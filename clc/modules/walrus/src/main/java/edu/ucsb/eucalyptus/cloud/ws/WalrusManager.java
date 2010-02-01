@@ -2370,9 +2370,10 @@ public class WalrusManager {
 											destinationKey);
 								}
 							}
-
+							boolean addNew = false;						
 							if (destinationObjectInfo == null) {
 								// not found. create a new one
+								addNew = true;
 								destinationObjectInfo = new ObjectInfo();
 								List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 								destinationObjectInfo
@@ -2386,7 +2387,6 @@ public class WalrusManager {
 								.setObjectName(destinationKey
 										.replaceAll("/", "-")
 										+ Hashes.getRandom(4));
-								dbObject.add(destinationObjectInfo);
 							} else {
 								if (destinationObjectInfo.canWriteACP(userId)) {
 									List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
@@ -2415,6 +2415,7 @@ public class WalrusManager {
 							destinationObjectInfo.setLastModified(lastModified);
 							destinationObjectInfo.setVersionId(destinationVersionId);
 							destinationObjectInfo.setLast(true);
+							destinationObjectInfo.setDeleted(false);
 							if (!metadataDirective.equals("REPLACE")) {
 								destinationObjectInfo
 								.setMetaData(sourceObjectInfo
@@ -2448,6 +2449,9 @@ public class WalrusManager {
 										+ " to "
 										+ destinationObjectName);
 							}
+							if(addNew)
+								dbObject.add(destinationObjectInfo);
+
 							reply.setEtag(etag);
 							reply.setLastModified(DateUtils.format(lastModified
 									.getTime(),
@@ -2892,7 +2896,6 @@ public class WalrusManager {
 								updateLogData(bucketInfo, logData);
 								reply.setLogData(logData);
 							}
-
 						} else {
 							db.rollback();
 							throw new AccessDeniedException("Key", objectKey, logData);
