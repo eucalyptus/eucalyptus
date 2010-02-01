@@ -78,7 +78,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
@@ -143,7 +142,6 @@ import edu.ucsb.eucalyptus.msgs.GetBucketLocationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketLocationType;
 import edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusType;
-import edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketVersioningStatusResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketVersioningStatusType;
 import edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType;
@@ -702,7 +700,7 @@ public class WalrusManager {
 							objectInfo.setSize(0L);
 							versionId = UUID.randomUUID().toString().replaceAll("-", "");
 						} else {
-							versionId = "NULL";
+							versionId = WalrusProperties.NULL_VERSION_ID;
 							ObjectInfo searchObject = new ObjectInfo(bucketName, objectKey);
 							searchObject.setVersionId(versionId);							
 							EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
@@ -1250,7 +1248,7 @@ public class WalrusManager {
 					} else {
 						//versioning disabled or suspended.
 						ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-						searchObjectInfo.setVersionId("NULL");
+						searchObjectInfo.setVersionId(WalrusProperties.NULL_VERSION_ID);
 						EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 						List<ObjectInfo>objectInfos = dbObject.query(searchObjectInfo);
 						if (objectInfos.size() > 0) {
@@ -1274,6 +1272,17 @@ public class WalrusManager {
 								if (logData != null) {
 									updateLogData(bucketInfo, logData);
 									reply.setLogData(logData);
+								}
+								if(bucketInfo.isVersioningSuspended()) {
+									//add delete marker
+									ObjectInfo deleteMarker = new ObjectInfo(bucketName,
+											objectKey);
+									deleteMarker.setDeleted(true);
+									deleteMarker.setLast(true);
+									deleteMarker.setOwnerId(userId);
+									deleteMarker.setLastModified(new Date());
+									deleteMarker.setVersionId(UUID.randomUUID().toString().replaceAll("-", ""));
+									dbObject.add(deleteMarker);
 								}
 							} else {
 								db.rollback();
@@ -1498,7 +1507,7 @@ public class WalrusManager {
 						if(request.getVersionId() == null)
 							searchObjectInfo.setLast(true);
 					}
-					String versionId = request.getVersionId() != null ? request.getVersionId() : "NULL";
+					String versionId = request.getVersionId() != null ? request.getVersionId() : WalrusProperties.NULL_VERSION_ID;
 					searchObjectInfo.setVersionId(versionId);
 					searchObjectInfo.setDeleted(false);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1670,7 +1679,7 @@ public class WalrusManager {
 						if(request.getVersionId() == null)
 							searchObjectInfo.setLast(true);
 					}
-					String versionId = request.getVersionId() != null ? request.getVersionId() : "NULL";
+					String versionId = request.getVersionId() != null ? request.getVersionId() : WalrusProperties.NULL_VERSION_ID;
 					searchObjectInfo.setVersionId(versionId);
 					searchObjectInfo.setDeleted(false);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -1756,7 +1765,7 @@ public class WalrusManager {
 						if(request.getVersionId() == null)
 							searchObjectInfo.setLast(true);
 					}
-					String versionId = request.getVersionId() != null ? request.getVersionId() : "NULL";
+					String versionId = request.getVersionId() != null ? request.getVersionId() : WalrusProperties.NULL_VERSION_ID;
 					searchObjectInfo.setVersionId(versionId);
 					searchObjectInfo.setDeleted(false);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
@@ -2179,7 +2188,7 @@ public class WalrusManager {
 							if (versioning) {
 								versionId = objectInfo.getVersionId() != null ? objectInfo
 										.getVersionId()
-										: "NULL";
+										: WalrusProperties.NULL_VERSION_ID;
 							}
 							if (request.getGetData()) {
 								if (WalrusProperties.trackUsageStatistics) {
@@ -2261,6 +2270,7 @@ public class WalrusManager {
 		String userId = request.getUserId();
 		String sourceBucket = request.getSourceBucket();
 		String sourceKey = request.getSourceObject();
+		String sourceVersionId = request.getSourceVersionId();
 		String destinationBucket = request.getDestinationBucket();
 		String destinationKey = request.getDestinationObject();
 		String metadataDirective = request.getMetadataDirective();
@@ -2279,23 +2289,16 @@ public class WalrusManager {
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
 		if (bucketList.size() > 0) {
-			boolean versioning = !bucketList.get(0).isVersioningDisabled();
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(sourceBucket,
 					sourceKey);
-			String copySourceVersionId = request.getVersionId();
-			searchObjectInfo.setVersionId(copySourceVersionId);
+			searchObjectInfo.setVersionId(sourceVersionId);
+			if(sourceVersionId == null)
+				searchObjectInfo.setLast(true);
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 			if (objectInfos.size() > 0) {
 				ObjectInfo sourceObjectInfo = objectInfos.get(0);
 				if (sourceObjectInfo.canRead(userId)) {
-					if (versioning) {
-						if (copySourceVersionId != null)
-							reply.setVersionId(copySourceVersionId);
-						else
-							reply.setCopySourceVersionId(sourceObjectInfo
-									.getVersionId());
-					}
 					if (copyIfMatch != null) {
 						if (!copyIfMatch.equals(sourceObjectInfo.getEtag())) {
 							db.rollback();
@@ -2342,10 +2345,20 @@ public class WalrusManager {
 						.get(0);
 						if (foundDestinationBucketInfo.canWrite(userId)) {
 							// all ok
+							String destinationVersionId = sourceVersionId;
 							ObjectInfo destinationObjectInfo = null;
 							String destinationObjectName;
 							ObjectInfo destSearchObjectInfo = new ObjectInfo(
 									destinationBucket, destinationKey);
+							if(foundDestinationBucketInfo.isVersioningEnabled()) {
+								if(sourceVersionId != null)
+									destinationVersionId = sourceVersionId;
+								else 
+									destinationVersionId = UUID.randomUUID().toString().replaceAll("-", "");
+							} else {
+								destinationVersionId = WalrusProperties.NULL_VERSION_ID;
+							}
+							destSearchObjectInfo.setVersionId(destinationVersionId);
 							List<ObjectInfo> destinationObjectInfos = dbObject
 							.query(destSearchObjectInfo);
 							if (destinationObjectInfos.size() > 0) {
@@ -2400,6 +2413,8 @@ public class WalrusManager {
 							.getLastModified();
 							destinationObjectInfo.setEtag(etag);
 							destinationObjectInfo.setLastModified(lastModified);
+							destinationObjectInfo.setVersionId(destinationVersionId);
+							destinationObjectInfo.setLast(true);
 							if (!metadataDirective.equals("REPLACE")) {
 								destinationObjectInfo
 								.setMetaData(sourceObjectInfo
@@ -2439,6 +2454,10 @@ public class WalrusManager {
 									DateUtils.ISO8601_DATETIME_PATTERN)
 									+ ".000Z");
 
+							if(destinationBucketInfo.isVersioningEnabled()) {
+								reply.setCopySourceVersionId(sourceVersionId);
+								reply.setVersionId(destinationVersionId);
+							}							
 							db.commit();
 							return reply;
 						} else {

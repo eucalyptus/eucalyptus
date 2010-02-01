@@ -324,6 +324,7 @@
 		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
 		<value name="SourceBucket" field="sourceBucket" />
 		<value name="SourceObject" field="sourceObject" />
+		<value name="SourceVersionId" field="sourceVersionId" usage="optional"/>
 		<value name="DestinationBucket" field="destinationBucket" />
 		<value name="DestinationObject" field="destinationObject" />
 		<value name="MetadataDirective" field="metadataDirective" />
@@ -337,7 +338,6 @@
 		<value name="CopySourceIfNoneMatch" field="copySourceIfNoneMatch" />
 		<value name="CopySourceIfModifiedSince" field="copySourceIfModifiedSince" />
 		<value name="CopySourceIfUnmodifiedSince" field="copySourceIfUnmodifiedSince" />
-		<value name="VersionId" field="versionId" usage="optional" />
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
 	</mapping>

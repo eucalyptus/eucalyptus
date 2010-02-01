@@ -427,6 +427,7 @@ public class PostObjectType extends WalrusDataRequestType {
 public class CopyObjectType extends WalrusRequestType {
 	String sourceBucket;
 	String sourceObject;
+	String sourceVersionId;
 	String destinationBucket;
 	String destinationObject;
 	String metadataDirective;
@@ -436,7 +437,6 @@ public class CopyObjectType extends WalrusRequestType {
 	String copySourceIfNoneMatch;
 	Date copySourceIfModifiedSince;
 	Date copySourceIfUnmodifiedSince;
-	String versionId;
 }
 
 public class CopyObjectResponseType extends WalrusDataResponseType {

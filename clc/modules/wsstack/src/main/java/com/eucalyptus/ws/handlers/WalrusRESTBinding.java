@@ -510,6 +510,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				if (verb.equals(WalrusProperties.HTTPVerb.PUT.toString())) {
 					if(httpRequest.containsHeader(WalrusProperties.COPY_SOURCE.toString())) {
 						String copySource = httpRequest.getHeader(WalrusProperties.COPY_SOURCE.toString());
+						String[] sourceParts = copySource.split("&");
+						if(sourceParts.length > 1) {
+							operationParams.put("SourceVersionId", sourceParts[1].replaceFirst("versionId=", "").trim());
+						}
+						copySource = sourceParts[0];
 						String[] sourceTarget = getTarget(copySource);
 						String sourceObjectKey = "";
 						String sourceSplitOn = "";
