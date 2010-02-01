@@ -41,7 +41,9 @@ Build-Depends: cdbs, debhelper (>= 7), libaxis2c-dev, librampart0, librampart-de
  libgwt-dev-java,
  libecj-java,
  libantlr-java,
- ant
+ ant,
+ libspring-beans-2.5-java, libspring-context-support-2.5-java, libspring-context-2.5-java, libspring-core-2.5-java, libspring-web-2.5-java,
+ libhibernate-annotations-java, libhibernate-commons-annotations-java, libhibernate-entitymanager-java, libhibernate3-java, libehcache-java 
 Standards-Version: 3.8.3
 Homepage: http://open.eucalyptus.com/
 
