@@ -62,7 +62,7 @@ Description: Elastic Utility Computing Architecture - Common files
 
 Package: eucalyptus-sc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2), eucalyptus-java-common (>= 1.6.2)
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2~bzr1160~1.6.2-0euca1), eucalyptus-java-common (>= 1.6.2~bzr1160~1.6.2-0euca1)
 Suggests: aoetools
 Description: Elastic Utility Computing Architecture - Storage controller
  EUCALYPTUS is an open source service overlay that implements elastic
@@ -74,7 +74,7 @@ Description: Elastic Utility Computing Architecture - Storage controller
 
 Package: eucalyptus-cloud
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2), eucalyptus-java-common (>= 1.6.2)
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2~bzr1160~1.6.2-0euca1), eucalyptus-java-common (>= 1.6.2~bzr1160~1.6.2-0euca1)
 Recommends: postfix | mail-transport-agent
 Replaces: eucalyptus-cc (<< 1.5.2-1),
  eucalyptus-sc (<< 1.5.2-1),
@@ -91,7 +91,7 @@ Description: Elastic Utility Computing Architecture - Cloud controller
 
 Package: eucalyptus-walrus
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2), eucalyptus-java-common (>= 1.6.2)
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2~bzr1160~1.6.2-0euca1), eucalyptus-java-common (>= 1.6.2~bzr1160~1.6.2-0euca1)
 Description: Elastic Utility Computing Architecture - Walrus (S3)
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
@@ -102,7 +102,7 @@ Description: Elastic Utility Computing Architecture - Walrus (S3)
 
 Package: eucalyptus-java-common
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, vblade, lvm2, dmsetup, openssh-server, eucalyptus-common (>= 1.6.2),
+Depends: ${shlibs:Depends}, ${misc:Depends}, vblade, lvm2, dmsetup, openssh-server, eucalyptus-common (>= 1.6.2~bzr1160~1.6.2-0euca1),
  default-jre-headless | java5-runtime-headless,
  libecj-java,
  libbackport-util-concurrent-java,
@@ -179,8 +179,8 @@ Description: Elastic Utility Computing Architecture - Common Java package
 
 Package: eucalyptus-cc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2), apache2, libapache2-mod-axis2c, 
-  eucalyptus-gl (>= 1.6.2), avahi-utils, librampart0, bridge-utils, vlan, dhcp3-server
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2~bzr1160~1.6.2-0euca1), apache2, libapache2-mod-axis2c, 
+  eucalyptus-gl (>= 1.6.2~bzr1160~1.6.2-0euca1), avahi-utils, librampart0, bridge-utils, vlan, dhcp3-server
 Recommends: vtun, libpam-modules (>= 1.0.1-9ubuntu3)
 Conflicts: apache2-mpm-itk
 Description: Elastic Utility Computing Architecture - Cluster controller
@@ -193,9 +193,9 @@ Description: Elastic Utility Computing Architecture - Cluster controller
 
 Package: eucalyptus-nc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2), 
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2~bzr1160~1.6.2-0euca1), 
   apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, 
-  eucalyptus-gl (>= 1.6.2), adduser, avahi-utils, librampart0, parted, libvirt-bin
+  eucalyptus-gl (>= 1.6.2~bzr1160~1.6.2-0euca1), adduser, avahi-utils, librampart0, parted, libvirt-bin
 Replaces: eucalyptus-common
 Recommends: vlan, bridge-utils, kvm, aoetools
 Conflicts: apache2-mpm-itk, qemu (<< 0.11.0-0)
@@ -209,7 +209,7 @@ Description: Elastic Utility Computing Architecture - Node controller
 
 Package: eucalyptus-gl
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2)
+Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2~bzr1160~1.6.2-0euca1)
 Description: Elastic Utility Computing Architecture - Logging service
  EUCALYPTUS is an open source service overlay that implements elastic
  computing using existing resources. The goal of EUCALYPTUS is to allow
