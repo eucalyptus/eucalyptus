@@ -197,7 +197,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 1.6.2~bzr1160
   apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, 
   eucalyptus-gl (>= 1.6.2~bzr1160~1.6.2-0euca1), adduser, avahi-utils, librampart0, parted, libvirt-bin
 Replaces: eucalyptus-common
-Recommends: vlan, bridge-utils, kvm, aoetools
+Recommends: vlan, bridge-utils, qemu-kvm, aoetools
 Conflicts: apache2-mpm-itk, qemu (<< 0.11.0-0)
 Description: Elastic Utility Computing Architecture - Node controller
  EUCALYPTUS is an open source service overlay that implements elastic
