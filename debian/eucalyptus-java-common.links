@@ -75,4 +75,16 @@
 /usr/share/java/wsdl4j.jar /usr/share/eucalyptus/wsdl4j.jar
 /usr/share/java/xom.jar /usr/share/eucalyptus/xom.jar
 /usr/share/java/xpp3.jar /usr/share/eucalyptus/xpp3.jar
-
+/usr/share/java/spring-aop.jar /usr/share/eucalyptus/spring-aop.jar
+/usr/share/java/spring-beans.jar /usr/share/eucalyptus/spring-beans.jar
+/usr/share/java/spring-context.jar /usr/share/eucalyptus/spring-context.jar
+/usr/share/java/spring-context-support.jar /usr/share/eucalyptus/spring-context-support.jar
+/usr/share/java/spring-core.jar /usr/share/eucalyptus/spring-core.jar
+/usr/share/java/spring-jdbc.jar /usr/share/eucalyptus/spring-jdbc.jar
+/usr/share/java/spring-tx.jar /usr/share/eucalyptus/spring-tx.jar
+/usr/share/java/spring-web.jar /usr/share/eucalyptus/spring-web.jar
+/usr/share/java/hibernate3.jar /usr/share/eucalyptus/hibernate3.jar
+/usr/share/java/hibernate-annotations.jar /usr/share/eucalyptus/hibernate-annotations.jar
+/usr/share/java/hibernate-commons-annotations.jar /usr/share/eucalyptus/hibernate-commons-annotations.jar
+/usr/share/java/hibernate-entitymanager.jar /usr/share/eucalyptus/hibernate-entitymanager.jar
+/usr/share/java/ehcache.jar /usr/share/eucalyptus/ehcache.jar
