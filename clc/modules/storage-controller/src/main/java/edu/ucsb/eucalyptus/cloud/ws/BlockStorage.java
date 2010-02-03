@@ -216,7 +216,6 @@ public class BlockStorage {
 				LOG.fatal("Unable to update password. " + e.getMessage());
 			}
 			db.commit();
-			blockManager.configure();
 		} catch(EucalyptusCloudException ex) {
 			storageInfo = new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
@@ -230,6 +229,7 @@ public class BlockStorage {
 			db.add(storageInfo);
 			db.commit();
 		} 
+		blockManager.configure();
 	}
 
 	public BlockStorage() {}
