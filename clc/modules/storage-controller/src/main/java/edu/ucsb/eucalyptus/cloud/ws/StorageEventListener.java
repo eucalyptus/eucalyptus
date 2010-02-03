@@ -96,6 +96,7 @@ public class StorageEventListener implements EventListener {
 			StartComponentEvent startComponentEvent = (StartComponentEvent) event;
 			ComponentConfiguration config = startComponentEvent.getConfiguration();
 			StorageProperties.updateStorageHost(config.getHostName());
+			StorageProperties.updateName();
 		} else if(event instanceof StopComponentEvent) { 
 			StopComponentEvent stopComponentEvent = (StopComponentEvent) event;
 			ComponentConfiguration config = stopComponentEvent.getConfiguration();

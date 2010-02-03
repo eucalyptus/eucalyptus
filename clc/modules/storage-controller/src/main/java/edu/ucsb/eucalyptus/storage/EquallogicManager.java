@@ -118,6 +118,7 @@ public class EquallogicManager implements LogicalStorageManager {
 	private static final Pattern SNAPSHOT_TARGET_NAME_PATTERN = Pattern.compile(".*iSCSI Name: (.*)\r");
 	private static final Pattern SNAPSHOT_DELETE_PATTERN = Pattern.compile("Snapshot deletion succeeded.");
 	private static final Pattern USER_DELETE_PATTERN = Pattern.compile("CHAP user deletion succeeded.");
+	private static final Pattern USER_SHOW_PATTERN = Pattern.compile(".*Password: (.*)\r");
 
 	private PSConnectionManager connectionManager;
 	private static EquallogicManager singleton;
@@ -441,9 +442,8 @@ public class EquallogicManager implements LogicalStorageManager {
 		public String createVolume(String volumeId, String snapshotId,
 				boolean locallyCreated, String sourceVolume) {
 			if(!enabled) {
-				try {
-					addUser(TARGET_USERNAME);
-				} catch (EucalyptusCloudException e) {
+				addUser(TARGET_USERNAME);
+				if(!enabled) {
 					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
 					return null;
 				}
@@ -558,9 +558,8 @@ public class EquallogicManager implements LogicalStorageManager {
 
 		public String createVolume(String volumeName, int size) {
 			if(!enabled) {
-				try {
-					addUser(TARGET_USERNAME);
-				} catch (EucalyptusCloudException e) {
+				addUser(TARGET_USERNAME);
+				if(!enabled) {
 					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
 					return null;
 				}
@@ -597,9 +596,8 @@ public class EquallogicManager implements LogicalStorageManager {
 
 		public String createSnapshot(String volumeId, String snapshotId) {
 			if(!enabled) {
-				try {
-					addUser(TARGET_USERNAME);
-				} catch (EucalyptusCloudException e) {
+				addUser(TARGET_USERNAME);
+				if(!enabled) {
 					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
 					return null;
 				}
@@ -662,7 +660,7 @@ public class EquallogicManager implements LogicalStorageManager {
 
 		}
 
-		public void addUser(String userName) throws EucalyptusCloudException {
+		public void addUser(String userName){
 			EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
 			try {
 				CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(userName));
@@ -672,14 +670,25 @@ public class EquallogicManager implements LogicalStorageManager {
 				try {
 					String returnValue = execCommand("stty hardwrap off\u001Achapuser create " + userName + "\u001A");
 					String password = matchPattern(returnValue, USER_CREATE_PATTERN);
-					db = StorageController.getEntityWrapper();
-					CHAPUserInfo userInfo = new CHAPUserInfo(userName, encryptSCTargetPassword(password));
-					db.add(userInfo);
-					db.commit();
-					enabled = true;
+					if(password != null) {
+						db = StorageController.getEntityWrapper();
+						CHAPUserInfo userInfo = new CHAPUserInfo(userName, encryptSCTargetPassword(password));
+						db.add(userInfo);
+						db.commit();
+						enabled = true;
+					} else {
+						returnValue = execCommand("stty hardwrap off\u001Achapuser show " + userName + "\u001A");
+						password = matchPattern(returnValue, USER_SHOW_PATTERN);
+						if(password != null) {
+							db = StorageController.getEntityWrapper();
+							CHAPUserInfo userInfo = new CHAPUserInfo(userName, encryptSCTargetPassword(password));
+							db.add(userInfo);
+							db.commit();
+							enabled = true;
+						}
+					}
 				} catch (EucalyptusCloudException e) {
 					LOG.error(e);
-					throw e;
 				}
 			}
 		}
@@ -752,7 +761,7 @@ public class EquallogicManager implements LogicalStorageManager {
 		}
 		return null;
 	}
-	
+
 	public String encryptSCTargetPassword(String password) throws EucalyptusCloudException {
 		PublicKey scPublicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getKeyPair().getPublic();
 		Cipher cipher;
