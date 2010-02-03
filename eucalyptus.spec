@@ -150,6 +150,9 @@ This package contains the internal log service of eucalyptus.
 
 %build
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
+if [ -e rpm_build.sh ]; then
+	./rpm_build.sh build
+fi
 cd clc
 make deps
 cd ..
@@ -157,6 +160,9 @@ make 2> err.log > out.log
 
 %install
 make install
+if [ -e rpm_build.sh ]; then
+	./rpm_build.sh install
+fi
 ls /usr/share/eucalyptus/*jar > jar_list
 
 %clean
@@ -622,3 +628,4 @@ fi
 
 *Sat May 21 2008 mayhem group (support@open.eucalyptus.com)
 - first release of eucalyptus
+

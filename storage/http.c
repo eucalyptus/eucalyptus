@@ -83,6 +83,8 @@ struct request {
 	FILE * fp; /* input file pointer to be used by curl READERs */
     long long total_read; /* bytes written during the operation */
     long long total_calls; /* write calls made during the operation */
+    time_t timestamp; // timestamp for periodically printing progress messages
+    long long file_size; // file size in bytes, to print in progress messages
 };
 
 static int curl_initialized = 0;
@@ -131,6 +133,8 @@ int http_put (const char * file_path, const char * url, const char * login, cons
     curl_easy_setopt (curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)mystat.st_size);
     curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0L); // TODO: make this optional?
     curl_easy_setopt (curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt (curl, CURLOPT_LOW_SPEED_LIMIT, 360L); // must have at least a 360 baud modem
+    curl_easy_setopt (curl, CURLOPT_LOW_SPEED_TIME, 10L); // abort if below speed limit for this many seconds
 
     if (login!=NULL && password!=NULL) {
         char userpwd [STRSIZE];
@@ -140,6 +144,8 @@ int http_put (const char * file_path, const char * url, const char * login, cons
 
 	struct request params;
     params.fp = fp;
+    params.timestamp = time(NULL);
+    params.file_size = (long long)mystat.st_size;
     curl_easy_setopt (curl, CURLOPT_READDATA, &params);
     curl_easy_setopt (curl, CURLOPT_READFUNCTION, read_data);
 
@@ -170,6 +176,9 @@ int http_put (const char * file_path, const char * url, const char * login, cons
                 break;
             case 408L: // timeout, retry
                 logprintfl (EUCAWARN, "http_put(): server responded with HTTP code %ld (timeout)\n", httpcode);
+                break;
+	    case 500L: // internal server error (could be a fluke, so we'll retry)
+	      logprintfl (EUCAWARN, "http_put(): server responded with HTTP code %ld (transient?)\n", httpcode);
                 break;
             default: // some kind of error, will not retry
                 logprintfl (EUCAERROR, "http_put(): server responded with HTTP code %ld\n", httpcode);
@@ -206,8 +215,17 @@ static size_t read_data (char *buffer, size_t size, size_t nitems, void *params)
     ((struct request *)params)->total_read += items_read * size;
     ((struct request *)params)->total_calls++;
 
+    if (((struct request *)params)->total_calls%50==0) {
+        time_t prev = ((struct request *)params)->timestamp;
+        time_t now = time(NULL);
+        if ((now-prev)>10) {
+            ((struct request *)params)->timestamp = now;
+            long long bytes_read = ((struct request *)params)->total_read;
+            long long bytes_file = ((struct request *)params)->file_size;
+            int percent = (int)((bytes_read*100)/bytes_file);
+            logprintfl (EUCADEBUG, "http_put(): upload progress %ld/%ld bytes (%d%%)\n", bytes_read, bytes_file, percent);
+        }
+    }
+
     return items_read;
 }
-
-
-

@@ -14,8 +14,8 @@ build: all
 euca_imager: Makefile euca_imager.c $(IMAGER_LIBS)
 	$(CC) $(CFLAGS) $(INCLUDES) euca_imager.c -o euca_imager $(IMAGER_LIBS) -lcurl -lrt
 
-Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o
-	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o $(STORAGE_LIBS)
+Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
+	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o http.o $(STORAGE_LIBS)
 
 walrus.o: walrus.c walrus.h
 	$(CC) $(CFLAGS) $(INCLUDES) -c walrus.c 

@@ -593,7 +593,7 @@ int build_disk_image (
         char *kernelId, char *kernelURL, char *kernel_path,
         char *ramdiskId, char *ramdiskURL, char *ramdisk_path,
         const char *keyName, 
-        long long total_disk_limit_mb, 
+        long long root_limit_mb, 
         long long swap_size_mb,
         long long ephemeral_size_mb) 
 {
@@ -603,12 +603,12 @@ int build_disk_image (
     
     int e = ERROR;
     
-    logprintfl (EUCAINFO, "retrieving images (disk limit=%lldMB)...\n", total_disk_limit_mb);
+    logprintfl (EUCAINFO, "retrieving images (root limit=%lldMB)...\n", root_limit_mb);
     
     /* get the necessary files from Walrus, caching them if possible */
     char * image_name;
     int mount_offset = 0;
-    long long limit_mb = total_disk_limit_mb - swap_size_mb; // OK if total is negative (unlimited)
+    long long limit_mb = root_limit_mb; // OK if total is negative (unlimited)
     /*
     if (convert_to_disk) {
         image_name = "disk";
@@ -620,11 +620,10 @@ int build_disk_image (
     */
 
 #define CHECK_LIMIT(WHAT) \
-    if (total_disk_limit_mb>0L && limit_mb < 1L) { \
+    if (root_limit_mb>0L && limit_mb < 1L) { \
         logprintfl (EUCAFATAL, "error: insufficient disk capacity remaining (%lldMB) in VM Type for component %s\n", limit_mb, WHAT); \
         return e; \
     }
-    CHECK_LIMIT("swap");
 
 //    static long long get_cached_file (const char * src_url, const char * dst_path, const char * cache_key, sem * s, int convert_to_disk, long long limit_mb, long long swap_size_mb) 
 
@@ -821,7 +820,7 @@ int img_convert (
         char disk_path    [SIZE]; snprintf (disk_path,    SIZE, "%s/%s-disk",      unique_path, root->id);
         char vmdk_path    [SIZE]; snprintf (vmdk_path,    SIZE, "%s/%s-disk.vmdk", unique_path, root->id);
 
-        int rc = build_disk_image ("admin", 
+        rc = build_disk_image ("admin", 
             root->id, root->location.url, image_path,
             kernel->id, kernel->location.url, kernel_path,
             ramdisk->id, ramdisk->location.url, ramdisk_path,
