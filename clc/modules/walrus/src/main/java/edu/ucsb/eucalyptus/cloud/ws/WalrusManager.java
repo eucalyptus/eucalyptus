@@ -726,26 +726,6 @@ public class WalrusManager {
 							}
 						}
 
-						/*if (WalrusProperties.enableTorrents) {
-								EntityWrapper<TorrentInfo> dbTorrent = db
-								.recast(TorrentInfo.class);
-								TorrentInfo torrentInfo = new TorrentInfo(bucketName,
-										objectKey);
-								List<TorrentInfo> torrentInfos = dbTorrent
-								.query(torrentInfo);
-								if (torrentInfos.size() > 0) {
-									TorrentInfo foundTorrentInfo = torrentInfos.get(0);
-									TorrentClient torrentClient = Torrents
-									.getClient(bucketName + objectKey);
-									if (torrentClient != null) {
-										torrentClient.bye();
-									}
-									dbTorrent.delete(foundTorrentInfo);
-								}
-							} else {
-								LOG
-								.warn("Bittorrent support has been disabled. Please check pre-requisites");
-							}*/
 						db.commit();
 						// writes are unconditional
 						WalrusDataQueue<WalrusDataMessage> putQueue = messenger
@@ -820,6 +800,26 @@ public class WalrusManager {
 											foundObject.addGrants(userId, grantInfos,
 													accessControlList);
 											foundObject.setGrants(grantInfos);
+										}
+										if (WalrusProperties.enableTorrents) {
+											EntityWrapper<TorrentInfo> dbTorrent = db
+											.recast(TorrentInfo.class);
+											TorrentInfo torrentInfo = new TorrentInfo(bucketName,
+													objectKey);
+											List<TorrentInfo> torrentInfos = dbTorrent
+											.query(torrentInfo);
+											if (torrentInfos.size() > 0) {
+												TorrentInfo foundTorrentInfo = torrentInfos.get(0);
+												TorrentClient torrentClient = Torrents
+												.getClient(bucketName + objectKey);
+												if (torrentClient != null) {
+													torrentClient.bye();
+												}
+												dbTorrent.delete(foundTorrentInfo);
+											}
+										} else {
+											LOG
+											.warn("Bittorrent support has been disabled. Please check pre-requisites");
 										}
 									} catch (EucalyptusCloudException ex) {
 										if(objectInfo != null) {
