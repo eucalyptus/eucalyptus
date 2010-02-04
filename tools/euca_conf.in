@@ -934,7 +934,7 @@ if [ -n "$CHECK" ]; then
 			exit 1
 		fi
 		# need to check if euca_rootwrap can run as EUCA_USER
-		TEST_EUID="`su -p $EUCA_USER -c \"$ROOTWRAP $ID -u\"`"
+                TEST_EUID="`sudo -u $EUCA_USER $ROOTWRAP $ID -u`"
 		if [ "$?" != "0" -o "$TEST_EUID" != "0" ]; then
 			echo "Problem running $ROOTWRAP! Did you run euca_conf -setup?"
 			exit 1

@@ -2390,9 +2390,9 @@ int check_isip(char *ip) {
 }
 
 char *host2ip(char *host) {
-  struct addrinfo hints, *result;
+  struct addrinfo hints, *result=NULL;
   int rc;
-  char hostbuf[256], *ret;
+  char hostbuf[256], *ret=NULL;
   
   if (!host) return(NULL);
   
@@ -2411,6 +2411,8 @@ char *host2ip(char *host) {
       ret = strdup(hostbuf);
     }
   }
+  if (result) freeaddrinfo(result);
+
   if (ret) {
     //    logprintfl(EUCADEBUG, "converted %s->%s\n", host, ret);
   } else {

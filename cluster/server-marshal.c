@@ -314,7 +314,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   adb_describePublicAddressesResponseType_t *dpart=NULL;
 
   axis2_bool_t status=AXIS2_TRUE;
-  char statusMessage[256];
+  char statusMessage[256], *ipstr=NULL;
 
   int rc, outAddressesLen, i;
   ncMetadata ccMeta;
@@ -345,9 +345,15 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   dpart = adb_describePublicAddressesResponseType_create(env);
   for (i=0; i<outAddressesLen; i++) {
     if (outAddresses[i].ip) {
-      adb_describePublicAddressesResponseType_add_sourceAddresses(dpart, env, hex2dot(outAddresses[i].ip));
+      ipstr = hex2dot(outAddresses[i].ip);
+      adb_describePublicAddressesResponseType_add_sourceAddresses(dpart, env, ipstr);
+      if (ipstr) free(ipstr);
+
       if (outAddresses[i].dstip) {
-	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, hex2dot(outAddresses[i].dstip));
+	ipstr = hex2dot(outAddresses[i].dstip);
+	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, ipstr);
+	if (ipstr) free(ipstr);
+
       } else {
 	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, "");
       }
@@ -667,8 +673,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   for (i=0; i<clusterControllersLen; i++) {
     clusterControllers[i] = host2ip(adb_startNetworkType_get_clusterControllers_at(snt, env, i));
   }
-  
-  
+    
   snrt = adb_startNetworkResponseType_create(env);
   status = AXIS2_TRUE;
   if (!DONOTHING) {
@@ -678,6 +683,10 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
       status = AXIS2_FALSE;
       snprintf(statusMessage, 255, "ERROR");
     }
+  }
+
+  for (i=0; i<clusterControllersLen; i++) {
+    if (clusterControllers[i]) free(clusterControllers[i]);
   }
   if (clusterControllers) free(clusterControllers);
   
