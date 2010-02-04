@@ -439,7 +439,7 @@ doAttachVolume (	struct nc_state_t *nc,
         ncVolume * volume;
 
         sem_p (inst_sem);
-        volume = add_volume (instance, volumeId, remoteDev, localDevReal);
+        volume = add_volume (instance, volumeId, remoteDev, localDevReal, "attached");
 	scSaveInstanceInfo(instance); /* to enable NC recovery */
         sem_v (inst_sem);
         if ( volume == NULL ) {

@@ -212,6 +212,9 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	  vnetconfig->networks[vlan].dns = dns;
 	  vnetconfig->networks[vlan].router = rt;
 	  vnetconfig->numaddrs = 0xFFFFFFFF - nm;
+	  if (vnetconfig->numaddrs > NUMBER_OF_PUBLIC_IPS) {
+	    vnetconfig->numaddrs = NUMBER_OF_PUBLIC_IPS;
+	  }
 	}
       }
     } else {
@@ -353,7 +356,7 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
   }
   
   if (done) {
-    // duplicate IP fond
+    // duplicate IP found
     logprintfl(EUCAWARN,"vnetAddHost(): attempting to add duplicate macmap entry, ignoring\n");
   } else if (found) {
     strncpy(vnetconfig->networks[vlan].addrs[found].mac, mac, 24);
@@ -1162,6 +1165,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   }
   
   for (i=0; i<ccsLen; i++) {
+    logprintfl(EUCADEBUG, "vnetSetCCS(): input CC=%s\n", ccs[i]);
     found=0;
     for (j=0; j<NUMBER_OF_CCS && !found; j++) {
       if (dot2hex(ccs[i]) == vnetconfig->tunnels.ccs[j]) {
@@ -1185,7 +1189,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
       }
       if (!found) {
 	// exists locally, but not in new list, remove it
-	logprintfl(EUCADEBUG, "vnetSetCCS(): removing CC %d,%d\n", vnetconfig->tunnels.ccs[i], i);
+	logprintfl(EUCADEBUG, "vnetSetCCS(): removing CC %d\n", i);
 	vnetDelCCS(vnetconfig, vnetconfig->tunnels.ccs[i]);
       }
     }

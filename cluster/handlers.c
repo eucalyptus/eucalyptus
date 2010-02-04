@@ -2118,9 +2118,11 @@ int initialize(void) {
   }
   
   // logprintfl(EUCADEBUG, "running vnetInitTunnels()\n");
-  rc = vnetInitTunnels(vnetconfig);
-  if (rc) {
-    logprintfl(EUCAERROR, "initialize(): cannot initialize tunnels\n");
+  if (config->use_tunnels) {
+    rc = vnetInitTunnels(vnetconfig);
+    if (rc) {
+      logprintfl(EUCAERROR, "initialize(): cannot initialize tunnels\n");
+    }
   }
 
   //  logprintfl(EUCADEBUG, "running init_pthreads()\n");
@@ -2370,7 +2372,7 @@ int update_config(void) {
 int init_config(void) {
   ccResource *res=NULL;
   char *tmpstr=NULL;
-  int rc, numHosts, use_wssec, schedPolicy, idleThresh, wakeThresh, ret, i;
+  int rc, numHosts, use_wssec, use_tunnels, schedPolicy, idleThresh, wakeThresh, ret, i;
   
   char configFiles[2][1024], netPath[1024], eucahome[1024], policyFile[1024], home[1024];
   
@@ -2713,11 +2715,22 @@ int init_config(void) {
   }
   if (tmpstr) free(tmpstr);
 
+  // Multi-cluster tunneling
+  use_tunnels = 1;
+  tmpstr = getConfString(configFiles, 2, "DISABLE_TUNNELING");
+  if (tmpstr) {
+    if (!strcmp(tmpstr, "Y")) {
+      use_tunnels = 0;
+    }
+  }
+  if (tmpstr) free(tmpstr);
+
   sem_mywait(CONFIG);
   // set up the current config   
   strncpy(config->eucahome, eucahome, 1024);
   strncpy(config->policyFile, policyFile, 1024);
   config->use_wssec = use_wssec;
+  config->use_tunnels = use_tunnels;
   config->schedPolicy = schedPolicy;
   config->idleThresh = idleThresh;
   config->wakeThresh = wakeThresh;

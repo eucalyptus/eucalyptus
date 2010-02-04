@@ -107,6 +107,11 @@ public class SnapshotManager {
     String userName = request.isAdministrator( ) ? null : request.getUserId( );
     Volume vol = db.recast( Volume.class ).getUnique( Volume.named( userName, request.getVolumeId( ) ) );
 
+    if(!vol.isReady()) {
+    	db.rollback();
+        throw new EucalyptusCloudException( "Volume " + request.getVolumeId() + " not yet ready");
+    }
+    
     String newId = null;
     Snapshot snap = null;
     while ( true ) {

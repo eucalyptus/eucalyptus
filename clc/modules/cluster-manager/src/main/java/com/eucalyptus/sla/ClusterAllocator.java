@@ -199,7 +199,7 @@ public class ClusterAllocator extends Thread {
 
     Integer vlan = null;
     List<String> networkNames = null;
-    ArrayList<String> networkIndexes = null;
+    ArrayList<String> networkIndexes = Lists.newArrayList( );
     if( token.getPrimaryNetwork() != null ) {
       vlan = token.getPrimaryNetwork( ).getVlan( );
       if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?

@@ -130,6 +130,9 @@ public class BucketInfo {
 	@Column(name="target_prefix")
 	private String targetPrefix;
 
+	@Column(name="versioning")
+	private String versioning;
+
 	@OneToMany( cascade = CascadeType.ALL )
 	@JoinTable(
 			name = "bucket_has_grants",
@@ -486,6 +489,26 @@ public class BucketInfo {
 		this.targetPrefix = targetPrefix;
 	}
 
+	public String getVersioning() {
+		return versioning;
+	}
+
+	public void setVersioning(String versioning) {
+		this.versioning = versioning;
+	}
+
+	public boolean isVersioningEnabled() {
+		return WalrusProperties.VersioningStatus.Enabled.toString().equals(versioning);	
+	}
+	
+	public boolean isVersioningDisabled() {
+		return WalrusProperties.VersioningStatus.Disabled.toString().equals(versioning);	
+	}
+	
+	public boolean isVersioningSuspended() {
+		return WalrusProperties.VersioningStatus.Suspended.toString().equals(versioning);	
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

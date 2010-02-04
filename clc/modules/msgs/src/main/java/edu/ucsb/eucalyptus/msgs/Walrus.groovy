@@ -213,6 +213,7 @@ public class GetObjectAccessControlPolicyResponseType extends WalrusResponseType
 }
 
 public class GetObjectAccessControlPolicyType extends WalrusRequestType {
+	String versionId;
 }
 
 public class WalrusErrorMessageType extends EucalyptusMessage {
@@ -426,6 +427,7 @@ public class PostObjectType extends WalrusDataRequestType {
 public class CopyObjectType extends WalrusRequestType {
 	String sourceBucket;
 	String sourceObject;
+	String sourceVersionId;
 	String destinationBucket;
 	String destinationObject;
 	String metadataDirective;
@@ -438,6 +440,8 @@ public class CopyObjectType extends WalrusRequestType {
 }
 
 public class CopyObjectResponseType extends WalrusDataResponseType {
+	String copySourceVersionId;
+	String versionId;
 }
 
 public class MetaDataEntry extends EucalyptusData {
@@ -459,6 +463,15 @@ public class DeleteObjectType extends WalrusDeleteType {
 }
 
 public class DeleteObjectResponseType extends WalrusDeleteResponseType {
+	String code;
+	String description;
+}
+
+public class DeleteVersionType extends WalrusDeleteType {
+	String versionid;
+}
+
+public class DeleteVersionResponseType extends WalrusDeleteResponseType {
 	String code;
 	String description;
 }
@@ -502,6 +515,48 @@ public class PrefixEntry extends EucalyptusData {
 	}
 }
 
+public class ListVersionsType extends WalrusRequestType {
+	String prefix;
+	String keyMarker;
+	String versionIdMarker;
+	String maxKeys;
+	String delimiter;
+}
+
+public class ListVersionsResponseType extends WalrusResponseType {
+	String name;
+	String prefix;
+	String keyMarker;
+	String versionIdMarker;
+	String nextKeyMarker;
+	String nextVersionIdMarker;
+	int maxKeys;
+	String delimiter;
+	boolean isTruncated;
+	ArrayList<VersionEntry> versions;
+	ArrayList<DeleteMarkerEntry> deleteMarkers;
+	ArrayList<PrefixEntry> commonPrefixes;
+}
+
+public class VersionEntry extends EucalyptusData {
+	String key;
+	String versionId;
+	Boolean isLatest;
+	String lastModified;
+	String etag;
+	long size;
+	String storageClass;
+	CanonicalUserType owner;
+}
+
+public class DeleteMarkerEntry extends EucalyptusData {
+	String key;
+	String versionId;
+	Boolean isLatest;
+	String lastModified;
+	CanonicalUserType owner;
+}
+
 public class SetBucketAccessControlPolicyType extends WalrusRequestType {
 	AccessControlListType accessControlList;
 }
@@ -513,6 +568,7 @@ public class SetBucketAccessControlPolicyResponseType extends WalrusResponseType
 
 public class SetObjectAccessControlPolicyType extends WalrusRequestType {
 	AccessControlListType accessControlList;
+	String versionId;
 }
 
 public class SetObjectAccessControlPolicyResponseType extends WalrusResponseType {
@@ -531,6 +587,7 @@ public class SetRESTBucketAccessControlPolicyResponseType extends WalrusResponse
 
 public class SetRESTObjectAccessControlPolicyType extends WalrusRequestType {
 	AccessControlPolicyType accessControlPolicy;
+	String versionId;
 }
 
 public class SetRESTObjectAccessControlPolicyResponseType extends WalrusResponseType {
@@ -545,6 +602,7 @@ public class GetObjectType extends WalrusDataGetRequestType {
 	Boolean inlineData;
 	Boolean deleteAfterGet;
 	Boolean getTorrent;
+	String versionId;
 
 	def GetObjectType() {
 	}
@@ -623,6 +681,20 @@ public class SetBucketLoggingStatusType extends WalrusRequestType {
 }
 
 public class SetBucketLoggingStatusResponseType extends WalrusResponseType {
+}
+
+public class GetBucketVersioningStatusType extends WalrusRequestType {
+}
+
+public class GetBucketVersioningStatusResponseType extends WalrusResponseType {
+	String versioningStatus;
+}
+
+public class SetBucketVersioningStatusType extends WalrusRequestType {
+	String versioningStatus;
+}
+
+public class SetBucketVersioningStatusResponseType extends WalrusResponseType {
 }
 
 public class AddObjectResponseType extends WalrusDataResponseType {

@@ -60,63 +60,29 @@
  *******************************************************************************/
 /*
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
+package edu.ucsb.eucalyptus.util;
 
-package com.eucalyptus.util;
+import java.util.concurrent.LinkedBlockingQueue;
 
-import java.io.UnsupportedEncodingException;
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.URLDecoder;
-import java.util.Collections;
-import java.util.List;
-
-import edu.ucsb.eucalyptus.cloud.WalrusException;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
-
-
-public class WalrusUtil {
-	private static String ipAddress;
-
-	static {
-		ipAddress = "127.0.0.1";
-		List<NetworkInterface> ifaces = null;
-		try {
-			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-			for ( NetworkInterface iface : ifaces ) {
-				try {
-					if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-						for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-							if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
-								ipAddress = iaddr.getHostAddress();
-								break;
-							}
-						}
-					}
-				} catch ( SocketException e1 ) {}
-			}	
-		} catch ( SocketException e1 ) {}
+@SuppressWarnings("serial")
+public class WalrusDataQueue<T> extends LinkedBlockingQueue<T> {
+	public boolean interrupted;
+	
+	public WalrusDataQueue() {
+		super();
 	}
 
-	public static EucalyptusMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
-		EucalyptusMessage errMsg;
-		Throwable ex = errorMessage.getException();
-		if(ex instanceof WalrusException) {
-			WalrusException e = (WalrusException) ex;
-			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), errorMessage.getCorrelationId(), ipAddress, e.getLogData());
-			errMsg.setCorrelationId( errorMessage.getCorrelationId() );
-		} else {
-			errMsg = errorMessage;
-		}
-		return errMsg;
+	public WalrusDataQueue(int dataQueueSize) {
+		super(dataQueueSize);
 	}
 	
-	public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
-		return URLDecoder.decode(objectKey, "UTF-8").replace("%20", "+").replace("%2A", "*").replace("~", "%7E").replace(" ", "+");
+	public void setInterrupted(boolean value) {
+		this.interrupted = value;
+	}
+	
+	public boolean getInterrupted() {
+		return this.interrupted;
 	}
 }

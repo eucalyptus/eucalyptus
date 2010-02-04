@@ -273,9 +273,9 @@ public class Binding {
   }
   public static String createRestFault( String faultCode, String faultReason, String faultDetails ) {
     return new StringBuffer().append("<?xml version=\"1.0\"?><Response><Errors><Error><Code>")
-      .append(faultCode).append("</Code><Message>")
-      .append(faultReason).append("</Message></Error></Errors><RequestID>")
-      .append(faultDetails).append("</RequestID></Response>").toString( );
+      .append(faultCode.replaceAll("<","&lt;").replaceAll(">","&gt;")).append("</Code><Message>")
+      .append(faultReason.replaceAll("<","&lt;").replaceAll(">","&gt;")).append("</Message></Error></Errors><RequestID>")
+      .append(faultDetails.replaceAll("<","&lt;").replaceAll(">","&gt;")).append("</RequestID></Response>").toString( );
   }
   public static SOAPEnvelope createFault( String faultCode, String faultReason, String faultDetails ) {
     SOAPFactory soapFactory = HoldMe.getOMSOAP11Factory( );

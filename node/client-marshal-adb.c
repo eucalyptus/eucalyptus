@@ -240,6 +240,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
             strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
+	    strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
         }
     }
 

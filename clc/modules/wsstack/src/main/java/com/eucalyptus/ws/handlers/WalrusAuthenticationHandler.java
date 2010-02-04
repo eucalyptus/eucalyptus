@@ -113,6 +113,7 @@ import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
 
@@ -252,7 +253,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				//query string authentication
 				String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
 				try {
-					String signature = URLDecoder.decode(parameters.remove(SecurityParameter.Signature.toString()), "UTF-8").replace("%20", "+").replace("%2A", "*").replace("~", "%7E").replace(" ", "+");
+					String signature = WalrusUtil.URLdecode(parameters.remove(SecurityParameter.Signature.toString()));
 					if(signature == null) {
 						throw new AuthenticationException("User authentication failed. Null signature.");
 					}

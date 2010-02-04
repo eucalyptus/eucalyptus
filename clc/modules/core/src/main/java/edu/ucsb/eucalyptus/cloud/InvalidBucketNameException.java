@@ -59,67 +59,33 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- * Author: Neil Soman <neil@eucalyptus.com>
+ *
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
-package edu.ucsb.eucalyptus.util;
 
-import org.apache.log4j.Logger;
+package edu.ucsb.eucalyptus.cloud;
 
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.ExecutionException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public class SystemUtil {
-	private static Logger LOG = Logger.getLogger(SystemUtil.class);
+@SuppressWarnings("serial")
+public class InvalidBucketNameException extends WalrusException {
 
-	public static String run(String[] command) throws ExecutionException {
-		try
-		{
-			String commandString = "";
-			for(String part : command) {
-				commandString += part + " ";
-			}
-			LOG.debug("Running command: " + commandString);
-			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(command);
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			StreamConsumer output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			int returnValue = proc.waitFor();
-			output.join();
-			if(returnValue != 0)
-				throw new ExecutionException(commandString + " error: " + error.getReturnValue());
-			return output.getReturnValue();
-		} catch (Throwable t) {
-			LOG.error(t, t);
-		}
-		return "";
-	}
+  public InvalidBucketNameException()
+  {
+    super( "InvalidBucketName" );
+  }
+  
+  public InvalidBucketNameException(String value)
+  {
+    super("The specified bucket is not valid: " + value, "InvalidBucketName", "Bucket",  value, HttpResponseStatus.BAD_REQUEST);
+  }
 
-	public static int runAndGetCode(String[] command) throws ExecutionException {
-		try
-		{
-			String commandString = "";
-			for(String part : command) {
-				commandString += part + " ";
-			}
-			LOG.debug("Running command: " + commandString);
-			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(command);
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			StreamConsumer output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			int returnValue = proc.waitFor();
-			return returnValue;
-		} catch (Throwable t) {
-			LOG.error(t, t);
-		}
-		return -1;
-	}
-
-	public static void shutdownWithError(String errorMessage) {
-		LOG.fatal(errorMessage);
-		System.exit(0xEC2);
-	}        
+  public InvalidBucketNameException(Throwable ex)
+  {
+    super("InvalidBucketName", ex);
+  }
+  public InvalidBucketNameException(String message, Throwable ex)
+  {
+    super(message,ex);
+  }
 }
