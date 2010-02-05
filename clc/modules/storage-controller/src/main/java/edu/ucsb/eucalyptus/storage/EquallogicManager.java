@@ -65,8 +65,16 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -104,6 +112,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
+import edu.emory.mathcs.backport.java.util.concurrent.LinkedBlockingQueue;
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
@@ -407,6 +416,93 @@ public class EquallogicManager implements LogicalStorageManager {
 		}
 	}
 
+	private class EqlTask {
+		private String command;
+		private volatile String returnValue;
+
+		public EqlTask(String command) {
+			this.command = command;
+		}
+
+		public String getCommand() {
+			return command;
+		}
+
+		public String getValue() { return returnValue; }
+
+		public void setValue(String value) {
+			this.returnValue = value;
+		}
+	}
+
+	private class SessionManager extends Thread {
+		private LinkedBlockingQueue taskQueue;
+		private BufferedWriter writer;
+		private BufferedReader reader;
+
+		public SessionManager(String host, String username, String password) {
+			try {
+				JSch jsch = new JSch();
+				Session session;
+				session = jsch.getSession(username, host);
+				session.setConfig("StrictHostKeyChecking", "no");
+				session.setPassword(password);
+				session.connect();
+				Channel channel = session.openChannel("shell");
+				PipedOutputStream outStream = new PipedOutputStream();
+				channel.setInputStream(new PipedInputStream(outStream));
+				PipedInputStream inStream = new PipedInputStream();
+				channel.setOutputStream(new PipedOutputStream(inStream));
+
+				channel.connect();
+
+				writer = new BufferedWriter(new OutputStreamWriter(outStream, "utf-8"));
+				reader = new BufferedReader(new InputStreamReader(inStream, "utf-8"));
+				taskQueue = new LinkedBlockingQueue(1);
+			} catch(JSchException ex) {
+				LOG.error(ex, ex);
+			} catch (UnsupportedEncodingException e) {
+				LOG.error(e, e);
+			} catch (IOException e) {
+				LOG.error(e, e);
+			}
+		}
+
+		public void addTask(EqlTask t) throws InterruptedException {
+			try {
+				taskQueue.put(t);
+			} catch (InterruptedException e) {
+				LOG.error(e);
+				throw e;
+			}
+		}
+
+		public void run() {
+			EqlTask task;
+			try {
+				while((task = (EqlTask) taskQueue.take()) != null) {
+					writer.write(task.getCommand() + "whoami\r\n");
+					writer.flush();
+					String returnValue = "";
+					for (String line = null; (line = reader.readLine()) != null;)
+					{
+						if(line.contains("whoami"))
+							break;
+						returnValue += line + "\r";
+					}
+					task.setValue(returnValue);
+					synchronized (task) {
+						task.notifyAll();
+					}
+				}
+			} catch (InterruptedException e) {
+				LOG.error(e);
+			} catch (IOException e) {
+				LOG.error(e);
+			}
+		}
+	}
+
 	public class PSConnectionManager {
 		private String host;
 		private String username;
@@ -414,6 +510,9 @@ public class EquallogicManager implements LogicalStorageManager {
 		private String eucalyptusUserName;
 		private final String TARGET_USERNAME = "eucalyptus"; 
 		private boolean enabled;
+		private SessionManager sessionManager;
+
+		private final long TASK_TIMEOUT = 5 * 60 * 1000;
 
 		public PSConnectionManager() {}
 
@@ -434,9 +533,9 @@ public class EquallogicManager implements LogicalStorageManager {
 			eucalyptusUserName = System.getProperty("euca.user");
 			if(eucalyptusUserName == null)
 				throw new EucalyptusCloudException("Unable to get property eucalyptus username");
-			String show = execCommand("show");
+			/*String show = execCommand("show");
 			if(show.length() <= 0) 
-				throw new EucalyptusCloudException("Connection failed.");
+				throw new EucalyptusCloudException("Connection failed.");*/
 		}
 
 		public String createVolume(String volumeId, String snapshotId,
@@ -521,29 +620,24 @@ public class EquallogicManager implements LogicalStorageManager {
 		}
 
 		public String execCommand(String command) throws EucalyptusCloudException {
+			EqlTask task = new EqlTask(command);
 			try {
-				JSch jsch = new JSch();
-				Session session;
-				session = jsch.getSession(username, host);
-				session.setConfig("StrictHostKeyChecking", "no");
-				session.setPassword(password);
-				session.connect();
-				Channel channel = session.openChannel("shell");
-				channel.setInputStream(new ByteArrayInputStream(command.getBytes()));
-				ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
-				channel.setOutputStream(bytesOut);
-				channel.connect();
-				try {
-					Thread.sleep(2000);
-				} catch (InterruptedException e) {
-					LOG.error(e);
+				sessionManager.addTask(task);
+				if(task.getValue() == null) {
+					synchronized (task) {
+						task.wait(TASK_TIMEOUT);
+					}
 				}
-				channel.disconnect();
-				session.disconnect();
-				return bytesOut.toString();
-			} catch (JSchException e1) {
-				LOG.error(e1, e1);
-				throw new EucalyptusCloudException(e1);
+				if(task.getValue() == null) {
+					LOG.error("Unable to execute command: " + task.getCommand());
+					return "";
+				} else {
+					return task.getValue();
+				}					
+
+			} catch (InterruptedException e) {
+				LOG.error(e);
+				return "";
 			}
 		}
 
@@ -558,6 +652,8 @@ public class EquallogicManager implements LogicalStorageManager {
 
 		public String createVolume(String volumeName, int size) {
 			if(!enabled) {
+				sessionManager = new SessionManager(host, username, password);
+				sessionManager.start();
 				addUser(TARGET_USERNAME);
 				if(!enabled) {
 					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
