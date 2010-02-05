@@ -748,6 +748,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	private AccessControlPolicyType getAccessControlPolicy(MappingHttpRequest httpRequest) throws BindingException {
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
+		AccessControlListType accessControlList = new AccessControlListType();
+		ArrayList<Grant> grants = new ArrayList<Grant>();
 		try {
 			String aclString = getMessageString(httpRequest);
 			if(aclString.length() > 0) {
@@ -757,9 +759,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 				CanonicalUserType canonicalUser = new CanonicalUserType(ownerId, displayName);
 				accessControlPolicy.setOwner(canonicalUser);
-
-				AccessControlListType accessControlList = new AccessControlListType();
-				ArrayList<Grant> grants = new ArrayList<Grant>();
 
 				List<String> permissions = xmlParser.getValues("//AccessControlList/Grant/Permission");
 				if(permissions == null)
@@ -791,13 +790,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						grants.add(grant);
 					}
 				}
-				accessControlList.setGrants(grants);
-				accessControlPolicy.setAccessControlList(accessControlList);
 			}
 		} catch(Exception ex) {
 			LOG.warn(ex);
 			throw new BindingException("Unable to parse access control policy " + ex.getMessage());
 		}
+		accessControlList.setGrants(grants);
+		accessControlPolicy.setAccessControlList(accessControlList);
 		return accessControlPolicy;
 	}
 
