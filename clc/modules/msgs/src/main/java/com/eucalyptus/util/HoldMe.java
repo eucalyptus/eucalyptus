@@ -26,16 +26,24 @@ public class HoldMe implements Lock {
   private static final String DEFAULT_OM_FACTORY_CLASS_NAME     = "org.apache.axiom.om.impl.llom.factory.OMLinkedListImplFactory";
   private static final String DEFAULT_SOAP11_FACTORY_CLASS_NAME = "org.apache.axiom.soap.impl.llom.soap11.SOAP11Factory";
   private static final String DEFAULT_SOAP12_FACTORY_CLASS_NAME = "org.apache.axiom.soap.impl.llom.soap12.SOAP12Factory";
+  static {
+    System.setProperty("javax.xml.stream.XMLInputFactory","com.ctc.wstx.stax.WstxInputFactory");
+    System.setProperty("javax.xml.stream.XMLOutputFactory","com.ctc.wstx.stax.WstxOutputFactory");
+    System.setProperty("javax.xml.stream.XMLEventFactory","com.ctc.wstx.stax.WstxEventFactory");
+  }
+  private static XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance( );
+  private static XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newInstance( );
 
   public static Lock          canHas                            = maybeGetLock( );
-  public static boolean       reuse                             = false;
+  public static boolean       reuse                             = true;
 
   @Override
   public void lock( ) {}
 
   private static Lock maybeGetLock( ) {
     if ( reuse ) {
-      return new ReentrantLock( );
+//      return new ReentrantLock( );
+      return new HoldMe( );
     } else {
       return new HoldMe( );
     }
@@ -181,11 +189,11 @@ public class HoldMe implements Lock {
   }
 
   public static XMLInputFactory getXMLInputFactory( ) {
-    return XMLInputFactory.newInstance( );
+    return reuse?xmlInputFactory:XMLInputFactory.newInstance( );
   }
 
   public static XMLOutputFactory getXMLOutputFactory( ) {
-    return XMLOutputFactory.newInstance( );
+    return reuse?xmlOutputFactory:XMLOutputFactory.newInstance( );
   }
 
 }
