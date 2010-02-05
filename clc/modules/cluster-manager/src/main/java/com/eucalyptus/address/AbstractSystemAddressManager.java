@@ -48,11 +48,10 @@ public abstract class AbstractSystemAddressManager {
     for( ClusterAddressInfo addrInfo : ccList ) {
       try {
         Address address = Helper.lookupOrCreate( cluster, addrInfo );
-        if( address.isAllocated( ) && Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ) {
-          address.allocate( Component.eucalyptus.name( ) );
-          address.clearPending( );
-          cluster.getState( ).clearOrphan( addrInfo );
-        } else if ( address.isAssigned( ) ) {
+        if ( address.isAssigned( ) ) {
+          if( Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ) {
+            this.markAsAllocated( cluster, addrInfo, address );
+          }
           try {
             VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
             cluster.getState( ).clearOrphan( addrInfo );
@@ -67,11 +66,21 @@ public abstract class AbstractSystemAddressManager {
               cluster.getState().handleOrphan( addrInfo );
             }
           }
-        }
+        } else if( address.isAllocated( ) && Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ) {
+          this.markAsAllocated( cluster, addrInfo, address );
+        } 
       } catch ( Throwable e ) {
         LOG.debug( e, e );
       }
     }
+  }
+
+  private void markAsAllocated( Cluster cluster, ClusterAddressInfo addrInfo, Address address ) {
+    address.allocate( Component.eucalyptus.name( ) );
+    try {
+      address.clearPending( );
+    } catch ( IllegalStateException e ) {/* might not be pending still valid. */}
+    cluster.getState( ).clearOrphan( addrInfo );
   }
   
   protected static class Helper {
