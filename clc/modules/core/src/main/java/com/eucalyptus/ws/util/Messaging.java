@@ -75,9 +75,14 @@ import com.eucalyptus.util.EucalyptusCloudException;
 public class Messaging {
 
   private static Logger LOG = Logger.getLogger( Messaging.class );
-
+  private static volatile boolean init = false;
+  private static MuleClient client;
   private static MuleClient getClient( ) throws MuleException {
-    return new MuleClient( );
+    if( !init ) {
+      client = new MuleClient();
+      init = true;
+    }
+    return client;
   }
 
   public static void dispatch( String dest, Object msg ) {
