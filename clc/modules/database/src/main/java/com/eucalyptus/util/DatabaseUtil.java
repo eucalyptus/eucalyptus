@@ -23,7 +23,6 @@ import edu.emory.mathcs.backport.java.util.Collections;
 public class DatabaseUtil implements EventListener {
 	static Logger                                        LOG           = Logger.getLogger( DatabaseUtil.class );
 	public static int                                    MAX_FAIL      = 5;
-	public static int                                    MAX_XTREME_FAIL      = 7;
 	private static int                                   failCount     = 0;
 	private static Map<String, EntityManagerFactoryImpl> emf           = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
 	private static List<Exception> illegalAccesses = Collections.synchronizedList( Lists.newArrayList( ) );
@@ -79,9 +78,7 @@ public class DatabaseUtil implements EventListener {
 		} else {
 			if ( MAX_FAIL > failCount ) {
 				LOG.warn( LogUtil.subheader( "Error using or obtaining a database connection, will try till " + ( MAX_FAIL - failCount++ ) + ">" + MAX_FAIL + " more times before reloading." ) );
-			} else if( MAX_XTREME_FAIL > failCount++) {
-				LOG.warn("-> Database performance severely degraded. Restarting.");
-				System.exit(123);    	  
+        System.exit(123);       
 			}
 		}
 	}
