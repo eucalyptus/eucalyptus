@@ -147,7 +147,7 @@ public class VmInstance implements HasName {
   public String getName( ) {
     return this.instanceId;
   }
-
+  
   public boolean equals( Object o ) {
     if ( this == o ) return true;
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
@@ -210,7 +210,7 @@ public class VmInstance implements HasName {
     this.userData = userData;
   }
 
-  public RunningInstancesItemType getAsRunningInstanceItemType( ) {
+  public RunningInstancesItemType getAsRunningInstanceItemType( boolean dns ) {
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
 
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
@@ -223,19 +223,16 @@ public class VmInstance implements HasName {
     runningInstance.setRamdisk( this.imageInfo.getRamdiskId( ) );
     runningInstance.setProductCodes( this.imageInfo.getProductCodes( ) );
 
-    if( Component.dns.isLocal( ) ) {
-      try {
-        StringBuffer sb = new StringBuffer( ).append( "euca-" );
-        sb.append( this.getNetworkConfig( ).getIpAddress( ).replaceAll( "\\.", "-" ) );
-        sb.append( ".eucalyptus." );
-        String dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
-        runningInstance.setDnsName( sb.toString( ) + dnsDomain );
-        runningInstance.setPrivateDnsName( sb.toString() + "internal" ); 
-      } catch ( Exception e ) {
-        setRunningIpAddresses( runningInstance );
-      }
+    if( dns ) {
+      runningInstance.setDnsName( this.getNetworkConfig( ).getPublicDnsName( ) );
+      runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getPrivateDnsName( ) );
     } else {
-      setRunningIpAddresses( runningInstance );
+      runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getIpAddress( ) );
+      if ( !VmInstance.DEFAULT_IP.equals( this.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
+        runningInstance.setDnsName( this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+      } else {
+        runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
+      }
     } 
     if ( this.getReason( ) != null || !"".equals( this.getReason( ) ) ) runningInstance.setReason( this.getReason( ) );
 
@@ -250,14 +247,6 @@ public class VmInstance implements HasName {
     return runningInstance;
   }
 
-  private void setRunningIpAddresses( RunningInstancesItemType runningInstance ) {
-    runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getIpAddress( ) );
-    if ( !VmInstance.DEFAULT_IP.equals( this.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
-      runningInstance.setDnsName( this.getNetworkConfig( ).getIgnoredPublicIp( ) );
-    } else {
-      runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
-    }
-  }
 
 
   
@@ -336,9 +325,17 @@ public class VmInstance implements HasName {
     m.put( "hostname", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
     m.put( "instance-id", this.getInstanceId( ) );
     m.put( "instance-type", this.getVmTypeInfo( ).getName( ) );
-    m.put( "local-hostname", this.getNetworkConfig( ).getIpAddress( ) );
+    if( Component.dns.isLocal( ) ) {
+      m.put( "local-hostname", this.getNetworkConfig( ).getPrivateDnsName( ) );      
+    } else {
+      m.put( "local-hostname", this.getNetworkConfig( ).getIpAddress( ) );      
+    }
     m.put( "local-ipv4", this.getNetworkConfig( ).getIpAddress( ) );
-    m.put( "public-hostname", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    if( Component.dns.isLocal( ) ) {
+      m.put( "public-hostname", this.getNetworkConfig( ).getPublicDnsName( ) );
+    } else {
+      m.put( "public-hostname", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    }
     m.put( "public-ipv4", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
     m.put( "reservation-id", this.getReservationId( ) );
     m.put( "kernel-id", this.getImageInfo( ).getKernelId( ) );
