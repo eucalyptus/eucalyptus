@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<!--
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
   ~
   ~ This program is free software: you can redistribute it and/or modify
@@ -61,18 +62,25 @@
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
-<binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2009-04-04/" name="ec2_amazonaws_com_doc_2009_04_04">
-    <namespace uri="http://ec2.amazonaws.com/doc/2009-04-04/" default="elements"/>
-    <include path="aws-base.xml"/>
-    <include path="aws-instances.xml"/>
-    <include path="aws-images.xml"/>
-    <include path="aws-image-attr.xml"/>
-    <include path="aws-ips.xml"/>
-    <include path="aws-keypairs.xml"/>
-    <include path="aws-security.xml"/>
-    <include path="aws-zones.xml"/>
-    <include path="aws-regions.xml"/>
-    <include path="aws-ebs-volumes.xml"/>
-    <include path="aws-ebs-snapshots.xml"/>
-    <include path="aws-unimplemented.xml"/>
+<binding force-classes="true">
+    <!--2008-12-01-->
+    <mapping name="DescribeRegionsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <collection name="regionInfo" field="regionInfo" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.RegionInfoType"/>
+        </collection>
+    </mapping>
+    <!--2008-12-01-->
+    <mapping class="edu.ucsb.eucalyptus.msgs.RegionInfoType" abstract="true">
+        <value name="regionName" field="regionName"/>
+        <value name="regionEndpoint" field="regionEndpoint"/>
+    </mapping>
+    <!--2008-12-01-->
+    <mapping name="DescribeRegions" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <collection name="regionSet" field="regions" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
+            <structure name="item">
+                <value name="regionName"/>
+            </structure>
+        </collection>
+    </mapping>
 </binding>

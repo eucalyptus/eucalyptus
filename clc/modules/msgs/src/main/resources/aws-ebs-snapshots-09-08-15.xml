@@ -62,25 +62,67 @@
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
+
 <binding force-classes="true">
-    <!--2008-02-01-->
-    <mapping name="DescribeAvailabilityZonesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <mapping abstract="true" class="edu.ucsb.eucalyptus.msgs.Snapshot" ordered="false">
+        <value name="snapshotId" field="snapshotId" usage="required"/>
+        <value name="volumeId" field="volumeId" usage="required"/>
+        <value name="status" field="status" usage="required"/>
+        <value name="startTime" field="startTime" usage="required"/>
+        <value name="progress" field="progress" usage="required"/>
+        <value name="ownerId" field="ownerId" usage="required"/>
+        <value name="volumeSize" field="volumeSize" usage="required"/>
+        <value name="description" field="description" usage="optional"/>
+    </mapping>
+
+    <mapping name="CreateSnapshot" class="edu.ucsb.eucalyptus.msgs.CreateSnapshotType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
+        <value name="volumeId" field="volumeId" usage="required"/>
+        <value name="description" field="description" usage="optional"/>
+    </mapping>
+
+    <mapping name="DeleteSnapshot" class="edu.ucsb.eucalyptus.msgs.DeleteSnapshotType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
+        <value name="snapshotId" field="snapshotId" usage="required"/>
+    </mapping>
+
+    <mapping name="CreateSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="availabilityZoneInfo" field="availabilityZoneInfo" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ClusterInfoType"/>
-        </collection>
+        <structure field="snapshot" map-as="edu.ucsb.eucalyptus.msgs.Snapshot"/>
     </mapping>
-    <!--2008-02-01-->
-    <mapping class="edu.ucsb.eucalyptus.msgs.ClusterInfoType" abstract="true">
-        <value name="zoneName" field="zoneName"/>
-        <value name="zoneState" field="zoneState"/>
+
+    <mapping name="DeleteSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.DeleteSnapshotResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="return" field="_return" usage="required"/>
     </mapping>
-    <!--2008-02-01-->
-    <mapping name="DescribeAvailabilityZones" class="edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <collection name="availabilityZoneSet" field="availabilityZoneSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
+
+    <mapping name="DescribeSnapshots" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
+        <collection name="snapshotSet" field="snapshotSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
             <structure name="item">
-                <value name="zoneName"/>
+                <value name="snapshotId"/>
+            </structure>
+        </collection>
+        <collection name="ownersSet" field="ownersSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
+            <structure name="item">
+                <value name="owner"/>
+            </structure>
+        </collection>
+        <collection name="restorableBySet" field="restorableBySet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
+            <structure name="item">
+                <value name="user"/>
             </structure>
         </collection>
     </mapping>
+
+    <mapping name="DescribeSnapshotsResponse"
+             class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType"
+             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <collection name="snapshotSet" field="snapshotSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.Snapshot"/>
+        </collection>
+    </mapping>
+
+
 </binding>

@@ -152,6 +152,8 @@ public class RunInstancesType extends VmControlMessage {
   boolean monitoring = false;
   String subnetId;
   String vpcId;
+  Boolean disableTerminate;
+  String shutdownAction;
 
 
   ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
