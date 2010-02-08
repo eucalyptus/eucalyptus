@@ -562,8 +562,10 @@ public class EquallogicManager implements LogicalStorageManager {
 				} catch (EucalyptusCloudException e) {
 					LOG.error(e, e);
 				}
-				else
+				else {
 					sessionManager = new SessionManager(host, username, password);
+					sessionManager.start();
+				}
 		}
 
 		public PSConnectionManager(String host, String username, String password) {
@@ -571,21 +573,15 @@ public class EquallogicManager implements LogicalStorageManager {
 			this.username = username;
 			this.password = password;
 			sessionManager = new SessionManager(host, username, password);
+			sessionManager.start();
 		}
 
 		public void checkConnection() {
-			//for now 
-			eucalyptusUserName = System.getProperty("euca.user");
-			if(eucalyptusUserName == null) {
-				LOG.error("Unable to get property eucalyptus username");
+			try {
+				sessionManager.checkConnection();
+			} catch (EucalyptusCloudException e) {
 				enabled = false;
-			}
-			if(!enabled) {
-				checkConnection();
-				if(!enabled) {
-					LOG.error("Not enabled. Will not run command. ");
-					return;
-				}
+				return;
 			}
 			addUser(TARGET_USERNAME);
 		}
@@ -832,6 +828,7 @@ public class EquallogicManager implements LogicalStorageManager {
 			try {
 				CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(userName));
 				db.commit();
+				enabled = true;
 			} catch(EucalyptusCloudException ex) {
 				db.rollback();
 				try {
