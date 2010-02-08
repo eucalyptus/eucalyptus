@@ -217,13 +217,13 @@ do_start() {
 	cd $EUCALYPTUS/etc/eucalyptus
 
 	# options from the configuration file
-	if [ "$DISABLE_DNS" = "Y" ]; then
+	if [ "$DISABLE_DNS" != "N" ]; then
 		OPTS="$OPTS --remote-dns"
 	fi
 	if [ "$DISABLE_EBS" = "Y" ]; then
 		OPTS="$OPTS --disable-storage"
 	fi
-	if [ "$DISABLE_ISCSI" = "Y" ]; then
+	if [ "$DISABLE_ISCSI" != "N" ]; then
 		OPTS="$OPTS --disable-iscsi"
 	fi
 
