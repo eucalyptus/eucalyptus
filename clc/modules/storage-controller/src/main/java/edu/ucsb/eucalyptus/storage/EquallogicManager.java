@@ -408,12 +408,8 @@ public class EquallogicManager implements LogicalStorageManager {
 
 	@Override
 	public void startupChecks() {
-		try {
-			connectionManager.configure();
-			connectionManager.checkConnection();
-		} catch (EucalyptusCloudException e) {
-			LOG.error(e, e);
-		}
+		connectionManager.configure();
+		connectionManager.checkConnection();
 	}
 
 	private class EqlTask {
@@ -439,33 +435,54 @@ public class EquallogicManager implements LogicalStorageManager {
 		private LinkedBlockingQueue taskQueue;
 		private BufferedWriter writer;
 		private BufferedReader reader;
+		private Channel channel;
+
+		private String host;
+		private String username;
+		private String password;
 
 		public SessionManager(String host, String username, String password) {
+			taskQueue = new LinkedBlockingQueue(1);
+		}
+
+		public void checkConnection() throws EucalyptusCloudException {
 			try {
-				JSch jsch = new JSch();
-				Session session;
-				session = jsch.getSession(username, host);
-				session.setConfig("StrictHostKeyChecking", "no");
-				session.setPassword(password);
-				session.connect();
-				Channel channel = session.openChannel("shell");
-				PipedOutputStream outStream = new PipedOutputStream();
-				channel.setInputStream(new PipedInputStream(outStream));
-				PipedInputStream inStream = new PipedInputStream();
-				channel.setOutputStream(new PipedOutputStream(inStream));
-
-				channel.connect();
-
-				writer = new BufferedWriter(new OutputStreamWriter(outStream, "utf-8"));
-				reader = new BufferedReader(new InputStreamReader(inStream, "utf-8"));
-				taskQueue = new LinkedBlockingQueue(1);
+				if(channel != null) {
+					if(!channel.isConnected())
+						connect();
+				} else {
+					connect();
+				}
 			} catch(JSchException ex) {
-				LOG.error(ex, ex);
-			} catch (UnsupportedEncodingException e) {
-				LOG.error(e, e);
-			} catch (IOException e) {
-				LOG.error(e, e);
+				LOG.error(ex);
+				throw new EucalyptusCloudException(ex);
+			} catch(IOException ex) {
+				LOG.error(ex);
+				throw new EucalyptusCloudException(ex);
 			}
+		}
+
+		public void connect() throws JSchException, IOException {
+			JSch jsch = new JSch();
+			Session session;
+			session = jsch.getSession(username, host);
+			session.setConfig("StrictHostKeyChecking", "no");
+			session.setPassword(password);
+			session.connect();
+			channel = session.openChannel("shell");
+			PipedOutputStream outStream = new PipedOutputStream();
+			channel.setInputStream(new PipedInputStream(outStream));
+			PipedInputStream inStream = new PipedInputStream();
+			channel.setOutputStream(new PipedOutputStream(inStream));
+			channel.connect();
+			writer = new BufferedWriter(new OutputStreamWriter(outStream, "utf-8"));
+			reader = new BufferedReader(new InputStreamReader(inStream, "utf-8"));			
+		}
+
+		public void refresh() throws JSchException, IOException {
+			channel.disconnect();
+			channel.getSession().disconnect();
+			connect();
 		}
 
 		public void addTask(EqlTask t) throws InterruptedException {
@@ -501,6 +518,25 @@ public class EquallogicManager implements LogicalStorageManager {
 				LOG.error(e);
 			}
 		}
+
+		public void update(String host, String username, String password) throws EucalyptusCloudException {
+			this.host = host;
+			this.username = username;
+			this.password = password;
+			try {
+				if(channel != null) {
+					refresh();
+				} else {
+					connect();
+				}	
+			} catch (JSchException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} catch (IOException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			}
+		}
 	}
 
 	public class PSConnectionManager {
@@ -520,28 +556,44 @@ public class EquallogicManager implements LogicalStorageManager {
 			this.host = StorageProperties.SAN_HOST;
 			this.username = StorageProperties.SAN_USERNAME;
 			this.password = StorageProperties.SAN_PASSWORD;
+			if(sessionManager != null)
+				try {
+					sessionManager.update(host, username, password);
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e, e);
+				}
+				else
+					sessionManager = new SessionManager(host, username, password);
 		}
 
 		public PSConnectionManager(String host, String username, String password) {
 			this.host = host;
 			this.username = username;
 			this.password = password;
+			sessionManager = new SessionManager(host, username, password);
 		}
 
-		public void checkConnection() throws EucalyptusCloudException {
+		public void checkConnection() {
 			//for now 
 			eucalyptusUserName = System.getProperty("euca.user");
-			if(eucalyptusUserName == null)
-				throw new EucalyptusCloudException("Unable to get property eucalyptus username");
-			/*String show = execCommand("show");
-			if(show.length() <= 0) 
-				throw new EucalyptusCloudException("Connection failed.");*/
+			if(eucalyptusUserName == null) {
+				LOG.error("Unable to get property eucalyptus username");
+				enabled = false;
+			}
+			if(!enabled) {
+				checkConnection();
+				if(!enabled) {
+					LOG.error("Not enabled. Will not run command. ");
+					return;
+				}
+			}
+			addUser(TARGET_USERNAME);
 		}
 
 		public String createVolume(String volumeId, String snapshotId,
 				boolean locallyCreated, String sourceVolume) {
 			if(!enabled) {
-				addUser(TARGET_USERNAME);
+				checkConnection();
 				if(!enabled) {
 					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
 					return null;
@@ -652,11 +704,9 @@ public class EquallogicManager implements LogicalStorageManager {
 
 		public String createVolume(String volumeName, int size) {
 			if(!enabled) {
-				sessionManager = new SessionManager(host, username, password);
-				sessionManager.start();
-				addUser(TARGET_USERNAME);
+				checkConnection();
 				if(!enabled) {
-					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
+					LOG.error("Not enabled. Will not run command. ");
 					return null;
 				}
 			}
@@ -678,6 +728,13 @@ public class EquallogicManager implements LogicalStorageManager {
 		}
 
 		public boolean deleteVolume(String volumeName) {
+			if(!enabled) {
+				checkConnection();
+				if(!enabled) {
+					LOG.error("Not enabled. Will not run command. ");
+					return false;
+				}
+			}
 			try {
 				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeName + " offline\u001Avolume delete " + volumeName + "\u001A");
 				if(returnValue.split(VOLUME_DELETE_PATTERN.toString()).length > 1)
@@ -692,9 +749,9 @@ public class EquallogicManager implements LogicalStorageManager {
 
 		public String createSnapshot(String volumeId, String snapshotId) {
 			if(!enabled) {
-				addUser(TARGET_USERNAME);
+				checkConnection();
 				if(!enabled) {
-					LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
+					LOG.error("Not enabled. Will not run command. ");
 					return null;
 				}
 			}
@@ -715,6 +772,13 @@ public class EquallogicManager implements LogicalStorageManager {
 		}
 
 		public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated) {
+			if(!enabled) {
+				checkConnection();
+				if(!enabled) {
+					LOG.error("Not enabled. Will not run command. ");
+					return false;
+				}
+			}
 			if(locallyCreated) {
 				try {				
 					String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeId + " snapshot select " + snapshotId + " offline\u001Avolume select " + volumeId + " snapshot delete " + snapshotId + "\u001A");
@@ -741,6 +805,13 @@ public class EquallogicManager implements LogicalStorageManager {
 		}
 
 		public void deleteUser(String userName) throws EucalyptusCloudException {
+			if(!enabled) {
+				checkConnection();
+				if(!enabled) {
+					LOG.error("Not enabled. Will not run command. ");
+					throw new EucalyptusCloudException("Not enabled. Will not run command.");
+				}
+			}
 			EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
 			try {
 				CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(userName));
