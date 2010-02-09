@@ -64,6 +64,9 @@
 package com.eucalyptus.ws.util;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -86,10 +89,13 @@ import org.apache.xml.security.exceptions.XMLSecurityException;
 import org.apache.xml.security.keys.KeyInfo;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureException;
+import org.bouncycastle.openssl.PEMReader;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.Text;
 
 import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.HoldMe;
 
 public class WSSecurity {
@@ -102,16 +108,16 @@ public class WSSecurity {
   public static CertificateFactory getCertificateFactory( ) {
     if ( factory == null ) {
       try {
-        factory = CertificateFactory.getInstance( "X.509", "BC" );
+        factory = CertificateFactory.getInstance( "X.509"/*, "BC"*/ );
       } catch ( CertificateException e ) {
         LOG.error( e, e );
-      } catch ( NoSuchProviderException e ) {
+      } /*catch ( NoSuchProviderException e ) {
         LOG.error( e, e );
-      }
+      }*/
     }
     return factory;
   }
-
+  private static boolean useBc = false;
   public static X509Certificate verifySignature( final Element securityNode, final XMLSignature sig ) throws WSSecurityException, XMLSignatureException {
     final SecurityTokenReference secRef = WSSecurity.getSecurityTokenReference( sig.getKeyInfo( ) );
     final Reference tokenRef = secRef.getReference( );
@@ -122,13 +128,24 @@ public class WSSecurity {
     }
     BinarySecurity token = new BinarySecurity( bstDirect );
     String type = token.getValueType( );
-    X509Security x509 = null;
     X509Certificate cert = null;
     try {
-      x509 = new X509Security( bstDirect );
-      byte[] bstToken = x509.getToken( );
-      CertificateFactory factory = getCertificateFactory( );
-      cert = ( X509Certificate ) factory.generateCertificate( new ByteArrayInputStream( bstToken ) );
+      if( useBc ) {
+        Node node = bstDirect.getFirstChild( );
+        String certStr = ("-----BEGIN CERTIFICATE-----\n" + (node == null || !(node instanceof Text) ? null : ((Text)node).getData( ) ) +"\n-----END CERTIFICATE-----\n");
+        ByteArrayInputStream pemByteIn = new ByteArrayInputStream( certStr.getBytes( ) );
+        PEMReader in = new PEMReader( new InputStreamReader( pemByteIn ) );
+        try {
+          cert = ( X509Certificate ) in.readObject( );
+        } catch ( Throwable e ) {
+          LOG.error( e, e );
+        }
+      } else {
+        X509Security x509 = new X509Security( bstDirect );
+        byte[] bstToken = x509.getToken( );
+        CertificateFactory factory = getCertificateFactory( );      
+        cert = ( X509Certificate ) factory.generateCertificate( new ByteArrayInputStream( bstToken ) );        
+      }
     } catch ( Exception e ) {
       LOG.error( e, e );
       throw new WSSecurityException( WSSecurityException.UNSUPPORTED_SECURITY_TOKEN, "unsupportedBinaryTokenType", new Object[] { type } );

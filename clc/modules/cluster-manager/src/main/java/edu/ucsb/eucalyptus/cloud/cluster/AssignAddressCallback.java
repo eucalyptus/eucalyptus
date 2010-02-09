@@ -124,11 +124,18 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
     try {
       VmInstance vm = VmInstances.getInstance( ).lookup( super.getRequest().getInstanceId( ) );
       VmState vmState = vm.getState( );
+      String dnsDomain = "dns-disabled";
+      try {
+        dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+      } catch ( Exception e ) {
+      }
       if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
         vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
+        vm.getNetworkConfig( ).updateDns( dnsDomain );
         return false;
       } else {
         vm.getNetworkConfig( ).setIgnoredPublicIp( this.address.getName( ) );
+        vm.getNetworkConfig( ).updateDns( dnsDomain );
         return true;
       }
     } catch ( NoSuchElementException e ) {

@@ -119,6 +119,12 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
           if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) ) {
             vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
           }
+          String dnsDomain = "dns-disabled";
+          try {
+            dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+          } catch ( Exception e ) {
+          }
+          vm.getNetworkConfig( ).updateDns( dnsDomain );
         }
       } else {
         this.fail( new EucalyptusClusterException( "RunInstances returned false." + this.getRequest( ) ) );

@@ -9,7 +9,7 @@ poolProps = [
   'proxool.simultaneous-build-throttle': '16',
   'proxool.minimum-connection-count': '16',
   'proxool.maximum-connection-count': '128',
-  /* TODO: DOES NOT WORK W/ HSQLDB 'proxool.house-keeping-test-sql': 'select CURRENT_DATE',*/
+  'proxool.house-keeping-test-sql': 'SELECT * FROM COUNTERS;',
   'user': 'sa',
   'password': db_pass,
 ]
@@ -21,8 +21,8 @@ LogUtil.logHeader( "Proxool config for ${context_name}" ).log( url ).log( poolPr
 ProxoolFacade.registerConnectionPool(url, p);
 
 [
-  'hibernate.bytecode.use_reflection_optimizer': 'false',
-  'hibernate.cglib.use_reflection_optimizer': 'false',
+  'hibernate.bytecode.use_reflection_optimizer': 'true',
+  'hibernate.cglib.use_reflection_optimizer': 'true',
   'hibernate.dialect': 'org.hibernate.dialect.HSQLDialect',
   'hibernate.connection.provider_class': 'org.hibernate.connection.ProxoolConnectionProvider',
   'hibernate.proxool.pool_alias': "eucalyptus_${context_name}",

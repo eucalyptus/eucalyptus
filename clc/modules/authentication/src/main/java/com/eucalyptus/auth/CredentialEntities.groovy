@@ -180,7 +180,7 @@ public class X509Cert extends AbstractPersistent implements Serializable {
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
     if ( !super.equals( obj ) ) return false;
-    if ( getClass( ).is( obj.getClass( ) ) ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     X509Cert other = ( X509Cert ) obj;
     if ( alias == null ) {
       if ( other.alias != null ) return false;
@@ -221,7 +221,7 @@ public class ClusterCredentials extends AbstractPersistent implements Serializab
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
     if ( !super.equals( obj ) ) return false;
-    if ( getClass( ).is( obj.getClass( ) ) ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     ClusterCredentials other = ( ClusterCredentials ) obj;
     if ( clusterName == null ) {
       if ( other.clusterName != null ) return false;

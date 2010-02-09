@@ -68,6 +68,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.HasName;
 
 import java.util.*;
@@ -163,7 +164,7 @@ public class Reservation implements HasName {
     for( String vmId : this.vmInstances )
     {
       VmInstance vm = VmInstances.getInstance().lookup( vmId );
-      rsvInfo.getInstancesSet().add( vm.getAsRunningInstanceItemType() );
+      rsvInfo.getInstancesSet().add( vm.getAsRunningInstanceItemType( Component.dns.isLocal( ) ) );
     }
     rsvInfo.setOwnerId( this.getOwnerId() );
     rsvInfo.setReservationId( this.getReservationId() );
