@@ -70,18 +70,16 @@ import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.zip.Adler32;
-
 import org.bouncycastle.util.encoders.UrlBase64;
-import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
-
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.util.DatabaseUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
@@ -182,33 +180,38 @@ public class CredentialProvider extends Bootstrapper {
     return userName;
   }
   
-  @SuppressWarnings( "unchecked" )
   public static String getUserName( X509Certificate cert ) throws GeneralSecurityException {
+    return getUser( cert ).getUserName( );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static User getUser( X509Certificate cert ) throws GeneralSecurityException {
     String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( cert ) ) );
     User searchUser = new User( );
     X509Cert searchCert = new X509Cert( );
     searchCert.setPemCertificate( certPem );
     searchUser.setIsEnabled( true );
-    EntityWrapper<User> db = Credentials.getEntityWrapper( );
+    Session session = DatabaseUtil.getEntityManagerFactory( Credentials.DB_NAME ).getSessionFactory( ).openSession( );
     try {
-      Session session = db.getSession( );
       Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
       Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
-      List<User> users = ( List<User> ) session.createCriteria( User.class ).add( qbeUser ).createCriteria(
-                                                                                                            "certificates" ).add(
-                                                                                                                                  qbeCert ).list( );
-      if ( users.size( ) > 1 ) {
-        db.rollback( );
-        throw new GeneralSecurityException( "Multiple users with the same certificate." );
-      } else if ( users.size( ) < 1 ) {
-        db.rollback( );
-        new GeneralSecurityException( "No user with the specified certificate." );
+      List<User> users = ( List<User> ) session.createCriteria( User.class ).setCacheable( true ).add( qbeUser )
+                                               .createCriteria( "certificates" ).setCacheable( true ).add( qbeCert )
+                                               .list( );
+      User ret = users.size()==1?users.get(0):null;
+      int size = users.size();
+      if( ret != null ) {
+        return ret;
+      } else {
+        throw new GeneralSecurityException( (size == 0)?"No user with the specified certificate.":"Multiple users with the same certificate." );
       }
-      db.commit( );
-      return users.get( 0 ).getUserName( );
-    } catch ( HibernateException e ) {
-      db.rollback( );
-      throw new GeneralSecurityException( e );
+    } catch ( Throwable t ) {
+      throw new GeneralSecurityException( t );
+    } finally {
+      try {
+        session.close( );
+      } catch ( Throwable t ) {
+      }
     }
   }
   

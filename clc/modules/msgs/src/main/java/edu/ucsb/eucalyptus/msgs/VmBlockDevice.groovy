@@ -121,6 +121,7 @@ public class DetachVolumeResponseType extends BlockVolumeMessage {
 public class CreateSnapshotType extends BlockSnapshotMessage {
 
   String volumeId;
+  String description;
 }
 public class CreateSnapshotResponseType extends BlockSnapshotMessage {
 
@@ -138,6 +139,8 @@ public class DescribeSnapshotsType extends BlockSnapshotMessage {
 
   @HttpParameterMapping (parameter = "SnapshotId")
   ArrayList<String> snapshotSet = new ArrayList<String>();
+  ArrayList<String> ownersSet = new ArrayList<String>();
+  ArrayList<String> restorableBySet = new ArrayList<String>();
 }
 public class DescribeSnapshotsResponseType extends BlockSnapshotMessage {
 
@@ -206,4 +209,7 @@ public class Snapshot extends EucalyptusData {
   String status;
   Date startTime = new Date();
   String progress;
+  String ownerId;
+  String volumeSize = "n/a";
+  String description;
 }

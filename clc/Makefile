@@ -57,9 +57,13 @@ run: install
 
 clean:
 	$(ANT) clean
+	make -C modules/bootstrap clean
+	make -C modules/storage-controller/native clean
 
 distclean: clean
 	$(ANT) distclean
+	make -C modules/bootstrap distclean
+	make -C modules/storage-controller/native distclean
 
 install: build
 	$(ANT) install

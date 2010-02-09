@@ -136,6 +136,7 @@ public class BlockStorage {
 	static SnapshotService snapshotService;
 
 	public static void deferredInitializer() {
+	   if( !Component.storage.isEnabled( ) ) return;//temporary workaround for remote-component boot issue.
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();

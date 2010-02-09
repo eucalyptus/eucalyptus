@@ -3,6 +3,7 @@ package com.eucalyptus.util;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -69,6 +70,31 @@ public class GroovyUtil {
     } catch ( Throwable e ) {
       LOG.debug( e, e );
       throw new FailScriptFailException( "Executing the requested script failed: " + code, e );
+    }
+  }
+
+  public static void loadConfig( String confFile ) {
+    try {
+      confFile = SubDirectory.SCRIPTS + File.separator + confFile;
+      String className = Thread.currentThread( ).getStackTrace( )[2].getClassName( );
+      LOG.info( "Trying to load config for " + className + " from " + confFile );
+      String conf = "import " + className;
+      String line = null;
+      try {
+        for(BufferedReader fileReader = new BufferedReader( new FileReader( confFile ) );
+            (line = fileReader.readLine( ))!=null;
+            conf += !line.matches("\\s*\\w+\\s*=[\\s\\w*\"']*")?"":"\n"+className+"."+line);
+        LOG.debug( conf );
+        try {
+          getGroovyEngine( ).eval( conf );
+        } catch ( ScriptException e ) {
+          LOG.warn( e, e );
+        }
+      } catch ( FileNotFoundException e ) {
+        LOG.info( "-> No config file found." );
+      }
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
     }
   }
 

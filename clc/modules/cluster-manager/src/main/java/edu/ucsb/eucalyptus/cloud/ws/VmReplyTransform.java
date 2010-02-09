@@ -69,6 +69,7 @@ import edu.ucsb.eucalyptus.msgs.*;
 
 import java.util.*;
 
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class VmReplyTransform {
@@ -85,8 +86,9 @@ public class VmReplyTransform {
                                                                networkNames );
 
     for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )
-      for( String instId : allocToken.getInstanceIds() )
-        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType() );
+      for( String instId : allocToken.getInstanceIds() ) {
+        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( Component.dns.isLocal( ) ) );
+      }
 
     reply.setRsvInfo( reservation );
     return vmAllocInfo.getReply();

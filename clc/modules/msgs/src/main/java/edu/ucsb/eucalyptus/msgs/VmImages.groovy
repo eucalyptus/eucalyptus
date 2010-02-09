@@ -189,6 +189,12 @@ public class ImageDetails extends EucalyptusData {
   String ramdiskId;
   String platform;
   Boolean isPublic;
+  String imageOwnerAlias;
+  String rootDeviceType = "instance-store";
+  String rootDeviceName = "/dev/sda1";
+  String name;
+  String description;
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   ArrayList<String> productCodes = new ArrayList<String>();
 
   boolean equals(final Object o) {

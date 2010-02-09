@@ -64,6 +64,7 @@
 package edu.ucsb.eucalyptus.msgs
 
 import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
+
 public class ClusterMessage extends EucalyptusMessage{}
 /** *******************************************************************************/
 public class DescribeAvailabilityZonesType extends ClusterMessage { //** added 2008-02-01  **/
@@ -84,9 +85,11 @@ public class DescribeRegionsResponseType extends ClusterMessage { //** added 200
 /** *******************************************************************************/
 public class ClusterInfoType extends EucalyptusData {  //** added 2008-02-01  **/
   public ClusterInfoType(){}
-  public ClusterInfoType(String zoneName, String zoneState){this.zoneName = zoneName; this.zoneState = zoneState;}
+  public ClusterInfoType(String zoneName, String zoneState){this.zoneName = zoneName; this.zoneState = zoneState; this.regionName="";}
   String zoneName;
   String zoneState;
+  String regionName;
+  ArrayList<String> messageSet = new ArrayList<String>();
 }
 public class RegionInfoType extends EucalyptusData {  //** added 2008-12-01  **/
   public RegionInfoType(){}

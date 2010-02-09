@@ -96,9 +96,7 @@ public class UserWsSecHandler extends MessageStackHandler implements ChannelHand
       } finally {
         HoldMe.canHas.unlock( );
       }
-      String userName = CredentialProvider.getUserName( cert );
-      User user = CredentialProvider.getUser( userName );
-      httpRequest.setUser( user );
+      httpRequest.setUser( CredentialProvider.getUser( cert ) );
     }
   }
 

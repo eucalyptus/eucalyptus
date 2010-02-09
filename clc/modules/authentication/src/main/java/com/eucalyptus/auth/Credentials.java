@@ -76,7 +76,7 @@ public class Credentials {
   private static String FORMAT         = "pkcs12";
   private static String KEY_STORE_PASS = "eucalyptus";                         
   private static String FILENAME       = "euca.p12";
-  private static String  DB_NAME        = "eucalyptus_auth";
+  static String  DB_NAME        = "eucalyptus_auth";
 
   public static void init( ) {
     Security.addProvider( new BouncyCastleProvider( ) );

@@ -69,9 +69,11 @@
     <include path="aws-image-attr.xml"/>
     <include path="aws-ips.xml"/>
     <include path="aws-keypairs.xml"/>
-    <include path="aws-security.xml"/>
-    <include path="aws-zones.xml"/>
-    <include path="aws-ebs.xml"/>
+    <include path="aws-security.xml"/>  
+    <include path="aws-zones-09-07-15.xml"/>
+    <include path="aws-regions.xml"/>
+    <include path="aws-ebs-volumes.xml"/>
+    <include path="aws-ebs-snapshots.xml"/>
     <include path="aws-vpc.xml"/>
     <include path="aws-unimplemented.xml"/>
 </binding>

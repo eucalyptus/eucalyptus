@@ -329,9 +329,16 @@ public class NetworkConfigType extends EucalyptusData {
   String ignoredMacAddress;
   String ipAddress;
   String ignoredPublicIp;
+  String privateDnsName;
+  String publicDnsName;
   int vlan;
   
   def NetworkConfigType() {
+  }
+  
+  public void updateDns( String domain ) {
+    this.publicDnsName = "euca-${this.ignoredPublicIp.replaceAll( '\\.', '-' )}.eucalyptus.${domain}";
+    this.privateDnsName = "euca-${this.ipAddress.replaceAll( '\\.', '-' )}.eucalyptus.internal";
   }
   
   @Override
@@ -340,6 +347,8 @@ public class NetworkConfigType extends EucalyptusData {
     "macAddress='" + macAddress + '\'' +
     ", ipAddress='" + ipAddress + '\'' +
     ", publicIp='" + ignoredPublicIp + '\'' +
+    ", privateDnsName='" + privateDnsName + '\'' +
+    ", publicDnsName='" + publicDnsName + '\'' +
     ", vlan=" + vlan +
     '}';
   }
