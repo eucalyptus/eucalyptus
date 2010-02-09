@@ -3,7 +3,7 @@ import com.eucalyptus.bootstrap.Component;
 import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.util.LogUtil;
 
-db_pass = System.getProperty("euca.db.password")!=null?System.getProperty("euca.db.password"):Hashes.getHexSignature( );
+db_pass = System.getProperty("euca.db.password")!=null && System.getProperty("euca.db.password").length()>1 ? System.getProperty("euca.db.password") : Hashes.getHexSignature( );
 Class.forName('org.logicalcobwebs.proxool.ProxoolDriver');
 poolProps = [
   'proxool.simultaneous-build-throttle': '16',
