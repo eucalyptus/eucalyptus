@@ -139,6 +139,7 @@ public class HmacUtils {
   }
 
   public static String makeV2SubjectString( String httpMethod, String host, String path, final Map<String, String> parameters ) {
+    parameters.remove("");
     StringBuilder sb = new StringBuilder( );
     sb.append( httpMethod );
     sb.append( "\n" );
@@ -150,8 +151,10 @@ public class HmacUtils {
     sb = new StringBuilder( );
     NavigableSet<String> sortedKeys = new TreeSet<String>( );
     sortedKeys.addAll( parameters.keySet( ) );
-    String firstKey = sortedKeys.pollFirst( );
-    sb.append( urlEncode( firstKey ) ).append( "=" ).append( urlEncode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
+    String firstKey = firstKey = sortedKeys.pollFirst( );
+    if( firstKey != null ) { 
+      sb.append( urlEncode( firstKey ) ).append( "=" ).append( urlEncode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
+    } 
     while ( ( firstKey = sortedKeys.pollFirst( ) ) != null ) {
       sb.append( "&" ).append( urlEncode( firstKey ) ).append( "=" ).append( urlEncode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
     }

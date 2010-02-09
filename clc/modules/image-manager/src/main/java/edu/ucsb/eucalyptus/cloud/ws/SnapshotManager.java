@@ -148,6 +148,8 @@ public class SnapshotManager {
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
     snapMsg.setProgress( "0%" );
+    snapMsg.setOwnerId( snap.getUserName( ) );
+    snapMsg.setVolumeSize( vol.getSize( ).toString( ) );
     reply.setSnapshot( snapMsg );
     return reply;
   }
@@ -191,6 +193,7 @@ public class SnapshotManager {
               edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
               if ( storageSnapshot.getProgress( ) != null ) snapReply.setProgress( storageSnapshot.getProgress( ) );
               snapReply.setVolumeId( storageSnapshot.getVolumeId( ) );
+              snapReply.setOwnerId( v.getUserName( ) );
               reply.getSnapshotSet( ).add( snapReply );
             }
           } catch ( EucalyptusCloudException e ) {

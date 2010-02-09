@@ -96,6 +96,28 @@ public class SystemUtil {
 		return "";
 	}
 
+	public static int runAndGetCode(String[] command) throws ExecutionException {
+		try
+		{
+			String commandString = "";
+			for(String part : command) {
+				commandString += part + " ";
+			}
+			LOG.debug("Running command: " + commandString);
+			Runtime rt = Runtime.getRuntime();
+			Process proc = rt.exec(command);
+			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+			StreamConsumer output = new StreamConsumer(proc.getInputStream());
+			error.start();
+			output.start();
+			int returnValue = proc.waitFor();
+			return returnValue;
+		} catch (Throwable t) {
+			LOG.error(t, t);
+		}
+		return -1;
+	}
+
 	public static void shutdownWithError(String errorMessage) {
 		LOG.fatal(errorMessage);
 		System.exit(0xEC2);

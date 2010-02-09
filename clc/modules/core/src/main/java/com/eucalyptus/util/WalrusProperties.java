@@ -133,6 +133,9 @@ public class WalrusProperties {
 	public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
 	public static final String ADMIN = "admin";
 
+	public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
+	public static final String NULL_VERSION_ID = "null";
+	
 	public static String TRACKER_BINARY = "bttrack";
 	public static String TORRENT_CREATOR_BINARY = "btmakemetafile";
 	public static String TORRENT_CLIENT_BINARY = "btdownloadheadless";
@@ -140,6 +143,10 @@ public class WalrusProperties {
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
 
+	public enum VersioningStatus {
+		Enabled, Disabled, Suspended
+	}
+	
 	public enum Headers {
 		Bucket, Key, RandomKey, VolumeId
 	}
@@ -210,7 +217,7 @@ public class WalrusProperties {
 	}
 
 	public enum OperationParameter {
-		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging;
+		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionId;
 	}
 
 	public enum RequiredQueryParams {

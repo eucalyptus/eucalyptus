@@ -73,6 +73,7 @@ import org.mule.RequestContext;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
@@ -80,6 +81,7 @@ import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -118,10 +120,10 @@ public class SystemState {
   
   private static Logger       LOG                 = Logger.getLogger( SystemState.class );
   public static final int     BURY_TIME           = 60 * 60 * 1000;
-  private static final int    SHUT_DOWN_TIME      = 10 * 60 * 1000;
-  private static final String RULE_FILE           = "/rules/describe/instances.drl";
-  private static final String INSTANCE_EXPIRED    = "Instance no longer reported as existing.";
-  private static final String INSTANCE_TERMINATED = "User requested shutdown.";
+  public static final int    SHUT_DOWN_TIME      = 10 * 60 * 1000;
+  public static final String INSTANCE_EXPIRED    = "Instance no longer reported as existing.";
+  public static final String INSTANCE_TERMINATED = "User requested shutdown.";
+  static { GroovyUtil.loadConfig("vmstate.groovy"); }
   
   public static void handle( VmDescribeResponseType request ) {
     VmInstances.flushBuried( );
@@ -184,7 +186,7 @@ public class SystemState {
   }
   
   private static void cleanUp( final VmInstance vm ) {
-    String networkFqName = vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 );
+    String networkFqName = !vm.getNetworks().isEmpty()?vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ):null;
     Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
     int networkIndex = vm.getNetworkIndex( );
     Address address = null;
@@ -218,14 +220,16 @@ public class SystemState {
         }
         vm.setNetworkIndex( -1 );
         try {
+          if( networkFqName != null ) {
           Network net = Networks.getInstance( ).lookup( networkFqName );
-          if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
-            net.returnNetworkIndex( networkIndex );
-            LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
-          }
-          if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-            StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getVlan( ) ) );
-            stopNet.fireEventAsyncToAllClusters( stopNet.getRequest( ) );
+            if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
+              net.returnNetworkIndex( networkIndex );
+              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
+            }
+            if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
+              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getVlan( ) ) );
+              stopNet.fireEventAsyncToAllClusters( stopNet.getRequest( ) );
+            }
           }
         } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
           LOG.debug( e1, e1 );
@@ -266,6 +270,12 @@ public class SystemState {
              && runVm.getNetParams( ).getIgnoredPublicIp( ) != null ) {
           vm.getNetworkConfig( ).setIgnoredPublicIp( runVm.getNetParams( ).getIgnoredPublicIp( ) );
         }
+        String dnsDomain = "dns-disabled";
+        try {
+          dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+        } catch ( Exception e ) {
+        }
+        vm.getNetworkConfig( ).updateDns( dnsDomain );
         VmState oldState = vm.getState( );
         vm.setState( VmState.Mapper.get( runVm.getStateName( ) ) );
         if ( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
@@ -356,6 +366,12 @@ public class SystemState {
                                       Integer.toString( runVm.getNetworkIndex( ) ) );
       vm.setLaunchTime( runVm.getLaunchTime( ) );
       vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
+      String dnsDomain = "dns-disabled";
+      try {
+        dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+      } catch ( Exception e ) {
+      }
+      vm.getNetworkConfig( ).updateDns( dnsDomain );
       vm.setKeyInfo( keyInfo );
       vm.setImageInfo( imgInfo );
       VmInstances.getInstance( ).register( vm );
@@ -435,16 +451,18 @@ public class SystemState {
     }
     return reply;
   }
-  
+  private static String DESCRIBE_NO_DNS = "no-dns";
+  private static String ALT_PREFIX = "i-";
   public static ArrayList<ReservationInfoType> handle( String userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
+    boolean dns = Component.dns.isLocal( ) && !(instancesSet.remove( DESCRIBE_NO_DNS ) || instancesSet.remove( ALT_PREFIX + DESCRIBE_NO_DNS ) );
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( ( !isAdmin && !userId.equals( v.getOwnerId( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {
         ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwnerId( ), v.getNetworkNames( ) );
         rsvMap.put( reservation.getReservationId( ), reservation );
       }
-      rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
+      rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( dns ) );
     }
     if ( isAdmin ) {
       for ( VmInstance v : VmInstances.getInstance( ).listDisabledValues( ) ) {
@@ -454,7 +472,7 @@ public class SystemState {
           ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwnerId( ), v.getNetworkNames( ) );
           rsvMap.put( reservation.getReservationId( ), reservation );
         }
-        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
+        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( dns ) );
       }
     }
     return new ArrayList<ReservationInfoType>( rsvMap.values( ) );

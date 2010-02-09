@@ -954,7 +954,7 @@ public class WalrusImageManager {
 					DefaultHttpResponse httpResponse = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.OK ); 
 					storageManager.sendObject(request.getChannel(), httpResponse, bucketName, imageKey, unencryptedSize, null, 
 							DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-							objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed(), null);                            
+							objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed(), null, null);                            
 					semaphore.release();
 					db.commit();
 					db2.commit();

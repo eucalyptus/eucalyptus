@@ -86,7 +86,7 @@ public class EntityWrapper<TYPE> {
 
   static Logger    LOG     = Logger.getLogger( EntityWrapper.class );
   private TxHandle tx;
-
+  private static final boolean TRACE = "TRACE".equals( System.getProperty( "euca.log.exhaustive.db" ) );
   public EntityWrapper( ) {
     this( "eucalyptus_general" );
   }
@@ -94,27 +94,27 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   public EntityWrapper( String persistenceContext ) {
     try {
-      LOG.trace( EventRecord.here( Component.db, DbEvent.CREATE.begin( ) ) );
+      if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.CREATE.begin( ) ) );
       this.tx = new TxHandle( persistenceContext );
     } catch ( Throwable e ) {
-      LOG.trace( EventRecord.here( Component.db, DbEvent.CREATE.fail( ),e.getMessage( ) ) );
+      if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.CREATE.fail( ),e.getMessage( ) ) );
       this.exceptionCaught( e );
       throw (RuntimeException) e ;
     }
-    LOG.trace( EventRecord.here( Component.db, DbEvent.CREATE.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
+    if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.CREATE.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
   }
 
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
-    LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.begin( ), tx.getTxUuid( ) ) );
+    if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.begin( ), tx.getTxUuid( ) ) );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setCacheable( true ).add( qbe ).list( );
-    LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
+    if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
 
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
-    LOG.trace( EventRecord.here( Component.db, DbEvent.UNIQUE.begin( ), tx.getTxUuid( ) ) );
+    if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.UNIQUE.begin( ), tx.getTxUuid( ) ) );
     List<TYPE> res = this.query( example );
     if ( res.size( ) != 1 ) {
       String msg = null;
@@ -123,10 +123,10 @@ public class EntityWrapper<TYPE> {
       } catch ( Exception e ) {
         msg = example.toString( );
       }
-      LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
+      if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
       throw new EucalyptusCloudException( "Error locating information for " + msg );
     }
-    LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
+    if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
     return res.get( 0 );
   }
 
@@ -157,26 +157,26 @@ public class EntityWrapper<TYPE> {
   }
 
   public void rollback( ) {
-    LOG.trace( EventRecord.here( Component.db, DbEvent.ROLLBACK.begin( ), tx.getTxUuid( ) ) );
+    if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.ROLLBACK.begin( ), tx.getTxUuid( ) ) );
     try {
       this.tx.rollback( );
     } catch ( Throwable e ) {
-      LOG.trace( EventRecord.here( Component.db, DbEvent.ROLLBACK.fail( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
+      if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.ROLLBACK.fail( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
       this.exceptionCaught( e );
     }
-    LOG.trace( EventRecord.here( Component.db, DbEvent.ROLLBACK.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
+    if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.ROLLBACK.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ) );
   }
 
   public void commit( ) {
-    LOG.trace( EventRecord.here( Component.db, DbEvent.COMMIT.begin( ), tx.getTxUuid( ) ) );
+    if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.COMMIT.begin( ), tx.getTxUuid( ) ) );
     try {
       this.tx.commit( );
     } catch ( Throwable e ) {
-      LOG.trace( EventRecord.here( Component.db, DbEvent.COMMIT.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
+      if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.COMMIT.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
       this.exceptionCaught( e );
       throw (RuntimeException) e ;
     }
-    LOG.trace( EventRecord.here( Component.db, DbEvent.COMMIT.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
+    if( TRACE ) LOG.trace( EventRecord.here( Component.db, DbEvent.COMMIT.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ) );
   }
 
   public Session getSession( ) {

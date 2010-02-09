@@ -92,7 +92,7 @@ public class ClusterState {
   private Integer                                 addressCapacity;
   private Boolean                                 publicAddressing      = false;
   private Boolean                                 addressingInitialized = false;
-  private ConcurrentNavigableMap<String, Integer> orphans               = new ConcurrentSkipListMap<String, Integer>( );
+  private ConcurrentNavigableMap<ClusterAddressInfo, Integer> orphans               = new ConcurrentSkipListMap<ClusterAddressInfo, Integer>( );
   
   public void clearOrphan( ClusterAddressInfo address ) {
     Integer delay = orphans.remove( address.getAddress( ) );
@@ -103,11 +103,13 @@ public class ClusterState {
   }
   public void handleOrphan( ClusterAddressInfo address ) {
     Integer orphanCount = 1;
-    orphanCount = orphans.putIfAbsent( address.getAddress( ), orphanCount );
+    orphanCount = orphans.putIfAbsent( address, orphanCount );
+    LOG.warn( "Found orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
     orphanCount = ( orphanCount == null ) ? 1 : orphanCount;
-    orphans.put( address.getAddress( ), orphanCount + 1 );
-    LOG.warn( "Found orphaned public ip address: " + address + " count=" + orphanCount );
+    orphans.put( address, orphanCount + 1 );
+    LOG.warn( "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
     if ( orphanCount > 10 ) {
+      LOG.warn( "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
       new UnassignAddressCallback( address ).dispatch( this.clusterName );
       orphans.remove( address.getAddress( ) );
     }

@@ -18,6 +18,8 @@ $(LIBDIR)/$(LVM2_SO):
 clean:
 	rm -f $(LVM2_SO) *.o *~* *#*  
 
+distclean: clean
+
 install:
 	mkdir -p $(DESTDIR)$(EUCALYPTUS)/usr/lib/eucalyptus/
 	cp $(LIBDIR)/$(LVM2_SO) $(DESTDIR)$(EUCALYPTUS)/usr/lib/eucalyptus/

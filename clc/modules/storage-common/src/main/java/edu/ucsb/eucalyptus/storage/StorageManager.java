@@ -115,13 +115,13 @@ public interface StorageManager {
     public long getObjectSize(String bucket, String object);
 
 	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, 
-			long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, BucketLogData logData);
+			long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, BucketLogData logData);
 
 	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, 
-			long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, BucketLogData logData);
+			long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, BucketLogData logData);
 
 	public void sendHeaders(Channel channel, DefaultHttpResponse httpResponse, Long size, String etag,
-			String lastModified, String contentType, String contentDisposition, BucketLogData logData);
+			String lastModified, String contentType, String contentDisposition, String versionId, BucketLogData logData);
 	
     public void setRootDirectory(String rootDirectory);
 }

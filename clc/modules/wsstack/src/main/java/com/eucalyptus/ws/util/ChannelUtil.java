@@ -27,13 +27,43 @@ import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 
+import com.eucalyptus.util.GroovyUtil;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.NioBootstrap;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.handlers.http.NioSslHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
 
+
 public class ChannelUtil {
+  private static Logger LOG = Logger.getLogger( ChannelUtil.class );
+  private static final int    CHANNEL_CONNECT_TIMEOUT           = 500;
+  public static final boolean SERVER_CHANNEL_REUSE_ADDRESS      = true;
+  public static final boolean SERVER_CHANNEL_NODELAY            = true;
+  public static final boolean CHANNEL_REUSE_ADDRESS             = true;
+  public static final boolean CHANNEL_KEEP_ALIVE                = true;
+  public static final boolean CHANNEL_NODELAY                   = true;
+  public static int           SERVER_POOL_MAX_THREADS           = 40;
+  public static long          SERVER_POOL_MAX_MEM_PER_CONN      = 1048576;
+  public static long          SERVER_POOL_TOTAL_MEM             = 100 * 1024 * 1024;
+  public static long          SERVER_POOL_TIMEOUT_MILLIS        = 500;
+  public static int           SERVER_BOSS_POOL_MAX_THREADS      = 40;
+  public static long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 1048576;
+  public static long          SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024;
+  public static long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500;
+  public static int           PORT                              = 8773;
+  public static long          CLIENT_IDLE_TIMEOUT_SECS          = 4 * 60;
+  public static long          CLUSTER_IDLE_TIMEOUT_SECS         = 4 * 60;
+  public static long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000;
+  public static long          PIPELINE_READ_TIMEOUT_SECONDS     = 20;
+  public static long          PIPELINE_WRITE_TIMEOUT_SECONDS    = 20;
+  public static int           CLIENT_POOL_MAX_THREADS           = 40;
+  public static long          CLIENT_POOL_MAX_MEM_PER_CONN      = 1048576;
+  public static long          CLIENT_POOL_TOTAL_MEM             = 20 * 1024 * 1024;
+  public static long          CLIENT_POOL_TIMEOUT_MILLIS        = 500;
+  static { GroovyUtil.loadConfig("channels.groovy"); }
+
   static class NioServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline( ) throws Exception {
       final ChannelPipeline pipeline = Channels.pipeline( );
@@ -56,21 +86,7 @@ public class ChannelUtil {
     }
   }
   
-  public static int                     PORT                           = 8773;
   private static Lock                   canHas                         = new ReentrantLock( );
-  public static long                    CLIENT_IDLE_TIMEOUT_SECS       = 4 * 60;
-  public static long                    CLUSTER_IDLE_TIMEOUT_SECS      = 4 * 60;
-  public static long                    CLUSTER_CONNECT_TIMEOUT_MILLIS = 2000;
-  public static long                    PIPELINE_READ_TIMEOUT_SECONDS  = 20;
-  public static long                    PIPELINE_WRITE_TIMEOUT_SECONDS = 20;
-  public static int                     SERVER_POOL_MAX_THREADS        = 40;
-  public static long                    SERVER_POOL_MAX_MEM_PER_CONN   = 1048576;
-  public static long                    SERVER_POOL_TOTAL_MEM          = 100*1024*1024;
-  public static long                    SERVER_POOL_TIMEOUT_MILLIS     = 500;
-  public static int                     CLIENT_POOL_MAX_THREADS        = 40;
-  public static long                    CLIENT_POOL_MAX_MEM_PER_CONN   = 1048576;
-  public static long                    CLIENT_POOL_TOTAL_MEM          = 20*1024*1024;
-  public static long                    CLIENT_POOL_TIMEOUT_MILLIS     = 500;
   private static ThreadFactory          systemThreadFactory            = ChannelUtil.getSystemThreadFactory( );
   private static ChannelPipelineFactory serverPipelineFactory          = ChannelUtil.getServerPipeline( );
   /** order from here really matters. no touchy. **/
@@ -80,7 +96,6 @@ public class ChannelUtil {
   private static ExecutorService        clientWorkerThreadPool               = ChannelUtil.getClientWorkerThreadPool( );
   private static ExecutorService        clientBossThreadPool               = ChannelUtil.getClientBossThreadPool( );
   private static ChannelFactory         clientSocketFactory            = ChannelUtil.getClientChannelFactory( );
-  // ChannelGroup channelGroup = new DefaultChannelGroup("Eucalyptus.");
   private static HashedWheelTimer       timer                          = new HashedWheelTimer( );
   
   public static ChannelPipeline addPipelineMonitors( final ChannelPipeline pipeline ) {
@@ -88,11 +103,10 @@ public class ChannelUtil {
   }
 
   public static ChannelPipeline addPipelineMonitors( ChannelPipeline pipeline, int i ) {
-    // TODO: decide on some parameters here.
-    //pipeline.addLast("state-monitor", new ChannelStateMonitor( ) );
-    //pipeline.addLast("idlehandler", new IdleStateHandler( ChannelUtil.timer, i, i, i ) );
-    //pipeline.addLast("readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
-    //pipeline.addLast("writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
+    pipeline.addLast("state-monitor", new ChannelStateMonitor( ) );
+    pipeline.addLast("idlehandler", new IdleStateHandler( ChannelUtil.timer, i, i, i ) );
+    pipeline.addLast("readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
+    pipeline.addLast("writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
     return pipeline;    
   }
 
@@ -101,7 +115,11 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( clientWorkerThreadPool == null ) {
-        // TODO: decide on some parameters here.
+        LOG.info( LogUtil.subheader( "Creating client worker thread pool." ) );
+        LOG.info( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
+        LOG.info( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
+        LOG.info( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN/(1024f*1024f) ) );
+        LOG.info( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM/(1024f*1024f) ) ); 
         clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( CLIENT_POOL_MAX_THREADS, CLIENT_POOL_MAX_MEM_PER_CONN, CLIENT_POOL_TOTAL_MEM, CLIENT_POOL_TIMEOUT_MILLIS,
                                                                      TimeUnit.MILLISECONDS );
       }
@@ -114,7 +132,11 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( clientBossThreadPool == null ) {
-        // TODO: decide on some parameters here.
+        LOG.info( LogUtil.subheader( "Creating client boss thread pool.") );
+        LOG.info( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
+        LOG.info( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
+        LOG.info( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN/(1024f*1024f) ) );
+        LOG.info( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM/(1024f*1024f) ) ); 
         clientBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( CLIENT_POOL_MAX_THREADS, CLIENT_POOL_MAX_MEM_PER_CONN, CLIENT_POOL_TOTAL_MEM, CLIENT_POOL_TIMEOUT_MILLIS,
                                                                      TimeUnit.MILLISECONDS );
       }
@@ -128,16 +150,38 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverBossThreadPool == null ) {
-        // TODO: i'm the booowwssss.
-        serverBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( SERVER_POOL_MAX_THREADS, SERVER_POOL_MAX_MEM_PER_CONN, SERVER_POOL_TOTAL_MEM,
-                                                                         SERVER_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
+        LOG.info( LogUtil.subheader( "Creating server boss thread pool." ) );
+        LOG.info( String.format( "-> Pool threads:              %8d", SERVER_BOSS_POOL_MAX_THREADS ) );
+        LOG.info( String.format( "-> Pool timeout:              %8d ms", SERVER_BOSS_POOL_TIMEOUT_MILLIS ) );
+        LOG.info( String.format( "-> Max memory per connection: %8.2f MB", SERVER_BOSS_POOL_MAX_MEM_PER_CONN/(1024f*1024f) ) );
+        LOG.info( String.format( "-> Max total memory:          %8.2f MB", SERVER_BOSS_POOL_TOTAL_MEM/(1024f*1024f) ) ); 
+        serverBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( SERVER_BOSS_POOL_MAX_THREADS, SERVER_BOSS_POOL_MAX_MEM_PER_CONN, SERVER_BOSS_POOL_TOTAL_MEM,
+                                                                         SERVER_BOSS_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
     } finally {
       canHas.unlock( );
     }
     return serverBossThreadPool;
   }
-    
+  
+  public static ExecutorService getServerWorkerThreadPool( ) {
+    canHas.lock( );
+    try {
+      if ( serverWorkerThreadPool == null ) {
+        LOG.info( LogUtil.subheader( "Creating server worker thread pool." ) );
+        LOG.info( String.format( "-> Pool threads:              %8d", SERVER_POOL_MAX_THREADS ) );
+        LOG.info( String.format( "-> Pool timeout:              %8d ms", SERVER_POOL_TIMEOUT_MILLIS ) );
+        LOG.info( String.format( "-> Max memory per connection: %8.2f MB", SERVER_POOL_MAX_MEM_PER_CONN/(1024f*1024f) ) );
+        LOG.info( String.format( "-> Max total memory:          %8.2f MB", SERVER_POOL_TOTAL_MEM/(1024f*1024f) ) ); 
+        serverWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( SERVER_POOL_MAX_THREADS, SERVER_POOL_MAX_MEM_PER_CONN, SERVER_POOL_TOTAL_MEM,
+                                                                           SERVER_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
+      }
+    } finally {
+      canHas.unlock( );
+    }
+    return serverWorkerThreadPool;
+  }
+
   public static NioBootstrap getClientBootstrap( ChannelPipelineFactory factory ) {
     final NioBootstrap bootstrap = new NioBootstrap( ChannelUtil.getClientChannelFactory( ) );//TODO: pass port host, etc here.
     bootstrap.setPipelineFactory( factory );
@@ -151,27 +195,19 @@ public class ChannelUtil {
   public static ServerBootstrap getServerBootstrap( ) {
     final ServerBootstrap bootstrap = new ServerBootstrap( ChannelUtil.getServerSocketChannelFactory( ) );
     bootstrap.setPipelineFactory( ChannelUtil.getServerPipeline( ) );
-    bootstrap.setOption( "child.tcpNoDelay", true );
-    bootstrap.setOption( "child.keepAlive", true );
-    bootstrap.setOption( "child.reuseAddress", true );
-    bootstrap.setOption( "child.connectTimeoutMillis", 500 );
-    bootstrap.setOption( "tcpNoDelay", true );
-    bootstrap.setOption( "reuseAddress", true );
-//    bootstrap.setOption( "readWriteFair", true ); //deprecated.
+    LOG.info( String.format("-> Server option: %25.25s = %s", "child.tcpNoDelay", CHANNEL_NODELAY ) );
+    LOG.info( String.format("-> Server option: %25.25s = %s", "child.keepAlive", CHANNEL_KEEP_ALIVE ) );
+    LOG.info( String.format("-> Server option: %25.25s = %s", "child.reuseAddress", CHANNEL_REUSE_ADDRESS ) );
+    LOG.info( String.format("-> Server option: %25.25s = %s", "child.connectTimeoutMillis", CHANNEL_CONNECT_TIMEOUT ) );
+    LOG.info( String.format("-> Server option: %25.25s = %s", "tcpNoDelay", SERVER_CHANNEL_NODELAY ) );
+    LOG.info( String.format("-> Server option: %25.25s = %s", "reuseAddress", SERVER_CHANNEL_REUSE_ADDRESS ) );
+    bootstrap.setOption( "child.tcpNoDelay", CHANNEL_NODELAY );
+    bootstrap.setOption( "child.keepAlive", CHANNEL_KEEP_ALIVE );
+    bootstrap.setOption( "child.reuseAddress", CHANNEL_REUSE_ADDRESS );
+    bootstrap.setOption( "child.connectTimeoutMillis", CHANNEL_CONNECT_TIMEOUT );
+    bootstrap.setOption( "tcpNoDelay", SERVER_CHANNEL_NODELAY );
+    bootstrap.setOption( "reuseAddress", SERVER_CHANNEL_REUSE_ADDRESS );
     return bootstrap;
-    // BlockingQueue<Integer> answer = new LinkedBlockingQueue<Integer>();
-    // ThroughputMonitor monitor = new ThroughputMonitor();
-    // Channel channel = bootstrap.bind(new InetSocketAddress(port));
-    // channelGroup.add(channel);
-    // monitor.start();
-    //
-    // answer.take();
-    //
-    // // *** Start the Netty shutdown ***
-    // monitor.interrupt();
-    // channelGroup.close().awaitUninterruptibly();
-    // pipelineExecutor.shutdownNow();
-    // factory.releaseExternalResources();
   }
   
   public static Channel getServerChannel( ) {
@@ -194,8 +230,7 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( clientSocketFactory == null ) {
-        clientSocketFactory = new NioClientSocketChannelFactory( ChannelUtil.getClientBossThreadPool( ), ChannelUtil.getClientWorkerThreadPool( ),
-                                                                 Runtime.getRuntime( ).availableProcessors( ) * 2 );
+        clientSocketFactory = new NioClientSocketChannelFactory( ChannelUtil.getClientBossThreadPool( ), ChannelUtil.getClientWorkerThreadPool( ), CLIENT_POOL_MAX_THREADS );
       }
     } finally {
       canHas.unlock( );
@@ -207,28 +242,14 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverSocketFactory == null ) {
-        serverSocketFactory = new NioServerSocketChannelFactory( ChannelUtil.getServerBossThreadPool( ), ChannelUtil.getServerBossThreadPool( ), Runtime.getRuntime( ).availableProcessors( ) * 2 );
+        serverSocketFactory = new NioServerSocketChannelFactory( ChannelUtil.getServerBossThreadPool( ), ChannelUtil.getServerWorkerThreadPool( ),  SERVER_POOL_MAX_THREADS );
       }
     } finally {
       canHas.unlock( );
     }
     return serverSocketFactory;
   }
-  
-  public static ExecutorService getServerWorkerThreadPool( ) {
-    canHas.lock( );
-    try {
-      if ( serverWorkerThreadPool == null ) {
-        // TODO: decide on some parameters here.
-        serverWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( SERVER_POOL_MAX_THREADS, SERVER_POOL_MAX_MEM_PER_CONN, SERVER_POOL_TOTAL_MEM,
-                                                                           SERVER_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
-      }
-    } finally {
-      canHas.unlock( );
-    }
-    return serverWorkerThreadPool;
-  }
-  
+    
   public static ThreadFactory getSystemThreadFactory( ) {
     canHas.lock( );
     try {
@@ -241,13 +262,6 @@ public class ChannelUtil {
     return systemThreadFactory;
   }
   
-  /**
-   * Broadcast a message to multiple Channels If you need to broadcast a message to more than one Channel, you can add the Channels associated with the
-   * recipients and call write(Object): ChannelGroup recipients = new DefaultChannelGroup(); recipients.add(channelA); recipients.add(channelB); ..
-   * recipients.write(ChannelBuffers.copiedBuffer( "Service will shut down for maintenance in 5 minutes.", "UTF-8"));
-   */
-
-  private static Logger LOG = Logger.getLogger( ChannelUtil.class );
   public static ChannelFutureListener DISPATCH( Object o ) {
     return new DeferedWriter( o, ChannelFutureListener.CLOSE );
   }

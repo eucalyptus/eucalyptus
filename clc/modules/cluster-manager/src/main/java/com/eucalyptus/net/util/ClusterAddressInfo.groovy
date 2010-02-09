@@ -32,6 +32,9 @@ public class ClusterAddressInfo {
     if ( this.address == null ) {
       if ( other.address != null ) return false;
     } else if ( !this.address.equals( other.address ) ) return false;
+    if ( this.instanceIp == null ) {
+      if ( other.instanceIp != null ) return false;
+    } else if ( !this.instanceIp.equals( other.instanceIp ) ) return false;
     return true;
   }  
   

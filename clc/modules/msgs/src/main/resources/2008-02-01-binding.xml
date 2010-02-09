@@ -72,5 +72,6 @@
     <include path="aws-keypairs.xml"/>
     <include path="aws-security.xml"/>
     <include path="aws-zones.xml"/>
+    <include path="aws-regions.xml"/>
     <include path="aws-ips.xml"/>
 </binding>

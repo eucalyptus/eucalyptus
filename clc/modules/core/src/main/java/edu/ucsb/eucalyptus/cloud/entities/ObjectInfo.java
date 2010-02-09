@@ -149,6 +149,15 @@ public class ObjectInfo implements Comparable {
     @Column(name="content_disposition")
     private String contentDisposition;
 
+    @Column(name="is_deleted")
+    private Boolean deleted;
+    
+    @Column(name="version_id")
+    private String versionId;
+
+    @Column(name="is_last")
+    private Boolean last;
+ 
     private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
     public ObjectInfo() {
@@ -266,10 +275,14 @@ public class ObjectInfo implements Comparable {
 
 
     public boolean canWrite(String userId) {
+        if(deleted) {
+        	return (ownerId == userId);
+        }
+       
         if (globalWrite) {
             return true;
         }
-
+        
         for (GrantInfo grantInfo: grants) {
             if (grantInfo.getUserId().equals(userId)) {
                 if (grantInfo.canWrite()) {
@@ -286,6 +299,10 @@ public class ObjectInfo implements Comparable {
     }
 
     public boolean canRead(String userId) {
+        if(deleted) {
+        	return (ownerId == userId);
+        }
+
         if (globalRead) {
             return true;
         }
@@ -478,9 +495,34 @@ public class ObjectInfo implements Comparable {
         this.contentDisposition = contentDisposition;
     }
     
-    public int compareTo(Object o) {
+    public Boolean getDeleted() {
+		return deleted;
+	}
+
+	public void setDeleted(Boolean deleted) {
+		this.deleted = deleted;
+	}
+
+	public String getVersionId() {
+		return versionId;
+	}
+
+	public void setVersionId(String versionId) {
+		this.versionId = versionId;
+	}
+
+	public int compareTo(Object o) {
         return this.objectKey.compareTo(((ObjectInfo)o).getObjectKey());
     }
+
+	
+	public Boolean getLast() {
+		return last;
+	}
+
+	public void setLast(Boolean last) {
+		this.last = last;
+	}
 
 	@Override
 	public int hashCode() {
@@ -490,6 +532,8 @@ public class ObjectInfo implements Comparable {
 				+ ((bucketName == null) ? 0 : bucketName.hashCode());
 		result = prime * result
 				+ ((objectKey == null) ? 0 : objectKey.hashCode());
+		result = prime * result
+				+ ((versionId == null) ? 0 : versionId.hashCode());
 		return result;
 	}
 
@@ -512,6 +556,11 @@ public class ObjectInfo implements Comparable {
 				return false;
 		} else if (!objectKey.equals(other.objectKey))
 			return false;
+		if (versionId == null) {
+			if (other.versionId != null)
+				return false;
+		} else if (!versionId.equals(other.versionId))
+			return false;
 		return true;
-	}    
+	}
 }

@@ -90,6 +90,8 @@ import edu.ucsb.eucalyptus.msgs.DeleteBucketResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteBucketType;
 import edu.ucsb.eucalyptus.msgs.DeleteObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteObjectType;
+import edu.ucsb.eucalyptus.msgs.DeleteVersionResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteVersionType;
 import edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotType;
 import edu.ucsb.eucalyptus.msgs.FlushCachedImageResponseType;
@@ -100,6 +102,8 @@ import edu.ucsb.eucalyptus.msgs.GetBucketLocationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketLocationType;
 import edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketLoggingStatusType;
+import edu.ucsb.eucalyptus.msgs.GetBucketVersioningStatusResponseType;
+import edu.ucsb.eucalyptus.msgs.GetBucketVersioningStatusType;
 import edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType;
 import edu.ucsb.eucalyptus.msgs.GetDecryptedImageType;
 import edu.ucsb.eucalyptus.msgs.GetObjectAccessControlPolicyResponseType;
@@ -118,6 +122,8 @@ import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
 import edu.ucsb.eucalyptus.msgs.ListBucketResponseType;
 import edu.ucsb.eucalyptus.msgs.ListBucketType;
+import edu.ucsb.eucalyptus.msgs.ListVersionsResponseType;
+import edu.ucsb.eucalyptus.msgs.ListVersionsType;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PostObjectType;
 import edu.ucsb.eucalyptus.msgs.PutObjectInlineResponseType;
@@ -128,6 +134,8 @@ import edu.ucsb.eucalyptus.msgs.SetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.SetBucketAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusResponseType;
 import edu.ucsb.eucalyptus.msgs.SetBucketLoggingStatusType;
+import edu.ucsb.eucalyptus.msgs.SetBucketVersioningStatusResponseType;
+import edu.ucsb.eucalyptus.msgs.SetBucketVersioningStatusType;
 import edu.ucsb.eucalyptus.msgs.SetObjectAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.SetObjectAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.SetRESTBucketAccessControlPolicyResponseType;
@@ -368,6 +376,22 @@ public class WalrusControl {
 
 	public SetBucketLoggingStatusResponseType SetBucketLoggingStatus(SetBucketLoggingStatusType request) throws EucalyptusCloudException {
 		return walrusManager.setBucketLoggingStatus(request);
+	}
+
+	public GetBucketVersioningStatusResponseType GetBucketVersioningStatus(GetBucketVersioningStatusType request) throws EucalyptusCloudException {
+		return walrusManager.getBucketVersioningStatus(request);
+	}
+
+	public SetBucketVersioningStatusResponseType SetBucketVersioningStatus(SetBucketVersioningStatusType request) throws EucalyptusCloudException {
+		return walrusManager.setBucketVersioningStatus(request);
+	}
+	
+	public ListVersionsResponseType ListVersions(ListVersionsType request) throws EucalyptusCloudException {
+		return walrusManager.listVersions(request);
+	}
+	
+	public DeleteVersionResponseType DeleteVersion(DeleteVersionType request) throws EucalyptusCloudException {
+		return walrusManager.deleteVersion(request);
 	}
 
 	public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {

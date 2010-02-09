@@ -411,7 +411,7 @@ public class ImageUtil {
       List<ImageInfo> results = db.query( new ImageInfo( ) );
       for ( ImageInfo img : results ) {
         ImageDetails imgDetails = img.getAsImageDetails( );
-        if ( img.isAllowed( user ) && ( imgList.isEmpty( ) || imgList.contains( imgDetails.getImageId( ) ) ) ) {
+        if ( img.isAllowed( user ) && ( imgList.isEmpty( ) || imgList.contains( img ) ) ) {
           repList.add( imgDetails );
         }
       }

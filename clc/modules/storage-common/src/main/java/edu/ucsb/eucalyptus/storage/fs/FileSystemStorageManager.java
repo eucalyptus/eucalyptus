@@ -68,6 +68,7 @@ package edu.ucsb.eucalyptus.storage.fs;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
+import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.util.ChannelUtil;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
@@ -266,7 +267,7 @@ public class FileSystemStorageManager implements StorageManager {
 		return -1;
 	}
 
-	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, final BucketLogData logData) {
+	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, final BucketLogData logData) {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
@@ -287,6 +288,9 @@ public class FileSystemStorageManager implements StorageManager {
 				logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
 				logData.setBytesSent(size);
 			}
+			if(versionId != null) {
+				httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
+			}
 			channel.write(httpResponse);
 			if(logData != null) {
 				channel.write(file).addListener(new ChannelFutureListener( ) {
@@ -303,7 +307,7 @@ public class FileSystemStorageManager implements StorageManager {
 		}	
 	}
 
-	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, final BucketLogData logData) {
+	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, final BucketLogData logData) {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
@@ -325,6 +329,9 @@ public class FileSystemStorageManager implements StorageManager {
 				logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
 				logData.setBytesSent(size);
 			}
+			if(versionId != null) {
+				httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
+			}
 			channel.write(httpResponse);
 			if(logData != null) {
 				channel.write(file).addListener(new ChannelFutureListener( ) {
@@ -342,7 +349,7 @@ public class FileSystemStorageManager implements StorageManager {
 	}
 
 	public void sendHeaders(Channel channel, DefaultHttpResponse httpResponse, Long size, String etag,
-			String lastModified, String contentType, String contentDisposition, final BucketLogData logData) {
+			String lastModified, String contentType, String contentDisposition, String versionId, final BucketLogData logData) {
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
 		if(etag != null)
@@ -350,6 +357,9 @@ public class FileSystemStorageManager implements StorageManager {
 		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
 		if(contentDisposition != null)
 			httpResponse.addHeader("Content-Disposition", contentDisposition);
+		if(versionId != null) {
+			httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
+		}
 		if(logData != null) {
 			logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
 			channel.write(httpResponse).addListener(new ChannelFutureListener( ) {
