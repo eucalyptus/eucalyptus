@@ -119,6 +119,7 @@ import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
 import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
 import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.storage.StorageManager;
+import edu.ucsb.eucalyptus.storage.BlockStorageUtil;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
@@ -168,7 +169,7 @@ public class BlockStorage {
 		StorageProperties.SAN_HOST = storageInfo.getSanHost();
 		StorageProperties.SAN_USERNAME = storageInfo.getSanUser();
 		try {
-			StorageProperties.SAN_PASSWORD = blockManager.decryptSCTargetPassword(storageInfo.getSanPassword());
+			StorageProperties.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
 		} catch (EucalyptusCloudException e) {
 			LOG.fatal("Unable to get password. " + e.getMessage());
 		}
@@ -212,7 +213,7 @@ public class BlockStorage {
 			storageInfo.setSanHost(StorageProperties.SAN_HOST);
 			storageInfo.setSanUser(StorageProperties.SAN_USERNAME);
 			try {
-				storageInfo.setSanPassword(blockManager.encryptSCTargetPassword(StorageProperties.SAN_PASSWORD));
+				storageInfo.setSanPassword(BlockStorageUtil.encryptSCTargetPassword(StorageProperties.SAN_PASSWORD));
 			} catch (EucalyptusCloudException e) {
 				LOG.fatal("Unable to update password. " + e.getMessage());
 			}

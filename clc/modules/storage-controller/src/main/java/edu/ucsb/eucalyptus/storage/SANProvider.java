@@ -60,59 +60,81 @@
  *******************************************************************************/
 /*
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
 
 package edu.ucsb.eucalyptus.storage;
 
-import com.eucalyptus.util.EucalyptusCloudException;
-
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public interface LogicalStorageManager {
-	public void initialize();
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.persistence.EntityNotFoundException;
+
+import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
+
+import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExecutionException;
+import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.util.WalrusProperties;
+import com.google.common.collect.Lists;
+
+import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
+import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
+import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
+import edu.ucsb.eucalyptus.ic.StorageController;
+import edu.ucsb.eucalyptus.util.SystemUtil;
+
+public interface SANProvider {
 
 	public void configure();
 
-	public void checkPreconditions() throws EucalyptusCloudException;
+	public void checkConnection();
+	
+	public String createVolume(String volumeId, String snapshotId,
+			boolean locallyCreated, String sourceVolume);
 
-	public void reload();
+	public String connectTarget(String iqn) throws EucalyptusCloudException;
 
-	public void startupChecks();
+	public String getVolumeProperty(String volumeId);
 
-	public void setStorageInterface(String storageInterface);
+	public String execCommand(String command) throws EucalyptusCloudException;
 
-	public void cleanVolume(String volumeId);
+	public String createVolume(String volumeName, int size);
 
-	public void cleanSnapshot(String volumeId);
+	public boolean deleteVolume(String volumeName);
 
-	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
+	public String createSnapshot(String volumeId, String snapshotId);
 
-	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
+	public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated);
 
-	public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
+	public void deleteUser(String userName) throws EucalyptusCloudException;
 
-	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException;
+	public void addUser(String userName);
 
-	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
+	public void disconnectTarget(String iqn) throws EucalyptusCloudException;
 
-	public void dupVolume(String volumeId, String dupedVolumeId) throws EucalyptusCloudException;
-
-	public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException;
-
-	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
-
-	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
-
-	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
-
-	public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException;
-
-	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
-
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException; 
 }
+

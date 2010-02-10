@@ -60,59 +60,69 @@
  *******************************************************************************/
 /*
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.security.PrivateKey;
+import java.security.PublicKey;
+
+import javax.crypto.Cipher;
+
+import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
+
+import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.StorageProperties;
 
-import java.util.List;
+public class BlockStorageUtil {
+	private static Logger LOG = Logger.getLogger(BlockStorageUtil.class);
 
-public interface LogicalStorageManager {
-	public void initialize();
+	public static String encryptNodeTargetPassword(String password) throws EucalyptusCloudException {
+		EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+		try {
+			ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
+			PublicKey ncPublicKey = X509Cert.toCertificate(credentials.getNodeCertificate()).getPublicKey();
+			credDb.commit();
+			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
+			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
+		} catch ( Exception e ) {
+			LOG.error( "Unable to encrypt storage target password" );
+			credDb.rollback( );
+			throw new EucalyptusCloudException(e.getMessage(), e);
+		}
+	}
 
-	public void configure();
+	public static String encryptSCTargetPassword(String password) throws EucalyptusCloudException {
+		PublicKey scPublicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getKeyPair().getPublic();
+		Cipher cipher;
+		try {
+			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, scPublicKey);
+			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
+		} catch (Exception e) {
+			LOG.error("Unable to encrypted storage target password");
+			throw new EucalyptusCloudException(e.getMessage(), e);
+		}
+	}
 
-	public void checkPreconditions() throws EucalyptusCloudException;
-
-	public void reload();
-
-	public void startupChecks();
-
-	public void setStorageInterface(String storageInterface);
-
-	public void cleanVolume(String volumeId);
-
-	public void cleanSnapshot(String volumeId);
-
-	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
-
-	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
-
-	public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
-
-	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException;
-
-	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public void dupVolume(String volumeId, String dupedVolumeId) throws EucalyptusCloudException;
-
-	public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException;
-
-	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
-
-	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
-
-	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
-
-	public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException;
-
-	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
-
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException; 
+	public static String decryptSCTargetPassword(String encryptedPassword) throws EucalyptusCloudException {
+		PrivateKey scPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getPrivateKey();
+		try {
+			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);
+			return new String(cipher.doFinal(Base64.decode(encryptedPassword)));
+		} catch(Exception ex) {
+			LOG.error(ex);
+			throw new EucalyptusCloudException("Unable to decrypt storage target password", ex);
+		}
+	}
 }

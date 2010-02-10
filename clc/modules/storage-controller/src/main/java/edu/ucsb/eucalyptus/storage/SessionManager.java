@@ -60,59 +60,136 @@
  *******************************************************************************/
 /*
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.jcraft.jsch.Channel;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
 
-import java.util.List;
+import org.apache.log4j.Logger;
 
-public interface LogicalStorageManager {
-	public void initialize();
 
-	public void configure();
+public class SessionManager extends Thread {
+	private LinkedBlockingQueue<SANTask> taskQueue;
+	private BufferedWriter writer;
+	private BufferedReader reader;
+	private Channel channel;
 
-	public void checkPreconditions() throws EucalyptusCloudException;
+	private String host;
+	private String username;
+	private String password;
 
-	public void reload();
+	private static Logger LOG = Logger.getLogger(SessionManager.class);
 
-	public void startupChecks();
+	public SessionManager(String host, String username, String password) {
+		taskQueue = new LinkedBlockingQueue<SANTask>(1);
+	}
 
-	public void setStorageInterface(String storageInterface);
+	public void checkConnection() throws EucalyptusCloudException {
+		try {
+			if(channel != null) {
+				if(!channel.isConnected())
+					connect();
+			} else {
+				connect();
+			}
+		} catch(JSchException ex) {
+			LOG.error(ex);
+			throw new EucalyptusCloudException(ex);
+		} catch(IOException ex) {
+			LOG.error(ex);
+			throw new EucalyptusCloudException(ex);
+		}
+	}
 
-	public void cleanVolume(String volumeId);
+	public void connect() throws JSchException, IOException {
+		JSch jsch = new JSch();
+		Session session;
+		session = jsch.getSession(username, host);
+		session.setConfig("StrictHostKeyChecking", "no");
+		session.setPassword(password);
+		session.connect();
+		channel = session.openChannel("shell");
+		PipedOutputStream outStream = new PipedOutputStream();
+		channel.setInputStream(new PipedInputStream(outStream));
+		PipedInputStream inStream = new PipedInputStream();
+		channel.setOutputStream(new PipedOutputStream(inStream));
+		channel.connect();
+		writer = new BufferedWriter(new OutputStreamWriter(outStream, "utf-8"));
+		reader = new BufferedReader(new InputStreamReader(inStream, "utf-8"));			
+	}
 
-	public void cleanSnapshot(String volumeId);
+	public void refresh() throws JSchException, IOException {
+		channel.disconnect();
+		channel.getSession().disconnect();
+		connect();
+	}
 
-	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
+	public void addTask(SANTask t) throws InterruptedException {
+		try {
+			taskQueue.put(t);
+		} catch (InterruptedException e) {
+			LOG.error(e);
+			throw e;
+		}
+	}
 
-	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
+	public void run() {
+		SANTask task;
+		try {
+			while((task = (SANTask) taskQueue.take()) != null) {
+				writer.write(task.getCommand() + "whoami\r\n");
+				writer.flush();
+				String returnValue = "";
+				for (String line = null; (line = reader.readLine()) != null;)
+				{
+					if(line.contains("whoami"))
+						break;
+					returnValue += line + "\r";
+				}
+				task.setValue(returnValue);
+				synchronized (task) {
+					task.notifyAll();
+				}
+			}
+		} catch (InterruptedException e) {
+			LOG.error(e);
+		} catch (IOException e) {
+			LOG.error(e);
+		}
+	}
 
-	public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
-
-	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException;
-
-	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public void dupVolume(String volumeId, String dupedVolumeId) throws EucalyptusCloudException;
-
-	public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException;
-
-	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
-
-	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
-
-	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
-
-	public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException;
-
-	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
-
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException; 
+	public void update(String host, String username, String password) throws EucalyptusCloudException {
+		this.host = host;
+		this.username = username;
+		this.password = password;
+		try {
+			if(channel != null) {
+				refresh();
+			} else {
+				connect();
+			}	
+		} catch (JSchException e) {
+			LOG.error(e);
+			throw new EucalyptusCloudException(e);
+		} catch (IOException e) {
+			LOG.error(e);
+			throw new EucalyptusCloudException(e);
+		}
+	}
 }
+

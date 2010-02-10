@@ -1108,19 +1108,5 @@ public class LVM2Manager implements LogicalStorageManager {
 			throws EucalyptusCloudException {
 		return StorageProperties.storageRootDirectory + File.separator + snapshotId;
 	}
-
-	@Override
-	public String decryptSCTargetPassword(String encryptedPassword)
-			throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String encryptSCTargetPassword(String password)
-			throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return null;
-	}
 }
 
