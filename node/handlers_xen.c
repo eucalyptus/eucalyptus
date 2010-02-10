@@ -147,12 +147,13 @@ doRunInstance(		struct nc_state_t *nc,
 			ncMetadata *meta,
 			char *instanceId,
 			char *reservationId,
-			ncInstParams *params, 
+			virtualMachine *params, 
 			char *imageId, char *imageURL, 
 			char *kernelId, char *kernelURL, 
 			char *ramdiskId, char *ramdiskURL, 
 			char *keyName, 
-			char *privMac, char *pubMac, int vlan, 
+			//			char *privMac, char *privIp, int vlan, 
+			netConfig *netparams,
 			char *userData, char *launchIndex,
 			char **groupNames, int groupNamesSize,
 			ncInstance **outInst)
@@ -160,12 +161,10 @@ doRunInstance(		struct nc_state_t *nc,
     ncInstance * instance = NULL;
     * outInst = NULL;
     pid_t pid;
-    ncNetConf ncnet;
+    netConfig ncnet;
     int error;
 
-    strcpy(ncnet.privateMac, privMac);
-    strcpy(ncnet.publicMac, pubMac);
-    ncnet.vlan = vlan;
+    memcpy(&ncnet, netparams, sizeof(netConfig));
 
     /* check as much as possible before forking off and returning */
     sem_p (inst_sem);
@@ -201,9 +200,9 @@ doRunInstance(		struct nc_state_t *nc,
     }
 
     instance->launchTime = time (NULL);
-    instance->params.memorySize = params->memorySize;
-    instance->params.numberOfCores = params->numberOfCores;
-    instance->params.diskSize = params->diskSize;
+    instance->params.mem = params->mem;
+    instance->params.cores = params->cores;
+    instance->params.disk = params->disk;
     strcpy (instance->ncnet.privateIp, "0.0.0.0");
     strcpy (instance->ncnet.publicIp, "0.0.0.0");
 

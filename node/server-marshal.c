@@ -67,6 +67,7 @@ permission notice:
 #define HANDLERS_FANOUT
 #include <handlers.h>
 #include <misc.h>
+#include <data.h>
 
 pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -243,17 +244,17 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     adb_instanceType_set_keyName(instance, env, outInst->keyName);
     
     adb_virtualMachineType_t * vm_type = adb_virtualMachineType_create(env);            
-    adb_virtualMachineType_set_memory(vm_type, env, outInst->params.memorySize);
-    adb_virtualMachineType_set_cores(vm_type, env, outInst->params.numberOfCores);
-    adb_virtualMachineType_set_disk(vm_type, env, outInst->params.diskSize);
+    adb_virtualMachineType_set_memory(vm_type, env, outInst->params.mem);
+    adb_virtualMachineType_set_cores(vm_type, env, outInst->params.cores);
+    adb_virtualMachineType_set_disk(vm_type, env, outInst->params.disk);
     adb_instanceType_set_instanceType(instance, env, vm_type);
     
     adb_netConfigType_t * netconf = adb_netConfigType_create(env);            
     adb_netConfigType_set_privateMacAddress(netconf, env, outInst->ncnet.privateMac);
-    adb_netConfigType_set_publicMacAddress(netconf, env, outInst->ncnet.publicMac);
     adb_netConfigType_set_privateIp(netconf, env, outInst->ncnet.privateIp);
     adb_netConfigType_set_publicIp(netconf, env, outInst->ncnet.publicIp);
     adb_netConfigType_set_vlan(netconf, env, outInst->ncnet.vlan);
+    adb_netConfigType_set_networkIndex(netconf, env, outInst->ncnet.networkIndex);
     adb_instanceType_set_netParams(instance, env, netconf);
     
     // reported by NC
@@ -297,10 +298,10 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     axis2_char_t * instanceId = adb_ncRunInstanceType_get_instanceId(input, env);
     axis2_char_t * reservationId = adb_ncRunInstanceType_get_reservationId(input, env);
     adb_virtualMachineType_t * vm_type = adb_ncRunInstanceType_get_instanceType(input, env);
-    ncInstParams params;
-    params.memorySize = adb_virtualMachineType_get_memory(vm_type, env);
-    params.numberOfCores = adb_virtualMachineType_get_cores(vm_type, env);
-    params.diskSize = adb_virtualMachineType_get_disk(vm_type, env);
+    virtualMachine params;
+    params.mem = adb_virtualMachineType_get_memory(vm_type, env);
+    params.cores = adb_virtualMachineType_get_cores(vm_type, env);
+    params.disk = adb_virtualMachineType_get_disk(vm_type, env);
     axis2_char_t * imageId = adb_ncRunInstanceType_get_imageId(input, env);
     axis2_char_t * imageURL = adb_ncRunInstanceType_get_imageURL(input, env);
     axis2_char_t * kernelId = adb_ncRunInstanceType_get_kernelId(input, env);
@@ -308,9 +309,13 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     axis2_char_t * ramdiskId = adb_ncRunInstanceType_get_ramdiskId(input, env);
     axis2_char_t * ramdiskURL = adb_ncRunInstanceType_get_ramdiskURL(input, env);
     axis2_char_t * keyName = adb_ncRunInstanceType_get_keyName(input, env);
-    axis2_char_t * privateMac = adb_ncRunInstanceType_get_privateMacAddress(input, env);
-    axis2_char_t * publicMac = adb_ncRunInstanceType_get_publicMacAddress(input, env);
-    int vlan = adb_ncRunInstanceType_get_vlan(input, env);
+    adb_netConfigType_t *net_type = adb_ncRunInstanceType_get_netParams(input, env);
+    netConfig netparams;
+    netparams.vlan = adb_netConfigType_get_vlan(net_type, env);
+    netparams.networkIndex = adb_netConfigType_get_networkIndex(net_type, env);
+    snprintf(netparams.privateMac, 32, "%s", adb_netConfigType_get_privateMacAddress(net_type, env));
+    snprintf(netparams.privateIp, 32, "%s", adb_netConfigType_get_privateIp(net_type, env));
+    snprintf(netparams.publicIp, 32, "%s", adb_netConfigType_get_publicIp(net_type, env));
     axis2_char_t * userData = adb_ncRunInstanceType_get_userData(input, env);
     axis2_char_t * launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
     int groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
@@ -340,7 +345,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
                                        kernelId, kernelURL, 
                                        ramdiskId, ramdiskURL, 
                                        keyName, 
-                                       privateMac, publicMac, vlan, 
+                                       &netparams, 
                                        userData, launchIndex, groupNames, groupNamesSize,
                                        &outInst);
             

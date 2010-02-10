@@ -32,7 +32,7 @@
 	  <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
 	  <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
-	  <xs:element minOccurs="0" name="networkIndex" type="xs:int"/>
+	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
 	  <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="volumes" type="tns:volumeType"/>
 	</xs:sequence>
@@ -84,7 +84,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" nillable="true" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -94,7 +94,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instances" nillable="true" type="tns:ccInstanceType"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instances" type="tns:ccInstanceType"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -114,7 +114,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element maxOccurs="unbounded" minOccurs="0" name="resources" nillable="true" type="tns:ccResourceType"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="resources" type="tns:ccResourceType"/>
 	      <xs:element maxOccurs="unbounded" minOccurs="0" name="serviceTags" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
@@ -125,7 +125,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" nillable="true" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -135,7 +135,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="isTerminated" type="xs:boolean"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="isTerminated" type="xs:boolean"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -210,7 +210,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="instanceIds" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -232,7 +232,7 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="vlan" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="netName" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="nameserver" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="clusterControllers" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="clusterControllers" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -313,7 +313,7 @@
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
 	      <xs:element minOccurs="0" maxOccurs="1" name="nameserver" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="clusterControllers" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="clusterControllers" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -325,7 +325,7 @@
 	    <xs:sequence>
 	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="addrsPerNet" type="xs:int"/>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="activeNetworks" type="tns:networkType"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="activeNetworks" type="tns:networkType"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -336,7 +336,7 @@
 	  <xs:element minOccurs="1" maxOccurs="1" name="vlan" type="xs:int"/>
 	  <xs:element minOccurs="1" maxOccurs="1" name="netName" type="xs:string"/>
 	  <xs:element minOccurs="1" maxOccurs="1" name="userName" type="xs:string"/>
-	  <xs:element minOccurs="0" maxOccurs="unbounded" name="activeAddrs" type="xs:int"/>
+	  <xs:element maxOccurs="unbounded" minOccurs="0" name="activeAddrs" type="xs:int"/>
 	</xs:sequence>
       </xs:complexType>
 
@@ -425,10 +425,10 @@
       <xs:complexType name="netConfigType">
 	<xs:sequence>
 	  <xs:element name="privateMacAddress" type="xs:string"/>
-	  <xs:element name="publicMacAddress" type="xs:string"/>
-	  <xs:element name="vlan" type="xs:int"/>
 	  <xs:element name="privateIp" type="xs:string"/>
 	  <xs:element name="publicIp" type="xs:string"/>
+	  <xs:element name="vlan" type="xs:int"/>
+	  <xs:element name="networkIndex" type="xs:int"/>
 	</xs:sequence>
       </xs:complexType>
       
@@ -483,11 +483,6 @@
       
       <xs:element name="TerminateInstances" nillable="true" type="tns:terminateInstancesType"/>
       <xs:element name="TerminateInstancesResponse" nillable="true" type="tns:terminateInstancesResponseType"/>
-      
-<!--
-      <xs:element name="RegisterImage" nillable="true" type="tns:registerImageType"/>
-      <xs:element name="RegisterImageResponse" nillable="true" type="tns:registerImageResponseType"/>
--->
       
       <xs:element name="RunInstances" nillable="true" type="tns:runInstancesType"/>
       <xs:element name="RunInstancesResponse" nillable="true" type="tns:runInstancesResponseType"/>
@@ -564,13 +559,6 @@
     <wsdl:part element="tns:TerminateInstancesResponse" name="TerminateInstancesResponse">
     </wsdl:part>
   </wsdl:message>
-
-<!--
-  <wsdl:message name="RegisterImageResponse">
-    <wsdl:part element="tns:RegisterImageResponse" name="RegisterImageResponse">
-    </wsdl:part>
-  </wsdl:message>
--->
 
   <wsdl:message name="RunInstancesResponse">
     <wsdl:part element="tns:RunInstancesResponse" name="RunInstancesResponse">

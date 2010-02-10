@@ -63,6 +63,27 @@ permission notice:
 #include <string.h> 
 #include "data.h"
 
+int allocate_virtualMachine(virtualMachine *out, int mem, int disk, int cores, char *name) {
+  if (out != NULL) {
+    out->mem = mem;
+    out->disk = disk;
+    out->cores = cores;
+    snprintf(out->name, 64, "%s", name);
+  }
+  return(0);
+}
+
+int allocate_netConfig(netConfig *out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex) {
+  if (out != NULL) {
+    if (pvMac) strncpy(out->privateMac,pvMac,24);
+    if (pvIp) strncpy(out->privateIp,pvIp,24);
+    if (pbIp) strncpy(out->publicIp,pbIp,24);
+    out->networkIndex = networkIndex;
+    out->vlan = vlan;
+  }
+  return(0);
+}
+
 /* metadata is present in every type of nc request */
 ncMetadata * allocate_metadata (char *correlationId, char *userId)
 {
@@ -85,12 +106,12 @@ void free_metadata (ncMetadata ** metap)
 
 /* instances are present in instance-related requests */
 ncInstance * allocate_instance (char *instanceId, char *reservationId, 
-                                ncInstParams *params, 
+                                virtualMachine *params, 
                                 char *imageId, char *imageURL, 
                                 char *kernelId, char *kernelURL, 
                                 char *ramdiskId, char *ramdiskURL,
                                 char *stateName, int stateCode, char *userId, 
-                                ncNetConf *ncnet, char *keyName,
+                                netConfig *ncnet, char *keyName,
                                 char *userData, char *launchIndex, char **groupNames, int groupNamesSize)
 {
     ncInstance * inst;
@@ -159,9 +180,9 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
       strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
     }
     if (params) {
-        inst->params.memorySize = params->memorySize;
-        inst->params.diskSize = params->diskSize;
-        inst->params.numberOfCores = params->numberOfCores;
+        inst->params.mem = params->mem;
+        inst->params.disk = params->disk;
+        inst->params.cores = params->cores;
     }
     inst->stateCode = stateCode;
     

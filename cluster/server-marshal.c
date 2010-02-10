@@ -901,14 +901,12 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
     adb_ccInstanceType_add_volumes(dst, env, vol);
   }
 
-  adb_ccInstanceType_set_networkIndex(dst, env, src->networkIndex);
-
   netconf = adb_netConfigType_create(env);
   adb_netConfigType_set_privateMacAddress(netconf, env, src->ccnet.privateMac);
-  adb_netConfigType_set_publicMacAddress(netconf, env, src->ccnet.publicMac);
   adb_netConfigType_set_privateIp(netconf, env, src->ccnet.privateIp);
   adb_netConfigType_set_publicIp(netconf, env, src->ccnet.publicIp);
   adb_netConfigType_set_vlan(netconf, env, src->ccnet.vlan);
+  adb_netConfigType_set_networkIndex(netconf, env, src->ccnet.networkIndex);
   adb_ccInstanceType_set_netParams(dst, env, netconf);
   
   vm = adb_virtualMachineType_create(env);
