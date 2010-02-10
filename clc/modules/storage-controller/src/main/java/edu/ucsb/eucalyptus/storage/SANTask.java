@@ -68,16 +68,22 @@ package edu.ucsb.eucalyptus.storage;
 
 public class SANTask {
 	private String command;
+	private String EOFCommand;
 	private volatile String returnValue;
 
-	public SANTask(String command) {
+	public SANTask(String command, String EOFCommand) {
 		this.command = command;
+		this.EOFCommand = EOFCommand;
 	}
 
 	public String getCommand() {
 		return command;
 	}
 
+	public String getEOFCommand() {
+		return EOFCommand;
+	}
+	
 	public String getValue() { return returnValue; }
 
 	public void setValue(String value) {

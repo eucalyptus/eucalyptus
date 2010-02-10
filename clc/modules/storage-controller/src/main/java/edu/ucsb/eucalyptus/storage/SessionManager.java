@@ -74,15 +74,14 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-
-import org.apache.log4j.Logger;
 
 
 public class SessionManager {
@@ -96,7 +95,7 @@ public class SessionManager {
 	private String password;
 
 	private static Logger LOG = Logger.getLogger(SessionManager.class);
-	private final int NUM_THREADS = 5;
+	private final int NUM_THREADS = 1;
 
 	public SessionManager(String host, String username, String password) {
 		pool = Executors.newFixedThreadPool(NUM_THREADS);
@@ -147,20 +146,27 @@ public class SessionManager {
 			@Override
 			public void run() {
 				try {
-					writer.write(task.getCommand() + "whoami\r\n");
+					writer.write(task.getCommand() + task.getEOFCommand());
 					writer.flush();
 					String returnValue = "";
 					for (String line = null; (line = reader.readLine()) != null;) {
-						if(line.contains("whoami"))
+						line = line + "\r";
+						if(line.contains(task.getEOFCommand()))
 							break;
-						returnValue += line + "\r";
+						returnValue += line;
 					}
-					task.setValue(returnValue);
 					synchronized (task) {
+						task.setValue(returnValue);
 						task.notifyAll();
 					}
 				} catch (IOException e) {
 					LOG.error(e);
+					try {
+						refresh();
+						addTask(task);
+					} catch(Exception ex) {
+						LOG.error(ex);
+					}
 				}
 			}
 		});

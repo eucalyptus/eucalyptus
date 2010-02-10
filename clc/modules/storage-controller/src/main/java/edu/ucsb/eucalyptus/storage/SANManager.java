@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
@@ -206,7 +207,7 @@ public class SANManager implements LogicalStorageManager {
 	throws EucalyptusCloudException {
 		String iqn = connectionManager.createVolume(volumeId, size);
 		if(iqn != null) {
-			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);			
+			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);
 			EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
 			db.add(volumeInfo);
 			db.commit();

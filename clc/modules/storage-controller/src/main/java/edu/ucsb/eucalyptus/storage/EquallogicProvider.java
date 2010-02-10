@@ -99,7 +99,9 @@ public class EquallogicProvider implements SANProvider {
 	private static final Pattern SNAPSHOT_DELETE_PATTERN = Pattern.compile("Snapshot deletion succeeded.");
 	private static final Pattern USER_DELETE_PATTERN = Pattern.compile("CHAP user deletion succeeded.");
 	private static final Pattern USER_SHOW_PATTERN = Pattern.compile(".*Password: (.*)\r");
-
+	
+	private static final String EOF_COMMAND = "whoami\r";
+	
 	private final long TASK_TIMEOUT = 5 * 60 * 1000;
 
 	public EquallogicProvider() {}
@@ -147,11 +149,11 @@ public class EquallogicProvider implements SANProvider {
 		}
 		if(locallyCreated) {
 			try {
-				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + sourceVolume + 
-						" snapshot select " + snapshotId + " clone " + volumeId + "\u001A");
+				String returnValue = execCommand("stty hardwrap off\rvolume select " + sourceVolume + 
+						" snapshot select " + snapshotId + " clone " + volumeId + "\r");
 				String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 				if(targetName != null) {
-					returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\u001A");
+					returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\r");
 					if(returnValue.length() == 0) {
 						LOG.error("Unable to set access for volume: " + volumeId);
 						return null;
@@ -164,11 +166,11 @@ public class EquallogicProvider implements SANProvider {
 			}	
 		} else {
 			try {
-				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + snapshotId + 
-						" offline\u001Avolume select " + snapshotId + " clone " + volumeId + "\u001A");
+				String returnValue = execCommand("stty hardwrap off\rvolume select " + snapshotId + 
+						" offline\rvolume select " + snapshotId + " clone " + volumeId + "\r");
 				String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 				if(targetName != null) {
-					returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\u001A");
+					returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\r");
 					if(returnValue.length() == 0) {
 						LOG.error("Unable to set access for volume: " + volumeId);
 						return null;
@@ -204,7 +206,8 @@ public class EquallogicProvider implements SANProvider {
 	public String getVolumeProperty(String volumeId) {
 		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
 		try {
-			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
+			EquallogicVolumeInfo searchVolumeInfo = new EquallogicVolumeInfo(volumeId);
+			EquallogicVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
 			EntityWrapper<CHAPUserInfo> dbUser = db.recast(CHAPUserInfo.class);
 			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
 			String property = host + "," + volumeInfo.getIqn() + "," + BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
@@ -218,11 +221,11 @@ public class EquallogicProvider implements SANProvider {
 	}
 
 	public String execCommand(String command) throws EucalyptusCloudException {
-		SANTask task = new SANTask(command);
+		SANTask task = new SANTask(command, EOF_COMMAND);
 		try {
 			sessionManager.addTask(task);
-			if(task.getValue() == null) {
-				synchronized (task) {
+			synchronized (task) {
+				if(task.getValue() == null) {
 					task.wait(TASK_TIMEOUT);
 				}
 			}
@@ -257,10 +260,10 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
-			String returnValue = execCommand("stty hardwrap off\u001Avolume create " + volumeName + " " + (size * StorageProperties.KB) + "\u001A");
+			String returnValue = execCommand("stty hardwrap off\rvolume create " + volumeName + " " + (size * StorageProperties.KB) + "\r");
 			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 			if(targetName != null) {
-				returnValue = execCommand("volume select " + volumeName + " access create username " + TARGET_USERNAME + "\u001A");
+				returnValue = execCommand("volume select " + volumeName + " access create username " + TARGET_USERNAME + "\r");
 				if(returnValue.length() == 0) {
 					LOG.error("Unable to set access for volume: " + volumeName);
 					return null;
@@ -282,7 +285,7 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
-			String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeName + " offline\u001Avolume delete " + volumeName + "\u001A");
+			String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeName + " offline\rvolume delete " + volumeName + "\r");
 			if(returnValue.split(VOLUME_DELETE_PATTERN.toString()).length > 1)
 				return true;
 			else
@@ -302,12 +305,12 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
-			String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeId + " snapshot create-now\u001A");
+			String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " snapshot create-now\r");
 			String snapName = matchPattern(returnValue, SNAPSHOT_CREATE_PATTERN);
 			if(snapName != null) {
-				returnValue = execCommand("volume select " + volumeId + " snapshot rename " + snapName + " " + snapshotId + "\u001A");
-				returnValue = execCommand("volume select " + volumeId + " snapshot select " + snapshotId + " online\u001A");
-				returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeId + " snapshot select " + snapshotId + " show\u001A");
+				returnValue = execCommand("volume select " + volumeId + " snapshot rename " + snapName + " " + snapshotId + "\r");
+				returnValue = execCommand("volume select " + volumeId + " snapshot select " + snapshotId + " online\r");
+				returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " snapshot select " + snapshotId + " show\r");
 				return matchPattern(returnValue, SNAPSHOT_TARGET_NAME_PATTERN);
 			}
 			return null;
@@ -327,7 +330,7 @@ public class EquallogicProvider implements SANProvider {
 		}
 		if(locallyCreated) {
 			try {				
-				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + volumeId + " snapshot select " + snapshotId + " offline\u001Avolume select " + volumeId + " snapshot delete " + snapshotId + "\u001A");
+				String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " snapshot select " + snapshotId + " offline\rvolume select " + volumeId + " snapshot delete " + snapshotId + "\r");
 				if(returnValue.split(SNAPSHOT_DELETE_PATTERN.toString()).length > 1)
 					return true;
 				else
@@ -338,7 +341,7 @@ public class EquallogicProvider implements SANProvider {
 			}
 		} else {
 			try {
-				String returnValue = execCommand("stty hardwrap off\u001Avolume select " + snapshotId + " offline\u001Avolume delete " + snapshotId + "\u001A");
+				String returnValue = execCommand("stty hardwrap off\rvolume select " + snapshotId + " offline\rvolume delete " + snapshotId + "\r");
 				if(returnValue.split(VOLUME_DELETE_PATTERN.toString()).length > 1)
 					return true;
 				else
@@ -361,7 +364,7 @@ public class EquallogicProvider implements SANProvider {
 		EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(userName));
-			String returnValue = execCommand("stty hardwrap off\u001Achapuser delete " + userName + "\u001A");
+			String returnValue = execCommand("stty hardwrap off\rchapuser delete " + userName + "\r");
 			if(matchPattern(returnValue, USER_DELETE_PATTERN) != null) {
 				db.delete(userInfo);
 			}
@@ -382,7 +385,7 @@ public class EquallogicProvider implements SANProvider {
 		} catch(EucalyptusCloudException ex) {
 			db.rollback();
 			try {
-				String returnValue = execCommand("stty hardwrap off\u001Achapuser create " + userName + "\u001A");
+				String returnValue = execCommand("stty hardwrap off\rchapuser create " + userName + "\r");
 				String password = matchPattern(returnValue, USER_CREATE_PATTERN);
 				if(password != null) {
 					db = StorageController.getEntityWrapper();
@@ -391,7 +394,7 @@ public class EquallogicProvider implements SANProvider {
 					db.commit();
 					enabled = true;
 				} else {
-					returnValue = execCommand("stty hardwrap off\u001Achapuser show " + userName + "\u001A");
+					returnValue = execCommand("stty hardwrap off\rchapuser show " + userName + "\r");
 					password = matchPattern(returnValue, USER_SHOW_PATTERN);
 					if(password != null) {
 						db = StorageController.getEntityWrapper();
