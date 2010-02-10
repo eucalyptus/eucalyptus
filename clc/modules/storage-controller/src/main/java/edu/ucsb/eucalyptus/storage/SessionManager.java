@@ -72,6 +72,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -83,20 +85,21 @@ import com.jcraft.jsch.Session;
 import org.apache.log4j.Logger;
 
 
-public class SessionManager extends Thread {
-	private LinkedBlockingQueue<SANTask> taskQueue;
+public class SessionManager {
 	private BufferedWriter writer;
 	private BufferedReader reader;
 	private Channel channel;
+	private final ExecutorService pool;
 
 	private String host;
 	private String username;
 	private String password;
 
 	private static Logger LOG = Logger.getLogger(SessionManager.class);
+	private final int NUM_THREADS = 5;
 
 	public SessionManager(String host, String username, String password) {
-		taskQueue = new LinkedBlockingQueue<SANTask>(1);
+		pool = Executors.newFixedThreadPool(NUM_THREADS);
 	}
 
 	public void checkConnection() throws EucalyptusCloudException {
@@ -139,38 +142,28 @@ public class SessionManager extends Thread {
 		connect();
 	}
 
-	public void addTask(SANTask t) throws InterruptedException {
-		try {
-			taskQueue.put(t);
-		} catch (InterruptedException e) {
-			LOG.error(e);
-			throw e;
-		}
-	}
-
-	public void run() {
-		SANTask task;
-		try {
-			while((task = (SANTask) taskQueue.take()) != null) {
-				writer.write(task.getCommand() + "whoami\r\n");
-				writer.flush();
-				String returnValue = "";
-				for (String line = null; (line = reader.readLine()) != null;)
-				{
-					if(line.contains("whoami"))
-						break;
-					returnValue += line + "\r";
-				}
-				task.setValue(returnValue);
-				synchronized (task) {
-					task.notifyAll();
+	public void addTask(final SANTask task) throws InterruptedException {
+		pool.execute(new Runnable() {		
+			@Override
+			public void run() {
+				try {
+					writer.write(task.getCommand() + "whoami\r\n");
+					writer.flush();
+					String returnValue = "";
+					for (String line = null; (line = reader.readLine()) != null;) {
+						if(line.contains("whoami"))
+							break;
+						returnValue += line + "\r";
+					}
+					task.setValue(returnValue);
+					synchronized (task) {
+						task.notifyAll();
+					}
+				} catch (IOException e) {
+					LOG.error(e);
 				}
 			}
-		} catch (InterruptedException e) {
-			LOG.error(e);
-		} catch (IOException e) {
-			LOG.error(e);
-		}
+		});
 	}
 
 	public void update(String host, String username, String password) throws EucalyptusCloudException {

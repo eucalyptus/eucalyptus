@@ -116,7 +116,6 @@ public class EquallogicProvider implements SANProvider {
 			}
 			else {
 				sessionManager = new SessionManager(host, username, password);
-				sessionManager.start();
 			}
 	}
 
@@ -125,7 +124,6 @@ public class EquallogicProvider implements SANProvider {
 		this.username = username;
 		this.password = password;
 		sessionManager = new SessionManager(host, username, password);
-		sessionManager.start();
 	}
 
 	public void checkConnection() {
