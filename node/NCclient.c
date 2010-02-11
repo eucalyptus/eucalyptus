@@ -339,8 +339,8 @@ int main (int argc, char **argv)
 	    netConfig netparams;
             ncInstance * outInst;
 	    netparams.vlan = vlan;
-	    snprintf(netparams.privateIp, 32, "%s", privIp);
-	    snprintf(netparams.privateMac, 32, "%s", privMac);
+	    snprintf(netparams.privateIp, 24, "%s", privIp);
+	    snprintf(netparams.privateMac, 24, "%s", privMac);
 
             int rc = ncRunInstanceStub(stub, &meta, 
                                        iid, rid,

@@ -1109,7 +1109,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 
   //  print_instanceCache();
   for (i=0; i< (*outInstsLen) ; i++) {
-    logprintfl(EUCADEBUG, "DescribeInstances(): returning: instanceId=%s, state=%s, publicIp=%s, privateIp=%s, volumesSize=%d\n", (*outInsts)[i].instanceId, (*outInsts)[i].state, (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp, (*outInsts)[i].volumesSize);
+    logprintfl(EUCADEBUG, "DescribeInstances(): returning: instanceId=%s, state=%s, publicIp=%s, privateIp=%s, userData=%s\n", (*outInsts)[i].instanceId, (*outInsts)[i].state, (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp, (*outInsts)[i].userData);
   }
 
   logprintfl(EUCADEBUG,"DescribeInstances(): done\n");
@@ -1551,9 +1551,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       } else {
 	ncnet.networkIndex = -1;
       }
-      snprintf(ncnet.privateMac, 32, "%s", mac);
-      snprintf(ncnet.privateIp, 32, "%s", privip);
-      snprintf(ncnet.publicIp, 32, "%s", pubip);
+      snprintf(ncnet.privateMac, 24, "%s", mac);
+      snprintf(ncnet.privateIp, 24, "%s", privip);
+      snprintf(ncnet.publicIp, 24, "%s", pubip);
       
       sem_mywait(NCCALL);
       sem_mywait(RESCACHE);

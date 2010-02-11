@@ -139,7 +139,7 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
     inst->volumesSize = 0;
     
     if (ncnet != NULL) {
-      memcpy(&(inst->ncnet), ncnet, sizeof(ncNetConf));
+      memcpy(&(inst->ncnet), ncnet, sizeof(netConfig));
     }
 
     if (instanceId) {

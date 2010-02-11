@@ -77,26 +77,11 @@ typedef struct virtualMachine_t {
 } virtualMachine;
 int allocate_virtualMachine(virtualMachine *out, int mem, int disk, int cores, char *name);
 
-/*
-typedef struct ncInstParams_t {
-  int memorySize;
-  int diskSize;
-  int numberOfCores;
-} ncInstParams;
-*/
-
 typedef struct netConfig_t {
   int vlan, networkIndex;
   char privateMac[24], publicIp[24], privateIp[24];
 } netConfig;
 int allocate_netConfig(netConfig *out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex);
-
-/*
-typedef struct ncNetConf_t {
-  int vlan, networkIndex;
-  char privateMac[32], publicIp[32], privateIp[32];
-} ncNetConf;
-*/
 
 typedef struct ncVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];

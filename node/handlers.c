@@ -306,24 +306,24 @@ refresh_instance_info(	struct nc_state_t *nc,
         char *ip=NULL;
         int rc;
 
-        if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 32)) {
+        if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 24)) {
 	  if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
 	      if(ip) {
 	        logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-	        strncpy(instance->ncnet.publicIp, ip, 32);
+	        strncpy(instance->ncnet.publicIp, ip, 24);
 	        free(ip);
 	      }
             }
 	  }
         }
-        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
+        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 24)) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
 		if(ip) {
                   logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
-                  strncpy(instance->ncnet.privateIp, ip, 32);
+                  strncpy(instance->ncnet.privateIp, ip, 24);
 	          free(ip);
 		}
             }

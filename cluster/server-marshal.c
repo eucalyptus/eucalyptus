@@ -959,6 +959,9 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   ramdiskURL = adb_runInstancesType_get_ramdiskURL(rit, env);
 
   userData = adb_runInstancesType_get_userData(rit, env);
+  if (!userData) {
+    userData = strdup("");
+  }
   launchIndex = adb_runInstancesType_get_launchIndex(rit, env);
   
   vm = adb_runInstancesType_get_instanceType(rit, env);

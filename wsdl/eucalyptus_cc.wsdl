@@ -125,7 +125,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" nillable="true" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

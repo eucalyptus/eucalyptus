@@ -168,9 +168,9 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     if (netconf != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
 	ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
-        strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 32);
-        strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 32);
-        strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 32);
+        strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
+        strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
+        strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
     }
 
     int i, groupNamesSize = adb_instanceType_sizeof_groupNames (instance, env);

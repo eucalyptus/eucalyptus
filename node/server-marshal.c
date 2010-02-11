@@ -313,9 +313,9 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     netConfig netparams;
     netparams.vlan = adb_netConfigType_get_vlan(net_type, env);
     netparams.networkIndex = adb_netConfigType_get_networkIndex(net_type, env);
-    snprintf(netparams.privateMac, 32, "%s", adb_netConfigType_get_privateMacAddress(net_type, env));
-    snprintf(netparams.privateIp, 32, "%s", adb_netConfigType_get_privateIp(net_type, env));
-    snprintf(netparams.publicIp, 32, "%s", adb_netConfigType_get_publicIp(net_type, env));
+    snprintf(netparams.privateMac, 24, "%s", adb_netConfigType_get_privateMacAddress(net_type, env));
+    snprintf(netparams.privateIp, 24, "%s", adb_netConfigType_get_privateIp(net_type, env));
+    snprintf(netparams.publicIp, 24, "%s", adb_netConfigType_get_publicIp(net_type, env));
     axis2_char_t * userData = adb_ncRunInstanceType_get_userData(input, env);
     axis2_char_t * launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
     int groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
