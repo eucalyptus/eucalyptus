@@ -276,7 +276,7 @@ public class ObjectInfo implements Comparable {
 
     public boolean canWrite(String userId) {
         if(deleted) {
-        	return (ownerId == userId);
+        	return (ownerId.equals(userId));
         }
        
         if (globalWrite) {
@@ -300,7 +300,7 @@ public class ObjectInfo implements Comparable {
 
     public boolean canRead(String userId) {
         if(deleted) {
-        	return (ownerId == userId);
+       	    return (ownerId.equals(userId));
         }
 
         if (globalRead) {
