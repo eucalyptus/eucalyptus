@@ -178,7 +178,8 @@ public class AddressManager {
       }
     };
     if ( address.isAssigned( ) ) {
-      address.unassign( ).getCallback( ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
+      if(oldAddr != null)
+        address.unassign( ).getCallback( ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
     } else {
       unassignBystander.apply();
     }
