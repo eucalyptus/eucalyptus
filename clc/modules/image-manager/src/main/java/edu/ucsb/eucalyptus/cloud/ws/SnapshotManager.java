@@ -129,6 +129,7 @@ public class SnapshotManager {
     try {
       sc = Configuration.getStorageControllerConfiguration( vol.getCluster( ) );
     } catch ( Exception e ) {
+      db.rollback();
       throw new EucalyptusCloudException( "Failed to find the storage controller information for volume: " + vol.getDisplayName( ) + " at " + vol.getCluster( ), e );
     }
 
