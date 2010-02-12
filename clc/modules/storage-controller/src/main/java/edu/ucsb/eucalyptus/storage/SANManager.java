@@ -110,14 +110,10 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void cleanSnapshot(String snapshotId) {
-		String volumeId;
-		boolean locallyCreated;
-
 		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();		
 		try {
+			//make sure it exists
 			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
-			volumeId = volumeInfo.getSnapshotOf();
-			locallyCreated = volumeInfo.getLocallyCreated();
 		} catch(EucalyptusCloudException ex) {
 			LOG.error("Unable to clean failed snapshot: " + snapshotId);
 			return;
@@ -125,7 +121,7 @@ public class SANManager implements LogicalStorageManager {
 			db.commit();
 		}
 
-		if(connectionManager.deleteSnapshot(volumeId, snapshotId, locallyCreated)) {
+		if(connectionManager.deleteVolume(snapshotId)) {
 			try {
 				db = StorageController.getEntityWrapper();
 				EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
@@ -143,6 +139,7 @@ public class SANManager implements LogicalStorageManager {
 	public void cleanVolume(String volumeId) {
 		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
 		try {
+			//make sure it exists
 			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
 		} catch(EucalyptusCloudException ex) {
 			LOG.error("Unable to clean failed volume: " + volumeId);
@@ -191,7 +188,6 @@ public class SANManager implements LogicalStorageManager {
 			returnValues.add(String.valueOf(size * WalrusProperties.G));
 			EquallogicVolumeInfo snapInfo = new EquallogicVolumeInfo(snapshotId, iqn, size);
 			snapInfo.setSnapshotOf(volumeId);
-			snapInfo.setLocallyCreated(true);
 			db = StorageController.getEntityWrapper();
 			db.add(snapInfo);
 			db.commit();
@@ -218,21 +214,17 @@ public class SANManager implements LogicalStorageManager {
 	public int createVolume(String volumeId, String snapshotId)
 	throws EucalyptusCloudException {
 		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
-		boolean locallyCreated = false;
-		String sourceVolume;		
 		int size;
 		try {
 			EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
 			db.commit();
-			locallyCreated = snapInfo.getLocallyCreated();
-			sourceVolume = snapInfo.getSnapshotOf();
 			size = snapInfo.getSize();
 		} catch(EucalyptusCloudException ex) {
 			LOG.error(ex);
 			db.rollback();
 			throw ex;
 		}
-		String iqn = connectionManager.createVolume(volumeId, snapshotId, locallyCreated, sourceVolume);
+		String iqn = connectionManager.createVolume(volumeId, snapshotId);
 		if(iqn != null) {
 			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);
 			db = StorageController.getEntityWrapper();
@@ -245,24 +237,9 @@ public class SANManager implements LogicalStorageManager {
 	@Override
 	public void deleteSnapshot(String snapshotId)
 	throws EucalyptusCloudException {
-		String volumeId;
-		boolean locallyCreated;
-
-		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();		
-		try {
-			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
-			volumeId = volumeInfo.getSnapshotOf();
-			locallyCreated = volumeInfo.getLocallyCreated();
-		} catch(EucalyptusCloudException ex) {
-			LOG.error(ex);
-			throw new NoSuchEntityException(snapshotId);
-		} finally {
-			db.commit();
-		}
-
-		if(connectionManager.deleteSnapshot(volumeId, snapshotId, locallyCreated)) {
+		if(connectionManager.deleteVolume(snapshotId)) {
+			EntityWrapper<EquallogicVolumeInfo>  db = StorageController.getEntityWrapper();
 			try {
-				db = StorageController.getEntityWrapper();
 				EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
 				db.delete(snapInfo);
 			} catch(EucalyptusCloudException ex) {
@@ -387,7 +364,6 @@ public class SANManager implements LogicalStorageManager {
 		if(iqn != null) {
 			String deviceName = connectionManager.connectTarget(iqn);
 			EquallogicVolumeInfo snapInfo = new EquallogicVolumeInfo(snapshotId, iqn, sizeExpected);
-			snapInfo.setLocallyCreated(false);
 			EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
 			db.add(snapInfo);
 			db.commit();

@@ -113,8 +113,7 @@ public interface SANProvider {
 
 	public void checkConnection();
 	
-	public String createVolume(String volumeId, String snapshotId,
-			boolean locallyCreated, String sourceVolume);
+	public String createVolume(String volumeId, String snapshotId);
 
 	public String connectTarget(String iqn) throws EucalyptusCloudException;
 

@@ -99,9 +99,9 @@ public class EquallogicProvider implements SANProvider {
 	private static final Pattern SNAPSHOT_DELETE_PATTERN = Pattern.compile("Snapshot deletion succeeded.");
 	private static final Pattern USER_DELETE_PATTERN = Pattern.compile("CHAP user deletion succeeded.");
 	private static final Pattern USER_SHOW_PATTERN = Pattern.compile(".*Password: (.*)\r");
-	
+
 	private static final String EOF_COMMAND = "whoami\r";
-	
+
 	private final long TASK_TIMEOUT = 5 * 60 * 1000;
 
 	public EquallogicProvider() {}
@@ -138,8 +138,7 @@ public class EquallogicProvider implements SANProvider {
 		addUser(TARGET_USERNAME);
 	}
 
-	public String createVolume(String volumeId, String snapshotId,
-			boolean locallyCreated, String sourceVolume) {
+	public String createVolume(String volumeId, String snapshotId) {
 		if(!enabled) {
 			checkConnection();
 			if(!enabled) {
@@ -147,41 +146,22 @@ public class EquallogicProvider implements SANProvider {
 				return null;
 			}
 		}
-		if(locallyCreated) {
-			try {
-				String returnValue = execCommand("stty hardwrap off\rvolume select " + sourceVolume + 
-						" snapshot select " + snapshotId + " clone " + volumeId + "\r");
-				String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
-				if(targetName != null) {
-					returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\r");
-					if(returnValue.length() == 0) {
-						LOG.error("Unable to set access for volume: " + volumeId);
-						return null;
-					}
+		try {
+			String returnValue = execCommand("stty hardwrap off\rvolume select " + snapshotId + 
+					" offline\rvolume select " + snapshotId + " clone " + volumeId + "\r");
+			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+			if(targetName != null) {
+				returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\r");
+				if(returnValue.length() == 0) {
+					LOG.error("Unable to set access for volume: " + volumeId);
+					return null;
 				}
-				return targetName;
-			} catch (EucalyptusCloudException e) {
-				LOG.error(e);
-				return null;
-			}	
-		} else {
-			try {
-				String returnValue = execCommand("stty hardwrap off\rvolume select " + snapshotId + 
-						" offline\rvolume select " + snapshotId + " clone " + volumeId + "\r");
-				String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
-				if(targetName != null) {
-					returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\r");
-					if(returnValue.length() == 0) {
-						LOG.error("Unable to set access for volume: " + volumeId);
-						return null;
-					}
-				}
-				return targetName;
-			} catch (EucalyptusCloudException e) {
-				LOG.error(e);
-				return null;
-			}	
-		}
+			}
+			return targetName;
+		} catch (EucalyptusCloudException e) {
+			LOG.error(e);
+			return null;
+		}			
 	}
 
 	public String connectTarget(String iqn) throws EucalyptusCloudException {
@@ -305,15 +285,16 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
-			String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " snapshot create-now\r");
-			String snapName = matchPattern(returnValue, SNAPSHOT_CREATE_PATTERN);
-			if(snapName != null) {
-				returnValue = execCommand("volume select " + volumeId + " snapshot rename " + snapName + " " + snapshotId + "\r");
-				returnValue = execCommand("volume select " + volumeId + " snapshot select " + snapshotId + " online\r");
-				returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " snapshot select " + snapshotId + " show\r");
-				return matchPattern(returnValue, SNAPSHOT_TARGET_NAME_PATTERN);
+			String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " clone " + snapshotId + "\r");
+			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+			if(targetName != null) {
+				returnValue = execCommand("volume select " + snapshotId + " access create username " + TARGET_USERNAME + "\r");
+				if(returnValue.length() == 0) {
+					LOG.error("Unable to set access for volume: " + snapshotId);
+					return null;
+				}
 			}
-			return null;
+			return targetName;
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
 			return null;
