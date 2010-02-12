@@ -325,7 +325,7 @@ public class SANManager implements LogicalStorageManager {
 	public List<String> prepareForTransfer(String snapshotId)
 	throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		return null;
+		return new ArrayList<String>();
 	}
 
 	@Override
