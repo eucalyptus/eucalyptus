@@ -2005,10 +2005,12 @@ public class WalrusManager {
 												bucketName, objectName);
 										while ((bytesRead = fileIO.read(offset)) > 0) {
 											ByteBuffer buffer = fileIO.getBuffer();
-											buffer.get(bytes, 0, bytesRead);
-											base64Data += new String(bytes, 0,
+											if(buffer != null) {
+											    buffer.get(bytes, 0, bytesRead);
+											    base64Data += new String(bytes, 0,
 													bytesRead);
-											offset += bytesRead;
+											    offset += bytesRead;
+											}
 										}
 										fileIO.finish();
 									} catch (Exception e) {

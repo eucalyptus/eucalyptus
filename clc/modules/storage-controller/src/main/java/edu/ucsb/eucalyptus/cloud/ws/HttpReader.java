@@ -84,7 +84,6 @@ public class HttpReader extends HttpTransfer {
 				outFile = new File(tempPath + File.separator + file.getName() + Hashes.getRandom(16) + ".gz");		
 			else
 				outFile = file;
-			assert(method != null);
 			httpClient.executeMethod(method);
 			InputStream httpIn;
 			httpIn = method.getResponseBodyAsStream();
@@ -165,7 +164,8 @@ public class HttpReader extends HttpTransfer {
 			httpClient.executeMethod(method);
 			Header value = method.getResponseHeader(headerName);
 			method.releaseConnection();
-			return value.getValue();
+			if(value != null)
+			    return value.getValue();
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}
