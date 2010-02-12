@@ -22,7 +22,7 @@ euca_classes.each{
   } ); 
 };
 
-entity_class_list = []             
+entity_class_list = [ Class.forName("edu.ucsb.eucalyptus.cloud.entities.Counters") ]
 entity_list.each{                  
   try {                            
     e = Class.forName( it );       

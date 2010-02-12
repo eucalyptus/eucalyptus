@@ -314,7 +314,14 @@ public class VmInstance implements HasName {
   }
 
   public String getByKey( String path ) {
+    Map<String, String> m = getMetadataMap( );
+    if ( path == null ) path = "";
+    LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
+    if ( m.containsKey( path + "/" ) ) path += "/";
+    return m.get( path ).replaceAll( "\n*\\z", "" );
+  }
 
+  private Map<String, String> getMetadataMap( ) {
     Map<String, String> m = new HashMap<String, String>( );
     m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
     m.put( "product-codes", this.getImageInfo( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
@@ -342,7 +349,7 @@ public class VmInstance implements HasName {
     m.put( "ramdisk-id", this.getImageInfo( ).getRamdiskId( ) );
     m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
 
-    m.put( "block-device-mapping/", "emi\nephemeral\nroot\nswap" );
+    m.put( "block-device-mapping/", "emi\nephemeral0\nroot\nswap" );
     m.put( "block-device-mapping/emi", "sda1" );
     m.put( "block-device-mapping/ami", "sda1" );
     m.put( "block-device-mapping/ephemeral", "sda2" );
@@ -356,18 +363,13 @@ public class VmInstance implements HasName {
 
     m.put( "placement/", "availability-zone" );
     m.put( "placement/availability-zone", this.getPlacement( ) );
-
-    if ( path == null ) path = "";
     String dir = "";
     for ( String entry : m.keySet( ) ) {
       if ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) continue;
       dir += entry + "\n";
     }
     m.put( "", dir );
-
-    LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
-    if ( m.containsKey( path + "/" ) ) path += "/";
-    return m.get( path ).replaceAll( "\n*\\z", "" );
+    return m;
   }
 
   public int compareTo( final Object o ) {
@@ -436,4 +438,5 @@ public class VmInstance implements HasName {
     NetworkConfigType conf = getNetworkConfig( );
     return conf != null && !( DEFAULT_IP.equals(conf.getIgnoredPublicIp( )) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
   }
+
 }
