@@ -180,9 +180,12 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
       strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
     }
     if (params) {
+      memcpy(&(inst->params), params, sizeof(virtualMachine));
+      /*
         inst->params.mem = params->mem;
         inst->params.disk = params->disk;
         inst->params.cores = params->cores;
+      */
     }
     inst->stateCode = stateCode;
     

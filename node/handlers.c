@@ -832,7 +832,7 @@ static int init (void)
 
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
-	int ret, len;
+        int ret, len, i;
 	char *file_name;
 	FILE *f;
 	long long used_mem, used_disk, used_cores;
@@ -850,6 +850,12 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 
 	if (ret)
 		return ret;
+
+
+	for (i=0; i < (*outInstsLen); i++) {
+	  ncInstance *instance = (*outInsts)[i];
+	  logprintfl(EUCADEBUG, "doDescribeInstances(): instanceId=%s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d\n", instance->instanceId, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex);
+	}
 
 	/* allocate enough memory */
 	len = (strlen(EUCALYPTUS_CONF_LOCATION) > strlen(NC_MONIT_FILENAME)) ? strlen(EUCALYPTUS_CONF_LOCATION) : strlen(NC_MONIT_FILENAME);
