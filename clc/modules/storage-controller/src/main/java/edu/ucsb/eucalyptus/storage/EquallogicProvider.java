@@ -173,6 +173,9 @@ public class EquallogicProvider implements SANProvider {
 			try {
 				String deviceName = SystemUtil.run(new String[]{"sudo", "-E", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
 						host + "," + iqn + "," + encryptedPassword});
+				if(deviceName.length() == 0) {
+					throw new EucalyptusCloudException("Unable to get device name. Connect failed.");
+				}
 				return deviceName;
 			} catch (ExecutionException e) {
 				throw new EucalyptusCloudException("Unable to connect to storage target");
