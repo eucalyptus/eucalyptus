@@ -86,6 +86,9 @@ permission notice:
 #define SUPERUSER "eucalyptus"
 
 // local globals
+int config_init=0;
+int local_init=0;
+int thread_init=0;
 int init=0;
 
 // to be stored in shared memory
@@ -97,7 +100,6 @@ ccResourceCache *resourceCache=NULL;
 
 vnetConfig *vnetconfig=NULL;
 
-enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, ENDLOCK};
 sem_t *locks[ENDLOCK] = {NULL, NULL, NULL, NULL, NULL, NULL};
 int mylocks[ENDLOCK] = {0,0,0,0,0,0};
 
@@ -1085,7 +1087,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
     }
 
     for (i=0; i<MAXINSTANCES; i++) {
-      if (instanceCache->valid[i] == 1) {
+      if (instanceCache->cacheState[i] == INSTVALID) {
 	memcpy( &((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
 	count++;
 	if (count > instanceCache->numInsts) {
@@ -2224,7 +2226,7 @@ int init_localstate(void) {
   char *tmpstr=NULL, logFile[1024], configFiles[2][1024], home[1024], vfile[1024];
 
   ret=0;
-  if (init) {
+  if (local_init) {
   } else {
     // thread is not initialized, run first time local state setup
     bzero(logFile, 1024);
@@ -2257,7 +2259,8 @@ int init_localstate(void) {
     if (tmpstr) free(tmpstr);
     // set up logfile
     logfile(logFile, loglevel);
-   
+    
+    local_init=1;
   }
 
   return(ret);
@@ -2266,12 +2269,12 @@ int init_localstate(void) {
 int init_thread(void) {
   int rc;
   
-  if (init) {
+  logprintfl(EUCADEBUG, "init_thread(): init=%d %08X %08X %08X %08X\n", init, config, vnetconfig, instanceCache, resourceCache);
+  if (thread_init) {
     // thread has already been initialized
   } else {
     // this thread has not been initialized, set up shared memory segments
     srand(time(NULL));
-
 
     //    initLock = sem_open("/eucalyptusCCinitLock", O_CREAT, 0644, 1);    
     //    sem_mywait(initLock);
@@ -2280,7 +2283,6 @@ int init_thread(void) {
 
     //    ncCallLock = sem_open("/eucalyptusCCncCallLock", O_CREAT, 0644, 1);
     locks[NCCALL] = sem_open("/eucalyptusCCncCallLock", O_CREAT, 0644, 1);
-
     
     if (config == NULL) {
       //      rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &configLock, "/eucalyptusCCConfigLock", SHARED_FILE);
@@ -2322,6 +2324,7 @@ int init_thread(void) {
       }
     }
     sem_mypost(INIT);
+    thread_init=1;
   }
   return(0);
 }
@@ -2369,6 +2372,10 @@ int update_config(void) {
       ret = 1;
     } else {
       sem_mywait(RESCACHE);
+      if (numHosts > MAXNODES) {
+	logprintfl(EUCAWARN, "update_config(): the list of nodes specified exceeds the maximum number of nodes that a single CC can support (%d).  Truncating list to %d nodes.\n", MAXNODES, MAXNODES);
+	numHosts = MAXNODES;
+      }
       resourceCache->numResources = numHosts;
       memcpy(resourceCache->resources, res, sizeof(ccResource) * numHosts);
       sem_mypost(RESCACHE);
@@ -2411,7 +2418,7 @@ int init_config(void) {
   snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
   snprintf(eucahome, 1024, "%s/", home);
 
-  if (init) {
+  if (config_init && config->initialized) {
     // this means that this thread has already been initialized
     ret = 0;
     return(ret);
@@ -2425,6 +2432,7 @@ int init_config(void) {
       // failed to restore network state, continue 
       logprintfl(EUCAWARN, "init_config(): restoreNetworkState returned false (may be already restored)\n");
     }
+    config_init = 1;
     return(0);
   }
   
@@ -2775,6 +2783,7 @@ int init_config(void) {
   resourceCache->lastResourceUpdate = 0;
   sem_mypost(RESCACHE);
   
+  config_init=1;
   logprintfl(EUCADEBUG,"init_config(): done\n");
   
   return(0);
@@ -2973,10 +2982,11 @@ void shawn() {
   
   //  logprintfl(EUCADEBUG, "msync()ing...called\n");
   //  TIMERSTART(msyncer);
-  msync(instanceCache, sizeof(ccInstanceCache), MS_ASYNC);
-  msync(resourceCache, sizeof(ccResourceCache), MS_ASYNC);
-  msync(config, sizeof(ccConfig), MS_ASYNC);
-  msync(vnetconfig, sizeof(vnetConfig), MS_ASYNC);
+  
+  if (instanceCache) msync(instanceCache, sizeof(ccInstanceCache), MS_ASYNC);
+  if (resourceCache) msync(resourceCache, sizeof(ccResourceCache), MS_ASYNC);
+  if (config) msync(config, sizeof(ccConfig), MS_ASYNC);
+  if (vnetconfig) msync(vnetconfig, sizeof(vnetConfig), MS_ASYNC);
   //  TIMERSTOP(msyncer);
   //  logprintfl(EUCADEBUG, "msync()ing...done\n");
 }
@@ -3114,7 +3124,7 @@ int pubIpSet(ccInstance *inst, void *ip) {
 }
 
 int map_instanceCache(int (*match)(ccInstance *, void *), void *matchParam, int (*operate)(ccInstance *, void *), void *operateParam) {
-  int i;
+  int i, ret=0;
   
   sem_mywait(INSTCACHE);
 
@@ -3122,12 +3132,13 @@ int map_instanceCache(int (*match)(ccInstance *, void *), void *matchParam, int 
     if (!match(&(instanceCache->instances[i]), matchParam)) {
       if (operate(&(instanceCache->instances[i]), operateParam)) {
 	logprintfl(EUCAWARN, "map_instanceCache(): failed to operate at index %d\n", i);
+	ret++;
       }
     }
   }
   
   sem_mypost(INSTCACHE);
-  return(0);
+  return(ret);
 }
 
 void print_instanceCache(void) {
@@ -3136,7 +3147,7 @@ void print_instanceCache(void) {
   sem_mywait(INSTCACHE);
   for (i=0; i<MAXINSTANCES; i++) {
     //    if ((time(NULL) - instanceCache->lastseen[i]) <= config->instanceTimeout) {
-    if ( instanceCache->valid[i] == 1 ) {
+    if ( instanceCache->cacheState[i] == INSTVALID ) {
       logprintfl(EUCADEBUG,"\tcache: %d/%d %s %s %s %s\n", i, instanceCache->numInsts, instanceCache->instances[i].instanceId, instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp, instanceCache->instances[i].state);
     }
   }
@@ -3184,11 +3195,11 @@ void invalidate_instanceCache(void) {
   
   sem_mywait(INSTCACHE);
   for (i=0; i<MAXINSTANCES; i++) {
-    if ( (instanceCache->valid[i] == 1) && ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout)) {
+    if ( (instanceCache->cacheState[i] == INSTVALID) && ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout)) {
       logprintfl(EUCADEBUG, "invalidate_instanceCache(): invalidating instance '%s' (last seen %d seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
       bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
       instanceCache->lastseen[i] = 0;
-      instanceCache->valid[i] = 0;
+      instanceCache->cacheState[i] = INSTINVALID;
       instanceCache->numInsts--;
       //      del_instanceCacheId(instanceCache->instances[i].instanceId);
     }
@@ -3234,13 +3245,13 @@ int add_instanceCache(char *instanceId, ccInstance *in){
   sem_mywait(INSTCACHE);
   done=0;
   for (i=0; i<MAXINSTANCES && !done; i++) {
-    if ( (instanceCache->valid[i] == 1 ) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
+    if ( (instanceCache->cacheState[i] == INSTVALID ) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
       // already in cache
       logprintfl(EUCADEBUG, "add_instanceCache(): '%s/%s/%s' already in cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp);
       instanceCache->lastseen[i] = time(NULL);
       sem_mypost(INSTCACHE);
       return(0);
-    } else if ( instanceCache->valid[i] == 0 ) {
+    } else if ( instanceCache->cacheState[i] == INSTINVALID ) {
       firstNull = i;
       done++;
     }
@@ -3249,7 +3260,7 @@ int add_instanceCache(char *instanceId, ccInstance *in){
   allocate_ccInstance(&(instanceCache->instances[firstNull]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->ownerId, in->state, in->ts, in->reservationId, &(in->ccnet), &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->groupNames, in->volumes, in->volumesSize);
   instanceCache->numInsts++;
   instanceCache->lastseen[firstNull] = time(NULL);
-  instanceCache->valid[firstNull] = 1;
+  instanceCache->cacheState[firstNull] = INSTVALID;
 
   sem_mypost(INSTCACHE);
   return(0);
@@ -3260,11 +3271,11 @@ int del_instanceCacheId(char *instanceId) {
 
   sem_mywait(INSTCACHE);
   for (i=0; i<MAXINSTANCES; i++) {
-    if ( (instanceCache->valid[i] == 1) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
+    if ( (instanceCache->cacheState[i] == INSTVALID) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
       // del from cache
       bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
       instanceCache->lastseen[i] = 0;
-      instanceCache->valid[i] = 0;
+      instanceCache->cacheState[i] = INSTINVALID;
       instanceCache->numInsts--;
       sem_mypost(INSTCACHE);
       return(0);
@@ -3347,7 +3358,7 @@ void print_resourceCache(void) {
 
   sem_mywait(RESCACHE);
   for (i=0; i<MAXNODES; i++) {
-    if (resourceCache->valid[i]) {
+    if (resourceCache->cacheState[i] == RESVALID) {
       logprintfl(EUCADEBUG,"\tcache: %s %s %s %s/%s state=%d\n", resourceCache->resources[i].hostname, resourceCache->resources[i].ncURL, resourceCache->resources[i].ncService, resourceCache->resources[i].mac, resourceCache->resources[i].ip, resourceCache->resources[i].state);
     }
   }
@@ -3359,7 +3370,7 @@ void invalidate_resourceCache(void) {
   
   sem_mywait(RESCACHE);
 
-  bzero(resourceCache->valid, sizeof(int)*MAXNODES);
+  bzero(resourceCache->cacheState, sizeof(int)*MAXNODES);
   resourceCache->numResources = 0;
   resourceCache->resourceCacheUpdate = 0;
 
@@ -3377,7 +3388,7 @@ int refresh_resourceCache(char *host, ccResource *in){
   sem_mywait(RESCACHE);
   done=0;
   for (i=0; i<MAXNODES && !done; i++) {
-    if (resourceCache->valid[i]) {
+    if (resourceCache->cacheState[i] == RESVALID) {
       if (!strcmp(resourceCache->resources[i].hostname, host)) {
 	// in cache
 	memcpy(&(resourceCache->resources[i]), in, sizeof(ccResource));
@@ -3403,7 +3414,7 @@ int add_resourceCache(char *host, ccResource *in){
   sem_mywait(RESCACHE);
   done=0;
   for (i=0; i<MAXNODES && !done; i++) {
-    if (resourceCache->valid[i]) {
+    if (resourceCache->cacheState[i] == RESVALID) {
       if (!strcmp(resourceCache->resources[i].hostname, host)) {
 	// already in cache
 	sem_mypost(RESCACHE);
@@ -3414,7 +3425,7 @@ int add_resourceCache(char *host, ccResource *in){
       done++;
     }
   }
-  resourceCache->valid[firstNull] = 1;
+  resourceCache->cacheState[firstNull] = RESVALID;
   allocate_ccResource(&(resourceCache->resources[firstNull]), in->ncURL, in->ncService, in->ncPort, in->hostname, in->mac, in->ip, in->maxMemory, in->availMemory, in->maxDisk, in->availDisk, in->maxCores, in->availCores, in->state, in->lastState, in->stateChange, in->idleStart);
   resourceCache->numResources++;
   sem_mypost(RESCACHE);
@@ -3426,11 +3437,11 @@ int del_resourceCacheId(char *host) {
 
   sem_mywait(RESCACHE);
   for (i=0; i<MAXNODES; i++) {
-    if (resourceCache->valid[i]) {
+    if (resourceCache->cacheState[i] == RESVALID) {
       if (!strcmp(resourceCache->resources[i].hostname, host)) {
 	// del from cache
 	bzero(&(resourceCache->resources[i]), sizeof(ccResource));
-	resourceCache->valid[i] = 0;
+	resourceCache->cacheState[i] = RESINVALID;
 	resourceCache->numResources--;
 	sem_mypost(RESCACHE);
 	return(0);
@@ -3452,7 +3463,7 @@ int find_resourceCacheId(char *host, ccResource **out) {
   *out = NULL;
   done=0;
   for (i=0; i<MAXNODES && !done; i++) {
-    if (resourceCache->valid[i]) {
+    if (resourceCache->cacheState[i] == RESVALID) {
       if (!strcmp(resourceCache->resources[i].hostname, host)) {
 	// found it
 	*out = malloc(sizeof(ccResource));
