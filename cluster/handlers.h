@@ -70,6 +70,7 @@ permission notice:
 #define OP_TIMEOUT_PERNODE 20
 
 enum {SHARED_MEM, SHARED_FILE};
+enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, ENDLOCK};
 
 typedef struct instance_t {
   char instanceId[16];
@@ -107,6 +108,8 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
 void print_ccInstance(char *tag, ccInstance *in);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
+enum {INSTINVALID, INSTVALID, INSTCONFLICT};
+enum {RESINVALID, RESVALID};
 enum {MONITOR, CLEANUP, CONTROL};
 enum {CONFIGLOCK, CACHELOCK, VNETCONFIGLOCK};
 
@@ -124,7 +127,7 @@ int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPor
 
 typedef struct ccResourceCache_t {
   ccResource resources[MAXNODES];
-  int valid[MAXNODES];
+  int cacheState[MAXNODES];
   int numResources;
   int lastResourceUpdate;
   int resourceCacheUpdate;
@@ -133,7 +136,7 @@ typedef struct ccResourceCache_t {
 typedef struct ccInstanceCache_t {
   ccInstance instances[MAXINSTANCES];
   time_t lastseen[MAXINSTANCES];
-  time_t valid[MAXINSTANCES];
+  int cacheState[MAXINSTANCES];
   int numInsts;
   int instanceCacheUpdate;
 } ccInstanceCache;
