@@ -136,7 +136,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
 
   public static VmInstance restrictedLookup( String userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
     VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
-    if ( !administrator || !vm.getOwnerId( ).equals( userId ) ) {
+    if ( !administrator && !vm.getOwnerId( ).equals( userId ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to lookup vm instance: " + instanceId );
     }
     return vm;
