@@ -236,7 +236,7 @@ int main (int argc, char **argv)
     }
     
     ncMetadata meta = { "correlate-me-please", "eucalyptus" };
-    ncInstParams params = { 64, 64, 1 };
+    virtualMachine params = { 64, 64, 1, "m1.tiny"};
     ncStub * stub;
     char configFile[1024], policyFile[1024];
     char *euca_home;
@@ -307,12 +307,12 @@ int main (int argc, char **argv)
         CHECK_PARAM(image_id, "image ID and manifest path");
         CHECK_PARAM(kernel_id, "kernel ID and manifest path");
 
-        char *privMac, *pubMac;
+        char *privMac, *pubMac, *privIp;
         int vlan = 3;
         privMac = strdup (mac_addr);
         mac_addr [0] = 'b';
         mac_addr [1] = 'b';
-        pubMac = strdup (mac_addr);
+	privIp = strdup("10.0.0.202");
 
         /* generate random IDs if they weren't specified*/
 #define C rand()%26 + 97
@@ -336,7 +336,12 @@ int main (int argc, char **argv)
                 rid = reservation_id;
             }
             
+	    netConfig netparams;
             ncInstance * outInst;
+	    netparams.vlan = vlan;
+	    snprintf(netparams.privateIp, 24, "%s", privIp);
+	    snprintf(netparams.privateMac, 24, "%s", privMac);
+
             int rc = ncRunInstanceStub(stub, &meta, 
                                        iid, rid,
                                        &params, 
@@ -344,7 +349,8 @@ int main (int argc, char **argv)
                                        kernel_id, kernel_url, 
                                        ramdisk_id, ramdisk_url, 
                                        "", /* key */
-                                       privMac, pubMac, vlan, 
+				       &netparams,
+				       //                                       privMac, privIp, vlan, 
                                        user_data, launch_index, group_names, group_names_size, /* CC stuff */
                                        &outInst);
             if (rc != 0) {

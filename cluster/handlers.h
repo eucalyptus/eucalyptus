@@ -71,20 +71,6 @@ permission notice:
 
 enum {SHARED_MEM, SHARED_FILE};
 
-typedef struct virtualMachine_t {
-  int mem, cores, disk;
-  char name[64];
-} virtualMachine;
-int allocate_virtualMachine(virtualMachine *out, int mem, int disk, int cores, char *name);
-//void free_virtualMachine(virtualMachine *in);
-
-typedef struct netConfig_t {
-  int vlan;
-  char publicMac[24], privateMac[24], publicIp[24], privateIp[24];
-} netConfig;
-int allocate_netConfig(netConfig *out, char *pvMac, char *pbMac, char *pvIp, char *pbIp, int vlan);
-//void free_netConfig(netConfig *in);
-
 typedef struct instance_t {
   char instanceId[16];
   char reservationId[16];
@@ -104,7 +90,6 @@ typedef struct instance_t {
   char keyName[1024];
   
   netConfig ccnet;
-  int networkIndex;
   virtualMachine ccvm;
 
   int ncHostIdx;
@@ -118,9 +103,8 @@ typedef struct instance_t {
   int volumesSize;
 } ccInstance;
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char groupNames[][32], ncVolume *volumes, int volumesSize, int networkIndex);
-void print_ccInstance(ccInstance *in);
-//void free_ccInstance(ccInstance *inInst);
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char groupNames[][32], ncVolume *volumes, int volumesSize);
+void print_ccInstance(char *tag, ccInstance *in);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
 enum {MONITOR, CLEANUP, CONTROL};
