@@ -326,12 +326,12 @@ public class ResourceType extends EucalyptusData {
 }
 public class NetworkConfigType extends EucalyptusData {
   String macAddress;
-  String ignoredMacAddress;
   String ipAddress;
   String ignoredPublicIp;
   String privateDnsName;
   String publicDnsName;
   int vlan;
+  Integer networkIndex;
   
   def NetworkConfigType() {
   }
@@ -349,6 +349,7 @@ public class NetworkConfigType extends EucalyptusData {
     ", publicIp='" + ignoredPublicIp + '\'' +
     ", privateDnsName='" + privateDnsName + '\'' +
     ", publicDnsName='" + publicDnsName + '\'' +
+    ", networkIndex='" + networkIndex + '\'' +
     ", vlan=" + vlan +
     '}';
   }

@@ -98,11 +98,12 @@ doInitialize (struct nc_state_t *nc)
 
 static int
 doRunInstance (	struct nc_state_t *nc, ncMetadata *meta, char *instanceId,
-		char *reservationId, ncInstParams *params, 
+		char *reservationId, virtualMachine *params, 
 		char *imageId, char *imageURL, 
 		char *kernelId, char *kernelURL, 
 		char *ramdiskId, char *ramdiskURL, 
-		char *keyName, char *privMac, char *pubMac, int vlan, 
+		char *keyName, 
+		netConfig *netparams,
 		char *userData, char *launchIndex, 
 		char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
@@ -255,9 +256,9 @@ doDescribeResource(	struct nc_state_t *nc,
     sem_p (inst_sem); 
     while ((inst=get_instance(&global_instances))!=NULL) {
         if (inst->state == TEARDOWN) continue; /* they don't take up resources */
-        sum_mem += inst->params.memorySize;
-        sum_disk += (inst->params.diskSize + SWAP_SIZE);
-        sum_cores += inst->params.numberOfCores;
+        sum_mem += inst->params.mem;
+        sum_disk += (inst->params.disk + SWAP_SIZE);
+        sum_cores += inst->params.cores;
     }
     sem_v (inst_sem);
     

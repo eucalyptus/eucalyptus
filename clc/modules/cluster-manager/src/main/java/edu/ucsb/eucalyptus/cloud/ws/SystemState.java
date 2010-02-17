@@ -188,7 +188,7 @@ public class SystemState {
   private static void cleanUp( final VmInstance vm ) {
     String networkFqName = !vm.getNetworks().isEmpty()?vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ):null;
     Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-    int networkIndex = vm.getNetworkIndex( );
+    int networkIndex = vm.getNetworkConfig().getNetworkIndex( );
     Address address = null;
     QueuedEventCallback cb = new TerminateCallback( vm.getInstanceId( ) );
     if ( Clusters.getInstance( ).hasNetworking( ) ) {
@@ -218,7 +218,7 @@ public class SystemState {
             LOG.debug( e, e );
           }
         }
-        vm.setNetworkIndex( -1 );
+        vm.getNetworkConfig().setNetworkIndex( -1 );
         try {
           if( networkFqName != null ) {
           Network net = Networks.getInstance( ).lookup( networkFqName );
@@ -280,12 +280,12 @@ public class SystemState {
         vm.setState( VmState.Mapper.get( runVm.getStateName( ) ) );
         if ( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
           SystemState.cleanUp( vm );
-        } else if ( vm.getNetworkIndex( ) > 0 && runVm.getNetworkIndex( ) > 0
+        } else if ( vm.getNetworkConfig().getNetworkIndex( ) > 0 && runVm.getNetParams().getNetworkIndex( ) > 0
                     && ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) ) {
           try {
-            vm.setNetworkIndex( runVm.getNetworkIndex( ) );
+	    vm.getNetworkConfig().setNetworkIndex( runVm.getNetParams().getNetworkIndex( ) );
             Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) ).extantNetworkIndex( vm.getPlacement( ),
-                                                                                                                              vm.getNetworkIndex( ) );
+                                                                                                                              vm.getNetworkConfig().getNetworkIndex( ) );
           } catch ( Exception e ) {}
         }
         
@@ -344,7 +344,7 @@ public class SystemState {
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.error( e );
           }
-          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetworkIndex( ) );
+          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams().getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
             notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
@@ -363,7 +363,7 @@ public class SystemState {
         }
       }
       VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, imgInfo, keyInfo, vmType, networks,
-                                      Integer.toString( runVm.getNetworkIndex( ) ) );
+                                      Integer.toString( runVm.getNetParams().getNetworkIndex( ) ) );
       vm.setLaunchTime( runVm.getLaunchTime( ) );
       vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
       String dnsDomain = "dns-disabled";
@@ -395,7 +395,11 @@ public class SystemState {
           if( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
             v.setState( VmState.SHUTTING_DOWN );
             v.resetStopWatch( );
-            SystemState.cleanUp( v );
+            try {
+		SystemState.cleanUp( v );
+	    } catch ( Throwable t ) {
+		LOG.debug(t, t);
+	    }
           }
         }
       } catch ( NoSuchElementException e ) {
