@@ -98,15 +98,15 @@ public class WalrusProperties {
 	public static int MAX_TOTAL_SNAPSHOT_SIZE = 50;
 	public static int MAX_KEYS = 1000;
 
-	public static final int IO_CHUNK_SIZE = 102400;
+	public static int IO_CHUNK_SIZE = 102400;
 	public static boolean shouldEnforceUsageLimits = true;
 	public static boolean trackUsageStatistics = true;
 	public static boolean enableTorrents = false;
 	public static boolean enableVirtualHosting = true;
-	public static final long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
+	public static long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
 	public static long IMAGE_CACHE_RETRY_TIMEOUT = 1000L;
-	public static final int IMAGE_CACHE_RETRY_LIMIT = 3;
-	public static final long MAX_INLINE_DATA_SIZE = 10 * M;
+	public static int IMAGE_CACHE_RETRY_LIMIT = 3;
+	public static long MAX_INLINE_DATA_SIZE = 10 * M;
 	public static final String walrusServicePath = "/services/Walrus";
 	public static int WALRUS_PORT = 8773;
 	public static final String NAMESPACE_VERSION = "2006-03-01";

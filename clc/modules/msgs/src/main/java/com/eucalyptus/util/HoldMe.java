@@ -98,7 +98,7 @@ public class HoldMe implements Lock {
     }
     SOAPFactory defaultSOAP11OMFactory;
     try {
-      defaultSOAP11OMFactory = ( SOAPFactory ) Class.forName( omFactory ).newInstance( );
+      defaultSOAP11OMFactory = ( SOAPFactory ) ClassLoader.getSystemClassLoader().loadClass( omFactory ).newInstance( );
     } catch ( InstantiationException e ) {
       throw new OMException( e );
     } catch ( IllegalAccessException e ) {
@@ -123,7 +123,7 @@ public class HoldMe implements Lock {
 
     SOAPFactory defaultSOAP12OMFactory;
     try {
-      defaultSOAP12OMFactory = ( SOAPFactory ) Class.forName( omFactory ).newInstance( );
+      defaultSOAP12OMFactory = ( SOAPFactory ) ClassLoader.getSystemClassLoader().loadClass( omFactory ).newInstance( );
     } catch ( InstantiationException e ) {
       throw new OMException( e );
     } catch ( IllegalAccessException e ) {
@@ -148,7 +148,7 @@ public class HoldMe implements Lock {
 
     OMFactory defaultOMFactory;
     try {
-      defaultOMFactory = ( OMFactory ) Class.forName( omFactory ).newInstance( );
+      defaultOMFactory = ( OMFactory ) ClassLoader.getSystemClassLoader().loadClass( omFactory ).newInstance( );
     } catch ( InstantiationException e ) {
       throw new OMException( e );
     } catch ( IllegalAccessException e ) {

@@ -68,9 +68,10 @@ static int debug = 0;
 #define EUCA_LIB_DIR "/usr/share/eucalyptus"
 #define EUCA_ETC_DIR "/etc/eucalyptus/cloud.d"
 #define EUCA_SCRIPT_DIR "/etc/eucalyptus/cloud.d/scripts"
-
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
 #define EUCA_RET_RELOAD 123
+#define java_load_bootstrapper euca_load_bootstrapper
+void euca_load_bootstrapper(void);
 
 typedef struct {
 	char* method_name;

@@ -128,8 +128,12 @@
   </target>
   <target name="builder" depends="init" description="--> build the jar file from source.">
     <condition property="builder.target" value="build-${builder.suffix}" else="build-java"><isset property="builder.suffix"/></condition>
-    <echo message="builder.target=${builder.target}"/>
-    <antcall target="${builder.target}" inheritall="true" inheritrefs="true"/>
+    <echo message="[COMPILE] ${builder.target} for ${ant.project.name}"/>
+  	<antcall target="${builder.target}" inheritall="true" inheritrefs="true"/>
+    <uptodate property="jar.notRequired" targetfile="${jar.file}">
+      <srcfiles dir="${build.dir}" includes="**/*" />
+      <srcfiles dir="${rsrc.dir}" includes="**/*" />
+    </uptodate>
     <antcall target="jar"/>
   </target>
   <target name="build-java">
@@ -156,8 +160,9 @@
     <delete file="${jar.file}" />
   </target>
   <!--================================== jar target ==================================-->
-  <target name="jar">
-  	<delete file="${jar.file}"/>
+  <target name="jar" unless="jar.notRequired">
+  	<echo message="[JARFILE] target/${ant.project.name}-${euca.version}.jar"/>
+    <delete file="${jar.file}"/>
     <jar destfile="${jar.file}">
       <fileset dir="${build.dir}">
         <include name="**/*"/>

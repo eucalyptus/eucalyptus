@@ -119,10 +119,10 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   @Override
   public boolean load( Resource current ) throws Exception {
     try {
-      LOG.debug( "Initializing SSL just in case: " + Class.forName( "com.eucalyptus.auth.util.SslSetup" ) );
+      LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.util.SslSetup" ) );
     } catch ( Throwable t ) {}
     try {
-      LOG.debug( "Initializing db password: " + Class.forName( "com.eucalyptus.auth.util.Hashes" ) );
+      LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.util.Hashes" ) );
     } catch ( Throwable t ) {}
     createDatabase( );
     return true;
