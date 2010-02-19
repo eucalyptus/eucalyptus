@@ -143,6 +143,8 @@ public class WalrusProperties {
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
 
+        static { GroovyUtil.loadConfig("walrusprops.groovy"); }
+
 	public enum VersioningStatus {
 		Enabled, Disabled, Suspended
 	}
