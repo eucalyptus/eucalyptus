@@ -82,7 +82,7 @@ public class GenerateJiBXBinding {
     List<Class> classList = Lists.newArrayList( );
     for ( String className : pathList ) {
       if ( className.startsWith( "JiBX_" ) || className.endsWith( "Category" ) ) continue;
-      classList.add( Class.forName( "edu.ucsb.eucalyptus.msgs." + className.replaceAll( ".class", "" ) ) );
+      classList.add( ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs." + className.replaceAll( ".class", "" ) ) );
     }
     GenerateJiBXBinding.binding( "http://msgs.eucalyptus.ucsb.edu", classList );
     File out = new File( "src/main/resources/msgs-binding.xml" );

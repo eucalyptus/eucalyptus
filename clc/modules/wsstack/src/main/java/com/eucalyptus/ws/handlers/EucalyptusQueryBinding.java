@@ -102,7 +102,7 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
     Map<String, String> fieldMap = null;
     Class targetType = null;
     try {
-      targetType = Class.forName( "edu.ucsb.eucalyptus.msgs.".concat( operationName ).concat( "Type" ) );
+      targetType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs.".concat( operationName ).concat( "Type" ) );
       fieldMap = this.buildFieldMap( targetType );
       eucaMsg = ( EucalyptusMessage ) targetType.newInstance( );
     } catch ( Exception e ) {

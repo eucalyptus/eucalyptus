@@ -99,7 +99,7 @@ public class BindingHandler extends MessageStackHandler {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
       //:: TODO: need an index of message types based on name space :://
-      Class msgType = Class.forName( "edu.ucsb.eucalyptus.msgs." + httpMessage.getOmMessage( ).getLocalName( ) + "Type" );
+      Class msgType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs." + httpMessage.getOmMessage( ).getLocalName( ) + "Type" );
       EucalyptusMessage msg = null;
       OMElement elem = httpMessage.getOmMessage( );
       OMNamespace omNs = elem.getNamespace( );
@@ -135,7 +135,7 @@ public class BindingHandler extends MessageStackHandler {
        Class targetClass = httpRequest.getMessage( ).getClass( );
       while ( !targetClass.getSimpleName( ).endsWith( "Type" ) )
         targetClass = targetClass.getSuperclass( );
-      Class responseClass = Class.forName( targetClass.getName( ) );
+      Class responseClass = ClassLoader.getSystemClassLoader().loadClass( targetClass.getName( ) );
       ctx.setAttachment( responseClass );
       OMElement omElem = this.binding.toOM( httpRequest.getMessage( ) );
       httpRequest.setOmMessage( omElem );

@@ -221,7 +221,7 @@ public class EucalyptusMessage implements Cloneable, Serializable {
     Class msgClass = this.getClass();
     if ( !this.getClass().getSimpleName().endsWith("Type") )
       msgClass = msgClass.getSuperclass();
-    Class responseClass = Class.forName(msgClass.getName().replaceAll("Type", "") + "ResponseType");
+    Class responseClass = ClassLoader.getSystemClassLoader().loadClass(msgClass.getName().replaceAll("Type", "") + "ResponseType");
     EucalyptusMessage reply = (EucalyptusMessage) responseClass.newInstance();
     reply.setCorrelationId(this.getCorrelationId());
     reply.setUserId(this.getUserId());
@@ -233,7 +233,7 @@ public class EucalyptusMessage implements Cloneable, Serializable {
     Class msgClass = this.getClass();
     if ( !this.getClass().getSimpleName().endsWith("Type") )
       msgClass = msgClass.getSuperclass();
-    Class responseClass = Class.forName(msgClass.getName().replaceAll("Type", "") + "ResponseType");
+    Class responseClass = ClassLoader.getSystemClassLoader().loadClass(msgClass.getName().replaceAll("Type", "") + "ResponseType");
     return responseClass;
   }
 
