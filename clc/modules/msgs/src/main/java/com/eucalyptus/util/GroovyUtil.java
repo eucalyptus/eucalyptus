@@ -83,7 +83,7 @@ public class GroovyUtil {
       try {
         for(BufferedReader fileReader = new BufferedReader( new FileReader( confFile ) );
             (line = fileReader.readLine( ))!=null;
-            conf += !line.matches("\\s*\\w+\\s*=[\\s\\w*\"']*")?"":"\n"+className+"."+line);
+            conf += !line.matches("\\s*\\w+\\s*=[\\s\\w*\"']*;{0,1}")?"":"\n"+className+"."+line);
         LOG.debug( conf );
         try {
           getGroovyEngine( ).eval( conf );
