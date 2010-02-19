@@ -98,7 +98,7 @@ import edu.ucsb.eucalyptus.msgs.Grantee;
 
 public class WalrusBucketLogger {
 	private Logger LOG = Logger.getLogger( WalrusBucketLogger.class );
-	private static WalrusBucketLogger singleton = new WalrusBucketLogger();
+	private static WalrusBucketLogger singleton;
 
         private static int LOG_THRESHOLD = 10;
 	private static int LOG_PERIODICITY = 120;
