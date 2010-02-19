@@ -227,7 +227,7 @@ public class Binding {
   public UnmarshallingContext getNewUnmarshalContext( final OMElement param ) throws JiBXException {
     if ( this.bindingFactory == null ) {
       try {
-        this.bindingFactory = BindingDirectory.getFactory( this.name, Class.forName( "edu.ucsb.eucalyptus.msgs." + param.getLocalName( ) + "Type" ) );
+        this.bindingFactory = BindingDirectory.getFactory( this.name, ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs." + param.getLocalName( ) + "Type" ) );
       } catch ( final Exception e ) {
         Binding.LOG.error( e, e );
         throw new RuntimeException( this.bindingErrorMsg );
@@ -263,7 +263,7 @@ public class Binding {
   public Object fromOM( final OMElement param ) throws WebServicesException {
     try {
       final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
-      return ctx.unmarshalElement( ); // Class.forName(
+      return ctx.unmarshalElement( ); // ClassLoader.getSystemClassLoader().loadClass(
                                       // "edu.ucsb.eucalyptus.msgs." +
                                       // param.getLocalName( ) + "Type" ) );
     } catch ( final Exception e ) {
