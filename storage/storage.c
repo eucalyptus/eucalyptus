@@ -78,6 +78,7 @@ permission notice:
 #include <misc.h>
 #include <storage.h>
 #include <vnetwork.h>
+#include <storage-windows.h>
 
 #define BUFSIZE 512 /* random buffer size used all over the place */
 
@@ -980,7 +981,7 @@ retry:
 }
 
 
-int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
+int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
 {
     char image_path   [BUFSIZE]; long long image_size_b = 0L;
     char kernel_path  [BUFSIZE]; long long kernel_size_b = 0L;
@@ -1009,7 +1010,7 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
         return e; \
     }
     CHECK_LIMIT("swap");
-
+    
     /* do kernel & ramdisk first, since either the disk or the ephemeral partition will take up the rest */
     if ((kernel_size_b=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, 0, limit_mb))<1L) return e;
     limit_mb -= kernel_size_b/MEGABYTE;
@@ -1026,6 +1027,11 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     snprintf (rundir_path, BUFSIZE, "%s/%s/%s", sc_instance_path, userId, instanceId);
    
     logprintfl (EUCAINFO, "preparing images for instance %s...\n", instanceId);
+
+    e = makeWindowsFloppy(euca_home, rundir_path, keyName, "helloworld");
+    if (e) {
+      logprintfl(EUCAERROR, "could not create windows bootup script floppy\n");
+    }
     
     /* embed the key, which is contained in keyName */
     char *key_template = NULL;

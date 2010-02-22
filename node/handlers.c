@@ -335,7 +335,8 @@ int
 get_instance_xml(	const char *gen_libvirt_cmd_path,
 			char *userId,
 			char *instanceId,
-			int ramdisk,
+			char *ramdiskId,
+			char *kernelId,
 			char *disk_path,
 			virtualMachine *params,
 			char *privMac,
@@ -345,11 +346,21 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
 {
     char buf [CHAR_BUFFER_SIZE];
 
-    if (ramdisk) {
-        snprintf (buf, CHAR_BUFFER_SIZE, "%s --ramdisk", gen_libvirt_cmd_path);
-    } else {
-        snprintf (buf, CHAR_BUFFER_SIZE, "%s", gen_libvirt_cmd_path);
+    snprintf(buf, CHAR_BUFFER_SIZE, "%s", gen_libvirt_cmd_path);
+
+    if (!strstr(ramdiskId, "windows") && !strstr(kernelId, "windows")) {
+      if (strnlen(ramdiskId, CHAR_BUFFER_SIZE) && strnlen(kernelId, CHAR_BUFFER_SIZE)) {
+	strcat(buf, " --ramdisk --kernel");
+	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --ramdisk --kernel", gen_libvirt_cmd_path);
+      } else if (strnlen(ramdiskId, CHAR_BUFFER_SIZE)) {
+	strcat(buf, " --ramdisk");
+	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --ramdisk", gen_libvirt_cmd_path);
+      } else if (strnlen(kernelId, CHAR_BUFFER_SIZE)) {
+	strcat(buf, " --kernel");
+	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --kernel", gen_libvirt_cmd_path);
+      }
     }
+
     if (params->disk > 0) { /* TODO: get this info from scMakeImage */
         strncat (buf, " --ephemeral", CHAR_BUFFER_SIZE);
     }
@@ -483,7 +494,8 @@ void *startup_thread (void * arg)
     }
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
     
-    error = scMakeInstanceImage (instance->userId, 
+    error = scMakeInstanceImage (nc_state.home, 
+				 instance->userId, 
                                  instance->imageId, instance->imageURL, 
                                  instance->kernelId, instance->kernelURL, 
                                  instance->ramdiskId, instance->ramdiskURL, 
@@ -502,14 +514,28 @@ void *startup_thread (void * arg)
 	if (brname) free(brname);
         return NULL;
     }
-    
+    {
+      char *ramdisk, *kernel;
+      if (strstr(instance->ramdiskId, "windows") || strstr(instance->kernelId, "windows") || strstr(instance->ramdiskURL, "windows") || strstr(instance->kernelURL, "windows")) {
+	ramdisk = strdup("");
+	kernel = strdup("");
+      } else {
+	ramdisk = strdup(instance->ramdiskId);
+	kernel = strdup(instance->kernelId);
+      }
+	
     error = get_instance_xml (nc_state.gen_libvirt_cmd_path,
 		              instance->userId, instance->instanceId, 
-                              strnlen (instance->ramdiskId, CHAR_BUFFER_SIZE), /* 0 if no ramdisk */
+			      //                              strnlen (instance->ramdiskId, CHAR_BUFFER_SIZE), /* 0 if no ramdisk */
+			      ramdisk,
+			      kernel,
                               disk_path, 
                               &(instance->params), 
                               instance->ncnet.privateMac, 
                               brname, &xml);
+    free(ramdisk);
+    free(kernel);
+    }
     if (brname) free(brname);
     if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
     if (error) {
