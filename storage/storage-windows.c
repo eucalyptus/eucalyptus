@@ -25,6 +25,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *p
     snprintf(dest_path, 1024, "flop.new");
   */
 
+  /*
   // generate the pem
   snprintf(fname, 1024, "%s/key.pub", rundir_path);
   rc = write2file(fname, keyName);
@@ -38,7 +39,8 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *p
       return(1);
     }
   }
-  
+  */
+
   snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
   snprintf(dest_path, 1024, "%s/floppy", rundir_path);
 
