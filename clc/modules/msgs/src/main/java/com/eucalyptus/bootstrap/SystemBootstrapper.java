@@ -229,10 +229,4 @@ public class SystemBootstrapper {
 
   public static native void hello( );
   
-  public static void main( String[] args ) throws Exception {
-    SystemBootstrapper b = SystemBootstrapper.getInstance( );
-    b.init( );
-    b.load( );
-    b.start( );
-  }
 }
