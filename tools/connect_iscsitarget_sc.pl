@@ -9,13 +9,6 @@ delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 $P12_PATH="";
 
-if($ENV{'EUCALYPTUS'}) {
-    $P12_PATH = $ENV{'EUCALYPTUS'}."/var/lib/eucalyptus/keys/euca.p12";
-} else {
-    print "EUCALYPTUS must be defined.";
-    do_exit(1);
-}
-
 $DELIMITER = ",";
 $ISCSIADM = untaint(`which iscsiadm`);
 $OPENSSL = untaint(`which openssl`);
@@ -27,12 +20,19 @@ if (!-x $ISCSIADM || !-x $OPENSSL) {
     do_exit(1);
 }
 
-$sc_pk = get_storage_pk();
-
 # check input params
 $dev_string = untaint(shift @ARGV);
 
-($ip, $store, $encrypted_password) = parse_devstring($dev_string);
+($euca_home, $ip, $store, $encrypted_password) = parse_devstring($dev_string);
+
+if(length($euca_home) <= 0) {
+    print STDERR "EUCALYPTUS path is not defined.\n";
+    do_exit(1);
+}
+
+$P12_PATH = $euca_home."/var/lib/eucalyptus/keys/euca.p12";
+
+$sc_pk = get_storage_pk();
 
 if((length($ip) <= 0) || (length($store) <= 0) || length($encrypted_password) <= 0) {
     print STDERR "Invalid input. Need to specify IP,STORE,ENCRYPTED_PASS\n";

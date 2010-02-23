@@ -171,8 +171,8 @@ public class EquallogicProvider implements SANProvider {
 			String encryptedPassword = userInfo.getEncryptedPassword();
 			db.commit();
 			try {
-				String deviceName = SystemUtil.run(new String[]{"sudo", "-E", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
-						host + "," + iqn + "," + encryptedPassword});
+				String deviceName = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
+						System.getProperty("euca.home") + "," + host + "," + iqn + "," + encryptedPassword});
 				if(deviceName.length() == 0) {
 					throw new EucalyptusCloudException("Unable to get device name. Connect failed.");
 				}
@@ -401,7 +401,7 @@ public class EquallogicProvider implements SANProvider {
 			String encryptedPassword = userInfo.getEncryptedPassword();
 			db.commit();
 			try {
-				String returnValue = SystemUtil.run(new String[]{"sudo", "-E", BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl", 
+				String returnValue = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl", System.getProperty("euca.home") + "," +  
 						host + "," + iqn + "," + encryptedPassword});
 				if(returnValue.length() == 0) {
 					throw new EucalyptusCloudException("Unable to disconnect target");
