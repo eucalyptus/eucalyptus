@@ -88,13 +88,14 @@ if (!$use_ramdisk && !$use_kernel) {
 }
 
 print <<EOF;
-<domain type='xen' id='18'>
+<domain type='xen'>
     <name>NAME</name>
     <os>
-    <type>linux</type>
 EOF
 
+
 if (!$plaindisk) {
+    print "        <type>linux</type>\n";
     if ($use_kernel) {
 	print "        <kernel>BASEPATH/kernel</kernel>\n";
     }
@@ -103,20 +104,47 @@ if (!$plaindisk) {
     }
     print "        <root>/dev/sda1</root>\n";
     print "        <cmdline> ro</cmdline>\n";
+} else {
+    print "            <type>hvm</type>\n";
+    print "            <loader>/usr/lib/xen/boot/hvmloader</loader>\n";
 }
 
 
 print <<EOF;
     </os>
+EOF
+
+if ($plaindisk) {
+print <<EOF;
+  <features>
+    <acpi/>
+    <apic/>
+    <pae/>
+  </features>
+  <clock offset='localtime'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>destroy</on_reboot>
+  <on_crash>destroy</on_crash>
+EOF
+}
+
+print <<EOF;
     <memory>MEMORY</memory>
     <vcpu>VCPUS</vcpu>
     <devices>
+EOF
+
+if ($plaindisk) {
+    print "        <emulator>/usr/lib64/xen/bin/qemu-dm</emulator>\n";
+}
+
+print <<EOF;
         <disk type='file'>
             <source file='BASEPATH/root'/>
 EOF
 
 if ($plaindisk) {
-    print "            <target dev='sda'/>\n";
+    print "            <target dev='hda' bus='ide'/>\n";
 } else {
     print "            <target dev='sda1'/>\n";
 }
@@ -160,6 +188,20 @@ print <<EOF;
             <mac address='PRIVMACADDR'/>
             <script path='/etc/xen/scripts/vif-bridge'/>
         </interface>
+EOF
+if ($plaindisk) {
+print <<EOF;
+        <serial type='pty'>
+           <source path='/dev/pts/3'/>
+           <target port='0'/>
+        </serial>
+        <input type='tablet' bus='usb'/>
+        <input type='mouse' bus='ps2'/>
+EOF
+}
+
+print <<EOF;
+        <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/>
     </devices>
 </domain>
 EOF

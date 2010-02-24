@@ -1613,7 +1613,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	    if (config->use_wssec) {
 	      rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
 	    }
+	    sleep (10);
 	    rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, &ncnet, userData, launchIndex, netNames, netNamesLen, &outInst);
+	    logprintfl(EUCADEBUG, "RunInstances(): ncRunInstances() complete\n");
 	  }
 	  if (!rc) {
 	    ret = 0;
