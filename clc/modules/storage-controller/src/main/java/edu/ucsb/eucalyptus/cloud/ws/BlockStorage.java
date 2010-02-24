@@ -169,7 +169,11 @@ public class BlockStorage {
 		StorageProperties.SAN_HOST = storageInfo.getSanHost();
 		StorageProperties.SAN_USERNAME = storageInfo.getSanUser();
 		try {
-			StorageProperties.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
+			if(!StorageProperties.DUMMY_SAN_PASSWORD.equals(storageInfo.getSanPassword())) {
+			    StorageProperties.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
+			} else {
+			    LOG.info("SAN credentials not configured yet.");
+			}
 		} catch (EucalyptusCloudException e) {
 			LOG.fatal("Unable to get password. " + e.getMessage());
 		}

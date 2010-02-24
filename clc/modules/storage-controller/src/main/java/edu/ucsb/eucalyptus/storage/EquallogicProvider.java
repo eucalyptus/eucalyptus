@@ -112,7 +112,9 @@ public class EquallogicProvider implements SANProvider {
 		this.password = StorageProperties.SAN_PASSWORD;
 		if(sessionManager != null)
 			try {
-				sessionManager.update(host, username, password);
+				if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) {
+				    sessionManager.update(host, username, password);
+				}
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e, e);
 			}

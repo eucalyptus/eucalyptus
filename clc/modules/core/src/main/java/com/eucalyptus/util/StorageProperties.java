@@ -104,6 +104,8 @@ public class StorageProperties {
 	public static String SAN_HOST = "san_host";
 	public static String SAN_USERNAME = "user";
 	public static String SAN_PASSWORD = "password";
+	public static final String DUMMY_SAN_PASSWORD = "password";
+ 	public static final String DUMMY_SAN_HOST = "san_host";
 	
 	public static String iface = "eth0";
 	public static boolean zeroFillVolumes = false;
