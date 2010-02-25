@@ -89,9 +89,9 @@ public class VMwareBrokerResponseType extends EucalyptusMessage {
   	
   	public VMwareBrokerResponseType withFailure (String msg) throws EucalyptusCloudException {
   		LOG.error("FAULT returned by VMwareBroker: " + msg);
-  		//this.setStatusMessage (msg);
-  		//this.set_return (false);
-  		throw EucalyptusCloudException(msg);
+  		this.setStatusMessage (msg);
+  		this.set_return (false);
+  		//throw EucalyptusCloudException(msg);
   	}
 }
 
