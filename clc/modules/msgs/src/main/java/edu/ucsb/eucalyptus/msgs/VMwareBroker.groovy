@@ -2,6 +2,8 @@ package edu.ucsb.eucalyptus.msgs
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.util.EucalyptusCloudException;
+
 /*
  * Software License Agreement (BSD License)
  *
@@ -85,11 +87,11 @@ public class VMwareBrokerResponseType extends EucalyptusMessage {
   		withFailure (STATUS_MSG_NOT_SUPPORTED); // default error message
   	}
   	
-  	public VMwareBrokerResponseType withFailure (String msg) {
+  	public VMwareBrokerResponseType withFailure (String msg) throws EucalyptusCloudException {
   		LOG.error("FAULT returned by VMwareBroker: " + msg);
-  		this.setStatusMessage (msg);
-  		this.set_return (false);
-  		return this;
+  		//this.setStatusMessage (msg);
+  		//this.set_return (false);
+  		throw EucalyptusCloudException(msg);
   	}
 }
 
