@@ -83,7 +83,7 @@ public class StorageProperties {
 
 	public static final String SERVICE_NAME = "StorageController";
 	public static final String SC_LOCAL_NAME = "StorageController-local";
-	public static String NAME = "StorageController" + UUID.randomUUID();
+	public static String NAME = "unregistered";
 	public static String SC_ID = SERVICE_NAME + UUID.randomUUID();
 	public static String DB_NAME             = "eucalyptus_storage";
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
@@ -112,7 +112,7 @@ public class StorageProperties {
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
 
-        static { GroovyUtil.loadConfig("storageprops.groovy"); }
+	static { GroovyUtil.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
 		if(!Component.eucalyptus.isLocal()) {
@@ -139,8 +139,12 @@ public class StorageProperties {
 
 	public static void updateStorageHost() {
 		try {
-			StorageControllerConfiguration config = Configuration.getStorageControllerConfiguration(StorageProperties.NAME);
-			STORAGE_HOST = config.getHostName();
+			if(!"unregistered".equals(StorageProperties.NAME)) {
+				StorageControllerConfiguration config = Configuration.getStorageControllerConfiguration(StorageProperties.NAME);
+				STORAGE_HOST = config.getHostName();
+			} else {
+				LOG.info("Storage Controller not registered yet.");
+			}
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
 		}
