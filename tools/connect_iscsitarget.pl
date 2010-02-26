@@ -9,13 +9,6 @@ delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 $KEY_PATH="";
 
-if($ENV{'EUCALYPTUS'}) {
-    $KEY_PATH = $ENV{'EUCALYPTUS'}."/var/lib/eucalyptus/keys/node-pk.pem";
-} else {
-    print "EUCALYPTUS must be defined.";
-    do_exit(1);
-}
-
 $DELIMITER = ",";
 $ISCSIADM = untaint(`which iscsiadm`);
 $ISCSI_USER = "eucalyptus";
@@ -29,7 +22,14 @@ if (!-x $ISCSIADM) {
 # check input params
 $dev_string = untaint(shift @ARGV);
 
-($ip, $store, $encrypted_password) = parse_devstring($dev_string);
+($euca_home, $ip, $store, $encrypted_password) = parse_devstring($dev_string);
+
+if(length($euca_home) <= 0) {
+    print STDERR "EUCALYPTUS path is not defined.\n";
+    do_exit(1);
+}
+
+$KEY_PATH = $euca_home."/var/lib/eucalyptus/keys/node-pk.pem";
 
 $password = decrypt_password($encrypted_password);
 

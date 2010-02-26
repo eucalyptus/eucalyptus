@@ -15,7 +15,12 @@ if (!-x $ISCSIADM) {
 # check input params
 $dev_string = untaint(shift @ARGV);
 
-($ip, $store, $passwd) = parse_devstring($dev_string);
+($euca_home, $ip, $store, $encrypted_password) = parse_devstring($dev_string);
+
+if(length($euca_home) <= 0) {
+    print STDERR "EUCALYPTUS path is not defined.\n";
+    do_exit(1);
+}
 
 logout_target($ip, $store, $passwd);
 
