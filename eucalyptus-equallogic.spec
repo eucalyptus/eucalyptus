@@ -17,10 +17,13 @@
 %define __bridge  xenbr0
 %endif
 
+%if %is_centos
+BuildRoot:     %{_tmppath}/%{name}-%{version}-root
+%endif
 Summary:       Elastic Utility Computing Architecture
-Name:          eucalyptus
-Version:       1.6.2
-Release:       0.1.rc1
+Name:          eucalyptus-equallogic
+Version:       1.0
+Release:       0.1160
 License:       GPLv3
 Group:         Applications/System
 %if %is_centos
@@ -32,10 +35,10 @@ BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euc
 Requires:      vlan
 %endif
 
-Conflicts:     eucalyptus < 1.6.2
+Conflicts:     eucalyptus, eucalyptus-equallogic < 1.0
 Vendor:        Eucalyptus Systems
 #Icon:          someicon.xpm
-Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
+Source:        http://open.eucalyptus.com/downloads/eucalyptus-equallogic-%{version}.tgz
 URL:           http://open.eucalyptus.com
 
 %description
@@ -49,8 +52,8 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus = 1.6.2, java-sdk >= 1.6.0, lvm2
-Conflicts:    eucalyptus < 1.6.2
+Requires:     eucalyptus-equallogic = 1.0, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus, eucalyptus-equallogic < 1.0
 Group:        Applications/System
 
 %description common-java
@@ -63,8 +66,8 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java = 1.6.2, java-sdk >= 1.6.0, lvm2
-Conflicts:    eucalyptus-walrus < 1.6.2
+Requires:     eucalyptus-equallogic-common-java = 1.0, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus-walrus, eucalyptus-equallogic-walrus < 1.0
 Group:        Applications/System
 
 %description walrus
@@ -77,8 +80,8 @@ This package contains walrus.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-common-java = 1.6.2, java-sdk >= 1.6.0, lvm2, vblade
-Conflicts:    eucalyptus-sc < 1.6.2
+Requires:     eucalyptus-equallogic-common-java = 1.0, java-sdk >= 1.6.0, lvm2, vblade
+Conflicts:    eucalyptus-sc, eucalyptus-equallogic-sc < 1.0
 Group:        Applications/System
 
 %description sc
@@ -91,8 +94,8 @@ This package contains the storage controller part of eucalyptus.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java = 1.6.2, java-sdk >= 1.6.0, lvm2
-Conflicts:    eucalyptus-cloud < 1.6.2
+Requires:     eucalyptus-equallogic-common-java = 1.0, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus-cloud, eucalyptus-equallogic-cloud < 1.0
 Group:        Applications/System
 
 %description cloud
@@ -105,8 +108,8 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus = 1.6.2, eucalyptus-gl = 1.6.2, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-gl >= 1.6, %{__dhcp}, vtun
-Conflicts:    eucalyptus-cc < 1.6.2, eucalyptus-nc < 1.6.2
+Requires:     eucalyptus-equallogic = 1.0, eucalyptus-equallogic-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-equallogic-gl >= 1.6, %{__dhcp}, vtun
+Conflicts:    eucalyptus-cc, eucalyptus-nc, eucalyptus-equallogic-cc < 1.0, eucalyptus-equallogic-nc < 1.0
 Group:        Applications/System
 
 %description cc
@@ -119,8 +122,8 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus = 1.6.2, eucalyptus-gl = 1.6.2, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-gl >= 1.6, %{__libvirt}, %{__curl}, %{__xen}
-Conflicts:    eucalyptus-nc < 1.6.2, eucalyptus-cc < 1.6.2
+Requires:     eucalyptus-equallogic = 1.0, eucalyptus-equallogic-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-equallogic-gl >= 1.6, %{__libvirt}, %{__curl}, %{__xen}
+Conflicts:    eucalyptus-nc, eucalyptus-cc, eucalyptus-equallogic-nc < 1.0, eucalyptus-equallogic-cc < 1.0
 Group:        Applications/System
 
 %description nc
@@ -133,8 +136,8 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus = 1.6.2, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
-Conflicts:    eucalyptus-gl < 1.6.2
+Requires:     eucalyptus-equallogic = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Conflicts:    eucalyptus-gl, eucalyptus-equallogic-gl < 1.0
 Group:        Applications/System
 
 %description gl
@@ -146,7 +149,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the internal log service of eucalyptus.
 
 %prep
-%setup -n eucalyptus-%{version}
+%setup -n %{name}-%{version}
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
@@ -165,6 +168,7 @@ make install
 #cd $CWD
 
 %clean
+echo BUILDROOT: ${RPM_BUILD_ROOT}
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 #make uninstall
 #rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
@@ -215,6 +219,8 @@ make install
 %files walrus
 
 %files sc
+/usr/share/eucalyptus/connect_iscsitarget_sc.pl
+/usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
@@ -228,6 +234,9 @@ make install
 /usr/share/eucalyptus/get_xen_info
 /usr/share/eucalyptus/get_sys_info
 /usr/share/eucalyptus/detach.pl
+/usr/share/eucalyptus/connect_iscsitarget.pl
+/usr/share/eucalyptus/disconnect_iscsitarget.pl
+/usr/share/eucalyptus/get_iscsitarget.pl
 /usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
 /etc/init.d/eucalyptus-nc
