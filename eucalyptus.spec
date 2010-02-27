@@ -17,10 +17,13 @@
 %define __bridge  xenbr0
 %endif
 
+%if %is_centos
+BuildRoot:     %{_tmppath}/%{name}-%{version}-root
+%endif
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.6.2
-Release:       0.1.rc1
+Release:       1
 License:       GPLv3
 Group:         Applications/System
 %if %is_centos
@@ -317,6 +320,7 @@ then
     if [ -f /tmp/eucaback.dir ]; then
 	BACKDIR=`cat /tmp/eucaback.dir`
 	if [ -d "$BACKDIR" ]; then
+	    /usr/sbin/euca_conf -setup
 	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
 	    /usr/sbin/euca_conf -setup
 	fi
@@ -365,6 +369,7 @@ fi
 /usr/sbin/euca_conf --enable walrus
 
 %post sc
+/usr/bin/killall -9 vblade
 /usr/sbin/euca_conf --enable sc
 
 %post cc
@@ -506,6 +511,11 @@ then
 fi
 
 %changelog gl
+*Fri Feb 12 2010 Eucalyptus Systems (support@open.eucalyptus.com)
+- New version (1.6.2)
+- Re-worked upgrade path for RPM install
+- Re-worked spec file to honor DESTDIR
+
 *Thu Nov 5 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - New version (1.6.1)
 - install in / instead of /opt/eucalyptus
