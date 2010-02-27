@@ -134,7 +134,7 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
         try { this.address.release(); } catch( Throwable t ) {
           LOG.warn( "Failed to release orphan address: " + this.address );
         }
-      }
+      } 
     }
   }
   
