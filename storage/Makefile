@@ -47,7 +47,7 @@ clean:
 distclean:
 
 install:
-	@$(INSTALL) -m 0755 euca_imager $(usrdir)/lib/eucalyptus
+	@$(INSTALL) -m 0755 euca_imager $(DESTDIR)$(usrdir)/lib/eucalyptus
 deploy:
 
 uninstall:
