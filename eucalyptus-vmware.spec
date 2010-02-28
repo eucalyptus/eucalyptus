@@ -17,10 +17,13 @@
 %define __bridge  xenbr0
 %endif
 
+%if %is_centos
+BuildRoot:     %{_tmppath}/%{name}-%{version}-root
+%endif
 Summary:       Elastic Utility Computing Architecture
-Name:          eucalyptus
-Version:       1.6.2
-Release:       0.1.rc1
+Name:          eucalyptus-vmware
+Version:       1.0
+Release:       0.1
 License:       GPLv3
 Group:         Applications/System
 %if %is_centos
@@ -32,10 +35,10 @@ BuildRequires: gcc, make, libcurl-devel, ant, ant-nodeps, java-sdk >= 1.6.0, euc
 Requires:      vlan
 %endif
 
-Conflicts:     eucalyptus < 1.6.2
+Conflicts:     eucalyptus, eucalyptus-vmware < 1.0
 Vendor:        Eucalyptus Systems
 #Icon:          someicon.xpm
-Source:        http://open.eucalyptus.com/downloads/eucalyptus-%{version}.tgz
+Source:        http://open.eucalyptus.com/downloads/eucalyptus-vmware-%{version}.tgz
 URL:           http://open.eucalyptus.com
 
 %description
@@ -49,8 +52,8 @@ eucalyptus-cloud, eucalyptus-cc or eucalyptus-nc (or all of them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus = 1.6.2, java-sdk >= 1.6.0, lvm2
-Conflicts:    eucalyptus < 1.6.2
+Requires:     eucalyptus-vmware = 1.0, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus, eucalyptus-vmware < 1.0
 Group:        Applications/System
 
 %description common-java
@@ -63,8 +66,8 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java = 1.6.2, java-sdk >= 1.6.0, lvm2
-Conflicts:    eucalyptus-walrus < 1.6.2
+Requires:     eucalyptus-vmware-common-java = 1.0, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus-walrus, eucalyptus-vmware-walrus < 1.0
 Group:        Applications/System
 
 %description walrus
@@ -77,8 +80,8 @@ This package contains walrus.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-common-java = 1.6.2, java-sdk >= 1.6.0, lvm2, vblade
-Conflicts:    eucalyptus-sc < 1.6.2
+Requires:     eucalyptus-vmware-common-java = 1.0, java-sdk >= 1.6.0, lvm2, vblade
+Conflicts:    eucalyptus-sc, eucalyptus-vmware-sc < 1.0
 Group:        Applications/System
 
 %description sc
@@ -91,8 +94,8 @@ This package contains the storage controller part of eucalyptus.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java = 1.6.2, java-sdk >= 1.6.0, lvm2
-Conflicts:    eucalyptus-cloud < 1.6.2
+Requires:     eucalyptus-vmware-common-java = 1.0, java-sdk >= 1.6.0, lvm2
+Conflicts:    eucalyptus-cloud, eucalyptus-vmware-cloud < 1.0
 Group:        Applications/System
 
 %description cloud
@@ -105,8 +108,8 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus = 1.6.2, eucalyptus-gl = 1.6.2, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-gl >= 1.6, %{__dhcp}, vtun
-Conflicts:    eucalyptus-cc < 1.6.2, eucalyptus-nc < 1.6.2
+Requires:     eucalyptus-vmware = 1.0, eucalyptus-vmware-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-vmware-gl >= 1.0, %{__dhcp}, vtun
+Conflicts:    eucalyptus-cc, eucalyptus-nc, eucalyptus-vmware-cc < 1.0, eucalyptus-vmware-nc < 1.0
 Group:        Applications/System
 
 %description cc
@@ -119,8 +122,8 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus = 1.6.2, eucalyptus-gl = 1.6.2, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-gl >= 1.6, %{__libvirt}, %{__curl}, %{__xen}
-Conflicts:    eucalyptus-nc < 1.6.2, eucalyptus-cc < 1.6.2
+Requires:     eucalyptus-vmware = 1.0, eucalyptus-vmware-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-vmware-gl >= 1.0, %{__libvirt}, %{__curl}, %{__xen}
+Conflicts:    eucalyptus-nc, eucalyptus-cc, eucalyptus-vmware-nc < 1.0, eucalyptus-vmware-cc < 1.0
 Group:        Applications/System
 
 %description nc
@@ -133,8 +136,8 @@ This package contains the node controller part of eucalyptus.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus = 1.6.2, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
-Conflicts:    eucalyptus-gl < 1.6.2
+Requires:     eucalyptus-vmware = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Conflicts:    eucalyptus-gl, eucalyptus-vmware-gl < 1.0
 Group:        Applications/System
 
 %description gl
@@ -145,15 +148,26 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 
 This package contains the internal log service of eucalyptus.
 
+%package vmware-broker
+Summary:      Elastic Utility Computing Architecture - vmware broker
+Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0
+Group:        Applications/System
+
+%description vmware-broker
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's EC2.
+
+This package contains broker needed to let EUCALYPTUS control a vmware
+installation.
+
 %prep
-%setup -n eucalyptus-%{version}
+%setup -n %{name}-%{version}
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
-if [ -e rpm_build.sh ]; then
-	./rpm_build.sh build
-fi
 cd clc
 make deps
 cd ..
@@ -162,12 +176,13 @@ make 2> err.log > out.log
 %install
 export DESTDIR=$RPM_BUILD_ROOT
 make install
-if [ -e rpm_build.sh ]; then
-	./rpm_build.sh install
-fi
-ls /usr/share/eucalyptus/*jar > jar_list
+#CWD=`pwd`
+#cd $RPM_BUILD_ROOT
+#ls usr/share/eucalyptus/*jar | sed "s/^/\//" > $CWD/jar_list
+#cd $CWD
 
 %clean
+echo BUILDROOT: ${RPM_BUILD_ROOT}
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 #make uninstall
 #rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
@@ -198,6 +213,11 @@ ls /usr/share/eucalyptus/*jar > jar_list
 /usr/sbin/euca_killall
 /etc/eucalyptus/httpd.conf
 /etc/eucalyptus/eucalyptus-version
+#/usr/share/eucalyptus/udev/55-openiscsi.rules
+#/usr/share/eucalyptus/udev/README
+#/usr/share/eucalyptus/udev/iscsidev-centos.sh
+#/usr/share/eucalyptus/udev/iscsidev-opensuse.sh
+#/usr/share/eucalyptus/udev/iscsidev-ubuntu.sh
 #/usr/share/eucalyptus/connect_iscsitarget.pl
 #/usr/share/eucalyptus/disconnect_iscsitarget.pl
 #/usr/share/eucalyptus/get_iscsitarget.pl
@@ -218,6 +238,8 @@ ls /usr/share/eucalyptus/*jar > jar_list
 %files walrus
 
 %files sc
+#/usr/share/eucalyptus/connect_iscsitarget_sc.pl
+#/usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 
 %files cc
 /opt/euca-axis2c/services/EucalyptusCC
@@ -231,12 +253,20 @@ ls /usr/share/eucalyptus/*jar > jar_list
 /usr/share/eucalyptus/get_xen_info
 /usr/share/eucalyptus/get_sys_info
 /usr/share/eucalyptus/detach.pl
+/usr/share/eucalyptus/connect_iscsitarget.pl
+/usr/share/eucalyptus/disconnect_iscsitarget.pl
+/usr/share/eucalyptus/get_iscsitarget.pl
 /usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
 /etc/init.d/eucalyptus-nc
 
 %files gl
 /opt/euca-axis2c/services/EucalyptusGL
+
+%files vmware-broker
+/usr/share/eucalyptus/*vmware*jar
+/usr/share/eucalyptus/euca_vmware
+/usr/lib/eucalyptus/euca_imager
 
 %pre
 if [ "$1" = "2" ]; 
@@ -283,6 +313,26 @@ then
 fi
 
 %post
+# set up udev iscsi config
+#mkdir -p /etc/udev/rules.d/
+#cp /usr/share/eucalyptus/udev/55-openiscsi.rules /etc/udev/rules.d/
+#mkdir -p /etc/udev/scripts/
+#%if %is_suse
+#	cp /usr/share/eucalyptus/udev/iscsidev-opensuse.sh /etc/udev/scripts/iscsidev.sh
+#%endif
+#%if %is_centos
+#	cp /usr/share/eucalyptus/udev/iscsidev-centos.sh /etc/udev/scripts/iscsidev.sh
+#	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
+#	cat <<EOF >> /etc/sudoers
+#eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget_sc.pl
+#eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
+#eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget.pl
+#eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget.pl
+#eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/get_iscsitarget.pl
+#EOF
+#%endif
+#chmod +x /etc/udev/scripts/iscsidev.sh
+
 # we need a eucalyptus user
 if ! getent passwd eucalyptus > /dev/null ; then
 %if %is_suse
@@ -683,3 +733,6 @@ fi
 *Sat May 21 2008 mayhem group (support@open.eucalyptus.com)
 - first release of eucalyptus
 
+%changelog vmware-broker
+*Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
+- new package
