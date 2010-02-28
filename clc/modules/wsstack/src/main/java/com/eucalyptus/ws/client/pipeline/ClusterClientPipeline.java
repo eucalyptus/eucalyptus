@@ -85,7 +85,7 @@ public class ClusterClientPipeline extends NioClientPipeline {
   
   @Override public ChannelPipeline getPipeline( ) throws Exception {
     final ChannelPipeline pipeline = Channels.pipeline( );
-    ChannelUtil.addPipelineMonitors( pipeline, 30 );
+    ChannelUtil.addPipelineMonitors( pipeline, 60 );
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
     pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
