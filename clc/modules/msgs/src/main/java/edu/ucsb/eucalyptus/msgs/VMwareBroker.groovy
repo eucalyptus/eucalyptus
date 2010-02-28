@@ -92,6 +92,7 @@ public class VMwareBrokerResponseType extends EucalyptusMessage {
   		this.setStatusMessage (msg);
   		this.set_return (false);
   		//throw EucalyptusCloudException(msg);
+  		return this;
   	}
 }
 
