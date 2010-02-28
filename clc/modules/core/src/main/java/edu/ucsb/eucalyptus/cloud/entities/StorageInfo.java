@@ -98,7 +98,9 @@ StorageInfo {
     private String sanUser;
     @Column(name = "san_password")
     private String sanPassword;
-    
+    @Column(name = "das_device")
+    private String DASDevice;
+
 	public StorageInfo(){}
 
 	public StorageInfo( final String name )
@@ -114,7 +116,8 @@ StorageInfo {
 			final Boolean zeroFillVolumes,
 			final String sanHost,
 			final String sanUser,
-			final String sanPassword) {
+			final String sanPassword,
+			final String DASDevice) {
 		this.name = name;
 		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
 		this.storageInterface = storageInterface;
@@ -124,6 +127,7 @@ StorageInfo {
 		this.sanHost = sanHost;
 		this.sanUser = sanUser;
 		this.sanPassword = sanPassword;
+		this.DASDevice = DASDevice;
 	}
 
 	public Long getId()
@@ -201,6 +205,14 @@ StorageInfo {
 
 	public void setSanPassword(String sanPassword) {
 		this.sanPassword = sanPassword;
+	}
+
+	public String getDASDevice() {
+		return DASDevice;
+	}
+
+	public void setDASDevice(String DASDevice) {
+		this.DASDevice = DASDevice;
 	}
 
 	@Override

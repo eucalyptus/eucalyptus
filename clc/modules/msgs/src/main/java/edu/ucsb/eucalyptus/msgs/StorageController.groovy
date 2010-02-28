@@ -111,6 +111,7 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 	String sanHost;
 	String sanUser;
 	String sanPassword;
+	String DASDevice;
 	
 	def UpdateStorageConfigurationType() {}
 
@@ -124,6 +125,7 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 		this.sanHost = storageState.sanHost;
 		this.sanUser = storageState.sanUser;
 		this.sanPassword = storageState.sanPassword;
+		this.DASDevice = storageState.getDASDevice();
 	}
 }
 
@@ -149,6 +151,7 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 	String sanHost;
 	String sanUser;
 	String sanPassword;
+	String DASDevice;
 
 	def GetStorageConfigurationResponseType() {}
 
@@ -160,7 +163,8 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 			Boolean zeroFillVolumes,
 			String sanHost,
 			String sanUser,
-			String sanPassword) {
+			String sanPassword,
+			String DASDevice) {
 		this.name = name;
 		this.storageRootDirectory = storageRootDirectory;
 		this.maxTotalVolumeSize = maxTotalVolumeSize;
@@ -170,6 +174,7 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 		this.sanHost = sanHost;
 		this.sanUser = sanUser;
 		this.sanPassword = sanPassword;
+		this.DASDevice = DASDevice;
 	}
 }
 

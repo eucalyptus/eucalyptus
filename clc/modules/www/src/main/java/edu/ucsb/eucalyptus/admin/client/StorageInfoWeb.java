@@ -72,6 +72,7 @@ public class StorageInfoWeb implements IsSerializable {
 	private Integer totalVolumesSizeInGB;
 	private String storageInterface;
 	private Boolean zeroFillVolumes;
+	private String DASDevice;
 	private Boolean committed;
 	String sanHost;
 	String sanUser;
@@ -88,6 +89,7 @@ public class StorageInfoWeb implements IsSerializable {
     this.totalVolumesSizeInGB = StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( );
     this.storageInterface = StorageInfoWeb.DEFAULT_SC.getStorageInterface( );
     this.zeroFillVolumes = StorageInfoWeb.DEFAULT_SC.getZeroFillVolumes( );
+    this.DASDevice = StorageInfoWeb.DEFAULT_SC.getDASDevice();
     this.committed = StorageInfoWeb.DEFAULT_SC.committed;
   }
 
@@ -101,7 +103,8 @@ public class StorageInfoWeb implements IsSerializable {
 			Boolean zeroFillVolumes,
 			String sanHost,
 			String sanUser,
-			String sanPassword) {
+			String sanPassword,
+			String DASDevice) {
 		this.name = name;
 		this.host = host;
 		this.port = port;
@@ -113,6 +116,7 @@ public class StorageInfoWeb implements IsSerializable {
 		this.sanHost = sanHost;
 		this.sanUser = sanUser;
 		this.sanPassword = sanPassword;
+		this.DASDevice = DASDevice;
 		this.committed = false;
 	}
 
@@ -216,6 +220,14 @@ public class StorageInfoWeb implements IsSerializable {
 		this.sanPassword = sanPassword;
 	}
 
+ 	public String getDASDevice() {
+		return DASDevice;
+	}
+
+	public void setDASDevice(String DASDevice) {
+		this.DASDevice = DASDevice;
+	}
+
 	@Override
 	public boolean equals( final Object o )
 	{
@@ -235,5 +247,5 @@ public class StorageInfoWeb implements IsSerializable {
 		return name.hashCode();
 	}
 
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanhost", "sanuser", "sanpassword");
+	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanhost", "sanuser", "sanpassword", "/dev/blockdev");
 }

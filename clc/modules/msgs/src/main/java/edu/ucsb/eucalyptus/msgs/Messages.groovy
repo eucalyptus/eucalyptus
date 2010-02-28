@@ -113,18 +113,21 @@ public class StorageStateType extends EucalyptusMessage{
   private String sanHost;
   private String sanUser;
   private String sanPassword;
-
+  private String DASDevice;
+  
   def StorageStateType() {
   }
   
   def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
-  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes) {
+  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
+  final DASDevice) {
     this.name = name;
     this.volumesPath = volumesPath;
     this.maxVolumeSizeInGB = maxVolumeSizeInGB;
     this.totalVolumesSizeInGB = totalVolumesSizeInGB;
     this.storageInterface = storageInterface;
     this.zeroFillVolumes = zeroFillVolumes;
+    this.DASDevice = DASDevice;
   }
 
   def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,

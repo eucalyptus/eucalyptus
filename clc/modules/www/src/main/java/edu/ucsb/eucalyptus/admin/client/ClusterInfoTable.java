@@ -121,7 +121,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		this.clusterList.add (new ClusterInfoWeb ("cluster-name", "cc-host", 8774, 10, 4096));
 		//these values are just defaults
-		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanHost", "sanUser", "sanPassword"));
+		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanHost", "sanUser", "sanPassword", "/dev/blockdev"));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
@@ -396,6 +396,14 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		sanPasswordBox.setText( storageInfo.getSanPassword() );
 		sanPasswordBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		g.setWidget( i, 1, sanPasswordBox );
+		/*g.setWidget( i, 0, new Label( "DAS Partition:" ) );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		final TextBox dasPartitionBox = new TextBox();
+		dasPartitionBox.addChangeListener (new ChangeCallback (this, row));
+		dasPartitionBox.setVisibleLength( 5 );
+		dasPartitionBox.setText( "" + storageInfo.getDASPartition());
+		dasPartitionBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+		g.setWidget( i, 1, dasPartitionBox );*/
 
 		return g;
 	}
@@ -458,6 +466,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		storage.setSanUser (((TextBox)g.getWidget(16, 1)).getText());
 		storage.setSanPassword (((TextBox)g.getWidget(17, 1)).getText());
 
+		//storage.setDASPartition(((TextBox)g.getWidget(15, 1)).getText());
 		//    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );
 	}
 

@@ -177,6 +177,7 @@ public class BlockStorage {
 		} catch (EucalyptusCloudException e) {
 			LOG.fatal("Unable to get password. " + e.getMessage());
 		}
+		StorageProperties.DAS_DEVICE = storageInfo.getDASDevice();
 		StorageProperties.updateStorageHost();
 		blockManager.configure();
 	}
@@ -197,7 +198,8 @@ public class BlockStorage {
 					StorageProperties.zeroFillVolumes,
 					StorageProperties.SAN_HOST,
 					StorageProperties.SAN_USERNAME,
-					StorageProperties.SAN_PASSWORD);
+					StorageProperties.SAN_PASSWORD,
+					StorageProperties.DAS_DEVICE);
 			db.add(storageInfo);
 			db.commit();
 		} 
@@ -221,6 +223,7 @@ public class BlockStorage {
 			} catch (EucalyptusCloudException e) {
 				LOG.fatal("Unable to update password. " + e.getMessage());
 			}
+			storageInfo.setDASDevice(StorageProperties.DAS_DEVICE);
 			db.commit();
 		} catch(EucalyptusCloudException ex) {
 			storageInfo = new StorageInfo(StorageProperties.NAME, 
@@ -231,7 +234,8 @@ public class BlockStorage {
 					StorageProperties.zeroFillVolumes,
 					StorageProperties.SAN_HOST,
 					StorageProperties.SAN_USERNAME,
-					StorageProperties.SAN_PASSWORD);
+					StorageProperties.SAN_PASSWORD,
+					StorageProperties.DAS_DEVICE);
 			db.add(storageInfo);
 			db.commit();
 		} 
@@ -298,6 +302,8 @@ public class BlockStorage {
 			StorageProperties.SAN_USERNAME = request.getSanUser();
 		if(request.getSanPassword() != null)
 			StorageProperties.SAN_PASSWORD = request.getSanPassword();
+		if(request.getDASDevice() != null)
+			StorageProperties.DAS_DEVICE = request.getDASDevice();
 		check();
 		//test connection to Walrus
 		StorageProperties.updateWalrusUrl();
@@ -326,6 +332,7 @@ public class BlockStorage {
 			reply.setSanHost(StorageProperties.SAN_HOST);
 			reply.setSanUser(StorageProperties.SAN_USERNAME);
 			reply.setSanPassword(StorageProperties.SAN_PASSWORD);
+			reply.setDASDevice(StorageProperties.DAS_DEVICE);
 			reply.setName(StorageProperties.NAME);
 		}
 		return reply;
