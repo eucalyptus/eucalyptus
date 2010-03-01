@@ -108,7 +108,7 @@ This package contains the cloud controller part of eucalyptus.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus-equallogic = 1.0, eucalyptus-equallogic-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-equallogic-gl >= 1.6, %{__dhcp}, vtun
+Requires:     eucalyptus-equallogic = 1.0, eucalyptus-equallogic-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, eucalyptus-equallogic-gl >= 1.0, %{__dhcp}, vtun
 Conflicts:    eucalyptus-cc, eucalyptus-nc, eucalyptus-equallogic-cc < 1.0, eucalyptus-equallogic-nc < 1.0
 Group:        Applications/System
 
@@ -122,7 +122,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus-equallogic = 1.0, eucalyptus-equallogic-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-equallogic-gl >= 1.6, %{__libvirt}, %{__curl}, %{__xen}
+Requires:     eucalyptus-equallogic = 1.0, eucalyptus-equallogic-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-equallogic-gl >= 1.0, %{__libvirt}, %{__curl}, %{__xen}
 Conflicts:    eucalyptus-nc, eucalyptus-cc, eucalyptus-equallogic-nc < 1.0, eucalyptus-equallogic-cc < 1.0
 Group:        Applications/System
 
@@ -199,6 +199,11 @@ echo BUILDROOT: ${RPM_BUILD_ROOT}
 /usr/sbin/euca_killall
 /etc/eucalyptus/httpd.conf
 /etc/eucalyptus/eucalyptus-version
+/usr/share/eucalyptus/udev/55-openiscsi.rules
+/usr/share/eucalyptus/udev/README
+/usr/share/eucalyptus/udev/iscsidev-centos.sh
+/usr/share/eucalyptus/udev/iscsidev-opensuse.sh
+/usr/share/eucalyptus/udev/iscsidev-ubuntu.sh
 #/usr/share/eucalyptus/connect_iscsitarget.pl
 #/usr/share/eucalyptus/disconnect_iscsitarget.pl
 #/usr/share/eucalyptus/get_iscsitarget.pl
@@ -289,6 +294,26 @@ then
 fi
 
 %post
+# set up udev iscsi config
+mkdir -p /etc/udev/rules.d/
+cp /usr/share/eucalyptus/udev/55-openiscsi.rules /etc/udev/rules.d/
+mkdir -p /etc/udev/scripts/
+%if %is_suse
+	cp /usr/share/eucalyptus/udev/iscsidev-opensuse.sh /etc/udev/scripts/iscsidev.sh
+%endif
+%if %is_centos
+	cp /usr/share/eucalyptus/udev/iscsidev-centos.sh /etc/udev/scripts/iscsidev.sh
+	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
+	cat <<EOF >> /etc/sudoers
+eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget_sc.pl
+eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
+eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget.pl
+eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget.pl
+eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/get_iscsitarget.pl
+EOF
+%endif
+chmod +x /etc/udev/scripts/iscsidev.sh
+
 # we need a eucalyptus user
 if ! getent passwd eucalyptus > /dev/null ; then
 %if %is_suse
