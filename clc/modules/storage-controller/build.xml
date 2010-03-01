@@ -79,5 +79,16 @@
         <delete dir="h"/>
         <delete dir="include"/>
     </target>
+  <!--================================== install target ==================================-->
+  <property name="euca.udev.dir" value="${euca.home}/usr/share/eucalyptus/udev"/>
+  <target name="install" depends="copy-conf">
+    <!-- copy udev config over -->
+    <mkdir dir="${DESTDIR}${euca.udev.dir}"/>
+    <copy todir="${DESTDIR}${euca.udev.dir}">
+      <fileset dir="${basedir}/udev">
+        <include name="**/*"/>
+      </fileset>
+    </copy>
+  </target>
 </project>
 
