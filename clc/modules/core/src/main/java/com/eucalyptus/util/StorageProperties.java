@@ -95,7 +95,7 @@ public class StorageProperties {
 	public static final long GB = 1024*1024*1024;
 	public static final long MB = 1024*1024;
 	public static final long KB = 1024;
-	public static int TRANSFER_CHUNK_SIZE = 102400;
+	public static int TRANSFER_CHUNK_SIZE = 8192;
 	public static boolean enableSnapshots = false;
 	public static boolean enableStorage = false;
 	public static boolean shouldEnforceUsageLimits = true;
