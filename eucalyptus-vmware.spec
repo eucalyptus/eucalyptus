@@ -477,9 +477,9 @@ fi
 
 %post broker
 /usr/sbin/euca_conf --enable vmwarebroker
-sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/services\/VMwareBroker\"/" /etc/eucalyptus.conf
-sed -i "s/NC_PORT=.*/NC_PORT=\"8773\"/" /etc/eucalyptus.conf
-#echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus.conf
+sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/services\/VMwareBroker\"/" /etc/eucalyptus/eucalyptus.conf
+sed -i "s/NC_PORT=.*/NC_PORT=\"8773\"/" /etc/eucalyptus/eucalyptus.conf
+#echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus/eucalyptus.conf
 
 %postun
 # in case of removal let's try to clean up the best we can
