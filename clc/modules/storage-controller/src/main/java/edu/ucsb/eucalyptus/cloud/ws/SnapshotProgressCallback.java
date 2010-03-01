@@ -11,13 +11,13 @@ import edu.ucsb.eucalyptus.ic.StorageController;
 public class SnapshotProgressCallback implements CallBack {
 	private String snapshotId;
 	private int progressTick;
-	private int updateThreshold;
+	private long updateThreshold;
 	private static Logger LOG = Logger.getLogger(SnapshotProgressCallback.class);
 
 	public SnapshotProgressCallback(String snapshotId, long size, int chunkSize) {
 		this.snapshotId = snapshotId;
 		progressTick = 3; //minimum percent update
-		updateThreshold = (int)(((size * progressTick) / 100) / chunkSize);
+		updateThreshold = ((size * progressTick) / 100) / chunkSize;
 	}
 
 	public void run() {
@@ -68,7 +68,7 @@ public class SnapshotProgressCallback implements CallBack {
 
 	}
 
-	public int getUpdateThreshold() {
+	public long getUpdateThreshold() {
 		return updateThreshold;
 	}
 }
