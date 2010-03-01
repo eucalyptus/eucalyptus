@@ -113,7 +113,7 @@ public class EquallogicProvider implements SANProvider {
 		if(sessionManager != null)
 			try {
 				if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) {
-				    sessionManager.update(host, username, password);
+					sessionManager.update(host, username, password);
 				}
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e, e);
@@ -132,7 +132,8 @@ public class EquallogicProvider implements SANProvider {
 
 	public void checkConnection() {
 		try {
-			sessionManager.checkConnection();
+			if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) 
+				sessionManager.checkConnection();
 		} catch (EucalyptusCloudException e) {
 			enabled = false;
 			return;

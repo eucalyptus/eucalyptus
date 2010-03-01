@@ -65,47 +65,7 @@
 
 package edu.ucsb.eucalyptus.storage;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.persistence.EntityNotFoundException;
-
-import org.apache.commons.io.output.ByteArrayOutputStream;
-import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
-
-import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.X509Cert;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.BaseDirectory;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.ExecutionException;
-import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.util.WalrusProperties;
-import com.google.common.collect.Lists;
-
-import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
-import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
-import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
-import edu.ucsb.eucalyptus.ic.StorageController;
-import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public interface SANProvider {
 
