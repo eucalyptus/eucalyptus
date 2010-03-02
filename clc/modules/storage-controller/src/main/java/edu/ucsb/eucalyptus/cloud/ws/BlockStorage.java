@@ -138,7 +138,7 @@ public class BlockStorage {
 	static SnapshotService snapshotService;
 
 	public static void deferredInitializer() {
-	   if( !Component.storage.isEnabled( ) ) return;//temporary workaround for remote-component boot issue.
+		if( !Component.storage.isEnabled( ) ) return;//temporary workaround for remote-component boot issue.
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
@@ -170,9 +170,9 @@ public class BlockStorage {
 		StorageProperties.SAN_USERNAME = storageInfo.getSanUser();
 		try {
 			if(!StorageProperties.DUMMY_SAN_PASSWORD.equals(storageInfo.getSanPassword())) {
-			    StorageProperties.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
+				StorageProperties.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
 			} else {
-			    LOG.info("SAN credentials not configured yet.");
+				LOG.info("SAN credentials not configured yet.");
 			}
 		} catch (EucalyptusCloudException e) {
 			LOG.fatal("Unable to get password. " + e.getMessage());
@@ -226,17 +226,21 @@ public class BlockStorage {
 			storageInfo.setDASDevice(StorageProperties.DAS_DEVICE);
 			db.commit();
 		} catch(EucalyptusCloudException ex) {
-			storageInfo = new StorageInfo(StorageProperties.NAME, 
-					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-					StorageProperties.iface, 
-					StorageProperties.MAX_VOLUME_SIZE, 
-					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes,
-					StorageProperties.SAN_HOST,
-					StorageProperties.SAN_USERNAME,
-					StorageProperties.SAN_PASSWORD,
-					StorageProperties.DAS_DEVICE);
-			db.add(storageInfo);
+			try {
+				storageInfo = new StorageInfo(StorageProperties.NAME, 
+						StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
+						StorageProperties.iface, 
+						StorageProperties.MAX_VOLUME_SIZE, 
+						StorageProperties.storageRootDirectory,
+						StorageProperties.zeroFillVolumes,
+						StorageProperties.SAN_HOST,
+						StorageProperties.SAN_USERNAME,
+						BlockStorageUtil.encryptSCTargetPassword(StorageProperties.SAN_PASSWORD),
+						StorageProperties.DAS_DEVICE);
+				db.add(storageInfo);
+			} catch (EucalyptusCloudException e) {
+				LOG.fatal("Unable to update password. " + e.getMessage());
+			}
 			db.commit();
 		} 
 		blockManager.configure();
