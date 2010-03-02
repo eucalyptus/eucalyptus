@@ -100,23 +100,30 @@ sub decrypt_password {
 
 sub get_device_name {
     my ($store) = @_;
+    $num_retries = 5;
 
-    if(!open GETSESSION, "iscsiadm -m session -P 3 |") {
-	print "Could not get iscsi session information";
-	do_exit(1)
-    }
+    for ($i = 0; $i < $num_retries; ++$i) {
+      if(!open GETSESSION, "iscsiadm -m session -P 3 |") {
+	  print STDERR "Could not get iscsi session information";
+	  do_exit(1)
+      }
     
-    $found_target = 0;    
-    while (<GETSESSION>) {
-        if($_ =~ /Target: (.*)\n/) {
-	    $found_target = 1 if $1 == $store;
-	} elsif($_ =~ /.*Attached scsi disk ([a-zA-Z0-9]+).*\n/) {
-	    if($found_target == 1) {
+      $found_target = 0;
+      $attach_seen = 1;    
+      while (<GETSESSION>) {
+          if($_ =~ /Target: (.*)\n/) {
+	      last if $attach_seen == 0; 
+	      $found_target = 1 if $1 eq $store;
+	      $attach_seen = 0;
+	  } elsif($_ =~ /.*Attached scsi disk ([a-zA-Z0-9]+).*\n/) {
+	      if($found_target == 1) {
 		return "/dev/", $1;
-	    }
-	}
-    } 
-    close GETSESSION; 
+	      }
+	      $attach_seen = 1;
+	  }
+      } 
+      close GETSESSION; 
+    }
 }
 
 sub do_exit() {
