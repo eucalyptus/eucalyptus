@@ -114,6 +114,8 @@ public class StorageProperties {
 
 	public static String DAS_DEVICE = "/dev/blockdev";
 	
+    static { GroovyUtil.loadConfig("storageprops.groovy"); }
+
 	public static void updateName() {
 		if(!Component.eucalyptus.isLocal()) {
 			String scName = System.getProperty("euca.storage.name");
