@@ -74,6 +74,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.CredentialProvider;
@@ -548,6 +549,16 @@ public class EucalyptusManagement {
 	{
 		String ipAddr = null;
 		HttpClient httpClient = new HttpClient();
+		//support for http proxy
+		if(System.getProperty("http.proxyHost") != null) {
+			String proxyHost = System.getProperty("http.proxyHost");
+			if(System.getProperty("http.proxyPort") != null) {
+				int proxyPort = Integer.parseInt(System.getProperty("http.proxyPort"));
+				httpClient.getHostConfiguration().setProxy(proxyHost, proxyPort);
+			} else {
+				httpClient.getHostConfiguration().setProxyHost(new ProxyHost(proxyHost));
+			}
+		}
 		// Use Rightscale's "whoami" service
 		GetMethod method = new GetMethod("https://my.rightscale.com/whoami?api_version=1.0&cloud=0");
 		Integer timeoutMs = new Integer(3 * 1000); // TODO: is this working?
