@@ -324,17 +324,19 @@ fi
 #%if %is_suse
 #	cp /usr/share/eucalyptus/udev/iscsidev-opensuse.sh /etc/udev/scripts/iscsidev.sh
 #%endif
-#%if %is_centos
+%if %is_centos
 #	cp /usr/share/eucalyptus/udev/iscsidev-centos.sh /etc/udev/scripts/iscsidev.sh
-#	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
-#	cat <<EOF >> /etc/sudoers
+	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
+	cat <<EOF >> /etc/sudoers
+eucalyptus ALL=NOPASSWD: /usr/sbin/tgtadm
+EOF
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget_sc.pl
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget.pl
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget.pl
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/get_iscsitarget.pl
 #EOF
-#%endif
+%endif
 #chmod +x /etc/udev/scripts/iscsidev.sh
 
 # we need a eucalyptus user
@@ -479,7 +481,8 @@ fi
 /usr/sbin/euca_conf --enable vmwarebroker
 sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/services\/VMwareBroker\"/" /etc/eucalyptus/eucalyptus.conf
 sed -i "s/NC_PORT=.*/NC_PORT=\"8773\"/" /etc/eucalyptus/eucalyptus.conf
-#echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus/eucalyptus.conf
+sed -i "s/ENABLE_WS_SECURITY=.*/ENABLE_WS_SECURITY=\"N\"/" /etc/eucalyptus/eucalyptus.conf
+echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus/eucalyptus.conf
 
 %postun
 # in case of removal let's try to clean up the best we can
