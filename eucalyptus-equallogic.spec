@@ -80,7 +80,7 @@ This package contains walrus.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-equallogic-common-java = 1.0, java-sdk >= 1.6.0, lvm2, vblade
+Requires:     eucalyptus-equallogic-common-java = 1.0, java-sdk >= 1.6.0, lvm2, vblade, perl-Crypt-OpenSSL-Random, perl-Crypt-OpenSSL-RSA, perl-Crypt-X509, iscsi-initiator-utils, scsi-target-utils
 Conflicts:    eucalyptus-sc, eucalyptus-equallogic-sc < 1.0
 Group:        Applications/System
 
@@ -122,7 +122,7 @@ This package contains the cluster controller part of eucalyptus.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus-equallogic = 1.0, eucalyptus-equallogic-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-equallogic-gl >= 1.0, %{__libvirt}, %{__curl}, %{__xen}
+Requires:     eucalyptus-equallogic = 1.0, eucalyptus-equallogic-gl = 1.0, %{__httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, eucalyptus-equallogic-gl >= 1.0, %{__libvirt}, %{__curl}, %{__xen}, perl-Crypt-OpenSSL-Random, perl-Crypt-OpenSSL-RSA, perl-Crypt-X509, iscsi-initiator-utils
 Conflicts:    eucalyptus-nc, eucalyptus-cc, eucalyptus-equallogic-nc < 1.0, eucalyptus-equallogic-cc < 1.0
 Group:        Applications/System
 
