@@ -340,15 +340,15 @@ int main( int argc, char *argv[ ] ) {
 	}
 	if( strcmp( argv[ 0 ], "eucalyptus-cloud" ) != 0 ) {
 		char *oldpath = getenv( "LD_LIBRARY_PATH" ),*libf = java_library( args, data );
-		char *old = argv[ 0 ],buf[ 4096 ],*tmp = NULL,*p1 = NULL,*p2 = NULL;
+		char *old = argv[ 0 ],buf[ 32768 ],*tmp = NULL,*p1 = NULL,*p2 = NULL;
 		p1 = strdup( libf );
 		tmp = strrchr( p1, '/' );
 		if( tmp != NULL ) tmp[ 0 ] = '\0';
 		p2 = strdup( p1 );
 		tmp = strrchr( p2, '/' );
 		if( tmp != NULL ) tmp[ 0 ] = '\0';
-		if( oldpath == NULL ) snprintf( buf, 4096, "%s:%s:%s/bin/linux-x64", p1, p2, GETARG(args,profiler_home) );
-		else snprintf( buf, 4096, "%s:%s:%s:%s/bin/linux-x64", oldpath, p1, p2, GETARG(args,profiler_home) );
+		if( oldpath == NULL ) snprintf( buf, 32768, "%s:%s:%s/bin/linux-x64", p1, p2, GETARG(args,profiler_home) );
+		else snprintf( buf, 32768, "%s:%s:%s:%s/bin/linux-x64", oldpath, p1, p2, GETARG(args,profiler_home) );
 		tmp = strdup( buf );
 
 		setenv( "LD_LIBRARY_PATH", tmp, 1 );
@@ -477,7 +477,7 @@ void euca_load_bootstrapper(void) {
 }
 
 char* java_library_path(euca_opts *args) {
-#define JAVA_PATH_LEN 16384
+#define JAVA_PATH_LEN 65536
     char lib_dir[256],etc_dir[256],script_dir[256],*jar_list=(char*)malloc(JAVA_PATH_LEN*sizeof(char));
     __die(( strlen(GETARG(args,home))+strlen(EUCA_LIB_DIR)>=254),"Directory path too long: %s/%s", GETARG(args,home), EUCA_LIB_DIR);
     snprintf(lib_dir,255,"%s%s",GETARG(args,home),EUCA_LIB_DIR);
