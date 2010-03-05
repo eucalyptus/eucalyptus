@@ -303,6 +303,7 @@ mkdir -p /etc/udev/scripts/
 %endif
 %if %is_centos
 	cp /usr/share/eucalyptus/udev/iscsidev-centos.sh /etc/udev/scripts/iscsidev.sh
+	udevcontrol reload_rules
 	sed -i "s/node\.startup.*/node\.startup\ = manual/" /etc/iscsi/iscsid.conf
 	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
 	cat <<EOF >> /etc/sudoers
