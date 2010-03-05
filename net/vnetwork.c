@@ -189,7 +189,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	snprintf(cmd, 256, "-A FORWARD -d ! %s/%d -j ACCEPT", network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
 
-	snprintf(cmd, 256, "-A POSTROUTING -s ! 127.0.0.0/8 -d ! %s/%d -j MASQUERADE", network, slashnet);
+	snprintf(cmd, 256, "-A POSTROUTING -s %s/%d -d ! %s/%d -j MASQUERADE", network, slashnet, network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
 	rc = vnetSetMetadataRedirect(vnetconfig, network, slashnet);

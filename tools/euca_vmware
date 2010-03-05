@@ -22,10 +22,6 @@ for FILE in $EUCALYPTUS/usr/share/eucalyptus/*.jar; do
         continue
     fi
 
-    if [ "$FILE" == "$EUCALYPTUS/usr/share/eucalyptus/slf4j-log4j12-1.5.2.jar" ]; then
-        continue
-    fi
-
     export CLASSPATH=${FILE}:${CLASSPATH}
 done
 
@@ -34,7 +30,11 @@ export CLASSPATH="$EUCALYPTUS/usr/share/eucalyptus/jcl-over-slf4j-1.5.2.jar:$CLA
 export CLASSPATH="$EUCALYPTUS/usr/share/eucalyptus/vijava220090625.jar:$CLASSPATH"
 
 DEFINES="-Xbootclasspath/p:$EUCALYPTUS/usr/share/eucalyptus/openjdk-crypto.jar -Djava.security.policy=$EUCALYPTUS/etc/eucalyptus/cloud.d/security.policy -Deuca.home=$EUCALYPTUS -Deuca.var.dir=$EUCALYPTUS/var/lib/eucalyptus -Deuca.conf.dir=$EUCALYPTUS/etc/eucalyptus/cloud.d -Deuca.lib.dir=$EUCALYPTUS/usr/share/eucalyptus -Deuca.log.dir=$EUCALYPTUS/var/log/eucalyptus"
-CMD="java $DEFINES com.eucalyptus.cloud.ws.VMwareClient $@"
+if [ ! -e $EUCALYPTUS/usr/share/eucalyptus/eucalyptus.jar ]; then
+  CMD="java $DEFINES com.eucalyptus.cloud.ws.VMwareClient $@"
+else
+  CMD="java -Djava.system.class.loader=net.jsecurity.classguard.bootstrap.ClassGuard $DEFINES com.eucalyptus.cloud.ws.VMwareClient $@" 
+fi
 
 #echo $CLASSPATH
 #echo $CMD

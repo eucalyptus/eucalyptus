@@ -115,8 +115,7 @@ usage () {
 	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
 	echo "   --register-cluster <clustername> <host> add new cluster to EUCALYPTUS"
 	echo "   --deregister-cluster <clustername>      remove cluster from EUCALYPTUS"
-	echo "   --register-vmware                add new vmware to EUCALYPTUS"
-#	echo "   --deregister-vmware              remove vmware from EUCALYPTUS"
+	echo "   --configure-vmware                add new vmware to EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
 	echo "   --deregister-walrus <host>       remove walrus from EUCALYPTUS"
 	echo "   --register-sc <name> <host>      add storage controller"
@@ -422,7 +421,7 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "--register-vmware" ]; then
+	if [ "$1" = "--configure-vmware" ]; then
 		VMWARE="Y"
 		shift;
 		continue
@@ -640,11 +639,6 @@ while [ $# -gt 0 ]; do
 	if [ "$1" = "--deregister-cluster" ]; then
 		CLUSNAME="$2"
 		CLUSMODE="DEL"
-		shift; shift
-		continue
-	fi
-	if [ "$1" = "--deregister-vmware" ]; then
-		echo "--deregister-vmware is not implemented yet"
 		shift; shift
 		continue
 	fi

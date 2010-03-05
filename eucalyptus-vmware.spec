@@ -148,12 +148,13 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 
 This package contains the internal log service of eucalyptus.
 
-%package vmware-broker
+%package broker
 Summary:      Elastic Utility Computing Architecture - vmware broker
-Requires:     eucalyptus-common-java >= 1.6, java-sdk >= 1.6.0
+Requires:     eucalyptus-vmware-common-java >= 1.0, java-sdk >= 1.6.0
+Conflicts:    eucalyptus-vmware-broker < 1.0
 Group:        Applications/System
 
-%description vmware-broker
+%description broker
 EUCALYPTUS is an open source service overlay that implements elastic
 computing using existing resources. The goal of EUCALYPTUS is to allow
 sites with existing clusters and server infrastructure to co-host an
@@ -213,6 +214,9 @@ echo BUILDROOT: ${RPM_BUILD_ROOT}
 /usr/sbin/euca_killall
 /etc/eucalyptus/httpd.conf
 /etc/eucalyptus/eucalyptus-version
+/usr/share/eucalyptus/licenses/APACHE-2
+/usr/share/eucalyptus/licenses/CPAL
+/usr/share/eucalyptus/licenses/LGPL-2.1
 #/usr/share/eucalyptus/udev/55-openiscsi.rules
 #/usr/share/eucalyptus/udev/README
 #/usr/share/eucalyptus/udev/iscsidev-centos.sh
@@ -263,7 +267,7 @@ echo BUILDROOT: ${RPM_BUILD_ROOT}
 %files gl
 /opt/euca-axis2c/services/EucalyptusGL
 
-%files vmware-broker
+%files broker
 /usr/share/eucalyptus/*vmware*jar
 /usr/share/eucalyptus/euca_vmware
 /usr/lib/eucalyptus/euca_imager
@@ -320,17 +324,19 @@ fi
 #%if %is_suse
 #	cp /usr/share/eucalyptus/udev/iscsidev-opensuse.sh /etc/udev/scripts/iscsidev.sh
 #%endif
-#%if %is_centos
+%if %is_centos
 #	cp /usr/share/eucalyptus/udev/iscsidev-centos.sh /etc/udev/scripts/iscsidev.sh
-#	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
-#	cat <<EOF >> /etc/sudoers
+	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
+	cat <<EOF >> /etc/sudoers
+eucalyptus ALL=NOPASSWD: /usr/sbin/tgtadm
+EOF
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget_sc.pl
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget.pl
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget.pl
 #eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/get_iscsitarget.pl
 #EOF
-#%endif
+%endif
 #chmod +x /etc/udev/scripts/iscsidev.sh
 
 # we need a eucalyptus user
@@ -471,6 +477,12 @@ fi
 #    fi
 #fi
 
+%post broker
+/usr/sbin/euca_conf --enable vmwarebroker
+sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/services\/VMwareBroker\"/" /etc/eucalyptus/eucalyptus.conf
+sed -i "s/NC_PORT=.*/NC_PORT=\"8773\"/" /etc/eucalyptus/eucalyptus.conf
+sed -i "s/ENABLE_WS_SECURITY=.*/ENABLE_WS_SECURITY=\"N\"/" /etc/eucalyptus/eucalyptus.conf
+echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus/eucalyptus.conf
 
 %postun
 # in case of removal let's try to clean up the best we can
@@ -733,6 +745,6 @@ fi
 *Sat May 21 2008 mayhem group (support@open.eucalyptus.com)
 - first release of eucalyptus
 
-%changelog vmware-broker
+%changelog broker
 *Sun Nov 1 2009 Eucalyptus Systems (support@open.eucalyptus.com)
 - new package
