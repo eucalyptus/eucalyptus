@@ -22,10 +22,6 @@ for FILE in $EUCALYPTUS/usr/share/eucalyptus/*.jar; do
         continue
     fi
 
-    if [ "$FILE" == "$EUCALYPTUS/usr/share/eucalyptus/slf4j-log4j12-1.5.2.jar" ]; then
-        continue
-    fi
-
     export CLASSPATH=${FILE}:${CLASSPATH}
 done
 
