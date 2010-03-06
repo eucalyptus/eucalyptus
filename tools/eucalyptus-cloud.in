@@ -204,7 +204,7 @@ check_java() {
 }
 
 do_start() {
-	local OPTS=""
+	local CLOUD_OPTS=""
 
 	# basic checks
 	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
@@ -218,19 +218,19 @@ do_start() {
 
 	# options from the configuration file
 	if [ "$DISABLE_DNS" != "N" ]; then
-		OPTS="$OPTS --remote-dns"
+		CLOUD_OPTS="$CLOUD_OPTS --remote-dns"
 	fi
 	if [ "$DISABLE_EBS" = "Y" ]; then
-		OPTS="$OPTS --disable-storage"
+		CLOUD_OPTS="$CLOUD_OPTS --disable-storage"
 	fi
 	if [ "$DISABLE_ISCSI" != "N" ]; then
-		OPTS="$OPTS --disable-iscsi"
+		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
 	fi
 
 	# enabled services
 	if [ "$STORAGE_WS" != "Y" ]; then
 		if [ "$DISABLE_EBS" != "Y" ]; then
-			OPTS="$OPTS --disable-storage"
+			CLOUD_OPTS="$CLOUD_OPTS --disable-storage"
 		fi
 	else
 		if [ "$DISABLE_EBS" = "Y" ]; then
@@ -242,14 +242,14 @@ do_start() {
 		fi
 	fi
 	if [ "$WALRUS_WS" != "Y" ]; then
-		OPTS="$OPTS --disable-walrus"
+		CLOUD_OPTS="$CLOUD_OPTS --disable-walrus"
 	else
 		if ! $EUCALYPTUS/usr/sbin/euca_conf --check walrus ; then
 			exit 1
 		fi
 	fi
 	if [ "$CLOUD_WS" != "Y" ]; then
-		OPTS="$OPTS --disable-cloud"
+		CLOUD_OPTS="$CLOUD_OPTS --disable-cloud"
 	else
 		if ! $EUCALYPTUS/usr/sbin/euca_conf --check cloud ; then
 			exit 1
@@ -262,8 +262,8 @@ do_start() {
 		return 0
 	fi
 
-    # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
-	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -L console-log >/dev/null 2>&1
+    # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
+	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -L console-log >/dev/null 2>&1
 
 	return $?
 }
