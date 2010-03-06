@@ -138,7 +138,7 @@ public class BlockStorage {
 	static SnapshotService snapshotService;
 
 	public static void deferredInitializer() {
-	   if( !Component.storage.isEnabled( ) ) return;//temporary workaround for remote-component boot issue.
+		if( !Component.storage.isEnabled( ) ) return;//temporary workaround for remote-component boot issue.
 		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
@@ -169,10 +169,15 @@ public class BlockStorage {
 		StorageProperties.SAN_HOST = storageInfo.getSanHost();
 		StorageProperties.SAN_USERNAME = storageInfo.getSanUser();
 		try {
-			StorageProperties.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
+			if(!StorageProperties.DUMMY_SAN_PASSWORD.equals(storageInfo.getSanPassword())) {
+				StorageProperties.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
+			} else {
+				LOG.info("SAN credentials not configured yet.");
+			}
 		} catch (EucalyptusCloudException e) {
 			LOG.fatal("Unable to get password. " + e.getMessage());
 		}
+		StorageProperties.DAS_DEVICE = storageInfo.getDASDevice();
 		StorageProperties.updateStorageHost();
 		blockManager.configure();
 	}
@@ -193,7 +198,8 @@ public class BlockStorage {
 					StorageProperties.zeroFillVolumes,
 					StorageProperties.SAN_HOST,
 					StorageProperties.SAN_USERNAME,
-					StorageProperties.SAN_PASSWORD);
+					StorageProperties.SAN_PASSWORD,
+					StorageProperties.DAS_DEVICE);
 			db.add(storageInfo);
 			db.commit();
 		} 
@@ -217,18 +223,24 @@ public class BlockStorage {
 			} catch (EucalyptusCloudException e) {
 				LOG.fatal("Unable to update password. " + e.getMessage());
 			}
+			storageInfo.setDASDevice(StorageProperties.DAS_DEVICE);
 			db.commit();
 		} catch(EucalyptusCloudException ex) {
-			storageInfo = new StorageInfo(StorageProperties.NAME, 
-					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-					StorageProperties.iface, 
-					StorageProperties.MAX_VOLUME_SIZE, 
-					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes,
-					StorageProperties.SAN_HOST,
-					StorageProperties.SAN_USERNAME,
-					StorageProperties.SAN_PASSWORD);
-			db.add(storageInfo);
+			try {
+				storageInfo = new StorageInfo(StorageProperties.NAME, 
+						StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
+						StorageProperties.iface, 
+						StorageProperties.MAX_VOLUME_SIZE, 
+						StorageProperties.storageRootDirectory,
+						StorageProperties.zeroFillVolumes,
+						StorageProperties.SAN_HOST,
+						StorageProperties.SAN_USERNAME,
+						BlockStorageUtil.encryptSCTargetPassword(StorageProperties.SAN_PASSWORD),
+						StorageProperties.DAS_DEVICE);
+				db.add(storageInfo);
+			} catch (EucalyptusCloudException e) {
+				LOG.fatal("Unable to update password. " + e.getMessage());
+			}
 			db.commit();
 		} 
 		blockManager.configure();
@@ -294,6 +306,8 @@ public class BlockStorage {
 			StorageProperties.SAN_USERNAME = request.getSanUser();
 		if(request.getSanPassword() != null)
 			StorageProperties.SAN_PASSWORD = request.getSanPassword();
+		if(request.getDASDevice() != null)
+			StorageProperties.DAS_DEVICE = request.getDASDevice();
 		check();
 		//test connection to Walrus
 		StorageProperties.updateWalrusUrl();
@@ -322,6 +336,7 @@ public class BlockStorage {
 			reply.setSanHost(StorageProperties.SAN_HOST);
 			reply.setSanUser(StorageProperties.SAN_USERNAME);
 			reply.setSanPassword(StorageProperties.SAN_PASSWORD);
+			reply.setDASDevice(StorageProperties.DAS_DEVICE);
 			reply.setName(StorageProperties.NAME);
 		}
 		return reply;

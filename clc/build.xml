@@ -87,6 +87,7 @@
   <target name="build-msgs">
     <ant dir="modules/msgs" inheritall="false" target="builder"/>
     <ant dir="modules/database" inheritall="false" target="builder"/>
+    <ant dir="modules/hsqldb" inheritall="false" target="builder"/>
     <ant dir="modules/authentication" inheritall="false" target="builder"/>
     <ant dir="modules/cloud" inheritall="false" target="builder"/>
     <ant dir="modules/configuration" inheritall="false" target="builder"/>
@@ -123,6 +124,7 @@
   <target name="clean-msgs">
     <ant dir="modules/msgs" inheritall="false" target="clean"/>
     <ant dir="modules/database" inheritall="false" target="clean"/>
+    <ant dir="modules/hsqldb" inheritall="false" target="clean"/>
     <ant dir="modules/cloud" inheritall="false" target="clean"/>
     <ant dir="modules/authentication" inheritall="false" target="clean"/>
     <ant dir="modules/configuration" inheritall="false" target="clean"/>
@@ -192,6 +194,7 @@
     <mkdir dir="${DESTDIR}${euca.var.dir}/modules"/>
     <ant dir="modules/msgs" inheritall="false" target="install"/>
     <ant dir="modules/database" inheritall="false" target="install"/>
+    <ant dir="modules/hsqldb" inheritall="false" target="install"/>
     <ant dir="modules/cloud" inheritall="false" target="install"/>
     <ant dir="modules/authentication" inheritall="false" target="install"/>
     <ant dir="modules/configuration" inheritall="false" target="install"/>
@@ -240,10 +243,6 @@
   </target>
   <target name="untar" if="needUnzipping">
     <untar compression="gzip" src="${deps.dir}/${deps.lib}.tar.gz" dest="${deps.lib.dir}"/>
-    <delete file="${deps.lib.dir}/openjdk-crypto.jar"/> 	
-  	<jar destfile="${deps.lib.dir}/openjdk-crypto.jar">
-  	    <zipfileset src="${deps.lib.dir}/eucalyptus-commons-ext-0.4.jar" includes="javax/crypto/**"/>
-	</jar>
   </target>
   <target name="download-deps" if="needDownload">
     <mkdir dir="${deps.dir}"/>

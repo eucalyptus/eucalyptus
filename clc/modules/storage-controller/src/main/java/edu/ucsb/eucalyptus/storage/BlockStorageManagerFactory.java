@@ -67,7 +67,9 @@ package edu.ucsb.eucalyptus.storage;
 
 public class BlockStorageManagerFactory {
     public static LogicalStorageManager getBlockStorageManager() {
+    	//TODO: make this configurable
         //return new LVM2Manager();
     	return new SANManager();
+    	//return new LVM2DASManager();
     }
 }

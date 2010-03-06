@@ -112,7 +112,9 @@ public class EquallogicProvider implements SANProvider {
 		this.password = StorageProperties.SAN_PASSWORD;
 		if(sessionManager != null)
 			try {
-				sessionManager.update(host, username, password);
+				if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) {
+					sessionManager.update(host, username, password);
+				}
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e, e);
 			}
@@ -130,7 +132,8 @@ public class EquallogicProvider implements SANProvider {
 
 	public void checkConnection() {
 		try {
-			sessionManager.checkConnection();
+			if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) 
+				sessionManager.checkConnection();
 		} catch (EucalyptusCloudException e) {
 			enabled = false;
 			return;
@@ -171,8 +174,11 @@ public class EquallogicProvider implements SANProvider {
 			String encryptedPassword = userInfo.getEncryptedPassword();
 			db.commit();
 			try {
-				String deviceName = SystemUtil.run(new String[]{"sudo", "-E", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
-						host + "," + iqn + "," + encryptedPassword});
+				String deviceName = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
+						System.getProperty("euca.home") + "," + host + "," + iqn + "," + encryptedPassword});
+				if(deviceName.length() == 0) {
+					throw new EucalyptusCloudException("Unable to get device name. Connect failed.");
+				}
 				return deviceName;
 			} catch (ExecutionException e) {
 				throw new EucalyptusCloudException("Unable to connect to storage target");
@@ -190,7 +196,7 @@ public class EquallogicProvider implements SANProvider {
 			EquallogicVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
 			EntityWrapper<CHAPUserInfo> dbUser = db.recast(CHAPUserInfo.class);
 			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
-			String property = host + "," + volumeInfo.getIqn() + "," + BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
+			String property = System.getProperty("euca.home") + "," + host + "," + volumeInfo.getIqn() + "," + BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
 			db.commit();
 			return property;
 		} catch(EucalyptusCloudException ex) {
@@ -398,7 +404,7 @@ public class EquallogicProvider implements SANProvider {
 			String encryptedPassword = userInfo.getEncryptedPassword();
 			db.commit();
 			try {
-				String returnValue = SystemUtil.run(new String[]{"sudo", "-E", BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl", 
+				String returnValue = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl", System.getProperty("euca.home") + "," +  
 						host + "," + iqn + "," + encryptedPassword});
 				if(returnValue.length() == 0) {
 					throw new EucalyptusCloudException("Unable to disconnect target");

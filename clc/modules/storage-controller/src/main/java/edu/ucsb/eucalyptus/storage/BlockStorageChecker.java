@@ -258,11 +258,11 @@ public class BlockStorageChecker {
 			if(snapshotInfos.size() > 0) {
 				SnapshotInfo snapInfo = snapshotInfos.get(0);
 				String snapshotId = snapInfo.getSnapshotId();
-				db.commit();	
 				List<String> returnValues;
 				try {
 					returnValues = blockManager.prepareForTransfer(snapshotId);
 				} catch (EucalyptusCloudException e) {
+					db.rollback();
 					LOG.error(e);
 					return;
 				}
@@ -280,6 +280,7 @@ public class BlockStorageChecker {
 					checker.cleanFailedSnapshot(snapshotId);
 				}
 			}
+			db.commit();	
 		}
 	}
 }

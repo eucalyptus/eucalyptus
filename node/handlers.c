@@ -306,24 +306,24 @@ refresh_instance_info(	struct nc_state_t *nc,
         char *ip=NULL;
         int rc;
 
-        if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 32)) {
+        if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 24)) {
 	  if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
-            rc = mac2ip(nc_state.vnetconfig, instance->ncnet.publicMac, &ip);
+            rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
 	      if(ip) {
 	        logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-	        strncpy(instance->ncnet.publicIp, ip, 32);
+	        strncpy(instance->ncnet.publicIp, ip, 24);
 	        free(ip);
 	      }
             }
 	  }
         }
-        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 32)) {
+        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 24)) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
 		if(ip) {
                   logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
-                  strncpy(instance->ncnet.privateIp, ip, 32);
+                  strncpy(instance->ncnet.privateIp, ip, 24);
 	          free(ip);
 		}
             }
@@ -337,9 +337,9 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
 			char *instanceId,
 			int ramdisk,
 			char *disk_path,
-			ncInstParams *params,
+			virtualMachine *params,
 			char *privMac,
-			char *pubMac,
+			//			char *privIp,
 			char *brname,
 			char **xml)
 {
@@ -350,7 +350,7 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
     } else {
         snprintf (buf, CHAR_BUFFER_SIZE, "%s", gen_libvirt_cmd_path);
     }
-    if (params->diskSize > 0) { /* TODO: get this info from scMakeImage */
+    if (params->disk > 0) { /* TODO: get this info from scMakeImage */
         strncat (buf, " --ephemeral", CHAR_BUFFER_SIZE);
     }
     * xml = system_output (buf);
@@ -365,11 +365,11 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
     replace_string (xml, "SWAPPATH", disk_path);
     replace_string (xml, "NAME", instanceId);
     replace_string (xml, "PRIVMACADDR", privMac);
-    replace_string (xml, "PUBMACADDR", pubMac);
+    //    replace_string (xml, "PUBMACADDR", pubMac);
     replace_string (xml, "BRIDGEDEV", brname);
-    snprintf(buf, CHAR_BUFFER_SIZE, "%d", params->memorySize * 1024); /* because libvirt wants memory in Kb, while we use Mb */
+    snprintf(buf, CHAR_BUFFER_SIZE, "%d", params->mem * 1024); /* because libvirt wants memory in Kb, while we use Mb */
     replace_string (xml, "MEMORY", buf);
-    snprintf(buf, CHAR_BUFFER_SIZE, "%d", params->numberOfCores);
+    snprintf(buf, CHAR_BUFFER_SIZE, "%d", params->cores);
     replace_string (xml, "VCPUS", buf);
     
     return 0;
@@ -489,7 +489,7 @@ void *startup_thread (void * arg)
                                  instance->ramdiskId, instance->ramdiskURL, 
                                  instance->instanceId, instance->keyName, 
                                  &disk_path, addkey_sem, nc_state.convert_to_disk,
-				 instance->params.diskSize*1024);
+				 instance->params.disk*1024);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
@@ -508,7 +508,7 @@ void *startup_thread (void * arg)
                               strnlen (instance->ramdiskId, CHAR_BUFFER_SIZE), /* 0 if no ramdisk */
                               disk_path, 
                               &(instance->params), 
-                              instance->ncnet.privateMac, instance->ncnet.publicMac, 
+                              instance->ncnet.privateMac, 
                               brname, &xml);
     if (brname) free(brname);
     if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
@@ -832,7 +832,7 @@ static int init (void)
 
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
-	int ret, len;
+        int ret, len, i;
 	char *file_name;
 	FILE *f;
 	long long used_mem, used_disk, used_cores;
@@ -850,6 +850,12 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 
 	if (ret)
 		return ret;
+
+
+	for (i=0; i < (*outInstsLen); i++) {
+	  ncInstance *instance = (*outInsts)[i];
+	  logprintfl(EUCADEBUG, "doDescribeInstances(): instanceId=%s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d\n", instance->instanceId, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex);
+	}
 
 	/* allocate enough memory */
 	len = (strlen(EUCALYPTUS_CONF_LOCATION) > strlen(NC_MONIT_FILENAME)) ? strlen(EUCALYPTUS_CONF_LOCATION) : strlen(NC_MONIT_FILENAME);
@@ -888,9 +894,9 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 			used_disk = used_mem = used_cores = 0;
 			for (i=0; i < (*outInstsLen); i++) {
 				instance = (*outInsts)[i];
-				used_disk += instance->params.diskSize;
-				used_mem += instance->params.memorySize;
-				used_cores += instance->params.numberOfCores;
+				used_disk += instance->params.disk;
+				used_mem += instance->params.mem;
+				used_cores += instance->params.cores;
 			}
 
 			fprintf(f, "memory (max/avail/used) MB: %lld/%lld/%lld\n", nc_state.mem_max, nc_state.mem_max - used_mem, used_mem);
@@ -902,9 +908,9 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 				fprintf(f, "id: %s", instance->instanceId);
 				fprintf(f, " userId: %s", instance->userId);
 				fprintf(f, " state: %s", instance->stateName);
-				fprintf(f, " mem: %d", instance->params.memorySize);
-				fprintf(f, " disk: %d", instance->params.diskSize);
-				fprintf(f, " cores: %d", instance->params.numberOfCores);
+				fprintf(f, " mem: %d", instance->params.mem);
+				fprintf(f, " disk: %d", instance->params.disk);
+				fprintf(f, " cores: %d", instance->params.cores);
 				fprintf(f, " private: %s", instance->ncnet.privateIp);
 				fprintf(f, " public: %s\n", instance->ncnet.publicIp);
 			}
@@ -932,25 +938,25 @@ int doPowerDown(ncMetadata *meta) {
 	return ret;
 }
 
-int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
 	int ret;
 
 	if (init())
 		return 1;
 
-	logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->numberOfCores, params->diskSize, params->memorySize);
+	logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
 	logprintfl (EUCAINFO, "                         image=%s at %s\n", imageId, imageURL);
 	logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
 	if (ramdiskId)
 		logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
-	logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s pubMAC=%s\n", vlan, privMac, pubMac);
+	logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
 
 
 	if (nc_state.H->doRunInstance)
-		ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, userData, launchIndex, groupNames, groupNamesSize, outInst);
+ 	  ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
 	else
-		ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, privMac, pubMac, vlan, userData, launchIndex, groupNames, groupNamesSize, outInst);
+	  ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
 
 	return ret;
 }

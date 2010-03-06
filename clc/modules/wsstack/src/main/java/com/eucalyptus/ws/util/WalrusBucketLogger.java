@@ -85,6 +85,7 @@ import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
@@ -97,13 +98,16 @@ import edu.ucsb.eucalyptus.msgs.Grantee;
 
 public class WalrusBucketLogger {
 	private Logger LOG = Logger.getLogger( WalrusBucketLogger.class );
-	private static WalrusBucketLogger singleton = new WalrusBucketLogger();
-	private static final int LOG_THRESHOLD = 10;
-	private static final int LOG_PERIODICITY = 120;
+	private static WalrusBucketLogger singleton;
+
+        private static int LOG_THRESHOLD = 10;
+	private static int LOG_PERIODICITY = 120;
 
 	private LinkedBlockingQueue<BucketLogData> logData;
 	private ConcurrentHashMap<String, LogFileEntry> logFileMap;
 	ScheduledExecutorService logger;
+
+  	static { GroovyUtil.loadConfig("walruslogger.groovy"); }
 
 	public WalrusBucketLogger() {
 		logData = new LinkedBlockingQueue<BucketLogData>();

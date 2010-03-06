@@ -113,18 +113,21 @@ public class StorageStateType extends EucalyptusMessage{
   private String sanHost;
   private String sanUser;
   private String sanPassword;
-
+  private String DASDevice;
+  
   def StorageStateType() {
   }
   
   def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
-  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes) {
+  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
+  final DASDevice) {
     this.name = name;
     this.volumesPath = volumesPath;
     this.maxVolumeSizeInGB = maxVolumeSizeInGB;
     this.totalVolumesSizeInGB = totalVolumesSizeInGB;
     this.storageInterface = storageInterface;
     this.zeroFillVolumes = zeroFillVolumes;
+    this.DASDevice = DASDevice;
   }
 
   def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
@@ -238,7 +241,7 @@ public class EucalyptusMessage implements Cloneable, Serializable {
     Class msgClass = this.getClass();
     if ( !this.getClass().getSimpleName().endsWith("Type") )
       msgClass = msgClass.getSuperclass();
-    Class responseClass = Class.forName(msgClass.getName().replaceAll("Type", "") + "ResponseType");
+    Class responseClass = ClassLoader.getSystemClassLoader().loadClass(msgClass.getName().replaceAll("Type", "") + "ResponseType");
     EucalyptusMessage reply = (EucalyptusMessage) responseClass.newInstance();
     reply.setCorrelationId(this.getCorrelationId());
     reply.setUserId(this.getUserId());
@@ -250,7 +253,7 @@ public class EucalyptusMessage implements Cloneable, Serializable {
     Class msgClass = this.getClass();
     if ( !this.getClass().getSimpleName().endsWith("Type") )
       msgClass = msgClass.getSuperclass();
-    Class responseClass = Class.forName(msgClass.getName().replaceAll("Type", "") + "ResponseType");
+    Class responseClass = ClassLoader.getSystemClassLoader().loadClass(msgClass.getName().replaceAll("Type", "") + "ResponseType");
     return responseClass;
   }
 
@@ -343,12 +346,12 @@ public class ResourceType extends EucalyptusData {
 }
 public class NetworkConfigType extends EucalyptusData {
   String macAddress;
-  String ignoredMacAddress;
   String ipAddress;
   String ignoredPublicIp;
   String privateDnsName;
   String publicDnsName;
   int vlan;
+  Integer networkIndex;
   
   def NetworkConfigType() {
   }
@@ -366,6 +369,7 @@ public class NetworkConfigType extends EucalyptusData {
     ", publicIp='" + ignoredPublicIp + '\'' +
     ", privateDnsName='" + privateDnsName + '\'' +
     ", publicDnsName='" + publicDnsName + '\'' +
+    ", networkIndex='" + networkIndex + '\'' +
     ", vlan=" + vlan +
     '}';
   }

@@ -242,7 +242,7 @@ public class DNSControl {
 		UpdateCNAMERecordResponseType reply = (UpdateCNAMERecordResponseType) request.getReply();
 		String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
-		String alias = request.getAlias();
+		String alias = request.getAlias() + DNSProperties.DOMAIN + ".";
 		long ttl = request.getTtl();
 		EntityWrapper<CNAMERecordInfo> db = DNSControl.getEntityWrapper();
 		CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();

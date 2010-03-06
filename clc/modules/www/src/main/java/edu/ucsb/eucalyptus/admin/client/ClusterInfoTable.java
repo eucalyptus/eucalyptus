@@ -121,7 +121,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		this.clusterList.add (new ClusterInfoWeb ("cluster-name", "cc-host", 8774, 10, 4096));
 		//these values are just defaults
-		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanHost", "sanUser", "sanPassword"));
+		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanHost", "sanUser", "sanPassword", "/dev/blockdev"));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
@@ -164,7 +164,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	private Grid addClusterEntry ( int row, ClusterInfoWeb clusterInfo, final StorageInfoWeb storageInfo)
 	{
-		Grid g = new Grid (18, 2);
+		Grid g = new Grid (15, 2);
 		g.setStyleName( "euca-table" );
 		if (row > 0) {
 			g.setStyleName( "euca-nonfirst-cluster-entry" );
@@ -288,7 +288,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		i++; // next row
 		g.setWidget( i, 1, new Label( "Storage Controller" ));
 
-		i++; // next row
+		/*i++; // next row
 		g.setWidget( i, 0, new Label( "Host:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox sb = new TextBox();
@@ -316,7 +316,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		volumesPathBox.setVisibleLength( 30 );
 		volumesPathBox.setText( storageInfo.getVolumesPath() );
 		volumesPathBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget( i, 1, volumesPathBox );
+		g.setWidget( i, 1, volumesPathBox );*/
 
 		i++; // next row
 		g.setWidget( i, 0, new Label( "Max volume size:" ) );
@@ -346,7 +346,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		volumesTotalPanel.add (new Label ("GB"));
 		g.setWidget( i, 1, volumesTotalPanel );
 
-		i++; // next row
+		/*i++; // next row
 		final CheckBox zeroFillVolumesCheckbox = new CheckBox ();
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		g.setWidget( i, 0, zeroFillVolumesCheckbox );
@@ -365,7 +365,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 				}
 			}
 		});
-		g.setWidget( i, 1, new Label ("Zero-fill volumes") );
+		g.setWidget( i, 1, new Label ("Zero-fill volumes") );*/
 
 		i++; // next row
 		g.setWidget( i, 0, new Label( "SAN Host:" ) );
@@ -396,6 +396,14 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		sanPasswordBox.setText( storageInfo.getSanPassword() );
 		sanPasswordBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		g.setWidget( i, 1, sanPasswordBox );
+		/*g.setWidget( i, 0, new Label( "DAS Partition:" ) );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		final TextBox dasPartitionBox = new TextBox();
+		dasPartitionBox.addChangeListener (new ChangeCallback (this, row));
+		dasPartitionBox.setVisibleLength( 5 );
+		dasPartitionBox.setText( "" + storageInfo.getDASPartition());
+		dasPartitionBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+		g.setWidget( i, 1, dasPartitionBox );*/
 
 		return g;
 	}
@@ -446,18 +454,19 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		cluster.setMaxVlans(Integer.parseInt(((TextBox)p.getWidget(2)).getText()));
 
 		// SC section
-		storage.setHost (((TextBox)g.getWidget(9, 1)).getText());
-		storage.setStorageInterface(((TextBox)g.getWidget(10, 1)).getText());
-		storage.setVolumesPath (((TextBox)g.getWidget(11, 1)).getText());
-		p = (HorizontalPanel)g.getWidget(12, 1);
+		//storage.setHost (((TextBox)g.getWidget(9, 1)).getText());
+		//storage.setStorageInterface(((TextBox)g.getWidget(10, 1)).getText());
+		//storage.setVolumesPath (((TextBox)g.getWidget(11, 1)).getText());
+		p = (HorizontalPanel)g.getWidget(9, 1);
 		storage.setMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-		p = (HorizontalPanel)g.getWidget(13, 1);
+		p = (HorizontalPanel)g.getWidget(10, 1);
 		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
 	
-		storage.setSanHost (((TextBox)g.getWidget(15, 1)).getText());
-		storage.setSanUser (((TextBox)g.getWidget(16, 1)).getText());
-		storage.setSanPassword (((TextBox)g.getWidget(17, 1)).getText());
+		storage.setSanHost (((TextBox)g.getWidget(11, 1)).getText());
+		storage.setSanUser (((TextBox)g.getWidget(12, 1)).getText());
+		storage.setSanPassword (((TextBox)g.getWidget(13, 1)).getText());
 
+		//storage.setDASPartition(((TextBox)g.getWidget(15, 1)).getText());
 		//    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );
 	}
 

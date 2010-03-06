@@ -93,9 +93,9 @@ static int doInitialize (struct nc_state_t *nc)
 	/* set up paths of Eucalyptus commands NC relies on */
 	snprintf (nc->gen_libvirt_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
 	snprintf (nc->get_info_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
-	snprintf (nc->connect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
-	snprintf (nc->disconnect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
-	snprintf (nc->get_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
+	snprintf (nc->connect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_CONNECT_ISCSI, nc->home);
+	snprintf (nc->disconnect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_DISCONNECT_ISCSI, nc->home);
+	snprintf (nc->get_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_ISCSI, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
@@ -130,12 +130,13 @@ static int
 doRunInstance (	struct nc_state_t *nc,
 		ncMetadata *meta,
 		char *instanceId,
-		char *reservationId, ncInstParams *params, 
+		char *reservationId, virtualMachine *params, 
 		char *imageId, char *imageURL, 
 		char *kernelId, char *kernelURL, 
 		char *ramdiskId, char *ramdiskURL, 
 		char *keyName, 
-		char *privMac, char *pubMac, int vlan, 
+		//		char *privMac, char *privIp, int vlan, 
+		netConfig *netparams,
 		char *userData, char *launchIndex, char **groupNames,
 		int groupNamesSize, ncInstance **outInst)
 {
@@ -143,11 +144,9 @@ doRunInstance (	struct nc_state_t *nc,
     * outInst = NULL;
     int error;
     pid_t pid;
-    ncNetConf ncnet;
+    netConfig ncnet;
 
-    strcpy(ncnet.privateMac, privMac);
-    strcpy(ncnet.publicMac, pubMac);
-    ncnet.vlan = vlan;
+    memcpy(&ncnet, netparams, sizeof(netConfig));
 
     /* check as much as possible before forking off and returning */
     sem_p (inst_sem);
@@ -183,11 +182,13 @@ doRunInstance (	struct nc_state_t *nc,
     }
 
     instance->launchTime = time (NULL);
-    instance->params.memorySize = params->memorySize;
-    instance->params.numberOfCores = params->numberOfCores;
-    instance->params.diskSize = params->diskSize;
+    /*
+    instance->params.mem = params->mem;
+    instance->params.cores = params->cores;
+    instance->params.disk = params->disk;
     strcpy (instance->ncnet.privateIp, "0.0.0.0");
     strcpy (instance->ncnet.publicIp, "0.0.0.0");
+    */
 
     /* do the potentially long tasks in a thread */
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));

@@ -11,7 +11,7 @@ web_prop_dir	= ${TOP}/clc/modules/www/conf
 all: build
 
 deps:
-	$(ANT) deps
+	@$(ANT) deps
 
 update_properties: ${web_prop_dir}/eucalyptus-web.properties
 
@@ -48,12 +48,9 @@ build: extras
 # this causes problems for pbuilder, should be handled by configure and build.xml already 
 #	@if test ! -e deps/cloud-lib.tar.gz; then \
 #		echo "Cannot find java deps, please run 'make deps' in the 'clc/' subdirectory."; exit 1; fi
-	ANT_OPTS="-Xmx512m" $(ANT) build
-	make -C modules/storage-controller/native
-	make -C modules/bootstrap
-
-run: install 
-	$(ANT) run
+	@ANT_OPTS="-Xmx512m" $(ANT) build
+	@make -C modules/storage-controller/native
+	@make -C modules/bootstrap
 
 clean:
 	$(ANT) clean
@@ -66,10 +63,9 @@ distclean: clean
 	make -C modules/storage-controller/native distclean
 
 install: build
-	$(ANT) install
-#	@$(INSTALL) -m 644 cloud.xml $(etcdir)/eucalyptus
-	make -C modules/storage-controller/native install
-	make -C modules/bootstrap install
+	@$(ANT) install
+	@make -C modules/storage-controller/native install
+	@make -C modules/bootstrap install
 
 deploy: install
 

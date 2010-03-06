@@ -311,7 +311,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		try
 		{
 			//:: try to create the target class :://
-			targetType = Class.forName( "edu.ucsb.eucalyptus.msgs.".concat( operationName ).concat( "Type" ) );
+			targetType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs.".concat( operationName ).concat( "Type" ) );
 			//:: get the map of parameters to fields :://
 			fieldMap = this.buildFieldMap( targetType );
 			//:: get an instance of the message :://
