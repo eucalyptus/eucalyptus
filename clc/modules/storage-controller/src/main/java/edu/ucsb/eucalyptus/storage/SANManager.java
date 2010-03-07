@@ -271,13 +271,6 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void dupVolume(String volumeId, String dupedVolumeId)
-	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
 	public int getSnapshotSize(String snapshotId)
 	throws EucalyptusCloudException {
 		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
@@ -290,18 +283,6 @@ public class SANManager implements LogicalStorageManager {
 		}	finally {		
 			db.commit();
 		}
-	}
-
-	@Override
-	public List<String> getSnapshotValues(String snapshotId)
-	throws EucalyptusCloudException {
-		return null;
-	}
-
-	@Override
-	public List<String> getStatus(List<String> volumeSet)
-	throws EucalyptusCloudException {
-		return null;
 	}
 
 	@Override
@@ -330,10 +311,6 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void reload() {
-	}
-
-	@Override
-	public void setStorageInterface(String storageInterface) {
 	}
 
 	@Override

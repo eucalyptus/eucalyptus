@@ -80,8 +80,6 @@ public interface LogicalStorageManager {
 
 	public void startupChecks();
 
-	public void setStorageInterface(String storageInterface);
-
 	public void cleanVolume(String volumeId);
 
 	public void cleanSnapshot(String volumeId);
@@ -96,10 +94,6 @@ public interface LogicalStorageManager {
 
 	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
 
-	public void dupVolume(String volumeId, String dupedVolumeId) throws EucalyptusCloudException;
-
-	public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException;
-
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
 
 	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
@@ -107,8 +101,6 @@ public interface LogicalStorageManager {
 	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
 
 	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
-
-	public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException;
 
 	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
 

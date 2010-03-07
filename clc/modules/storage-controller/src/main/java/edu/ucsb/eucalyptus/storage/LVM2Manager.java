@@ -265,10 +265,6 @@ public class LVM2Manager implements LogicalStorageManager {
 		reload();
 	}
 
-	public void setStorageInterface(String storageInterface) {
-		StorageProperties.iface = storageInterface;
-	}
-
 	public void cleanVolume(String volumeId) {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(volumeId);
@@ -546,7 +542,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		}
 	}
 
-	public void dupVolume(String volumeId, String dupVolumeId) throws EucalyptusCloudException {
+	/*public void dupVolume(String volumeId, String dupVolumeId) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 
 		LVMVolumeInfo foundVolumeInfo = volumeManager.getVolumeInfo(volumeId);
@@ -590,23 +586,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			throw new EucalyptusCloudException("Could not dup volume " + volumeId);
 		}
 
-	}
-
-	public List<String> getStatus(List<String> volumeSet) throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-		ArrayList<String> status = new ArrayList<String>();
-		for(String volumeSetEntry: volumeSet) {
-			LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo(volumeSetEntry);
-			if(lvmVolumeInfo != null) {
-				status.add(lvmVolumeInfo.getStatus());
-			} else {
-				volumeManager.abort();
-				throw new EucalyptusCloudException("Unable to find entry: " + volumeSetEntry);
-			}
-		}
-		volumeManager.finish();
-		return status;
-	}
+	}*/
 
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -806,13 +786,6 @@ public class LVM2Manager implements LogicalStorageManager {
 			}		
 		}
 		volumeManager.finish();
-	}
-
-	public List<String> getSnapshotValues(String snapshotId) throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-		List<String> returnValues = volumeManager.getSnapshotValues(snapshotId);
-		volumeManager.finish();
-		return returnValues;
 	}
 
 	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException {
