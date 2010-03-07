@@ -81,6 +81,7 @@ import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 
 import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 
@@ -815,6 +816,16 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		List<DownloadsWeb> downloadsList = new ArrayList<DownloadsWeb>();
 
 		HttpClient httpClient = new HttpClient();
+		//support for http proxy
+		if(System.getProperty("http.proxyHost") != null) {
+			String proxyHost = System.getProperty("http.proxyHost");
+			if(System.getProperty("http.proxyPort") != null) {
+				int proxyPort = Integer.parseInt(System.getProperty("http.proxyPort"));
+				httpClient.getHostConfiguration().setProxy(proxyHost, proxyPort);
+			} else {
+				httpClient.getHostConfiguration().setProxyHost(new ProxyHost(proxyHost));
+			}
+		}
 		GetMethod method = new GetMethod(downloadsUrl);
 		Integer timeoutMs = new Integer(3 * 1000);
 		method.getParams().setSoTimeout(timeoutMs);

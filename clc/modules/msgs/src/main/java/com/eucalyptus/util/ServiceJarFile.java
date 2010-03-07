@@ -97,23 +97,21 @@ public class ServiceJarFile extends JarFile {
     Properties props = new Properties( );
     this.bootstrappers = Lists.newArrayList( );
     Enumeration<JarEntry> jarList = this.entries( );
-    this.classLoader = URLClassLoader.newInstance( new URL[] { f.getAbsoluteFile( ).toURL( ) } );
     LOG.info( "-> Trying to load component info from " + f.getAbsolutePath( ) );
     while ( jarList.hasMoreElements( ) ) {
       JarEntry j = jarList.nextElement( );
-      LOG.trace( "--> Handling entry: " + j.getName( ) );
-      if ( j.getName( ).endsWith( ".class" ) ) {
+      if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
         try {
           Class c = this.getEventListener( j );
           LOG.info( "---> Loading event listener from entry: " + j.getName( ) );
-        } catch ( Exception e ) {
+        } catch ( Throwable e ) {
           LOG.trace( e, e );
         }
         try {
           Class c = this.getBootstrapper( j );
           LOG.info( "---> Loading bootstrapper from entry: " + j.getName( ) );
           this.bootstrappers.add( c );
-        } catch ( Exception e ) {
+        } catch ( Throwable e ) {
           LOG.trace( e, e );
         }
         try {
@@ -127,8 +125,8 @@ public class ServiceJarFile extends JarFile {
 
   @SuppressWarnings("unchecked")
 private void addDeferredInitializers(JarEntry j) throws Exception {
-	String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( ".class", "" );
-    Class candidate = this.classLoader.loadClass( classGuess );
+	String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
+    Class candidate = ClassLoader.getSystemClassLoader().loadClass( classGuess );
     if(candidate.getAnnotation(NeedsDeferredInitialization.class) != null) {
        NeedsDeferredInitialization needsDeferredInit = (NeedsDeferredInitialization) candidate.getAnnotation(NeedsDeferredInitialization.class);
        if(needsDeferredInit.component().isEnabled())
@@ -152,7 +150,7 @@ private void addDeferredInitializers(JarEntry j) throws Exception {
         }
       } catch ( Exception e ) {
         LOG.warn( "Error in <init>()V and getInstance()L; in bootstrapper: " + c.getCanonicalName( ) );
-        LOG.warn( e.getMessage( ) );
+//        LOG.warn( e.getMessage( ) );
         // LOG.debug( e, e );
       }
     }
@@ -161,8 +159,8 @@ private void addDeferredInitializers(JarEntry j) throws Exception {
 
   @SuppressWarnings( "unchecked" )
   private Class getBootstrapper( JarEntry j ) throws Exception {
-    String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( ".class", "" );
-    Class candidate = this.classLoader.loadClass( classGuess );
+    String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
+    Class candidate = ClassLoader.getSystemClassLoader().loadClass( classGuess );
     if ( Bootstrapper.class.equals( candidate ) ) throw new InstantiationException( Bootstrapper.class + " is abstract." );
     if ( !Bootstrapper.class.isAssignableFrom( candidate ) ) throw new InstantiationException( candidate + " does not conform to " + Bootstrapper.class );
     LOG.warn( "Candidate bootstrapper: " + candidate.getName( ) );
@@ -176,8 +174,8 @@ private void addDeferredInitializers(JarEntry j) throws Exception {
 
   @SuppressWarnings( "unchecked" )
   private Class getEventListener( JarEntry j ) throws Exception {
-    String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( ".class", "" );
-    Class candidate = this.classLoader.loadClass( classGuess );
+    String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
+    Class candidate = ClassLoader.getSystemClassLoader().loadClass( classGuess );
     if ( !EventListener.class.isAssignableFrom( candidate ) ) throw new InstantiationException( candidate + " does not conform to " + EventListener.class );
     LOG.warn( "Candidate event listener: " + candidate.getName( ) );
     Method factory;

@@ -99,7 +99,10 @@ public class BindingHandler extends MessageStackHandler {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
       //:: TODO: need an index of message types based on name space :://
-      Class msgType = Class.forName( "edu.ucsb.eucalyptus.msgs." + httpMessage.getOmMessage( ).getLocalName( ) + "Type" );
+      Class msgType = null;
+      try {
+        msgType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs." + httpMessage.getOmMessage( ).getLocalName( ) + "Type" );
+      } catch ( ClassNotFoundException e ) {}
       EucalyptusMessage msg = null;
       OMElement elem = httpMessage.getOmMessage( );
       OMNamespace omNs = elem.getNamespace( );
@@ -113,7 +116,11 @@ public class BindingHandler extends MessageStackHandler {
       }
       try {
         if(httpMessage instanceof MappingHttpRequest ) {
-          msg = ( EucalyptusMessage ) this.binding.fromOM( httpMessage.getOmMessage( ), msgType );
+          if( msgType != null ) {
+            msg = ( EucalyptusMessage ) this.binding.fromOM( httpMessage.getOmMessage( ), msgType );
+          } else {
+            msg = ( EucalyptusMessage ) this.binding.fromOM( httpMessage.getOmMessage( ) );
+          }
         } else {
           msg = ( EucalyptusMessage ) this.binding.fromOM( httpMessage.getOmMessage( ) );          
         }
@@ -135,7 +142,7 @@ public class BindingHandler extends MessageStackHandler {
        Class targetClass = httpRequest.getMessage( ).getClass( );
       while ( !targetClass.getSimpleName( ).endsWith( "Type" ) )
         targetClass = targetClass.getSuperclass( );
-      Class responseClass = Class.forName( targetClass.getName( ) );
+      Class responseClass = ClassLoader.getSystemClassLoader().loadClass( targetClass.getName( ) );
       ctx.setAttachment( responseClass );
       OMElement omElem = this.binding.toOM( httpRequest.getMessage( ) );
       httpRequest.setOmMessage( omElem );

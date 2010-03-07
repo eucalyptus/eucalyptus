@@ -81,10 +81,12 @@ public class GroovyUtil {
       String conf = "import " + className;
       String line = null;
       try {
-        for(BufferedReader fileReader = new BufferedReader( new FileReader( confFile ) );
+	BufferedReader fileReader = new BufferedReader( new FileReader( confFile ) );
+        for(;
             (line = fileReader.readLine( ))!=null;
-            conf += !line.matches("\\s*\\w+\\s*=[\\s\\w*\"']*")?"":"\n"+className+"."+line);
+            conf += !line.matches("\\s*\\w+\\s*=[\\s\\w*\"']*;{0,1}")?"":"\n"+className+"."+line);
         LOG.debug( conf );
+	fileReader.close();
         try {
           getGroovyEngine( ).eval( conf );
         } catch ( ScriptException e ) {

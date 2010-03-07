@@ -917,7 +917,7 @@ public class LVM2Manager implements LogicalStorageManager {
 						LOG.error(e);
 						return null;
 					}
-					return StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
+					return System.getProperty("euca.home") + "," + StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
 				}
 			}
 			return null;

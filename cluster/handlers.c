@@ -1222,7 +1222,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   strncpy(dst->ramdiskId, src->ramdiskId, 16);
   strncpy(dst->keyName, src->keyName, 1024);
   strncpy(dst->launchIndex, src->launchIndex, 64);
-  strncpy(dst->userData, src->userData, 64);
+  strncpy(dst->userData, src->userData, 4096);
   strncpy(dst->state, src->stateName, 16);
   dst->ts = src->launchTime;
 
@@ -3048,9 +3048,9 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
     if (kernelId) strncpy(out->kernelId, kernelId, 16);
     if (ramdiskId) strncpy(out->ramdiskId, ramdiskId, 16);
     
-    if (amiURL) strncpy(out->amiURL, amiURL, 64);
-    if (kernelURL) strncpy(out->kernelURL, kernelURL, 64);
-    if (ramdiskURL) strncpy(out->ramdiskURL, ramdiskURL, 64);
+    if (amiURL) strncpy(out->amiURL, amiURL, 512);
+    if (kernelURL) strncpy(out->kernelURL, kernelURL, 512);
+    if (ramdiskURL) strncpy(out->ramdiskURL, ramdiskURL, 512);
     
     if (state) strncpy(out->state, state, 16);
     if (ownerId) strncpy(out->ownerId, ownerId, 16);
@@ -3059,7 +3059,7 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
     out->ts = ts;
     out->ncHostIdx = ncHostIdx;
     if (serviceTag) strncpy(out->serviceTag, serviceTag, 64);
-    if (userData) strncpy(out->userData, userData, 64);
+    if (userData) strncpy(out->userData, userData, 4096);
     if (launchIndex) strncpy(out->launchIndex, launchIndex, 64);
     if (groupNames) {
       int i;

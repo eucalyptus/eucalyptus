@@ -65,7 +65,7 @@ char *java_library(euca_opts*, java_home_t*);
 int java_init(euca_opts*, java_home_t*);
 int JVM_destroy(int);
 
-static void java_fail(void) { exit(123); }
+static void java_fail(void) { exit(1); }
 
 static java_home_t *get_java_home( char *path ) {
 	java_home_t *data = NULL;
@@ -182,9 +182,9 @@ static int checkuser( char *user, uid_t *uid, gid_t *gid ) {
 	while( waitpid( pid, &status, 0 ) != pid );
 	if( WIFEXITED( status ) ) {
 		status = WEXITSTATUS( status );
-		__abort(1, (status == 0),"User '%s' validated", user );
+		__abort(0, (status != 0),"User '%s' validated", user );
 	}
-	__abort(0,1,"Error validating user '%s'", user );
+	return 1;
 }
 
 static void controller( int sig ) {
@@ -212,6 +212,9 @@ static void * signal_set( int sig, void * newHandler ) {
 
 static int __get_pid( char *pidpath ) {
 	FILE* pidfile; int pid;
+	if( (pidfile = fopen( pidpath, "r"))==NULL ) {
+		return -1;
+	}
 	__abort(-1,(pidfile = fopen( pidpath, "r"))==NULL,"");
 	__abort(-1,(fscanf(pidfile,"%d",&pid)<0),"Failed to read pid file.");
 	fclose( pidfile );
@@ -337,15 +340,15 @@ int main( int argc, char *argv[ ] ) {
 	}
 	if( strcmp( argv[ 0 ], "eucalyptus-cloud" ) != 0 ) {
 		char *oldpath = getenv( "LD_LIBRARY_PATH" ),*libf = java_library( args, data );
-		char *old = argv[ 0 ],buf[ 4096 ],*tmp = NULL,*p1 = NULL,*p2 = NULL;
+		char *old = argv[ 0 ],buf[ 32768 ],*tmp = NULL,*p1 = NULL,*p2 = NULL;
 		p1 = strdup( libf );
 		tmp = strrchr( p1, '/' );
 		if( tmp != NULL ) tmp[ 0 ] = '\0';
 		p2 = strdup( p1 );
 		tmp = strrchr( p2, '/' );
 		if( tmp != NULL ) tmp[ 0 ] = '\0';
-		if( oldpath == NULL ) snprintf( buf, 4096, "%s:%s:%s/bin/linux-x64", p1, p2, GETARG(args,profiler_home) );
-		else snprintf( buf, 4096, "%s:%s:%s:%s/bin/linux-x64", oldpath, p1, p2, GETARG(args,profiler_home) );
+		if( oldpath == NULL ) snprintf( buf, 32768, "%s:%s:%s/bin/linux-x64", p1, p2, GETARG(args,profiler_home) );
+		else snprintf( buf, 32768, "%s:%s:%s:%s/bin/linux-x64", oldpath, p1, p2, GETARG(args,profiler_home) );
 		tmp = strdup( buf );
 
 		setenv( "LD_LIBRARY_PATH", tmp, 1 );
@@ -357,15 +360,10 @@ int main( int argc, char *argv[ ] ) {
 	}
 	__debug( "Running w/ LD_LIBRARY_PATH=%s", getenv( "LD_LIBRARY_PATH" ) );
 	if(args->fork_flag) {
-//TODO: commented out for the time being to make dan happi.
-//		if(args->debug_flag) {
-//			__debug("Ignoring --fork because of --debug.");
-//		} else {
-			pid = fork( );
-			__die(( pid == -1 ),"Cannot detach from parent process" );
-			if( pid != 0 ) return wait_child( args, pid );
-			setsid( );
-//		}
+		pid = fork( );
+		__die(( pid == -1 ),"Cannot detach from parent process" );
+		if( pid != 0 ) return wait_child( args, pid );
+		setsid( );
 	}
 	set_output(GETARG(args,out), GETARG(args,err));
 	while( ( pid = fork( ) ) != -1 ) {
@@ -376,8 +374,8 @@ int main( int argc, char *argv[ ] ) {
 		signal( SIGINT, controller );
 		while( waitpid( pid, &status, 0 ) != pid );
 		if( WIFEXITED( status ) ) {
-			__debug( "Eucalyptus exited with status: %d", status );
 			status = WEXITSTATUS( status );
+			__debug( "Eucalyptus exited with status: %d", status );
 			if( status != 122 ) unlink( GETARG( args, pidfile ) );
 			if( status == 123 ) {
 				__debug( "Reloading service" );
@@ -447,7 +445,7 @@ char *java_library(euca_opts *args, java_home_t *data) {
     return libjvm_path;
 }
 
-void java_load_bootstrapper(void) {
+void euca_load_bootstrapper(void) {
     __die((bootstrap.class_name=((*env)->NewStringUTF(env,EUCA_MAIN)))==NULL,"Cannot create string for class name.");
     __die((bootstrap.clazz=((*env)->FindClass(env,EUCA_MAIN)))==NULL,"Cannot find Eucalyptus bootstrapper: %s.",EUCA_MAIN);
     __debug("Found Eucalyptus bootstrapper: %s",EUCA_MAIN);
@@ -479,7 +477,7 @@ void java_load_bootstrapper(void) {
 }
 
 char* java_library_path(euca_opts *args) {
-#define JAVA_PATH_LEN 16384
+#define JAVA_PATH_LEN 65536
     char lib_dir[256],etc_dir[256],script_dir[256],*jar_list=(char*)malloc(JAVA_PATH_LEN*sizeof(char));
     __die(( strlen(GETARG(args,home))+strlen(EUCA_LIB_DIR)>=254),"Directory path too long: %s/%s", GETARG(args,home), EUCA_LIB_DIR);
     snprintf(lib_dir,255,"%s%s",GETARG(args,home),EUCA_LIB_DIR);
