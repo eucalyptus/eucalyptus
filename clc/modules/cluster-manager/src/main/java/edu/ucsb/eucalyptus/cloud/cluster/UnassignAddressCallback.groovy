@@ -130,7 +130,7 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
       LOG.warn( EventRecord.here( UnassignAddressCallback.class, Transition.broken, address.toString( ) ) );
       LOG.trace(t,t)
     } finally {
-      if( !this.address.isPending() && this.addres.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId() ) ) {
+      if( !this.address.isPending() && this.address.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId() ) ) {
         try { this.address.release(); } catch( Throwable t ) {
           LOG.warn( "Failed to release orphan address: " + this.address );
         }
