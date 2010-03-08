@@ -191,8 +191,9 @@ public class ImageManager {
       db.rollback( );
       throw new EucalyptusCloudException( "Unable to determine required kernel image." );
     }
-
-    String ramdiskId = ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
+    boolean nord = ( ImageUtil.isSet( msg.getKernelId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) );
+    nord |= ( !ImageUtil.isSet( msg.getKernelId() ) && ImageUtil.isSet( diskInfo.getKernelId( ) ) && !ImageUtil.isSet( diskInfo.getRamdiskId() ) && !ImageUtil.isSet( msg.getRamdiskId() ) ); 
+    String ramdiskId = nord?null:ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
 
     ImageInfo kernelInfo = null;
     try {
