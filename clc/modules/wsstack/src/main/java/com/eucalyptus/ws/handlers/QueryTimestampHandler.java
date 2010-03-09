@@ -67,6 +67,7 @@ import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -117,8 +118,9 @@ public class QueryTimestampHandler extends MessageStackHandler {
         throw new AuthenticationException( "Failure to parse timestamp: Timestamp=" + timestamp + " Expires=" + exp );
       }
       if ( now.after( expires ) ) {
-        String expiryTime = String.format( "%4d-%02d-%02d'T'%02d:%02d:%02d", expires.get( Calendar.YEAR ), expires.get( Calendar.MONTH ), expires.get( Calendar.DAY_OF_MONTH ), expires.get( Calendar.HOUR_OF_DAY ), expires.get( Calendar.MINUTE ), expires.get( Calendar.SECOND ) );
-        throw new AuthenticationException( "Message has expired: Timestamp=" + timestamp + " Expires=" + exp + " Deadline=" + expiryTime );
+        expires.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
+        String expiryTime = String.format( "%4d-%02d-%02d'T'%02d:%02d:%02d", expires.get( Calendar.YEAR ), expires.get( Calendar.MONTH ) + 1, expires.get( Calendar.DAY_OF_MONTH ) + 1, expires.get( Calendar.HOUR_OF_DAY ), expires.get( Calendar.MINUTE ), expires.get( Calendar.SECOND ) );
+        throw new AuthenticationException( "Message has expired (times in UTC): Timestamp=" + timestamp + " Expires=" + exp + " Deadline=" + expiryTime );
       }
     }
   }
