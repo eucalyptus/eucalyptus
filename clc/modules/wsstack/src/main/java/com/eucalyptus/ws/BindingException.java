@@ -63,6 +63,8 @@
  */
 package com.eucalyptus.ws;
 
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
 public class BindingException extends WebServicesException {
 
   public BindingException( ) {
@@ -70,15 +72,15 @@ public class BindingException extends WebServicesException {
   }
 
   public BindingException( String arg0, Throwable arg1 ) {
-    super( arg0, arg1 );
+    super( arg0, arg1, HttpResponseStatus.BAD_REQUEST );
   }
 
   public BindingException( String arg0 ) {
-    super( arg0 );
+    super( arg0, HttpResponseStatus.BAD_REQUEST );
   }
 
   public BindingException( Throwable arg0 ) {
-    super( arg0 );
+    super( arg0, HttpResponseStatus.BAD_REQUEST );
   }
 
 }
