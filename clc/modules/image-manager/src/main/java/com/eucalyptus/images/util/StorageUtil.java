@@ -116,7 +116,7 @@ public class StorageUtil {
       aVolume.setStatus( v.mapState( ) );
       aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
     }
-    if ( "invalid".equals( v.getRemoteDevice( ) ) ) {
+    if ( "invalid".equals( v.getRemoteDevice( ) ) && !State.FAIL.equals( v.getState( ) ) ) {
       aVolume.setStatus( "creating" );
     }
     return aVolume;
