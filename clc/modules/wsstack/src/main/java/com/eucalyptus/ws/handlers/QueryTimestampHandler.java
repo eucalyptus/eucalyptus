@@ -104,7 +104,7 @@ public class QueryTimestampHandler extends MessageStackHandler {
           } catch ( Exception e ) {
             expires = HmacUtils.parseTimestamp( URLDecoder.decode( timestamp ) );
           }
-          expires.add( Calendar.MINUTE, 5 );
+          expires.add( Calendar.MINUTE, 15 );
         } else {
           exp = parameters.remove( SecurityParameter.Expires.toString( ) );
           try {
