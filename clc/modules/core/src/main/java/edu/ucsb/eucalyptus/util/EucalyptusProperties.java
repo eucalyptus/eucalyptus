@@ -161,20 +161,28 @@ public class EucalyptusProperties {
 		if(sysConf.getDefaultKernel() == null) {
 			ImageInfo q = new ImageInfo();
 			EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-			q.setImageType( EucalyptusProperties.IMAGE_KERNEL );
-			List<ImageInfo> res = db2.query(q);
-			if( res.size() > 0 )
-				sysConf.setDefaultKernel(res.get(0).getImageId());
-			db2.commit( );
+			try {
+        q.setImageType( EucalyptusProperties.IMAGE_KERNEL );
+        List<ImageInfo> res = db2.query(q);
+        if( res.size() > 0 )
+        	sysConf.setDefaultKernel(res.get(0).getImageId());
+        db2.commit( );
+      } catch ( Exception e ) {
+        db2.rollback( );
+      }
 		}
 		if(sysConf.getDefaultRamdisk() == null) {
 			ImageInfo q = new ImageInfo();
 			EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-			q.setImageType( EucalyptusProperties.IMAGE_RAMDISK );
-			List<ImageInfo> res = db2.query(q);
-			if( res.size() > 0 )
-				sysConf.setDefaultRamdisk(res.get(0).getImageId());
-			db2.commit( );
+			try {
+        q.setImageType( EucalyptusProperties.IMAGE_RAMDISK );
+        List<ImageInfo> res = db2.query(q);
+        if( res.size() > 0 )
+        	sysConf.setDefaultRamdisk(res.get(0).getImageId());
+        db2.commit( );
+      } catch ( Exception e ) {
+        db2.rollback( );
+      }
 		}
 		if(sysConf.getDnsDomain() == null) {
 			sysConf.setDnsDomain(DNSProperties.DOMAIN);
