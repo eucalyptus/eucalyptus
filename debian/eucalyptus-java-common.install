@@ -11,7 +11,7 @@
 /usr/share/eucalyptus/eucalyptus-clustermgr-*.jar
 /usr/share/eucalyptus/eucalyptus-keymgr-*.jar
 /usr/share/eucalyptus/eucalyptus-config-*.jar
-/usr/share/eucalyptus/[^e][^u]*.jar
+clc/lib/*.jar /usr/share/eucalyptus/
 /etc/eucalyptus/cloud.d
 /usr/lib/eucalyptus/liblvm2control.so
 /var/lib/eucalyptus/webapps
