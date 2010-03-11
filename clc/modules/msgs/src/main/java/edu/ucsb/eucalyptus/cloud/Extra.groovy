@@ -169,9 +169,9 @@ public class VmInfo extends EucalyptusData {
   @Override
   public String toString( ) {
     return String.format(
-                          "VmInfo [groupNames=%s, imageId=%s, instanceId=%s, instanceType=%s, kernelId=%s, keyValue=%s, launchIndex=%s, launchTime=%s, netParams=%s, networkIndex=%s, ownerId=%s, placement=%s, productCodes=%s, ramdiskId=%s, reservationId=%s, serviceTag=%s, stateName=%s, userData=%s, volumes=%s]",
+                          "VmInfo [groupNames=%s, imageId=%s, instanceId=%s, instanceType=%s, kernelId=%s, keyValue=%s, launchIndex=%s, launchTime=%s, netParams=%s, ownerId=%s, placement=%s, productCodes=%s, ramdiskId=%s, reservationId=%s, serviceTag=%s, stateName=%s, userData=%s, volumes=%s]",
                           this.groupNames, this.imageId, this.instanceId, this.instanceType, this.kernelId,
-                          this.keyValue, this.launchIndex, this.launchTime, this.netParams, this.networkIndex,
+                          this.keyValue, this.launchIndex, this.launchTime, this.netParams, 
                           this.ownerId, this.placement, this.productCodes, this.ramdiskId, this.reservationId,
                           this.serviceTag, this.stateName, this.userData, this.volumes );
   }
