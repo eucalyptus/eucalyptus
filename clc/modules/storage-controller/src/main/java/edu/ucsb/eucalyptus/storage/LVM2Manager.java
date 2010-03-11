@@ -350,7 +350,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		return createLoopback(fileName);
 	}
 
-	public String createLoopback(String fileName) throws EucalyptusCloudException, ExecutionException {
+	public synchronized String createLoopback(String fileName) throws EucalyptusCloudException, ExecutionException {
 		int number_of_retries = 0;
 		int status = -1;
 		String loDevName;
