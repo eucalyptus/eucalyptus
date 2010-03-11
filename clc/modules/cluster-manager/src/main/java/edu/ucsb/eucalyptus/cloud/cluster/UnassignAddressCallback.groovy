@@ -121,13 +121,13 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
     if( msg._return ) {
       LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ) );
     } else {
-      LOG.warn( EventRecord.here( UnassignAddressCallback.class, Transition.broken, address.toString( ) ) );
+      LOG.warn( EventRecord.here( UnassignAddressCallback.class, "broken", address.toString( ) ) );
     }
     try{ 
       this.address.clearPending( );
     } catch(Throwable t) {
       LOG.warn(t.getMessage())
-      LOG.warn( EventRecord.here( UnassignAddressCallback.class, Transition.broken, address.toString( ) ) );
+      LOG.warn( EventRecord.here( UnassignAddressCallback.class, "broken", address.toString( ) ) );
       LOG.trace(t,t)
     } finally {
       if( !this.address.isPending() && this.address.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId() ) ) {
