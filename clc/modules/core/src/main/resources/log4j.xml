@@ -170,11 +170,15 @@
         <appender-ref ref="logfile"/>
     </category>
     <category name="org.hibernate.cache.EhCacheProvider" additivity="false">
-        <priority value="ERROR"/>
+        <priority value="WARN"/>
         <appender-ref ref="logfile"/>
     </category>
     <category name="net.sf.ehcache" additivity="false">
-        <priority value="ERROR"/>
+        <priority value="WARN"/>
+        <appender-ref ref="logfile"/>
+    </category>
+    <category name="org.logicalcobwebs.proxool" additivity="false">
+        <priority value="WARN"/>
         <appender-ref ref="logfile"/>
     </category>
     <category name="org.apache" additivity="true">
