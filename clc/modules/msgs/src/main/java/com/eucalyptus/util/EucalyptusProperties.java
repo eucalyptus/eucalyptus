@@ -94,6 +94,6 @@ public class EucalyptusProperties {
   }
 
   public enum TokenState {
-    preallocate, returned, accepted, submitted, allocated, redeemed;
+    preallocate, returned, accepted, submitted, allocated, redeemed, split, child;
   }
 }

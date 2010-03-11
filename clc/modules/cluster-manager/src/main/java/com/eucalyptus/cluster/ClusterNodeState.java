@@ -77,6 +77,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
@@ -133,6 +134,20 @@ public class ClusterNodeState {
     LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, token ) );
     this.pendingTokens.add( token );
     return token;
+  }
+  
+  public synchronized List<ResourceToken> splitToken( ResourceToken token ) throws NoSuchTokenException {
+    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.split, token ) );
+    if( !this.pendingTokens.contains( token ) ) {
+      throw new NoSuchTokenException( "Splitting the requested token is not possible since it is not pending: " + token );
+    }
+    List<ResourceToken> childTokens = Lists.newArrayList( );
+    for( int index = 0; index < token.getAmount( ); index++ ) {
+      ResourceToken childToken = new ResourceToken( token.getCluster( ), token.getCorrelationId( )+index, token.getUserName( ), 1, this.virtualTimer++, token.getVmType( ) );
+      LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.child, token ) );
+      childTokens.add( childToken );
+    }
+    return childTokens;
   }
 
   public synchronized void releaseToken( ResourceToken token ) {

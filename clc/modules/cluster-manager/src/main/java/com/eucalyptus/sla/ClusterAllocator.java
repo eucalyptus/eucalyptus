@@ -92,6 +92,7 @@ import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
 import edu.ucsb.eucalyptus.cloud.cluster.ConfigureNetworkCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.MultiClusterCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.StartNetworkCallback;
@@ -219,19 +220,37 @@ public class ClusterAllocator extends Thread {
     VmTypeInfo vmInfo = this.vmAllocInfo.getVmTypeInfo();
     String rsvId = this.vmAllocInfo.getReservationId();
     VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo();
-    VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
-    QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token );
-    if( !addresses.isEmpty( ) ) {
-      cb.then( new SuccessCallback<VmRunResponseType>( ) {
-        @Override public void apply( VmRunResponseType response ) {
-          for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
-            Address addr = Addresses.getInstance().lookup( addresses.remove( 0 ) );
-            VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
-            AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
+    try {
+      for( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
+        VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
+        QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token );
+        if( !addresses.isEmpty( ) ) {
+          cb.then( new SuccessCallback<VmRunResponseType>( ) {
+            @Override public void apply( VmRunResponseType response ) {
+              for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
+                Address addr = Addresses.getInstance().lookup( addresses.remove( 0 ) );
+                VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
+                AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
+            }
+          }});
         }
-      }});
+        this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( cb, run ) );
+      }
+    } catch ( NoSuchTokenException e ) {
+      VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
+      QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token );
+      if( !addresses.isEmpty( ) ) {
+        cb.then( new SuccessCallback<VmRunResponseType>( ) {
+          @Override public void apply( VmRunResponseType response ) {
+            for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
+              Address addr = Addresses.getInstance().lookup( addresses.remove( 0 ) );
+              VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
+              AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
+          }
+        }});
+      }
+      this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( cb, run ) );
     }
-    this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( cb, run ) );
   }
   public void setState( final State state ) {
     this.clearQueue( );
