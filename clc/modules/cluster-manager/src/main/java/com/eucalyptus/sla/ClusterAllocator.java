@@ -229,12 +229,13 @@ public class ClusterAllocator extends Thread {
                                        Lists.newArrayList( networkNames.get( index ) ), 
                                        Lists.newArrayList( networkIndexes.get( index ) ) );
         index++;
-        QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token );
+        QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, childToken );
+        final String address = addresses.get( index );
         if( !addresses.isEmpty( ) ) {
           cb.then( new SuccessCallback<VmRunResponseType>( ) {
             @Override public void apply( VmRunResponseType response ) {
               for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
-                Address addr = Addresses.getInstance().lookup( addresses.remove( 0 ) );
+                Address addr = Addresses.getInstance().lookup( address );
                 VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
                 AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
             }
