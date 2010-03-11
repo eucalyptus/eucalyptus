@@ -66,7 +66,7 @@ public abstract class AbstractSystemAddressManager {
               cluster.getState().handleOrphan( addrInfo );
             }
           }
-        } else if( address.isAllocated( ) && Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ) {
+        } else if( address.isAllocated( ) && Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) && !address.isPending( ) ) {
           this.markAsAllocated( cluster, addrInfo, address );
         } 
       } catch ( Throwable e ) {
