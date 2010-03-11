@@ -225,8 +225,7 @@ public class ClusterAllocator extends Thread {
       for( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
         VmRunType run = new VmRunType( request, rsvId, request.getUserData(), 1, imgInfo, vmInfo, keyInfo, 
                                        Lists.newArrayList( token.getInstanceIds().get( index ) ), 
-                                       Lists.newArrayList( macs.get( index ) ), vlan, 
-                                       Lists.newArrayList( networkNames.get( index ) ), 
+                                       Lists.newArrayList( macs.get( index ) ), vlan, networkNames, 
                                        Lists.newArrayList( networkIndexes.get( index ) ) );
         index++;
         QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, childToken );
