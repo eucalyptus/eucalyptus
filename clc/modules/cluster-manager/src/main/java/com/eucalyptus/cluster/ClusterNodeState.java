@@ -147,6 +147,8 @@ public class ClusterNodeState {
       LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.child, token ) );
       childTokens.add( childToken );
     }
+    this.pendingTokens.remove( token );
+    this.pendingTokens.addAll( childTokens );
     return childTokens;
   }
 
