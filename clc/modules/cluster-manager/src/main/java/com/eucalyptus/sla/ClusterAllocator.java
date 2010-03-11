@@ -227,7 +227,6 @@ public class ClusterAllocator extends Thread {
                                        Lists.newArrayList( token.getInstanceIds().get( index ) ), 
                                        Lists.newArrayList( macs.get( index ) ), vlan, networkNames, 
                                        Lists.newArrayList( networkIndexes.get( index ) ) );
-        index++;
         QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, childToken );
         final String address = addresses.get( index );
         if( !addresses.isEmpty( ) ) {
@@ -241,6 +240,7 @@ public class ClusterAllocator extends Thread {
           }});
         }
         this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( cb, run ) );
+        index++;
       }
     } catch ( NoSuchTokenException e ) {
       VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
