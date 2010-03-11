@@ -302,7 +302,10 @@ public class SystemState {
         long splitTime = vm.getSplitTime( );
         if ( splitTime > BURY_TIME ) vm.setState( VmState.BURIED );
       } catch ( NoSuchElementException e1 ) {
-        SystemState.restoreInstance( originCluster, runVm );
+        VmState state = VmState.Mapper.get( runVm.getStateName() );
+        if( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) {
+          SystemState.restoreInstance( originCluster, runVm );
+        }
       }
     }
   }
