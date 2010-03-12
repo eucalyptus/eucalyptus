@@ -73,6 +73,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
+import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.TerminateCallback;
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
@@ -97,12 +98,35 @@ public class ClusterMessageQueue implements Runnable {
     LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent().toString() ) );
     LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent().toString() ), new Exception() );  
     LOG.debug( "Queued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) + " for cluster " + this.getClusterName( ) );
-    try {
-      while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
-    } catch ( final InterruptedException e ) {
-      LOG.debug( e, e );
-      Thread.currentThread().interrupt();
+    if( !this.checkDuplicates( event ) ) {
+      try {
+        while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
+      } catch ( final InterruptedException e ) {
+        LOG.debug( e, e );
+        Thread.currentThread().interrupt();
+      }
     }
+  }
+
+  private boolean checkDuplicates( final QueuedEvent event ) {
+    for( QueuedEvent e : this.msgQueue ) {
+      if( event.getCallback( ) instanceof StopNetworkCallback && e.getCallback( ) instanceof StopNetworkCallback ) {
+        StopNetworkCallback incoming = ( StopNetworkCallback ) event.getCallback( );
+        StopNetworkCallback existing = ( StopNetworkCallback ) e.getCallback( );
+        if( incoming.getRequest( ).getNetName( ).equals( existing.getRequest( ).getNetName( ) ) ) {
+          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_REJECTED, this.clusterName, event.getEvent().toString() ) );     
+          return true;
+        }
+      } else if( event.getCallback( ) instanceof TerminateCallback && e.getCallback( ) instanceof TerminateCallback ) {
+        TerminateCallback incoming = ( TerminateCallback ) event.getCallback( );
+        TerminateCallback existing = ( TerminateCallback ) e.getCallback( );
+        if( existing.getRequest( ).getInstancesSet( ).containsAll( incoming.getRequest( ).getInstancesSet( ) ) ) {
+          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_REJECTED, this.clusterName, event.getEvent().toString() ) );     
+          return true;
+        }
+      }
+    }
+    return false;
   }
   
   public String getClusterName( ) {
