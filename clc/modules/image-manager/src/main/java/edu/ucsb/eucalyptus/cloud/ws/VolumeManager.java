@@ -303,6 +303,7 @@ public class VolumeManager {
     cluster.getMessageQueue().enqueue( event );
 
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice() );
+    attachVol.setStatus( "attaching" );
     vm.getVolumes().add( attachVol );
     volume.setState( State.BUSY );
     reply.setAttachedVolume( attachVol );

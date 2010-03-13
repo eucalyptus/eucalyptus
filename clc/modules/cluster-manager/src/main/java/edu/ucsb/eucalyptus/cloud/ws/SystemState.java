@@ -293,7 +293,13 @@ public class SystemState {
           vol.setInstanceId( vm.getInstanceId( ) );
           vol.setStatus( "attached" );
         }
+        List<AttachedVolume> oldVolumes = vm.getVolumes( );
         vm.setVolumes( runVm.getVolumes( ) );
+        for( AttachedVolume v : oldVolumes ) {
+          if( "attaching".equals( v.getStatus( ) ) && !vm.getVolumes( ).contains( v ) ) {
+            vm.getVolumes( ).add( v );
+          }
+        }
       }
     } catch ( NoSuchElementException e ) {
       try {
