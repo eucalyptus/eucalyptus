@@ -311,23 +311,18 @@ sync_keys() {
 	# is REMOTE actually localhost?
 	if [ ${REMOTE} = "127.0.0.1" -o ${REMOTE} = localhost -o ${REMOTE} = "`hostname -s`" -o ${REMOTE} = "`hostname -f`" ]; then
 	    # machine is localhost, not need for remote syncing
-	    if [ -d "$SOURCEDIR" ]; then
-		for i in $FILES
-		do
-		    if [ ! -e $i ]; then
-			echo "ERROR: cannot find cluster credentials."
-			exit 1
-		    else
-			if ! rsync -a $i $DESTDIR ; then
-			    echo "ERROR: cannot copy file (${i}) to destination (${DESTDIR})"
-			    return 1
-			fi
+	    for i in $FILES
+	    do
+		if [ ! -e $i ]; then
+		    echo "ERROR: cannot find cluster credentials."
+		    exit 1
+		else
+		    if ! rsync -a $i $DESTDIR ; then
+			echo "ERROR: cannot copy file (${i}) to destination (${DESTDIR})"
+			return 1
 		    fi
-		done		    
-	    else
-		echo "ERROR: Cannot find source keys directory."
-		return 1
-	    fi
+		fi
+	    done		    
 	    return 0
 	fi
 

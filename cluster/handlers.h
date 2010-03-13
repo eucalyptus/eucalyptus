@@ -80,9 +80,9 @@ typedef struct instance_t {
   char kernelId[16];
   char ramdiskId[16];
   
-  char amiURL[64];
-  char kernelURL[64];
-  char ramdiskURL[64];
+  char amiURL[512];
+  char kernelURL[512];
+  char ramdiskURL[512];
   
   char state[16];
   time_t ts;
@@ -96,7 +96,7 @@ typedef struct instance_t {
   int ncHostIdx;
   char serviceTag[64];
 
-  char userData[64];
+  char userData[4096];
   char launchIndex[64];
   char groupNames[64][32];
 
