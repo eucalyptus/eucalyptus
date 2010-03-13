@@ -345,7 +345,7 @@ public class SystemState {
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
           } catch ( NetworkAlreadyExistsException e ) {
-            LOG.error( e );
+            LOG.trace( e );
           }
           notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams().getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
@@ -361,7 +361,7 @@ public class SystemState {
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
             new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
-            LOG.debug( e );
+            LOG.trace( e );
           }
         }
       }
