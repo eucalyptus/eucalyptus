@@ -160,13 +160,13 @@ public class ClusterMessageQueue implements Runnable {
               public void run( ) {
                 Clusters.sendClusterEvent( clusterName, event );
                 event.getCallback( ).waitForResponse( );                
+                LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE, clusterName, EventType.QUEUE_TIME.name( ), Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ), Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ) );  
               }
             } );
             //TODO: handle events which raised I/O exceptions to indicate the cluster state.
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
           }
-          LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.QUEUE_TIME.name( ), Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ), Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ) );  
         }
       } catch ( final Throwable e ) {
         LOG.error( e, e );
