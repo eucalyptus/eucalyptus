@@ -361,7 +361,7 @@ public class SystemState {
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
             new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
-            LOG.error( e );
+            LOG.debug( e );
           }
         }
       }
