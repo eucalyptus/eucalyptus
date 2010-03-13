@@ -64,6 +64,8 @@
 package com.eucalyptus.cluster;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -88,6 +90,7 @@ public class ClusterMessageQueue implements Runnable {
   private final int                        messageQueueSize = 100;
   private final AtomicBoolean              finished;
   private final String                     clusterName;
+  private ExecutorService workers = Executors.newFixedThreadPool( 8 );
   
   public ClusterMessageQueue( final String clusterName ) {
     this.finished = new AtomicBoolean( false );
@@ -145,14 +148,20 @@ public class ClusterMessageQueue implements Runnable {
   @SuppressWarnings( "unchecked" )
   public void run( ) {
     while ( !this.finished.get( ) ) {
+      final String clusterName = this.clusterName;
       try {
         final QueuedEvent event = this.msgQueue.poll( this.pollInterval, TimeUnit.MILLISECONDS );
         final long start = System.currentTimeMillis( );
         if ( event != null ) {// msg == null if the queue was empty
           LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
           try {
-            Clusters.sendClusterEvent( this.clusterName, event );
-            event.getCallback( ).waitForResponse( );
+            workers.execute( new Runnable() {
+              @Override
+              public void run( ) {
+                Clusters.sendClusterEvent( clusterName, event );
+                event.getCallback( ).waitForResponse( );                
+              }
+            } );
             //TODO: handle events which raised I/O exceptions to indicate the cluster state.
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
