@@ -82,12 +82,13 @@ public class ClusterMessageQueue implements Runnable {
   
   private static Logger                    LOG              = Logger.getLogger( ClusterMessageQueue.class );
   private final BlockingQueue<QueuedEvent> msgQueue;
+  private final int                        numThreads       = 4;
   private final int                        offerInterval    = 500;
   private final int                        pollInterval     = 500;
   private final int                        messageQueueSize = 100;
   private final AtomicBoolean              finished;
   private final String                     clusterName;
-  private ExecutorService                  workers          = Executors.newFixedThreadPool( 8 );
+  private ExecutorService                  workers          = Executors.newFixedThreadPool( numThreads );
   
   public ClusterMessageQueue( final String clusterName ) {
     this.finished = new AtomicBoolean( false );
@@ -160,9 +161,7 @@ public class ClusterMessageQueue implements Runnable {
               try {
                 Clusters.sendClusterEvent( clusterName, event );
                 event.getCallback( ).waitForResponse( );
-                LOG
-                   .debug( EventRecord
-                                      .here( event.getCallback( ).getClass( ), EventType.QUEUE, clusterName, EventType.QUEUE_TIME.name( ),
+                LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE, clusterName, EventType.QUEUE_TIME.name( ),
                                              Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ),
                                              Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ), Long.toString( msgQueue.size( ) ) ) );
               } catch ( final Throwable e ) {
