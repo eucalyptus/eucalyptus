@@ -75,6 +75,7 @@ import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.TerminateCallback;
+import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
@@ -121,6 +122,14 @@ public class ClusterMessageQueue implements Runnable {
         TerminateCallback incoming = ( TerminateCallback ) event.getCallback( );
         TerminateCallback existing = ( TerminateCallback ) e.getCallback( );
         if( existing.getRequest( ).getInstancesSet( ).containsAll( incoming.getRequest( ).getInstancesSet( ) ) ) {
+          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_REJECTED, this.clusterName, event.getEvent().toString() ) );     
+          return true;
+        }
+      } else if( event.getCallback( ) instanceof UnassignAddressCallback && e.getCallback( ) instanceof UnassignAddressCallback ) {
+        UnassignAddressCallback incoming = ( UnassignAddressCallback ) event.getCallback( );
+        UnassignAddressCallback existing = ( UnassignAddressCallback ) e.getCallback( );
+        if( incoming.getRequest( ).getSource( ).equals( existing.getRequest( ).getSource( ) ) 
+            && incoming.getRequest( ).getDestination( ).equals( existing.getRequest( ).getDestination( ) ) ) {
           LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_REJECTED, this.clusterName, event.getEvent().toString() ) );     
           return true;
         }
