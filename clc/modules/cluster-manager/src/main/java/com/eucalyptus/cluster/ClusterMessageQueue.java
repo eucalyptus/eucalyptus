@@ -155,12 +155,13 @@ public class ClusterMessageQueue implements Runnable {
         if ( event != null ) {// msg == null if the queue was empty
           LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
           try {
+            final int queueLength = this.msgQueue.size( );
             workers.execute( new Runnable() {
               @Override
               public void run( ) {
                 Clusters.sendClusterEvent( clusterName, event );
                 event.getCallback( ).waitForResponse( );                
-                LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE, clusterName, EventType.QUEUE_TIME.name( ), Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ), Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ) );  
+                LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE, clusterName, EventType.QUEUE_TIME.name( ), Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ), Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ), Long.toString( queueLength ) ) );  
               }
             } );
             //TODO: handle events which raised I/O exceptions to indicate the cluster state.
