@@ -154,18 +154,20 @@ public class ClusterMessageQueue implements Runnable {
         @Override
         public void run( ) {
           try {
-            final QueuedEvent event = msgQueue.poll( pollInterval, TimeUnit.MILLISECONDS );
-            final long start = System.currentTimeMillis( );
-            if ( event != null ) {// msg == null if the queue was empty
-              LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
-              try {
-                Clusters.sendClusterEvent( clusterName, event );
-                event.getCallback( ).waitForResponse( );
-                LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE, clusterName, EventType.QUEUE_TIME.name( ),
-                                             Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ),
-                                             Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ), Long.toString( msgQueue.size( ) ) ) );
-              } catch ( final Throwable e ) {
-                LOG.debug( e, e );
+            while ( !finished.get( ) ) {
+              final QueuedEvent event = msgQueue.poll( pollInterval, TimeUnit.MILLISECONDS );
+              final long start = System.currentTimeMillis( );
+              if ( event != null ) {// msg == null if the queue was empty
+                LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
+                try {
+                  Clusters.sendClusterEvent( clusterName, event );
+                  event.getCallback( ).waitForResponse( );
+                  LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE, clusterName, EventType.QUEUE_TIME.name( ),
+                                               Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ),
+                                               Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ), Long.toString( msgQueue.size( ) ) ) );
+                } catch ( final Throwable e ) {
+                  LOG.debug( e, e );
+                }
               }
             }
           } catch ( final Throwable e ) {
