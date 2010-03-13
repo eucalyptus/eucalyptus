@@ -152,8 +152,8 @@ public class ClusterMessageQueue implements Runnable {
         final QueuedEvent event = this.msgQueue.poll( this.pollInterval, TimeUnit.MILLISECONDS );
         if ( event != null ) {// msg == null if the queue was empty
           LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
+          final long start = System.currentTimeMillis( );
           try {
-            final long start = System.currentTimeMillis( );
             Clusters.sendClusterEvent( this.clusterName, event );
             event.getCallback( ).waitForResponse( );                
             //TODO: handle events which raised I/O exceptions to indicate the cluster state.
