@@ -218,6 +218,7 @@ public class Address implements HasName {
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.name );
+        this.state.set( State.unallocated, false );        
       } else {
         Addresses.getInstance( ).register( this );
         this.state.set( State.allocated, false );        
