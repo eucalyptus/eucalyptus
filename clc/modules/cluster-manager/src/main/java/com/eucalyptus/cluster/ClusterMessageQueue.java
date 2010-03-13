@@ -115,14 +115,14 @@ public class ClusterMessageQueue implements Runnable {
         StopNetworkCallback incoming = ( StopNetworkCallback ) event.getCallback( );
         StopNetworkCallback existing = ( StopNetworkCallback ) e.getCallback( );
         if( incoming.getRequest( ).getNetName( ).equals( existing.getRequest( ).getNetName( ) ) ) {
-          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_REJECTED, this.clusterName, event.getEvent().toString() ) );     
+          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, EventType.MSG_REJECTED.toString( ), this.clusterName, event.getEvent().toString() ) );     
           return true;
         }
       } else if( event.getCallback( ) instanceof TerminateCallback && e.getCallback( ) instanceof TerminateCallback ) {
         TerminateCallback incoming = ( TerminateCallback ) event.getCallback( );
         TerminateCallback existing = ( TerminateCallback ) e.getCallback( );
         if( existing.getRequest( ).getInstancesSet( ).containsAll( incoming.getRequest( ).getInstancesSet( ) ) ) {
-          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_REJECTED, this.clusterName, event.getEvent().toString() ) );     
+          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, EventType.MSG_REJECTED.toString( ), this.clusterName, event.getEvent().toString() ) );     
           return true;
         }
       } else if( event.getCallback( ) instanceof UnassignAddressCallback && e.getCallback( ) instanceof UnassignAddressCallback ) {
@@ -130,7 +130,7 @@ public class ClusterMessageQueue implements Runnable {
         UnassignAddressCallback existing = ( UnassignAddressCallback ) e.getCallback( );
         if( incoming.getRequest( ).getSource( ).equals( existing.getRequest( ).getSource( ) ) 
             && incoming.getRequest( ).getDestination( ).equals( existing.getRequest( ).getDestination( ) ) ) {
-          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_REJECTED, this.clusterName, event.getEvent().toString() ) );     
+          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, EventType.MSG_REJECTED.toString( ), this.clusterName, event.getEvent().toString() ) );     
           return true;
         }
       }
