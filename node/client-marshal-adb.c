@@ -183,25 +183,25 @@ static int datetime_to_unix (axutil_date_time_t *dt, axutil_env_t *env)
 static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axutil_env_t * env)
 {
     adb_virtualMachineType_t * vm_type;
-    ncInstParams params;
-    bzero(&params, sizeof(ncInstParams));
+    virtualMachine params;
+    bzero(&params, sizeof(virtualMachine));
     vm_type = adb_instanceType_get_instanceType(instance, env);
     if (vm_type != NULL) {
         // TODO: Type Name?
-        params.memorySize = adb_virtualMachineType_get_memory(vm_type, env);
-        params.diskSize = adb_virtualMachineType_get_disk(vm_type, env);
-        params.numberOfCores = adb_virtualMachineType_get_cores(vm_type, env);
+        params.mem = adb_virtualMachineType_get_memory(vm_type, env);
+        params.disk = adb_virtualMachineType_get_disk(vm_type, env);
+        params.cores = adb_virtualMachineType_get_cores(vm_type, env);
     }
     
-    ncNetConf ncnet;
-    bzero(&ncnet, sizeof(ncNetConf));
+    netConfig ncnet;
+    bzero(&ncnet, sizeof(netConfig));
     adb_netConfigType_t * netconf = adb_instanceType_get_netParams(instance, env);
     if (netconf != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
-        strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 32);
-        strncpy(ncnet.publicMac, adb_netConfigType_get_publicMacAddress(netconf, env), 32);
-        strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 32);
-        strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 32);
+	ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
+        strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
+        strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
+        strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
     }
 
     int i, groupNamesSize = adb_instanceType_sizeof_groupNames (instance, env);
@@ -250,7 +250,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     return outInst;
 }
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
     axutil_env_t * env = st->env;
     axis2_stub_t * stub = st->stub;
@@ -269,9 +269,9 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     adb_ncRunInstanceType_set_reservationId(request, env, reservationId);
 
     adb_virtualMachineType_t * vm_type = adb_virtualMachineType_create(env);
-    adb_virtualMachineType_set_memory(vm_type, env, params->memorySize);
-    adb_virtualMachineType_set_cores(vm_type, env, params->numberOfCores);
-    adb_virtualMachineType_set_disk(vm_type, env, params->diskSize);
+    adb_virtualMachineType_set_memory(vm_type, env, params->mem);
+    adb_virtualMachineType_set_cores(vm_type, env, params->cores);
+    adb_virtualMachineType_set_disk(vm_type, env, params->disk);
     adb_ncRunInstanceType_set_instanceType(request, env, vm_type);
 
     adb_ncRunInstanceType_set_imageId(request, env, imageId);
@@ -281,9 +281,16 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     adb_ncRunInstanceType_set_ramdiskId(request, env, ramdiskId);
     adb_ncRunInstanceType_set_ramdiskURL(request, env, ramdiskURL);
     adb_ncRunInstanceType_set_keyName(request, env, keyName);
-    adb_ncRunInstanceType_set_privateMacAddress(request, env, privMac);
-    adb_ncRunInstanceType_set_publicMacAddress(request, env, pubMac);
-    adb_ncRunInstanceType_set_vlan(request, env, vlan);
+    adb_netConfigType_t *netConfig = adb_netConfigType_create(env);
+    adb_netConfigType_set_privateMacAddress(netConfig, env, netparams->privateMac);
+    adb_netConfigType_set_privateIp(netConfig, env, netparams->privateIp);
+    adb_netConfigType_set_publicIp(netConfig, env, netparams->publicIp);
+    adb_netConfigType_set_vlan(netConfig, env, netparams->vlan);
+    adb_netConfigType_set_networkIndex(netConfig, env, netparams->networkIndex);
+    adb_ncRunInstanceType_set_netParams(request, env, netConfig);
+    //    adb_ncRunInstanceType_set_privateMacAddress(request, env, privMac);
+    //    adb_ncRunInstanceType_set_privateIp(request, env, privIp);
+    //    adb_ncRunInstanceType_set_vlan(request, env, vlan);
     adb_ncRunInstanceType_set_userData(request, env, userData);
     adb_ncRunInstanceType_set_launchIndex(request, env, launchIndex);
     int i;

@@ -100,7 +100,6 @@
         <value name="serviceTag" field="serviceTag" usage="optional"/>
         <value name="userData" field="userData" usage="optional"/>
         <value name="launchIndex" field="launchIndex" usage="optional"/>
-        <value name="networkIndex" field="networkIndex" usage="optional"/>
         <structure usage="optional">
             <collection field="groupNames" factory="org.jibx.runtime.Utility.arrayListFactory">
                 <value name="groupNames" type="java.lang.String"/>
@@ -136,10 +135,10 @@
 
     <mapping class="edu.ucsb.eucalyptus.msgs.NetworkConfigType" abstract="true">
         <value name="privateMacAddress" field="macAddress"/>
-        <value name="publicMacAddress" field="ignoredMacAddress"/>
-        <value name="vlan" field="vlan"/>
         <value name="privateIp" field="ipAddress"/>
         <value name="publicIp" field="ignoredPublicIp"/>
+        <value name="vlan" field="vlan"/>
+	<value name="networkIndex" field="networkIndex"/>
     </mapping>
     <mapping class="edu.ucsb.eucalyptus.msgs.NetworkInfoType" abstract="true">
         <value name="vlan" field="vlan"/>

@@ -97,7 +97,6 @@ public class VmInstance implements HasName {
   private String               placement;
   private Date                 launchTime;
   private StopWatch            stopWatch;
-  private volatile int                  networkIndex;
 
   private String               userData;
   private String               serviceTag;
@@ -136,12 +135,11 @@ public class VmInstance implements HasName {
     this.keyInfo = keyInfo;
     this.vmTypeInfo = vmTypeInfo;
     this.networks = networks;
-    this.networkIndex = Integer.parseInt( networkIndex );
     String mac = String.format( "%s:%s:%s:%s", this.instanceId.substring( 2, 4 ), this.instanceId.substring( 4, 6 ), this.instanceId.substring( 6, 8 ), this.instanceId.substring( 8, 10 ) );
     this.networkConfig.setMacAddress( "d0:0d:" + mac );
-    this.networkConfig.setIgnoredMacAddress( "d0:0f:" + mac );
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
+    this.networkConfig.setNetworkIndex(Integer.parseInt(networkIndex));
   }
 
   public String getName( ) {
@@ -314,7 +312,14 @@ public class VmInstance implements HasName {
   }
 
   public String getByKey( String path ) {
+    Map<String, String> m = getMetadataMap( );
+    if ( path == null ) path = "";
+    LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
+    if ( m.containsKey( path + "/" ) ) path += "/";
+    return m.get( path ).replaceAll( "\n*\\z", "" );
+  }
 
+  private Map<String, String> getMetadataMap( ) {
     Map<String, String> m = new HashMap<String, String>( );
     m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
     m.put( "product-codes", this.getImageInfo( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
@@ -339,10 +344,12 @@ public class VmInstance implements HasName {
     m.put( "public-ipv4", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
     m.put( "reservation-id", this.getReservationId( ) );
     m.put( "kernel-id", this.getImageInfo( ).getKernelId( ) );
-    m.put( "ramdisk-id", this.getImageInfo( ).getRamdiskId( ) );
+    if( this.getImageInfo( ).getRamdiskId( ) != null ) {
+      m.put( "ramdisk-id", this.getImageInfo( ).getRamdiskId( ) );
+    }
     m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
 
-    m.put( "block-device-mapping/", "emi\nephemeral\nroot\nswap" );
+    m.put( "block-device-mapping/", "emi\nephemeral0\nroot\nswap" );
     m.put( "block-device-mapping/emi", "sda1" );
     m.put( "block-device-mapping/ami", "sda1" );
     m.put( "block-device-mapping/ephemeral", "sda2" );
@@ -356,18 +363,13 @@ public class VmInstance implements HasName {
 
     m.put( "placement/", "availability-zone" );
     m.put( "placement/availability-zone", this.getPlacement( ) );
-
-    if ( path == null ) path = "";
     String dir = "";
     for ( String entry : m.keySet( ) ) {
       if ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) continue;
       dir += entry + "\n";
     }
     m.put( "", dir );
-
-    LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
-    if ( m.containsKey( path + "/" ) ) path += "/";
-    return m.get( path ).replaceAll( "\n*\\z", "" );
+    return m;
   }
 
   public int compareTo( final Object o ) {
@@ -406,20 +408,12 @@ public class VmInstance implements HasName {
     this.consoleOutput = consoleOutput;
   }
 
-  public int getNetworkIndex( ) {
-    return networkIndex;
-  }
-
-  public void setNetworkIndex( int networkIndex ) {
-    this.networkIndex = networkIndex;
-  }
-
   @Override
   public String toString( ) {
     return String.format(
-                          "VmInstance [imageInfo=%s, instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networkIndex=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
+                          "VmInstance [imageInfo=%s, instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
                           this.imageInfo, this.instanceId, this.keyInfo, this.launchIndex, this.launchTime,
-                          this.networkConfig, this.networkIndex, this.networks, this.ownerId, this.placement,
+                          this.networkConfig, this.networks, this.ownerId, this.placement,
                           this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch,
                           this.userData, this.vmTypeInfo, this.volumes );
   }
@@ -436,4 +430,5 @@ public class VmInstance implements HasName {
     NetworkConfigType conf = getNetworkConfig( );
     return conf != null && !( DEFAULT_IP.equals(conf.getIgnoredPublicIp( )) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
   }
+
 }

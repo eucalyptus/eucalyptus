@@ -70,19 +70,26 @@ public class VmMetadata {
   private static Logger LOG = Logger.getLogger( VmMetadata.class );
 
   public String handle( String path ) {
-    String vmIp = path.split( ":" )[ 0 ];
-    String url = path.split( ":" )[ 1 ];
-    for ( VmInstance vm : VmInstances.getInstance().listValues() )
-      if ( vmIp.equals( vm.getNetworkConfig().getIpAddress() ) || vmIp.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) ) {
-
-        if ( url.equals( "user-data" ) || url.equals( "user-data/" ) )
-          return vm.getUserData();
-        else if ( !url.startsWith( "meta-data" ) )
-          return null;
-        url = url.replaceAll("meta-data/?","");
-        return vm.getByKey( url );
+    String[] parts = path.split( ":" );
+    String vmIp = parts[0];
+    String url = parts.length==2?parts[ 1 ]:"/";
+    LOG.debug( "Instance Metadata: " + path + " " + url );
+    if( url.matches("[/]*") ) {
+      return "dynamic\nuser-data\nmeta-data";
+    }
+    for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
+      if ( vmIp.equals( vm.getNetworkConfig( ).getIpAddress( ) ) || vmIp.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
+        if ( url.matches( "user-data[/]*" ) ) {
+          return vm.getUserData( );
+        } else if ( url.matches( "dynamic[/]*" ) ) {
+          return "";
+        } else if ( url.matches( "meta-data(/.*)*" ) ) {
+          url = url.replaceAll( "meta-data/?", "" );
+          return vm.getByKey( url );
+        }
       }
-    return null;
+    }
+    return "";
   }
 }
 

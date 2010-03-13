@@ -186,13 +186,16 @@
 	    <xs:element name="imageURL" type="xs:string"/>
 	    <xs:element name="kernelURL" type="xs:string"/>
 	    <xs:element minOccurs="0" name="ramdiskURL" type="xs:string"/>
+	    <xs:element name="reservationId" type="xs:string"/>
 	    <xs:element name="instanceId" type="xs:string"/>
 	    <xs:element name="instanceType" type="tns:virtualMachineType"/>
 	    <xs:element name="keyName" type="xs:string"/>
-	    <xs:element name="publicMacAddress" type="xs:string"/>
+	    <xs:element name="netParams" type="tns:netConfigType"/>
+<!--
 	    <xs:element name="privateMacAddress" type="xs:string"/>
-	    <xs:element name="reservationId" type="xs:string"/>
+	    <xs:element name="privateIp" type="xs:string"/>
 	    <xs:element name="vlan" type="xs:int"/>
+-->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
@@ -244,10 +247,10 @@
     <xs:complexType name="netConfigType">
       <xs:sequence>
 	<xs:element name="privateMacAddress" type="xs:string"/>
-	<xs:element name="publicMacAddress" type="xs:string"/>
-	<xs:element name="vlan" type="xs:int"/>
 	<xs:element name="privateIp" type="xs:string"/>
 	<xs:element name="publicIp" type="xs:string"/>
+	<xs:element name="vlan" type="xs:int"/>
+	<xs:element name="networkIndex" type="xs:int"/>
       </xs:sequence>
     </xs:complexType>
 

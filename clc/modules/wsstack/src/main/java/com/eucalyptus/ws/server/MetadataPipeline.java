@@ -32,7 +32,7 @@ public class MetadataPipeline extends FilteredPipeline implements UnrollableStag
 
   @Override
   protected boolean checkAccepts( HttpRequest message ) {
-    return message.getUri( ).matches("/latest/.*") || message.getUri( ).matches("/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*");
+    return message.getUri( ).matches("/latest(/.*)*") || message.getUri( ).matches("/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*");
   }
 
   @Override

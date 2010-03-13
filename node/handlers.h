@@ -121,7 +121,7 @@ struct handlers {
 		    		ncMetadata *meta,
 				char *instanceId,
 				char *reservationId,
-				ncInstParams *params,
+				virtualMachine *params,
 				char *imageId,
 				char *imageURL,
 				char *kernelId,
@@ -129,9 +129,7 @@ struct handlers {
 				char *ramdiskId,
 				char *ramdiskURL,
 				char *keyName,
-				char *privMac,
-				char *pubMac,
-				int vlan,
+				netConfig *netparams,
 				char *userData,
 				char *launchIndex,
 				char **groupNames,
@@ -177,7 +175,7 @@ struct handlers {
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
 int doPowerDown			(ncMetadata *meta);
 int doDescribeInstances		(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-int doRunInstance		(ncMetadata *meta, char *instanceId, char *reservationId, ncInstParams *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, char *privMac, char *pubMac, int vlan, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst);
+int doRunInstance		(ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst);
 int doTerminateInstance		(ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
 int doRebootInstance		(ncMetadata *meta, char *instanceId);
 int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutput);
@@ -207,9 +205,9 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *instanceId,
 				int ramdisk,
 				char *disk_path,
-				ncInstParams *params,
+				virtualMachine *params,
 				char *privMac,
-				char *pubMac,
+				//				char *pubMac,
 				char *brname,
 				char **xml);
 void * monitoring_thread(	void *arg);

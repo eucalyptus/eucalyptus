@@ -95,7 +95,7 @@ public class StorageProperties {
 	public static final long GB = 1024*1024*1024;
 	public static final long MB = 1024*1024;
 	public static final long KB = 1024;
-	public static final int TRANSFER_CHUNK_SIZE = 102400;
+	public static int TRANSFER_CHUNK_SIZE = 102400;
 	public static boolean enableSnapshots = false;
 	public static boolean enableStorage = false;
 	public static boolean shouldEnforceUsageLimits = true;
@@ -104,6 +104,8 @@ public class StorageProperties {
 	public static boolean zeroFillVolumes = false;
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
+
+        static { GroovyUtil.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
 		if(!Component.eucalyptus.isLocal()) {

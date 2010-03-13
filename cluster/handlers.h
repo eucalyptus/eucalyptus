@@ -70,20 +70,7 @@ permission notice:
 #define OP_TIMEOUT_PERNODE 20
 
 enum {SHARED_MEM, SHARED_FILE};
-
-typedef struct virtualMachine_t {
-  int mem, cores, disk;
-  char name[64];
-} virtualMachine;
-int allocate_virtualMachine(virtualMachine *out, int mem, int disk, int cores, char *name);
-//void free_virtualMachine(virtualMachine *in);
-
-typedef struct netConfig_t {
-  int vlan;
-  char publicMac[24], privateMac[24], publicIp[24], privateIp[24];
-} netConfig;
-int allocate_netConfig(netConfig *out, char *pvMac, char *pbMac, char *pvIp, char *pbIp, int vlan);
-//void free_netConfig(netConfig *in);
+enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, ENDLOCK};
 
 typedef struct instance_t {
   char instanceId[16];
@@ -93,9 +80,9 @@ typedef struct instance_t {
   char kernelId[16];
   char ramdiskId[16];
   
-  char amiURL[64];
-  char kernelURL[64];
-  char ramdiskURL[64];
+  char amiURL[512];
+  char kernelURL[512];
+  char ramdiskURL[512];
   
   char state[16];
   time_t ts;
@@ -104,13 +91,12 @@ typedef struct instance_t {
   char keyName[1024];
   
   netConfig ccnet;
-  int networkIndex;
   virtualMachine ccvm;
 
   int ncHostIdx;
   char serviceTag[64];
 
-  char userData[64];
+  char userData[4096];
   char launchIndex[64];
   char groupNames[64][32];
 
@@ -118,11 +104,12 @@ typedef struct instance_t {
   int volumesSize;
 } ccInstance;
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char groupNames[][32], ncVolume *volumes, int volumesSize, int networkIndex);
-void print_ccInstance(ccInstance *in);
-//void free_ccInstance(ccInstance *inInst);
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char groupNames[][32], ncVolume *volumes, int volumesSize);
+void print_ccInstance(char *tag, ccInstance *in);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
+enum {INSTINVALID, INSTVALID, INSTCONFLICT};
+enum {RESINVALID, RESVALID};
 enum {MONITOR, CLEANUP, CONTROL};
 enum {CONFIGLOCK, CACHELOCK, VNETCONFIGLOCK};
 
@@ -140,7 +127,7 @@ int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPor
 
 typedef struct ccResourceCache_t {
   ccResource resources[MAXNODES];
-  int valid[MAXNODES];
+  int cacheState[MAXNODES];
   int numResources;
   int lastResourceUpdate;
   int resourceCacheUpdate;
@@ -149,7 +136,7 @@ typedef struct ccResourceCache_t {
 typedef struct ccInstanceCache_t {
   ccInstance instances[MAXINSTANCES];
   time_t lastseen[MAXINSTANCES];
-  time_t valid[MAXINSTANCES];
+  int cacheState[MAXINSTANCES];
   int numInsts;
   int instanceCacheUpdate;
 } ccInstanceCache;

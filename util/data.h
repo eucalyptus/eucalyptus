@@ -71,16 +71,17 @@ typedef struct ncMetadata_t {
     char *userId;
 } ncMetadata;
 
-typedef struct ncInstParams_t {
-  int memorySize;
-  int diskSize;
-  int numberOfCores;
-} ncInstParams;
+typedef struct virtualMachine_t {
+  int mem, cores, disk;
+  char name[64];
+} virtualMachine;
+int allocate_virtualMachine(virtualMachine *out, int mem, int disk, int cores, char *name);
 
-typedef struct ncNetConf_t {
-  int vlan;
-  char publicMac[32], privateMac[32], publicIp[32], privateIp[32];
-} ncNetConf;
+typedef struct netConfig_t {
+  int vlan, networkIndex;
+  char privateMac[24], publicIp[24], privateIp[24];
+} netConfig;
+int allocate_netConfig(netConfig *out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex);
 
 typedef struct ncVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];
@@ -113,8 +114,8 @@ typedef struct ncInstance_t {
     int launchTime;
     int terminationTime;
     
-    ncInstParams params;
-    ncNetConf ncnet;
+    virtualMachine params;
+    netConfig ncnet;
     pthread_t tcb;
 
     /* passed into NC via runInstances for safekeeping */
@@ -163,12 +164,12 @@ ncMetadata * allocate_metadata(char *correlationId, char *userId);
 void free_metadata(ncMetadata ** meta);
 
 ncInstance * allocate_instance(char *instanceId, char *reservationId, 
-                               ncInstParams *params, 
+                               virtualMachine *params, 
                                char *imageId, char *imageURL, 
                                char *kernelId, char *kernelURL, 
                                char *ramdiskId, char *ramdiskURL, 
                                char *stateName, int stateCode, char *userId, 
-                               ncNetConf *ncnet, char *keyName,
+                               netConfig *ncnet, char *keyName,
                                char *userData, char *launchIndex, char **groupNames, int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
