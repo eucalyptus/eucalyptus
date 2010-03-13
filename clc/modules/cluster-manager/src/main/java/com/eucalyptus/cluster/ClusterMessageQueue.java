@@ -152,9 +152,7 @@ public class ClusterMessageQueue implements Runnable {
           LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
           try {
             Clusters.sendClusterEvent( this.clusterName, event );
-            if ( !( event.getCallback( ) instanceof TerminateCallback ) ) {
-              event.getCallback( ).waitForResponse( );
-            }
+            event.getCallback( ).waitForResponse( );
             //TODO: handle events which raised I/O exceptions to indicate the cluster state.
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
