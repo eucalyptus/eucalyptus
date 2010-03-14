@@ -101,6 +101,7 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType> 
         VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
         AttachedVolume attachedVol = new AttachedVolume( this.getRequest().getVolumeId( ) );
         LOG.debug( "Volumes marked as attached " + vm.getVolumes( ) + " to " + vm.getInstanceId( ) );
+        attachedVol = vm.getVolumes( ).get( vm.getVolumes( ).indexOf( attachedVol ) );
         attachedVol.setStatus( "attached" );
       } catch ( NoSuchElementException e1 ) {
       }
