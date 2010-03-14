@@ -116,6 +116,7 @@ public abstract class AbstractSystemAddressManager {
             }            
           }
         } catch ( NoSuchElementException e ) {
+          LOG.debug( "Failed to lookup instance owning the address: " + addrInfo );
           if( !addr.isPending( ) ) {
             final boolean isSystemOwned = addr.isSystemOwned( );
             final Address a = addr;
