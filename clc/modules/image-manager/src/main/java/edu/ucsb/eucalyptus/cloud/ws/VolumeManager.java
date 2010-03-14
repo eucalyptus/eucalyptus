@@ -74,6 +74,7 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.Configuration;
@@ -81,6 +82,7 @@ import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.images.util.StorageUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
@@ -98,6 +100,7 @@ import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteVolumeType;
@@ -191,6 +194,7 @@ public class VolumeManager {
 
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
+    boolean reallyFailed = false;
     try {
       Volume vol = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
       for( VmInstance vm : VmInstances.getInstance().listValues() ) {
@@ -201,16 +205,26 @@ public class VolumeManager {
           }
         }
       }
-      db.delete( vol );
-      db.getSession( ).flush( );
-      if( !vol.getState(  ).equals( State.ANNILATED ) ) {
-        StorageUtil.dispatchAll( new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      DeleteStorageVolumeResponseType scReply = StorageUtil.send( vol.getCluster( ), new DeleteStorageVolumeType( vol.getDisplayName( ) ) );
+      if( scReply.get_return( ) ) {
+        db.delete( vol );
+        db.getSession( ).flush( );
+        if( !vol.getState(  ).equals( State.ANNILATED ) ) {
+          StorageUtil.dispatchAll( new DeleteStorageVolumeType( vol.getDisplayName() ) );
+        }
+        db.commit();
+      } else {
+        reallyFailed = true;
+        throw new EucalyptusCloudException( "Storage Controller returned false:  Contact the administrator to report the problem." );
       }
-      db.commit();
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
-      return reply;
+      if( reallyFailed ) {
+        throw e;
+      } else {
+        return reply;
+      }
     }
     reply.set_return( true );
     return reply;

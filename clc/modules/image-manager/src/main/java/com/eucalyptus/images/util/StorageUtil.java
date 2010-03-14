@@ -97,6 +97,13 @@ public class StorageUtil {
     return ServiceDispatcher.lookup( Component.storage, hostName );
   }
   
+  public static <TYPE> TYPE send( String clusterName, EucalyptusMessage message ) throws EucalyptusCloudException {
+    StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( clusterName );
+    ServiceDispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
+    TYPE reply = (TYPE) sc.send( message );
+    return reply;
+  }
+  
   public static void dispatchAll( EucalyptusMessage message ) throws EucalyptusCloudException {
     for( ServiceDispatcher sc : ServiceDispatcher.lookupMany( Component.storage ) ) {
       sc.dispatch( message );
