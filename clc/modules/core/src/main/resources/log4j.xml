@@ -104,7 +104,7 @@
         </layout>
     </appender>
     <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">
-        <param name="File" value="${euca.log.dir}/cloud-cc.log"/>
+        <param name="File" value="${euca.log.dir}/cloud-cluster.log"/>
         <param name="MaxFileSize" value="10MB"/>
         <param name="MaxBackupIndex" value="10"/>
         <param name="Threshold" value="${euca.log.level}"/>
