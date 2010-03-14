@@ -99,7 +99,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( addr != null && vm == null ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr == null && vm != null ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getName( ), vm.getOwnerId( ), vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) );
+          addr = new Address( addrInfo.getAddress( ), cluster.getName( ), Component.eucalyptus.name( ), vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) );
           cluster.getState( ).clearOrphan( addrInfo );
         } else if( addr == null && vm == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );
