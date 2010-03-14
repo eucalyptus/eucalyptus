@@ -358,7 +358,7 @@ public class VolumeManager {
     request.setInstanceId( vm.getInstanceId() );
     QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( ), request );
     cluster.getMessageQueue().enqueue( event );
-
+    volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     return reply;
   }
