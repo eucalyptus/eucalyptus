@@ -103,6 +103,15 @@
             <param name="ConversionPattern" value="%d{HH:mm:ss} [%c{1}:%t] %x %-5p %m%n"/>
         </layout>
     </appender>
+    <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${euca.log.dir}/cloud-cc.log"/>
+        <param name="MaxFileSize" value="10MB"/>
+        <param name="MaxBackupIndex" value="10"/>
+        <param name="Threshold" value="ERROR"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d{HH:mm:ss} [%c{1}:%t] %x %-5p %m%n"/>
+        </layout>
+    </appender>
 
     <appender name="walrus-stats-log" class="org.apache.log4j.RollingFileAppender">
         <param name="File" value="${euca.log.dir}/walrus-stats.log"/>
@@ -133,13 +142,21 @@
       ~ NOTE: The following suppress very verbose but potentially useful output.
       ~ Consider removing or changing these if you are having unexplained failures. 
       -->
-    <category name="com.eucalyptus.cluster.AbstractClusterMessageDispatcher" additivity="true">
+    <category name="com.eucalyptus.cluster.handlers" additivity="false">
         <priority value="${euca.log.exhaustive.cc}"/>
         <appender-ref ref="exhaustive"/>
     </category>
-    <category name="edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback" additivity="false">
+    <category name="com.eucalyptus.cluster.handlers" additivity="false">
+        <priority value="${euca.log.level}"/>
+        <appender-ref ref="cloud-cluster"/>
+    </category>
+    <category name="edu.ucsb.eucalyptus.cloud.cluster" additivity="false">
         <priority value="${euca.log.exhaustive.cc}"/>
         <appender-ref ref="exhaustive"/>
+    </category>
+    <category name="edu.ucsb.eucalyptus.cloud.cluster" additivity="false">
+        <priority value="${euca.log.level}"/>
+        <appender-ref ref="cloud-cluster"/>
     </category>
     <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
         <priority value="${euca.log.exhaustive.user}"/>
@@ -157,7 +174,7 @@
         <priority value="${euca.log.exhaustive.user}"/>
         <appender-ref ref="exhaustive"/>
     </category>
-    <category name="com.eucalyptus.util.EntityWrapper" additivity="true">
+    <category name="com.eucalyptus.util.EntityWrapper" additivity="false">
         <priority value="${euca.log.exhaustive.db}"/>
         <appender-ref ref="exhaustive"/>
     </category>
