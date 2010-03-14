@@ -82,11 +82,11 @@ public abstract class AbstractSystemAddressManager {
       VmInstance vm = null;
       try {
         addr = Addresses.getInstance( ).lookupDisabled( addrInfo.getAddress( ) );
-        LOG.info( "[INIT] found address in the inactive set cache: " + addr );
+        LOG.debug( "Found address in the inactive set cache: " + addr );
       } catch ( NoSuchElementException e1 ) {
         try {
           addr = Addresses.getInstance( ).lookup( addrInfo.getAddress( ) );
-          LOG.info( "[INIT] found address in the active set cache: " + addr );
+          LOG.debug( "Found address in the active set cache: " + addr );
         } catch ( NoSuchElementException e ) {}
       }
       Helper.checkUniqueness( addrInfo );
@@ -217,7 +217,7 @@ public abstract class AbstractSystemAddressManager {
         }
         for ( Address addr : addrList ) {
           try {
-            LOG.info( "[INIT] restoring persistent address info for: " + addr );
+            LOG.info( "Restoring persistent address info for: " + addr );
             Addresses.getInstance( ).lookup( addr.getName( ) );
             addr.init( );
           } catch ( Throwable e ) {

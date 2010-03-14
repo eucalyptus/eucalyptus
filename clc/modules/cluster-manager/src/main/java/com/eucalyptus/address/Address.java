@@ -224,7 +224,7 @@ public class Address implements HasName {
         this.state.set( State.allocated, false );        
       }
     }
-    LOG.debug( "INIT Initialized address: " + this.toString( ) );
+    LOG.debug( "Initialized address: " + this.toString( ) );
   }
   
   private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, SplitTransition transition ) {
