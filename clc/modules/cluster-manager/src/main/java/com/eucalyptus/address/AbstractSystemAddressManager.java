@@ -82,11 +82,11 @@ public abstract class AbstractSystemAddressManager {
       VmInstance vm = null;
       try {
         addr = Addresses.getInstance( ).lookupDisabled( addrInfo.getAddress( ) );
-        LOG.debug( "Found address in the inactive set cache: " + addr );
+        LOG.trace( "Found address in the inactive set cache: " + addr );
       } catch ( NoSuchElementException e1 ) {
         try {
           addr = Addresses.getInstance( ).lookup( addrInfo.getAddress( ) );
-          LOG.debug( "Found address in the active set cache: " + addr );
+          LOG.trace( "Found address in the active set cache: " + addr );
         } catch ( NoSuchElementException e ) {}
       }
       Helper.checkUniqueness( addrInfo );
