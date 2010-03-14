@@ -74,7 +74,7 @@ public class EucalyptusCloudException extends Exception {
   }
 
   public EucalyptusCloudException( Throwable ex ) {
-    super( "Internal Error.", ex );
+    super( ex.getMessage() != null ? ex.getMessage() : "Internal Error.", ex );
   }
 
   public EucalyptusCloudException( String message, Throwable ex ) {
