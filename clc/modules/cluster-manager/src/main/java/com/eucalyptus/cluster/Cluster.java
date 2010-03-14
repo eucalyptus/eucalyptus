@@ -69,10 +69,12 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import org.apache.avalon.framework.configuration.Configurable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasName;
@@ -83,7 +85,7 @@ import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Cluster implements HasName {
   private static Logger                            LOG = Logger.getLogger( Cluster.class );
-  private MQ                                       mq;
+  private ClusterMessageQueue                      mq;
   private ClusterConfiguration                     configuration;
   private ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private ClusterState                             state;
@@ -97,7 +99,7 @@ public class Cluster implements HasName {
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
     this.credentials = credentials;
-    this.mq = new MQ();
+    this.mq = new ClusterMessageQueue( configuration.getName( ) );
   }
 
   public ClusterCredentials getCredentials( ) {
@@ -140,10 +142,6 @@ public class Cluster implements HasName {
     return this.getName( ).compareTo( that.getName( ) );
   }
 
-  public MQ getThreadGroup( ) {
-    return mq;
-  }
-
   public ClusterConfiguration getConfiguration( ) {
     return configuration;
   }
@@ -162,11 +160,11 @@ public class Cluster implements HasName {
 
   public void fireEventAsync( QueuedEvent e ) {
     LOG.debug( "Queueing message for " + this.getUri( ) + LogUtil.dumpObject( e ) );
-    this.mq.getMessageQueue( ).enqueue( e );
+    this.mq.enqueue( e );
   }
   
   public ClusterMessageQueue getMessageQueue( ) {
-    return this.mq.getMessageQueue( );
+    return this.mq;
   }
 
   public ClusterState getState( ) {
@@ -178,11 +176,11 @@ public class Cluster implements HasName {
   }
   
   public void start() {
-    this.mq.startMessageQueue( );
+    this.mq.start();
   }
 
   public void stop( ) {
-    this.mq.stopMessageQueue( );
+    this.mq.stop();
   }
 
   public class MQ extends ThreadGroup {

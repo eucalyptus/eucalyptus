@@ -111,6 +111,9 @@ public class SystemBootstrapper {
   public static Thread makeSystemThread( Runnable r ) {
     return new Thread( getThreadGroup( ), r );
   }
+  public static Thread makeSystemThread( Runnable r, String name ) {
+    return new Thread( getThreadGroup( ), r, name );
+  }
   
   static class EucalyptusThreadGroup extends ThreadGroup {
     EucalyptusThreadGroup( ) {

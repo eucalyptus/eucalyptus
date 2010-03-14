@@ -67,11 +67,14 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
@@ -91,18 +94,41 @@ public class ClusterMessageQueue implements Runnable {
   private final AtomicBoolean              finished;
   private final String                     clusterName;
   public static int CLUSTER_NUM_WORKERS = 8;
-  private ExecutorService workers = Executors.newFixedThreadPool( CLUSTER_NUM_WORKERS );
+  private final ThreadFactory threadFactory;
+  private volatile int threadCount = 0;
+  private ExecutorService workers;
+  class ClusterThreadFactory implements ThreadFactory {    
+    private String threadName;
+    private AtomicInteger threadIndex;
+
+    public ClusterThreadFactory( String threadName ) {
+      this.threadName = threadName;
+      this.threadIndex = new AtomicInteger(0);
+    }
+
+    @Override
+    public Thread newThread( final Runnable r ) {
+      return SystemBootstrapper.makeSystemThread( r, threadName + "-" + threadIndex.addAndGet( 1 ) );
+    }
+  }
   
   public ClusterMessageQueue( final String clusterName ) {
     this.finished = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedEvent>( );
     this.clusterName = clusterName;
+    this.threadFactory = new ClusterThreadFactory( clusterName );
+    this.workers = Executors.newFixedThreadPool( CLUSTER_NUM_WORKERS, this.threadFactory );
+  }
+  
+  public void start() {
+    for( int i = 0; i < ClusterMessageQueue.CLUSTER_NUM_WORKERS; i++ ) {
+      this.workers.execute( this );
+    }
   }
   
   public void enqueue( final QueuedEvent event ) {
     LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent().toString() ) );
-    LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent().toString() ), new Exception() );  
-    LOG.debug( "Queued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) + " for cluster " + this.getClusterName( ) );
+    LOG.trace( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent().toString() ), new Exception() );  
     if( !this.checkDuplicates( event ) ) {
       try {
         while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
@@ -148,6 +174,7 @@ public class ClusterMessageQueue implements Runnable {
   
   @SuppressWarnings( "unchecked" )
   public void run( ) {
+    LOG.debug( "Starting cluster message queue: " + Thread.currentThread( ).getName( ) );
     while ( !this.finished.get( ) ) {
       try {
         final QueuedEvent event = this.msgQueue.poll( this.pollInterval, TimeUnit.MILLISECONDS );
@@ -167,10 +194,12 @@ public class ClusterMessageQueue implements Runnable {
         LOG.error( e, e );
       }
     }
+    LOG.debug( "Shutting down cluster message queue: " + Thread.currentThread( ).getName( ) );
   }
   
   public void stop( ) {
     this.finished.lazySet( true );
+    this.workers.shutdownNow( );
   }
   
   @Override
