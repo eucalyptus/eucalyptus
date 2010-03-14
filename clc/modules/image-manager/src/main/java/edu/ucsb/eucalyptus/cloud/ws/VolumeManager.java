@@ -65,6 +65,7 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +81,7 @@ import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.images.util.StorageUtil;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
@@ -228,17 +230,18 @@ public class VolumeManager {
       }
       
       List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
-
+      List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : volumes ) {
         if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
-          try {
-            edu.ucsb.eucalyptus.msgs.Volume aVolume = StorageUtil.getVolumeReply( attachedVolumes, v );
-            reply.getVolumeSet().add( aVolume );
-          } catch ( Exception e ) {
-            LOG.warn( "Error getting volume information from the Storage Controller: " + e );
-            LOG.debug( e, e );
-          }
+          describeVolumes.add( v );
         }
+      }
+      try {
+        ArrayList<edu.ucsb.eucalyptus.msgs.Volume> volumeReplyList = StorageUtil.getVolumeReply( attachedVolumes, volumes );
+        reply.getVolumeSet().addAll( volumeReplyList );
+      } catch ( Exception e ) {
+        LOG.warn( "Error getting volume information from the Storage Controller: " + e );
+        LOG.debug( e, e );
       }
       db.commit( );
     } catch (Throwable t ) {
