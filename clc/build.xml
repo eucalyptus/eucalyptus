@@ -243,6 +243,10 @@
   </target>
   <target name="untar" if="needUnzipping">
     <untar compression="gzip" src="${deps.dir}/${deps.lib}.tar.gz" dest="${deps.lib.dir}"/>
+    <delete file="${deps.lib.dir}/openjdk-crypto.jar"/> 	
+  	<jar destfile="${deps.lib.dir}/openjdk-crypto.jar">
+  	    <zipfileset src="${deps.lib.dir}/eucalyptus-commons-ext-0.4.jar" includes="javax/crypto/**"/>
+	</jar>
   </target>
   <target name="download-deps" if="needDownload">
     <mkdir dir="${deps.dir}"/>
