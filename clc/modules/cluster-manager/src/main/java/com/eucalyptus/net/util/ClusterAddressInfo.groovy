@@ -14,7 +14,11 @@ public class ClusterAddressInfo {
   public static List<ClusterAddressInfo> fromLists( List<String> addresses, List<String> instanceIps ) {
     return addresses.collect{ new ClusterAddressInfo( it ) }.eachWithIndex{ it, i -> it.instanceIp = instanceIps[ i ] }
   }
-
+  
+  public boolean hasMapping() {
+    return this.instanceIp != null &&  !"".equals( this.instanceIp );
+  }
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;

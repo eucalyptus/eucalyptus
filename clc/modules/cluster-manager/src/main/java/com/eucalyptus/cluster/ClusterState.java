@@ -69,6 +69,8 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
@@ -110,7 +112,18 @@ public class ClusterState {
     LOG.warn( "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
     if ( orphanCount > 10 ) {
       LOG.warn( "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
-      new UnassignAddressCallback( address ).dispatch( this.clusterName );
+      try {
+        final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
+        new UnassignAddressCallback( address ).then( new SuccessCallback( ) {
+          @Override
+          public void apply( Object t ) {
+            if ( addr.isSystemOwned( ) ) {
+              Addresses.getAddressManager( ).releaseSystemAddress( addr );
+            }
+          }
+        } ).dispatch( this.clusterName );
+      } catch ( NoSuchElementException e ) {
+      }
       orphans.remove( address.getAddress( ) );
     }
   }
