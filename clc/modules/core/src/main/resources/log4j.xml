@@ -107,7 +107,7 @@
         <param name="File" value="${euca.log.dir}/cloud-cc.log"/>
         <param name="MaxFileSize" value="10MB"/>
         <param name="MaxBackupIndex" value="10"/>
-        <param name="Threshold" value="ERROR"/>
+        <param name="Threshold" value="${euca.log.level}"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="%d{HH:mm:ss} [%c{1}:%t] %x %-5p %m%n"/>
         </layout>
