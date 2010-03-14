@@ -92,9 +92,6 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
   }
 
   @Override
-  public void prepareAll( final StopNetworkType msg ) {}
-
-  @Override
   public void verify( EucalyptusMessage msg ) throws Exception {}
 
   @Override

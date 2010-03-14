@@ -90,7 +90,8 @@ public class ClusterMessageQueue implements Runnable {
   private final int                        messageQueueSize = 100;
   private final AtomicBoolean              finished;
   private final String                     clusterName;
-  private ExecutorService workers = Executors.newFixedThreadPool( 8 );
+  public static int CLUSTER_NUM_WORKERS = 8;
+  private ExecutorService workers = Executors.newFixedThreadPool( CLUSTER_NUM_WORKERS );
   
   public ClusterMessageQueue( final String clusterName ) {
     this.finished = new AtomicBoolean( false );

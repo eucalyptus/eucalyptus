@@ -16,16 +16,16 @@ public abstract class MultiClusterCallback<TYPE extends EucalyptusMessage> exten
   
   public abstract MultiClusterCallback<TYPE> newInstance( );
   
-  public abstract void prepareAll( TYPE msg ) throws Exception;
-  
-  public List<QueuedEventCallback> fireEventAsyncToAllClusters( final TYPE msg ) {
-    List<QueuedEventCallback> callbackList = Lists.newArrayList( );
+  public List<QueuedEvent> fireEventAsyncToAllClusters( final TYPE msg ) {
+    List<QueuedEvent> callbackList = Lists.newArrayList( );
     for ( final Cluster c : Clusters.getInstance( ).listValues( ) ) {
       LOG.debug( "-> Sending " + msg.getClass( ).getSimpleName( ) + " network to: " + c.getUri( ) );
       LOG.debug( LogUtil.dumpObject( msg ) );
       try {
         MultiClusterCallback<TYPE> newThis = this.newInstance( );
-        c.getMessageQueue().enqueue( QueuedEvent.make(newThis, msg ) );
+        QueuedEvent newEvent = QueuedEvent.make(newThis, msg );
+        c.getMessageQueue().enqueue( newEvent );
+        callbackList.add( newEvent );
       } catch ( final Throwable e ) {
         LOG.error( "Error while sending to: " + c.getUri( ) + " " + msg.getClass( ).getSimpleName( ) );
       }

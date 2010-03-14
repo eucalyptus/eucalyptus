@@ -87,13 +87,6 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
   }
 
   @Override
-  public void prepareAll( StartNetworkType msg ) throws Exception {
-    msg.setNameserver( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getNameserverAddress( ) );
-    msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-    this.fireEventAsyncToAllClusters( msg );
-  }
-
-  @Override
   public void verify( EucalyptusMessage msg ) throws Exception {
     try {
       Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );

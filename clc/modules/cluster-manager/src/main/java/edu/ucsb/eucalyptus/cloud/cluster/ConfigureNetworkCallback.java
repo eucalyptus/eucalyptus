@@ -78,9 +78,7 @@ public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetw
   private static Logger LOG = Logger.getLogger( ConfigureNetworkCallback.class );
 
   public ConfigureNetworkCallback( ) {}
-  public void prepareAll( final ConfigureNetworkType msg ) throws Exception {
-    this.fireEventAsyncToAllClusters( msg );
-  }
+
   @Override
   public void prepare( ConfigureNetworkType msg ) throws Exception {
     LOG.debug("Sending configure network rules for: " + msg.getUserId( ) + "\n" + LogUtil.dumpObject( msg.getRules( ) ) );
