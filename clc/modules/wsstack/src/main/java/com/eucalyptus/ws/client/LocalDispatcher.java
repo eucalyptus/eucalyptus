@@ -40,6 +40,7 @@ public class LocalDispatcher extends ServiceDispatcher {
     try {
       MuleMessage reply = this.getMuleClient( ).send( this.getComponent( ).getLocalAddress( ), msg, null );
       if ( reply.getExceptionPayload( ) != null ) {
+        LOG.debug( e, e );
         throw new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
       } else {
         return ( EucalyptusMessage ) reply.getPayload( );
