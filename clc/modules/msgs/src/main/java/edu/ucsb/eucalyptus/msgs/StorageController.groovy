@@ -112,7 +112,8 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 	String sanUser;
 	String sanPassword;
 	String DASDevice;
-	
+	ArrayList<String> storageParams;
+
 	def UpdateStorageConfigurationType() {}
 
 	def UpdateStorageConfigurationType(StorageStateType storageState) {
@@ -125,7 +126,8 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 		this.sanHost = storageState.sanHost;
 		this.sanUser = storageState.sanUser;
 		this.sanPassword = storageState.sanPassword;
-		this.DASDevice = storageState.getDASDevice();
+		this.DASDevice = storageState.getDASDevice();	
+		this.storageParams = storageState.getStorageParams();
 	}
 }
 
@@ -152,7 +154,8 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 	String sanUser;
 	String sanPassword;
 	String DASDevice;
-
+	ArrayList<String> storageParams;
+	
 	def GetStorageConfigurationResponseType() {}
 
 	def GetStorageConfigurationResponseType(String name,
@@ -164,7 +167,8 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 			String sanHost,
 			String sanUser,
 			String sanPassword,
-			String DASDevice) {
+			String DASDevice,
+			List<String> storageParams) {
 		this.name = name;
 		this.storageRootDirectory = storageRootDirectory;
 		this.maxTotalVolumeSize = maxTotalVolumeSize;
@@ -175,6 +179,7 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 		this.sanUser = sanUser;
 		this.sanPassword = sanPassword;
 		this.DASDevice = DASDevice;
+		this.storageParams = storageParams;
 	}
 }
 

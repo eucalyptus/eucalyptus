@@ -318,6 +318,11 @@ public class BlockStorage {
 			StorageProperties.enableStorage = false;
 			LOG.error(ex);
 		}
+		if(request.getStorageParams() != null) {
+			for(String param : request.getStorageParams()) {
+				LOG.info("Storage Param: " + param);
+			}
+		}
 		updateConfig();
 		return reply;
 	}
@@ -338,6 +343,9 @@ public class BlockStorage {
 			reply.setSanPassword(StorageProperties.SAN_PASSWORD);
 			reply.setDASDevice(StorageProperties.DAS_DEVICE);
 			reply.setName(StorageProperties.NAME);
+			ArrayList<String> storageParams = new ArrayList<String>();
+			blockManager.setStorageParamNames(storageParams);
+			reply.setStorageParams(storageParams);
 		}
 		return reply;
 	}

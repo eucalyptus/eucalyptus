@@ -63,6 +63,8 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import java.util.List;
+
 import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
@@ -114,13 +116,14 @@ public class StorageStateType extends EucalyptusMessage{
   private String sanUser;
   private String sanPassword;
   private String DASDevice;
-  
+  private ArrayList<String> storageParams;
+
   def StorageStateType() {
   }
   
   def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
   final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
-  final DASDevice) {
+  final DASDevice, final List<String> storageParams) {
     this.name = name;
     this.volumesPath = volumesPath;
     this.maxVolumeSizeInGB = maxVolumeSizeInGB;
@@ -128,11 +131,12 @@ public class StorageStateType extends EucalyptusMessage{
     this.storageInterface = storageInterface;
     this.zeroFillVolumes = zeroFillVolumes;
     this.DASDevice = DASDevice;
+    this.storageParams = storageParams;
   }
 
   def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
   final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
-  final sanHost, final sanUser, final sanPassword) {
+  final sanHost, final sanUser, final sanPassword, final List<String> storageParams) {
     this.name = name;
     this.volumesPath = volumesPath;
     this.maxVolumeSizeInGB = maxVolumeSizeInGB;
@@ -142,6 +146,7 @@ public class StorageStateType extends EucalyptusMessage{
     this.sanHost = sanHost;
     this.sanUser = sanUser;
     this.sanPassword = sanPassword;
+    this.storageParams = storageParams;
   }
 }
 

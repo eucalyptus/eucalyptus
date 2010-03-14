@@ -1012,5 +1012,11 @@ public class LVM2DASManager implements LogicalStorageManager {
                 return StorageProperties.storageRootDirectory + File.separator + snapshotId;
         }
 
+		@Override
+		public void setStorageParamNames(ArrayList<String> storageParams) {
+			// TODO Auto-generated method stub
+			
+		}
+
 }
 

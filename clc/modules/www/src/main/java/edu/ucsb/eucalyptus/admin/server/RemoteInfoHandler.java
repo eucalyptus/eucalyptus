@@ -159,6 +159,7 @@ public class RemoteInfoHandler {
 			updateStorageConfiguration.setSanUser(storageControllerWeb.getSanUser());
 			updateStorageConfiguration.setSanPassword(storageControllerWeb.getSanPassword());
 			updateStorageConfiguration.setDASDevice(storageControllerWeb.getDASDevice());
+			updateStorageConfiguration.setStorageParams(storageControllerWeb.getStorageParams());
 			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, 
 					storageControllerWeb.getHost());
 			if(Component.eucalyptus.isLocal()) {
@@ -201,6 +202,7 @@ public class RemoteInfoHandler {
             scInfo.setSanUser(getStorageConfigResponse.getSanUser());
             scInfo.setSanPassword(getStorageConfigResponse.getSanPassword());
             scInfo.setDASDevice(getStorageConfigResponse.getDASDevice());
+            scInfo.setStorageParams(getStorageConfigResponse.getStorageParams());
           } else {
             LOG.debug("Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception());
             LOG.debug("Expected configuration for SC related to CC: " + LogUtil.dumpObject( c ) );

@@ -348,5 +348,11 @@ public class SANManager implements LogicalStorageManager {
 		}
 		return null;
 	}
+
+	@Override
+	public void setStorageParamNames(ArrayList<String> storageParams) {
+		storageParams.add("key");
+		storageParams.add("value");
+	}
 }
 

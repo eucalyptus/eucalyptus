@@ -60,8 +60,9 @@
 *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.client;
 
+import java.util.ArrayList;
+
 import com.google.gwt.user.client.rpc.IsSerializable;
-import edu.ucsb.eucalyptus.admin.server.RemoteInfoHandler;
 
 public class StorageInfoWeb implements IsSerializable {
 	private String name;
@@ -77,7 +78,9 @@ public class StorageInfoWeb implements IsSerializable {
 	String sanHost;
 	String sanUser;
 	String sanPassword;
-
+	
+	ArrayList<String> storageParams = new ArrayList<String>();
+	
 	public StorageInfoWeb() {}
 	
 	public StorageInfoWeb( String name, String host, Integer port ) {
@@ -91,6 +94,7 @@ public class StorageInfoWeb implements IsSerializable {
     this.zeroFillVolumes = StorageInfoWeb.DEFAULT_SC.getZeroFillVolumes( );
     this.DASDevice = StorageInfoWeb.DEFAULT_SC.getDASDevice();
     this.committed = StorageInfoWeb.DEFAULT_SC.committed;
+    this.storageParams = new ArrayList<String>();
   }
 
   public StorageInfoWeb( final String name,
@@ -104,7 +108,8 @@ public class StorageInfoWeb implements IsSerializable {
 			String sanHost,
 			String sanUser,
 			String sanPassword,
-			String DASDevice) {
+			String DASDevice,
+			ArrayList<String> storageParams) {
 		this.name = name;
 		this.host = host;
 		this.port = port;
@@ -118,6 +123,7 @@ public class StorageInfoWeb implements IsSerializable {
 		this.sanPassword = sanPassword;
 		this.DASDevice = DASDevice;
 		this.committed = false;
+		this.storageParams = storageParams;
 	}
 
 
@@ -228,6 +234,14 @@ public class StorageInfoWeb implements IsSerializable {
 		this.DASDevice = DASDevice;
 	}
 
+	public ArrayList<String> getStorageParams() {
+		return storageParams;
+	}
+
+	public void setStorageParams(ArrayList<String> storageParams) {
+		this.storageParams = storageParams;
+	}
+
 	@Override
 	public boolean equals( final Object o )
 	{
@@ -247,5 +261,5 @@ public class StorageInfoWeb implements IsSerializable {
 		return name.hashCode();
 	}
 
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanhost", "sanuser", "sanpassword", "/dev/blockdev");
+	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanhost", "sanuser", "sanpassword", "/dev/blockdev", new ArrayList<String>());
 }

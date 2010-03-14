@@ -81,7 +81,8 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	private List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>();
 	private SystemConfigWeb systemConfig = new SystemConfigWeb ();
 	private String sessionId;
-
+	private int numStorageParams;
+	
 	public ClusterInfoTable(String sessionId)
 	{
 		this.sessionId = sessionId;
@@ -121,7 +122,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		this.clusterList.add (new ClusterInfoWeb ("cluster-name", "cc-host", 8774, 10, 4096));
 		//these values are just defaults
-		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanHost", "sanUser", "sanPassword", "/dev/blockdev"));
+		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanHost", "sanUser", "sanPassword", "/dev/blockdev", new ArrayList<String>()));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
@@ -162,9 +163,13 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		}
 	}
 
+	public static native void logme(String msg) /*-{
+		console.log(msg);
+	}-*/;
+	
 	private Grid addClusterEntry ( int row, ClusterInfoWeb clusterInfo, final StorageInfoWeb storageInfo)
 	{
-		Grid g = new Grid (15, 2);
+		Grid g = new Grid (14 + (storageInfo.getStorageParams().size() / 2), 2);
 		g.setStyleName( "euca-table" );
 		if (row > 0) {
 			g.setStyleName( "euca-nonfirst-cluster-entry" );
@@ -405,6 +410,25 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		dasPartitionBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 		g.setWidget( i, 1, dasPartitionBox );*/
 
+		ArrayList<String> storageParams = storageInfo.getStorageParams();
+		numStorageParams = storageParams.size()/2;
+		logme("storageparams size: " + storageParams.size());
+		for(String param : storageParams) {
+			logme("param: " + param);
+		}
+		logme("rowcount: " + g.getRowCount());
+		for(int paramidx = 0; paramidx < numStorageParams; ++paramidx) {
+			i++; // next row	
+			g.setWidget( i, 0, new Label(storageParams.get(2*paramidx) + ": ") );
+			g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+			final TextBox lolBox = new TextBox();
+			lolBox.addChangeListener (new ChangeCallback (this, row));
+			lolBox.setVisibleLength( 30 );
+			lolBox.setText(storageParams.get(2*paramidx + 1));
+			lolBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+			g.setWidget( i, 1, lolBox );
+		}
+
 		return g;
 	}
 
@@ -461,11 +485,17 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		storage.setMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		p = (HorizontalPanel)g.getWidget(10, 1);
 		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
-	
+
 		storage.setSanHost (((TextBox)g.getWidget(11, 1)).getText());
 		storage.setSanUser (((TextBox)g.getWidget(12, 1)).getText());
 		storage.setSanPassword (((TextBox)g.getWidget(13, 1)).getText());
 
+		int widgetStartIndex = 14;
+		ArrayList<String> storageParams = storage.getStorageParams();
+		for(int i = 0; i < numStorageParams; ++i) {
+			storageParams.set(2*i + 1, ((TextBox)g.getWidget(widgetStartIndex++, 1)).getText());
+		}
+		//storage.setStorageParams(storageParams);
 		//storage.setDASPartition(((TextBox)g.getWidget(15, 1)).getText());
 		//    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );
 	}
