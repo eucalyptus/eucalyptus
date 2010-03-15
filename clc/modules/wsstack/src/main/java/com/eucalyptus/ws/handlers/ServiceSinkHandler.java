@@ -200,9 +200,10 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );
         } else if ( ( user == null ) || ( ( user != null ) && user.getIsAdministrator( ) ) ) {
-          final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ) );
-          if(reply != null)
-              ctx.getChannel( ).write( reply.getPayload( ) );
+          this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), false );
+//          final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ) );
+//          if(reply != null)
+//              ctx.getChannel( ).write( reply.getPayload( ) );
         } else {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
