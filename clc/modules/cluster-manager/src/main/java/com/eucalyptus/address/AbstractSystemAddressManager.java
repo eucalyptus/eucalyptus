@@ -160,10 +160,10 @@ public abstract class AbstractSystemAddressManager {
       VmInstance vm = null;
       try {
         vm = VmInstances.getInstance( ).lookupByInstanceIp( privateIp );
-        LOG.debug( "Found VM which claims this address: " + vm.getInstanceId( ) + " " + publicIp );
+        LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + publicIp );
         if ( publicIp.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
           vm.getNetworkConfig( ).setIgnoredPublicIp( publicIp );
-          LOG.debug( "Updated vm with address information: " + vm.getInstanceId( ) + " " + publicIp );
+          LOG.trace( "Updated vm with address information: " + vm.getInstanceId( ) + " " + publicIp );
         }
       } catch ( NoSuchElementException e ) {}
       return vm;
