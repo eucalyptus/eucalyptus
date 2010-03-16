@@ -131,11 +131,11 @@
         </layout>
     </appender>
     <category name="com.eucalyptus" additivity="true">
-        <priority value="DEBUG"/>
+        <priority value="${euca.log.level}"/>
         <appender-ref ref="logfile"/>
     </category>
     <category name="edu.ucsb.eucalyptus" additivity="true">
-        <priority value="DEBUG"/>
+        <priority value="${euca.log.level}"/>
         <appender-ref ref="logfile"/>
     </category>
     <!-- 
