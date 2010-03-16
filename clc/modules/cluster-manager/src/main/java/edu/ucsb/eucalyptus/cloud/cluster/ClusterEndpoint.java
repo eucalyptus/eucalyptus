@@ -75,7 +75,6 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.Admin;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 import org.apache.log4j.Logger;
@@ -102,14 +101,14 @@ public class ClusterEndpoint implements Startable {
       ConfigureNetworkType msg = null;
 
       if ( net.getRules().isEmpty() ) {
-        msg = Admin.makeMsg( ConfigureNetworkType.class );
+        msg = new ConfigureNetworkType().regarding( );
         msg.setUserId( existingNet.getUserName() );
         for ( PacketFilterRule pf : existingNet.getRules() )
           msg.getRules().add( PacketFilterRule.revoke( pf ) );
         existingNet.setRules( net.getRules() );
       } else {
         existingNet.setRules( net.getRules() );
-        msg = Admin.makeMsg( ConfigureNetworkType.class );
+        msg = new ConfigureNetworkType( ).regarding( );
         msg.setUserId( existingNet.getUserName() );
         msg.setRules( existingNet.getRules() );
       }

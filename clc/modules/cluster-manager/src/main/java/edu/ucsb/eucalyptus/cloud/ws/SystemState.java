@@ -114,7 +114,6 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
-import edu.ucsb.eucalyptus.util.Admin;
 
 public class SystemState {
   
@@ -425,7 +424,7 @@ public class SystemState {
   
   private static void dispatchReboot( final String clusterName, final String instanceId, final EucalyptusMessage request ) {
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    QueuedEvent<RebootInstancesType> event = QueuedEvent.make( new RebootCallback( ), Admin.makeMsg( RebootInstancesType.class, instanceId ) );
+    QueuedEvent event = QueuedEvent.make( new RebootCallback( ), new RebootInstancesType( instanceId ).regarding( request ) );
     cluster.getMessageQueue( ).enqueue( event );
   }
   
