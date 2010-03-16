@@ -84,6 +84,7 @@ import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.MappingHttpMessage;
+import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.eucalyptus.ws.util.WSSecurity;
 import com.google.common.collect.Lists;
@@ -108,7 +109,7 @@ public class InternalWsSecHandler extends WsSecHandler {
   @Override
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     final Object o = event.getMessage( );
-    if ( o instanceof MappingHttpMessage ) {
+    if ( o instanceof MappingHttpRequest ) {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
       SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
       X509Certificate cert = WSSecurity.getVerifiedCertificate( envelope );
