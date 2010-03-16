@@ -174,50 +174,6 @@ public class Cluster implements HasName {
     this.mq.stop();
   }
 
-  public class MQ extends ThreadGroup {
-    private Thread              mqThread;
-    private ClusterMessageQueue messageQueue;
-    private boolean             stopped = false;
-
-    public MQ( ) {
-      super( configuration.getName( ) );
-      this.messageQueue = new ClusterMessageQueue( configuration.getName( ) );
-    }
-
-    public void startMessageQueue( ) {
-      if ( ( this.mqThread == null || !this.mqThread.isAlive( ) ) && !this.stopped ) {
-        this.mqThread = new Thread( this.messageQueue );
-        LOG.warn( "-> [ " + this.getName( ) + " ] Starting threads " + this.mqThread.getName( ) );
-        this.mqThread.start( );
-      }
-    }
-
-    public void stopMessageQueue( ) {
-      this.messageQueue.stop( );
-      this.stopped = true;
-      LOG.warn( "-> [ " + this.getName( ) + " ] Stopping threads " + this.mqThread );
-    }
-
-    @Override
-    public void uncaughtException( Thread t, Throwable e ) {
-      LOG.error( "Caught exception from " + t.getName( ) + ": " + e.getClass( ) );
-      LOG.error( t.getName( ) + ": " + e.getMessage( ), e );
-      super.uncaughtException( t, e );
-    }
-
-    public ClusterMessageQueue getMessageQueue( ) {
-      return messageQueue;
-    }
-
-    @Override
-    public String toString( ) {
-      return String.format( "MQ [messageQueue=%s, mqThread=%s, stopped=%s]", this.messageQueue, this.mqThread,
-                            this.stopped );
-    }
-
-    
-  }
-
   @Override
   public int hashCode( ) {
     final int prime = 31;
