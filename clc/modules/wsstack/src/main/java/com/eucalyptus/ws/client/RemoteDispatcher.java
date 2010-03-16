@@ -80,6 +80,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.ServiceBootstrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 
@@ -110,7 +111,16 @@ public class RemoteDispatcher extends ServiceDispatcher {
       return this.getNioClient( ).send( msg );
     } catch ( Exception e ) {
       LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
+      Throwable rootCause = e;
+      while( rootCause.getCause( ) != null || !( rootCause instanceof EucalyptusRemoteFault ) ) {
+        rootCause = rootCause.getCause( );
+      }
+      if( rootCause instanceof EucalyptusRemoteFault ) {
+        EucalyptusRemoteFault remoteFault = ( EucalyptusRemoteFault ) rootCause;
+        throw new EucalyptusCloudException( " " + remoteFault.getFaultString( ) );
+      } else {
+        throw new EucalyptusCloudException( msg.getClass().getSimpleName( ) + ": " + rootCause.getMessage( ), rootCause );
+      }
     } finally {
       RequestContext.setEvent( context );
     }
