@@ -185,7 +185,7 @@ public class ConfigurationProperties {
         LOG.debug( e, e );
       }        
     }
-    
+    store( c );
   }
   
   private static String canonicalize( Class c, Field f) {
