@@ -75,9 +75,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DeferredInitializer;
 import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
@@ -90,7 +88,7 @@ public class ServiceJarFile extends JarFile {
   private URLClassLoader      classLoader;
   private List<Class>         bootstrappers;
   private Map<String, String> components;
-
+  
   @SuppressWarnings( { "deprecation", "unchecked" } )
   public ServiceJarFile( File f ) throws IOException {
     super( f );
@@ -101,40 +99,50 @@ public class ServiceJarFile extends JarFile {
     while ( jarList.hasMoreElements( ) ) {
       JarEntry j = jarList.nextElement( );
       if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
+        String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
+        Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
         try {
-          Class c = this.getEventListener( j );
+          this.getEventListener( candidate );
           LOG.info( "---> Loading event listener from entry: " + j.getName( ) );
         } catch ( Throwable e ) {
           LOG.trace( e, e );
         }
         try {
-          Class c = this.getBootstrapper( j );
+          this.getBootstrapper( candidate );
           LOG.info( "---> Loading bootstrapper from entry: " + j.getName( ) );
-          this.bootstrappers.add( c );
+          this.bootstrappers.add( candidate );
         } catch ( Throwable e ) {
           LOG.trace( e, e );
         }
         try {
-	      this.addDeferredInitializers(j);
-		} catch (Exception e) {
-	      LOG.trace( e, e );
-		}
+          this.addDeferredInitializers( candidate );
+        } catch ( Exception e ) {
+          LOG.trace( e, e );
+        }
+        try {
+          this.addConfigurableClass( candidate );
+        } catch ( Exception e ) {
+          LOG.trace( e, e );
+        }
       }
     }
   }
-
-  @SuppressWarnings("unchecked")
-private void addDeferredInitializers(JarEntry j) throws Exception {
-	String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
-    Class candidate = ClassLoader.getSystemClassLoader().loadClass( classGuess );
-    if(candidate.getAnnotation(NeedsDeferredInitialization.class) != null) {
-       NeedsDeferredInitialization needsDeferredInit = (NeedsDeferredInitialization) candidate.getAnnotation(NeedsDeferredInitialization.class);
-       if(needsDeferredInit.component().isEnabled())
-         DeferredInitializer.getInstance().add(candidate);
+  
+  private void addConfigurableClass( Class candidate ) throws Exception {
+    if ( candidate.getAnnotation( ConfigurableClass.class ) != null ) {
+      ConfigurationProperties.prepareClass( candidate );
     }
   }
-
-@SuppressWarnings( "unchecked" )
+  
+  @SuppressWarnings( "unchecked" )
+  private void addDeferredInitializers( Class candidate ) throws Exception {
+    if ( candidate.getAnnotation( NeedsDeferredInitialization.class ) != null ) {
+      NeedsDeferredInitialization needsDeferredInit = ( NeedsDeferredInitialization ) candidate.getAnnotation( NeedsDeferredInitialization.class );
+      if ( needsDeferredInit.component( ).isEnabled( ) ) DeferredInitializer.getInstance( ).add( candidate );
+    }
+  }
+  
+  @SuppressWarnings( "unchecked" )
   public List<Bootstrapper> getBootstrappers( ) {
     List<Bootstrapper> ret = Lists.newArrayList( );
     for ( Class c : this.bootstrappers ) {
@@ -150,39 +158,40 @@ private void addDeferredInitializers(JarEntry j) throws Exception {
         }
       } catch ( Exception e ) {
         LOG.warn( "Error in <init>()V and getInstance()L; in bootstrapper: " + c.getCanonicalName( ) );
-//        LOG.warn( e.getMessage( ) );
+        //        LOG.warn( e.getMessage( ) );
         // LOG.debug( e, e );
       }
     }
     return ret;
   }
-
+  
   @SuppressWarnings( "unchecked" )
-  private Class getBootstrapper( JarEntry j ) throws Exception {
-    String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
-    Class candidate = ClassLoader.getSystemClassLoader().loadClass( classGuess );
+  private Class getBootstrapper( Class candidate ) throws Exception {
     if ( Bootstrapper.class.equals( candidate ) ) throw new InstantiationException( Bootstrapper.class + " is abstract." );
     if ( !Bootstrapper.class.isAssignableFrom( candidate ) ) throw new InstantiationException( candidate + " does not conform to " + Bootstrapper.class );
     LOG.warn( "Candidate bootstrapper: " + candidate.getName( ) );
     if ( !Modifier.isPublic( candidate.getDeclaredConstructor( new Class[] {} ).getModifiers( ) ) ) {
       Method factory = candidate.getDeclaredMethod( "getInstance", new Class[] {} );
-      if ( !Modifier.isStatic( factory.getModifiers( ) ) || !Modifier.isPublic( factory.getModifiers( ) ) ) { throw new InstantiationException( candidate.getCanonicalName( ) + " does not declare public <init>()V or public static getInstance()L;" ); }
+      if ( !Modifier.isStatic( factory.getModifiers( ) ) || !Modifier.isPublic( factory.getModifiers( ) ) ) {
+        throw new InstantiationException( candidate.getCanonicalName( ) + " does not declare public <init>()V or public static getInstance()L;" );
+      }
     }
     LOG.info( "Found bootstrapper: " + candidate.getName( ) );
     return candidate;
   }
-
+  
   @SuppressWarnings( "unchecked" )
-  private Class getEventListener( JarEntry j ) throws Exception {
-    String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
-    Class candidate = ClassLoader.getSystemClassLoader().loadClass( classGuess );
+  private Class getEventListener( Class candidate ) throws Exception {
     if ( !EventListener.class.isAssignableFrom( candidate ) ) throw new InstantiationException( candidate + " does not conform to " + EventListener.class );
     LOG.warn( "Candidate event listener: " + candidate.getName( ) );
     Method factory;
     factory = candidate.getDeclaredMethod( "register", new Class[] {} );
-    if ( !Modifier.isStatic( factory.getModifiers( ) ) || !Modifier.isPublic( factory.getModifiers( ) ) ) throw new InstantiationException( candidate.getCanonicalName( ) + " does not declare public static register()V" );
+    if ( !Modifier.isStatic( factory.getModifiers( ) ) || !Modifier.isPublic( factory.getModifiers( ) ) ) throw new InstantiationException(
+                                                                                                                                            candidate
+                                                                                                                                                     .getCanonicalName( )
+                                                                                                                                                + " does not declare public static register()V" );
     LOG.info( "-> Registered event listener: " + candidate.getName( ) );
-    factory.invoke( null, new Object[]{} );
+    factory.invoke( null, new Object[] {} );
     return candidate;
   }
 }
