@@ -84,6 +84,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.mule.DefaultMuleMessage;
+import org.mule.api.ExceptionPayload;
+import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
 import org.mule.transport.NullPayload;
 
@@ -200,10 +202,21 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );
         } else if ( ( user == null ) || ( ( user != null ) && user.getIsAdministrator( ) ) ) {
-          this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), false );
-//          final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ) );
-//          if(reply != null)
-//              ctx.getChannel( ).write( reply.getPayload( ) );
+          try {
+            final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
+            if( reply != null ) {
+              ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
+            } else {
+              ReplyQueue.removeReplyListener( msg.getCorrelationId( ) );
+              ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.INTERNAL_SERVER_ERROR ) ).addListener( ChannelFutureListener.CLOSE );
+            }
+          } catch ( Exception e1 ) {
+            LOG.error( e1, e1 );
+            EucalyptusErrorMessageType errMsg = new EucalyptusErrorMessageType( this.msgReceiver.getService( ).getName( ), msg, (e1.getCause( )!=null?e1.getCause( ):e1).getMessage( ) );
+            errMsg.setCorrelationId( msg.getCorrelationId( ) );
+            errMsg.setException( e1.getCause( )!=null?e1.getCause( ):e1 );
+            new ReplyQueue().handle( errMsg );
+          }
         } else {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
