@@ -100,29 +100,33 @@ public class ServiceJarFile extends JarFile {
       JarEntry j = jarList.nextElement( );
       if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
         String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
-        Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
         try {
-          this.getEventListener( candidate );
-          LOG.info( "---> Loading event listener from entry: " + j.getName( ) );
-        } catch ( Throwable e ) {
-          LOG.trace( e, e );
-        }
-        try {
-          this.getBootstrapper( candidate );
-          LOG.info( "---> Loading bootstrapper from entry: " + j.getName( ) );
-          this.bootstrappers.add( candidate );
-        } catch ( Throwable e ) {
-          LOG.trace( e, e );
-        }
-        try {
-          this.addDeferredInitializers( candidate );
-        } catch ( Exception e ) {
-          LOG.trace( e, e );
-        }
-        try {
-          this.addConfigurableClass( candidate );
-        } catch ( Exception e ) {
-          LOG.trace( e, e );
+          Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
+          try {
+            this.getEventListener( candidate );
+            LOG.info( "---> Loading event listener from entry: " + j.getName( ) );
+          } catch ( Throwable e ) {
+            LOG.trace( e, e );
+          }
+          try {
+            this.getBootstrapper( candidate );
+            LOG.info( "---> Loading bootstrapper from entry: " + j.getName( ) );
+            this.bootstrappers.add( candidate );
+          } catch ( Throwable e ) {
+            LOG.trace( e, e );
+          }
+          try {
+            this.addDeferredInitializers( candidate );
+          } catch ( Exception e ) {
+            LOG.trace( e, e );
+          }
+          try {
+            this.addConfigurableClass( candidate );
+          } catch ( Exception e ) {
+            LOG.trace( e, e );
+          }
+        } catch ( ClassNotFoundException e ) {
+          LOG.debug( e, e );
         }
       }
     }

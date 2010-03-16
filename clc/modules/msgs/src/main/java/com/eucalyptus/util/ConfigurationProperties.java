@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -94,12 +95,7 @@ public class ConfigurationProperties {
   }
   
   public static void configure( Class c ) {
-    ConfigurableClass a = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
-    if( a == null ) {
-      throw new RuntimeException( "Attempt to configure a class which does not declare itself Configurable: " + c.getName( ) );
-    }
-    String propsFileName = SubDirectory.CONF + File.separator + a.alias( ) + ".properties";
-    File propsFile = new File( propsFileName );
+    File propsFile = getPropertyFile( c );
     if( !propsFile.exists( ) ) {
       ConfigurationProperties.reset( c );
     }
@@ -123,7 +119,7 @@ public class ConfigurationProperties {
             f.set( null, fieldTypeMap.get( c.getName( )+f.getName( ) ).parse( value ) );
             LOG.debug( "-> " + canonicalize( c, f ) + " = " + f.get( null ) );
           } catch ( Exception e ) {
-            LOG.warn( "Failed to parse " + propsFileName + " " + canonicalize( c, f ) + " = " + value + "as type " + fieldTypeMap.get( canonicalize( c, f ) ), e );
+            LOG.warn( "Failed to parse " + propsFile.getName( ) + " " + canonicalize( c, f ) + " = " + value + "as type " + fieldTypeMap.get( canonicalize( c, f ) ), e );
           }
         }
       } catch ( Exception e ) {
@@ -131,15 +127,64 @@ public class ConfigurationProperties {
       }
     }
     if( !missingFields.isEmpty( ) ) {
-      throw new RuntimeException( "Failed to parse values from " + propsFileName + ": " + missingFields );
+      throw new RuntimeException( "Failed to parse values from " + propsFile.getName( ) + ": " + missingFields );
     }
+  }
+
+  private static File getPropertyFile( Class c ) {
+    ConfigurableClass a = getAnnotation( c );
+    String propsFileName = SubDirectory.CONF + File.separator + a.alias( ) + ".properties";
+    File propsFile = new File( propsFileName );
+    return propsFile;
+  }
+
+  private static ConfigurableClass getAnnotation( Class c ) {
+    ConfigurableClass a = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
+    if( a == null ) {
+      throw new RuntimeException( "Attempt to configure a class which does not declare itself Configurable: " + c.getName( ) );
+    }
+    return a;
   }
   
   public static void store( Class c ) {
-    
+    File propsFile = getPropertyFile( c );
+    Properties props = new Properties( );
+    for( Class member : fileToClassMap.get( getAnnotation( c ).alias( ) ) ) {
+      for( String fieldName : classToFieldMap.get( member ) ) {
+        try {
+          Field f = c.getDeclaredField( fieldName );
+          Configurable fieldConf = f.getAnnotation( Configurable.class );
+          if( fieldConf == null ) {
+            continue;
+          } else {
+            props.put( f.getName( ), f.get( null ) );
+          }
+        } catch ( Exception e ) {
+          LOG.debug( e, e );
+        }        
+      }
+    }
+    try {
+      props.store( new FileWriter( propsFile ), "Yay." );
+    } catch ( IOException e ) {
+      LOG.warn( e, e );
+    }
   }
   
   public static void reset( Class c ) {
+    for( String fieldName : classToFieldMap.get( c ) ) {
+      try {
+        Field f = c.getDeclaredField( fieldName );
+        Configurable fieldConf = f.getAnnotation( Configurable.class );
+        if( fieldConf == null ) {
+          continue;
+        } else {
+          f.set( null, fieldTypeMap.get( canonicalize( c, f ) ).parse( fieldConf.initial( ) ) );
+        }
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }        
+    }
     
   }
   
