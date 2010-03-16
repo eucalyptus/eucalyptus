@@ -74,18 +74,20 @@ import org.bouncycastle.util.encoders.Base64;
 
 import java.util.Date;
 
-public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputType> {
+public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
   
   private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
   
-  public ConsoleOutputCallback( ) {}
+  public ConsoleOutputCallback( GetConsoleOutputType msg ) {
+    this.setRequest( msg );
+  }
   
   
   @Override
   public void prepare( GetConsoleOutputType msg ) throws Exception {}
   
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
+  public void verify( BaseMessage msg ) throws Exception {
     this.verify( ( GetConsoleOutputResponseType ) msg );
   }
   

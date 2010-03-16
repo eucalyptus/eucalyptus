@@ -81,7 +81,7 @@ import org.apache.log4j.Logger;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
+public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType,StopNetworkResponseType> {
   private static Logger LOG = Logger.getLogger( StopNetworkCallback.class );
   private NetworkToken  token;
 
@@ -92,7 +92,7 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
   }
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {}
+  public void verify( BaseMessage msg ) throws Exception {}
 
   @Override
   public void prepare( StopNetworkType msg ) throws Exception {
@@ -108,7 +108,7 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType> {
   }
 
   @Override
-  public MultiClusterCallback<StopNetworkType> newInstance( ) {
+  public MultiClusterCallback<StopNetworkType,StopNetworkResponseType> newInstance( ) {
     return new StopNetworkCallback( token );
   }
 

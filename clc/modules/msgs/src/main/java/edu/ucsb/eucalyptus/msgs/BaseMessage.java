@@ -45,7 +45,7 @@ public class BaseMessage {
   public void setEffectiveUserId( String effectiveUserId ) {
     this.effectiveUserId = effectiveUserId;
   }
-  public boolean is_return( ) {
+  public boolean get_return( ) {
     return this._return;
   }
   public void set_return( boolean return1 ) {
@@ -72,12 +72,21 @@ public class BaseMessage {
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg ) {
     return regarding( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
   }
-  
+
+  public <TYPE extends BaseMessage> TYPE regardingUser( BaseMessage msg ) {
+    return regarding( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
+  }
+
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg, String subCorrelationId ) {
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
     return regarding( );
   }
   
+  public <TYPE extends BaseMessage> TYPE regardingUser( BaseMessage msg, String subCorrelationId ) {
+    this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
+    return (TYPE) this;
+  }
+
   public boolean isAdministrator( ) {
     return "eucalyptus".equals( this.effectiveUserId );
   }

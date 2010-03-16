@@ -83,6 +83,7 @@ import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
@@ -116,7 +117,7 @@ public class ClusterState {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
         new UnassignAddressCallback( address ).then( new SuccessCallback( ) {
           @Override
-          public void apply( Object t ) {
+          public void apply( BaseMessage t ) {
             if ( addr.isSystemOwned( ) ) {
               Addresses.getAddressManager( ).releaseSystemAddress( addr );
             }

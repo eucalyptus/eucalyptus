@@ -78,18 +78,19 @@ import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public class VmRunCallback extends QueuedEventCallback<VmRunType> {
+public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseType> {
 
   private static Logger LOG = Logger.getLogger( VmRunCallback.class );
 
   private ClusterAllocator parent;
   private ResourceToken token;
   
-  public VmRunCallback( final ClusterAllocator parent, final ResourceToken token ) {
+  public VmRunCallback( final VmRunType msg, final ClusterAllocator parent, final ResourceToken token ) {
     this.parent = parent;
     this.token = token;
+    this.setRequest( msg );
   }
 
   public void prepare( final VmRunType msg ) throws Exception {
@@ -102,7 +103,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType> {
     }
   }
 
-  public void verify( EucalyptusMessage response ) throws Exception {
+  public void verify( BaseMessage response ) throws Exception {
     VmRunResponseType reply = (VmRunResponseType) response; 
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );

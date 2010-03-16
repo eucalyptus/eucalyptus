@@ -68,14 +68,15 @@ import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 import com.eucalyptus.bootstrap.Component;
 
-public class INTERNAL extends EucalyptusMessage {
-  
-  def INTERNAL() {
-    super();
-    this.userId = "eucalyptus";
-    this.effectiveUserId = "eucalyptus";
-  }
-}
+//TODO: Remove me
+//public class INTERNAL extends EucalyptusMessage {
+//  
+//  def INTERNAL() {
+//    super();
+//    this.userId = "eucalyptus";
+//    this.effectiveUserId = "eucalyptus";
+//  }
+//}
 
 public class HeartbeatType extends EucalyptusMessage {
   ArrayList<HeartbeatComponentType> components = new ArrayList<HeartbeatComponentType>();

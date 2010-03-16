@@ -198,8 +198,7 @@ public class VmRunType extends EucalyptusMessage {
 
   def VmRunType() {}
 
-  def VmRunType(final RunInstancesType request,
-                final String reservationId, final String userData, final int amount,
+  def VmRunType(final String reservationId, final String userData, final int amount,
                 final VmImageInfo imageInfo, final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
                 final List<String> instanceIds, final List<String> macAddresses,
                 final int vlan, final List<String> networkNames, final List<String> networkIndexList ) {

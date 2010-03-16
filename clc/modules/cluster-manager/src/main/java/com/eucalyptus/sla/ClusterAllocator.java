@@ -64,6 +64,7 @@
 package com.eucalyptus.sla;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -78,6 +79,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.util.LogUtil;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -93,35 +95,32 @@ import edu.ucsb.eucalyptus.cloud.VmRunType;
 import edu.ucsb.eucalyptus.cloud.cluster.ConfigureNetworkCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.MultiClusterCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.StartNetworkCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.cluster.VmRunCallback;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator extends Thread {
   
-  private static Logger                      LOG = Logger.getLogger( ClusterAllocator.class );
-  
-  private State                              state;
-  private AtomicBoolean                      rollback;
-  private Multimap<State, QueuedEvent>       msgMap;
-  private Cluster                            cluster;
-  private ConcurrentLinkedQueue<QueuedEvent> pendingEvents;
-  private VmAllocationInfo                   vmAllocInfo;
+  private static Logger                              LOG            = Logger.getLogger( ClusterAllocator.class );
+  public static Boolean                              SPLIT_REQUESTS = true;
+  private State                                      state;
+  private AtomicBoolean                              rollback;
+  private Multimap<State, QueuedEventCallback>       msgMap;
+  private Cluster                                    cluster;
+  private ConcurrentLinkedQueue<QueuedEventCallback> pendingEvents;
+  private VmAllocationInfo                           vmAllocInfo;
   
   public ClusterAllocator( ResourceToken vmToken, VmAllocationInfo vmAllocInfo ) {
     this.msgMap = Multimaps.newHashMultimap( );
-    this.vmAllocInfo = vmAllocInfo;
-    this.pendingEvents = new ConcurrentLinkedQueue<QueuedEvent>( );
+    this.pendingEvents = new ConcurrentLinkedQueue<QueuedEventCallback>( );
     this.state = State.START;
     this.rollback = new AtomicBoolean( false );
+    this.vmAllocInfo = vmAllocInfo;
     if ( vmToken != null ) {
       try {
         this.cluster = Clusters.getInstance( ).lookup( vmToken.getCluster( ) );
@@ -158,12 +157,16 @@ public class ClusterAllocator extends Thread {
       }
     }
   }
-
+  
+  private void addRequest( State state, QueuedEventCallback callback ) {
+    this.msgMap.put( State.CREATE_NETWORK, callback );
+  }
+  
   @SuppressWarnings( "unchecked" )
   public void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
-      StartNetworkType msg = new StartNetworkType( this.vmAllocInfo.getRequest( ), networkToken.getVlan( ), networkToken.getNetworkName( ) );
-      this.msgMap.put( State.CREATE_NETWORK, QueuedEvent.make( new StartNetworkCallback( networkToken ), msg ) );
+      QueuedEventCallback callback = new StartNetworkCallback( networkToken ).regarding( vmAllocInfo.getRequest( ) );
+      this.msgMap.put( State.CREATE_NETWORK, callback );
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest( );
@@ -175,7 +178,7 @@ public class ClusterAllocator extends Thread {
         msg.setUserId( networkToken.getUserName( ) );
         msg.setEffectiveUserId( networkToken.getUserName( ) );
         if ( !network.getRules( ).isEmpty( ) ) {
-          this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, msg ) );
+          this.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( msg ) );
         }
         //:: need to refresh the rules on the backend for all active networks which point to this network :://
         for ( Network otherNetwork : Networks.getInstance( ).listValues( ) ) {
@@ -185,7 +188,9 @@ public class ClusterAllocator extends Thread {
             ConfigureNetworkType omsg = new ConfigureNetworkType( otherNetwork.getRules( ) );
             omsg.setUserId( otherNetwork.getUserName( ) );
             omsg.setEffectiveUserId( Component.eucalyptus.name( ) );
-            this.msgMap.put( State.CREATE_NETWORK_RULES, QueuedEvent.make( ConfigureNetworkCallback.CALLBACK, omsg ) );
+            if ( !otherNetwork.getRules( ).isEmpty( ) ) {
+              this.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( omsg ) );
+            }
           }
         }
       }
@@ -193,19 +198,14 @@ public class ClusterAllocator extends Thread {
   }
   
   public void setupVmMessages( final ResourceToken token ) {
-    List<String> macs = Lists.newArrayList( );
-
-    for ( String instanceId : token.getInstanceIds() )
-      macs.add( VmInstances.getAsMAC( instanceId ) );
-
     Integer vlan = null;
     List<String> networkNames = null;
     ArrayList<String> networkIndexes = Lists.newArrayList( );
-    if( token.getPrimaryNetwork() != null ) {
+    if ( token.getPrimaryNetwork( ) != null ) {
       vlan = token.getPrimaryNetwork( ).getVlan( );
       if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
       networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getNetworkName( ) );
-      for( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
+      for ( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
         networkIndexes.add( index.toString( ) );
       }
     } else {
@@ -215,48 +215,58 @@ public class ClusterAllocator extends Thread {
     }
     
     final List<String> addresses = Lists.newArrayList( token.getAddresses( ) );
-    RunInstancesType request = this.vmAllocInfo.getRequest();
-    VmImageInfo imgInfo = this.vmAllocInfo.getImageInfo();
-    VmTypeInfo vmInfo = this.vmAllocInfo.getVmTypeInfo();
-    String rsvId = this.vmAllocInfo.getReservationId();
-    VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo();
+    RunInstancesType request = this.vmAllocInfo.getRequest( );
+    String rsvId = this.vmAllocInfo.getReservationId( );
+    VmImageInfo imgInfo = this.vmAllocInfo.getImageInfo( );
+    VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo( );
+    VmTypeInfo vmInfo = this.vmAllocInfo.getVmTypeInfo( );
+    String userData = this.vmAllocInfo.getUserData( );
+    QueuedEventCallback cb = null;
     try {
       int index = 0;
-      for( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        VmRunType run = new VmRunType( request, rsvId, request.getUserData(), 1, imgInfo, vmInfo, keyInfo, 
-                                       Lists.newArrayList( token.getInstanceIds().get( index ) ), 
-                                       Lists.newArrayList( macs.get( index ) ), vlan, networkNames, 
-                                       Lists.newArrayList( networkIndexes.get( index ) ) );
-        QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, childToken );
-        final String address = addresses.get( index );
-        if( !addresses.isEmpty( ) ) {
-          cb.then( new SuccessCallback<VmRunResponseType>( ) {
-            @Override public void apply( VmRunResponseType response ) {
-              for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
-                Address addr = Addresses.getInstance().lookup( address );
-                VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
-                AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
-            }
-          }});
+      for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
+        List<String> instanceIds = Lists.newArrayList( token.getInstanceIds( ).get( index ) );
+        List<String> netIndexes = Lists.newArrayList( networkIndexes.get( index ) );
+        List<String> addrList = Lists.newArrayList( );
+        if ( !addresses.isEmpty( ) ) {
+          addrList.add( addresses.get( index ) );
         }
-        this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( cb, run ) );
+        cb = makeRunRequest( childToken, rsvId, instanceIds, imgInfo, keyInfo, vmInfo, vlan, networkNames, netIndexes, addrList, userData );
+        this.addRequest( State.CREATE_VMS, cb );
         index++;
       }
     } catch ( NoSuchTokenException e ) {
-      VmRunType run = new VmRunType( request, rsvId, request.getUserData(), token.getAmount(), imgInfo, vmInfo, keyInfo, token.getInstanceIds(), macs, vlan, networkNames, networkIndexes );
-      QueuedEventCallback<VmRunType> cb = new VmRunCallback( this, token );
-      if( !addresses.isEmpty( ) ) {
-        cb.then( new SuccessCallback<VmRunResponseType>( ) {
-          @Override public void apply( VmRunResponseType response ) {
-            for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
-              Address addr = Addresses.getInstance().lookup( addresses.remove( 0 ) );
-              VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
-              AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
-          }
-        }});
-      }
-      this.msgMap.put( State.CREATE_VMS, QueuedEvent.make( cb, run ) );
+      cb = makeRunRequest( token, rsvId, token.getInstanceIds( ), imgInfo, keyInfo, vmInfo, vlan, networkNames, networkIndexes, addresses, userData );
     }
+    this.addRequest( State.CREATE_VMS, cb );
+  }
+  
+  private QueuedEventCallback makeRunRequest( ResourceToken childToken, String rsvId, List<String> instanceIds, 
+                                                         VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, 
+                                                         Integer vlan, List<String> networkNames, List<String> netIndexes, 
+                                                         final List<String> addrList, String userData ) {
+    List<String> macs = Lists.transform( instanceIds, new Function<String, String>( ) {
+      @Override
+      public String apply( String instanceId ) {
+        return VmInstances.getAsMAC( instanceId );
+      }
+    } );
+    VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), imgInfo, vmInfo, keyInfo, instanceIds, macs, vlan, networkNames, netIndexes );
+    VmRunCallback cb = new VmRunCallback( run, this, childToken );
+    if ( !addrList.isEmpty( ) ) {
+      cb.then( new SuccessCallback<VmRunResponseType>( ) {
+        @Override
+        public void apply( VmRunResponseType response ) {
+          Iterator<String> addrs = addrList.iterator( );
+          for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
+            Address addr = Addresses.getInstance( ).lookup( addrs.next( ) );
+            VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
+            AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
+          }
+        }
+      } );
+    }
+    return cb;
   }
   public void setState( final State state ) {
     this.clearQueue( );
@@ -297,11 +307,11 @@ public class ClusterAllocator extends Thread {
   }
   
   public void clearQueue( ) {
-    QueuedEvent event = null;
+    QueuedEventCallback event = null;
     while ( ( event = this.pendingEvents.poll( ) ) != null ) {
       Object o = null;
       try {
-        o = event.getCallback( ).getResponse( );
+        o = event.getResponse( );
       } catch ( Throwable t ) {
         LOG.debug( t, t );
         this.rollback.lazySet( true );
@@ -312,13 +322,13 @@ public class ClusterAllocator extends Thread {
   
   @SuppressWarnings( "unchecked" )
   private void queueEvents( ) {
-    for ( QueuedEvent event : this.msgMap.get( this.state ) ) {
-      if ( event.getCallback( ) instanceof MultiClusterCallback ) {
-        MultiClusterCallback callback = ( MultiClusterCallback ) event.getCallback( );
-        this.pendingEvents.addAll( callback.fireEventAsyncToAllClusters( ( EucalyptusMessage ) event.getEvent( ) ) );
+    for ( QueuedEventCallback event : this.msgMap.get( this.state ) ) {
+      if ( event instanceof MultiClusterCallback ) {
+        MultiClusterCallback callback = ( MultiClusterCallback ) event;
+        this.pendingEvents.addAll( callback.fireEventAsyncToAllClusters( callback.getRequest( ) ) );
       } else {
         this.pendingEvents.add( event );
-        this.cluster.getMessageQueue( ).enqueue( event );
+        Clusters.dispatchEvent( cluster, event );
       }
     }
   }

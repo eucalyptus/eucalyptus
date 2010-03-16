@@ -73,10 +73,11 @@ import com.eucalyptus.ws.client.Client;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
-public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType> {
+public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType,StartNetworkResponseType> {
 
   private static Logger    LOG = Logger.getLogger( StartNetworkCallback.class );
 
@@ -84,10 +85,12 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
 
   public StartNetworkCallback( final NetworkToken networkToken ) {
     this.networkToken = networkToken;
+    StartNetworkType msg = new StartNetworkType( networkToken.getVlan( ), networkToken.getNetworkName( ) );
+    this.setRequest( msg );
   }
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
+  public void verify( BaseMessage msg ) throws Exception {
     try {
       Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
     } catch ( Throwable e ) {
@@ -107,7 +110,7 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType>
   }
 
   @Override
-  public MultiClusterCallback<StartNetworkType> newInstance( ) {
+  public MultiClusterCallback<StartNetworkType,StartNetworkResponseType> newInstance( ) {
     return new StartNetworkCallback( networkToken );
   }
 

@@ -69,18 +69,14 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import org.apache.avalon.framework.configuration.Configurable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Cluster implements HasName {
@@ -158,11 +154,6 @@ public class Cluster implements HasName {
     return new RegisterClusterType( this.getName( ), host, port );
   }
 
-  public void fireEventAsync( QueuedEvent e ) {
-    LOG.debug( "Queueing message for " + this.getUri( ) + LogUtil.dumpObject( e ) );
-    this.mq.enqueue( e );
-  }
-  
   public ClusterMessageQueue getMessageQueue( ) {
     return this.mq;
   }
@@ -225,10 +216,6 @@ public class Cluster implements HasName {
     }
 
     
-  }
-
-  public void sendEvent( QueuedEvent event ) throws Exception {
-    Clusters.sendClusterEvent( this, event );
   }
 
   @Override

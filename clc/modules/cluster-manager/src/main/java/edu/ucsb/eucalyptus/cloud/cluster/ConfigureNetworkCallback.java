@@ -69,27 +69,29 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 
+import edu.ucsb.eucalyptus.msgs.ConfigureNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
-public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetworkType> {
-  public static ConfigureNetworkCallback CALLBACK = new ConfigureNetworkCallback( ); 
+public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetworkType,ConfigureNetworkResponseType> {
   private static Logger LOG = Logger.getLogger( ConfigureNetworkCallback.class );
 
-  public ConfigureNetworkCallback( ) {}
+  public ConfigureNetworkCallback( ConfigureNetworkType request ) {
+    this.setRequest( request );
+  }
 
   @Override
   public void prepare( ConfigureNetworkType msg ) throws Exception {
     LOG.debug("Sending configure network rules for: " + msg.getUserId( ) + "\n" + LogUtil.dumpObject( msg.getRules( ) ) );
   }
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
+  public void verify( BaseMessage msg ) throws Exception {
     
   }
   @Override
-  public MultiClusterCallback<ConfigureNetworkType> newInstance( ) {
-    return new ConfigureNetworkCallback( );
+  public MultiClusterCallback<ConfigureNetworkType,ConfigureNetworkResponseType> newInstance( ) {
+    return new ConfigureNetworkCallback( this.getRequest( ) );
   }
   @Override
   public void fail( Throwable e ) {

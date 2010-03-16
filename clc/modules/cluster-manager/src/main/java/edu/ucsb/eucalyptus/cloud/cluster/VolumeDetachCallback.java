@@ -66,18 +66,20 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
-public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType> {
+public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType,DetachVolumeResponseType> {
   
   private static Logger LOG = Logger.getLogger( VolumeDetachCallback.class );
   
-  public VolumeDetachCallback( ) {}
+  public VolumeDetachCallback( DetachVolumeType request ) {
+    this.setRequest( request );
+  }
   
   @Override
   public void prepare( DetachVolumeType msg ) throws Exception {
@@ -85,7 +87,7 @@ public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType> 
   }
   
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
+  public void verify( BaseMessage msg ) throws Exception {
     DetachVolumeResponseType reply = (DetachVolumeResponseType) msg;
     if ( reply.get_return( ) ) {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );

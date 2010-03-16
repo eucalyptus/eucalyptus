@@ -66,11 +66,12 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-public class TerminateCallback extends QueuedEventCallback<TerminateInstancesType> {
+public class TerminateCallback extends QueuedEventCallback<TerminateInstancesType,TerminateInstancesResponseType> {
   
   private static Logger LOG = Logger.getLogger( TerminateCallback.class );
   private String        instanceId;
@@ -86,7 +87,7 @@ public class TerminateCallback extends QueuedEventCallback<TerminateInstancesTyp
   }
   
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
+  public void verify( BaseMessage msg ) throws Exception {
     LOG.info( EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATED, LogUtil.dumpObject( msg ) ) );
   }
   

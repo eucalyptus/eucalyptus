@@ -66,7 +66,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.util.LogUtil;
@@ -75,16 +75,19 @@ import org.apache.log4j.Logger;
 
 import java.util.NoSuchElementException;
 
-public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType> {
+public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType,AttachVolumeResponseType> {
 
   private static Logger LOG = Logger.getLogger( VolumeAttachCallback.class );
-  public VolumeAttachCallback( ) {}
+  public VolumeAttachCallback( AttachVolumeType request ) {
+    this.setRequest( request );
+  }
+  
 
   @Override
   public void prepare( AttachVolumeType msg ) throws Exception {}
 
   @Override
-  public void verify( EucalyptusMessage response ) throws Exception {
+  public void verify( BaseMessage response ) throws Exception {
     AttachVolumeResponseType reply = (AttachVolumeResponseType) response;
     if ( !reply.get_return( ) ) {
       LOG.debug( "Trying to remove invalid volume attachment " + this.getRequest().getVolumeId( ) + " from instance " + this.getRequest().getInstanceId( ) );

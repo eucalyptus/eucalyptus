@@ -72,11 +72,12 @@ import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.constants.VmState;
+import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
-public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType> {
+public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType,AssignAddressResponseType> {
   private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
   
   private Address       address;
@@ -104,7 +105,7 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
   
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {
+  public void verify( BaseMessage msg ) throws Exception {
     try {
       this.updateState( );
       this.address.clearPending( );

@@ -70,7 +70,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.NioResponseHandler;
+import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
@@ -79,7 +79,7 @@ import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
 public class ClusterClientPipeline extends NioClientPipeline {
-  public ClusterClientPipeline( final NioResponseHandler handler ) throws GeneralSecurityException {
+  public ClusterClientPipeline( final ResponseHandler handler ) throws GeneralSecurityException {
     super( handler, "eucalyptus_ucsb_edu", new ClusterWsSecHandler( ) );
   }
   

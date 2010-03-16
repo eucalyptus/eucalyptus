@@ -63,7 +63,8 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 
 import com.eucalyptus.cluster.Cluster;
@@ -72,17 +73,22 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.Client;
 import org.apache.log4j.Logger;
 
-public class RebootCallback extends QueuedEventCallback<RebootInstancesType> {
+public class RebootCallback extends QueuedEventCallback<RebootInstancesType,RebootInstancesResponseType> {
 
   private static Logger LOG = Logger.getLogger( RebootCallback.class );
 
-  public RebootCallback( ) {}
+  public RebootCallback( String instanceId ) {
+    this.setRequest( new RebootInstancesType( instanceId ) );
+  }
+  public RebootCallback( RebootInstancesType msg ) {
+    this.setRequest( msg );
+  }
 
   @Override
   public void prepare( RebootInstancesType msg ) throws Exception {}
 
   @Override
-  public void verify( EucalyptusMessage msg ) throws Exception {}
+  public void verify( BaseMessage msg ) throws Exception {}
 
   @Override
   public void fail( Throwable e ) {

@@ -85,7 +85,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeAttachCallback;
@@ -316,8 +315,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException("Volume is not yet available: " + request.getVolumeId());
     }
     request.setRemoteDevice( volume.getRemoteDevice() );
-    QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback(  ), request );
-    cluster.getMessageQueue().enqueue( event );
+    Clusters.dispatchEvent( cluster, new VolumeAttachCallback( request ) );
 
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice() );
     attachVol.setStatus( "attaching" );
@@ -373,8 +371,7 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice() );
     request.setDevice( volume.getDevice().replaceAll("unknown,requested:","") );
     request.setInstanceId( vm.getInstanceId() );
-    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( ), request );
-    cluster.getMessageQueue().enqueue( event );
+    Clusters.dispatchEvent( cluster, new VolumeDetachCallback( request ) );
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     return reply;

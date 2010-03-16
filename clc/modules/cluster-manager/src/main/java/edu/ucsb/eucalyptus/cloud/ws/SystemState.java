@@ -91,7 +91,6 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.cluster.ConsoleOutputCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.RebootCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
@@ -102,11 +101,9 @@ import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
-import edu.ucsb.eucalyptus.msgs.INTERNAL;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
@@ -422,12 +419,6 @@ public class SystemState {
     return reply;
   }
   
-  private static void dispatchReboot( final String clusterName, final String instanceId, final EucalyptusMessage request ) {
-    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    QueuedEvent event = QueuedEvent.make( new RebootCallback( ), new RebootInstancesType( instanceId ).regarding( request ) );
-    cluster.getMessageQueue( ).enqueue( event );
-  }
-  
   public static void handle( GetConsoleOutputType request ) throws Exception {
     GetConsoleOutputResponseType reply = ( GetConsoleOutputResponseType ) request.getReply( );
     reply.set_return( true );
@@ -437,9 +428,12 @@ public class SystemState {
       if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
         cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
       }
-      if ( !VmState.RUNNING.equals( v.getState( ) ) ) throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
-      QueuedEvent<GetConsoleOutputType> event = QueuedEvent.make( new ConsoleOutputCallback( ), request );
-      if ( cluster != null ) cluster.getMessageQueue( ).enqueue( event );
+      if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
+        throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
+      }
+      if ( cluster != null ) {
+        Clusters.dispatchEvent( cluster, new ConsoleOutputCallback( request ) );
+      }
       return;
     } catch ( NoSuchElementException e ) {
       Messaging.dispatch( "vm://ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext( ).getService( ).getComponent( ).getClass( )
@@ -455,7 +449,7 @@ public class SystemState {
       try {
         VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
         if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
-          SystemState.dispatchReboot( v.getPlacement( ), v.getInstanceId( ), new INTERNAL( ) );
+          Clusters.dispatchEvent( v.getPlacement( ), new RebootCallback( v.getInstanceId( ) ).regarding( request ) );
         }
       } catch ( NoSuchElementException e ) {
         throw new EucalyptusCloudException( e.getMessage( ) );

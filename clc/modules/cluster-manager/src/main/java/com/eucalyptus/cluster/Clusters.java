@@ -73,9 +73,7 @@ import com.eucalyptus.event.AbstractNamedRegistry;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
@@ -113,47 +111,26 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   }
   
   @SuppressWarnings( "unchecked" )
-  public static void sendClusterEvent( String clusterName, QueuedEvent event ) throws NoSuchElementException {
+  public static void sendEvent( String clusterName, QueuedEventCallback event ) throws NoSuchElementException {
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    Clusters.sendClusterEvent( cluster, event );
+    Clusters.sendEvent( cluster, event );
   }
   
   @SuppressWarnings( "unchecked" )
-  public static void sendClusterEvent( Cluster cluster, QueuedEvent event ) throws NoSuchElementException {
-    event.getCallback( ).fire( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ), event.getEvent( ) );
+  public static void sendEvent( Cluster cluster, QueuedEventCallback event ) throws NoSuchElementException {
+    event.fire( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ) );
+    event.waitForResponse( );
   }
   
-    @SuppressWarnings( "unchecked" )
-    public static void dispatchClusterEvent( Cluster cluster, QueuedEventCallback callback, EucalyptusMessage msg ) throws NoSuchElementException {
-      cluster.getMessageQueue( ).enqueue( QueuedEvent.make( callback, msg ) );
-    }
+  @SuppressWarnings( "unchecked" )
+  public static void dispatchEvent( Cluster cluster, QueuedEventCallback callback ) throws NoSuchElementException {
+    cluster.getMessageQueue( ).enqueue( callback );
+  }
   
-    @SuppressWarnings( "unchecked" )
-    public static void sendClusterEvent( Cluster cluster, QueuedEventCallback callback ) throws NoSuchElementException {
-      Clusters.sendClusterEvent( cluster, QueuedEvent.make( callback, callback.getRequest( ) ) );
-    }
-  
-    @SuppressWarnings( "unchecked" )
-    public static void sendClusterEvent( String clusterName, QueuedEventCallback callback ) throws NoSuchElementException {
-      Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-      Clusters.sendClusterEvent( cluster, QueuedEvent.make( callback, callback.getRequest( ) ) );
-    }
-  
-    @SuppressWarnings( "unchecked" )
-    public static void dispatchClusterEvent( Cluster cluster, QueuedEventCallback callback ) throws NoSuchElementException {
-      cluster.getMessageQueue( ).enqueue( QueuedEvent.make( callback, callback.getRequest( ) ) );
-    }
-  
-    @SuppressWarnings( "unchecked" )
-    public static void dispatchClusterEvent( String clusterName, QueuedEventCallback callback ) throws NoSuchElementException {
-      Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-      Clusters.dispatchClusterEvent( cluster, callback );
-    }
-  
-    @SuppressWarnings( "unchecked" )
-    public static void dispatchClusterEvent( String clusterName, QueuedEventCallback callback, EucalyptusMessage msg ) throws NoSuchElementException {
-      Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-      Clusters.dispatchClusterEvent( cluster, callback, msg );
-    }
-  
+  @SuppressWarnings( "unchecked" )
+  public static void dispatchEvent( String clusterName, QueuedEventCallback callback ) throws NoSuchElementException {
+    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+    Clusters.dispatchEvent( cluster, callback );
+  }
+    
 }
