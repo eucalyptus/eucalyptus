@@ -24,7 +24,7 @@ public abstract class MultiClusterCallback<TYPE extends BaseMessage,RTYPE extend
       LOG.debug( LogUtil.dumpObject( msg ) );
       try {
         MultiClusterCallback<TYPE,RTYPE> newThis = this.newInstance( );
-        c.getMessageQueue().enqueue( newThis.regardingUser( msg ) );
+        Clusters.dispatchEvent( c, newThis.regardingUser( msg ) );
         callbackList.add( newThis );
       } catch ( final Throwable e ) {
         LOG.error( "Error while sending to: " + c.getUri( ) + " " + msg.getClass( ).getSimpleName( ) );

@@ -127,8 +127,7 @@ public class ClusterMessageQueue implements Runnable {
   public void enqueue( final QueuedEventCallback callback ) {
     QueuedEvent event = QueuedEvent.make( callback );
     LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent( ).toString( ) ) );
-    LOG
-       .trace( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent( ).toString( ) ), new Exception( ) );
+    LOG.trace( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent( ).toString( ) ), new Exception( ) );
     if ( !this.checkDuplicates( event ) ) {
       try {
         while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) ) {
