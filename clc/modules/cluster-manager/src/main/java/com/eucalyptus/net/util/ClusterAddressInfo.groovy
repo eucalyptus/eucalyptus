@@ -2,7 +2,7 @@ package com.eucalyptus.net.util;
 
 import com.google.common.collect.Lists;
 
-public class ClusterAddressInfo {
+public class ClusterAddressInfo implements Comparable<ClusterAddressInfo> {
   int orphanCount;
   String address;
   String instanceIp;
@@ -25,6 +25,10 @@ public class ClusterAddressInfo {
     int result = 1;
     result = prime * result + ( ( this.address == null ) ? 0 : this.address.hashCode( ) );
     return result;
+  }
+  
+  public int compareTo( ClusterAddressInfo that ) {
+    return ( this.address + this.instanceIp ).compareTo( that.address + that.instanceIp );
   }
   
   @Override
