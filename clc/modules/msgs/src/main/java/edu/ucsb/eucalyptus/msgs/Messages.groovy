@@ -148,7 +148,7 @@ public class WalrusStateType extends EucalyptusMessage{
 }
 
 
-public class EucalyptusMessage implements Cloneable, Serializable {
+public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
   
   String correlationId;
   String userId;
@@ -157,7 +157,7 @@ public class EucalyptusMessage implements Cloneable, Serializable {
   String statusMessage;
   
   public EucalyptusMessage() {
-    this.correlationId = UUID.randomUUID();
+    super();
   }
   
   public EucalyptusMessage( EucalyptusMessage msg ) {
@@ -177,66 +177,6 @@ public class EucalyptusMessage implements Cloneable, Serializable {
     return metaClass;
   }
   
-  public String getEffectiveUserId() {
-    if ( isAdministrator() ) return "eucalyptus";
-    return effectiveUserId;
-  }
-  
-  public boolean isAdministrator() {
-    return "eucalyptus".equals(this.effectiveUserId);
-  }
-  
-  public String toString() {
-    ByteArrayOutputStream temp = new ByteArrayOutputStream();
-    Class targetClass = this.getClass();
-    while ( !targetClass.getSimpleName().endsWith("Type") ) targetClass = targetClass.getSuperclass();
-    IBindingFactory bindingFactory = null;
-    try {
-      bindingFactory = BindingDirectory.getFactory("msgs_eucalyptus_ucsb_edu", targetClass);
-    } catch( Throwable t ) {
-      bindingFactory = BindingDirectory.getFactory("eucalyptus_ucsb_edu", targetClass);
-    }
-    IMarshallingContext mctx = bindingFactory.createMarshallingContext();
-    mctx.setIndent(2);
-    mctx.marshalDocument(this, "UTF-8", null, temp);
-    return temp.toString();
-  }
-  
-  public String toString(String namespace) {
-    ByteArrayOutputStream temp = new ByteArrayOutputStream();
-    Class targetClass = this.getClass();
-    while ( !targetClass.getSimpleName().endsWith("Type") ) targetClass = targetClass.getSuperclass();
-    IBindingFactory bindingFactory = BindingDirectory.getFactory(namespace, targetClass);
-    IMarshallingContext mctx = bindingFactory.createMarshallingContext();
-    mctx.setIndent(2);
-    mctx.marshalDocument(this, "UTF-8", null, temp);
-    return temp;
-  }
-  
-  public Object clone() {
-    return super.clone();
-  }
-  
-  public EucalyptusMessage getReply() {
-    Class msgClass = this.getClass();
-    if ( !this.getClass().getSimpleName().endsWith("Type") )
-      msgClass = msgClass.getSuperclass();
-    Class responseClass = ClassLoader.getSystemClassLoader().loadClass(msgClass.getName().replaceAll("Type", "") + "ResponseType");
-    EucalyptusMessage reply = (EucalyptusMessage) responseClass.newInstance();
-    reply.setCorrelationId(this.getCorrelationId());
-    reply.setUserId(this.getUserId());
-    reply.setEffectiveUserId(this.getEffectiveUserId());
-    return reply;
-  }
-  
-  public Class getReplyType() {
-    Class msgClass = this.getClass();
-    if ( !this.getClass().getSimpleName().endsWith("Type") )
-      msgClass = msgClass.getSuperclass();
-    Class responseClass = ClassLoader.getSystemClassLoader().loadClass(msgClass.getName().replaceAll("Type", "") + "ResponseType");
-    return responseClass;
-  }
-
 }
 public class EucalyptusErrorMessageType extends EucalyptusMessage {
   
