@@ -112,5 +112,7 @@ public interface LogicalStorageManager {
 
 	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException;
 
-	public void setStorageParamNames(ArrayList<ComponentProperty> storageParams); 
+	public void getStorageProps(ArrayList<ComponentProperty> storageParams);
+
+	public void setStorageProps(ArrayList<ComponentProperty> storageParams); 
 }

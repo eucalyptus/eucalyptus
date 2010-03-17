@@ -353,10 +353,16 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void setStorageParamNames(ArrayList<ComponentProperty> storageParams) {
+	public void getStorageProps(ArrayList<ComponentProperty> storageParams) {
 		storageParams.add(new ComponentProperty("KEYVALUE", "SAN Host", StorageProperties.SAN_HOST));
 		storageParams.add(new ComponentProperty("KEYVALUE", "SAN Username", StorageProperties.SAN_USERNAME));
 		storageParams.add(new ComponentProperty("KEYVALUE", "SAN Password", StorageProperties.SAN_PASSWORD));
+	}
+
+	@Override
+	public void setStorageProps(ArrayList<ComponentProperty> storageParams) {
+		// TODO Auto-generated method stub
+		
 	}
 }
 

@@ -82,7 +82,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	private SystemConfigWeb systemConfig = new SystemConfigWeb ();
 	private String sessionId;
 	private int numStorageParams;
-	
+
 	public ClusterInfoTable(String sessionId)
 	{
 		this.sessionId = sessionId;
@@ -165,7 +165,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 	private Grid addClusterEntry ( int row, ClusterInfoWeb clusterInfo, final StorageInfoWeb storageInfo)
 	{
-		Grid g = new Grid (11 + (storageInfo.getStorageParams().size() / 2), 2);
+		Grid g = new Grid (11 + (storageInfo.getStorageParams().size() / 3), 2);
 		g.setStyleName( "euca-table" );
 		if (row > 0) {
 			g.setStyleName( "euca-nonfirst-cluster-entry" );
@@ -338,20 +338,43 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		});
 		g.setWidget( i, 1, new Label ("Zero-fill volumes") );*/
 
-		ArrayList<String> storageParams = storageInfo.getStorageParams();
-		numStorageParams = storageParams.size()/2;
+		final ArrayList<String> storageParams = storageInfo.getStorageParams();
+		numStorageParams = storageParams.size()/3;
 		for(String param : storageParams) {
 		}
 		for(int paramidx = 0; paramidx < numStorageParams; ++paramidx) {
-			i++; // next row	
-			g.setWidget( i, 0, new Label(storageParams.get(2*paramidx) + ": ") );
-			g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-			final TextBox lolBox = new TextBox();
-			lolBox.addChangeListener (new ChangeCallback (this, row));
-			lolBox.setVisibleLength( 30 );
-			lolBox.setText(storageParams.get(2*paramidx + 1));
-			lolBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-			g.setWidget( i, 1, lolBox );
+			i++; // next row
+			if ("KEYVALUE".equals(storageParams.get(3 * paramidx))) {
+				g.setWidget( i, 0, new Label(storageParams.get(3*paramidx + 1) + ": ") );
+				g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+				final TextBox propTextBox = new TextBox();
+				propTextBox.addChangeListener (new ChangeCallback (this, row));
+				propTextBox.setVisibleLength( 30 );
+				propTextBox.setText(storageParams.get(3*paramidx + 2));
+				propTextBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+				g.setWidget( i, 1, propTextBox );
+			} else if("BOOLEAN".equals(storageParams.get(3 * paramidx))) {
+				final int index = paramidx;
+				final CheckBox propCheckbox = new CheckBox ();
+				g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+				g.setWidget( i, 0, propCheckbox );
+				if (Boolean.parseBoolean(storageParams.get(3*index + 2))) {
+					propCheckbox.setChecked(true);
+				} else {
+					propCheckbox.setChecked(false);
+				}
+				propCheckbox.addClickListener (new ClickListener() {
+					public void onClick( Widget sender )
+					{
+						if (((CheckBox)sender).isChecked()) {
+							storageParams.set(3 * index + 2,  String.valueOf(true) );
+						} else {
+							storageParams.set(3 * index + 2,  String.valueOf(false) );
+						}
+					}
+				});
+				g.setWidget( i, 1, new Label (storageParams.get(paramidx * 3 + 1)) );
+			}
 		}
 
 		return g;
@@ -414,11 +437,12 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		/*storage.setSanHost (((TextBox)g.getWidget(11, 1)).getText());
 		storage.setSanUser (((TextBox)g.getWidget(12, 1)).getText());
 		storage.setSanPassword (((TextBox)g.getWidget(13, 1)).getText());
-*/
+		 */
 		int widgetStartIndex = 11;
 		ArrayList<String> storageParams = storage.getStorageParams();
 		for(int i = 0; i < numStorageParams; ++i) {
-			storageParams.set(2*i + 1, ((TextBox)g.getWidget(widgetStartIndex++, 1)).getText());
+			if("KEYVALUE".equals(storageParams.get(3 * i)))
+				storageParams.set(3*i + 2, ((TextBox)g.getWidget(widgetStartIndex++, 1)).getText());
 		}
 		//storage.setStorageParams(storageParams);
 		//storage.setDASPartition(((TextBox)g.getWidget(15, 1)).getText());

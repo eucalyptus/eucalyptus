@@ -1084,10 +1084,16 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void setStorageParamNames(ArrayList<ComponentProperty> storageParams) {
+	public void getStorageProps(ArrayList<ComponentProperty> storageParams) {
 		storageParams.add(new ComponentProperty("KEYVALUE", "Host", StorageProperties.NAME));
 		storageParams.add(new ComponentProperty("KEYVALUE", "Interface", StorageProperties.iface));
 		storageParams.add(new ComponentProperty("KEYVALUE", "Volumes Path", StorageProperties.storageRootDirectory));
+	}
+
+	@Override
+	public void setStorageProps(ArrayList<ComponentProperty> storageParams) {
+		// TODO Auto-generated method stub
+		
 	}
 }
 

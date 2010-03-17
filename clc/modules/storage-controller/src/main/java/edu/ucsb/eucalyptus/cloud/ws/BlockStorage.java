@@ -316,6 +316,7 @@ public class BlockStorage {
 			for(ComponentProperty param : request.getStorageParams()) {
 				LOG.info("Storage Param: " + param.getKey() + " Value: " + param.getValue());
 			}
+			blockManager.setStorageProps(request.getStorageParams());
 		}
 		updateConfig();
 		return reply;
@@ -335,7 +336,7 @@ public class BlockStorage {
 			reply.setDASDevice(StorageProperties.DAS_DEVICE);
 			reply.setName(StorageProperties.NAME);
 			ArrayList<ComponentProperty> storageParams = new ArrayList<ComponentProperty>();
-			blockManager.setStorageParamNames(storageParams);
+			blockManager.getStorageProps(storageParams);
 			reply.setStorageParams(storageParams);
 		}
 		return reply;

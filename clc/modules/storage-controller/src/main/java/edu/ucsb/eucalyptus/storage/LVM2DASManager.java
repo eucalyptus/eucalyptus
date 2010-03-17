@@ -424,7 +424,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 			throw new EucalyptusCloudException("Unable to create file " + fileName);
 		return createLoopback(fileName);
 	}
-*/
+	 */
 	//creates a logical volume (and a new physical volume and volume group)
 	public void createLogicalVolume(String lvName, int size) throws EucalyptusCloudException, ExecutionException {
 		String returnValue = createLogicalVolume(volumeGroup, lvName, size);
@@ -992,26 +992,43 @@ public class LVM2DASManager implements LogicalStorageManager {
 	public void loadSnapshots(List<String> snapshotSet,
 			List<String> snapshotFileNames) throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
-        @Override
-        public void finishSnapshot(String snapshotId) throws EucalyptusCloudException{
-                // TODO Auto-generated method stub
+	@Override
+	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException{
+		// TODO Auto-generated method stub
 
-        }
+	}
 
-        @Override
-        public String prepareSnapshot(String snapshotId, int sizeExpected)
-                        throws EucalyptusCloudException {
-                return StorageProperties.storageRootDirectory + File.separator + snapshotId;
-        }
+	@Override
+	public String prepareSnapshot(String snapshotId, int sizeExpected)
+	throws EucalyptusCloudException {
+		return StorageProperties.storageRootDirectory + File.separator + snapshotId;
+	}
 
-		@Override
-		public void setStorageParamNames(ArrayList<ComponentProperty> storageParams) {
-			storageParams.add(new ComponentProperty("KEYVALUE", "Host", StorageProperties.NAME));
-			storageParams.add(new ComponentProperty("KEYVALUE", "Interface", StorageProperties.iface));
-			storageParams.add(new ComponentProperty("KEYVALUE", "Volumes Path", StorageProperties.storageRootDirectory));
-			storageParams.add(new ComponentProperty("KEYVALUE", "DAS Device", StorageProperties.DAS_DEVICE));
+	@Override
+	public void getStorageProps(ArrayList<ComponentProperty> storageParams) {
+		storageParams.add(new ComponentProperty("KEYVALUE", "Host", StorageProperties.NAME));
+		storageParams.add(new ComponentProperty("KEYVALUE", "Interface", StorageProperties.iface));
+		storageParams.add(new ComponentProperty("KEYVALUE", "Volumes Path", StorageProperties.storageRootDirectory));
+		storageParams.add(new ComponentProperty("KEYVALUE", "DAS Device", StorageProperties.DAS_DEVICE));
+		storageParams.add(new ComponentProperty("BOOLEAN", "Zero-fill Volumes", String.valueOf(StorageProperties.zeroFillVolumes)));
+	}
+
+	@Override
+	public void setStorageProps(ArrayList<ComponentProperty> storageParams) {
+		for (ComponentProperty param : storageParams) {
+			if ("Host".equals(param.getKey()))
+				StorageProperties.NAME = param.getValue();
+			else if("Interface".equals(param.getKey()))
+				StorageProperties.iface = param.getValue();
+			else if("Volumes Path".equals(param.getKey()))
+				StorageProperties.storageRootDirectory = param.getValue();
+			else if("DAS Device".equals(param.getKey()))
+				StorageProperties.DAS_DEVICE = param.getValue();
+			else if("Zero-fill Volumes".equals(param.getKey()))
+				StorageProperties.zeroFillVolumes = Boolean.parseBoolean(param.getValue());
 		}
+	}
 }
 

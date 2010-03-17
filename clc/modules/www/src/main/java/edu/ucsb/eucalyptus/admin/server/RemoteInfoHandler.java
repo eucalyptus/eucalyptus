@@ -350,6 +350,7 @@ public class RemoteInfoHandler {
 	private static ArrayList<String> convertStorageParams(ArrayList<ComponentProperty> properties) {
 		ArrayList<String> params = new ArrayList<String>();
 		for (ComponentProperty property : properties) {
+			params.add(property.getType());
 			params.add(property.getKey());
 			params.add(property.getValue());
 		}
@@ -358,8 +359,8 @@ public class RemoteInfoHandler {
 
 	private static ArrayList<ComponentProperty> convertStorageProps(ArrayList<String> params) {
 		ArrayList<ComponentProperty> props = new ArrayList<ComponentProperty>();
-		for(int i = 0 ; i < (params.size() / 2); ++i) {
-			props.add(new ComponentProperty("KEYVALUE", params.get(2*i), params.get(2*i + 1)));
+		for(int i = 0 ; i < (params.size() / 3); ++i) {
+			props.add(new ComponentProperty(params.get(3*i), params.get(3*i + 1), params.get(3*i + 2)));
 		}
 		return props;
 	}
