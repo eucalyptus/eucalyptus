@@ -344,7 +344,9 @@ public class VmInstance implements HasName {
     m.put( "public-ipv4", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
     m.put( "reservation-id", this.getReservationId( ) );
     m.put( "kernel-id", this.getImageInfo( ).getKernelId( ) );
-    m.put( "ramdisk-id", this.getImageInfo( ).getRamdiskId( ) );
+    if( this.getImageInfo( ).getRamdiskId( ) != null ) {
+      m.put( "ramdisk-id", this.getImageInfo( ).getRamdiskId( ) );
+    }
     m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
 
     m.put( "block-device-mapping/", "emi\nephemeral0\nroot\nswap" );

@@ -226,7 +226,8 @@ public class WalrusImageManager {
 					//Assemble parts
 					String encryptedImageKey = imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
 					String encryptedImageName = storageManager.getObjectPath(bucketName, encryptedImageKey);
-					String decryptedImageKey = encryptedImageKey.replaceAll("crypt.gz", "tgz");
+                                        String decryptedImageKey = encryptedImageKey.substring(0, encryptedImageKey.lastIndexOf("crypt.gz")) + "tgz";
+
 					String decryptedImageName = storageManager.getObjectPath(bucketName, decryptedImageKey);
 					assembleParts(encryptedImageName, qualifiedPaths);
 					//Decrypt key and IV
@@ -398,7 +399,7 @@ public class WalrusImageManager {
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		try {
 			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
-			String cacheImageKey = foundImageCacheInfo.getImageName().replaceAll(".tgz", "");
+                        String cacheImageKey = foundImageCacheInfo.getImageName().substring(0, foundImageCacheInfo.getImageName().lastIndexOf(".tgz"));
 			long objectSize = storageManager.getObjectSize(bucketName, cacheImageKey);
 			db.commit();
 			if(objectSize > 0) {
@@ -590,9 +591,9 @@ public class WalrusImageManager {
 			//update status
 			//wake up any waiting consumers
 			String decryptedImageName = storageManager.getObjectPath(bucketName, decryptedImageKey);
-			String tarredImageName = decryptedImageName.replaceAll("tgz", "tar");
-			String imageName = tarredImageName.replaceAll(".tar", "");
-			String imageKey = decryptedImageKey.replaceAll(".tgz", "");
+                        String imageName = decryptedImageName.substring(0, decryptedImageName.lastIndexOf(".tgz"));
+                        String tarredImageName = imageName + (".tar");
+                        String imageKey = decryptedImageKey.substring(0, decryptedImageKey.lastIndexOf(".tgz"));
 			Long unencryptedSize;
 			int numberOfRetries = 0;
 			while((unencryptedSize = tryToCache(decryptedImageName, tarredImageName, imageName)) < 0) {
