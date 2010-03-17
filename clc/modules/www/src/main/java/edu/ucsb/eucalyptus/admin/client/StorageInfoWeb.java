@@ -75,15 +75,15 @@ public class StorageInfoWeb implements IsSerializable {
 	private Boolean zeroFillVolumes;
 	private String DASDevice;
 	private Boolean committed;
-	String sanHost;
-	String sanUser;
-	String sanPassword;
+	private String sanHost;
+	private String sanUser;
+	private String sanPassword;
 	
-	ArrayList<String> storageParams = new ArrayList<String>();
+	private ArrayList<String> storageParams = new ArrayList<String>();
 	
-	public StorageInfoWeb() {}
+	public StorageInfoWeb() { }
 	
-	public StorageInfoWeb( String name, String host, Integer port ) {
+	public StorageInfoWeb( final String name, final String host, final Integer port ) {
     this.name = name;
     this.host = host;
     this.port = port;
@@ -98,18 +98,18 @@ public class StorageInfoWeb implements IsSerializable {
   }
 
   public StorageInfoWeb( final String name,
-			String host,
-			Integer port,
-			String volumesPath,
-			Integer maxVolumeSizeInGB,
-			Integer totalVolumesSizeInGB,
-			String storageInterface,
-			Boolean zeroFillVolumes,
-			String sanHost,
-			String sanUser,
-			String sanPassword,
-			String DASDevice,
-			ArrayList<String> storageParams) {
+			final String host,
+			final Integer port,
+			final String volumesPath,
+			final Integer maxVolumeSizeInGB,
+			final Integer totalVolumesSizeInGB,
+			final String storageInterface,
+			final Boolean zeroFillVolumes,
+			final String sanHost,
+			final String sanUser,
+			final String sanPassword,
+			final String DASDevice,
+			final ArrayList<String> storageParams) {
 		this.name = name;
 		this.host = host;
 		this.port = port;
@@ -127,136 +127,142 @@ public class StorageInfoWeb implements IsSerializable {
 	}
 
 
-	public void setCommitted ()
+	public final void setCommitted ()
 	{
 		this.committed = true;
 	}
 
-	public Boolean isCommitted ()
+	public final Boolean isCommitted ()
 	{
 		return this.committed;
 	}
 
-	public String getName() {
+	public final String getName() {
 		return name;
 	}
 
-	public void setName(String name) {
+	public final void setName(final String name) {
 		this.name = name;
 	}
 
 	
-	public String getHost() {
+	public final String getHost() {
 		return host;
 	}
 
-	public void setHost(String host) {
+	public final void setHost(final String host) {
 		this.host = host;
 	}
 
-	public Integer getPort() {
+	public final Integer getPort() {
 		return port;
 	}
 
-	public void setPort(Integer port) {
+	public final void setPort(final Integer port) {
 		this.port = port;
 	}
 
-	public String getVolumesPath() {
+	public final String getVolumesPath() {
 		return volumesPath;
 	}
 
-	public void setVolumesPath(String volumesPath) {
+	public final void setVolumesPath(final String volumesPath) {
 		this.volumesPath = volumesPath;
 	}
 
-	public Integer getMaxVolumeSizeInGB() {
+	public final Integer getMaxVolumeSizeInGB() {
 		return maxVolumeSizeInGB;
 	}
 
-	public void setMaxVolumeSizeInGB(Integer maxVolumeSizeInGB) {
+	public final void setMaxVolumeSizeInGB(final Integer maxVolumeSizeInGB) {
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
 	}
 
-	public Integer getTotalVolumesSizeInGB() {
+	public final Integer getTotalVolumesSizeInGB() {
 		return totalVolumesSizeInGB;
 	}
 
-	public void setTotalVolumesSizeInGB(Integer totalVolumesSizeInGB) {
+	public final void setTotalVolumesSizeInGB(final Integer totalVolumesSizeInGB) {
 		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
 	}
 
-	public String getStorageInterface() {
+	public final String getStorageInterface() {
 		return storageInterface;
 	}
 
-	public void setStorageInterface(String storageInterface) {
+	public final void setStorageInterface(final String storageInterface) {
 		this.storageInterface = storageInterface;
 	}
 
-	public Boolean getZeroFillVolumes() {
+	public final Boolean getZeroFillVolumes() {
 		return zeroFillVolumes;
 	}
 
-	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
+	public final void setZeroFillVolumes(final Boolean zeroFillVolumes) {
 		this.zeroFillVolumes = zeroFillVolumes;
 	}
 
-	public String getSanHost() {
+	public final String getSanHost() {
 		return sanHost;
 	}
 
-	public void setSanHost(String sanHost) {
+	public final void setSanHost(final String sanHost) {
 		this.sanHost = sanHost;
 	}
 
-	public String getSanUser() {
+	public final String getSanUser() {
 		return sanUser;
 	}
 
-	public void setSanUser(String sanUser) {
+	public final void setSanUser(final String sanUser) {
 		this.sanUser = sanUser;
 	}
 
-	public String getSanPassword() {
+	public final String getSanPassword() {
 		return sanPassword;
 	}
 
-	public void setSanPassword(String sanPassword) {
+	public final void setSanPassword(final String sanPassword) {
 		this.sanPassword = sanPassword;
 	}
 
- 	public String getDASDevice() {
+ 	public final String getDASDevice() {
 		return DASDevice;
 	}
 
-	public void setDASDevice(String DASDevice) {
+	public final void setDASDevice(final String DASDevice) {
 		this.DASDevice = DASDevice;
 	}
 
-	public ArrayList<String> getStorageParams() {
+	public final ArrayList<String> getStorageParams() {
 		return storageParams;
 	}
 
-	public void setStorageParams(ArrayList<String> storageParams) {
+	public final void setStorageParams(final ArrayList<String> storageParams) {
 		this.storageParams = storageParams;
 	}
 
 	@Override
-	public boolean equals( final Object o )
+	public final boolean equals( final Object o )
 	{
-		if ( this == o ) return true;
-		if ( o == null || getClass() != o.getClass() ) return false;
+		if ( this == o ) {
+			return true;
+		}
+		if ( o == null || getClass() != o.getClass() ) {
+			return false;
+		}
 
 		StorageInfoWeb that = ( StorageInfoWeb ) o;
 
-		if ( !name.equals( that.name ) ) return false;
+		if ( !name.equals( that.name ) ) {
+			return false;
+		}
 
 		return true;
 	}
 
 	@Override
-	public int hashCode()
+	public final int hashCode()
 	{
 		return name.hashCode();
 	}

@@ -351,8 +351,12 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void setStorageParamNames(ArrayList<String> storageParams) {
-		storageParams.add("key");
-		storageParams.add("value");
+		storageParams.add("SAN Host");
+		storageParams.add(StorageProperties.SAN_HOST);
+		storageParams.add("SAN Username");
+		storageParams.add(StorageProperties.SAN_USERNAME);
+		storageParams.add("SAN Password");
+		storageParams.add(StorageProperties.SAN_PASSWORD);
 	}
 }
 

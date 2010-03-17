@@ -163,13 +163,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		}
 	}
 
-	public static native void logme(String msg) /*-{
-		console.log(msg);
-	}-*/;
-	
 	private Grid addClusterEntry ( int row, ClusterInfoWeb clusterInfo, final StorageInfoWeb storageInfo)
 	{
-		Grid g = new Grid (14 + (storageInfo.getStorageParams().size() / 2), 2);
+		Grid g = new Grid (11 + (storageInfo.getStorageParams().size() / 2), 2);
 		g.setStyleName( "euca-table" );
 		if (row > 0) {
 			g.setStyleName( "euca-nonfirst-cluster-entry" );
@@ -372,7 +368,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		});
 		g.setWidget( i, 1, new Label ("Zero-fill volumes") );*/
 
-		i++; // next row
+		/*i++; // next row
 		g.setWidget( i, 0, new Label( "SAN Host:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox sanHostTextBox = new TextBox();
@@ -400,7 +396,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		sanPasswordBox.setVisibleLength( 30 );
 		sanPasswordBox.setText( storageInfo.getSanPassword() );
 		sanPasswordBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget( i, 1, sanPasswordBox );
+		g.setWidget( i, 1, sanPasswordBox );*/
 		/*g.setWidget( i, 0, new Label( "DAS Partition:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox dasPartitionBox = new TextBox();
@@ -412,11 +408,8 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 
 		ArrayList<String> storageParams = storageInfo.getStorageParams();
 		numStorageParams = storageParams.size()/2;
-		logme("storageparams size: " + storageParams.size());
 		for(String param : storageParams) {
-			logme("param: " + param);
 		}
-		logme("rowcount: " + g.getRowCount());
 		for(int paramidx = 0; paramidx < numStorageParams; ++paramidx) {
 			i++; // next row	
 			g.setWidget( i, 0, new Label(storageParams.get(2*paramidx) + ": ") );
@@ -486,11 +479,11 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		p = (HorizontalPanel)g.getWidget(10, 1);
 		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
 
-		storage.setSanHost (((TextBox)g.getWidget(11, 1)).getText());
+		/*storage.setSanHost (((TextBox)g.getWidget(11, 1)).getText());
 		storage.setSanUser (((TextBox)g.getWidget(12, 1)).getText());
 		storage.setSanPassword (((TextBox)g.getWidget(13, 1)).getText());
-
-		int widgetStartIndex = 14;
+*/
+		int widgetStartIndex = 11;
 		ArrayList<String> storageParams = storage.getStorageParams();
 		for(int i = 0; i < numStorageParams; ++i) {
 			storageParams.set(2*i + 1, ((TextBox)g.getWidget(widgetStartIndex++, 1)).getText());
