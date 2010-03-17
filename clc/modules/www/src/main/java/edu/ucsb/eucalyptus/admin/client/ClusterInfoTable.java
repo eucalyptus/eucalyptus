@@ -289,36 +289,6 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		i++; // next row
 		g.setWidget( i, 1, new Label( "Storage Controller" ));
 
-		/*i++; // next row
-		g.setWidget( i, 0, new Label( "Host:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox sb = new TextBox();
-		sb.addChangeListener (new ChangeCallback (this, row));
-		sb.setVisibleLength( 20 );
-		sb.setText( storageInfo.getHost() ); 
-		sb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget ( i, 1, sb );
-
-		i++; // next row
-		g.setWidget( i, 0, new Label( "Interface:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox sib = new TextBox();
-		sib.addChangeListener (new ChangeCallback (this, row));
-		sib.setVisibleLength( 5 );
-		sib.setText( "" + storageInfo.getStorageInterface());
-		sib.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget( i, 1, sib );
-
-		i++; // next row
-		g.setWidget( i, 0, new Label( "Volumes path:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox volumesPathBox = new TextBox();
-		volumesPathBox.addChangeListener (new ChangeCallback (this, row));
-		volumesPathBox.setVisibleLength( 30 );
-		volumesPathBox.setText( storageInfo.getVolumesPath() );
-		volumesPathBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget( i, 1, volumesPathBox );*/
-
 		i++; // next row
 		g.setWidget( i, 0, new Label( "Max volume size:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
@@ -367,44 +337,6 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			}
 		});
 		g.setWidget( i, 1, new Label ("Zero-fill volumes") );*/
-
-		/*i++; // next row
-		g.setWidget( i, 0, new Label( "SAN Host:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox sanHostTextBox = new TextBox();
-		sanHostTextBox.addChangeListener (new ChangeCallback (this, row));
-		sanHostTextBox.setVisibleLength( 30 );
-		sanHostTextBox.setText( storageInfo.getSanHost() );
-		sanHostTextBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget( i, 1, sanHostTextBox );
-
-		i++; // next row
-		g.setWidget( i, 0, new Label( "SAN User Name:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox sanUserBox = new TextBox();
-		sanUserBox.addChangeListener (new ChangeCallback (this, row));
-		sanUserBox.setVisibleLength( 30 );
-		sanUserBox.setText( storageInfo.getSanUser() );
-		sanUserBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget( i, 1, sanUserBox );
-
-		i++; // next row
-		g.setWidget( i, 0, new Label( "SAN Password:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final PasswordTextBox sanPasswordBox = new PasswordTextBox();
-		sanPasswordBox.addChangeListener (new ChangeCallback (this, row));
-		sanPasswordBox.setVisibleLength( 30 );
-		sanPasswordBox.setText( storageInfo.getSanPassword() );
-		sanPasswordBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget( i, 1, sanPasswordBox );*/
-		/*g.setWidget( i, 0, new Label( "DAS Partition:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox dasPartitionBox = new TextBox();
-		dasPartitionBox.addChangeListener (new ChangeCallback (this, row));
-		dasPartitionBox.setVisibleLength( 5 );
-		dasPartitionBox.setText( "" + storageInfo.getDASPartition());
-		dasPartitionBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget( i, 1, dasPartitionBox );*/
 
 		ArrayList<String> storageParams = storageInfo.getStorageParams();
 		numStorageParams = storageParams.size()/2;

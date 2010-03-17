@@ -86,6 +86,7 @@ import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.ClusterConfiguration;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
@@ -1083,9 +1084,10 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void setStorageParamNames(ArrayList<String> storageParams) {
-		// TODO Auto-generated method stub
-		
+	public void setStorageParamNames(ArrayList<ComponentProperty> storageParams) {
+		storageParams.add(new ComponentProperty("KEYVALUE", "Host", StorageProperties.NAME));
+		storageParams.add(new ComponentProperty("KEYVALUE", "Interface", StorageProperties.iface));
+		storageParams.add(new ComponentProperty("KEYVALUE", "Volumes Path", StorageProperties.storageRootDirectory));
 	}
 }
 

@@ -63,6 +63,8 @@ package edu.ucsb.eucalyptus.msgs
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
+
+
 public class StorageResponseType extends EucalyptusMessage {
 	def StorageResponseType() {}
 }
@@ -108,11 +110,8 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 	Integer maxVolumeSize;
 	String storageInterface;
 	Boolean zeroFillVolumes;
-	String sanHost;
-	String sanUser;
-	String sanPassword;
 	String DASDevice;
-	ArrayList<String> storageParams;
+	ArrayList<ComponentProperty> storageParams;
 
 	def UpdateStorageConfigurationType() {}
 
@@ -123,9 +122,6 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 		this.maxVolumeSize = storageState.getTotalVolumesSizeInGB();
 		this.storageInterface = storageState.getStorageInterface();
 		this.zeroFillVolumes = storageState.getZeroFillVolumes();
-		this.sanHost = storageState.sanHost;
-		this.sanUser = storageState.sanUser;
-		this.sanPassword = storageState.sanPassword;
 		this.DASDevice = storageState.getDASDevice();	
 		this.storageParams = storageState.getStorageParams();
 	}
@@ -150,11 +146,8 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 	Integer maxVolumeSize;
 	String storageInterface;
 	Boolean zeroFillVolumes;
-	String sanHost;
-	String sanUser;
-	String sanPassword;
 	String DASDevice;
-	ArrayList<String> storageParams;
+	ArrayList<ComponentProperty> storageParams;
 	
 	def GetStorageConfigurationResponseType() {}
 
@@ -164,20 +157,14 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 			Integer maxVolumeSize,
 			String storageInterface,
 			Boolean zeroFillVolumes,
-			String sanHost,
-			String sanUser,
-			String sanPassword,
 			String DASDevice,
-			List<String> storageParams) {
+			List<ComponentProperty> storageParams) {
 		this.name = name;
 		this.storageRootDirectory = storageRootDirectory;
 		this.maxTotalVolumeSize = maxTotalVolumeSize;
 		this.maxVolumeSize = maxVolumeSize;
 		this.storageInterface = storageInterface;
 		this.zeroFillVolumes = zeroFillVolumes;
-		this.sanHost = sanHost;
-		this.sanUser = sanUser;
-		this.sanPassword = sanPassword;
 		this.DASDevice = DASDevice;
 		this.storageParams = storageParams;
 	}

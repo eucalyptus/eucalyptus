@@ -64,6 +64,7 @@ import java.util.ArrayList;
 
 import com.google.gwt.user.client.rpc.IsSerializable;
 
+
 public class StorageInfoWeb implements IsSerializable {
 	private String name;
 	private String host;
@@ -74,11 +75,7 @@ public class StorageInfoWeb implements IsSerializable {
 	private String storageInterface;
 	private Boolean zeroFillVolumes;
 	private String DASDevice;
-	private Boolean committed;
-	private String sanHost;
-	private String sanUser;
-	private String sanPassword;
-	
+	private Boolean committed;	
 	private ArrayList<String> storageParams = new ArrayList<String>();
 	
 	public StorageInfoWeb() { }
@@ -118,9 +115,6 @@ public class StorageInfoWeb implements IsSerializable {
 		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
 		this.storageInterface = storageInterface;
 		this.zeroFillVolumes = zeroFillVolumes;
-		this.sanHost = sanHost;
-		this.sanUser = sanUser;
-		this.sanPassword = sanPassword;
 		this.DASDevice = DASDevice;
 		this.committed = false;
 		this.storageParams = storageParams;
@@ -200,30 +194,6 @@ public class StorageInfoWeb implements IsSerializable {
 
 	public final void setZeroFillVolumes(final Boolean zeroFillVolumes) {
 		this.zeroFillVolumes = zeroFillVolumes;
-	}
-
-	public final String getSanHost() {
-		return sanHost;
-	}
-
-	public final void setSanHost(final String sanHost) {
-		this.sanHost = sanHost;
-	}
-
-	public final String getSanUser() {
-		return sanUser;
-	}
-
-	public final void setSanUser(final String sanUser) {
-		this.sanUser = sanUser;
-	}
-
-	public final String getSanPassword() {
-		return sanPassword;
-	}
-
-	public final void setSanPassword(final String sanPassword) {
-		this.sanPassword = sanPassword;
 	}
 
  	public final String getDASDevice() {

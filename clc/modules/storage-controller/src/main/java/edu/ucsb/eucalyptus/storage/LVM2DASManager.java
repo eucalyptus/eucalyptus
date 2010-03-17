@@ -83,25 +83,19 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.ClusterConfiguration;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 
-import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
-import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
 import edu.ucsb.eucalyptus.ic.StorageController;
-import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class LVM2DASManager implements LogicalStorageManager {
@@ -1013,10 +1007,11 @@ public class LVM2DASManager implements LogicalStorageManager {
         }
 
 		@Override
-		public void setStorageParamNames(ArrayList<String> storageParams) {
-			// TODO Auto-generated method stub
-			
+		public void setStorageParamNames(ArrayList<ComponentProperty> storageParams) {
+			storageParams.add(new ComponentProperty("KEYVALUE", "Host", StorageProperties.NAME));
+			storageParams.add(new ComponentProperty("KEYVALUE", "Interface", StorageProperties.iface));
+			storageParams.add(new ComponentProperty("KEYVALUE", "Volumes Path", StorageProperties.storageRootDirectory));
+			storageParams.add(new ComponentProperty("KEYVALUE", "DAS Device", StorageProperties.DAS_DEVICE));
 		}
-
 }
 

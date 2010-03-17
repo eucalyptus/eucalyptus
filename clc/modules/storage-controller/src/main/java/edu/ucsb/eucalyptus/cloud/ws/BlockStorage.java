@@ -83,7 +83,6 @@ import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
-import com.google.gwt.dev.util.HttpHeaders;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
@@ -95,6 +94,7 @@ import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
@@ -117,9 +117,9 @@ import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
 import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
+import edu.ucsb.eucalyptus.storage.BlockStorageUtil;
 import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.storage.BlockStorageUtil;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
@@ -300,12 +300,6 @@ public class BlockStorage {
 		Boolean zeroFillVolumes = request.getZeroFillVolumes();
 		if(zeroFillVolumes != null)
 			StorageProperties.zeroFillVolumes = zeroFillVolumes;
-		if(request.getSanHost() != null)
-			StorageProperties.SAN_HOST = request.getSanHost();
-		if(request.getSanUser() != null)
-			StorageProperties.SAN_USERNAME = request.getSanUser();
-		if(request.getSanPassword() != null)
-			StorageProperties.SAN_PASSWORD = request.getSanPassword();
 		if(request.getDASDevice() != null)
 			StorageProperties.DAS_DEVICE = request.getDASDevice();
 		check();
@@ -319,8 +313,8 @@ public class BlockStorage {
 			LOG.error(ex);
 		}
 		if(request.getStorageParams() != null) {
-			for(String param : request.getStorageParams()) {
-				LOG.info("Storage Param: " + param);
+			for(ComponentProperty param : request.getStorageParams()) {
+				LOG.info("Storage Param: " + param.getKey() + " Value: " + param.getValue());
 			}
 		}
 		updateConfig();
@@ -338,12 +332,9 @@ public class BlockStorage {
 			reply.setMaxVolumeSize(StorageProperties.MAX_VOLUME_SIZE);
 			reply.setStorageInterface(StorageProperties.iface);
 			reply.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
-			reply.setSanHost(StorageProperties.SAN_HOST);
-			reply.setSanUser(StorageProperties.SAN_USERNAME);
-			reply.setSanPassword(StorageProperties.SAN_PASSWORD);
 			reply.setDASDevice(StorageProperties.DAS_DEVICE);
 			reply.setName(StorageProperties.NAME);
-			ArrayList<String> storageParams = new ArrayList<String>();
+			ArrayList<ComponentProperty> storageParams = new ArrayList<ComponentProperty>();
 			blockManager.setStorageParamNames(storageParams);
 			reply.setStorageParams(storageParams);
 		}

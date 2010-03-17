@@ -68,6 +68,8 @@ package edu.ucsb.eucalyptus.storage;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.RowFilter.ComparisonType;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EntityWrapper;
@@ -78,6 +80,7 @@ import com.eucalyptus.util.WalrusProperties;
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 public class SANManager implements LogicalStorageManager {
 
@@ -350,13 +353,10 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void setStorageParamNames(ArrayList<String> storageParams) {
-		storageParams.add("SAN Host");
-		storageParams.add(StorageProperties.SAN_HOST);
-		storageParams.add("SAN Username");
-		storageParams.add(StorageProperties.SAN_USERNAME);
-		storageParams.add("SAN Password");
-		storageParams.add(StorageProperties.SAN_PASSWORD);
+	public void setStorageParamNames(ArrayList<ComponentProperty> storageParams) {
+		storageParams.add(new ComponentProperty("KEYVALUE", "SAN Host", StorageProperties.SAN_HOST));
+		storageParams.add(new ComponentProperty("KEYVALUE", "SAN Username", StorageProperties.SAN_USERNAME));
+		storageParams.add(new ComponentProperty("KEYVALUE", "SAN Password", StorageProperties.SAN_PASSWORD));
 	}
 }
 
