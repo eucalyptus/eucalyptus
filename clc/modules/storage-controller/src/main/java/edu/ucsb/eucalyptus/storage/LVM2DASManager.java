@@ -1005,14 +1005,15 @@ public class LVM2DASManager implements LogicalStorageManager {
 	throws EucalyptusCloudException {
 		return StorageProperties.storageRootDirectory + File.separator + snapshotId;
 	}
-
+	
 	@Override
-	public void getStorageProps(ArrayList<ComponentProperty> storageParams) {
-		storageParams.add(new ComponentProperty("KEYVALUE", "Host", StorageProperties.NAME));
+	public ArrayList<ComponentProperty> getStorageProps() {
+		return null;
+		/*storageParams.add(new ComponentProperty("KEYVALUE", "Host", StorageProperties.NAME));
 		storageParams.add(new ComponentProperty("KEYVALUE", "Interface", StorageProperties.iface));
 		storageParams.add(new ComponentProperty("KEYVALUE", "Volumes Path", StorageProperties.storageRootDirectory));
 		storageParams.add(new ComponentProperty("KEYVALUE", "DAS Device", StorageProperties.DAS_DEVICE));
-		storageParams.add(new ComponentProperty("BOOLEAN", "Zero-fill Volumes", String.valueOf(StorageProperties.zeroFillVolumes)));
+		storageParams.add(new ComponentProperty("BOOLEAN", "Zero-fill Volumes", String.valueOf(StorageProperties.zeroFillVolumes)));*/
 	}
 
 	@Override

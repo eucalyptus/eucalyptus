@@ -119,6 +119,7 @@ import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
 import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
 import edu.ucsb.eucalyptus.storage.BlockStorageUtil;
 import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
+import edu.ucsb.eucalyptus.storage.SANManager;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
@@ -166,11 +167,11 @@ public class BlockStorage {
 		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
 		StorageProperties.storageRootDirectory = storageInfo.getVolumesDir();
 		StorageProperties.zeroFillVolumes = storageInfo.getZeroFillVolumes();
-		StorageProperties.SAN_HOST = storageInfo.getSanHost();
-		StorageProperties.SAN_USERNAME = storageInfo.getSanUser();
+		SANManager.SAN_HOST = storageInfo.getSanHost();
+		SANManager.SAN_USERNAME = storageInfo.getSanUser();
 		try {
 			if(!StorageProperties.DUMMY_SAN_PASSWORD.equals(storageInfo.getSanPassword())) {
-				StorageProperties.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
+				SANManager.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
 			} else {
 				LOG.info("SAN credentials not configured yet.");
 			}
@@ -196,9 +197,9 @@ public class BlockStorage {
 					StorageProperties.MAX_VOLUME_SIZE, 
 					StorageProperties.storageRootDirectory,
 					StorageProperties.zeroFillVolumes,
-					StorageProperties.SAN_HOST,
-					StorageProperties.SAN_USERNAME,
-					StorageProperties.SAN_PASSWORD,
+					SANManager.SAN_HOST,
+					SANManager.SAN_USERNAME,
+					SANManager.SAN_PASSWORD,
 					StorageProperties.DAS_DEVICE);
 			db.add(storageInfo);
 			db.commit();
@@ -216,10 +217,10 @@ public class BlockStorage {
 			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
 			storageInfo.setVolumesDir(StorageProperties.storageRootDirectory);
 			storageInfo.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
-			storageInfo.setSanHost(StorageProperties.SAN_HOST);
-			storageInfo.setSanUser(StorageProperties.SAN_USERNAME);
+			storageInfo.setSanHost(SANManager.SAN_HOST);
+			storageInfo.setSanUser(SANManager.SAN_USERNAME);
 			try {
-				storageInfo.setSanPassword(BlockStorageUtil.encryptSCTargetPassword(StorageProperties.SAN_PASSWORD));
+				storageInfo.setSanPassword(BlockStorageUtil.encryptSCTargetPassword(SANManager.SAN_PASSWORD));
 			} catch (EucalyptusCloudException e) {
 				LOG.fatal("Unable to update password. " + e.getMessage());
 			}
@@ -233,9 +234,9 @@ public class BlockStorage {
 						StorageProperties.MAX_VOLUME_SIZE, 
 						StorageProperties.storageRootDirectory,
 						StorageProperties.zeroFillVolumes,
-						StorageProperties.SAN_HOST,
-						StorageProperties.SAN_USERNAME,
-						BlockStorageUtil.encryptSCTargetPassword(StorageProperties.SAN_PASSWORD),
+						SANManager.SAN_HOST,
+						SANManager.SAN_USERNAME,
+						BlockStorageUtil.encryptSCTargetPassword(SANManager.SAN_PASSWORD),
 						StorageProperties.DAS_DEVICE);
 				db.add(storageInfo);
 			} catch (EucalyptusCloudException e) {
@@ -335,8 +336,7 @@ public class BlockStorage {
 			reply.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
 			reply.setDASDevice(StorageProperties.DAS_DEVICE);
 			reply.setName(StorageProperties.NAME);
-			ArrayList<ComponentProperty> storageParams = new ArrayList<ComponentProperty>();
-			blockManager.getStorageProps(storageParams);
+			ArrayList<ComponentProperty> storageParams = blockManager.getStorageProps();
 			reply.setStorageParams(storageParams);
 		}
 		return reply;

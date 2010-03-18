@@ -65,6 +65,7 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,9 +73,13 @@ import javax.swing.RowFilter.ComparisonType;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Configurable;
+import com.eucalyptus.bootstrap.ConfigurableField;
+import com.eucalyptus.bootstrap.ConfigurableFieldType;
+import com.eucalyptus.bootstrap.ConfigurableManagement;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
@@ -82,9 +87,18 @@ import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
+@Configurable(component = Component.storage)
 public class SANManager implements LogicalStorageManager {
 
 	private SANProvider connectionManager;
+	
+	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "SAN Password")
+	public static String SAN_PASSWORD = "sanPassword";
+	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "SAN Username")
+	public static String SAN_USERNAME = "sanUser";
+	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "SAN Host")
+	public static String SAN_HOST = "sanHost";
+
 	private static SANManager singleton;
 	private static Logger LOG = Logger.getLogger(SANManager.class);
 
@@ -353,16 +367,13 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void getStorageProps(ArrayList<ComponentProperty> storageParams) {
-		storageParams.add(new ComponentProperty("KEYVALUE", "SAN Host", StorageProperties.SAN_HOST));
-		storageParams.add(new ComponentProperty("KEYVALUE", "SAN Username", StorageProperties.SAN_USERNAME));
-		storageParams.add(new ComponentProperty("KEYVALUE", "SAN Password", StorageProperties.SAN_PASSWORD));
+	public ArrayList<ComponentProperty> getStorageProps() {
+		return ConfigurableManagement.getInstance().getProperties(this.getClass());		
 	}
 
 	@Override
 	public void setStorageProps(ArrayList<ComponentProperty> storageParams) {
-		// TODO Auto-generated method stub
-		
+		ConfigurableManagement.getInstance().setProperties(this.getClass(), storageParams);
 	}
 }
 

@@ -101,9 +101,6 @@ public class StorageProperties {
 	public static boolean shouldEnforceUsageLimits = true;
 	public static final String ETHERD_PREFIX = "/dev/etherd/e";
 
-	public static String SAN_HOST = "san_host";
-	public static String SAN_USERNAME = "user";
-	public static String SAN_PASSWORD = "password";
 	public static final String DUMMY_SAN_PASSWORD = "password";
  	public static final String DUMMY_SAN_HOST = "san_host";
 	
