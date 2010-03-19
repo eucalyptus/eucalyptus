@@ -346,10 +346,11 @@ doAttachVolume (	struct nc_state_t *nc,
 			char *remoteDev,
 			char *localDev)
 {
-    int ret = OK;
+    int ret = OK, rc;
     ncInstance *instance;
     virConnectPtr *conn;
     char localDevReal[32], localDevTag[256];
+    struct stat statbuf;
 
     // fix up format of incoming local dev name, if we need to
     ret = convert_dev_names (localDev, localDevReal, localDevTag);
@@ -373,6 +374,7 @@ doAttachVolume (	struct nc_state_t *nc,
             char xml [1024];
             int is_iscsi_target = 0;
             char *local_iscsi_dev;
+            rc = 0;
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
@@ -383,17 +385,26 @@ doAttachVolume (	struct nc_state_t *nc,
                 snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
             } else {
                 snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                rc = stat(remoteDev, &statbuf);
+                if (rc) {
+                   logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
+                   rc = 1;
+                }
 	    }
-            /* protect KVM calls, just in case */
-            sem_p (hyp_sem);
-            err = virDomainAttachDevice (dom, xml);
-            sem_v (hyp_sem);
-            if (err) {
+	    if (!rc) {
+	      /* protect KVM calls, just in case */
+	      sem_p (hyp_sem);
+	      err = virDomainAttachDevice (dom, xml);
+	      sem_v (hyp_sem);
+	      if (err) {
                 logprintfl (EUCAERROR, "virDomainAttachDevice() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;
-            } else {
+	      } else {
                 logprintfl (EUCAINFO, "attached %s to %s in domain %s\n", remoteDev, localDevReal, instanceId);
-            }
+	      }
+	    } else {
+	      ret = ERROR;
+	    }
             virDomainFree(dom);
             if(is_iscsi_target) {
                 free(local_iscsi_dev);

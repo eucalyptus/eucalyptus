@@ -96,8 +96,9 @@ extern struct handlers xen_libvirt_handlers;
 extern struct handlers kvm_libvirt_handlers;
 extern struct handlers default_libvirt_handlers;
 
-const int unbooted_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any unbooted and SHUTOFF domains will be cleaned up */
-const int teardown_state_duration = 60; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
+const int staging_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any STAGING domains will be cleaned up */
+const int booting_cleanup_threshold = 60; /* after this many seconds any BOOTING domains will be cleaned up */
+const int teardown_state_duration = 120; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
 
 // a NULL-terminated array of available handlers
 static struct handlers * available_handlers [] = {
@@ -418,16 +419,19 @@ monitoring_thread (void *arg)
                 continue;
             }
 
-            if ((instance->state==STAGING || instance->state==BOOTING) &&
-                (now - instance->launchTime)<unbooted_cleanup_threshold) /* hasn't been long enough */
-                continue; /* let it be */
+			// time out logic for STAGING or BOOTING instances
+            if (instance->state==STAGING && (now - instance->launchTime) < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
+            if (instance->state==BOOTING && (now - instance->bootTime)   < booting_cleanup_threshold) continue;
             
             /* ok, it's been condemned => destroy the files */
             if (!nc_state.save_instance_files) {
+				logprintfl (EUCAINFO, "cleaning up state for instance %s\n", instance->instanceId);
 	      if (scCleanupInstanceImage(instance->userId, instance->instanceId)) {
-                logprintfl (EUCAWARN, "warning: failed to cleanup instance image %d\n", instance->instanceId);
+                logprintfl (EUCAWARN, "warning: failed to cleanup instance image %s\n", instance->instanceId);
 	      }
-	    }
+			} else {
+				logprintfl (EUCAINFO, "cleaning up state for instance %s (but keeping the files)\n", instance->instanceId);
+			}
             
             /* check to see if this is the last instance running on vlan */
             int left = 0;
@@ -467,7 +471,7 @@ void *startup_thread (void * arg)
     virDomainPtr dom = NULL;
     char * disk_path, * xml=NULL;
     char *brname=NULL;
-    int error;
+    int error, i;
     
     if (! check_hypervisor_conn ()) {
         logprintfl (EUCAFATAL, "could not start instance %s, abandoning it\n", instance->instanceId);
@@ -496,6 +500,10 @@ void *startup_thread (void * arg)
 	if (brname) free(brname);
         return NULL;
     }
+	if (instance->state==TEARDOWN) { // timed out in STAGING
+		if (brname) free(brname);
+        return NULL;
+	}
     if (instance->state==CANCELED) {
         logprintfl (EUCAFATAL, "Startup of instance %s was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
@@ -525,30 +533,35 @@ void *startup_thread (void * arg)
      * too many simultaneous create requests */
     logprintfl (EUCADEBUG2, "about to start domain %s\n", instance->instanceId);
     print_running_domains ();
-    sem_p (hyp_sem); 
-    dom = virDomainCreateLinux (nc_state.conn, xml, 0);
-    sem_v (hyp_sem);
+    for (i=0; i<5 && dom == NULL; i++) {
+      sem_p (hyp_sem);
+      dom = virDomainCreateLinux (nc_state.conn, xml, 0);
+      sem_v (hyp_sem);
+    }
     if (xml) free(xml);
     if (dom == NULL) {
         logprintfl (EUCAFATAL, "hypervisor failed to start domain\n");
         change_state (instance, SHUTOFF);
         return NULL;
     }
-    eventlog("NC", instance->userId, "", "instanceBoot", "begin"); /* TODO: bring back correlationId */
+    eventlog("NC", instance->userId, "", "instanceBoot", "begin"); // TODO: bring back correlationId
     
     sem_p(hyp_sem);
     virDomainFree(dom);
     sem_v(hyp_sem);
 
     // check one more time for cancellation
+	if (instance->state==TEARDOWN) { // timed out in BOOTING
+        return NULL;
+	}
     if (instance->state==CANCELED) {
         logprintfl (EUCAFATAL, "startup of instance %s was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
     } else {
-        logprintfl (EUCAINFO, "started VM instance %s\n", instance->instanceId);
+        logprintfl (EUCAINFO, "booting VM instance %s\n", instance->instanceId);
+		instance->bootTime = time (NULL);
         change_state (instance, BOOTING);
     }
-
     return NULL;
 }
 
@@ -660,6 +673,8 @@ static int init (void)
 	else if (initialized<0)
 		return 1;
 
+	bzero (&nc_state, sizeof(struct nc_state_t)); // ensure that MAXes are zeroed out
+
 	/* from now on we have unrecoverable failure, so no point in
 	 * retrying to re-init */
 	initialized = -1;
@@ -711,7 +726,6 @@ static int init (void)
 	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM);
 	GET_VAR_INT(nc_state.config_max_disk,     CONFIG_MAX_DISK);
 	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES);
-	nc_state.save_instance_files = 0;
 	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES);
 
 	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
@@ -810,12 +824,12 @@ static int init (void)
 	if (statfs(log, &fs) == -1) {
 		logprintfl(EUCAWARN, "Failed to stat %s\n", log);
 	}  else {
-		nc_state.disk_max = fs.f_bsize * fs.f_bavail + instances_bytes; /* max for Euca, not total */
+		nc_state.disk_max = (long long)fs.f_bsize * (long long)fs.f_bavail + instances_bytes; /* max for Euca, not total */
 		nc_state.disk_max /= BYTES_PER_DISK_UNIT;
 		if (nc_state.config_max_disk && nc_state.config_max_disk < nc_state.disk_max)
 			nc_state.disk_max = nc_state.config_max_disk;
 
-		logprintfl (EUCAINFO, "Maximum disk available = %lld (under %s)\n", nc_state.disk_max, log);
+		logprintfl (EUCAINFO, "Maximum disk available: %lld (under %s)\n", nc_state.disk_max, log);
 	}
 
 	/* start the monitoring thread */
