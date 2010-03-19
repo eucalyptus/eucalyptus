@@ -1,4 +1,4 @@
-package com.eucalyptus.util;
+package com.eucalyptus.configurable;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

@@ -77,7 +77,6 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.ServiceJarFile;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -105,58 +104,49 @@ public class BootstrapFactory {
       }
     }
   }
-
-  public static void initBootstrappers( ) {
+  
+  public static void initDiscovery( ) {
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( File f : libDir.listFiles( ) ) {
       if ( f.getName( ).startsWith( Component.eucalyptus.name() ) && f.getName( ).endsWith( ".jar" ) && !f.getName( ).matches( ".*-ext-.*" ) ) {
         LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
-        ServiceJarFile jar;
         try {
-          jar = new ServiceJarFile( f );
+          ServiceJarDiscovery.processFile( f );
         } catch ( IOException e ) {
           LOG.error( e.getMessage( ) );
           continue;
         }
-        List<Bootstrapper> bsList = jar.getBootstrappers( );
-        for ( Bootstrapper bootstrap : bsList ) {
-          for ( Resource r : Resource.values( ) ) {
-            if ( r.providedBy( bootstrap.getClass( ) ) || Resource.Final.equals( r ) ) {
-              Provides provides = bootstrap.getClass( ).getAnnotation( Provides.class );
-              if( provides == null ) {
-                LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides is not specified." );
-              } else {
-                Component component = provides.component( );
-                if ( component != null && !component.isEnabled( ) ) {
-                  LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides.component=" + component.toString( ) + " is disabled." );
-                  break;
-                }
-                if ( checkDepends( bootstrap ) ) {
-                  try {
-                    r.add( bootstrap );
-                  } catch ( Throwable e ) {
-                    LOG.fatal( e, e );
-                    for( Bootstrapper exists : r.getBootstrappers( ) ) {
-                      if( exists.equals( bootstrap ) ) {
-                        LOG.fatal( "Duplicate bootstrapper registration: " + exists.getClass( ) + 
-                        "\n==> Old definition source: " + exists.getClass( ).getProtectionDomain( ).getCodeSource( ).getLocation( ).getPath( ) +
-                        "\n==> New definition source: " + f.getAbsolutePath( ) );
-                      }
-                    }
-                    System.exit( 1 );
-                  }
-                  LOG.info( "-> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) + "." );
-                  break;
-                }
+      }
+    }
+    ServiceJarDiscovery.runDiscovery( );
+  }
+
+  public static void initBootstrappers( ) {
+    for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {
+      for ( Resource r : Resource.values( ) ) {
+        if ( r.providedBy( bootstrap.getClass( ) ) || Resource.Final.equals( r ) ) {
+          Provides provides = bootstrap.getClass( ).getAnnotation( Provides.class );
+          if ( provides == null ) {
+            LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides is not specified." );
+          } else {
+            Component component = provides.component( );
+            if ( component != null && !component.isEnabled( ) ) {
+              LOG.info( "-X Skipping bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " since Provides.component=" + component.toString( )
+                        + " is disabled." );
+              break;
+            }
+            if ( checkDepends( bootstrap ) ) {
+              try {
+                r.add( bootstrap );
+              } catch ( Throwable e ) {
+                LOG.fatal( e, e );
+                System.exit( 1 );
               }
+              LOG.info( "-> Associated bootstrapper " + bootstrap.getClass( ).getSimpleName( ) + " with resource " + r.toString( ) + "." );
+              break;
             }
           }
         }
-        try {
-			jar.close();
-		} catch (IOException e) {
-			LOG.error(e);
-		}
       }
     }
   }

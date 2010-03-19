@@ -150,13 +150,7 @@ public class WalrusStateType extends EucalyptusMessage{
 
 
 public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
-  
-  String correlationId;
-  String userId;
-  String effectiveUserId;
-  boolean _return;
-  String statusMessage;
-  
+    
   public EucalyptusMessage() {
     super();
   }

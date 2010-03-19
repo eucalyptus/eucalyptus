@@ -148,6 +148,8 @@ public class SystemBootstrapper {
       BootstrapFactory.initResourceProviders( );
       LOG.info( LogUtil.header( "Initializing configuration resources." ) );
       BootstrapFactory.initConfigurationResources( );
+      LOG.info( LogUtil.header( "Initializing discoverable bootstrap resources." ) );
+      BootstrapFactory.initDiscovery( );
       LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
       BootstrapFactory.initBootstrappers( );
       return true;

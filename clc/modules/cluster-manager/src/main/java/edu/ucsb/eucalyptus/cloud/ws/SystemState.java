@@ -79,12 +79,10 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.configurable.Configurable;
+import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.network.NetworkGroupUtil;
-import com.eucalyptus.util.Configurable;
-import com.eucalyptus.util.ConfigurableClass;
-import com.eucalyptus.util.ConfigurationProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -115,17 +113,16 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-@ConfigurableClass(alias="vmstate",description="Parameters controlling the lifecycle of virtual machines.")
+@ConfigurableClass( alias = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class SystemState {
   
-  private static Logger       LOG                 = Logger.getLogger( SystemState.class );
-  @Configurable(description="Amount of time (in milliseconds) that a terminated VM will continue to be reported.",initial=""+60*60*1000 )
-  public static final int     BURY_TIME           = -1;
-  @Configurable(description="Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.",initial=""+10*60*1000)
-  public static final int    SHUT_DOWN_TIME      = -1;
+  private static Logger      LOG                 = Logger.getLogger( SystemState.class );
+  @Configurable( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
+  public static Integer      BURY_TIME           = -1;
+  @Configurable( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
+  public static Integer      SHUT_DOWN_TIME      = -1;
   public static final String INSTANCE_EXPIRED    = "Instance no longer reported as existing.";
   public static final String INSTANCE_TERMINATED = "User requested shutdown.";
-  static { ConfigurationProperties.configure( SystemState.class ); }
   
   public static void handle( VmDescribeResponseType request ) {
     VmInstances.flushBuried( );
@@ -188,9 +185,9 @@ public class SystemState {
   }
   
   private static void cleanUp( final VmInstance vm ) {
-    String networkFqName = !vm.getNetworks().isEmpty()?vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ):null;
+    String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
     Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-    int networkIndex = vm.getNetworkConfig().getNetworkIndex( );
+    int networkIndex = vm.getNetworkConfig( ).getNetworkIndex( );
     Address address = null;
     QueuedEventCallback cb = new TerminateCallback( vm.getInstanceId( ) );
     if ( Clusters.getInstance( ).hasNetworking( ) ) {
@@ -207,7 +204,7 @@ public class SystemState {
   private static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
     UnconditionalCallback cleanup = new UnconditionalCallback( ) {
       public void apply( ) {
-        if( address != null ) {
+        if ( address != null ) {
           try {
             if ( address.isSystemOwned( ) ) {
               LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
@@ -216,20 +213,21 @@ public class SystemState {
               LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
               AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
             }
-          } catch (IllegalStateException e) {} catch ( Throwable e ) {
+          } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
           }
         }
-        vm.getNetworkConfig().setNetworkIndex( -1 );
+        vm.getNetworkConfig( ).setNetworkIndex( -1 );
         try {
-          if( networkFqName != null ) {
-          Network net = Networks.getInstance( ).lookup( networkFqName );
+          if ( networkFqName != null ) {
+            Network net = Networks.getInstance( ).lookup( networkFqName );
             if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
               net.returnNetworkIndex( networkIndex );
               LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
             }
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getVlan( ) ) );
+              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ),
+                                                                                       net.getVlan( ) ) );
               stopNet.fireEventAsyncToAllClusters( stopNet.getRequest( ) );
             }
           }
@@ -240,7 +238,7 @@ public class SystemState {
     };
     return cleanup;
   }
-
+  
   private static void updateVmInstance( final String originCluster, final VmInfo runVm ) {
     VmInstance vm = null;
     try {
@@ -275,19 +273,20 @@ public class SystemState {
         String dnsDomain = "dns-disabled";
         try {
           dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
-        } catch ( Exception e ) {
-        }
+        } catch ( Exception e ) {}
         vm.getNetworkConfig( ).updateDns( dnsDomain );
         VmState oldState = vm.getState( );
         vm.setState( VmState.Mapper.get( runVm.getStateName( ) ) );
         if ( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
           SystemState.cleanUp( vm );
-        } else if ( vm.getNetworkConfig().getNetworkIndex( ) > 0 && runVm.getNetParams().getNetworkIndex( ) > 0
+        } else if ( vm.getNetworkConfig( ).getNetworkIndex( ) > 0 && runVm.getNetParams( ).getNetworkIndex( ) > 0
                     && ( VmState.RUNNING.equals( vm.getState( ) ) || VmState.PENDING.equals( vm.getState( ) ) ) ) {
           try {
-	    vm.getNetworkConfig().setNetworkIndex( runVm.getNetParams().getNetworkIndex( ) );
-            Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) ).extantNetworkIndex( vm.getPlacement( ),
-                                                                                                                              vm.getNetworkConfig().getNetworkIndex( ) );
+            vm.getNetworkConfig( ).setNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
+            Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) ).extantNetworkIndex(
+                                                                                                                              vm.getPlacement( ),
+                                                                                                                              vm.getNetworkConfig( )
+                                                                                                                                .getNetworkIndex( ) );
           } catch ( Exception e ) {}
         }
         
@@ -297,8 +296,8 @@ public class SystemState {
         }
         List<AttachedVolume> oldVolumes = vm.getVolumes( );
         vm.setVolumes( runVm.getVolumes( ) );
-        for( AttachedVolume v : oldVolumes ) {
-          if( "attaching".equals( v.getStatus( ) ) && !vm.getVolumes( ).contains( v ) ) {
+        for ( AttachedVolume v : oldVolumes ) {
+          if ( "attaching".equals( v.getStatus( ) ) && !vm.getVolumes( ).contains( v ) ) {
             vm.getVolumes( ).add( v );
           }
         }
@@ -310,8 +309,8 @@ public class SystemState {
         long splitTime = vm.getSplitTime( );
         if ( splitTime > BURY_TIME ) vm.setState( VmState.BURIED );
       } catch ( NoSuchElementException e1 ) {
-        VmState state = VmState.Mapper.get( runVm.getStateName() );
-        if( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) {
+        VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+        if ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) {
           SystemState.restoreInstance( originCluster, runVm );
         }
       }
@@ -355,7 +354,7 @@ public class SystemState {
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.trace( e );
           }
-          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams().getNetworkIndex( ) );
+          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams( ).getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
             notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
@@ -374,14 +373,13 @@ public class SystemState {
         }
       }
       VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, imgInfo, keyInfo, vmType, networks,
-                                      Integer.toString( runVm.getNetParams().getNetworkIndex( ) ) );
+                                      Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.setLaunchTime( runVm.getLaunchTime( ) );
       vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
       String dnsDomain = "dns-disabled";
       try {
         dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
-      } catch ( Exception e ) {
-      }
+      } catch ( Exception e ) {}
       vm.getNetworkConfig( ).updateDns( dnsDomain );
       vm.setKeyInfo( keyInfo );
       vm.setImageInfo( imgInfo );
@@ -403,14 +401,14 @@ public class SystemState {
           reply.getInstancesSet( ).add(
                                         new TerminateInstancesItemType( v.getInstanceId( ), v.getState( ).getCode( ), v.getState( ).getName( ),
                                                                         VmState.SHUTTING_DOWN.getCode( ), VmState.SHUTTING_DOWN.getName( ) ) );
-          if( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+          if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
             v.setState( VmState.SHUTTING_DOWN );
             v.resetStopWatch( );
             try {
-		SystemState.cleanUp( v );
-	    } catch ( Throwable t ) {
-		LOG.debug(t, t);
-	    }
+              SystemState.cleanUp( v );
+            } catch ( Throwable t ) {
+              LOG.debug( t, t );
+            }
           }
         }
       } catch ( NoSuchElementException e ) {
@@ -463,11 +461,13 @@ public class SystemState {
     }
     return reply;
   }
+  
   private static String DESCRIBE_NO_DNS = "no-dns";
-  private static String ALT_PREFIX = "i-";
+  private static String ALT_PREFIX      = "i-";
+  
   public static ArrayList<ReservationInfoType> handle( String userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
-    boolean dns = Component.dns.isLocal( ) && !(instancesSet.remove( DESCRIBE_NO_DNS ) || instancesSet.remove( ALT_PREFIX + DESCRIBE_NO_DNS ) );
+    boolean dns = Component.dns.isLocal( ) && !( instancesSet.remove( DESCRIBE_NO_DNS ) || instancesSet.remove( ALT_PREFIX + DESCRIBE_NO_DNS ) );
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( ( !isAdmin && !userId.equals( v.getOwnerId( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {

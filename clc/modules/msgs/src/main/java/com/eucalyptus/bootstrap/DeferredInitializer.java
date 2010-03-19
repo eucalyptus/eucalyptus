@@ -91,6 +91,8 @@ public class DeferredInitializer {
 	public void add(Class klass) {
 		klasses.add(klass);
 	}
+	
+	
 
 	public void run() {
 		for (Class klass : klasses) {
@@ -113,4 +115,41 @@ public class DeferredInitializer {
 			} 
 		}
 	}
+	
+	public static class Discover extends ServiceJarDiscovery {	
+    @Override
+    public Double getPriority( ) {
+      return 1.0;
+    }
+    
+    @Override
+    public boolean processsClass( Class candidate ) throws Throwable {
+      if ( candidate.getAnnotation( NeedsDeferredInitialization.class ) != null ) {
+        NeedsDeferredInitialization needsDeferredInit = ( NeedsDeferredInitialization ) candidate.getAnnotation( NeedsDeferredInitialization.class );
+        if ( needsDeferredInit.component( ).isEnabled( ) ) {
+          singleton.add( candidate );
+          LOG.info( "---> Loading deferred initializer for entry: " + candidate.getName( ) );
+          return true;
+        }
+      }
+      return false;
+    }
+	}
+  
+  @Provides( resource = Resource.DeferredInitialization )
+  public static class Bootstrap extends Bootstrapper {
+
+    @Override
+    public boolean load( Resource current ) throws Exception {
+      return false;
+    }
+
+    @Override
+    public boolean start( ) throws Exception {
+      DeferredInitializer.getInstance().run();
+      return true;
+    }
+    
+  }
+
 }

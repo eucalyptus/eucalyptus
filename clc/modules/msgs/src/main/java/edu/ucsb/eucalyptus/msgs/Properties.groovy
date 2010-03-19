@@ -59,21 +59,33 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- *
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package edu.ucsb.eucalyptus.msgs;
 
-package edu.ucsb.eucalyptus.util;
-
-/**
- * User: decker
- * Date: Jun 11, 2008
- * Time: 3:10:22 AM
- */
-public class BindingUtil {
-
-  public static String sanitizeNamespace( String namespace )
-  {
-    return namespace.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
+public class Property extends EucalyptusData {
+  String name;
+  String value;
+  String description;
+  public Property( String name, String value, String description ) {
+    super( );
+    this.name = name;
+    this.value = value;
+    this.description = description;
   }
+}
+public class DescribePropertiesType extends EucalyptusMessage {
+  ArrayList<String> properties = new ArrayList<String>();
+}
+public class DescribePropertiesResponseType extends EucalyptusMessage {
+  ArrayList<Property> properties = new ArrayList<Property>();
+}
+public class ModifyPropertyValueType extends EucalyptusMessage {
+  String name;
+  String value;
+}
+public class ModifyPropertyValueResponseType extends EucalyptusMessage {
+  String name;
+  String value;
+  String oldValue;
 }

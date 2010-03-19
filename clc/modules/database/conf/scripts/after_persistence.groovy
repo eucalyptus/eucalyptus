@@ -1,3 +1,4 @@
-import com.eucalyptus.bootstrap.DeferredInitializer;
-
-DeferredInitializer.getInstance().run();
+//import com.eucalyptus.bootstrap.DeferredInitializer;
+//
+//DeferredInitializer.getInstance().run();
+println ""
