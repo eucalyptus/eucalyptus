@@ -622,7 +622,13 @@ public class LVM2Manager implements LogicalStorageManager {
 					throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
 				}
 				returnValue = removeLoopback(loDevName);
-				volumeManager.remove(foundLVMVolumeInfo);
+				File rawFile = new File(storageRootDirectory + "/" + volumeId);
+				if (rawFile.exists()) {
+					if(!rawFile.delete()) {
+						throw new EucalyptusCloudException("Unable to delete: " + rawFile.getAbsolutePath());
+					}
+				}
+				volumeManager.remove(foundLVMVolumeInfo);				
 				volumeManager.finish();
 			} catch(ExecutionException ex) {
 				volumeManager.abort();
@@ -1131,6 +1137,11 @@ public class LVM2Manager implements LogicalStorageManager {
 		} else if(!volumeDir.canWrite()) {
 			LOG.fatal("Cannot write to volume root directory: " + storageRootDirectory);
 		}		
+	}
+	
+	@Override
+	public String getStorageRootDirectory() {
+		return storageRootDirectory;
 	}
 }
 

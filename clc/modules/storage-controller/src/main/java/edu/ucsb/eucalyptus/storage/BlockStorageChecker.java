@@ -89,16 +89,10 @@ import java.util.UUID;
 
 public class BlockStorageChecker {
 	private static Logger LOG = Logger.getLogger(BlockStorageChecker.class);
-	private StorageManager volumeStorageManager;
-	private StorageManager snapshotStorageManager;
 	private LogicalStorageManager blockManager;
 	private static boolean transferredPending = false;
 
-	public BlockStorageChecker(StorageManager volumeStorageManager, 
-			StorageManager snapshotStorageManager, 
-			LogicalStorageManager blockManager) {
-		this.volumeStorageManager = volumeStorageManager;
-		this.snapshotStorageManager = snapshotStorageManager;
+	public BlockStorageChecker(LogicalStorageManager blockManager) {
 		this.blockManager = blockManager;
 	}
 

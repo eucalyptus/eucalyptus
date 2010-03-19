@@ -66,7 +66,6 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -116,11 +115,7 @@ import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
 import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
-import edu.ucsb.eucalyptus.storage.LVM2DASManager;
-import edu.ucsb.eucalyptus.storage.LVM2Manager;
 import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
-import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
@@ -129,8 +124,6 @@ public class BlockStorage {
 
 	private static Logger LOG = Logger.getLogger(BlockStorage.class);
 
-	static StorageManager volumeStorageManager;
-	static StorageManager snapshotStorageManager;
 	static LogicalStorageManager blockManager;
 	static BlockStorageChecker checker;
 	static BlockStorageStatistics blockStorageStatistics;
@@ -139,10 +132,8 @@ public class BlockStorage {
 
 	public static void deferredInitializer() {
 		if( !Component.storage.isEnabled( ) ) return;//temporary workaround for remote-component boot issue.
-		volumeStorageManager = new FileSystemStorageManager(LVM2Manager.storageRootDirectory);
-		snapshotStorageManager = new FileSystemStorageManager(LVM2Manager.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
-		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
+		checker = new BlockStorageChecker(blockManager);
 		if(StorageProperties.trackUsageStatistics) 
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
@@ -189,10 +180,6 @@ public class BlockStorage {
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		String storageRootDirectory = request.getStorageRootDirectory();
-		if(storageRootDirectory != null)  {
-			volumeStorageManager.setRootDirectory(storageRootDirectory);
-			snapshotStorageManager.setRootDirectory(storageRootDirectory);
-		}
 		Integer maxTotalVolumeSize = request.getMaxTotalVolumeSize();
 		if(maxTotalVolumeSize != null) 
 			StorageProperties.MAX_TOTAL_VOLUME_SIZE = maxTotalVolumeSize;        
@@ -506,7 +493,7 @@ public class BlockStorage {
 			//something went wrong in the past. remove and retry
 			file.delete();
 		}*/
-		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, LVM2Manager.storageRootDirectory);
+		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, blockManager.getStorageRootDirectory());
 		snapshotGetter.run();
 		/*int snapshotSize = (int)(file.length() / StorageProperties.GB);
 		if(snapshotSize == 0) {
@@ -790,12 +777,8 @@ public class BlockStorage {
 		public void run() {
 			try {
 				blockManager.deleteVolume(volumeId);
-				volumeStorageManager.deleteObject("", volumeId);
 			} catch (EucalyptusCloudException e1) {
 				LOG.error(e1);
-				return;
-			} catch (IOException e) {
-				LOG.error(e);
 				return;
 			}
 			EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();

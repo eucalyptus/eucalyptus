@@ -442,5 +442,11 @@ public class SANManager implements LogicalStorageManager {
 		}
 		connectionManager.configure();
 	}
+
+	@Override
+	public String getStorageRootDirectory() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
 

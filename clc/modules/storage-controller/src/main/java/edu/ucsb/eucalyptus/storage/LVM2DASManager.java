@@ -932,5 +932,10 @@ public class LVM2DASManager implements LogicalStorageManager {
 			LOG.fatal("Cannot write to volume root directory: " + storageRootDirectory);
 		}
 	}
+
+	@Override
+	public String getStorageRootDirectory() {
+		return storageRootDirectory;
+	}
 }
 

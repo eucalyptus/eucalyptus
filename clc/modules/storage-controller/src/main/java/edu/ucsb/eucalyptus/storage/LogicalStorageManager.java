@@ -114,5 +114,7 @@ public interface LogicalStorageManager {
 
 	public ArrayList<ComponentProperty> getStorageProps();
 
-	public void setStorageProps(ArrayList<ComponentProperty> storageParams); 
+	public void setStorageProps(ArrayList<ComponentProperty> storageParams);
+
+	public String getStorageRootDirectory(); 
 }
