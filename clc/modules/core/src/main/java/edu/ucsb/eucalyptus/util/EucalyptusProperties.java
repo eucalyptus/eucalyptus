@@ -65,6 +65,10 @@
 
 package edu.ucsb.eucalyptus.util;
 
+import java.net.SocketException;
+import java.util.List;
+import java.util.UUID;
+import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.WalrusConfiguration;
@@ -73,17 +77,8 @@ import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.StorageProperties;
-import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import org.apache.log4j.Logger;
-
-import java.net.MalformedURLException;
-import java.net.SocketException;
-import java.net.URL;
-import java.util.List;
-import java.util.UUID;
 
 public class EucalyptusProperties {
 

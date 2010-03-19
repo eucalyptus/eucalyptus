@@ -70,11 +70,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.Configuration;
@@ -82,9 +79,7 @@ import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.util.StorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.cluster.VolumeAttachCallback;

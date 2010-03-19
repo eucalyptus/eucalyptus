@@ -337,7 +337,7 @@ public class Network implements HasName {
       Network me = Networks.getInstance().lookup( this.networkName );
       this.max = me.max;
     } catch (Throwable t) {
-      this.max = 256;
+      this.max = 2048;
     }
     for( int i = 2; i < max; i++ ) {//FIXME: potentially a network can be more than a /24. update w/ real constraints at runtime.
       this.availableNetworkIndexes.add( i );

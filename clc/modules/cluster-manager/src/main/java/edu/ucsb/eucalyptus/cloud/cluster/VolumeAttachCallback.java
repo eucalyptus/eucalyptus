@@ -63,17 +63,13 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
+import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
-import org.apache.log4j.Logger;
-
-import java.util.NoSuchElementException;
 
 public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType,AttachVolumeResponseType> {
 
