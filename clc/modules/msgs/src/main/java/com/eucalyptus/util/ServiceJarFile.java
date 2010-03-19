@@ -79,6 +79,8 @@ import java.util.jar.JarFile;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Configurable;
+import com.eucalyptus.bootstrap.ConfigurableManagement;
 import com.eucalyptus.bootstrap.DeferredInitializer;
 import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
@@ -119,6 +121,11 @@ public class ServiceJarFile extends JarFile {
 		} catch (Exception e) {
 	      LOG.trace( e, e );
 		}
+        try {
+  	      this.addConfigurableKlasses(j);
+  		} catch (Exception e) {
+  	      LOG.trace( e, e );
+  		}
       }
     }
   }
@@ -134,6 +141,17 @@ private void addDeferredInitializers(JarEntry j) throws Exception {
     }
   }
 
+  @SuppressWarnings("unchecked")
+private void addConfigurableKlasses(JarEntry j) throws Exception {
+	String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
+    Class candidate = ClassLoader.getSystemClassLoader().loadClass( classGuess );
+    if(candidate.getAnnotation(Configurable.class) != null) {
+    	Configurable configurable = (Configurable) candidate.getAnnotation(Configurable.class);
+       if(configurable.component().isEnabled())
+         ConfigurableManagement.getInstance().add(candidate);
+    }
+  }
+  
 @SuppressWarnings( "unchecked" )
   public List<Bootstrapper> getBootstrappers( ) {
     List<Bootstrapper> ret = Lists.newArrayList( );

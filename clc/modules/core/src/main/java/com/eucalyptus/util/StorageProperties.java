@@ -88,7 +88,6 @@ public class StorageProperties {
 	public static String DB_NAME             = "eucalyptus_storage";
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
 	public static final String EUCALYPTUS_HEADER = "EucaHeader";
-	public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
 	public static String WALRUS_URL = "http://localhost:8773/services/Walrus";
 	public static int MAX_TOTAL_VOLUME_SIZE = 50;
 	public static int MAX_VOLUME_SIZE = 10;
@@ -101,20 +100,13 @@ public class StorageProperties {
 	public static boolean shouldEnforceUsageLimits = true;
 	public static final String ETHERD_PREFIX = "/dev/etherd/e";
 
-	public static String SAN_HOST = "san_host";
-	public static String SAN_USERNAME = "user";
-	public static String SAN_PASSWORD = "password";
 	public static final String DUMMY_SAN_PASSWORD = "password";
  	public static final String DUMMY_SAN_HOST = "san_host";
 	
-	public static String iface = "eth0";
-	public static boolean zeroFillVolumes = false;
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
 
-	public static String DAS_DEVICE = "/dev/blockdev";
-	
-    static { GroovyUtil.loadConfig("storageprops.groovy"); }
+	static { GroovyUtil.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
 		if(!Component.eucalyptus.isLocal()) {

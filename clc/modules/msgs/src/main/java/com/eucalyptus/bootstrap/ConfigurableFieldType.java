@@ -59,30 +59,11 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.bootstrap;
 
-package edu.ucsb.eucalyptus.storage;
 
-import org.apache.log4j.Logger;
-
-public class BlockStorageManagerFactory {
-	private static Logger LOG = Logger.getLogger(BlockStorageManagerFactory.class);
-	public static LogicalStorageManager getBlockStorageManager() {
-		String ebsManager = "edu.ucsb.eucalyptus.storage.LVM2Manager";
-		if(System.getProperty("ebs.storage.manager") != null) {
-			ebsManager = System.getProperty("ebs.storage.manager");
-		}
-		try {
-			return (LogicalStorageManager) Class.forName(ebsManager).newInstance();
-		} catch (InstantiationException e) {
-			LOG.error(e, e); 
-		} catch (IllegalAccessException e) {
-			LOG.error(e, e); 
-		} catch (ClassNotFoundException e) {
-			LOG.error(e, e); 
-		}
-		return null;
-	}
+public enum ConfigurableFieldType {
+  BOOLEAN, KEYVALUE, KEYVALUEHIDDEN
 }

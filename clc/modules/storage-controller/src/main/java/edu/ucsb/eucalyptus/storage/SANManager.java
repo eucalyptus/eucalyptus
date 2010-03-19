@@ -65,11 +65,19 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.RowFilter.ComparisonType;
+
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Configurable;
+import com.eucalyptus.bootstrap.ConfigurableField;
+import com.eucalyptus.bootstrap.ConfigurableFieldType;
+import com.eucalyptus.bootstrap.ConfigurableManagement;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -77,11 +85,22 @@ import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
+@Configurable(component = Component.storage)
 public class SANManager implements LogicalStorageManager {
 
 	private SANProvider connectionManager;
+
+	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "SAN Host")
+	public static String SAN_HOST = "sanHost";
+	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "SAN Username")
+	public static String SAN_USERNAME = "sanUser";
+	@ConfigurableField(type = ConfigurableFieldType.KEYVALUEHIDDEN, displayName = "SAN Password")
+	public static String SAN_PASSWORD = "sanPassword";
+
 	private static SANManager singleton;
 	private static Logger LOG = Logger.getLogger(SANManager.class);
 
@@ -163,6 +182,38 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void configure() {
+		EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();	
+		StorageInfo storageInfo;
+		try {
+			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
+			db.commit();
+		} catch(EucalyptusCloudException ex) {
+			storageInfo = new StorageInfo(StorageProperties.NAME, 
+					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
+					null, 
+					StorageProperties.MAX_VOLUME_SIZE, 
+					null,
+					null,
+					SANManager.SAN_HOST,
+					SANManager.SAN_USERNAME,
+					SANManager.SAN_PASSWORD,
+					null);
+			db.add(storageInfo);
+			db.commit();
+		} 
+		StorageProperties.MAX_TOTAL_VOLUME_SIZE = storageInfo.getMaxTotalVolumeSizeInGb();
+		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
+		SANManager.SAN_HOST = storageInfo.getSanHost();
+		SANManager.SAN_USERNAME = storageInfo.getSanUser();
+		try {
+			if(!StorageProperties.DUMMY_SAN_PASSWORD.equals(storageInfo.getSanPassword())) {
+				SANManager.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
+			} else {
+				LOG.info("SAN credentials not configured yet.");
+			}
+		} catch (EucalyptusCloudException e) {
+			LOG.fatal("Unable to get password. " + e.getMessage());
+		}
 		connectionManager.configure();
 	}
 
@@ -305,7 +356,7 @@ public class SANManager implements LogicalStorageManager {
 	@Override
 	public List<String> prepareForTransfer(String snapshotId)
 	throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
+		//Nothing to do here
 		return new ArrayList<String>();
 	}
 
@@ -346,6 +397,55 @@ public class SANManager implements LogicalStorageManager {
 			db.commit();
 			return deviceName;
 		}
+		return null;
+	}
+
+	@Override
+	public ArrayList<ComponentProperty> getStorageProps() {
+		return ConfigurableManagement.getInstance().getProperties(this.getClass());		
+	}
+
+	@Override
+	public void setStorageProps(final ArrayList<ComponentProperty> storageParams) {
+		ConfigurableManagement.getInstance().setProperties(this.getClass(), storageParams);
+		EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();
+		StorageInfo storageInfo;
+		try {
+			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
+			storageInfo.setMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
+			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
+			storageInfo.setSanHost(SANManager.SAN_HOST);
+			storageInfo.setSanUser(SANManager.SAN_USERNAME);
+			try {
+				storageInfo.setSanPassword(BlockStorageUtil.encryptSCTargetPassword(SANManager.SAN_PASSWORD));
+			} catch (EucalyptusCloudException e) {
+				LOG.fatal("Unable to update password. " + e.getMessage());
+			}
+			db.commit();
+		} catch(EucalyptusCloudException ex) {
+			try {
+				storageInfo = new StorageInfo(StorageProperties.NAME, 
+						StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
+						null, 
+						StorageProperties.MAX_VOLUME_SIZE, 
+					    null,
+						null,
+						SANManager.SAN_HOST,
+						SANManager.SAN_USERNAME,
+						BlockStorageUtil.encryptSCTargetPassword(SANManager.SAN_PASSWORD),
+						null);
+				db.add(storageInfo);
+			} catch (EucalyptusCloudException e) {
+				LOG.fatal("Unable to update password. " + e.getMessage());
+			}
+			db.commit();
+		}
+		connectionManager.configure();
+	}
+
+	@Override
+	public String getStorageRootDirectory() {
+		// TODO Auto-generated method stub
 		return null;
 	}
 }

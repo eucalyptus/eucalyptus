@@ -89,6 +89,7 @@ import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType;
@@ -116,14 +117,14 @@ public class RemoteInfoHandler {
 		//FIXME: Min/max vlans values should be updated
 		List<ClusterConfiguration> clusterConfig = Lists.newArrayList( );
 		for ( ClusterInfoWeb clusterWeb : newClusterList ) {
-	    try {
-        ClusterConfiguration ccConfig = Configuration.getClusterConfiguration( clusterWeb.getName( ) );
-        ccConfig.setMaxVlan( clusterWeb.getMaxVlans( ) );
-        ccConfig.setMinVlan( clusterWeb.getMinVlans( ) );
-        Configuration.getEntityWrapper( ).mergeAndCommit( ccConfig );
-      } catch ( Exception e ) {
-        LOG.debug( e, e );
-      }
+			try {
+				ClusterConfiguration ccConfig = Configuration.getClusterConfiguration( clusterWeb.getName( ) );
+				ccConfig.setMaxVlan( clusterWeb.getMaxVlans( ) );
+				ccConfig.setMinVlan( clusterWeb.getMinVlans( ) );
+				Configuration.getEntityWrapper( ).mergeAndCommit( ccConfig );
+			} catch ( Exception e ) {
+				LOG.debug( e, e );
+			}
 			clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ), clusterWeb.getMaxVlans( ) ) );
 		}
 		updateClusterConfigurations( clusterConfig );
@@ -152,78 +153,66 @@ public class RemoteInfoHandler {
 			updateStorageConfiguration.setName(storageControllerWeb.getName());
 			updateStorageConfiguration.setMaxTotalVolumeSize(storageControllerWeb.getTotalVolumesSizeInGB());
 			updateStorageConfiguration.setMaxVolumeSize(storageControllerWeb.getMaxVolumeSizeInGB());
-			updateStorageConfiguration.setStorageInterface(storageControllerWeb.getStorageInterface());
-			updateStorageConfiguration.setStorageRootDirectory(storageControllerWeb.getVolumesPath());
-			updateStorageConfiguration.setZeroFillVolumes(storageControllerWeb.getZeroFillVolumes());
-			updateStorageConfiguration.setSanHost(storageControllerWeb.getSanHost());
-			updateStorageConfiguration.setSanUser(storageControllerWeb.getSanUser());
-			updateStorageConfiguration.setSanPassword(storageControllerWeb.getSanPassword());
-			updateStorageConfiguration.setDASDevice(storageControllerWeb.getDASDevice());
+			updateStorageConfiguration.setStorageParams(convertStorageProps(storageControllerWeb.getStorageParams()));
 			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, 
 					storageControllerWeb.getHost());
 			if(Component.eucalyptus.isLocal()) {
 				updateStorageConfiguration.setName(StorageProperties.SC_LOCAL_NAME);
 			}
 			try {
-        scDispatch.send(updateStorageConfiguration);
-      } catch ( Exception e ) {
-        LOG.error( "Error sending update configuration message to storage controller: " + updateStorageConfiguration );
-        LOG.error( "The storage controller's configuration may be out of sync!" );
-        LOG.debug( e, e );
-      }
+				scDispatch.send(updateStorageConfiguration);
+			} catch ( Exception e ) {
+				LOG.error( "Error sending update configuration message to storage controller: " + updateStorageConfiguration );
+				LOG.error( "The storage controller's configuration may be out of sync!" );
+				LOG.debug( e, e );
+			}
 		}
 	}
 
 	public static synchronized List<StorageInfoWeb> getStorageList( ) throws EucalyptusCloudException {
 		List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
-    for( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
-    	try {
-        if( NetworkUtil.testLocal( cc.getHostName( ) ) && !Component.storage.isEnabled( ) ) {
-        	storageList.add( StorageInfoWeb.DEFAULT_SC );
-        	continue;
-        }
-      } catch ( Exception e ) {
-        LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
-      }
-    	StorageControllerConfiguration c;
-    	try {
-    		c = Configuration.getStorageControllerConfiguration(  cc.getName( ) );
-    		StorageInfoWeb scInfo = new StorageInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ) );
-    		try {
-          GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
-          if( c.getName( ).equals( getStorageConfigResponse.getName( ) ) ) {
-            scInfo.setVolumesPath( getStorageConfigResponse.getStorageRootDirectory( ) );
-            scInfo.setMaxVolumeSizeInGB( getStorageConfigResponse.getMaxVolumeSize( ) );
-            scInfo.setTotalVolumesSizeInGB( getStorageConfigResponse.getMaxTotalVolumeSize( ) );
-            scInfo.setStorageInterface( getStorageConfigResponse.getStorageInterface( ) );
-            scInfo.setZeroFillVolumes( getStorageConfigResponse.getZeroFillVolumes( ) );
-            scInfo.setSanHost(getStorageConfigResponse.getSanHost());
-            scInfo.setSanUser(getStorageConfigResponse.getSanUser());
-            scInfo.setSanPassword(getStorageConfigResponse.getSanPassword());
-            scInfo.setDASDevice(getStorageConfigResponse.getDASDevice());
-          } else {
-            LOG.debug("Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception());
-            LOG.debug("Expected configuration for SC related to CC: " + LogUtil.dumpObject( c ) );
-            LOG.debug("Received configuration for SC related to CC: " + LogUtil.dumpObject( getStorageConfigResponse ) );            
-          }
-    		} catch ( Throwable e ) {
-    			LOG.debug( "Got an error while trying to communicate with remote storage controller", e );
-    		}
-    		storageList.add( scInfo );
-    	} catch ( Exception e1 ) {
-    		storageList.add( StorageInfoWeb.DEFAULT_SC );
-    	}
-    }
+		for( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
+			try {
+				if( NetworkUtil.testLocal( cc.getHostName( ) ) && !Component.storage.isEnabled( ) ) {
+					storageList.add( StorageInfoWeb.DEFAULT_SC );
+					continue;
+				}
+			} catch ( Exception e ) {
+				LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
+			}
+			StorageControllerConfiguration c;
+			try {
+				c = Configuration.getStorageControllerConfiguration(  cc.getName( ) );
+				StorageInfoWeb scInfo = new StorageInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ) );
+				try {
+					GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
+					if( c.getName( ).equals( getStorageConfigResponse.getName( ) ) ) {
+						scInfo.setMaxVolumeSizeInGB( getStorageConfigResponse.getMaxVolumeSize( ) );
+						scInfo.setTotalVolumesSizeInGB( getStorageConfigResponse.getMaxTotalVolumeSize( ) );
+						scInfo.setStorageParams(convertStorageParams(getStorageConfigResponse.getStorageParams()));
+					} else {
+						LOG.debug("Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception());
+						LOG.debug("Expected configuration for SC related to CC: " + LogUtil.dumpObject( c ) );
+						LOG.debug("Received configuration for SC related to CC: " + LogUtil.dumpObject( getStorageConfigResponse ) );            
+					}
+				} catch ( Throwable e ) {
+					LOG.debug( "Got an error while trying to communicate with remote storage controller", e );
+				}
+				storageList.add( scInfo );
+			} catch ( Exception e1 ) {
+				storageList.add( StorageInfoWeb.DEFAULT_SC );
+			}
+		}
 		return storageList;
 	}
 
-  private static GetStorageConfigurationResponseType sendForStorageInfo( ClusterConfiguration cc, StorageControllerConfiguration c ) throws EucalyptusCloudException {
-    GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType(c.getName());
-    ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, c.getHostName());
-    GetStorageConfigurationResponseType getStorageConfigResponse = 
-    	scDispatch.send(getStorageConfiguration, GetStorageConfigurationResponseType.class);
-    return getStorageConfigResponse;
-  }
+	private static GetStorageConfigurationResponseType sendForStorageInfo( ClusterConfiguration cc, StorageControllerConfiguration c ) throws EucalyptusCloudException {
+		GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType(c.getName());
+		ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, c.getHostName());
+		GetStorageConfigurationResponseType getStorageConfigResponse = 
+			scDispatch.send(getStorageConfiguration, GetStorageConfigurationResponseType.class);
+		return getStorageConfigResponse;
+	}
 
 	public static synchronized void setWalrusList( List<WalrusInfoWeb> newWalrusList ) throws EucalyptusCloudException {
 		List<WalrusConfiguration> walrusConfig = Lists.newArrayList( );
@@ -348,5 +337,23 @@ public class RemoteInfoHandler {
 			throw new EucalyptusCloudException( "Changing component configurations failed: " + e.getMessage( ), e );
 		}
 
+	}
+
+	private static ArrayList<String> convertStorageParams(ArrayList<ComponentProperty> properties) {
+		ArrayList<String> params = new ArrayList<String>();
+		for (ComponentProperty property : properties) {
+			params.add(property.getType());
+			params.add(property.getKey());
+			params.add(property.getValue());
+		}
+		return params;
+	}
+
+	private static ArrayList<ComponentProperty> convertStorageProps(ArrayList<String> params) {
+		ArrayList<ComponentProperty> props = new ArrayList<ComponentProperty>();
+		for(int i = 0 ; i < (params.size() / 3); ++i) {
+			props.add(new ComponentProperty(params.get(3*i), params.get(3*i + 1), params.get(3*i + 2)));
+		}
+		return props;
 	}
 }

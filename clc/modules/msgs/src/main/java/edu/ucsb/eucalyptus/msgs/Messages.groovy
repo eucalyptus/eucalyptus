@@ -63,6 +63,8 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import java.util.List;
+
 import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
@@ -103,6 +105,39 @@ public class ComponentType extends EucalyptusData {
   }
   public ComponentType( ) {}  
 }
+
+public class ComponentProperty extends EucalyptusData {
+	private String type;
+	private String key;
+	private String value;
+	
+	
+	public ComponentProperty(String type, String key, String value) {
+		this.type = type;
+		this.key = key;
+		this.value = value;
+	}
+	
+	public String getType() {
+		return type;
+	}
+	public void setType(String type) {
+		this.type = type;
+	}
+	public String getKey() {
+		return key;
+	}
+	public void setKey(String key) {
+		this.key = key;
+	}
+	public String getValue() {
+		return value;
+	}
+	public void setValue(String value) {
+		this.value = value;
+	}	
+}
+
 public class StorageStateType extends EucalyptusMessage{
   private String name;
   private String volumesPath;
@@ -110,17 +145,15 @@ public class StorageStateType extends EucalyptusMessage{
   private Integer totalVolumesSizeInGB;
   private String storageInterface;
   private Boolean zeroFillVolumes;
-  private String sanHost;
-  private String sanUser;
-  private String sanPassword;
   private String DASDevice;
-  
+  private ArrayList<ComponentProperty> storageParams;
+
   def StorageStateType() {
   }
   
   def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
   final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
-  final DASDevice) {
+  final DASDevice, final List<ComponentProperty> storageParams) {
     this.name = name;
     this.volumesPath = volumesPath;
     this.maxVolumeSizeInGB = maxVolumeSizeInGB;
@@ -128,11 +161,12 @@ public class StorageStateType extends EucalyptusMessage{
     this.storageInterface = storageInterface;
     this.zeroFillVolumes = zeroFillVolumes;
     this.DASDevice = DASDevice;
+    this.storageParams = storageParams;
   }
 
   def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
   final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
-  final sanHost, final sanUser, final sanPassword) {
+  final List<ComponentProperty> storageParams) {
     this.name = name;
     this.volumesPath = volumesPath;
     this.maxVolumeSizeInGB = maxVolumeSizeInGB;
@@ -142,6 +176,7 @@ public class StorageStateType extends EucalyptusMessage{
     this.sanHost = sanHost;
     this.sanUser = sanUser;
     this.sanPassword = sanPassword;
+    this.storageParams = storageParams;
   }
 }
 

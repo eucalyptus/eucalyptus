@@ -67,6 +67,10 @@ package edu.ucsb.eucalyptus.storage;
 
 import com.eucalyptus.util.EucalyptusCloudException;
 
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+
+
+import java.util.ArrayList;
 import java.util.List;
 
 public interface LogicalStorageManager {
@@ -106,5 +110,11 @@ public interface LogicalStorageManager {
 
 	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException;
 
-	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException; 
+	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException;
+
+	public ArrayList<ComponentProperty> getStorageProps();
+
+	public void setStorageProps(ArrayList<ComponentProperty> storageParams);
+
+	public String getStorageRootDirectory(); 
 }

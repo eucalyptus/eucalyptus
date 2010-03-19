@@ -107,9 +107,9 @@ public class EquallogicProvider implements SANProvider {
 	public EquallogicProvider() {}
 
 	public void configure() {
-		this.host = StorageProperties.SAN_HOST;
-		this.username = StorageProperties.SAN_USERNAME;
-		this.password = StorageProperties.SAN_PASSWORD;
+		this.host = SANManager.SAN_HOST;
+		this.username = SANManager.SAN_USERNAME;
+		this.password = SANManager.SAN_PASSWORD;
 		if(sessionManager != null)
 			try {
 				if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) {

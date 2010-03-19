@@ -94,8 +94,6 @@ public class SystemConfiguration {
   private Boolean doDynamicPublicAddresses;
   @Column( name = "system_reserved_public_addresses" )
   private Integer systemReservedPublicAddresses;
-  @Column( name = "zero_fill_volumes" )
-  private Boolean zeroFillVolumes;
   @Column( name = "dns_domain" )
   private String  dnsDomain;
   @Column( name = "nameserver" )
@@ -106,7 +104,7 @@ public class SystemConfiguration {
   public SystemConfiguration( ) {
   }
 
-  public SystemConfiguration( final String defaultKernel, final String defaultRamdisk, final Integer maxUserPublicAddresses, final Boolean doDynamicPublicAddresses, final Integer systemReservedPublicAddresses, final Boolean zeroFillVolumes, final String dnsDomain, final String nameserver,
+  public SystemConfiguration( final String defaultKernel, final String defaultRamdisk, final Integer maxUserPublicAddresses, final Boolean doDynamicPublicAddresses, final Integer systemReservedPublicAddresses, final String dnsDomain, final String nameserver,
       final String nameserverAddress, final String cloudHost ) {
     this.defaultKernel = defaultKernel;
     this.defaultRamdisk = defaultRamdisk;
@@ -114,7 +112,6 @@ public class SystemConfiguration {
     this.doDynamicPublicAddresses = doDynamicPublicAddresses;
     this.systemReservedPublicAddresses = systemReservedPublicAddresses;
     this.dnsDomain = dnsDomain;
-    this.zeroFillVolumes = zeroFillVolumes;
     this.nameserver = nameserver;
     this.nameserverAddress = nameserverAddress;
     this.cloudHost = cloudHost;
@@ -194,14 +191,6 @@ public class SystemConfiguration {
 
   public void setNameserverAddress( String nameserverAddress ) {
     this.nameserverAddress = nameserverAddress;
-  }
-
-  public Boolean getZeroFillVolumes( ) {
-    return zeroFillVolumes;
-  }
-
-  public void setZeroFillVolumes( Boolean zeroFillVolumes ) {
-    this.zeroFillVolumes = zeroFillVolumes;
   }
 
   public String getCloudHost( ) {

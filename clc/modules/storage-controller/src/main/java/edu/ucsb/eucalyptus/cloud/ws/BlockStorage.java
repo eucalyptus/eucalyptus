@@ -66,7 +66,6 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -83,7 +82,6 @@ import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
-import com.google.gwt.dev.util.HttpHeaders;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
@@ -92,9 +90,9 @@ import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
 import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
-import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
@@ -118,9 +116,6 @@ import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
 import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
 import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
-import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.storage.BlockStorageUtil;
-import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
@@ -129,8 +124,6 @@ public class BlockStorage {
 
 	private static Logger LOG = Logger.getLogger(BlockStorage.class);
 
-	static StorageManager volumeStorageManager;
-	static StorageManager snapshotStorageManager;
 	static LogicalStorageManager blockManager;
 	static BlockStorageChecker checker;
 	static BlockStorageStatistics blockStorageStatistics;
@@ -139,10 +132,8 @@ public class BlockStorage {
 
 	public static void deferredInitializer() {
 		if( !Component.storage.isEnabled( ) ) return;//temporary workaround for remote-component boot issue.
-		volumeStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
-		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
-		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
+		checker = new BlockStorageChecker(blockManager);
 		if(StorageProperties.trackUsageStatistics) 
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
@@ -160,96 +151,14 @@ public class BlockStorage {
 
 	private static void configure() {
 		StorageProperties.updateWalrusUrl();
-		StorageInfo storageInfo = getConfig();
-		StorageProperties.MAX_TOTAL_VOLUME_SIZE = storageInfo.getMaxTotalVolumeSizeInGb();
-		StorageProperties.iface = storageInfo.getStorageInterface();
-		StorageProperties.MAX_VOLUME_SIZE = storageInfo.getMaxVolumeSizeInGB();
-		StorageProperties.storageRootDirectory = storageInfo.getVolumesDir();
-		StorageProperties.zeroFillVolumes = storageInfo.getZeroFillVolumes();
-		StorageProperties.SAN_HOST = storageInfo.getSanHost();
-		StorageProperties.SAN_USERNAME = storageInfo.getSanUser();
-		try {
-			if(!StorageProperties.DUMMY_SAN_PASSWORD.equals(storageInfo.getSanPassword())) {
-				StorageProperties.SAN_PASSWORD = BlockStorageUtil.decryptSCTargetPassword(storageInfo.getSanPassword());
-			} else {
-				LOG.info("SAN credentials not configured yet.");
-			}
-		} catch (EucalyptusCloudException e) {
-			LOG.fatal("Unable to get password. " + e.getMessage());
-		}
-		StorageProperties.DAS_DEVICE = storageInfo.getDASDevice();
+		StorageProperties.updateName();
 		StorageProperties.updateStorageHost();
-		blockManager.configure();
-	}
-
-	private static StorageInfo getConfig() {
-		StorageProperties.updateName();		
-		EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();	
-		StorageInfo storageInfo;
-		try {
-			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
-			db.commit();
-		} catch(EucalyptusCloudException ex) {
-			storageInfo = new StorageInfo(StorageProperties.NAME, 
-					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-					StorageProperties.iface, 
-					StorageProperties.MAX_VOLUME_SIZE, 
-					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes,
-					StorageProperties.SAN_HOST,
-					StorageProperties.SAN_USERNAME,
-					StorageProperties.SAN_PASSWORD,
-					StorageProperties.DAS_DEVICE);
-			db.add(storageInfo);
-			db.commit();
-		} 
-		return storageInfo;
-	}
-
-	private static void updateConfig() {
-		EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();
-		StorageInfo storageInfo;
-		try {
-			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
-			storageInfo.setMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
-			storageInfo.setStorageInterface(StorageProperties.iface);
-			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
-			storageInfo.setVolumesDir(StorageProperties.storageRootDirectory);
-			storageInfo.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
-			storageInfo.setSanHost(StorageProperties.SAN_HOST);
-			storageInfo.setSanUser(StorageProperties.SAN_USERNAME);
-			try {
-				storageInfo.setSanPassword(BlockStorageUtil.encryptSCTargetPassword(StorageProperties.SAN_PASSWORD));
-			} catch (EucalyptusCloudException e) {
-				LOG.fatal("Unable to update password. " + e.getMessage());
-			}
-			storageInfo.setDASDevice(StorageProperties.DAS_DEVICE);
-			db.commit();
-		} catch(EucalyptusCloudException ex) {
-			try {
-				storageInfo = new StorageInfo(StorageProperties.NAME, 
-						StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-						StorageProperties.iface, 
-						StorageProperties.MAX_VOLUME_SIZE, 
-						StorageProperties.storageRootDirectory,
-						StorageProperties.zeroFillVolumes,
-						StorageProperties.SAN_HOST,
-						StorageProperties.SAN_USERNAME,
-						BlockStorageUtil.encryptSCTargetPassword(StorageProperties.SAN_PASSWORD),
-						StorageProperties.DAS_DEVICE);
-				db.add(storageInfo);
-			} catch (EucalyptusCloudException e) {
-				LOG.fatal("Unable to update password. " + e.getMessage());
-			}
-			db.commit();
-		} 
 		blockManager.configure();
 	}
 
 	public BlockStorage() {}
 
 	private static void startupChecks() throws EucalyptusCloudException {
-		check();
 		if(checker != null) {
 			checker.startupChecks();
 		}
@@ -266,49 +175,17 @@ public class BlockStorage {
 		}
 	}
 
-	public static void check() {
-		File volumeDir = new File(StorageProperties.storageRootDirectory);
-		if(!volumeDir.exists()) {
-			if(!volumeDir.mkdirs()) {
-				LOG.fatal("Unable to make volume root directory: " + StorageProperties.storageRootDirectory);
-			}
-		} else if(!volumeDir.canWrite()) {
-			LOG.fatal("Cannot write to volume root directory: " + StorageProperties.storageRootDirectory);
-		}
-
-	}
-
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		String storageRootDirectory = request.getStorageRootDirectory();
-		if(storageRootDirectory != null)  {
-			volumeStorageManager.setRootDirectory(storageRootDirectory);
-			snapshotStorageManager.setRootDirectory(storageRootDirectory);
-			StorageProperties.storageRootDirectory = storageRootDirectory;
-		}
 		Integer maxTotalVolumeSize = request.getMaxTotalVolumeSize();
 		if(maxTotalVolumeSize != null) 
 			StorageProperties.MAX_TOTAL_VOLUME_SIZE = maxTotalVolumeSize;        
 		Integer maxVolumeSize = request.getMaxVolumeSize();
 		if(maxVolumeSize != null)
 			StorageProperties.MAX_VOLUME_SIZE = maxVolumeSize;
-		String storageInterface = request.getStorageInterface();
-		if(storageInterface != null)
-			StorageProperties.iface = storageInterface;
-		Boolean zeroFillVolumes = request.getZeroFillVolumes();
-		if(zeroFillVolumes != null)
-			StorageProperties.zeroFillVolumes = zeroFillVolumes;
-		if(request.getSanHost() != null)
-			StorageProperties.SAN_HOST = request.getSanHost();
-		if(request.getSanUser() != null)
-			StorageProperties.SAN_USERNAME = request.getSanUser();
-		if(request.getSanPassword() != null)
-			StorageProperties.SAN_PASSWORD = request.getSanPassword();
-		if(request.getDASDevice() != null)
-			StorageProperties.DAS_DEVICE = request.getDASDevice();
-		check();
 		//test connection to Walrus
 		StorageProperties.updateWalrusUrl();
 		try {
@@ -318,7 +195,12 @@ public class BlockStorage {
 			StorageProperties.enableStorage = false;
 			LOG.error(ex);
 		}
-		updateConfig();
+		if(request.getStorageParams() != null) {
+			for(ComponentProperty param : request.getStorageParams()) {
+				LOG.info("Storage Param: " + param.getKey() + " Value: " + param.getValue());
+			}
+			blockManager.setStorageProps(request.getStorageParams());
+		}
 		return reply;
 	}
 
@@ -328,16 +210,11 @@ public class BlockStorage {
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		if(StorageProperties.NAME.equals(request.getName())) {
-			reply.setStorageRootDirectory(StorageProperties.storageRootDirectory);
 			reply.setMaxTotalVolumeSize(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
 			reply.setMaxVolumeSize(StorageProperties.MAX_VOLUME_SIZE);
-			reply.setStorageInterface(StorageProperties.iface);
-			reply.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
-			reply.setSanHost(StorageProperties.SAN_HOST);
-			reply.setSanUser(StorageProperties.SAN_USERNAME);
-			reply.setSanPassword(StorageProperties.SAN_PASSWORD);
-			reply.setDASDevice(StorageProperties.DAS_DEVICE);
 			reply.setName(StorageProperties.NAME);
+			ArrayList<ComponentProperty> storageParams = blockManager.getStorageProps();
+			reply.setStorageParams(storageParams);
 		}
 		return reply;
 	}
@@ -616,7 +493,7 @@ public class BlockStorage {
 			//something went wrong in the past. remove and retry
 			file.delete();
 		}*/
-		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, StorageProperties.storageRootDirectory);
+		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, blockManager.getStorageRootDirectory());
 		snapshotGetter.run();
 		/*int snapshotSize = (int)(file.length() / StorageProperties.GB);
 		if(snapshotSize == 0) {
@@ -735,7 +612,6 @@ public class BlockStorage {
 				}
 				List<String> returnValues = blockManager.createSnapshot(volumeId, snapshotId);
 				semaphore.release();
-				//List<String> returnValues = blockManager.prepareForTransfer(snapshotId);
 				if(returnValues.size() < 2) {
 					throw new EucalyptusCloudException("Unable to transfer snapshot");
 				}
@@ -901,12 +777,8 @@ public class BlockStorage {
 		public void run() {
 			try {
 				blockManager.deleteVolume(volumeId);
-				volumeStorageManager.deleteObject("", volumeId);
 			} catch (EucalyptusCloudException e1) {
 				LOG.error(e1);
-				return;
-			} catch (IOException e) {
-				LOG.error(e);
 				return;
 			}
 			EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();

@@ -58,133 +58,19 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
-package edu.ucsb.eucalyptus.admin.client;
+/*
+ * Author: Neil Soman <neil@eucalyptus.com>
+ */
+package com.eucalyptus.bootstrap;
 
-import java.util.ArrayList;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import com.google.gwt.user.client.rpc.IsSerializable;
-
-
-public class StorageInfoWeb implements IsSerializable {
-	private String name;
-	private String host;
-	private Integer port;
-	private Integer maxVolumeSizeInGB;
-	private Integer totalVolumesSizeInGB;
-	private Boolean committed;	
-	private ArrayList<String> storageParams = new ArrayList<String>();
-	
-	public StorageInfoWeb() { }
-	
-	public StorageInfoWeb( final String name, final String host, final Integer port ) {
-    this.name = name;
-    this.host = host;
-    this.port = port;
-    this.maxVolumeSizeInGB = StorageInfoWeb.DEFAULT_SC.getMaxVolumeSizeInGB( );
-    this.totalVolumesSizeInGB = StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( );
-    this.committed = StorageInfoWeb.DEFAULT_SC.committed;
-    this.storageParams = new ArrayList<String>();
-  }
-
-  public StorageInfoWeb( final String name,
-			final String host,
-			final Integer port,
-			final Integer maxVolumeSizeInGB,
-			final Integer totalVolumesSizeInGB,
-			final ArrayList<String> storageParams) {
-		this.name = name;
-		this.host = host;
-		this.port = port;
-		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-		this.committed = false;
-		this.storageParams = storageParams;
-	}
-
-
-	public final void setCommitted ()
-	{
-		this.committed = true;
-	}
-
-	public final Boolean isCommitted ()
-	{
-		return this.committed;
-	}
-
-	public final String getName() {
-		return name;
-	}
-
-	public final void setName(final String name) {
-		this.name = name;
-	}
-
-	
-	public final String getHost() {
-		return host;
-	}
-
-	public final void setHost(final String host) {
-		this.host = host;
-	}
-
-	public final Integer getPort() {
-		return port;
-	}
-
-	public final void setPort(final Integer port) {
-		this.port = port;
-	}
-
-	public final Integer getMaxVolumeSizeInGB() {
-		return maxVolumeSizeInGB;
-	}
-
-	public final void setMaxVolumeSizeInGB(final Integer maxVolumeSizeInGB) {
-		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-	}
-
-	public final Integer getTotalVolumesSizeInGB() {
-		return totalVolumesSizeInGB;
-	}
-
-	public final void setTotalVolumesSizeInGB(final Integer totalVolumesSizeInGB) {
-		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-	}
-
-	public final ArrayList<String> getStorageParams() {
-		return storageParams;
-	}
-
-	public final void setStorageParams(final ArrayList<String> storageParams) {
-		this.storageParams = storageParams;
-	}
-
-	@Override
-	public final boolean equals( final Object o )
-	{
-		if ( this == o ) {
-			return true;
-		}
-		if ( o == null || getClass() != o.getClass() ) {
-			return false;
-		}
-
-		StorageInfoWeb that = ( StorageInfoWeb ) o;
-
-		if ( !name.equals( that.name ) ) {
-			return false;
-		}
-
-		return true;
-	}
-
-	@Override
-	public final int hashCode()
-	{
-		return name.hashCode();
-	}
-
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, 10, 50, new ArrayList<String>());
+@Target({ ElementType.TYPE, ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ConfigurableField {
+	ConfigurableFieldType type() default ConfigurableFieldType.KEYVALUE;
+	String displayName() default "field";
 }
