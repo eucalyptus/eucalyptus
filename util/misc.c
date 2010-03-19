@@ -531,8 +531,8 @@ get_conf_var(	const char *path,
 	}
 
 	len = strlen(name);
-	buf = malloc(sizeof(char) * 4096);
-	while (fgets(buf, 4096, f)) {
+	buf = malloc(sizeof(char) * 32768);
+	while (fgets(buf, 32768, f)) {
 		/* the process here is fairly simple: spaces are not
 		 * considered (unless between "") so we remove them
 		 * before every step. We look for the variable *name*
