@@ -235,6 +235,7 @@ public class EucalyptusNCNcRunInstanceType extends VMwareBrokerRequestType {
 	String imageURL;
 	String kernelURL;
 	String ramdiskURL;
+	String reservationId;
 	String instanceId;
 	VirtualMachineType instanceType;
 	String keyName;
