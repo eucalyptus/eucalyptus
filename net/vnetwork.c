@@ -186,6 +186,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
 
 	snprintf(cmd, 256, "-A POSTROUTING -d ! %s/%d -s %s/%d -j MASQUERADE", network, slashnet, network, slashnet);
+
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
 	rc = vnetSetMetadataRedirect(vnetconfig, network, slashnet);
@@ -1395,13 +1396,18 @@ int vnetAttachTunnels(vnetConfig *vnetconfig, int vlan, char *newbrname) {
   int rc, i, slashnet;
   char cmd[1024], tundev[32], tunvlandev[32], *network=NULL;
   
-  if (!vnetconfig || vlan < 0 || vlan > NUMBER_OF_VLANS || !newbrname || check_bridge(newbrname)) {
+  if (!vnetconfig) {
     logprintfl(EUCAERROR, "vnetAttachTunnels(): bad input params\n");
     return(1);
   }
-  
+
   if (!vnetconfig->tunnels.tunneling) {
     return(0);
+  }
+
+  if (vlan < 0 || vlan > NUMBER_OF_VLANS || !newbrname || check_bridge(newbrname)) {
+    logprintfl(EUCAERROR, "vnetAttachTunnels(): bad input params\n");
+    return(1);
   }
   
   if (check_bridgestp(newbrname)) {

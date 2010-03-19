@@ -66,8 +66,8 @@ permission notice:
 #define INCLUDE_VNETWORK_H
 
 #define NUMBER_OF_VLANS 4096
-#define NUMBER_OF_HOSTS_PER_VLAN 256
-#define NUMBER_OF_PUBLIC_IPS 256
+#define NUMBER_OF_HOSTS_PER_VLAN 2048
+#define NUMBER_OF_PUBLIC_IPS 2048
 #define NUMBER_OF_CCS 8
 
 typedef struct netEntry_t {
