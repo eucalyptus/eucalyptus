@@ -66,26 +66,37 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
-import javax.persistence.*;
+import com.eucalyptus.configurable.Configurable;
+import com.eucalyptus.configurable.ConfigurableClass;
 
 @Entity
 @PersistenceContext(name="eucalyptus_general")
 @Table( name = "system_info" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@ConfigurableClass( alias = "config", description = "Basic system configuration." )
 public class SystemConfiguration {
   @Id
   @GeneratedValue
   @Column( name = "system_info_id" )
   private Long    id = -1l;
+  @Configurable(description="Hostname of the cloud controller.")
   @Column( name = "system_info_cloud_host" )
   private String  cloudHost;
+  @Configurable(description="Default kernel to use when none is supplied by an image's manifest or the user at runtime.")
   @Column( name = "system_info_default_kernel" )
   private String  defaultKernel;
+  @Configurable(description="Default ramdisk to use when none is supplied by an image's manifest or the user at runtime.")
   @Column( name = "system_info_default_ramdisk" )
   private String  defaultRamdisk;
+  @Configurable(description="Unique ID of this cloud installation.",readonly=false)
   @Column( name = "system_registration_id" )
   private String  registrationId;
   @Column( name = "system_max_user_public_addresses" )
@@ -96,8 +107,10 @@ public class SystemConfiguration {
   private Integer systemReservedPublicAddresses;
   @Column( name = "zero_fill_volumes" )
   private Boolean zeroFillVolumes;
+  @Configurable(description="Domain name to use for DNS.")
   @Column( name = "dns_domain" )
   private String  dnsDomain;
+  @Configurable(description="Nameserver address.")
   @Column( name = "nameserver" )
   private String  nameserver;
   @Column( name = "ns_address" )

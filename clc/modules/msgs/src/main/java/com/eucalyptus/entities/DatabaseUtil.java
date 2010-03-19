@@ -1,26 +1,20 @@
-package com.eucalyptus.util;
+package com.eucalyptus.entities;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
-
-import javax.persistence.Persistence;
-
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
-
 import com.eucalyptus.bootstrap.SystemBootstrapper;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
-
 import edu.emory.mathcs.backport.java.util.Collections;
 
 @SuppressWarnings( "unchecked" )
-public class DatabaseUtil implements EventListener {
+public class DatabaseUtil {
 	static Logger                                        LOG           = Logger.getLogger( DatabaseUtil.class );
 	public static int                                    MAX_FAIL      = 5;
 	private static int                                   failCount     = 0;
@@ -67,7 +61,7 @@ public class DatabaseUtil implements EventListener {
 	}
 
 	public static void handleConnectionError( Throwable cause ) {
-		DebugUtil.debug( );
+//		DebugUtil.debug( );
 		touchDatabase( );
 	}
 
@@ -79,22 +73,6 @@ public class DatabaseUtil implements EventListener {
 			if ( MAX_FAIL > failCount ) {
 				LOG.warn( LogUtil.subheader( "Error using or obtaining a database connection, will try till " + ( MAX_FAIL - failCount++ ) + ">" + MAX_FAIL + " more times before reloading." ) );
         System.exit(123);       
-			}
-		}
-	}
-
-	@Override
-	public void advertiseEvent( Event event ) {}
-
-	@Override
-	public void fireEvent( Event event ) {
-		if ( event instanceof ClockTick ) {
-			ClockTick e = ( ClockTick ) event;
-			if ( e.isBackEdge( ) ) {
-				DebugUtil.Times.print( );
-			} else {
-				DebugUtil.Times.update( );
-				DebugUtil.debug( );
 			}
 		}
 	}

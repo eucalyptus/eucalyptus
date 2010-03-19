@@ -84,7 +84,9 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.accounts.UserGroupInfo;
+import com.eucalyptus.accounts.UserInfo;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 

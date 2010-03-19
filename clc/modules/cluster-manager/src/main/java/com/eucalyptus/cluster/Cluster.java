@@ -73,7 +73,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasName;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;

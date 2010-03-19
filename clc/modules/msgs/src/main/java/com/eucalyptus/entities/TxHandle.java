@@ -1,4 +1,4 @@
-package com.eucalyptus.util;
+package com.eucalyptus.entities;
 
 import java.lang.ref.WeakReference;
 import java.util.Calendar;
@@ -14,6 +14,8 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
+import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.util.LogUtil;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private static Logger                     LOG         = Logger.getLogger( TxHandle.class );

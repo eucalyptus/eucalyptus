@@ -178,7 +178,7 @@
         <priority value="${euca.log.exhaustive.user}"/>
         <appender-ref ref="exhaustive"/>
     </category>
-    <category name="com.eucalyptus.util.EntityWrapper" additivity="false">
+    <category name="com.eucalyptus.entities.EntityWrapper" additivity="false">
         <priority value="${euca.log.exhaustive.db}"/>
         <appender-ref ref="exhaustive"/>
     </category>

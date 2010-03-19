@@ -64,7 +64,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.util;
+package com.eucalyptus.entities;
 
 import java.util.List;
 
@@ -77,6 +77,10 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.exception.JDBCConnectionException;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExceptionNotRelatedException;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -189,7 +193,7 @@ public class EntityWrapper<TYPE> {
 
   @SuppressWarnings( "unchecked" )
   public <NEWTYPE> EntityWrapper<NEWTYPE> recast( Class<NEWTYPE> c ) {
-    return ( EntityWrapper<NEWTYPE> ) this;
+    return (com.eucalyptus.entities.EntityWrapper<NEWTYPE> ) this;
   }
 
   public static StackTraceElement getMyStackTraceElement( ) {

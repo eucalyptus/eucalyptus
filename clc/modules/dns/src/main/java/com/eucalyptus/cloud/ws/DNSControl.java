@@ -67,8 +67,8 @@ package com.eucalyptus.cloud.ws;
 
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.dns.TransientZone;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
-import com.eucalyptus.util.EntityWrapper;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -76,7 +76,6 @@ import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
-import org.xbill.DNS.Address;
 
 import java.net.UnknownHostException;
 import java.util.List;

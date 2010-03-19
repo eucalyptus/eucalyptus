@@ -68,8 +68,8 @@ import com.google.common.collect.Lists;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.util.StorageUtil;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 

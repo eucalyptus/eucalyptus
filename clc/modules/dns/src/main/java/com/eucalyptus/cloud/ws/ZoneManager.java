@@ -66,11 +66,11 @@
 package com.eucalyptus.cloud.ws;
 
 import com.eucalyptus.util.DNSProperties;
-import com.eucalyptus.util.EntityWrapper;
 
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import org.apache.log4j.Logger;
 import com.eucalyptus.dns.Zone;
+import com.eucalyptus.entities.EntityWrapper;
 import org.xbill.DNS.Address;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.Record;
