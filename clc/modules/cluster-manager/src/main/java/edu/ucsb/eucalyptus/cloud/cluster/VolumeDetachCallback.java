@@ -83,7 +83,6 @@ public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType,D
   
   @Override
   public void prepare( DetachVolumeType msg ) throws Exception {
-    //FIXME-BETA: make sure the volume is indeed attached.
   }
   
   @Override
@@ -91,7 +90,6 @@ public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType,D
     DetachVolumeResponseType reply = (DetachVolumeResponseType) msg;
     if ( reply.get_return( ) ) {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
-      //FIXME-BETA: mark the volume as detached.
       vm.getVolumes( ).remove( new AttachedVolume( this.getRequest( ).getVolumeId( ) ) );
     }
   }
