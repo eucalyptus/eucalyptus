@@ -65,7 +65,6 @@ package com.eucalyptus.ws.handlers;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -81,14 +80,10 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.mule.DefaultMuleMessage;
-import org.mule.api.ExceptionPayload;
-import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
 import org.mule.transport.NullPayload;
-
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.LogUtil;
@@ -97,7 +92,6 @@ import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.Messaging;
 import com.eucalyptus.ws.util.ReplyQueue;
-
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
