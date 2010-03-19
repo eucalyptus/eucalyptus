@@ -1071,9 +1071,6 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
     return(1);
   }
 
-  //  logprintfl(EUCADEBUG, "DescribeInstances(): printing instance cache\n");
-  //  print_instanceCache();
-  
   *outInsts = NULL;
   *outInstsLen = 0;
 
@@ -1101,7 +1098,6 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   }
   sem_mypost(INSTCACHE);
 
-  //  print_instanceCache();
   for (i=0; i< (*outInstsLen) ; i++) {
     logprintfl(EUCADEBUG, "DescribeInstances(): returning: instanceId=%s, state=%s, publicIp=%s, privateIp=%s, userData=%s\n", (*outInsts)[i].instanceId, (*outInsts)[i].state, (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp, (*outInsts)[i].userData);
   }
@@ -1327,7 +1323,6 @@ int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outres
   for (i=0; i<resourceCache->numResources && !done; i++) {
     int mem, disk, cores;
     
-    // new fashion way
     res = &(resourceCache->resources[i]);
     if (!strcmp(res->hostname, targetNode)) {
       done++;
@@ -1388,7 +1383,6 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
   for (i=0; i<resourceCache->numResources && !done; i++) {
     int mem, disk, cores;
     
-    // new fashion way
     res = &(resourceCache->resources[i]);
     if ((res->state == RESUP || res->state == RESWAKING) && resid == -1) {
       mem = res->availMemory - vm->mem;
@@ -1433,12 +1427,11 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   int rc=0, i=0, done=0, runCount=0, resid=0, foundnet=0, error=0, networkIdx=0, nidx=0, thenidx=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
-  //  char *instId=NULL;
   char instId[16];
   time_t op_start=0, op_timer=0;
   ccResource *res=NULL;
   char mac[32], privip[32], pubip[32];
-
+  
   ncInstance *outInst=NULL;
   virtualMachine ncvm;
   netConfig ncnet;
@@ -1679,11 +1672,15 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  */
 
 	  // start up DHCP
+	  sem_mywait(CONFIG);
+	  config->kick_dhcp = 1;
+	  sem_mypost(CONFIG);
+	  /*
 	  rc = vnetKickDHCP(vnetconfig);
 	  if (rc) {
 	    logprintfl(EUCAERROR, "RunInstances(): cannot start DHCP daemon, for instance %s please check your network settings\n", myInstance->instanceId);
 	  }
-	  
+	  */
 	  // add the instance to the cache, and continue on
 	  add_instanceCache(myInstance->instanceId, myInstance);
 	  print_ccInstance("RunInstances(): ", myInstance);
@@ -1929,16 +1926,16 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
 int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int **outStatus) {
   int i, j, shutdownState, previousState, rc, start, stop;
   char *instId;
-  ccInstance *myInstance;
+  ccInstance *myInstance=NULL;
   ncStub *ncs;
   time_t op_start, op_timer;
-
+  
   i = j = 0;
   instId = NULL;
   myInstance = NULL;
   op_start = time(NULL);
   op_timer = OP_TIMEOUT;
-
+  
   rc = initialize();
   if (rc) {
     return(1);
@@ -1948,14 +1945,21 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   
   sem_mywait(NCCALL);
   sem_mywait(RESCACHE);
-
+  
   for (i=0; i<instIdsLen; i++) {
     instId = instIds[i];
     rc = find_instanceCacheId(instId, &myInstance);
     if (!rc) {
       // found the instance in the cache
-      start = myInstance->ncHostIdx;
-      stop = start+1;
+      if (!strcmp(myInstance->state, "Pending") || !strcmp(myInstance->state, "Extant") || !strcmp(myInstance->state, "Unknown")) {
+	start = myInstance->ncHostIdx;
+	stop = start+1;
+      } else {
+	// instance is not in a terminatable state
+	start = 0;
+	stop = 0;
+	(*outStatus)[i] = 0;
+      }
       
       // remove private network info from system
       sem_mywait(VNET);
@@ -1969,22 +1973,22 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       
       free(myInstance);
     } else {
+      // instance is not in cache, try all resources
       start = 0;
-      stop = resourceCache->numResources;
+      stop = 0;
+      (*outStatus)[i] = 0;      
+      //      stop = resourceCache->numResources;
     }
     
-
+    
     for (j=start; j<stop; j++) {
       // read the instance ids
       logprintfl(EUCAINFO,"TerminateInstances(): calling terminate instance (%s) on (%s)\n", instId, resourceCache->resources[j].hostname);
       if (resourceCache->resources[j].state == RESUP) {
 	int pid, status, ret;
-	int filedes[2];
-	rc = pipe(filedes);
 	pid = fork();
 	if (pid == 0) {
 	  ret=0;
-	  close(filedes[0]);
 	  ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
 	  if (config->use_wssec) {
 	    rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
@@ -1996,20 +2000,17 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	  } else {
 	    ret = 1;
 	  }
-	  close(filedes[1]);	  
 	  exit(ret);
 	} else {
-	  close(filedes[1]);
-	  close(filedes[0]);
-	  
+
 	  op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	  rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
-	  rc = WEXITSTATUS(status);
+	  //rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
+	  //rc = WEXITSTATUS(status);
+	  rc = 0;
 	  logprintfl(EUCADEBUG,"TerminateInstances(): call complete (pid/rc): %d/%d\n", pid, rc);
 	}
 
-	if (!rc) {
-	  //	  del_instanceCacheId(instId);
+	if (rc) {
 	  (*outStatus)[i] = 1;
 	  logprintfl(EUCAWARN, "TerminateInstances(): failed to terminate '%s': instance may not exist any longer\n", instId);
 	} else {
@@ -2017,7 +2018,6 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	}
       }
     }
-    //    del_instanceCacheId(instId);
   }
   
   sem_mypost(RESCACHE);
@@ -2088,51 +2088,28 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, c
   return(ret);
 }
 
-/*
-int sem_timewait(sem_t *sem, time_t seconds) {
-  int rc;
-  struct timespec to;
-
-  logprintfl(EUCADEBUG, "initialize(): called\n");
-  to.tv_sec = time(NULL) + seconds + 1;
-  to.tv_nsec = 0;
-  
-  rc = sem_timedwait(sem, &to);
-  if (rc < 0) {
-    perror("SEM");
-    logprintfl(EUCAERROR, "timeout waiting for semaphore\n");
-  } else {
-  }
-  return(rc);
-}
-*/
-
 int initialize(void) {
   int rc, ret;
 
   ret=0;
-  //  logprintfl(EUCADEBUG, "running init_thread()\n");
   rc = init_thread();
   if (rc) {
     ret=1;
     logprintfl(EUCAERROR, "initialize(): cannot initialize thread\n");
   }
 
-  //  logprintfl(EUCADEBUG, "running init_localstate()\n");
   rc = init_localstate();
   if (rc) {
     ret = 1;
     logprintfl(EUCAERROR, "initialize(): cannot initialize local state\n");
   }
 
-  //  logprintfl(EUCADEBUG, "running init_config()\n");
   rc = init_config();
   if (rc) {
     ret=1;
     logprintfl(EUCAERROR, "initialize(): cannot initialize from configuration file\n");
   }
   
-  // logprintfl(EUCADEBUG, "running vnetInitTunnels()\n");
   if (config->use_tunnels) {
     rc = vnetInitTunnels(vnetconfig);
     if (rc) {
@@ -2140,7 +2117,6 @@ int initialize(void) {
     }
   }
 
-  //  logprintfl(EUCADEBUG, "running init_pthreads()\n");
   rc = init_pthreads();
   if (rc) {
     logprintfl(EUCAERROR, "initialize(): cannot initialize background threads\n");
@@ -2152,10 +2128,18 @@ int initialize(void) {
     init=1;
   }
   
-  //  logprintfl(EUCADEBUG, "initialize(): done\n");
   return(ret);
 }
 
+/* 
+   As of 1.6.2, the CC will start a background thread to poll its
+   collection of nodes.  This thread populates an in-memory cache of
+   instance and resource information that can be accessed via the
+   regular describeInstances and describeResources calls to the CC.
+   The purpose of this separation is to allow for a more scalable
+   framework where describe operations do not block on access to node
+   controllers.
+*/
 void *monitor_thread(void *in) {
   int rc;
   ncMetadata ccMeta;
@@ -2187,6 +2171,18 @@ void *monitor_thread(void *in) {
     if (rc) {
       logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
     }
+
+    
+    sem_mywait(CONFIG);
+    if (config->kick_dhcp) {
+      rc = vnetKickDHCP(vnetconfig);
+      if (rc) {
+	logprintfl(EUCAERROR, "monitor_thread(): cannot start DHCP daemon\n");
+      } else {
+	config->kick_dhcp = 0;
+      }
+    }
+    sem_mypost(CONFIG);
     
     logprintfl(EUCADEBUG, "monitor_thread(): done\n");
     sleep(config->ncPollingFrequency);
@@ -2276,16 +2272,12 @@ int init_thread(void) {
     // this thread has not been initialized, set up shared memory segments
     srand(time(NULL));
 
-    //    initLock = sem_open("/eucalyptusCCinitLock", O_CREAT, 0644, 1);    
-    //    sem_mywait(initLock);
     locks[INIT] = sem_open("/eucalyptusCCinitLock", O_CREAT, 0644, 1);
     sem_mywait(INIT);
 
-    //    ncCallLock = sem_open("/eucalyptusCCncCallLock", O_CREAT, 0644, 1);
     locks[NCCALL] = sem_open("/eucalyptusCCncCallLock", O_CREAT, 0644, 1);
     
     if (config == NULL) {
-      //      rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &configLock, "/eucalyptusCCConfigLock", SHARED_FILE);
       rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &(locks[CONFIG]), "/eucalyptusCCConfigLock", SHARED_FILE);
       if (rc != 0) {
 	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccConfig, exiting...\n");
@@ -2295,7 +2287,6 @@ int init_thread(void) {
     }
     
     if (instanceCache == NULL) {
-      //      rc = setup_shared_buffer((void **)&instanceCache, "/eucalyptusCCInstanceCache", sizeof(ccInstanceCache), &instanceCacheLock, "/eucalyptusCCInstanceCacheLock", SHARED_FILE);
       rc = setup_shared_buffer((void **)&instanceCache, "/eucalyptusCCInstanceCache", sizeof(ccInstanceCache), &(locks[INSTCACHE]), "/eucalyptusCCInstanceCacheLock", SHARED_FILE);
       if (rc != 0) {
 	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccInstanceCache, exiting...\n");
@@ -2305,7 +2296,6 @@ int init_thread(void) {
     }
 
     if (resourceCache == NULL) {
-      //      rc = setup_shared_buffer((void **)&resourceCache, "/eucalyptusCCResourceCache", sizeof(ccResourceCache), &resourceCacheLock, "/eucalyptusCCResourceCacheLock", SHARED_FILE);
       rc = setup_shared_buffer((void **)&resourceCache, "/eucalyptusCCResourceCache", sizeof(ccResourceCache), &(locks[RESCACHE]), "/eucalyptusCCResourceCacheLock", SHARED_FILE);
       if (rc != 0) {
 	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccResourceCache, exiting...\n");
@@ -2315,7 +2305,6 @@ int init_thread(void) {
     }
     
     if (vnetconfig == NULL) {
-      //      rc = setup_shared_buffer((void **)&vnetconfig, "/eucalyptusCCVNETConfig", sizeof(vnetConfig), &vnetConfigLock, "/eucalyptusCCVNETConfigLock", SHARED_FILE);
       rc = setup_shared_buffer((void **)&vnetconfig, "/eucalyptusCCVNETConfig", sizeof(vnetConfig), &(locks[VNET]), "/eucalyptusCCVNETConfigLock", SHARED_FILE);
       if (rc != 0) {
 	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccVNETConfig, exiting...\n");
@@ -2894,7 +2883,6 @@ int restoreNetworkState() {
 int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
   int rc, i;
   char *tmpstr, *ipbuf;
-  //  char *ncservice = NULL;
   char ncservice[512];
   int ncport;
   char **hosts;
@@ -2980,15 +2968,11 @@ void shawn() {
     logprintfl(EUCAERROR, "shawn(): network state maintainance failed\n");
   }
   
-  //  logprintfl(EUCADEBUG, "msync()ing...called\n");
-  //  TIMERSTART(msyncer);
-  
   if (instanceCache) msync(instanceCache, sizeof(ccInstanceCache), MS_ASYNC);
   if (resourceCache) msync(resourceCache, sizeof(ccResourceCache), MS_ASYNC);
   if (config) msync(config, sizeof(ccConfig), MS_ASYNC);
   if (vnetconfig) msync(vnetconfig, sizeof(vnetConfig), MS_ASYNC);
-  //  TIMERSTOP(msyncer);
-  //  logprintfl(EUCADEBUG, "msync()ing...done\n");
+
 }
 
 int timeread(int fd, void *buf, size_t bytes, int timeout) {
@@ -3146,7 +3130,6 @@ void print_instanceCache(void) {
 
   sem_mywait(INSTCACHE);
   for (i=0; i<MAXINSTANCES; i++) {
-    //    if ((time(NULL) - instanceCache->lastseen[i]) <= config->instanceTimeout) {
     if ( instanceCache->cacheState[i] == INSTVALID ) {
       logprintfl(EUCADEBUG,"\tcache: %d/%d %s %s %s %s\n", i, instanceCache->numInsts, instanceCache->instances[i].instanceId, instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp, instanceCache->instances[i].state);
     }
@@ -3201,7 +3184,6 @@ void invalidate_instanceCache(void) {
       instanceCache->lastseen[i] = 0;
       instanceCache->cacheState[i] = INSTINVALID;
       instanceCache->numInsts--;
-      //      del_instanceCacheId(instanceCache->instances[i].instanceId);
     }
   }
   sem_mypost(INSTCACHE);
@@ -3215,19 +3197,16 @@ int refresh_instanceCache(char *instanceId, ccInstance *in){
   }
   
   sem_mywait(INSTCACHE);
-  //  logprintfl(EUCADEBUG, "call refresh_instanceCache()...\n");
   done=0;
   for (i=0; i<MAXINSTANCES && !done; i++) {
     if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
       // in cache
       memcpy(&(instanceCache->instances[i]), in, sizeof(ccInstance));
-      //      logprintfl(EUCADEBUG, "done refresh_instanceCache() inner...\n");
       instanceCache->lastseen[i] = time(NULL);
       sem_mypost(INSTCACHE);
       return(0);
     }
   }
-  //  logprintfl(EUCADEBUG, "done refresh_instanceCache() outer...\n");
   sem_mypost(INSTCACHE);
 
   add_instanceCache(instanceId, in);
@@ -3293,11 +3272,9 @@ int find_instanceCacheId(char *instanceId, ccInstance **out) {
   }
   
   sem_mywait(INSTCACHE);
-  //  logprintfl(EUCADEBUG, "call find_instanceCacheId(%s)...\n", instanceId);
   *out = NULL;
   done=0;
   for (i=0; i<MAXINSTANCES && !done; i++) {
-    //    logprintfl(EUCADEBUG, "find_instanceCacheId(): comping %s and %s\n", instanceCache->instances[i].instanceId, instanceId);
     if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
       // found it
       *out = malloc(sizeof(ccInstance));
@@ -3311,7 +3288,6 @@ int find_instanceCacheId(char *instanceId, ccInstance **out) {
       done++;
     }
   }
-  //  logprintfl(EUCADEBUG, "done find_instanceCacheId()...\n");
   sem_mypost(INSTCACHE);
   if (done) {
     return(0);
@@ -3427,6 +3403,7 @@ int add_resourceCache(char *host, ccResource *in){
   }
   resourceCache->cacheState[firstNull] = RESVALID;
   allocate_ccResource(&(resourceCache->resources[firstNull]), in->ncURL, in->ncService, in->ncPort, in->hostname, in->mac, in->ip, in->maxMemory, in->availMemory, in->maxDisk, in->availDisk, in->maxCores, in->availCores, in->state, in->lastState, in->stateChange, in->idleStart);
+
   resourceCache->numResources++;
   sem_mypost(RESCACHE);
   return(0);
@@ -3502,11 +3479,9 @@ int sem_mywait(int lockno) {
   int rc;
   rc = sem_wait(locks[lockno]);
   mylocks[lockno] = 1;
-  //  logprintfl(EUCADEBUG, "LOCK %08X\n", sem);
   return(rc);
 }
 int sem_mypost(int lockno) {
-  //  logprintfl(EUCADEBUG, "UNLOCK %08X\n", sem);
   mylocks[lockno] = 0;
   return(sem_post(locks[lockno]));
 }
