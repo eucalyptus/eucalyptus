@@ -107,12 +107,15 @@ public class ConfigurableManagement {
 			for (FieldType field : fields) {
 				try {
 					Field f = klass.getField(field.getKey());
+					ConfigurableField configurableField = f.getAnnotation(ConfigurableField.class);
 					try {
 						String value = f.get(klass).toString();						
-						if(String.class.equals(f.getType())) {
+						if(String.class.equals(f.getType()) && configurableField.type().equals(ConfigurableFieldType.KEYVALUE)) {
 							properties.add(new ComponentProperty("KEYVALUE", field.getDisplayName(), value));
 						} else if(Boolean.class.equals(f.getType())) {
 							properties.add(new ComponentProperty("BOOLEAN", field.getDisplayName(), value));
+						} else if(String.class.equals(f.getType()) && configurableField.type().equals(ConfigurableFieldType.KEYVALUEHIDDEN)) {
+							properties.add(new ComponentProperty("KEYVALUEHIDDEN", field.getDisplayName(), value));
 						}
 					} catch (IllegalArgumentException e) {
 						LOG.error(e);
@@ -143,6 +146,8 @@ public class ConfigurableManagement {
 									f.set(klass, property.getValue());
 								else if("BOOLEAN".equals(property.getType()))
 									f.set(klass, Boolean.parseBoolean(property.getValue()));
+								else if("KEYVALUEHIDDEN".equals(property.getType()))
+									f.set(klass, property.getValue());
 							} catch (IllegalArgumentException e) {
 								LOG.error(e);
 							} catch (IllegalAccessException e) {

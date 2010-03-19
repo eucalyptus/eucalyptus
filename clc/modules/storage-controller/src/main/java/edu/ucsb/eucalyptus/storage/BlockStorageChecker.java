@@ -243,13 +243,13 @@ public class BlockStorageChecker {
 				getMethod.releaseConnection();
 		}
 	}
-	
+
 	private class SnapshotTransfer extends Thread {
 		private BlockStorageChecker checker;
 		public SnapshotTransfer(final BlockStorageChecker checker) {
 			this.checker = checker;
 		}
-		
+
 		public void run() {
 			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
 			SnapshotInfo snapshotInfo = new SnapshotInfo();
@@ -266,18 +266,20 @@ public class BlockStorageChecker {
 					LOG.error(e);
 					return;
 				}
-				String snapshotFileName = returnValues.get(0);
-				File snapshotFile = new File(snapshotFileName);
-				Map<String, String> httpParamaters = new HashMap<String, String>();
-				HttpWriter httpWriter;
-				SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, snapshotFile.length(), StorageProperties.TRANSFER_CHUNK_SIZE);
-				httpWriter = new HttpWriter("PUT", snapshotFile, String.valueOf(snapshotFile.length()), callback, "snapset-" + UUID.randomUUID(), snapshotId, "StoreSnapshot", null, httpParamaters);
-				try {
-					httpWriter.run();
-				} catch(Exception ex) {
-					db.rollback();
-					LOG.error(ex, ex);
-					checker.cleanFailedSnapshot(snapshotId);
+				if(returnValues.size() > 0) {
+					String snapshotFileName = returnValues.get(0);
+					File snapshotFile = new File(snapshotFileName);
+					Map<String, String> httpParamaters = new HashMap<String, String>();
+					HttpWriter httpWriter;
+					SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, snapshotFile.length(), StorageProperties.TRANSFER_CHUNK_SIZE);
+					httpWriter = new HttpWriter("PUT", snapshotFile, String.valueOf(snapshotFile.length()), callback, "snapset-" + UUID.randomUUID(), snapshotId, "StoreSnapshot", null, httpParamaters);
+					try {
+						httpWriter.run();
+					} catch(Exception ex) {
+						db.rollback();
+						LOG.error(ex, ex);
+						checker.cleanFailedSnapshot(snapshotId);
+					}
 				}
 			}
 			db.commit();	

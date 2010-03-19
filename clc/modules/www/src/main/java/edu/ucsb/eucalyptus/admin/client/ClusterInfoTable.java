@@ -122,7 +122,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		this.clusterList.add (new ClusterInfoWeb ("cluster-name", "cc-host", 8774, 10, 4096));
 		//these values are just defaults
-		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanHost", "sanUser", "sanPassword", "/dev/blockdev", new ArrayList<String>()));
+		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, 10, 50, new ArrayList<String>()));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
@@ -317,27 +317,6 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		volumesTotalPanel.add (new Label ("GB"));
 		g.setWidget( i, 1, volumesTotalPanel );
 
-		/*i++; // next row
-		final CheckBox zeroFillVolumesCheckbox = new CheckBox ();
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		g.setWidget( i, 0, zeroFillVolumesCheckbox );
-		if (storageInfo.getZeroFillVolumes()) {
-			zeroFillVolumesCheckbox.setChecked(true);
-		} else {
-			zeroFillVolumesCheckbox.setChecked(false);
-		}
-		zeroFillVolumesCheckbox.addClickListener (new ClickListener() {
-			public void onClick( Widget sender )
-			{
-				if (((CheckBox)sender).isChecked()) {
-					storageInfo.setZeroFillVolumes( true );
-				} else {
-					storageInfo.setZeroFillVolumes( false );
-				}
-			}
-		});
-		g.setWidget( i, 1, new Label ("Zero-fill volumes") );*/
-
 		final ArrayList<String> storageParams = storageInfo.getStorageParams();
 		numStorageParams = storageParams.size()/3;
 		for(String param : storageParams) {
@@ -353,7 +332,17 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 				propTextBox.setText(storageParams.get(3*paramidx + 2));
 				propTextBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 				g.setWidget( i, 1, propTextBox );
-			} else if("BOOLEAN".equals(storageParams.get(3 * paramidx))) {
+			} else if ("KEYVALUEHIDDEN".equals(storageParams.get(3 * paramidx))) {
+				g.setWidget( i, 0, new Label(storageParams.get(3*paramidx + 1) + ": ") );
+				g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+				final TextBox propTextBox = new PasswordTextBox();
+				propTextBox.addChangeListener (new ChangeCallback (this, row));
+				propTextBox.setVisibleLength( 30 );
+				propTextBox.setText(storageParams.get(3*paramidx + 2));
+				propTextBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+				g.setWidget( i, 1, propTextBox );
+			}	else if("BOOLEAN".equals(storageParams.get(3 * paramidx))) {
+
 				final int index = paramidx;
 				final CheckBox propCheckbox = new CheckBox ();
 				g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
@@ -426,27 +415,17 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		cluster.setMaxVlans(Integer.parseInt(((TextBox)p.getWidget(2)).getText()));
 
 		// SC section
-		//storage.setHost (((TextBox)g.getWidget(9, 1)).getText());
-		//storage.setStorageInterface(((TextBox)g.getWidget(10, 1)).getText());
-		//storage.setVolumesPath (((TextBox)g.getWidget(11, 1)).getText());
 		p = (HorizontalPanel)g.getWidget(9, 1);
 		storage.setMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
 		p = (HorizontalPanel)g.getWidget(10, 1);
 		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
 
-		/*storage.setSanHost (((TextBox)g.getWidget(11, 1)).getText());
-		storage.setSanUser (((TextBox)g.getWidget(12, 1)).getText());
-		storage.setSanPassword (((TextBox)g.getWidget(13, 1)).getText());
-		 */
 		int widgetStartIndex = 11;
 		ArrayList<String> storageParams = storage.getStorageParams();
 		for(int i = 0; i < numStorageParams; ++i) {
-			if("KEYVALUE".equals(storageParams.get(3 * i)))
+			if(storageParams.get(3 * i).startsWith("KEYVALUE"))
 				storageParams.set(3*i + 2, ((TextBox)g.getWidget(widgetStartIndex++, 1)).getText());
 		}
-		//storage.setStorageParams(storageParams);
-		//storage.setDASPartition(((TextBox)g.getWidget(15, 1)).getText());
-		//    systemConfig.setDoDynamicPublicAddresses( !((TextBox)p.getWidget(0)).isEnabled() ? true : false );
 	}
 
 	public void MarkCommitted ()

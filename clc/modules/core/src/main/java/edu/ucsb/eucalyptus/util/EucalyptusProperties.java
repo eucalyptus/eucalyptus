@@ -194,9 +194,6 @@ public class EucalyptusProperties {
 		if( sysConf.getSystemReservedPublicAddresses() == null ) {
 			sysConf.setSystemReservedPublicAddresses( 10 );
 		}
-		if(sysConf.getZeroFillVolumes() == null) {
-			sysConf.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
-		}
 		return sysConf;
 	}
 

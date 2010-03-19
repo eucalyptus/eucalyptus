@@ -153,10 +153,6 @@ public class RemoteInfoHandler {
 			updateStorageConfiguration.setName(storageControllerWeb.getName());
 			updateStorageConfiguration.setMaxTotalVolumeSize(storageControllerWeb.getTotalVolumesSizeInGB());
 			updateStorageConfiguration.setMaxVolumeSize(storageControllerWeb.getMaxVolumeSizeInGB());
-			updateStorageConfiguration.setStorageInterface(storageControllerWeb.getStorageInterface());
-			updateStorageConfiguration.setStorageRootDirectory(storageControllerWeb.getVolumesPath());
-			updateStorageConfiguration.setZeroFillVolumes(storageControllerWeb.getZeroFillVolumes());
-			updateStorageConfiguration.setDASDevice(storageControllerWeb.getDASDevice());
 			updateStorageConfiguration.setStorageParams(convertStorageProps(storageControllerWeb.getStorageParams()));
 			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, 
 					storageControllerWeb.getHost());
@@ -191,12 +187,8 @@ public class RemoteInfoHandler {
 				try {
 					GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
 					if( c.getName( ).equals( getStorageConfigResponse.getName( ) ) ) {
-						scInfo.setVolumesPath( getStorageConfigResponse.getStorageRootDirectory( ) );
 						scInfo.setMaxVolumeSizeInGB( getStorageConfigResponse.getMaxVolumeSize( ) );
 						scInfo.setTotalVolumesSizeInGB( getStorageConfigResponse.getMaxTotalVolumeSize( ) );
-						scInfo.setStorageInterface( getStorageConfigResponse.getStorageInterface( ) );
-						scInfo.setZeroFillVolumes( getStorageConfigResponse.getZeroFillVolumes( ) );
-						scInfo.setDASDevice(getStorageConfigResponse.getDASDevice());
 						scInfo.setStorageParams(convertStorageParams(getStorageConfigResponse.getStorageParams()));
 					} else {
 						LOG.debug("Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception());

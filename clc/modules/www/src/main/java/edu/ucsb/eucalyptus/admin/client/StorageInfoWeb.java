@@ -69,12 +69,8 @@ public class StorageInfoWeb implements IsSerializable {
 	private String name;
 	private String host;
 	private Integer port;
-	private String volumesPath;
 	private Integer maxVolumeSizeInGB;
 	private Integer totalVolumesSizeInGB;
-	private String storageInterface;
-	private Boolean zeroFillVolumes;
-	private String DASDevice;
 	private Boolean committed;	
 	private ArrayList<String> storageParams = new ArrayList<String>();
 	
@@ -84,12 +80,8 @@ public class StorageInfoWeb implements IsSerializable {
     this.name = name;
     this.host = host;
     this.port = port;
-    this.volumesPath = StorageInfoWeb.DEFAULT_SC.getVolumesPath( );
     this.maxVolumeSizeInGB = StorageInfoWeb.DEFAULT_SC.getMaxVolumeSizeInGB( );
     this.totalVolumesSizeInGB = StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( );
-    this.storageInterface = StorageInfoWeb.DEFAULT_SC.getStorageInterface( );
-    this.zeroFillVolumes = StorageInfoWeb.DEFAULT_SC.getZeroFillVolumes( );
-    this.DASDevice = StorageInfoWeb.DEFAULT_SC.getDASDevice();
     this.committed = StorageInfoWeb.DEFAULT_SC.committed;
     this.storageParams = new ArrayList<String>();
   }
@@ -97,25 +89,14 @@ public class StorageInfoWeb implements IsSerializable {
   public StorageInfoWeb( final String name,
 			final String host,
 			final Integer port,
-			final String volumesPath,
 			final Integer maxVolumeSizeInGB,
 			final Integer totalVolumesSizeInGB,
-			final String storageInterface,
-			final Boolean zeroFillVolumes,
-			final String sanHost,
-			final String sanUser,
-			final String sanPassword,
-			final String DASDevice,
 			final ArrayList<String> storageParams) {
 		this.name = name;
 		this.host = host;
 		this.port = port;
-		this.volumesPath = volumesPath;
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
 		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-		this.storageInterface = storageInterface;
-		this.zeroFillVolumes = zeroFillVolumes;
-		this.DASDevice = DASDevice;
 		this.committed = false;
 		this.storageParams = storageParams;
 	}
@@ -156,14 +137,6 @@ public class StorageInfoWeb implements IsSerializable {
 		this.port = port;
 	}
 
-	public final String getVolumesPath() {
-		return volumesPath;
-	}
-
-	public final void setVolumesPath(final String volumesPath) {
-		this.volumesPath = volumesPath;
-	}
-
 	public final Integer getMaxVolumeSizeInGB() {
 		return maxVolumeSizeInGB;
 	}
@@ -178,30 +151,6 @@ public class StorageInfoWeb implements IsSerializable {
 
 	public final void setTotalVolumesSizeInGB(final Integer totalVolumesSizeInGB) {
 		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-	}
-
-	public final String getStorageInterface() {
-		return storageInterface;
-	}
-
-	public final void setStorageInterface(final String storageInterface) {
-		this.storageInterface = storageInterface;
-	}
-
-	public final Boolean getZeroFillVolumes() {
-		return zeroFillVolumes;
-	}
-
-	public final void setZeroFillVolumes(final Boolean zeroFillVolumes) {
-		this.zeroFillVolumes = zeroFillVolumes;
-	}
-
- 	public final String getDASDevice() {
-		return DASDevice;
-	}
-
-	public final void setDASDevice(final String DASDevice) {
-		this.DASDevice = DASDevice;
 	}
 
 	public final ArrayList<String> getStorageParams() {
@@ -237,5 +186,5 @@ public class StorageInfoWeb implements IsSerializable {
 		return name.hashCode();
 	}
 
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, "/var/lib/eucalyptus/volumes", 10, 50, "eth0", false, "sanhost", "sanuser", "sanpassword", "/dev/blockdev", new ArrayList<String>());
+	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, 10, 50, new ArrayList<String>());
 }
