@@ -146,7 +146,7 @@ typedef struct ccConfig_t {
   char configFiles[2][1024];
   int use_wssec, use_tunnels;
   char policyFile[1024];
-  int initialized;
+  int initialized, kick_dhcp;
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
   time_t configMtime, instanceTimeout, ncPollingFrequency;
