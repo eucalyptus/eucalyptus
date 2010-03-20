@@ -113,20 +113,20 @@ public class VirtualMachineType extends EucalyptusData {
 }
 
 public class NetConfigType extends EucalyptusData {
-	String macAddress;
-	String ignoredMacAddress;
+	String privateMacAddress;
+	String privateIp;
+	String publicIp;
 	Integer vlan;
-	String ipAddress;
-	String ignoredPublicIp;
+	Integer networkIndex;
 	
 	NetConfigType () {}
 	
-	NetConfigType (String macAddress, String ignoredMacAddress, int vlan, String ipAddress, String ignoredPublicIp) {
-		this.macAddress = macAddress;
-		this.ignoredMacAddress = ignoredMacAddress;
+	NetConfigType (String macAddress, String privateIp, String publicIp, int vlan, int networkIndex) {
+		this.privateMacAddress = macAddress;
+		this.privateIp = privateIp;
+		this.publicIp = publicIp;
 		this.vlan = vlan;
-		this.ipAddress = ipAddress;
-		this.ignoredPublicIp = ignoredPublicIp;
+		this.networkIndex = networkIndex;
 	}
 }
 
@@ -235,13 +235,11 @@ public class EucalyptusNCNcRunInstanceType extends VMwareBrokerRequestType {
 	String imageURL;
 	String kernelURL;
 	String ramdiskURL;
+	String reservationId;
 	String instanceId;
 	VirtualMachineType instanceType;
 	String keyName;
-	String publicMacAddress;
-	String privateMacAddress;
-	String reservationId;
-	Integer vlan;
+	NetConfigType netParams;
 	String userData;
 	String launchIndex;
 	ArrayList<String> groupNames = new ArrayList<String>();
