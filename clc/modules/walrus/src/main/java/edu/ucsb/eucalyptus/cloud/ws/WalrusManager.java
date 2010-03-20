@@ -486,11 +486,20 @@ public class WalrusManager {
 							}
 
 							if (WalrusProperties.enableVirtualHosting) {
+								URI walrusUri;
+								String address;
 								RemoveARecordType removeARecordType = new RemoveARecordType();
 								removeARecordType.setUserId(userId);
 								String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
 								removeARecordType.setName(bucketName + "." + zone);
 								removeARecordType.setZone(zone);
+								try {
+									walrusUri = new URI(EucalyptusProperties.getWalrusUrl());
+									address = walrusUri.getHost();
+								} catch (URISyntaxException e) {
+									throw new EucalyptusCloudException("Could not get Walrus URL");
+								}
+								removeARecordType.setAddress(address);
 								try {
 									ServiceDispatcher.lookupSingle(Component.dns).send(
 											removeARecordType);
