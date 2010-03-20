@@ -300,42 +300,64 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			ncMetadata *meta,
 			char *instanceId,
 			char **consoleOutput) {
-  char *console_output;
+  char *console_output=NULL, *console_append=NULL, *console_main=NULL;
   char console_file[1024];
-  int rc, fd;
+  int rc, fd, ret;
   struct stat statbuf;
 
   *consoleOutput = NULL;
 
-  // for KVM, read the console output from a file, encode it, and return
-  console_output = malloc(64 * 1024);
-  if (console_output == NULL) {
-    return(1);
-  }
-  
-  snprintf(console_file, 1024, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
-  
+  snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), meta->userId, instanceId);
   rc = stat(console_file, &statbuf);
-  if (rc < 0) {
+  if (rc >= 0) {
+    fd = open(console_file, O_RDONLY);
+    if (fd >= 0) {
+      console_append = malloc(4096);
+      if (console_append) {
+	bzero(console_append, 4096);
+	rc = read(fd, console_append, (4096)-1);
+	close(fd);          
+      }
+    }
+  }
+
+  snprintf(console_file, 1024, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);  
+  rc = stat(console_file, &statbuf);
+  if (rc >= 0) {
+    fd = open(console_file, O_RDONLY);
+    if (fd >= 0) {
+      console_main = malloc(64 * 1024);
+      if (console_main) {
+	bzero(console_main, 64*1024);
+	rc = read(fd, console_main, (64*1024)-1);
+	close(fd);
+      }
+    } else {
+      logprintfl(EUCAERROR, "cannot open '%s' read-only\n", console_file);
+    }
+  } else {
     logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", console_file);
-    if (console_output) free(console_output);
-    return(1);
   }
   
-  fd = open(console_file, O_RDONLY);
-  if (fd < 0) {
-    logprintfl(EUCAERROR, "cannot open '%s' read-only\n", console_file);
-    if (console_output) free(console_output);
-    return(1);
+  ret = 1;
+  console_output = malloc( (64*1024) + 4096 );
+  if (console_output) {
+    bzero(console_output, (64*1024) + 4096 );
+    if (console_append) {
+      strncat(console_output, console_append, 4096);
+    }
+    if (console_main) {
+      strncat(console_output, console_main, 4096);
+    }
+    *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
+    ret = 0;
   }
-  
-  bzero(console_output, 64*1024);
-  rc = read(fd, console_output, (64*1024)-1);
-  close(fd);
-  
-  *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
+
+  if (console_append) free(console_append);
+  if (console_main) free(console_main);
   if (console_output) free(console_output);
-  return(0);
+
+  return(ret);
 }
 
 static int

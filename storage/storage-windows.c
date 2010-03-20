@@ -141,8 +141,10 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize) {
 
 
 int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *password) {
-  int fd, rc, rbytes, count;
+  int fd, rc, rbytes, count, encsize;
   char *buf, *ptr, *tmp, *newpass, dest_path[1024], source_path[1024], fname[1024];
+  char *encpassword;
+  FILE *FH;
 
   snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
   snprintf(dest_path, 1024, "%s/floppy", rundir_path);
@@ -178,7 +180,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *p
     ptr++;
     count++;
   }
-
+  
   fd = open(dest_path, O_CREAT | O_TRUNC | O_RDWR);
   if (fd < 0) {
     if (buf) free(buf);
@@ -191,5 +193,26 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *p
   }
   close(fd);
   if (buf) free(buf);
+
+  // encrypt password and write to console log for later retrieval
+  char tmpstr[512], enckey[2048];
+  sscanf(keyName, "%s %s %s", tmp, enckey, tmp);
+  fprintf(stderr, "ENC KEY: |%s|\n", enckey);
+  rc = encryptWindowsPassword(password, enckey, &encpassword, &encsize);
+  if (rc) {
+    return(1);
+  }
+
+  snprintf(dest_path, 1024, "%s/console.append.log", rundir_path);
+  FH = fopen(dest_path, "w");
+  if (FH) {
+    fprintf(FH, "<Password>\r\n%s\r\n</Password>\r\n", encpassword);
+    fclose(FH);
+  } else {
+    if (encpassword) free(encpassword);
+    return(1);
+  }
+  if (encpassword) free(encpassword);
+
   return(0);
 }
