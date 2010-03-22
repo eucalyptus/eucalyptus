@@ -90,7 +90,7 @@ public class ClusterMessageQueue implements Runnable {
   private final int                        messageQueueSize    = 100;
   private final AtomicBoolean              finished;
   private final String                     clusterName;
-  public static int                        CLUSTER_NUM_WORKERS = 8;
+  public static int                        CLUSTER_NUM_WORKERS = 1;
   private final ThreadFactory              threadFactory;
   private volatile int                     threadCount         = 0;
   private final ExecutorService            workers;
