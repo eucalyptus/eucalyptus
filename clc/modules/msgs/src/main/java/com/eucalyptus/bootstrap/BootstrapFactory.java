@@ -112,7 +112,7 @@ public class BootstrapFactory {
         LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
         try {
           ServiceJarDiscovery.processFile( f );
-        } catch ( IOException e ) {
+        } catch ( Throwable e ) {
           LOG.error( e.getMessage( ) );
           continue;
         }

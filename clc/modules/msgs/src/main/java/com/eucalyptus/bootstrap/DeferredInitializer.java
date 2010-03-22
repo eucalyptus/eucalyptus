@@ -105,8 +105,7 @@ public class DeferredInitializer {
 				} catch (IllegalAccessException e) {
 					LOG.error(e, e);
 				} catch (InvocationTargetException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+          LOG.error(e, e);
 				}
 			} catch (SecurityException e) {
 				LOG.error(e, e);
@@ -114,26 +113,6 @@ public class DeferredInitializer {
 				LOG.error(e, e);
 			} 
 		}
-	}
-	
-	public static class Discover extends ServiceJarDiscovery {	
-    @Override
-    public Double getPriority( ) {
-      return 1.0;
-    }
-    
-    @Override
-    public boolean processsClass( Class candidate ) throws Throwable {
-      if ( candidate.getAnnotation( NeedsDeferredInitialization.class ) != null ) {
-        NeedsDeferredInitialization needsDeferredInit = ( NeedsDeferredInitialization ) candidate.getAnnotation( NeedsDeferredInitialization.class );
-        if ( needsDeferredInit.component( ).isEnabled( ) ) {
-          singleton.add( candidate );
-          LOG.info( "---> Loading deferred initializer for entry: " + candidate.getName( ) );
-          return true;
-        }
-      }
-      return false;
-    }
 	}
   
   @Provides( resource = Resource.DeferredInitialization )

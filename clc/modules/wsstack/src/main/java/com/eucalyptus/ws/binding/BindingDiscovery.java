@@ -11,6 +11,8 @@ import com.google.common.collect.Lists;
 public class BindingDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( BindingDiscovery.class );
 
+  public BindingDiscovery( ) {}
+
   @Override
   public Double getPriority( ) {
     return 1.0;

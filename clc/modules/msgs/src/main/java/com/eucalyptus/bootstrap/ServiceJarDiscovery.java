@@ -63,7 +63,11 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     for ( ServiceJarDiscovery s : discovery ) {
       LOG.info( "-> Starting discovery: " + s.getClass( ).getName( ) );
       for( Class c : classList.keySet( ) ) {
-        s.checkClass( c );
+        try {
+          s.checkClass( c );
+        } catch ( Throwable t ) {
+          LOG.debug( t, t );
+        }
       }
     }
   }
