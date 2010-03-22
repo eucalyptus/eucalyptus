@@ -8,19 +8,14 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.net.util.ClusterAddressInfo;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
-import edu.ucsb.eucalyptus.constants.VmState;
 
 public abstract class AbstractSystemAddressManager {
   static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );

@@ -3,15 +3,11 @@ package com.eucalyptus.bootstrap;
 import java.io.File;
 import java.io.IOException;
 import java.util.Enumeration;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.SortedSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import org.apache.log4j.Logger;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
@@ -36,7 +32,8 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           classList.put( candidate, f.getAbsolutePath( ) );
           if ( ServiceJarDiscovery.class.isAssignableFrom( candidate ) && !ServiceJarDiscovery.class.equals( candidate )) {
             try {
-              discovery.add( ( ServiceJarDiscovery ) candidate.newInstance( ) );
+              ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
+              discovery.add( discover );
             } catch ( Exception e ) {
               LOG.fatal( e, e );
               throw new RuntimeException( e );
