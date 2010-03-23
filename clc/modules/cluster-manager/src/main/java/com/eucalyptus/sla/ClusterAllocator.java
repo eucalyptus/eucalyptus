@@ -97,6 +97,8 @@ import edu.ucsb.eucalyptus.cloud.VmRunType;
 import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
+import edu.ucsb.eucalyptus.cloud.ws.SystemState;
+import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -128,6 +130,17 @@ public class ClusterAllocator extends Thread {
         LOG.debug( e, e );
         try {
           Clusters.getInstance( ).lookup( vmToken.getCluster( ) ).getNodeState( ).releaseToken( vmToken );
+          for( String vmId : vmToken.getInstanceIds( ) ) {
+            try {
+              VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
+              vm.setState( VmState.TERMINATED );
+              vm.resetStopWatch( );
+              vm.setReason( SystemState.INSTANCE_FAILED + " " + e.getMessage( ) );
+              VmInstances.getInstance( ).disable( vmId );
+            } catch ( Exception e1 ) {
+              LOG.debug( e1, e1 );
+            }
+          }
         } catch ( Throwable e1 ) {
           LOG.debug( e1 );
           LOG.trace( e1, e1 );

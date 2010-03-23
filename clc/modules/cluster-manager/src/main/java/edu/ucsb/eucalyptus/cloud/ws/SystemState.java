@@ -122,6 +122,7 @@ public class SystemState {
   @Configurable( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
   public static Integer      SHUT_DOWN_TIME      = -1;
   public static final String INSTANCE_EXPIRED    = "Instance no longer reported as existing.";
+  public static final String INSTANCE_FAILED     = "Starting the instance failed.";
   public static final String INSTANCE_TERMINATED = "User requested shutdown.";
   
   public static void handle( VmDescribeResponseType request ) {
@@ -228,7 +229,7 @@ public class SystemState {
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
               StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ),
                                                                                        net.getVlan( ) ) );
-              for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+              for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
                 stopNet.newInstance( ).dispatch( cluster );
               }
             }
