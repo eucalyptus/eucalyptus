@@ -484,7 +484,7 @@ public class Network implements HasName {
           assignedIndexes += "${last},${it}..";
         } 
       }
-      assignedIndexes += "${this.assignedNetworkIndexes.last( )}];
+      assignedIndexes += "${this.assignedNetworkIndexes.last( )}]";
     }
     return String.format("Network [availableNetworkIndexes=%s, assignedNetworkIndexes=%s, name=%s, networkName=%s, clusterTokens=%s, rules=%s, userName=%s]",
                          availableIndexes, this.assignedIndexes, this.name, this.networkName, this.clusterTokens, this.rules, this.userName );
