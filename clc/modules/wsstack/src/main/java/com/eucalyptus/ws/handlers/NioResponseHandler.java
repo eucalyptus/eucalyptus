@@ -87,30 +87,31 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.MappingHttpMessage;
 import com.eucalyptus.ws.MappingHttpResponse;
 
+import edu.ucsb.eucalyptus.cloud.NotImplementedException;
 import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 @ChannelPipelineCoverage( "one" )
-public class NioResponseHandler extends SimpleChannelHandler {
+public class NioResponseHandler extends SimpleChannelHandler implements ResponseHandler {
   private static Logger                 LOG           = Logger.getLogger( NioResponseHandler.class );
   private Lock canHas = new ReentrantLock();
   private Condition ready = canHas.newCondition( );
   private AtomicReference<Object> response = new AtomicReference<Object>(null);
-  protected BlockingQueue<EucalyptusMessage> requestQueue = new LinkedBlockingQueue<EucalyptusMessage>( );
+  protected BlockingQueue<BaseMessage> requestQueue = new LinkedBlockingQueue<BaseMessage>( );
 
   public boolean hasException( ) {
     return this.response.get() instanceof Throwable;
   }
   
   public boolean hasResponse( ) {
-    return this.response.get() instanceof EucalyptusMessage;
+    return this.response.get() instanceof BaseMessage;
   }
   
-  public EucalyptusMessage getResponse( ) throws Exception {
+  public BaseMessage getResponse( ) throws Exception {
     this.waitForResponse( );
-    if( this.response.get( ) instanceof EucalyptusMessage ) {
-      return (EucalyptusMessage) this.response.get( );
+    if( this.response.get( ) instanceof BaseMessage ) {
+      return (BaseMessage) this.response.get( );
     } else if ( this.response.get() instanceof Throwable ) {
       throw new EucalyptusClusterException( "Exception in NIO request.", (Throwable) this.response.get( ) );
     }
@@ -126,20 +127,14 @@ public class NioResponseHandler extends SimpleChannelHandler {
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
     this.exceptionCaught( ctx, e.getCause( ) );
     ctx.getChannel( ).close( );
-//FIXME: testing the effect of .close
-//    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-//    ctx.sendUpstream( e );
   }
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
     final MappingHttpMessage httpResponse = ( MappingHttpMessage ) e.getMessage( );
-    final EucalyptusMessage reply = ( EucalyptusMessage ) httpResponse.getMessage( );
+    final BaseMessage reply = ( BaseMessage ) httpResponse.getMessage( );
     this.queueResponse( reply );
     ctx.getChannel( ).close( );
-//FIXME: testing the effect of .close
-//    e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-//    ctx.sendUpstream( e );
   }
 
   public void queueResponse( Object o ) {
@@ -201,6 +196,11 @@ public class NioResponseHandler extends SimpleChannelHandler {
       this.queueResponse( new EucalyptusClusterException( LogUtil.dumpObject( e ) ) );
     }
     super.channelClosed( ctx, e );
+  }
+
+  @Override
+  public BaseMessage getRequest( ) {
+    throw new RuntimeException( "Not implemented" );
   }
   
 }

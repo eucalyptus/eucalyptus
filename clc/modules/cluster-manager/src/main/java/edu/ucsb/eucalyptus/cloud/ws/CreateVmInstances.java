@@ -109,7 +109,7 @@ public class CreateVmInstances {
                                         networkIndex.toString( ) );
     String dnsDomain = "dns-disabled";
     try {
-      dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+      dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
     } catch ( Exception e ) {
     }
     vmInst.getNetworkConfig( ).updateDns( dnsDomain );

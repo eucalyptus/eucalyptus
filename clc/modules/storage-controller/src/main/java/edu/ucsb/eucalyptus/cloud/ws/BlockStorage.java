@@ -79,7 +79,7 @@ import org.apache.tools.ant.util.DateUtils;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;

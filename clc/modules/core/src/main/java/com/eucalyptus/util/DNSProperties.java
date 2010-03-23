@@ -67,7 +67,6 @@ package com.eucalyptus.util;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 import java.util.UUID;
 import java.util.List;
@@ -89,7 +88,7 @@ public class DNSProperties {
 	public static String NS_IP = "127.0.0.1";
 
 	public static void update() {
-		SystemConfiguration systemConfiguration = EucalyptusProperties.getSystemConfiguration();
+		SystemConfiguration systemConfiguration = SystemConfiguration.getSystemConfiguration();
 		DOMAIN = systemConfiguration.getDnsDomain();
 		NS_HOST = systemConfiguration.getNameserver();
 		NS_IP = systemConfiguration.getNameserverAddress();

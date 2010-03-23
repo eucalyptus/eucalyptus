@@ -92,13 +92,29 @@ public class ReplyQueue {
   private static float                                  MAP_BIN_AVG_THRESHOLD = 1.0f;
   private static long                                   MAP_GET_WAIT_MS       = 10;
   private static ConcurrentMap<String, ChannelHandlerContext> pending               = new ConcurrentHashMap<String, ChannelHandlerContext>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
-
+  private static ReplyQueue                                   singleton             = new ReplyQueue( );
+  
   public static void addReplyListener( String correlationId, ChannelHandlerContext ctx ) {
     LOG.trace("Adding reply listener: " + correlationId + " with ctx=" + ctx );
     pending.put( correlationId, ctx );
   }
   public static void removeReplyListener( String correlationId ) {
-    pending.remove( correlationId );
+    ChannelHandlerContext ctx = pending.remove( correlationId );
+    LOG.trace("Removing reply listener: " + correlationId + " with ctx=" + ctx );
+  }
+  
+  public static void handle( String service, MuleMessage responseMessage, EucalyptusMessage request ) {
+    EucalyptusMessage reply = null;
+    if ( responseMessage.getExceptionPayload( ) == null ) {
+      reply = ( EucalyptusMessage ) responseMessage.getPayload( );
+    } else {
+      Throwable t = responseMessage.getExceptionPayload( ).getException( );
+      t = ( t.getCause() == null ) ? t : t.getCause( );
+      reply = new EucalyptusErrorMessageType( service, request, t.getMessage( ) );
+    }
+    String corrId = reply.getCorrelationId( );
+    ChannelHandlerContext ctx = pending.remove( corrId );
+    Channels.write( ctx.getChannel( ), reply );
   }
   
   @SuppressWarnings( "unchecked" )
@@ -114,6 +130,7 @@ public class ReplyQueue {
   }
 
   public void handle( ExceptionMessage exMsg ) {
+    LOG.debug( "Caught exception while servicing: " + exMsg.getPayload( ) );
     Throwable exception = exMsg.getException( );
     Object payload = null;
     EucalyptusMessage msg = null;

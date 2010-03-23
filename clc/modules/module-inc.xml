@@ -100,6 +100,7 @@
     </fileset>
     <fileset dir="${lib.dir}">
       <include name="**/*.jar"/>
+    	<exclude name="**/openjdk-crypto.jar"/>
     </fileset>
   </path>
   <path id="runtimeclasspath">

@@ -5,18 +5,18 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.eucalyptus.accounts.UserInfo;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.IpRange;
 import com.eucalyptus.entities.NetworkPeer;
 import com.eucalyptus.entities.NetworkRule;
 import com.eucalyptus.entities.NetworkRulesGroup;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
@@ -101,7 +101,7 @@ public class NetworkGroupUtil {
   public static List<SecurityGroupItemType> getUserNetworksAdmin( String userId, List<String> groupNames ) throws EucalyptusCloudException {
     List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
     if ( groupNames.isEmpty( ) ) {
-      for( User u : CredentialProvider.getAllUsers( ) ) {
+      for( User u : CredentialProvider.getEnabledUsers( ) ) {
         groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( u.getUserName( ), groupNames ) );        
       }
     } else {

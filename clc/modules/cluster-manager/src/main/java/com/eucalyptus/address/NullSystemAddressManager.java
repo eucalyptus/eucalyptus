@@ -1,14 +1,9 @@
 package com.eucalyptus.address;
 
 import java.util.List;
-import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 
 public class NullSystemAddressManager extends AbstractSystemAddressManager {
   
