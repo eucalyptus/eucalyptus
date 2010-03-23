@@ -441,13 +441,7 @@ public class LVM2Manager implements LogicalStorageManager {
 
 		String vgName = "vg-" + Hashes.getRandom(4);
 		String lvName = "lv-" + Hashes.getRandom(4);
-		LVMVolumeInfo lvmVolumeInfo = null;
-		if(exportManager instanceof AOEManager) {
-			lvmVolumeInfo = new AOEVolumeInfo();
-		} else {
-			lvmVolumeInfo = new ISCSIVolumeInfo();
-		}
-
+		LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
 		String rawFileName = storageRootDirectory + "/" + volumeId;
 		//create file and attach to loopback device
 		long absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
