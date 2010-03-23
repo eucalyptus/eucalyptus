@@ -511,6 +511,7 @@ public class ImageManager {
 
       if ( !request.getUserId( ).equals( imgInfo.getImageOwnerId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Not allowed to modify image: " + imgInfo.getImageId( ) );
       imgInfo.getPermissions( ).clear( );
+      imgInfo.getPermissions( ).add( db.recast( UserInfo.class ).getUnique( UserInfo.named( imgInfo.getImageOwnerId( ) ) ) );
       imgInfo.getUserGroups( ).clear( );
       imgInfo.getUserGroups( ).add( db.recast( UserGroupInfo.class ).getUnique( UserGroupInfo.named( "all" ) ) );
       db.commit( );
