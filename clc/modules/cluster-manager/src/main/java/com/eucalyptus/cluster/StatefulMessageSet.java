@@ -15,7 +15,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
   private Multimap<E, QueuedEventCallback>           messages         = Multimaps.newHashMultimap( );
   private AtomicBoolean                              rollback         = new AtomicBoolean( false );
   private List<QueuedEventCallback>                  rollbackMessages = Lists.newArrayList( );
-  private ConcurrentLinkedQueue<QueuedEventCallback> pendingEvents;
+  private ConcurrentLinkedQueue<QueuedEventCallback> pendingEvents    = new ConcurrentLinkedQueue<QueuedEventCallback>( );
   private E[]                                        states;
   private E                                          state;
   private E                                          endState;
@@ -103,6 +103,6 @@ public class StatefulMessageSet<E extends Enum<E>> {
         this.transition( );
       }
     } while ( !this.state.equals( endState ) || !this.state.equals( failState ) );
-    LOG.info( "Allocator completed execution in " + ( System.currentTimeMillis( ) - this.startTime )/1000.0d + "s" );
+    LOG.info( "Allocator completed execution in " + ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" );
   }
 }
