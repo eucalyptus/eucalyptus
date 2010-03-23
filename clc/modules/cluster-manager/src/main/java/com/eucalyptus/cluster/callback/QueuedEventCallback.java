@@ -123,8 +123,8 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     return this;
   }
 
-  public QueuedEventCallback<TYPE,RTYPE> regardingUser( BaseMessage msg ) {
-    this.getRequest( ).regardingRequest( msg );
+  public QueuedEventCallback<TYPE,RTYPE> regardingUserRequest( BaseMessage msg ) {
+    this.getRequest( ).regardingUserRequest( msg );
     return this;
   }
 

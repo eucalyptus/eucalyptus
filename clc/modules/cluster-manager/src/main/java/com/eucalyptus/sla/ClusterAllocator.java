@@ -173,7 +173,7 @@ public class ClusterAllocator extends Thread {
   @SuppressWarnings( "unchecked" )
   private void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
-      QueuedEventCallback callback = new StartNetworkCallback( networkToken ).regardingRequest( vmAllocInfo.getRequest( ) );
+      QueuedEventCallback callback = new StartNetworkCallback( networkToken ).regardingUserRequest( vmAllocInfo.getRequest( ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
       LOG.debug( EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ),networkToken.toString( ) ) );
     }
@@ -183,7 +183,7 @@ public class ClusterAllocator extends Thread {
         Network network = Networks.getInstance( ).lookup( networkToken.getName( ) );
         LOG.debug( LogUtil.header( "Setting up rules for: " + network.getName( ) ) );
         LOG.debug( LogUtil.subheader( network.toString( ) ) );
-        ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules( ) ).regardingRequest( vmAllocInfo.getRequest( ) );
+        ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules( ) ).regardingUserRequest( vmAllocInfo.getRequest( ) );
         if ( !network.getRules( ).isEmpty( ) ) {
           this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( msg ) );
         }
@@ -255,7 +255,7 @@ public class ClusterAllocator extends Thread {
         return VmInstances.getAsMAC( instanceId );
       }
     } );
-    VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), imgInfo, vmInfo, keyInfo, instanceIds, macs, vlan, networkNames, netIndexes ).regardingRequest( request );
+    VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), imgInfo, vmInfo, keyInfo, instanceIds, macs, vlan, networkNames, netIndexes ).regardingUserRequest( request );
     VmRunCallback cb = new VmRunCallback( run, this, childToken );
     if ( !addrList.isEmpty( ) ) {
       cb.then( new SuccessCallback<VmRunResponseType>( ) {
