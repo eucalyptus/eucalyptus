@@ -98,8 +98,10 @@ import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.ws.SystemState;
+import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -171,8 +173,9 @@ public class ClusterAllocator extends Thread {
   @SuppressWarnings( "unchecked" )
   private void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
-      QueuedEventCallback callback = new StartNetworkCallback( networkToken ).regarding( vmAllocInfo.getRequest( ) );
+      QueuedEventCallback callback = new StartNetworkCallback( networkToken ).regardingRequest( vmAllocInfo.getRequest( ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
+      LOG.debug( EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ),networkToken.toString( ) ) );
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest( );
@@ -180,9 +183,7 @@ public class ClusterAllocator extends Thread {
         Network network = Networks.getInstance( ).lookup( networkToken.getName( ) );
         LOG.debug( LogUtil.header( "Setting up rules for: " + network.getName( ) ) );
         LOG.debug( LogUtil.subheader( network.toString( ) ) );
-        ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules( ) );
-        msg.setUserId( networkToken.getUserName( ) );
-        msg.setEffectiveUserId( networkToken.getUserName( ) );
+        ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules( ) ).regardingRequest( vmAllocInfo.getRequest( ) );
         if ( !network.getRules( ).isEmpty( ) ) {
           this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( msg ) );
         }
@@ -254,7 +255,7 @@ public class ClusterAllocator extends Thread {
         return VmInstances.getAsMAC( instanceId );
       }
     } );
-    VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), imgInfo, vmInfo, keyInfo, instanceIds, macs, vlan, networkNames, netIndexes ).regardingUser( request );
+    VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), imgInfo, vmInfo, keyInfo, instanceIds, macs, vlan, networkNames, netIndexes ).regardingRequest( request );
     VmRunCallback cb = new VmRunCallback( run, this, childToken );
     if ( !addrList.isEmpty( ) ) {
       cb.then( new SuccessCallback<VmRunResponseType>( ) {

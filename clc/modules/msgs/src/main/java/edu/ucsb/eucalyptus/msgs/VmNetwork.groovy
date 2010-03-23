@@ -71,13 +71,6 @@ public class StartNetworkType extends EucalyptusMessage {
   ArrayList<String> clusterControllers = new ArrayList<String>();
 
 
-  def StartNetworkType(final EucalyptusMessage msg, final Integer vlan, final String netName)
-  {
-    super(msg);
-    this.vlan = vlan;
-    this.netName = netName;
-  }
-
   def StartNetworkType(){
     }
 

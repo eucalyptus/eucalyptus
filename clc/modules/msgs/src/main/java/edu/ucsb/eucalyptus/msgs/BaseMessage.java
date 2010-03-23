@@ -71,8 +71,8 @@ public class BaseMessage {
     return regarding( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
   }
 
-  public <TYPE extends BaseMessage> TYPE regardingUser( BaseMessage msg ) {
-    return regardingUser( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
+  public <TYPE extends BaseMessage> TYPE regardingRequest( BaseMessage msg ) {
+    return regardingRequest( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
   }
 
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg, String subCorrelationId ) {
@@ -80,7 +80,7 @@ public class BaseMessage {
     return regarding( );
   }
   
-  public <TYPE extends BaseMessage> TYPE regardingUser( BaseMessage msg, String subCorrelationId ) {
+  public <TYPE extends BaseMessage> TYPE regardingRequest( BaseMessage msg, String subCorrelationId ) {
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
     this.userId = msg.getUserId( );
     this.effectiveUserId = msg.getEffectiveUserId( );
