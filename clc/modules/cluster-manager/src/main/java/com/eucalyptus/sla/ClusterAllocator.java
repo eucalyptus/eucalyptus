@@ -120,6 +120,7 @@ public class ClusterAllocator extends Thread {
     if ( vmToken != null ) {
       try {
         this.cluster = Clusters.getInstance( ).lookup( vmToken.getCluster( ) );
+        this.messages = new StatefulMessageSet<State>( cluster, State.values( ) );
         for ( NetworkToken networkToken : vmToken.getNetworkTokens( ) )
           this.setupNetworkMessages( networkToken );
         this.setupVmMessages( vmToken );
