@@ -456,26 +456,36 @@ public class Network implements HasName {
   
   @Override
   public String toString( ) {
-    String availableIndexes = "${this.availableNetworkIndexes.first( )}..";
-    Integer last = this.availableNetworkIndexes.first( )-1;
-    this.availableNetworkIndexes.each{ Integer it -> 
-      if( it-1 == last ) { 
-        last == it; 
-      } else { 
-        availableIndexes += "${last},${it}..";
-      } 
+    String availableIndexes = "";
+    if( this.availableNetworkIndexes.size() < 3 ) {
+      availableIndexes = this.availableNetworkIndexes.toString();
+    } else {
+      availableIndexes = "${this.availableNetworkIndexes.first( )}..";
+      Integer last = this.availableNetworkIndexes.first( )-1;
+      this.availableNetworkIndexes.each{ Integer it -> 
+        if( it-1 == last ) { 
+          last == it; 
+        } else { 
+          availableIndexes += "${last},${it}..";
+        } 
+      }
+      availableIndexes += "${this.availableNetworkIndexes.last( )}]";
     }
-    availableIndexes += this.availableNetworkIndexes.last( );
-    String assignedIndexes = "${this.assignedNetworkIndexes.first( )}..";
-    last = this.assignedNetworkIndexes.first( )-1;
-    this.assignedNetworkIndexes.each{ Integer it -> 
-      if( it-1 == last ) { 
-        last == it; 
-      } else { 
-        assignedIndexes += "${last},${it}..";
-      } 
+    String assignedIndexes = "";
+    if( this.assignedNetworkIndexes.size() < 3 ) {
+      assignedIndexes = this.assignedNetworkIndexes.toString() 
+    } else { 
+      assignedIndexes = "[${this.assignedNetworkIndexes.first( )}..";
+      last = this.assignedNetworkIndexes.first( )-1;
+      this.assignedNetworkIndexes.each{ Integer it -> 
+        if( it-1 == last ) { 
+          last == it; 
+        } else { 
+          assignedIndexes += "${last},${it}..";
+        } 
+      }
+      assignedIndexes += "${this.assignedNetworkIndexes.last( )}];
     }
-    assignedIndexes += this.assignedNetworkIndexes.last( );
     return String.format("Network [availableNetworkIndexes=%s, assignedNetworkIndexes=%s, name=%s, networkName=%s, clusterTokens=%s, rules=%s, userName=%s]",
                          availableIndexes, this.assignedIndexes, this.name, this.networkName, this.clusterTokens, this.rules, this.userName );
   }
