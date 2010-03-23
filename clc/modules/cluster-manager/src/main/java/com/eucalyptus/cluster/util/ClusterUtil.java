@@ -30,7 +30,6 @@ public class ClusterUtil {
   public static boolean checkCerts( final GetKeysResponseType reply, final Cluster cluster ) {
     NodeCertInfo certs = reply.getCerts( );
     if ( certs == null || certs.getCcCert( ) == null || certs.getNcCert( ) == null ) { return false; }
-    LOG.info( "---------------------------------------------------------------" );
     byte[] ccCert = Base64.decode( certs.getCcCert( ) );
     X509Certificate clusterx509 = Hashes.getPemCert( ccCert );
     X509Certificate realClusterx509 = X509Cert.toCertificate( cluster.getCredentials( ).getClusterCertificate( ) );
