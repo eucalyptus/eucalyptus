@@ -237,24 +237,24 @@ public class ClusterAllocator extends Thread {
         if ( !addresses.isEmpty( ) ) {
           addrList.add( addresses.get( index ) );
         }
-        cb = makeRunRequest( childToken, rsvId, instanceIds, imgInfo, keyInfo, vmInfo, vlan, networkNames, netIndexes, addrList, userData );
+        cb = makeRunRequest( request, childToken, rsvId, instanceIds, imgInfo, keyInfo, vmInfo, vlan, networkNames, netIndexes, addrList, userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
         index++;
       }
     } catch ( NoSuchTokenException e ) {
-      cb = makeRunRequest( token, rsvId, token.getInstanceIds( ), imgInfo, keyInfo, vmInfo, vlan, networkNames, networkIndexes, addresses, userData );
+      cb = makeRunRequest( request, token, rsvId, token.getInstanceIds( ), imgInfo, keyInfo, vmInfo, vlan, networkNames, networkIndexes, addresses, userData );
     }
     this.messages.addRequest( State.CREATE_VMS, cb );
   }
   
-  private QueuedEventCallback makeRunRequest( ResourceToken childToken, String rsvId, List<String> instanceIds, VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, Integer vlan, List<String> networkNames, List<String> netIndexes, final List<String> addrList, String userData ) {
+  private QueuedEventCallback makeRunRequest( RunInstancesType request, ResourceToken childToken, String rsvId, List<String> instanceIds, VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, Integer vlan, List<String> networkNames, List<String> netIndexes, final List<String> addrList, String userData ) {
     List<String> macs = Lists.transform( instanceIds, new Function<String, String>( ) {
       @Override
       public String apply( String instanceId ) {
         return VmInstances.getAsMAC( instanceId );
       }
     } );
-    VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), imgInfo, vmInfo, keyInfo, instanceIds, macs, vlan, networkNames, netIndexes );
+    VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), imgInfo, vmInfo, keyInfo, instanceIds, macs, vlan, networkNames, netIndexes ).regardingUser( request );
     VmRunCallback cb = new VmRunCallback( run, this, childToken );
     if ( !addrList.isEmpty( ) ) {
       cb.then( new SuccessCallback<VmRunResponseType>( ) {

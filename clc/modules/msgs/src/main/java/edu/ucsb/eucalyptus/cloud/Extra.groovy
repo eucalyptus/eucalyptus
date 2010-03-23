@@ -203,9 +203,6 @@ public class VmRunType extends EucalyptusMessage {
   final VmImageInfo imageInfo, final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
   final List<String> instanceIds, final List<String> macAddresses,
   final int vlan, final List<String> networkNames, final List<String> networkIndexList ) {
-    this.correlationId = request.correlationId;
-    this.userId = request.userId;
-    this.effectiveUserId = request.effectiveUserId;
     this.reservationId = reservationId;
     this.userData = userData;
     this.min = amount;
