@@ -66,6 +66,7 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -80,6 +81,7 @@ import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusResponseType;
 
+@ChannelPipelineCoverage("one")
 public class WalrusRESTLoggerInbound extends MessageStackHandler {
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {

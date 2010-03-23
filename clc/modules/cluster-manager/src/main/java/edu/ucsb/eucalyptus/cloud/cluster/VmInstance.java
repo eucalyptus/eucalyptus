@@ -65,7 +65,6 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;

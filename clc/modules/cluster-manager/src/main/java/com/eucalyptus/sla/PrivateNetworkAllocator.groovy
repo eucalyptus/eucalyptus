@@ -5,14 +5,12 @@ import java.util.NoSuchElementException;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import org.apache.log4j.Logger;
-import com.eucalyptus.util.EucalyptusProperties.TokenState;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class PrivateNetworkAllocator implements ResourceAllocator {

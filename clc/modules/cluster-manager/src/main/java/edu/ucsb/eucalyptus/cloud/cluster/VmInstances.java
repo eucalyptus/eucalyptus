@@ -125,9 +125,19 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     throw new NoSuchElementException( "Can't find registered object with ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
   }
 
+  public int countByPublicIp ( String ip ) throws NoSuchElementException {
+    int count = 0;
+    for( VmInstance vm : this.listValues( ) ) {
+      if( ip.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) )) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   public VmInstance lookupByPublicIp ( String ip ) throws NoSuchElementException {
     for( VmInstance vm : this.listValues( ) ) {
-      if( ip.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
+      if( ip.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) )) {
         return vm;
       }
     }

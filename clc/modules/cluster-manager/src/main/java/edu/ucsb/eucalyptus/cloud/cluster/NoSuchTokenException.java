@@ -65,4 +65,18 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 
 public class NoSuchTokenException extends Exception {
 
+  public NoSuchTokenException( String string ) {}
+
+  public NoSuchTokenException( ) {
+    super( );
+  }
+
+  public NoSuchTokenException( String message, Throwable cause ) {
+    super( message, cause );
+  }
+
+  public NoSuchTokenException( Throwable cause ) {
+    super( cause );
+  }
+
 }

@@ -70,10 +70,10 @@ import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import java.io.IOException;
