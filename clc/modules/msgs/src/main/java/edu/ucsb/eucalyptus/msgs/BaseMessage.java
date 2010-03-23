@@ -1,12 +1,10 @@
 package edu.ucsb.eucalyptus.msgs;
 
-import groovy.lang.GroovyObject;
 import java.io.ByteArrayOutputStream;
 import java.util.UUID;
 import org.apache.log4j.Logger;
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
-import org.jibx.runtime.IMarshallable;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
 

@@ -35,7 +35,7 @@ public class LogUtil {
     LOG.info( LogUtil.subheader( message ) );
     return singleton;
   }
-  public static String rangedIntegerList( List<Integer> intList ) {
+  public static String rangedIntegerList( Collection<Integer> intList ) {
     String shortList = "";
     if( intList.size() < 5 ) {
       shortList = intList.toString().replaceAll("\\s","");
