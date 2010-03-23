@@ -130,17 +130,6 @@ public class ClusterAllocator extends Thread {
         LOG.debug( e, e );
         try {
           Clusters.getInstance( ).lookup( vmToken.getCluster( ) ).getNodeState( ).releaseToken( vmToken );
-          for( String vmId : vmToken.getInstanceIds( ) ) {
-            try {
-              VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-              vm.setState( VmState.TERMINATED );
-              vm.resetStopWatch( );
-              vm.setReason( SystemState.INSTANCE_FAILED + " " + e.getMessage( ) );
-              VmInstances.getInstance( ).disable( vmId );
-            } catch ( Exception e1 ) {
-              LOG.debug( e1, e1 );
-            }
-          }
         } catch ( Throwable e1 ) {
           LOG.debug( e1 );
           LOG.trace( e1, e1 );
@@ -163,6 +152,17 @@ public class ClusterAllocator extends Thread {
         } catch ( Throwable e1 ) {
           LOG.debug( e1 );
           LOG.trace( e1, e1 );
+        }
+        for( String vmId : vmToken.getInstanceIds( ) ) {
+          try {
+            VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
+            vm.setState( VmState.TERMINATED );
+            vm.resetStopWatch( );
+            vm.setReason( SystemState.INSTANCE_FAILED + " " + e.getMessage( ) );
+            VmInstances.getInstance( ).disable( vmId );
+          } catch ( Exception e1 ) {
+            LOG.debug( e1, e1 );
+          }
         }
       }
     }
