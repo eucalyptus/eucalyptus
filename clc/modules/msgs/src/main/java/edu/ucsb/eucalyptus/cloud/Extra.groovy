@@ -463,11 +463,10 @@ public class Network implements HasName {
       availableIndexes = "${this.availableNetworkIndexes.first( )}..";
       Integer last = this.availableNetworkIndexes.first( )-1;
       this.availableNetworkIndexes.each{ Integer it -> 
-        if( it-1 == last ) { 
-          last == it; 
-        } else { 
+        if( it-1 != last ) { 
           availableIndexes += "${last},${it}..";
         } 
+        last == it; 
       }
       availableIndexes += "${this.availableNetworkIndexes.last( )}]";
     }
@@ -478,11 +477,10 @@ public class Network implements HasName {
       assignedIndexes = "[${this.assignedNetworkIndexes.first( )}..";
       last = this.assignedNetworkIndexes.first( )-1;
       this.assignedNetworkIndexes.each{ Integer it -> 
-        if( it-1 == last ) { 
-          last == it; 
-        } else { 
-          assignedIndexes += "${last},${it}..";
+        if( it-1 != last ) { 
+          availableIndexes += "${last},${it}..";
         } 
+        last == it; 
       }
       assignedIndexes += "${this.assignedNetworkIndexes.last( )}]";
     }
