@@ -38,6 +38,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
    */
   public StatefulMessageSet( Cluster cluster, E[] states ) {
     this.cluster = cluster;
+    this.states = states;
     this.state = states[0];
     this.endState = states[states.length - 2];
     this.failState = states[states.length - 1];
