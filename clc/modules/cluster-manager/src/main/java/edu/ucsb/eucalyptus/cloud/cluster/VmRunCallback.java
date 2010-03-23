@@ -165,7 +165,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     }
     LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
-    this.parent.getRollback().lazySet( true );    
+    this.parent.rollback( );
   }
 
 }

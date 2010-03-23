@@ -70,9 +70,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.TerminateCallback;
@@ -87,29 +85,12 @@ public class ClusterMessageQueue implements Runnable {
   private final BlockingQueue<QueuedEvent> msgQueue;
   private final int                        offerInterval       = 500;
   private final int                        pollInterval        = 500;
-  private final int                        messageQueueSize    = 100;
   private final AtomicBoolean              finished;
   private final String                     clusterName;
   public static int                        CLUSTER_NUM_WORKERS = 8;
   private final ThreadFactory              threadFactory;
-  private volatile int                     threadCount         = 0;
   private final ExecutorService            workers;
-  
-  class ClusterThreadFactory implements ThreadFactory {
-    private final String        threadName;
-    private final AtomicInteger threadIndex;
     
-    public ClusterThreadFactory( final String threadName ) {
-      this.threadName = threadName;
-      this.threadIndex = new AtomicInteger( 0 );
-    }
-    
-    @Override
-    public Thread newThread( final Runnable r ) {
-      return SystemBootstrapper.makeSystemThread( r, this.threadName + "-" + this.threadIndex.addAndGet( 1 ) );
-    }
-  }
-  
   public ClusterMessageQueue( final String clusterName ) {
     this.finished = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedEvent>( );

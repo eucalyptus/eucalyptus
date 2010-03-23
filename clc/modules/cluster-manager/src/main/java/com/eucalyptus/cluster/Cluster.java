@@ -69,6 +69,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ThreadFactory;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
@@ -83,11 +84,12 @@ public class Cluster implements HasName {
   private static Logger                            LOG = Logger.getLogger( Cluster.class );
   private ClusterMessageQueue                      mq;
   private ClusterConfiguration                     configuration;
+  private ThreadFactory                            threadFactory;
   private ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private ClusterState                             state;
   private ClusterNodeState                         nodeState;
   private ClusterCredentials                       credentials;
-
+  
   public Cluster( ClusterConfiguration configuration, ClusterCredentials credentials ) {
     super( );
     this.configuration = configuration;
@@ -96,8 +98,9 @@ public class Cluster implements HasName {
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
     this.credentials = credentials;
     this.mq = new ClusterMessageQueue( configuration.getName( ) );
+    this.threadFactory = ClusterThreadFactory.getThreadFactory( this.configuration.getName( ) );
   }
-
+  
   public ClusterCredentials getCredentials( ) {
     synchronized ( this ) {
       if ( this.credentials == null ) {
@@ -112,36 +115,36 @@ public class Cluster implements HasName {
     }
     return credentials;
   }
-
+  
   @Override
   public String getName( ) {
     return this.configuration.getName( );
   }
-
+  
   public NavigableSet<String> getNodeTags( ) {
     return this.nodeMap.navigableKeySet( );
   }
-
+  
   public NodeInfo getNode( String serviceTag ) {
     return this.nodeMap.get( serviceTag );
   }
-
+  
   public void updateNodeInfo( List<String> nodeTags ) {
     NodeInfo ret = null;
     for ( String tag : nodeTags )
       if ( ( ret = this.nodeMap.putIfAbsent( tag, new NodeInfo( tag ) ) ) != null ) ret.touch( );
   }
-
+  
   @Override
   public int compareTo( Object o ) {
     Cluster that = ( Cluster ) o;
     return this.getName( ).compareTo( that.getName( ) );
   }
-
+  
   public ClusterConfiguration getConfiguration( ) {
     return configuration;
   }
-
+  
   public RegisterClusterType getWeb( ) {
     String host = this.getConfiguration( ).getHostName( );
     int port = 0;
@@ -149,31 +152,30 @@ public class Cluster implements HasName {
       URI uri = new URI( this.getConfiguration( ).getUri( ) );
       host = uri.getHost( );
       port = uri.getPort( );
-    } catch ( URISyntaxException e ) {
-    }
+    } catch ( URISyntaxException e ) {}
     return new RegisterClusterType( this.getName( ), host, port );
   }
-
+  
   public ClusterMessageQueue getMessageQueue( ) {
     return this.mq;
   }
-
+  
   public ClusterState getState( ) {
     return state;
   }
-
+  
   public ClusterNodeState getNodeState( ) {
     return nodeState;
   }
   
-  public void start() {
-    this.mq.start();
+  public void start( ) {
+    this.mq.start( );
   }
-
+  
   public void stop( ) {
-    this.mq.stop();
+    this.mq.stop( );
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -182,7 +184,7 @@ public class Cluster implements HasName {
     result = prime * result + ( ( state == null ) ? 0 : state.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) return true;
@@ -197,32 +199,35 @@ public class Cluster implements HasName {
     } else if ( !state.equals( other.state ) ) return false;
     return true;
   }
-
+  
   public String getUri( ) {
     return configuration.getUri( );
   }
-
+  
   public String getHostName( ) {
     return this.configuration.getHostName( );
   }
-
+  
   public String getInsecureServicePath( ) {
     return this.configuration.getInsecureServicePath( );
   }
-
+  
   public Integer getPort( ) {
     return this.configuration.getPort( );
   }
-
+  
   public String getServicePath( ) {
     return this.configuration.getServicePath( );
   }
-
+  
+  public ClusterThreadFactory getThreadFactory( ) {
+    return this.threadFactory;
+  }
+  
   @Override
   public String toString( ) {
-    return String.format( "Cluster [configuration=%s, credentials=%s, mq=%s, nodeMap=%s, nodeState=%s, state=%s]",
-                          this.configuration, this.credentials, this.mq, this.nodeMap, this.nodeState, this.state );
+    return String.format( "Cluster [configuration=%s, credentials=%s, mq=%s, nodeMap=%s, nodeState=%s, state=%s]", this.configuration, this.credentials,
+                          this.mq, this.nodeMap, this.nodeState, this.state );
   }
-
   
 }

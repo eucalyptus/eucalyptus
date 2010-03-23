@@ -67,22 +67,20 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.ClusterThreadFactory;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.StatefulMessageSet;
 import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -93,7 +91,6 @@ import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
 import edu.ucsb.eucalyptus.cloud.cluster.ConfigureNetworkCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.MultiClusterCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
 import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.StartNetworkCallback;
@@ -105,21 +102,20 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator extends Thread {
-  
   private static Logger                              LOG            = Logger.getLogger( ClusterAllocator.class );
+  enum State {
+    START, CREATE_NETWORK, CREATE_NETWORK_RULES, CREATE_VMS, ASSIGN_ADDRESSES, FINISHED, ROLLBACK;
+  }
   public static Boolean                              SPLIT_REQUESTS = true;
-  private State                                      state;
-  private AtomicBoolean                              rollback;
-  private Multimap<State, QueuedEventCallback>       msgMap;
+  private StatefulMessageSet<State>                  messages;
   private Cluster                                    cluster;
-  private ConcurrentLinkedQueue<QueuedEventCallback> pendingEvents;
   private VmAllocationInfo                           vmAllocInfo;
   
-  public ClusterAllocator( ResourceToken vmToken, VmAllocationInfo vmAllocInfo ) {
-    this.msgMap = Multimaps.newHashMultimap( );
-    this.pendingEvents = new ConcurrentLinkedQueue<QueuedEventCallback>( );
-    this.state = State.START;
-    this.rollback = new AtomicBoolean( false );
+  public static void create(ResourceToken t, VmAllocationInfo vmAllocInfo ) {
+    ClusterThreadFactory.getThreadFactory( t.getCluster( ) ).newThread( new ClusterAllocator( t, vmAllocInfo ) ).start( );
+  }
+  
+  private ClusterAllocator( ResourceToken vmToken, VmAllocationInfo vmAllocInfo ) {
     this.vmAllocInfo = vmAllocInfo;
     if ( vmToken != null ) {
       try {
@@ -158,15 +154,11 @@ public class ClusterAllocator extends Thread {
     }
   }
   
-  private void addRequest( State state, QueuedEventCallback callback ) {
-    this.msgMap.put( State.CREATE_NETWORK, callback );
-  }
-  
   @SuppressWarnings( "unchecked" )
-  public void setupNetworkMessages( NetworkToken networkToken ) {
+  private void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
       QueuedEventCallback callback = new StartNetworkCallback( networkToken ).regarding( vmAllocInfo.getRequest( ) );
-      this.msgMap.put( State.CREATE_NETWORK, callback );
+      this.messages.addRequest( State.CREATE_NETWORK, callback );
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest( );
@@ -178,7 +170,7 @@ public class ClusterAllocator extends Thread {
         msg.setUserId( networkToken.getUserName( ) );
         msg.setEffectiveUserId( networkToken.getUserName( ) );
         if ( !network.getRules( ).isEmpty( ) ) {
-          this.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( msg ) );
+          this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( msg ) );
         }
         //:: need to refresh the rules on the backend for all active networks which point to this network :://
         for ( Network otherNetwork : Networks.getInstance( ).listValues( ) ) {
@@ -189,7 +181,7 @@ public class ClusterAllocator extends Thread {
             omsg.setUserId( otherNetwork.getUserName( ) );
             omsg.setEffectiveUserId( Component.eucalyptus.name( ) );
             if ( !otherNetwork.getRules( ).isEmpty( ) ) {
-              this.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( omsg ) );
+              this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( omsg ) );
             }
           }
         }
@@ -197,7 +189,7 @@ public class ClusterAllocator extends Thread {
     } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
   }
   
-  public void setupVmMessages( final ResourceToken token ) {
+  private void setupVmMessages( final ResourceToken token ) {
     Integer vlan = null;
     List<String> networkNames = null;
     ArrayList<String> networkIndexes = Lists.newArrayList( );
@@ -232,19 +224,16 @@ public class ClusterAllocator extends Thread {
           addrList.add( addresses.get( index ) );
         }
         cb = makeRunRequest( childToken, rsvId, instanceIds, imgInfo, keyInfo, vmInfo, vlan, networkNames, netIndexes, addrList, userData );
-        this.addRequest( State.CREATE_VMS, cb );
+        this.messages.addRequest( State.CREATE_VMS, cb );
         index++;
       }
     } catch ( NoSuchTokenException e ) {
       cb = makeRunRequest( token, rsvId, token.getInstanceIds( ), imgInfo, keyInfo, vmInfo, vlan, networkNames, networkIndexes, addresses, userData );
     }
-    this.addRequest( State.CREATE_VMS, cb );
+    this.messages.addRequest( State.CREATE_VMS, cb );
   }
   
-  private QueuedEventCallback makeRunRequest( ResourceToken childToken, String rsvId, List<String> instanceIds, 
-                                                         VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, 
-                                                         Integer vlan, List<String> networkNames, List<String> netIndexes, 
-                                                         final List<String> addrList, String userData ) {
+  private QueuedEventCallback makeRunRequest( ResourceToken childToken, String rsvId, List<String> instanceIds, VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, Integer vlan, List<String> networkNames, List<String> netIndexes, final List<String> addrList, String userData ) {
     List<String> macs = Lists.transform( instanceIds, new Function<String, String>( ) {
       @Override
       public String apply( String instanceId ) {
@@ -268,83 +257,13 @@ public class ClusterAllocator extends Thread {
     }
     return cb;
   }
-  public void setState( final State state ) {
-    this.clearQueue( );
-    if ( this.rollback.get( ) && !State.ROLLBACK.equals( this.state ) )
-      this.state = State.ROLLBACK;
-    else if ( this.rollback.get( ) && State.ROLLBACK.equals( this.state ) )
-      this.state = State.FINISHED;
-    else this.state = state;
+
+  public void run() {
+    this.messages.run( );
   }
   
-  public void run( ) {
-    this.state = State.CREATE_NETWORK;
-    while ( !this.state.equals( State.FINISHED ) ) {
-      try {
-        this.queueEvents( );
-        switch ( this.state ) {
-          case CREATE_NETWORK:
-            this.setState( State.CREATE_NETWORK_RULES );
-            break;
-          case CREATE_NETWORK_RULES:
-            this.setState( State.CREATE_VMS );
-            break;
-          case CREATE_VMS:
-            this.setState( State.ASSIGN_ADDRESSES );
-            break;
-          case ASSIGN_ADDRESSES:
-            this.setState( State.FINISHED );
-            break;
-          case ROLLBACK:
-            this.setState( State.FINISHED );
-            break;
-        }
-        this.clearQueue( );
-      } catch ( Throwable e ) {
-        LOG.error( e, e );
-      }
-    }
+  public void rollback() {
+    this.messages.rollback( );
   }
-  
-  public void clearQueue( ) {
-    QueuedEventCallback event = null;
-    while ( ( event = this.pendingEvents.poll( ) ) != null ) {
-      Object o = null;
-      try {
-        o = event.getResponse( );
-      } catch ( Throwable t ) {
-        LOG.debug( t, t );
-        this.rollback.lazySet( true );
-        this.state = State.ROLLBACK;
-      }
-    }
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  private void queueEvents( ) {
-    for ( QueuedEventCallback event : this.msgMap.get( this.state ) ) {
-      if ( event instanceof MultiClusterCallback ) {
-        MultiClusterCallback callback = ( MultiClusterCallback ) event;
-        for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-          QueuedEventCallback subEvent = callback.newInstance( );
-          this.pendingEvents.add( subEvent );
-          LOG.info( this.state.name( ) +  ": enqueing event for cluster " + cluster.getName( ) + " of type: " + event );
-          subEvent.dispatch( c );
-        }
-      } else {
-        LOG.info( this.state.name( ) +  ": enqueing event for cluster " + cluster.getName( ) + " of type: " + event );
-        this.pendingEvents.add( event );
-        event.dispatch( cluster );
-      }
-    }
-  }
-  
-  public AtomicBoolean getRollback( ) {
-    return rollback;
-  }
-  
-  enum State {
-    START, CREATE_NETWORK, CREATE_NETWORK_RULES, CREATE_VMS, ASSIGN_ADDRESSES, FINISHED, ROLLBACK;
-  }
-  
+      
 }

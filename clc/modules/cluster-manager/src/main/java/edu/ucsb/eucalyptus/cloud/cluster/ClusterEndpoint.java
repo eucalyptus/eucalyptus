@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.ClusterThreadFactory;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.sla.ClusterAllocator;
@@ -123,7 +124,7 @@ public class ClusterEndpoint implements Startable {
 
   public void enqueue( VmAllocationInfo vmAllocInfo ) {
     for( ResourceToken t : vmAllocInfo.getAllocationTokens( ) ) {
-      new ClusterAllocator( t, vmAllocInfo ).start( );
+       ClusterAllocator.create( t, vmAllocInfo );
     }
     RequestContext.getEventContext().setStopFurtherProcessing( true );
   }
