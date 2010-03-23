@@ -75,7 +75,6 @@ import org.mule.config.ConfigResource;
 
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.BaseDirectory;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;

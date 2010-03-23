@@ -116,7 +116,7 @@ try {
 
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{ 
-  SystemConfiguration config = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration();
+  SystemConfiguration config = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration();
   EntityWrapper<SystemConfiguration> confDb = new EntityWrapper<SystemConfiguration>();
   try {
     config.setDefaultKernel(it.SYSTEM_INFO_DEFAULT_KERNEL);

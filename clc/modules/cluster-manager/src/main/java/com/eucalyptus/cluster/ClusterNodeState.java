@@ -74,7 +74,6 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
@@ -84,6 +83,8 @@ import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypeAvailability;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -131,20 +132,20 @@ public class ClusterNodeState {
     LOG.debug( sorted );
 
     ResourceToken token = new ResourceToken( this.clusterName, requestId, userName, quantity, this.virtualTimer++, vmTypeName );
-    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.preallocate, token ) );
+    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_RESERVED, token.toString( ) ) );
     this.pendingTokens.add( token );
     return token;
   }
   
   public synchronized List<ResourceToken> splitToken( ResourceToken token ) throws NoSuchTokenException {
-    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.split, token ) );
+    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_SPLIT, token.toString( ) ) );
     if( !this.pendingTokens.contains( token ) ) {
       throw new NoSuchTokenException( "Splitting the requested token is not possible since it is not pending: " + token );
     }
     List<ResourceToken> childTokens = Lists.newArrayList( );
     for( int index = 0; index < token.getAmount( ); index++ ) {
       ResourceToken childToken = new ResourceToken( token.getCluster( ), token.getCorrelationId( )+index, token.getUserName( ), 1, this.virtualTimer++, token.getVmType( ) );
-      LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.child, token ) );
+      LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_CHILD, childToken.toString( ) ) );
       childTokens.add( childToken );
     }
     this.pendingTokens.remove( token );
@@ -153,14 +154,14 @@ public class ClusterNodeState {
   }
 
   public synchronized void releaseToken( ResourceToken token ) {
-    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.returned, token ) );
+    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_RETURNED, token.toString( ) ) );
     this.pendingTokens.remove( token );
     this.submittedTokens.remove( token );
     this.redeemedTokens.remove( token );
   }
 
   public synchronized void submitToken( ResourceToken token ) throws NoSuchTokenException {
-    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.submitted, token ) );
+    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_SUBMITTED, token.toString( ) ) );
     if ( this.pendingTokens.remove( token ) )
       this.submittedTokens.add( token );
     else
@@ -168,7 +169,7 @@ public class ClusterNodeState {
   }
 
   public synchronized void redeemToken( ResourceToken token ) throws NoSuchTokenException {
-    LOG.debug( String.format( EucalyptusProperties.DEBUG_FSTRING, EucalyptusProperties.TokenState.redeemed, token ) );
+    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_REDEEMED, token.toString( ) ) );
     if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) )
       this.redeemedTokens.add( token );
     else

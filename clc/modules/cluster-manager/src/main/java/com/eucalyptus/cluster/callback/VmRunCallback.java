@@ -123,7 +123,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
           }
           String dnsDomain = "dns-disabled";
           try {
-            dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+            dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
           } catch ( Exception e ) {
           }
           vm.getNetworkConfig( ).updateDns( dnsDomain );

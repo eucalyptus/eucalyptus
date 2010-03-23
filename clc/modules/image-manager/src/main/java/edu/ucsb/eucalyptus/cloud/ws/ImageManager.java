@@ -64,19 +64,26 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 import com.eucalyptus.accounts.UserGroupInfo;
 import com.eucalyptus.accounts.UserInfo;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.util.ImageUtil;
 import com.eucalyptus.images.util.WalrusUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.client.ServiceDispatcher;
-
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -102,22 +109,15 @@ import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Set;
 
 public class ImageManager {
   public static Logger LOG = Logger.getLogger( ImageManager.class );
+  public static String IMAGE_MACHINE = "machine";
+  public static String IMAGE_KERNEL = "kernel";
+  public static String IMAGE_RAMDISK = "ramdisk";
+  public static String IMAGE_MACHINE_PREFIX = "emi";
+  public static String IMAGE_KERNEL_PREFIX = "eki";
+  public static String IMAGE_RAMDISK_PREFIX = "eri";
 
   public VmImageInfo resolve( VmInfo vmInfo ) throws EucalyptusCloudException {
     String walrusUrl = ImageUtil.getWalrusUrl( );
@@ -183,8 +183,8 @@ public class ImageManager {
     String defaultKernelId = null;
     String defaultRamdiskId = null;
     try {
-      defaultKernelId = EucalyptusProperties.getSystemConfiguration( ).getDefaultKernel( );
-      defaultRamdiskId = EucalyptusProperties.getSystemConfiguration( ).getDefaultRamdisk( );
+      defaultKernelId = SystemConfiguration.getSystemConfiguration( ).getDefaultKernel( );
+      defaultRamdiskId = SystemConfiguration.getSystemConfiguration( ).getDefaultRamdisk( );
     } catch ( Exception e1 ) {}
     String kernelId = ImageUtil.getImageInfobyId( msg.getKernelId( ), diskInfo.getKernelId( ), defaultKernelId );
     if ( kernelId == null ) {
@@ -313,12 +313,12 @@ public class ImageManager {
 
     if ( "yes".equals( kernelId ) || "true".equals( kernelId ) || imagePathParts[1].startsWith( "vmlinuz" ) ) {
       if ( !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Only administrators can register kernel images." );
-      imageInfo.setImageType( EucalyptusProperties.IMAGE_KERNEL );
-      imageInfo.setImageId( ImageUtil.newImageId( EucalyptusProperties.IMAGE_KERNEL_PREFIX, imageInfo.getImageLocation( ) ) );
+      imageInfo.setImageType( ImageManager.IMAGE_KERNEL );
+      imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_KERNEL_PREFIX, imageInfo.getImageLocation( ) ) );
     } else if ( "yes".equals( ramdiskId ) || "true".equals( ramdiskId ) || imagePathParts[1].startsWith( "initrd" ) ) {
       if ( !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
-      imageInfo.setImageType( EucalyptusProperties.IMAGE_RAMDISK );
-      imageInfo.setImageId( ImageUtil.newImageId( EucalyptusProperties.IMAGE_RAMDISK_PREFIX, imageInfo.getImageLocation( ) ) );
+      imageInfo.setImageType( ImageManager.IMAGE_RAMDISK );
+      imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_RAMDISK_PREFIX, imageInfo.getImageLocation( ) ) );
     } else {
       if ( kernelId != null ) {
         try {
@@ -334,10 +334,10 @@ public class ImageManager {
           throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
         }
       }
-      imageInfo.setImageType( EucalyptusProperties.IMAGE_MACHINE );
+      imageInfo.setImageType( ImageManager.IMAGE_MACHINE );
       imageInfo.setKernelId( kernelId );
       imageInfo.setRamdiskId( ramdiskId );
-      imageInfo.setImageId( ImageUtil.newImageId( EucalyptusProperties.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
+      imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
     }
 
     String signature = null;

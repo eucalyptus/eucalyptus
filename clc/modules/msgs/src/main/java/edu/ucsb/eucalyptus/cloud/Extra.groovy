@@ -65,7 +65,7 @@ package edu.ucsb.eucalyptus.cloud
 
 
 import edu.ucsb.eucalyptus.msgs.*
-
+import edu.ucsb.eucalyptus.constants.EventType;
 import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
@@ -75,7 +75,6 @@ import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ConcurrentSkipListSet
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.*;
 
@@ -359,7 +358,7 @@ public class Network implements HasName {
       this.availableNetworkIndexes.remove( index );
     } else {
       if( !this.assignedNetworkIndexes.contains( index ) && this.availableNetworkIndexes.remove( index ) ) {
-        LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.allocated, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
+        LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_ALLOCATED, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
         this.assignedNetworkIndexes.add( index );
         NetworkToken token = this.getClusterToken( cluster );
         token.indexes.add( index );
@@ -391,11 +390,11 @@ public class Network implements HasName {
   public Integer allocateNetworkIndex( String cluster ) {
     Integer nextIndex = this.availableNetworkIndexes.pollFirst( );
     if( nextIndex == null ) { 
-      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+      LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
     } else {
       this.assignedNetworkIndexes.add( nextIndex );
       this.getClusterToken( cluster )?.getIndexes().add( nextIndex );
-      LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.preallocate, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+      LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
     }
     return nextIndex;
   }
@@ -406,7 +405,7 @@ public class Network implements HasName {
   }
 
   public void returnNetworkIndex( Integer index ) {
-    LOG.debug( EventRecord.caller( this.getClass( ), EucalyptusProperties.TokenState.returned, "network=${this.name}","networkIndex=${index}") );
+    LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_RETURNED, "network=${this.name}","networkIndex=${index}") );
     this.assignedNetworkIndexes.remove( index );
     this.clusterTokens.values().each { 
       it.getIndexes().remove( index );

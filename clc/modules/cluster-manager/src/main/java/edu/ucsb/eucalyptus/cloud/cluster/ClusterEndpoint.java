@@ -99,7 +99,6 @@ import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import edu.ucsb.eucalyptus.msgs.RegionInfoType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class ClusterEndpoint implements Startable {
 
@@ -296,9 +295,9 @@ public class ClusterEndpoint implements Startable {
   public DescribeRegionsResponseType DescribeRegions(DescribeRegionsType request) {
       DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
       try {
-        SystemConfiguration config = EucalyptusProperties.getSystemConfiguration( );
-        reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", EucalyptusProperties.getCloudUrl( ) ) );
-        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", EucalyptusProperties.getWalrusUrl( ) ) );
+        SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
+        reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
+        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", SystemConfiguration.getWalrusUrl( ) ) );
       } catch ( EucalyptusCloudException e ) {}
       return reply;
   }

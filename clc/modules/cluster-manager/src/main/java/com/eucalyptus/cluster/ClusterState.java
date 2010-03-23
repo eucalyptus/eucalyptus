@@ -82,10 +82,11 @@ import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
+import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class ClusterState {
   private static Logger                           LOG                   = Logger.getLogger( ClusterState.class );
@@ -196,7 +197,7 @@ public class ClusterState {
     try {
       Network network = getVlanAssignedNetwork( networkName );      
       NetworkToken token = network.createNetworkToken( clusterName );
-      LOG.debug( EventRecord.here( ClusterState.class, EucalyptusProperties.TokenState.preallocate, token.toString( ) ) );
+      LOG.info( EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, token.toString( ) ) );
       return token;
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
@@ -214,14 +215,14 @@ public class ClusterState {
         ClusterState.availableVlans.add( vlan );
         throw new NotEnoughResourcesAvailable( "Not enough resources available: an error occured obtaining a usable vlan tag" );
       } else {
-        LOG.debug( EventRecord.here( ClusterState.class, EucalyptusProperties.TokenState.assigned, network.toString( ) ) );
+        LOG.info( EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, network.toString( ) ) );
       }
     }
     return network;
   }
   
   public void releaseNetworkAllocation( NetworkToken token ) {
-    LOG.debug( EventRecord.here( ClusterState.class, EucalyptusProperties.TokenState.returned, token.toString() ) );
+    LOG.info( EventRecord.caller( NetworkToken.class, EventType.TOKEN_RETURNED, token.toString( ) ) );
     try {
       Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
       if ( !existingNet.hasTokens( ) ) {

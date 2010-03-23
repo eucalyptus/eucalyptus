@@ -74,7 +74,6 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.DatabaseUtil;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusProperties;
 
 import javax.persistence.*;
 

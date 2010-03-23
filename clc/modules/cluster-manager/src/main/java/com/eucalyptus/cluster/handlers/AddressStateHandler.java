@@ -14,7 +14,6 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.GenericEvent;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.MappingHttpResponse;

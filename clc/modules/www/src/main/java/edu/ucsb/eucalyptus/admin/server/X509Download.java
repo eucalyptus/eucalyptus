@@ -63,41 +63,32 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
-import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
-import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.CredentialProvider;
-import com.eucalyptus.auth.X509Cert;
-import com.eucalyptus.auth.util.EucaKeyStore;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.auth.util.KeyTool;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.UrlBase64;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.cert.X509Certificate;
+import java.util.Calendar;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.security.KeyPair;
-import java.security.KeyStore;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.UrlBase64;
+import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.bootstrap.Component;
+import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class X509Download extends HttpServlet {
   
   private static Logger LOG                = Logger.getLogger( X509Download.class );
-  
+  public static String  NAME_SHORT         = "euca2";
   public static String  PARAMETER_USERNAME = "user";
   public static String  PARAMETER_KEYNAME  = "keyName";
   public static String  PARAMETER_CODE     = "code";
@@ -132,7 +123,7 @@ public class X509Download extends HttpServlet {
     }
     
     response.setContentType( mimetype );
-    response.setHeader( "Content-Disposition", "attachment; filename=\"" + EucalyptusProperties.NAME_SHORT + "-" + userName + "-x509.zip\"" );
+    response.setHeader( "Content-Disposition", "attachment; filename=\"" + X509Download.NAME_SHORT + "-" + userName + "-x509.zip\"" );
     LOG.info( "pushing out the X509 certificate for user " + userName );
     
     try {
@@ -165,7 +156,7 @@ public class X509Download extends HttpServlet {
     try {
       KeyTool keyTool = new KeyTool( );
       keyPair = keyTool.getKeyPair( );
-      x509 = keyTool.getCertificate( keyPair, EucalyptusProperties.getDName( userName ) );
+      x509 = keyTool.getCertificate( keyPair, CredentialProvider.getDName( userName ) );
       x509.checkValidity( );
       CredentialProvider.addCertificate( userName, newKeyName, x509 );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
@@ -183,7 +174,7 @@ public class X509Download extends HttpServlet {
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );
     String fingerPrint = Hashes.getFingerPrint( keyPair.getPublic( ) );
     if ( fingerPrint != null ) {
-      String baseName = EucalyptusProperties.NAME_SHORT + "-" + userName + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
+      String baseName = X509Download.NAME_SHORT + "-" + userName + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
       
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
       StringBuffer sb = new StringBuffer( );
@@ -193,11 +184,11 @@ public class X509Download extends HttpServlet {
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
       
       try {
-        sb.append( "\nexport S3_URL=" + EucalyptusProperties.getWalrusUrl( ) );
+        sb.append( "\nexport S3_URL=" + SystemConfiguration.getWalrusUrl( ) );
       } catch ( Exception e ) {
         sb.append( "\necho WARN:  Walrus URL is not configured." );
       }
-      sb.append( "\nexport EC2_URL=" + EucalyptusProperties.getCloudUrl( ) );
+      sb.append( "\nexport EC2_URL=" + SystemConfiguration.getCloudUrl( ) );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );

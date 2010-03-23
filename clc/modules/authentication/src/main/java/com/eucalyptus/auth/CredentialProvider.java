@@ -117,6 +117,11 @@ public class CredentialProvider extends Bootstrapper {
     }
   }
   
+  public static String getDName( final String name ) {
+    return String.format( "CN=localhost, OU=Eucalyptus, O=%s, L=Santa Barbara, ST=CA, C=US", name );
+  }
+
+  
   public static String getCertificateAlias( final String certPem ) throws GeneralSecurityException {
     String certAlias = null;
     EntityWrapper<X509Cert> db = Credentials.getEntityWrapper( );

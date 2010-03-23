@@ -274,7 +274,7 @@ public class SystemState {
         }
         String dnsDomain = "dns-disabled";
         try {
-          dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+          dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
         } catch ( Exception e ) {}
         vm.getNetworkConfig( ).updateDns( dnsDomain );
         VmState oldState = vm.getState( );
@@ -380,7 +380,7 @@ public class SystemState {
       vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
       String dnsDomain = "dns-disabled";
       try {
-        dnsDomain = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( );
+        dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
       } catch ( Exception e ) {}
       vm.getNetworkConfig( ).updateDns( dnsDomain );
       vm.setKeyInfo( keyInfo );

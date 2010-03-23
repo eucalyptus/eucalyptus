@@ -99,7 +99,6 @@ import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.UserManagement;
 
 public class EucalyptusManagement {
@@ -486,7 +485,7 @@ public class EucalyptusManagement {
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
 	{
 		EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>();
-		SystemConfiguration sysConf = EucalyptusProperties.getSystemConfiguration();
+		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration();
 		return new SystemConfigWeb( 
 				sysConf.getDefaultKernel(),
 				sysConf.getDefaultRamdisk(),
@@ -596,9 +595,9 @@ public class EucalyptusManagement {
 	public static CloudInfoWeb getCloudInfo (boolean setExternalHostPort) throws SerializableException
 	{
 		String cloudRegisterId = null;
-	    cloudRegisterId = EucalyptusProperties.getSystemConfiguration().getRegistrationId();
+	    cloudRegisterId = SystemConfiguration.getSystemConfiguration().getRegistrationId();
 		CloudInfoWeb cloudInfo = new CloudInfoWeb();
-		cloudInfo.setInternalHostPort (EucalyptusProperties.getInternalIpAddress() + ":8443");
+		cloudInfo.setInternalHostPort (SystemConfiguration.getInternalIpAddress() + ":8443");
 		if (setExternalHostPort) {
 			String ipAddr = getExternalIpAddress();
 			if (ipAddr!=null) {

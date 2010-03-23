@@ -63,45 +63,26 @@
  */
 package edu.ucsb.eucalyptus;
 
-import edu.ucsb.eucalyptus.cloud.entities.CertificateInfo;
-import edu.ucsb.eucalyptus.cloud.entities.Counters;
-import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
-import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.Volume;
-import edu.ucsb.eucalyptus.util.SystemUtil;
-import edu.ucsb.eucalyptus.util.UserManagement;
-import com.eucalyptus.util.StorageProperties;
+import java.io.File;
+import java.util.List;
 import org.apache.log4j.Logger;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.util.encoders.UrlBase64;
 import org.hibernate.HibernateException;
-import org.mortbay.jetty.security.Credential;
-
 import com.eucalyptus.accounts.UserGroupInfo;
 import com.eucalyptus.accounts.UserInfo;
-import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.util.AbstractKeyStore;
-import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.DatabaseUtil;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.SubDirectory;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.security.GeneralSecurityException;
-import java.security.PrivateKey;
-import java.security.Security;
-import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
+import edu.ucsb.eucalyptus.cloud.entities.Counters;
+import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import edu.ucsb.eucalyptus.msgs.Volume;
+import edu.ucsb.eucalyptus.util.SystemUtil;
+import edu.ucsb.eucalyptus.util.UserManagement;
 
 public class StartupChecks {
 
