@@ -73,6 +73,10 @@ permission notice:
 #include <pthread.h>
 #include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
+#include <linux/limits.h>
+#ifndef MAX_PATH
+#define MAX_PATH 4096
+#endif
 
 #include "eucalyptus-config.h"
 #include "ipc.h"
@@ -654,7 +658,7 @@ static int init (void)
 {
 	static int initialized = 0;
 	int do_warn = 0, i;
-	char configFiles[2][1024],
+	char configFiles[2][MAX_PATH],
 		log[CHAR_BUFFER_SIZE],
 		*bridge,
 		*hypervisor,
@@ -702,7 +706,7 @@ static int init (void)
 	}
 	snprintf(configFiles[0], CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
 
-	logprintfl (EUCAINFO, "NC is looking for configuration in %s/%s\n", configFiles[1], configFiles[0]);
+	logprintfl (EUCAINFO, "NC is looking for configuration in %s,%s\n", configFiles[1], configFiles[0]);
 
 	/* reset the log to the right value */
 	tmp = getConfString(configFiles, 2, "LOGLEVEL");
