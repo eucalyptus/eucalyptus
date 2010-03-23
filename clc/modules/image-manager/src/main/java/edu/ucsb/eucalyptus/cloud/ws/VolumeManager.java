@@ -310,7 +310,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException("Volume is not yet available: " + request.getVolumeId());
     }
     request.setRemoteDevice( volume.getRemoteDevice() );
-    Clusters.dispatchEvent( cluster, new VolumeAttachCallback( request ) );
+    new VolumeAttachCallback( request ).dispatch( cluster );
 
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice() );
     attachVol.setStatus( "attaching" );
@@ -366,7 +366,7 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice() );
     request.setDevice( volume.getDevice().replaceAll("unknown,requested:","") );
     request.setInstanceId( vm.getInstanceId() );
-    Clusters.dispatchEvent( cluster, new VolumeDetachCallback( request ) );
+    new VolumeDetachCallback( request ).dispatch( cluster );
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     return reply;

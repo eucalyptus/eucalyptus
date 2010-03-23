@@ -228,7 +228,9 @@ public class SystemState {
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
               StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ),
                                                                                        net.getVlan( ) ) );
-              stopNet.fireEventAsyncToAllClusters( stopNet.getRequest( ) );
+              for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+                stopNet.newInstance( ).dispatch( cluster );
+              }
             }
           }
         } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
@@ -436,7 +438,7 @@ public class SystemState {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
       if ( cluster != null ) {
-        Clusters.dispatchEvent( cluster, new ConsoleOutputCallback( request ) );
+        new ConsoleOutputCallback( request ).dispatch( cluster );
       }
       return;
     } catch ( NoSuchElementException e ) {
@@ -453,7 +455,7 @@ public class SystemState {
       try {
         VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
         if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
-          Clusters.dispatchEvent( v.getPlacement( ), new RebootCallback( v.getInstanceId( ) ).regarding( request ) );
+          new RebootCallback( v.getInstanceId( ) ).regarding( request ).dispatch( v.getPlacement( ) );
         }
       } catch ( NoSuchElementException e ) {
         throw new EucalyptusCloudException( e.getMessage( ) );

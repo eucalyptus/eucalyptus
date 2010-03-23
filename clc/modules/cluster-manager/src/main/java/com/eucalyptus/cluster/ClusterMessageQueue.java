@@ -90,7 +90,7 @@ public class ClusterMessageQueue implements Runnable {
   private final int                        messageQueueSize    = 100;
   private final AtomicBoolean              finished;
   private final String                     clusterName;
-  public static int                        CLUSTER_NUM_WORKERS = 1;
+  public static int                        CLUSTER_NUM_WORKERS = 8;
   private final ThreadFactory              threadFactory;
   private volatile int                     threadCount         = 0;
   private final ExecutorService            workers;
@@ -186,7 +186,7 @@ public class ClusterMessageQueue implements Runnable {
           LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
           final long start = System.currentTimeMillis( );
           try {
-            Clusters.sendEvent( this.clusterName, event.getCallback( ) );
+            event.getCallback( ).send( this.clusterName );
             //TODO: handle events which raised I/O exceptions to indicate the cluster state.
           } catch ( final Throwable e ) {
             LOG.debug( e, e );

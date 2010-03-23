@@ -163,11 +163,12 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   
   public void dispatch( String clusterName ) {
     LOG.debug( EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ) );
-    Clusters.dispatchEvent( clusterName, this );
+    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+    this.dispatch( cluster );
   }
   public void dispatch( Cluster cluster ) {
     LOG.debug( EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ) );
-    Clusters.dispatchEvent( cluster, this );
+    cluster.getMessageQueue( ).enqueue( this );
   }
   
   public RTYPE send( String clusterName ) throws Exception, Exception {

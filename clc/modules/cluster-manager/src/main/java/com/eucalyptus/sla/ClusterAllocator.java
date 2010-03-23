@@ -325,10 +325,16 @@ public class ClusterAllocator extends Thread {
     for ( QueuedEventCallback event : this.msgMap.get( this.state ) ) {
       if ( event instanceof MultiClusterCallback ) {
         MultiClusterCallback callback = ( MultiClusterCallback ) event;
-        this.pendingEvents.addAll( callback.fireEventAsyncToAllClusters( callback.getRequest( ) ) );
+        for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+          QueuedEventCallback subEvent = callback.newInstance( );
+          this.pendingEvents.add( subEvent );
+          LOG.info( "Enqueing event for cluster " + cluster.getName( ) + " of type: " + event );
+          subEvent.dispatch( c );
+        }
       } else {
+        LOG.info( "Enqueing event for cluster " + cluster.getName( ) + " of type: " + event );
         this.pendingEvents.add( event );
-        Clusters.dispatchEvent( cluster, event );
+        event.dispatch( cluster );
       }
     }
   }

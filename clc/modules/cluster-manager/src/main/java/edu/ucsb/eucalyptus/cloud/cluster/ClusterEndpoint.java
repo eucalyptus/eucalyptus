@@ -112,17 +112,14 @@ public class ClusterEndpoint implements Startable {
         msg.setUserId( existingNet.getUserName() );
         msg.setRules( existingNet.getRules() );
       }
-      new ConfigureNetworkCallback( msg ).fireEventAsyncToAllClusters( msg );
+      ConfigureNetworkCallback configureNetwork = new ConfigureNetworkCallback( msg );
+      for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+        configureNetwork.newInstance( ).dispatch( c );
+      }
     } catch ( NoSuchElementException e ) {
       LOG.error( "Changed network rules not applied to inactive network: " + net.getName() );
     }
   }
-
-//TODO: Remove me
-//  public void enqueue( ClusterEnvelope msg ) {
-//    Clusters.getInstance().lookup( msg.getClusterName() ).getMessageQueue().enqueue( msg.getEvent() );
-//    RequestContext.getEventContext().setStopFurtherProcessing( true );
-//  }
 
   public void enqueue( VmAllocationInfo vmAllocInfo ) {
     for( ResourceToken t : vmAllocInfo.getAllocationTokens( ) ) {

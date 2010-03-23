@@ -109,28 +109,5 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       hostOrdered.add( c.getConfiguration( ).getHostName( ) );
     return Lists.newArrayList( hostOrdered );
   }
-  
-  @SuppressWarnings( "unchecked" )
-  public static void sendEvent( String clusterName, QueuedEventCallback event ) throws NoSuchElementException {
-    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    Clusters.sendEvent( cluster, event );
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  public static void sendEvent( Cluster cluster, QueuedEventCallback event ) throws NoSuchElementException {
-    event.fire( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ) );
-    event.waitForResponse( );
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  public static void dispatchEvent( Cluster cluster, QueuedEventCallback callback ) throws NoSuchElementException {
-    cluster.getMessageQueue( ).enqueue( callback );
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  public static void dispatchEvent( String clusterName, QueuedEventCallback callback ) throws NoSuchElementException {
-    Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    Clusters.dispatchEvent( cluster, callback );
-  }
     
 }
