@@ -263,6 +263,12 @@ public class LVM2Manager implements LogicalStorageManager {
 		if(!initialized) {
 			System.loadLibrary("lvm2control");
 			registerSignals();
+			File storageRootDir = new File(storageRootDirectory);
+			if(!storageRootDir.exists()) {
+				if(!storageRootDir.mkdirs()) {
+	                                LOG.fatal("Unable to make volume root directory: " + storageRootDirectory);
+				}
+			}
 			initialized = true;
 		}
 	}
