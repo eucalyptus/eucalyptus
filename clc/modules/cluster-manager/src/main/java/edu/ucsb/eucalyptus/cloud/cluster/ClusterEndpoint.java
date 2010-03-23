@@ -111,21 +111,17 @@ public class ClusterEndpoint implements Startable {
   public void networkChange( Network net ) {
     try {
       Network existingNet = Networks.getInstance().lookup( net.getName() );
-      ConfigureNetworkType msg = null;
+      List<PacketFilterRule> rules = Lists.newArrayList( );
 
       if ( net.getRules().isEmpty() ) {
-        msg = new ConfigureNetworkType().regarding( );
-        msg.setUserId( existingNet.getUserName() );
         for ( PacketFilterRule pf : existingNet.getRules() )
-          msg.getRules().add( PacketFilterRule.revoke( pf ) );
+          rules.add( PacketFilterRule.revoke( pf ) );
         existingNet.setRules( net.getRules() );
       } else {
         existingNet.setRules( net.getRules() );
-        msg = new ConfigureNetworkType( ).regarding( );
-        msg.setUserId( existingNet.getUserName() );
-        msg.setRules( existingNet.getRules() );
+        rules.addAll( existingNet.getRules() );
       }
-      ConfigureNetworkCallback configureNetwork = new ConfigureNetworkCallback( msg );
+      ConfigureNetworkCallback configureNetwork = new ConfigureNetworkCallback( existingNet.getUserName( ), rules );
       for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
         configureNetwork.newInstance( ).dispatch( c );
       }

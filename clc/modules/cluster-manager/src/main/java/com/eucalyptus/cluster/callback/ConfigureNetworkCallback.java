@@ -63,35 +63,46 @@
  */
 package com.eucalyptus.cluster.callback;
 
+import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
+import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
-public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetworkType,ConfigureNetworkResponseType> {
+public class ConfigureNetworkCallback extends BroadcastCallback<ConfigureNetworkType,ConfigureNetworkResponseType> {
   private static Logger LOG = Logger.getLogger( ConfigureNetworkCallback.class );
-
-  public ConfigureNetworkCallback( ConfigureNetworkType request ) {
-    this.setRequest( request );
+  private String userName;
+  private List<PacketFilterRule> rules;
+  public ConfigureNetworkCallback( String userName, List<PacketFilterRule> rules ) {
+    this.userName = userName;
+    this.rules = rules;
+    ConfigureNetworkType msg = new ConfigureNetworkType().regarding( );
+    msg.setUserId( userName );
+    msg.setEffectiveUserId( Component.eucalyptus.name( ) );
+    msg.getRules( ).addAll( rules );
+    this.setRequest( msg );
   }
-
+  
   @Override
   public void prepare( ConfigureNetworkType msg ) throws Exception {
     LOG.debug("Sending configure network rules for: " + msg.getUserId( ) + "\n" + LogUtil.dumpObject( msg.getRules( ) ) );
   }
+
   @Override
-  public void verify( BaseMessage msg ) throws Exception {
-    
-  }
-  @Override
-  public MultiClusterCallback<ConfigureNetworkType,ConfigureNetworkResponseType> newInstance( ) {
-    return new ConfigureNetworkCallback( this.getRequest( ) );
-  }
+  public void verify( BaseMessage msg ) throws Exception {}
+
   @Override
   public void fail( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
+  }
+
+  @Override
+  public BroadcastCallback<ConfigureNetworkType, ConfigureNetworkResponseType> newInstance( ) {
+    return new ConfigureNetworkCallback( this.userName, this.rules );
   }
 
 }

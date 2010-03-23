@@ -181,22 +181,17 @@ public class ClusterAllocator extends Thread {
       RunInstancesType request = this.vmAllocInfo.getRequest( );
       if ( networkToken != null ) {
         Network network = Networks.getInstance( ).lookup( networkToken.getName( ) );
-        LOG.debug( LogUtil.header( "Setting up rules for: " + network.getName( ) ) );
-        LOG.debug( LogUtil.subheader( network.toString( ) ) );
-        ConfigureNetworkType msg = new ConfigureNetworkType( network.getRules( ) ).regardingUserRequest( vmAllocInfo.getRequest( ) );
+        LOG.debug( EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, ConfigureNetworkCallback.class.getSimpleName( ), network.toString( ) ) );
         if ( !network.getRules( ).isEmpty( ) ) {
-          this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( msg ) );
+          this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( this.vmAllocInfo.getRequest( ).getUserId( ), network.getRules( ) ) );
         }
         //:: need to refresh the rules on the backend for all active networks which point to this network :://
         for ( Network otherNetwork : Networks.getInstance( ).listValues( ) ) {
           if ( otherNetwork.isPeer( network.getUserName( ), network.getNetworkName( ) ) ) {
             LOG.warn( "Need to refresh rules for incoming named network ingress on: " + otherNetwork.getName( ) );
             LOG.debug( otherNetwork );
-            ConfigureNetworkType omsg = new ConfigureNetworkType( otherNetwork.getRules( ) );
-            omsg.setUserId( otherNetwork.getUserName( ) );
-            omsg.setEffectiveUserId( Component.eucalyptus.name( ) );
             if ( !otherNetwork.getRules( ).isEmpty( ) ) {
-              this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( omsg ) );
+              this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( otherNetwork.getUserName( ), otherNetwork.getRules( ) ) );
             }
           }
         }

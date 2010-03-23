@@ -75,7 +75,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.StopNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 
-public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType,StopNetworkResponseType> {
+public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopNetworkResponseType> {
   private static Logger LOG = Logger.getLogger( StopNetworkCallback.class );
   private NetworkToken  token;
 
@@ -102,7 +102,7 @@ public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType,St
   }
 
   @Override
-  public MultiClusterCallback<StopNetworkType,StopNetworkResponseType> newInstance( ) {
+  public BroadcastCallback<StopNetworkType,StopNetworkResponseType> newInstance( ) {
     return new StopNetworkCallback( token );
   }
 

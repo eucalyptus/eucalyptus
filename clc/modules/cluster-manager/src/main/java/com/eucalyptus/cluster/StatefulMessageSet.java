@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.callback.MultiClusterCallback;
+import com.eucalyptus.cluster.callback.BroadcastCallback;
 import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -60,10 +60,10 @@ public class StatefulMessageSet<E extends Enum<E>> {
   @SuppressWarnings( "unchecked" )
   private void queueEvents( E state ) {
     for ( QueuedEventCallback event : this.messages.get( state ) ) {
-      if ( event instanceof MultiClusterCallback ) {
-        MultiClusterCallback callback = ( MultiClusterCallback ) event;
+      if ( event instanceof BroadcastCallback ) {
+        BroadcastCallback callback = ( BroadcastCallback ) event;
         for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-          QueuedEventCallback subEvent = callback.newInstance( );
+          QueuedEventCallback subEvent = callback.newInstance( ).regardingUserRequest( callback.getRequest( ) );
           this.pendingEvents.add( subEvent );
           LOG.info( this.state.name( ) + ": enqueing event for cluster " + this.cluster.getName( ) + " of type: " + event );
           subEvent.dispatch( c );

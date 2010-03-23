@@ -244,12 +244,12 @@ public class VmTypeInfo extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "VmTypeInfo{" +
+    return "VmTypeInfo [" +
     "name='" + name + '\'' +
     ", memory=" + memory +
     ", disk=" + disk +
     ", cores=" + cores +
-    '}';
+    ']';
   }
   
 }
@@ -278,15 +278,14 @@ public class NetworkConfigType extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "NetworkConfigType{" +
-    "macAddress='" + macAddress + '\'' +
-    ", ipAddress='" + ipAddress + '\'' +
+    return "NetworkConfigType [" +
+    ", privateIp='" + ipAddress + '\'' +
     ", publicIp='" + ignoredPublicIp + '\'' +
     ", privateDnsName='" + privateDnsName + '\'' +
     ", publicDnsName='" + publicDnsName + '\'' +
     ", networkIndex='" + networkIndex + '\'' +
     ", vlan=" + vlan +
-    '}';
+    ']';
   }
   
 }
@@ -340,18 +339,18 @@ public class PacketFilterRule extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "PacketFilterRule{" +
+    return "PacketFilterRule [" +
     "destUserName='" + destUserName + '\'' +
     "destNetworkName='" + destNetworkName + '\'' +
     ", policy='" + policy + '\'' +
     ", protocol='" + protocol + '\'' +
     ", portMin=" + portMin +
     ", portMax=" + portMax +
-    ", sourceCidrs=" + sourceCidrs +
-    ", peers=" + peers +
-    ", sourceNetworkNames=" + sourceNetworkNames +
-    ", sourceUserNames=" + sourceUserNames +
-    '}';
+    ((!sourceCidrs.isEmpty())?"":", sourceCidrs=" + sourceCidrs) +
+    ((!peers.isEmpty())?"":", peers=" + peers) +
+    ((!sourceNetworkNames.isEmpty())?"":", sourceNetworkNames=" + sourceNetworkNames) +
+    ((!sourceUserNames.isEmpty())?"":", sourceUserNames=" + sourceUserNames) +
+    ']';
   }
   
   
@@ -445,11 +444,11 @@ public class NodeCertInfo extends EucalyptusData implements Comparable {
   
   @Override
   public String toString() {
-    return "NodeCertInfo{" +
+    return "NodeCertInfo [" +
     "serviceTag='" + serviceTag.replaceAll("services/EucalyptusNC","") + '\'' +
     ", ccCert='" + ccCert + '\'' +
     ", ncCert='" + ncCert + '\'' +
-    '}';
+    ']';
   }
   
 }

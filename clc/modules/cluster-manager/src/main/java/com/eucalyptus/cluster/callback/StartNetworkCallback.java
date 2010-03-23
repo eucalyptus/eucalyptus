@@ -70,10 +70,11 @@ import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
-public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType,StartNetworkResponseType> {
+public class StartNetworkCallback extends BroadcastCallback<StartNetworkType,StartNetworkResponseType> {
 
   private static Logger    LOG = Logger.getLogger( StartNetworkCallback.class );
 
@@ -81,7 +82,7 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType,
 
   public StartNetworkCallback( final NetworkToken networkToken ) {
     this.networkToken = networkToken;
-    StartNetworkType msg = new StartNetworkType( networkToken.getVlan( ), networkToken.getNetworkName( ) );
+    StartNetworkType msg = new StartNetworkType( networkToken.getUserName( ), networkToken.getVlan( ), networkToken.getNetworkName( ) );
     this.setRequest( msg );
   }
 
@@ -106,14 +107,14 @@ public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType,
   }
 
   @Override
-  public MultiClusterCallback<StartNetworkType,StartNetworkResponseType> newInstance( ) {
-    return new StartNetworkCallback( networkToken );
-  }
-
-  @Override
   public void fail( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
+  }
+
+  @Override
+  public BroadcastCallback<StartNetworkType, StartNetworkResponseType> newInstance( ) {
+    return new StartNetworkCallback( this.networkToken );
   }
 
 }
