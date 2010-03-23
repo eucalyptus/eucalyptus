@@ -95,7 +95,7 @@ public class ClusterMessageQueue implements Runnable {
     this.finished = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedEvent>( );
     this.clusterName = clusterName;
-    this.threadFactory = new ClusterThreadFactory( clusterName );
+    this.threadFactory = ClusterThreadFactory.getThreadFactory( clusterName );
     this.workers = Executors.newFixedThreadPool( CLUSTER_NUM_WORKERS, this.threadFactory );
   }
   

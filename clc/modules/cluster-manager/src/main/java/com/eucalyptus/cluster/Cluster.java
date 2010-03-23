@@ -220,7 +220,7 @@ public class Cluster implements HasName {
     return this.configuration.getServicePath( );
   }
   
-  public ClusterThreadFactory getThreadFactory( ) {
+  public ThreadFactory getThreadFactory( ) {
     return this.threadFactory;
   }
   
