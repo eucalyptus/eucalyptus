@@ -71,10 +71,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.StopNetworkCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.TerminateCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
+import com.eucalyptus.cluster.callback.QueuedEventCallback;
+import com.eucalyptus.cluster.callback.StopNetworkCallback;
+import com.eucalyptus.cluster.callback.TerminateCallback;
+import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
@@ -107,8 +107,8 @@ public class ClusterMessageQueue implements Runnable {
   
   public void enqueue( final QueuedEventCallback callback ) {
     QueuedEvent event = QueuedEvent.make( callback );
-    LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent( ).toString( ) ) );
-    LOG.trace( EventRecord.caller( event.getCallback( ).getClass( ), EventType.MSG_PENDING, this.clusterName, event.getEvent( ).toString( ) ), new Exception( ) );
+    LOG.info( EventRecord.caller( ClusterMessageQueue.class, EventType.MSG_PENDING, this.clusterName, event.getCallback( ).getClass( ).getSimpleName( ) ) );
+    LOG.trace( EventRecord.caller( ClusterMessageQueue.class, EventType.MSG_PENDING, this.clusterName, event.getEvent( ).toString( ) ), new Exception( ) );
     if ( !this.checkDuplicates( event ) ) {
       try {
         while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) ) {
@@ -172,7 +172,7 @@ public class ClusterMessageQueue implements Runnable {
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
           }
-          LOG.debug( EventRecord.here( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.QUEUE_TIME.name( ),
+          LOG.info( EventRecord.here( ClusterMessageQueue.class, EventType.QUEUE, this.clusterName, event.getCallback( ).getClass( ).getSimpleName( ), EventType.QUEUE_TIME.name( ),
                                        Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ),
                                        Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ),
                                        Long.toString( this.msgQueue.size( ) ) ) );

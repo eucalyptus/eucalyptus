@@ -1,7 +1,7 @@
 /**
  * 
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster.callback;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 

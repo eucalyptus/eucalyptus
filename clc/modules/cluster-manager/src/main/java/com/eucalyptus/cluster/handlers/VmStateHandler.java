@@ -61,7 +61,7 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
           }
         }
         SystemState.handle( reply );
-        if( this.init.addAndGet( 1 ) > 2 ) {
+        if( this.init.addAndGet( 1 ) == 2 ) {
           try {
             ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
           } catch ( Exception e1 ) {

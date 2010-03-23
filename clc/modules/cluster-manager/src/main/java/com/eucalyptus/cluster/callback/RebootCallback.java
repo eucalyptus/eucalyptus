@@ -61,38 +61,31 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
-
-import edu.ucsb.eucalyptus.msgs.ConfigureNetworkResponseType;
-import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.StartNetworkType;
+import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 
-public class ConfigureNetworkCallback extends MultiClusterCallback<ConfigureNetworkType,ConfigureNetworkResponseType> {
-  private static Logger LOG = Logger.getLogger( ConfigureNetworkCallback.class );
+public class RebootCallback extends QueuedEventCallback<RebootInstancesType,RebootInstancesResponseType> {
 
-  public ConfigureNetworkCallback( ConfigureNetworkType request ) {
-    this.setRequest( request );
+  private static Logger LOG = Logger.getLogger( RebootCallback.class );
+
+  public RebootCallback( String instanceId ) {
+    this.setRequest( new RebootInstancesType( instanceId ) );
+  }
+  public RebootCallback( RebootInstancesType msg ) {
+    this.setRequest( msg );
   }
 
   @Override
-  public void prepare( ConfigureNetworkType msg ) throws Exception {
-    LOG.debug("Sending configure network rules for: " + msg.getUserId( ) + "\n" + LogUtil.dumpObject( msg.getRules( ) ) );
-  }
+  public void prepare( RebootInstancesType msg ) throws Exception {}
+
   @Override
-  public void verify( BaseMessage msg ) throws Exception {
-    
-  }
-  @Override
-  public MultiClusterCallback<ConfigureNetworkType,ConfigureNetworkResponseType> newInstance( ) {
-    return new ConfigureNetworkCallback( this.getRequest( ) );
-  }
+  public void verify( BaseMessage msg ) throws Exception {}
+
   @Override
   public void fail( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );

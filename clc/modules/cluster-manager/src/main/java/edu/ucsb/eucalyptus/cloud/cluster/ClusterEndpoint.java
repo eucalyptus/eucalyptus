@@ -63,30 +63,43 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.ClusterThreadFactory;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.sla.ClusterAllocator;
-import com.eucalyptus.util.DebugUtil;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
+import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
+import com.eucalyptus.sla.ClusterAllocator;
+import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
+import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
+import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
+import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
+import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
+import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
+import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.security.GeneralSecurityException;
 
 public class ClusterEndpoint implements Startable {
 

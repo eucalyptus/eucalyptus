@@ -65,7 +65,6 @@ package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.log4j.Logger;
@@ -73,7 +72,6 @@ import com.eucalyptus.event.AbstractNamedRegistry;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {

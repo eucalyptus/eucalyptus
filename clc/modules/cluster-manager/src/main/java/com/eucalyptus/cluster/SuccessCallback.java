@@ -1,6 +1,5 @@
 package com.eucalyptus.cluster;
 
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public interface SuccessCallback<T extends BaseMessage> extends Callback {

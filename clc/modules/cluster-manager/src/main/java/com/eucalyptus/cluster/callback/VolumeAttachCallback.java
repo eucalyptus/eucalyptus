@@ -61,11 +61,13 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;

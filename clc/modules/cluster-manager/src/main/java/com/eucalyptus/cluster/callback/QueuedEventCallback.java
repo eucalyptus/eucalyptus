@@ -61,10 +61,9 @@
 /**
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster.callback;
 
 import java.net.InetSocketAddress;
-import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;

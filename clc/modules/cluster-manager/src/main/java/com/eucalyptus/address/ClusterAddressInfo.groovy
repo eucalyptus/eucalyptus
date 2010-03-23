@@ -1,4 +1,4 @@
-package com.eucalyptus.net.util;
+package com.eucalyptus.address;
 
 import com.google.common.collect.Lists;
 

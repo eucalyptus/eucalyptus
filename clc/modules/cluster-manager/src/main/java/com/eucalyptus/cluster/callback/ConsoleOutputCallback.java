@@ -61,38 +61,50 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster.callback;
 
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
+import java.util.Date;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.ws.util.Messaging;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
+import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 
-public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType,DetachVolumeResponseType> {
+public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
   
-  private static Logger LOG = Logger.getLogger( VolumeDetachCallback.class );
+  private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
   
-  public VolumeDetachCallback( DetachVolumeType request ) {
-    this.setRequest( request );
+  public ConsoleOutputCallback( GetConsoleOutputType msg ) {
+    this.setRequest( msg );
   }
+  
   
   @Override
-  public void prepare( DetachVolumeType msg ) throws Exception {
-  }
+  public void prepare( GetConsoleOutputType msg ) throws Exception {}
   
   @Override
   public void verify( BaseMessage msg ) throws Exception {
-    DetachVolumeResponseType reply = (DetachVolumeResponseType) msg;
-    if ( reply.get_return( ) ) {
-      VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
-      vm.getVolumes( ).remove( new AttachedVolume( this.getRequest( ).getVolumeId( ) ) );
-    }
+    this.verify( ( GetConsoleOutputResponseType ) msg );
   }
+  
+  public void verify( GetConsoleOutputResponseType reply ) throws Exception {
+    VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+    String output = null;
+    try {
+      output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );
+//for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
+      if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
+    } catch ( ArrayIndexOutOfBoundsException e1 ) {}
+    reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
+    reply.setTimestamp( new Date( ) );
+    reply.setOutput( new String( Base64.encode( vm.getConsoleOutput( ).toString( ).getBytes( ) ) ) );
+    Messaging.dispatch( "vm://ReplyQueue", reply );
+  }
+
 
   @Override
   public void fail( Throwable e ) {

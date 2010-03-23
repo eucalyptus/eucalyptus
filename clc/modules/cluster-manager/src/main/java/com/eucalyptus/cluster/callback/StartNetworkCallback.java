@@ -61,55 +61,53 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
-
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.EucalyptusClusterException;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
-import com.google.common.collect.Lists;
+package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.util.LogUtil;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
+import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
-import java.util.List;
-import java.util.NoSuchElementException;
+public class StartNetworkCallback extends MultiClusterCallback<StartNetworkType,StartNetworkResponseType> {
 
-public class StopNetworkCallback extends MultiClusterCallback<StopNetworkType,StopNetworkResponseType> {
-  private static Logger LOG = Logger.getLogger( StopNetworkCallback.class );
-  private NetworkToken  token;
+  private static Logger    LOG = Logger.getLogger( StartNetworkCallback.class );
 
-  public StopNetworkCallback( final NetworkToken networkToken ) {
-    this.token = networkToken;
-    StopNetworkType msg = new StopNetworkType( token.getUserName(), token.getNetworkName(), token.getVlan() ).regarding( );
+  private NetworkToken     networkToken;
+
+  public StartNetworkCallback( final NetworkToken networkToken ) {
+    this.networkToken = networkToken;
+    StartNetworkType msg = new StartNetworkType( networkToken.getVlan( ), networkToken.getNetworkName( ) );
     this.setRequest( msg );
   }
 
   @Override
-  public void verify( BaseMessage msg ) throws Exception {}
+  public void verify( BaseMessage msg ) throws Exception {
+    try {
+      Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
+    }
+  }
+
 
   @Override
-  public void prepare( StopNetworkType msg ) throws Exception {
+  public void prepare( StartNetworkType msg ) throws Exception {
     try {
-      Network net = Networks.getInstance( ).lookup( token.getName( ) );
-      Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
-      LOG.debug( "Releasing network token back to cluster: " + token );
-      if( net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
-      cluster.getState( ).releaseNetworkAllocation( token );
-    } catch ( Exception e ) {
-      LOG.debug( e );
+      msg.setNameserver( edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getNameserverAddress( ) );
+      msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );      
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
     }
   }
 
   @Override
-  public MultiClusterCallback<StopNetworkType,StopNetworkResponseType> newInstance( ) {
-    return new StopNetworkCallback( token );
+  public MultiClusterCallback<StartNetworkType,StartNetworkResponseType> newInstance( ) {
+    return new StartNetworkCallback( networkToken );
   }
 
   @Override

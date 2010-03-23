@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
@@ -71,6 +71,8 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;

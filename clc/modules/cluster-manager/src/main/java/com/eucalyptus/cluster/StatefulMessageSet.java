@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.callback.MultiClusterCallback;
+import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import edu.ucsb.eucalyptus.cloud.cluster.MultiClusterCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 
 public class StatefulMessageSet<E extends Enum<E>> {
   private static Logger                              LOG              = Logger.getLogger( StatefulMessageSet.class );

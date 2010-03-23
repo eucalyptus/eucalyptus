@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
@@ -71,13 +71,14 @@ import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseType> {

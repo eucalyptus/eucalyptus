@@ -61,51 +61,36 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster.callback;
 
-import edu.ucsb.eucalyptus.msgs.*;
-
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.Client;
-import com.eucalyptus.ws.util.Messaging;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.util.LogUtil;
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-import java.util.Date;
-
-public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
+public class TerminateCallback extends QueuedEventCallback<TerminateInstancesType,TerminateInstancesResponseType> {
   
-  private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
+  private static Logger LOG = Logger.getLogger( TerminateCallback.class );
+  private String        instanceId;
   
-  public ConsoleOutputCallback( GetConsoleOutputType msg ) {
-    this.setRequest( msg );
+  public TerminateCallback( String instanceId ) {
+    this.instanceId = instanceId;
+    super.setRequest( new TerminateInstancesType( instanceId ) );
   }
   
-  
   @Override
-  public void prepare( GetConsoleOutputType msg ) throws Exception {}
+  public void prepare( TerminateInstancesType msg ) throws Exception {
+    LOG.info( EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATING, LogUtil.dumpObject( msg ) ) );
+  }
   
   @Override
   public void verify( BaseMessage msg ) throws Exception {
-    this.verify( ( GetConsoleOutputResponseType ) msg );
+    LOG.info( EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATED, LogUtil.dumpObject( msg ) ) );
   }
   
-  public void verify( GetConsoleOutputResponseType reply ) throws Exception {
-    VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
-    String output = null;
-    try {
-      output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );
-//for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
-      if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
-    } catch ( ArrayIndexOutOfBoundsException e1 ) {}
-    reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
-    reply.setTimestamp( new Date( ) );
-    reply.setOutput( new String( Base64.encode( vm.getConsoleOutput( ).toString( ).getBytes( ) ) ) );
-    Messaging.dispatch( "vm://ReplyQueue", reply );
-  }
-
-
   @Override
   public void fail( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );

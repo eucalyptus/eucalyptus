@@ -61,36 +61,38 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
+import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 
-public class TerminateCallback extends QueuedEventCallback<TerminateInstancesType,TerminateInstancesResponseType> {
+public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType,DetachVolumeResponseType> {
   
-  private static Logger LOG = Logger.getLogger( TerminateCallback.class );
-  private String        instanceId;
+  private static Logger LOG = Logger.getLogger( VolumeDetachCallback.class );
   
-  public TerminateCallback( String instanceId ) {
-    this.instanceId = instanceId;
-    super.setRequest( new TerminateInstancesType( instanceId ) );
+  public VolumeDetachCallback( DetachVolumeType request ) {
+    this.setRequest( request );
   }
   
   @Override
-  public void prepare( TerminateInstancesType msg ) throws Exception {
-    LOG.info( EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATING, LogUtil.dumpObject( msg ) ) );
+  public void prepare( DetachVolumeType msg ) throws Exception {
   }
   
   @Override
   public void verify( BaseMessage msg ) throws Exception {
-    LOG.info( EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATED, LogUtil.dumpObject( msg ) ) );
+    DetachVolumeResponseType reply = (DetachVolumeResponseType) msg;
+    if ( reply.get_return( ) ) {
+      VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+      vm.getVolumes( ).remove( new AttachedVolume( this.getRequest( ).getVolumeId( ) ) );
+    }
   }
-  
+
   @Override
   public void fail( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );

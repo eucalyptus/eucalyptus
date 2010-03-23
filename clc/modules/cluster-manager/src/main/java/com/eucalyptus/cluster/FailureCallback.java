@@ -1,6 +1,6 @@
 package com.eucalyptus.cluster;
 
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
+import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public interface FailureCallback<T extends BaseMessage,R extends BaseMessage> extends Callback {
