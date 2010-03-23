@@ -444,7 +444,7 @@ public class BlockStorage {
 			if(size != null) {
 				sizeAsInt = Integer.parseInt(size);
 				int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
-				;				if(((totalVolumeSize + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
+				if(((totalVolumeSize + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
 						(sizeAsInt > StorageProperties.MAX_VOLUME_SIZE))
 					throw new EntityTooLargeException(volumeId);
 			}
