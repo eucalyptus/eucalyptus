@@ -328,11 +328,11 @@ public class ClusterAllocator extends Thread {
         for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
           QueuedEventCallback subEvent = callback.newInstance( );
           this.pendingEvents.add( subEvent );
-          LOG.info( "Enqueing event for cluster " + cluster.getName( ) + " of type: " + event );
+          LOG.info( this.state.name( ) +  ": enqueing event for cluster " + cluster.getName( ) + " of type: " + event );
           subEvent.dispatch( c );
         }
       } else {
-        LOG.info( "Enqueing event for cluster " + cluster.getName( ) + " of type: " + event );
+        LOG.info( this.state.name( ) +  ": enqueing event for cluster " + cluster.getName( ) + " of type: " + event );
         this.pendingEvents.add( event );
         event.dispatch( cluster );
       }
