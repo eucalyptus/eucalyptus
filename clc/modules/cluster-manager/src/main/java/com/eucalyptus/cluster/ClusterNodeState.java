@@ -191,9 +191,7 @@ public class ClusterNodeState {
     this.redeemedTokens.clear();
 
     StringBuffer before = new StringBuffer();
-    before.append( "-> BEFORE: [" );
     StringBuffer after = new StringBuffer();
-    after.append( "-> AFTER: [" );
     for ( ResourceType rsc : rscUpdate ) {
       VmTypeAvailability vmAvailable = this.typeMap.get( rsc.getInstanceType().getName() );
       if ( vmAvailable == null ) continue;
