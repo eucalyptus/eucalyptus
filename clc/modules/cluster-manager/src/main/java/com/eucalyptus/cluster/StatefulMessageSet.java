@@ -9,6 +9,8 @@ import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class StatefulMessageSet<E extends Enum<E>> {
   private static Logger                              LOG              = Logger.getLogger( StatefulMessageSet.class );
@@ -50,10 +52,12 @@ public class StatefulMessageSet<E extends Enum<E>> {
   }
   
   public void addRequest( E state, QueuedEventCallback callback ) {
+    LOG.debug( EventRecord.caller( StatefulMessageSet.class, EventType.VM_PREPARE, state.name( ), callback.getClass( ).getSimpleName( ) ) );
     this.messages.put( state, callback );
   }
   
   public void addRollbackRequest( QueuedEventCallback callback ) {
+    LOG.debug( EventRecord.caller( StatefulMessageSet.class, EventType.VM_PREPARE, this.failState.name( ), callback.getClass( ).getSimpleName( ) ) );
     this.rollbackMessages.add( callback );
   }
   
@@ -65,11 +69,11 @@ public class StatefulMessageSet<E extends Enum<E>> {
         for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
           QueuedEventCallback subEvent = callback.newInstance( ).regardingUserRequest( callback.getRequest( ) );
           this.pendingEvents.add( subEvent );
-          LOG.info( this.state.name( ) + ": enqueing event for cluster " + this.cluster.getName( ) + " of type: " + event );
+          LOG.info( EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), c.getName( ), event.getClass( ).getSimpleName( ) ) );
           subEvent.dispatch( c );
         }
       } else {
-        LOG.info( this.state.name( ) + ": enqueing event for cluster " + this.cluster.getName( ) + " of type: " + event );
+        LOG.info( EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), this.cluster.getName( ), event.getClass( ).getSimpleName( ) ) );
         this.pendingEvents.add( event );
         event.dispatch( cluster );
       }
@@ -82,16 +86,16 @@ public class StatefulMessageSet<E extends Enum<E>> {
       Object o = null;
       try {
         o = event.getResponse( );
-        LOG.info( this.state.name( ) + ": received response for cluster " + this.cluster.getName( ) + " of type: " + o );
+        LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), this.cluster.getName( ), o.getClass( ).getSimpleName( ) ) );
       } catch ( Throwable t ) {
-        LOG.info( this.state.name( ) + ": received response for cluster " + this.cluster.getName( ) + " of type: " + t );
+        LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), this.cluster.getName( ), t.getClass( ).getSimpleName( ) ) );
         LOG.debug( t, t );
         this.rollback.lazySet( true );
         this.state = failState;
         return;
       }
     }
-    LOG.info( "Allocator tranitioned from " + this.state.name( ) + " to " + this.states[this.state.ordinal( ) + 1].name( ) );
+    LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), EventType.TRANSITION.name( ), this.states[this.state.ordinal( ) + 1].name( ) ) );
     this.state = this.states[this.state.ordinal( ) + 1];
   }
   
@@ -104,6 +108,6 @@ public class StatefulMessageSet<E extends Enum<E>> {
         this.transition( );
       }
     } while ( !this.state.equals( endState ) || !this.state.equals( failState ) );
-    LOG.info( "Allocator completed execution in " + ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" );
+    LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTED, ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" ) );
   }
 }
