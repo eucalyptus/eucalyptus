@@ -339,7 +339,7 @@ int doFlushNetwork(ncMetadata *ccMeta, char *destName) {
 
 int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   int rc, allocated, addrdevno, ret;
-  char cmd[256];
+  char cmd[MAX_PATH];
   ccInstance *myInstance=NULL;
 
   rc = initialize();
@@ -367,7 +367,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       ret = 1;
     } else {
       if (!allocated) {
-	snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
+	snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
 	logprintfl(EUCADEBUG,"running cmd %s\n", cmd);
 	rc = system(cmd);
 	rc = rc>>8;
@@ -435,7 +435,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
 
 int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   int rc, allocated, addrdevno, ret;
-  char cmd[256];
+  char cmd[MAX_PATH];
   ccInstance *myInstance=NULL;
 
   rc = initialize();
@@ -474,7 +474,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       }
       
 
-      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
+      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
       logprintfl(EUCADEBUG, "UnassignAddress(): running cmd '%s'\n", cmd);
       rc = system(cmd);
       if (rc) {
@@ -1111,7 +1111,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 
 int powerUp(ccResource *res) {
   int rc,ret,len, i;
-  char cmd[256], *bc=NULL;
+  char cmd[MAX_PATH], *bc=NULL;
   uint32_t *ips=NULL, *nms=NULL;
   
   if (config->schedPolicy != SCHEDPOWERSAVE) {
@@ -1148,9 +1148,9 @@ int powerUp(ccResource *res) {
     rc = 0;
     ret = 0;
     if (strcmp(res->mac, "00:00:00:00:00:00")) {
-      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->mac);
+      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->mac);
     } else if (strcmp(res->ip, "0.0.0.0")) {
-      snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->ip);
+      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->ip);
     } else {
       ret = rc = 1;
     }
@@ -2055,15 +2055,15 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, c
     }
     *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
   } else if (mode == SHARED_FILE) {
-    char *tmpstr, path[1024];
+    char *tmpstr, path[MAX_PATH];
     struct stat mystat;
     int fd;
     
     tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!tmpstr) {
-      snprintf(path, 1024, "/var/lib/eucalyptus/CC/%s", bufname);
+      snprintf(path, MAX_PATH, "/var/lib/eucalyptus/CC/%s", bufname);
     } else {
-      snprintf(path, 1024, "%s/var/lib/eucalyptus/CC/%s", tmpstr, bufname);
+      snprintf(path, MAX_PATH, "%s/var/lib/eucalyptus/CC/%s", tmpstr, bufname);
     }
     fd = open(path, O_RDWR | O_CREAT, 0600);
     if (fd<0) {
@@ -2219,27 +2219,27 @@ int init_pthreads() {
 
 int init_localstate(void) {
   int rc, loglevel, ret;
-  char *tmpstr=NULL, logFile[1024], configFiles[2][1024], home[1024], vfile[1024];
+  char *tmpstr=NULL, logFile[MAX_PATH], configFiles[2][MAX_PATH], home[MAX_PATH], vfile[MAX_PATH];
 
   ret=0;
   if (local_init) {
   } else {
     // thread is not initialized, run first time local state setup
-    bzero(logFile, 1024);
-    bzero(home, 1024);
-    bzero(configFiles[0], 1024);
-    bzero(configFiles[1], 1024);
+    bzero(logFile, MAX_PATH);
+    bzero(home, MAX_PATH);
+    bzero(configFiles[0], MAX_PATH);
+    bzero(configFiles[1], MAX_PATH);
     
     tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!tmpstr) {
-      snprintf(home, 1024, "/");
+      snprintf(home, MAX_PATH, "/");
     } else {
-      snprintf(home, 1024, "%s", tmpstr);
+      snprintf(home, MAX_PATH, "%s", tmpstr);
     }
     
-    snprintf(configFiles[1], 1024, EUCALYPTUS_CONF_LOCATION, home);
-    snprintf(configFiles[0], 1024, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
-    snprintf(logFile, 1024, "%s/var/log/eucalyptus/cc.log", home);  
+    snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+    snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
+    snprintf(logFile, MAX_PATH, "%s/var/log/eucalyptus/cc.log", home);  
     
     tmpstr = getConfString(configFiles, 2, "LOGLEVEL");
     if (!tmpstr) {
@@ -2319,7 +2319,7 @@ int init_thread(void) {
 }
 
 int update_config(void) {
-  char home[1024], *tmpstr=NULL;
+  char home[MAX_PATH], *tmpstr=NULL;
   ccResource *res=NULL;
   int rc, numHosts, ret;
   time_t configMtime;
@@ -2383,7 +2383,7 @@ int init_config(void) {
   char *tmpstr=NULL;
   int rc, numHosts, use_wssec, use_tunnels, schedPolicy, idleThresh, wakeThresh, ret, i;
   
-  char configFiles[2][1024], netPath[1024], eucahome[1024], policyFile[1024], home[1024];
+  char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH];
   
   time_t configMtime, instanceTimeout, ncPollingFrequency;
   struct stat statbuf;
@@ -2391,21 +2391,21 @@ int init_config(void) {
   // read in base config information
   tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
   if (!tmpstr) {
-    snprintf(home, 1024, "/");
+    snprintf(home, MAX_PATH, "/");
   } else {
-    snprintf(home, 1024, "%s", tmpstr);
+    snprintf(home, MAX_PATH, "%s", tmpstr);
   }
   
-  bzero(configFiles[0], 1024);
-  bzero(configFiles[1], 1024);
-  bzero(netPath, 1024);
-  bzero(policyFile, 1024);
+  bzero(configFiles[0], MAX_PATH);
+  bzero(configFiles[1], MAX_PATH);
+  bzero(netPath, MAX_PATH);
+  bzero(policyFile, MAX_PATH);
   
-  snprintf(configFiles[1], 1024, EUCALYPTUS_CONF_LOCATION, home);
-  snprintf(configFiles[0], 1024, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
-  snprintf(netPath, 1024, CC_NET_PATH_DEFAULT, home);
-  snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
-  snprintf(eucahome, 1024, "%s/", home);
+  snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+  snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
+  snprintf(netPath, MAX_PATH, CC_NET_PATH_DEFAULT, home);
+  snprintf(policyFile, MAX_PATH, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
+  snprintf(eucahome, MAX_PATH, "%s/", home);
 
   if (config_init && config->initialized) {
     // this means that this thread has already been initialized
@@ -2737,8 +2737,8 @@ int init_config(void) {
 
   sem_mywait(CONFIG);
   // set up the current config   
-  strncpy(config->eucahome, eucahome, 1024);
-  strncpy(config->policyFile, policyFile, 1024);
+  strncpy(config->eucahome, eucahome, MAX_PATH);
+  strncpy(config->policyFile, policyFile, MAX_PATH);
   config->use_wssec = use_wssec;
   config->use_tunnels = use_tunnels;
   config->schedPolicy = schedPolicy;
@@ -2748,8 +2748,8 @@ int init_config(void) {
   config->instanceTimeout = instanceTimeout;
   config->ncPollingFrequency = ncPollingFrequency;
   config->initialized = 1;
-  snprintf(config->configFiles[0], 1024, "%s", configFiles[0]);
-  snprintf(config->configFiles[1], 1024, "%s", configFiles[1]);
+  snprintf(config->configFiles[0], MAX_PATH, "%s", configFiles[0]);
+  snprintf(config->configFiles[1], MAX_PATH, "%s", configFiles[1]);
   
   logprintfl(EUCAINFO, "init_config(): CC Configuration: eucahome=%s, policyfile=%s, ws-security=%s, schedulerPolicy=%s, idleThreshold=%d, wakeThreshold=%d\n", SP(config->eucahome), SP(config->policyFile), use_wssec ? "ENABLED" : "DISABLED", SP(SCHEDPOLICIES[config->schedPolicy]), config->idleThresh, config->wakeThresh);
 
@@ -2816,7 +2816,7 @@ int maintainNetworkState() {
 
 int restoreNetworkState() {
   int rc, ret=0, i;
-  char cmd[1024];
+  char cmd[MAX_PATH];
 
   logprintfl(EUCADEBUG, "restoreNetworkState(): restoring network state\n");
   sem_mywait(VNET);
@@ -2832,7 +2832,7 @@ int restoreNetworkState() {
   // restore ip addresses                                                                                      
   logprintfl(EUCADEBUG, "restoreNetworkState(): restarting ips\n");
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254/32 scope link dev %s", config->eucahome, vnetconfig->privInterface);
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254/32 scope link dev %s", config->eucahome, vnetconfig->privInterface);
     logprintfl(EUCADEBUG,"restoreNetworkState(): running cmd %s\n", cmd);
     rc = system(cmd);
     if (rc) {
@@ -2844,7 +2844,7 @@ int restoreNetworkState() {
       char *tmp;
 
       tmp = hex2dot(vnetconfig->publicips[i].ip);
-      snprintf(cmd, 255, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, tmp, vnetconfig->pubInterface);
+      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, tmp, vnetconfig->pubInterface);
       logprintfl(EUCADEBUG,"restoreNetworkState(): running cmd %s\n", cmd);
       rc = system(cmd);
       if (rc) {

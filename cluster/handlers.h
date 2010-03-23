@@ -65,6 +65,11 @@ permission notice:
 #include <data.h>
 #include <client-marshal.h>
 #include <vnetwork.h>
+#include <linux/limits.h>
+
+#ifndef MAX_PATH
+#define MAX_PATH 4096
+#endif
 
 #define OP_TIMEOUT 60
 #define OP_TIMEOUT_PERNODE 20
@@ -142,10 +147,10 @@ typedef struct ccInstanceCache_t {
 } ccInstanceCache;
 
 typedef struct ccConfig_t {
-  char eucahome[1024];
-  char configFiles[2][1024];
+  char eucahome[MAX_PATH];
+  char configFiles[2][MAX_PATH];
   int use_wssec, use_tunnels;
-  char policyFile[1024];
+  char policyFile[MAX_PATH];
   int initialized, kick_dhcp;
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
