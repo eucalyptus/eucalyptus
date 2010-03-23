@@ -103,4 +103,5 @@ public enum EventType {
   TOKEN_SPLIT,
   TOKEN_CHILD,
   TOKEN_RESERVED,
+  CLUSTER_STATE_UPDATE,
 }

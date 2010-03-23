@@ -187,7 +187,7 @@ public class ClusterNodeState {
     for( ResourceToken t : this.redeemedTokens )
       redeemed += t.getAmount();
     outstandingCount = pending + submitted;
-    LOG.debug( LogUtil.subheader( String.format( "Resource update for cluster=%s, outstanding=%d pending=%d submitted=%d redeemed=%d", this.clusterName, outstandingCount, pending, submitted, redeemed ) ) );
+    LOG.info( EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, String.format( "outstanding=%d:pending=%d:submitted=%d:redeemed=%d", outstandingCount, pending, submitted, redeemed ) ) );
     this.redeemedTokens.clear();
 
     StringBuffer before = new StringBuffer();
@@ -197,14 +197,14 @@ public class ClusterNodeState {
     for ( ResourceType rsc : rscUpdate ) {
       VmTypeAvailability vmAvailable = this.typeMap.get( rsc.getInstanceType().getName() );
       if ( vmAvailable == null ) continue;
-      before.append( String.format( " %s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
+      before.append( String.format( ":%s:%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
       vmAvailable.setAvailable( rsc.getAvailableInstances() );
       vmAvailable.decrement( outstandingCount );
       vmAvailable.setMax( rsc.getMaxInstances() );
-      after.append( String.format( " %s available=%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
+      after.append( String.format( ":%s:%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
     }
-    LOG.debug( before.toString( ) + " ]");
-    LOG.debug( after.toString( ) + " ]");
+    LOG.info( EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "ANTE" + before.toString( ) ) );
+    LOG.info( EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "POST" + after.toString( ) ) );
   }
 
   private NavigableSet<VmTypeAvailability> sorted() {
