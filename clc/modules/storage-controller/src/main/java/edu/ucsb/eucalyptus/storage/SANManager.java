@@ -65,7 +65,12 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -120,7 +125,7 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void addSnapshot(String snapshotId) throws EucalyptusCloudException {
-		finishSnapshot(snapshotId);
+		finishVolume(snapshotId);
 	}
 
 	@Override
@@ -371,7 +376,7 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException {
+	public void finishVolume(String snapshotId) throws EucalyptusCloudException {
 		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
 		try {
 			EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
@@ -428,7 +433,7 @@ public class SANManager implements LogicalStorageManager {
 						StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
 						null, 
 						StorageProperties.MAX_VOLUME_SIZE, 
-					    null,
+						null,
 						null,
 						SANManager.SAN_HOST,
 						SANManager.SAN_USERNAME,
@@ -447,6 +452,61 @@ public class SANManager implements LogicalStorageManager {
 	public String getStorageRootDirectory() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public String getVolumePath(String volumeId)
+	throws EucalyptusCloudException {
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		List<String> returnValues = new ArrayList<String>();
+		try {
+			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
+			String iqn = volumeInfo.getIqn();
+			String deviceName = connectionManager.connectTarget(iqn);
+			return deviceName;
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Unable to find volume: " + volumeId);
+			throw ex;
+		} finally {
+			db.commit();
+		}
+	}
+
+	@Override
+	public void importVolume(String volumeId, String volumePath, int size)
+	throws EucalyptusCloudException {
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		try {
+			db.getUnique(new EquallogicVolumeInfo(volumeId));
+			throw new EucalyptusCloudException("Volume " + volumeId + " already exists. Import failed.");
+		} catch (EucalyptusCloudException ex) {
+			//all okay. proceed with import
+		} finally {
+			db.commit();
+		}
+		String iqn = connectionManager.createVolume(volumeId, size);
+		if(iqn != null) {
+			String deviceName = connectionManager.connectTarget(iqn);
+			//now copy
+			try {
+				FileInputStream inStream = new FileInputStream(new File(volumePath));
+				FileChannel inChannel = inStream.getChannel();
+				FileOutputStream outStream = new FileOutputStream(new File(deviceName));
+				FileChannel outChannel = outStream.getChannel();
+				inChannel.transferTo(0, inChannel.size(), outChannel);
+				inChannel.close();
+				inStream.close();
+				outChannel.close();
+				outStream.close();
+			} catch (IOException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			}
+			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);
+			db = StorageController.getEntityWrapper();
+			db.add(volumeInfo);
+			db.commit();
+		}		
 	}
 }
 

@@ -75,6 +75,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.crypto.Cipher;
+import javax.persistence.EntityNotFoundException;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
@@ -99,6 +100,7 @@ import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
+import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
@@ -266,7 +268,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			File storageRootDir = new File(storageRootDirectory);
 			if(!storageRootDir.exists()) {
 				if(!storageRootDir.mkdirs()) {
-	                                LOG.fatal("Unable to make volume root directory: " + storageRootDirectory);
+					LOG.fatal("Unable to make volume root directory: " + storageRootDirectory);
 				}
 			}
 			initialized = true;
@@ -699,7 +701,6 @@ public class LVM2Manager implements LogicalStorageManager {
 				LOG.error(error);
 				throw new EucalyptusCloudException(error);
 			}
-
 		}
 		volumeManager.finish();
 		return returnValues;
@@ -1087,7 +1088,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException{
+	public void finishVolume(String snapshotId) throws EucalyptusCloudException{
 		//Nothing to do here
 	}
 
@@ -1138,10 +1139,62 @@ public class LVM2Manager implements LogicalStorageManager {
 			LOG.fatal("Cannot write to volume root directory: " + storageRootDirectory);
 		}		
 	}
-	
+
 	@Override
 	public String getStorageRootDirectory() {
 		return storageRootDirectory;
+	}
+
+	@Override
+	public String getVolumePath(String volumeId)
+	throws EucalyptusCloudException {
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+		if(volInfo != null) {
+			String volumePath = lvmRootDirectory + File.pathSeparator + volInfo.getVgName() + File.pathSeparator + volInfo.getLvName();
+			volumeManager.finish();
+			return volumePath;
+		} else {
+			volumeManager.abort();
+			throw new EntityNotFoundException("Unable to find volume with id: " + volumeId);
+		}
+	}
+
+	@Override
+	public void importVolume(String volumeId, String volumePath, int size)
+	throws EucalyptusCloudException {
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+		if(volInfo != null) {
+			volumeManager.finish();
+			throw new EucalyptusCloudException("Volume " + volumeId + " already exists. Import failed.");
+		}
+		volumeManager.finish();
+		createVolume(volumeId, size);
+		volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volumeInfo = volumeManager.getVolumeInfo(volumeId);
+		if(volumeInfo != null) {
+			try {
+				FileInputStream inStream = new FileInputStream(new File(volumePath));
+				FileChannel inChannel = inStream.getChannel();
+				FileOutputStream outStream = new FileOutputStream(new File(lvmRootDirectory + 
+						File.pathSeparator + volumeInfo.getVgName() + 
+						File.pathSeparator + volumeInfo.getLvName()));
+				FileChannel outChannel = outStream.getChannel();
+				inChannel.transferTo(0, inChannel.size(), outChannel);
+				inChannel.close();
+				inStream.close();
+				outChannel.close();
+				outStream.close();
+			} catch (IOException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			}
+			volumeManager.finish();
+		} else {
+			volumeManager.abort();
+			throw new EucalyptusCloudException("Unable to find volume with id: " + volumeId);
+		}
 	}
 }
 

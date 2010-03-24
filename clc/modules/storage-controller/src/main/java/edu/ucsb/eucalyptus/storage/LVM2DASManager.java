@@ -886,7 +886,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 
 	}
 	@Override
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException{
+	public void finishVolume(String snapshotId) throws EucalyptusCloudException{
 		//Nothing to do here
 	}
 
@@ -942,6 +942,20 @@ public class LVM2DASManager implements LogicalStorageManager {
 	@Override
 	public String getStorageRootDirectory() {
 		return storageRootDirectory;
+	}
+
+	@Override
+	public String getVolumePath(String volumeId)
+			throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void importVolume(String volumeId, String volumePath, int size)
+			throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
 	}
 }
 
