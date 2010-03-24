@@ -348,15 +348,15 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
 			char *brname,
 			char **xml)
 {
-    char buf [CHAR_BUFFER_SIZE];
+    char buf [MAX_PATH];
 
     if (ramdisk) {
-        snprintf (buf, CHAR_BUFFER_SIZE, "%s --ramdisk", gen_libvirt_cmd_path);
+        snprintf (buf, MAX_PATH, "%s --ramdisk", gen_libvirt_cmd_path);
     } else {
-        snprintf (buf, CHAR_BUFFER_SIZE, "%s", gen_libvirt_cmd_path);
+        snprintf (buf, MAX_PATH, "%s", gen_libvirt_cmd_path);
     }
     if (params->disk > 0) { /* TODO: get this info from scMakeImage */
-        strncat (buf, " --ephemeral", CHAR_BUFFER_SIZE);
+        strncat (buf, " --ephemeral", MAX_PATH);
     }
     * xml = system_output (buf);
     if ( ( * xml ) == NULL ) {
@@ -659,7 +659,7 @@ static int init (void)
 	static int initialized = 0;
 	int do_warn = 0, i;
 	char configFiles[2][MAX_PATH],
-		log[CHAR_BUFFER_SIZE],
+		log[MAX_PATH],
 		*bridge,
 		*hypervisor,
 		*s,
@@ -689,22 +689,22 @@ static int init (void)
 		nc_state.home[0] = '\0';
 		do_warn = 1;
 	} else 
-		strncpy(nc_state.home, tmp, CHAR_BUFFER_SIZE);
+		strncpy(nc_state.home, tmp, MAX_PATH);
 
 	/* set the minimum log for now */
-	snprintf(log, CHAR_BUFFER_SIZE, "%s/var/log/eucalyptus/nc.log", nc_state.home);
+	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
 	logfile(log, EUCADEBUG);
 
 	if (do_warn) 
 		logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
 
 	/* search for the config file */
-	snprintf(configFiles[1], CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_LOCATION, nc_state.home);
+	snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, nc_state.home);
 	if (stat(configFiles[1], &mystat)) {
 		logprintfl (EUCAFATAL, "could not open configuration file %s\n", configFiles[1]);
 		return 1;
 	}
-	snprintf(configFiles[0], CHAR_BUFFER_SIZE, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
+	snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
 
 	logprintfl (EUCAINFO, "NC is looking for configuration in %s,%s\n", configFiles[1], configFiles[0]);
 
@@ -749,7 +749,7 @@ static int init (void)
 	nc_state.xm_cmd_path[0] = '\0';
 	nc_state.virsh_cmd_path[0] = '\0';
 	nc_state.get_info_cmd_path[0] = '\0';
-	snprintf (nc_state.rootwrap_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_ROOTWRAP, nc_state.home);
+	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
 	/* prompt the SC to read the configuration too */
 	if (scInitConfig()) {
@@ -800,7 +800,7 @@ static int init (void)
 		logprintfl (EUCAFATAL, "Cannot allocate vnetconfig!\n");
 		return 1;
 	}
-	snprintf (nc_state.config_network_path, CHAR_BUFFER_SIZE, NC_NET_PATH_DEFAULT, nc_state.home);
+	snprintf (nc_state.config_network_path, MAX_PATH, NC_NET_PATH_DEFAULT, nc_state.home);
 	hypervisor = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
 	if (!hypervisor) 
 		hypervisor = getConfString(configFiles, 2, "VNET_INTERFACE");
@@ -823,7 +823,7 @@ static int init (void)
 	}
 	
 	/* get disk max */
-	strncpy(log, scGetInstancePath(), CHAR_BUFFER_SIZE);
+	strncpy(log, scGetInstancePath(), MAX_PATH);
 
 	if (statfs(log, &fs) == -1) {
 		logprintfl(EUCAWARN, "Failed to stat %s\n", log);
@@ -1120,10 +1120,10 @@ void parse_target(char *dev_string) {
 }
 
 char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
-    char buf [BIG_CHAR_BUFFER_SIZE];
+    char buf [MAX_PATH];
     char *retval;
     
-    snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
+    snprintf (buf, MAX_PATH, "%s %s", storage_cmd_path, dev_string);
     logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
@@ -1143,10 +1143,10 @@ int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
 }
 
 char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
-    char buf [BIG_CHAR_BUFFER_SIZE];
+    char buf [MAX_PATH];
     char *retval;
     
-    snprintf (buf, BIG_CHAR_BUFFER_SIZE, "%s %s", storage_cmd_path, dev_string);
+    snprintf (buf, MAX_PATH, "%s %s", storage_cmd_path, dev_string);
     logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");

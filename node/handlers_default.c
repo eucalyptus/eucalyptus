@@ -300,10 +300,10 @@ static int
 doPowerDown(	struct nc_state_t *nc,
 		ncMetadata *ccMeta)
 {
-	char cmd[1024];
+	char cmd[MAX_PATH];
 	int rc;
 
-	snprintf(cmd, 1024, "%s /usr/sbin/powernap-now", nc->rootwrap_cmd_path);
+	snprintf(cmd, MAX_PATH, "%s /usr/sbin/powernap-now", nc->rootwrap_cmd_path);
 	logprintfl(EUCADEBUG, "saving power: %s\n", cmd);
 	rc = system(cmd);
 	rc = rc>>8;

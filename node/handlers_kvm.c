@@ -91,11 +91,11 @@ static int doInitialize (struct nc_state_t *nc)
 	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
 
 	/* set up paths of Eucalyptus commands NC relies on */
-	snprintf (nc->gen_libvirt_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
-	snprintf (nc->get_info_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
-	snprintf (nc->connect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
-	snprintf (nc->disconnect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
-	snprintf (nc->get_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
+	snprintf (nc->gen_libvirt_cmd_path, MAX_PATH, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
+	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
+	snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
+	snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
+	snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
@@ -224,8 +224,8 @@ static void * rebooting_thread (void *arg)
     virConnectPtr *conn;
     ncInstance * instance = (ncInstance *)arg;
 
-    char xml_path [1024];
-    snprintf (xml_path, 1024, "%s/%s/%s/libvirt.xml", scGetInstancePath(), instance->userId, instance->instanceId);
+    char xml_path [MAX_PATH];
+    snprintf (xml_path, MAX_PATH, "%s/%s/%s/libvirt.xml", scGetInstancePath(), instance->userId, instance->instanceId);
     char * xml = file2str (xml_path);
     if (xml == NULL) {
         logprintfl (EUCAERROR, "cannot obtain XML file %s\n", xml_path);
@@ -301,7 +301,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			char *instanceId,
 			char **consoleOutput) {
   char *console_output;
-  char console_file[1024];
+  char console_file[MAX_PATH];
   int rc, fd;
   struct stat statbuf;
 
@@ -313,7 +313,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     return(1);
   }
   
-  snprintf(console_file, 1024, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
+  snprintf(console_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
   
   rc = stat(console_file, &statbuf);
   if (rc < 0) {
