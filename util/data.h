@@ -111,8 +111,9 @@ typedef struct ncInstance_t {
     char keyName[CHAR_BUFFER_SIZE*4];
     char privateDnsName[CHAR_BUFFER_SIZE];
     char dnsName[CHAR_BUFFER_SIZE];
-    int launchTime;
-    int terminationTime;
+    int launchTime; // timestamp of RunInstances request arrival
+    int bootTime; // timestamp of STAGING->BOOTING transition
+    int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
     virtualMachine params;
     netConfig ncnet;

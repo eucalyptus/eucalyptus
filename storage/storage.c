@@ -96,7 +96,7 @@ static sem * disk_sem;
 int scInitConfig (void)
 {
     struct stat mystat;
-    char configFiles[2][1024];
+    char configFiles[2][MAX_PATH];
     char * s;
     int concurrent_disk_ops;
 

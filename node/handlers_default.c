@@ -163,18 +163,20 @@ doTerminateInstance(	struct nc_state_t *nc,
 			virDomainFree(dom); /* necessary? */
 			sem_v(hyp_sem);
 		} else {
-			if (instance->state != BOOTING && instance->state != STAGING)
+			if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN)
 				logprintfl (EUCAWARN, "warning: domain %s to be terminated not running on hypervisor\n", instanceId);
 		}
 	} 
 
 	/* change the state and let the monitoring_thread clean up state */
     sem_p (inst_sem);
-    if (instance->state==BOOTING || instance->state==STAGING) {
-        change_state (instance, CANCELED);
-    } else {
-        change_state (instance, SHUTOFF);
-    }
+	if (instance->state!=TEARDOWN) { // do not leave TEARDOWN
+		if (instance->state==BOOTING || instance->state==STAGING) {
+			change_state (instance, CANCELED);
+		} else {
+			change_state (instance, SHUTOFF);
+		}
+	}
     sem_v (inst_sem);
 	*previousState = instance->stateCode;
 	*shutdownState = instance->stateCode;
@@ -298,10 +300,10 @@ static int
 doPowerDown(	struct nc_state_t *nc,
 		ncMetadata *ccMeta)
 {
-	char cmd[1024];
+	char cmd[MAX_PATH];
 	int rc;
 
-	snprintf(cmd, 1024, "%s /usr/sbin/powernap-now", nc->rootwrap_cmd_path);
+	snprintf(cmd, MAX_PATH, "%s /usr/sbin/powernap-now", nc->rootwrap_cmd_path);
 	logprintfl(EUCADEBUG, "saving power: %s\n", cmd);
 	rc = system(cmd);
 	rc = rc>>8;

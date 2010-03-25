@@ -75,12 +75,18 @@ my $user = getuid();
 
 $inputfail = 1;
 $detachfail = 2;
-system("cp $virshxmlfile /tmp/wtf");
+#system("cp $virshxmlfile /tmp/wtf");
 $distro = detect_distro();
 print STDERR "DISTRO: $distro\n";
 if ( ! -x "$rootwrap" ) {
     print STDERR "ERROR: cannot find root wrapper '$rootwrap'\n";
     exit $inputfail;
+}
+
+$rc = check_devexists($rootwrap, $virsh, $instanceId, $localdev);
+if ($rc == 1) {
+    print STDERR "device to detach is not attached\n";
+    exit(0);
 }
 
 if ($distro eq "GENERIC") {
@@ -89,7 +95,7 @@ if ($distro eq "GENERIC") {
 	print STDERR "ERROR: cannot locate virsh XML file\n";
 	exit $inputfail;
     }
-    
+
     $cmd = "$rootwrap $virsh detach-device $instanceId $virshxmlfile";
     $rc = system($cmd);
     if ($rc) {
@@ -118,7 +124,34 @@ if ($distro eq "GENERIC") {
     exit $inputfail;
 }
 
-exit 0;
+for ($i=0; $i<5; $i++) {
+    $rc = check_devexists($rootwrap, $virsh, $instanceId, $localdev);
+    if ($rc == 1) {
+	exit(0);
+    }
+    sleep(1);
+}
+
+exit $detachfail;
+
+sub check_devexists() {
+    my $rootwrap = untaint(shift @_);
+    my $virsh = untaint(shift @_);
+    my $instanceId = untaint(shift @_);
+    my $localdev = untaint(shift @_);
+
+    open(RFH, "$rootwrap $virsh dumpxml $instanceId|");
+    while(<RFH>) {
+	chomp;
+	my $line = $_;
+	if ($line =~ /target dev='$localdev' bus='scsi'/) {
+	    close(RFH);
+	    return(0);
+	}
+    }
+    close(RFH);
+    return(1);
+}
 
 sub detect_distro() {
     if ( -f "/etc/debian_version" ) {
