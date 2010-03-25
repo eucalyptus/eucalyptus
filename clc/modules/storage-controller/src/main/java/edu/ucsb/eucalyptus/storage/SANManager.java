@@ -78,7 +78,7 @@ import com.eucalyptus.bootstrap.Configurable;
 import com.eucalyptus.bootstrap.ConfigurableField;
 import com.eucalyptus.bootstrap.ConfigurableFieldType;
 import com.eucalyptus.bootstrap.ConfigurableManagement;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;

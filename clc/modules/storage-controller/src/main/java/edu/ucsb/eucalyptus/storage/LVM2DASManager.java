@@ -94,7 +94,7 @@ import com.eucalyptus.bootstrap.ConfigurableManagement;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 import com.eucalyptus.util.BaseDirectory;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;

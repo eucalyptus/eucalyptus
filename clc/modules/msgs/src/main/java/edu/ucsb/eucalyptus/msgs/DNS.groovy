@@ -95,12 +95,14 @@ public class UpdateARecordResponseType extends DNSResponseType {
 public class RemoveARecordType extends DNSRequestType {
   String zone;
   String name;
-
+  String address;
+  
   def RemoveARecordType() {}
 
-  def RemoveARecordType(String zone, String name) {
+  def RemoveARecordType(String zone, String name, String address) {
       this.zone = zone;
       this.name = name;
+      this.address = address;
   }
 }
 
@@ -131,12 +133,14 @@ public class UpdateCNAMERecordResponseType extends DNSResponseType {
 public class RemoveCNAMERecordType extends DNSRequestType {
   String zone;
   String name;
-
+  String alias;
+  
   def RemoveCNAMERecordType() {}
 
-  def RemoveCNAMERecordType(String zone, String name) {
+  def RemoveCNAMERecordType(String zone, String name, String alias) {
       this.zone = zone;
       this.name = name;
+      this.alias = alias;
   }
 }
 

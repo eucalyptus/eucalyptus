@@ -63,7 +63,6 @@
  */
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import edu.ucsb.eucalyptus.util.BindingUtil;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 

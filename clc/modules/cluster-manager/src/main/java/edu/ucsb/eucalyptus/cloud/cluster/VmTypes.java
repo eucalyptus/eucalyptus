@@ -63,7 +63,7 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 

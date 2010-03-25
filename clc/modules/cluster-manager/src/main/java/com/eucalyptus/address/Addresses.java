@@ -78,18 +78,16 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
-import com.eucalyptus.net.util.ClusterAddressInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.constants.VmState;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @SuppressWarnings( "serial" )
 public class Addresses extends AbstractNamedRegistry<Address> implements EventListener {
@@ -133,7 +131,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   }
   
   private static AbstractSystemAddressManager getProvider( ) {
-    String provider = "" + edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).isDoDynamicPublicAddresses( )
+    String provider = "" + edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).isDoDynamicPublicAddresses( )
                       + Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
                         @Override
                         public boolean apply( Cluster arg0 ) {
@@ -159,11 +157,11 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   }
   
   public static int getSystemReservedAddressCount( ) {
-    return edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getSystemReservedPublicAddresses( );
+    return edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getSystemReservedPublicAddresses( );
   }
   
   public static int getUserMaxAddresses( ) {
-    return edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration( ).getMaxUserPublicAddresses( );
+    return edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getMaxUserPublicAddresses( );
   }
   
   //TODO: add config change event listener ehre.
@@ -262,7 +260,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     try {
       final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
       return new SuccessCallback( ) {
-        public void apply( Object response ) {
+        public void apply( BaseMessage response ) {
           try {
             if( !addr.isSystemOwned( ) ) {
               addr.release( );
@@ -277,7 +275,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       };
     } catch ( NoSuchElementException e ) {
       return new SuccessCallback( ) {
-        public void apply( Object response ) {
+        public void apply( BaseMessage response ) {
           if( !addr.isSystemOwned( ) ) {
             addr.release( );
           } else {

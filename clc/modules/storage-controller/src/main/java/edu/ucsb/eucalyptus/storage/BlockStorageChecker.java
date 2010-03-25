@@ -72,13 +72,13 @@ import edu.ucsb.eucalyptus.cloud.ws.HttpWriter;
 import edu.ucsb.eucalyptus.cloud.ws.SnapshotProgressCallback;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.util.EntityWrapper;
 
 import java.io.File;
 import java.net.URL;

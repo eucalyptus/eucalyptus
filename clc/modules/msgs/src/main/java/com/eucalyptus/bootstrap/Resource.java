@@ -78,6 +78,7 @@ public enum Resource {
   RemoteConfiguration( ),
   Database( ),
   PersistenceContext( ),
+  DeferredInitialization( ),
   ClusterCredentials( ),
   RemoteServices( ),
   UserCredentials( ),
