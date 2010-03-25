@@ -92,17 +92,17 @@ struct nc_state_t {
 	long long mem_max;
 	long long cores_max;
 	// paths
-	char home[CHAR_BUFFER_SIZE];
-	char config_network_path [CHAR_BUFFER_SIZE];
-	char gen_libvirt_cmd_path[CHAR_BUFFER_SIZE];
-	char get_info_cmd_path[CHAR_BUFFER_SIZE];
-	char rootwrap_cmd_path[CHAR_BUFFER_SIZE];
-	char virsh_cmd_path[CHAR_BUFFER_SIZE];
-	char xm_cmd_path[CHAR_BUFFER_SIZE];
-	char detach_cmd_path[CHAR_BUFFER_SIZE];
-	char connect_storage_cmd_path[BIG_CHAR_BUFFER_SIZE];
-	char disconnect_storage_cmd_path[BIG_CHAR_BUFFER_SIZE];
-	char get_storage_cmd_path[BIG_CHAR_BUFFER_SIZE];
+	char home[MAX_PATH];
+	char config_network_path [MAX_PATH];
+	char gen_libvirt_cmd_path[MAX_PATH];
+	char get_info_cmd_path[MAX_PATH];
+	char rootwrap_cmd_path[MAX_PATH];
+	char virsh_cmd_path[MAX_PATH];
+	char xm_cmd_path[MAX_PATH];
+	char detach_cmd_path[MAX_PATH];
+	char connect_storage_cmd_path[MAX_PATH];
+	char disconnect_storage_cmd_path[MAX_PATH];
+	char get_storage_cmd_path[MAX_PATH];
 };
 
 

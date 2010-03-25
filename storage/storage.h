@@ -63,6 +63,10 @@ permission notice:
 #include "data.h"
 #include "ipc.h"
 #include <vnetwork.h>
+#include <linux/limits.h>
+#ifndef MAX_PATH
+#define MAX_PATH 4096
+#endif
 
 int scInitConfig (void);
 int scSetInstancePath(char *path);

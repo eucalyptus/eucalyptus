@@ -70,8 +70,12 @@
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
-	<euca:endpoint name="ConfigurationWS" connector-ref="eucaws"
-		address="http://127.0.0.1:8773/services/Configuration" synchronous="true" />
+  <euca:endpoint name="ConfigurationWS" connector-ref="eucaws"
+    address="http://127.0.0.1:8773/services/Configuration" synchronous="true" />
+  <euca:endpoint name="PropertiesWS" connector-ref="eucaws"
+    address="http://127.0.0.1:8773/services/Properties" synchronous="true" />
+  <euca:endpoint name="AccountsWS" connector-ref="eucaws"
+    address="http://127.0.0.1:8773/services/Accounts" synchronous="true" />
 	<model name="eucalyptus-configuration">
 		<default-service-exception-strategy>
 			<outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -82,6 +86,18 @@
 			</inbound>
 			<component class="com.eucalyptus.config.Configuration" />
 		</service>
+    <service name="Properties">
+      <inbound>
+        <inbound-endpoint ref="PropertiesWS" />
+      </inbound>
+      <component class="com.eucalyptus.config.Properties" />
+    </service>
+    <service name="Accounts">
+      <inbound>
+        <inbound-endpoint ref="AccountsWS" />
+      </inbound>
+      <component class="com.eucalyptus.accounts.Accounts" />
+    </service>
 	</model>
 
 </mule>

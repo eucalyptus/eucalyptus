@@ -64,26 +64,13 @@
 package com.eucalyptus.ws.client;
 
 import java.net.URI;
-import java.security.GeneralSecurityException;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
-import org.mule.api.MuleMessage;
-import org.mule.api.registry.Registry;
-import org.mule.module.client.MuleClient;
-
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.ServiceBootstrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
-import com.eucalyptus.ws.handlers.NioResponseHandler;
-
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class RemoteDispatcher extends ServiceDispatcher {
   private static Logger LOG = Logger.getLogger( RemoteDispatcher.class );
@@ -93,7 +80,7 @@ public class RemoteDispatcher extends ServiceDispatcher {
   }
 
   
-  public void dispatch( EucalyptusMessage msg ) {
+  public void dispatch( BaseMessage msg ) {
     MuleEvent context = RequestContext.getEvent( );
     try {
       this.getNioClient( ).dispatch( msg );
@@ -104,13 +91,22 @@ public class RemoteDispatcher extends ServiceDispatcher {
     }
   }
 
-  public EucalyptusMessage send( EucalyptusMessage msg ) throws EucalyptusCloudException {
+  public BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException {
     MuleEvent context = RequestContext.getEvent( );
     try {
       return this.getNioClient( ).send( msg );
     } catch ( Exception e ) {
       LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
+      Throwable rootCause = e;
+      while( rootCause.getCause( ) != null || !( rootCause instanceof EucalyptusRemoteFault ) ) {
+        rootCause = rootCause.getCause( );
+      }
+      if( rootCause instanceof EucalyptusRemoteFault ) {
+        EucalyptusRemoteFault remoteFault = ( EucalyptusRemoteFault ) rootCause;
+        throw new EucalyptusCloudException( " " + remoteFault.getFaultString( ) );
+      } else {
+        throw new EucalyptusCloudException( msg.getClass().getSimpleName( ) + ": " + rootCause.getMessage( ), rootCause );
+      }
     } finally {
       RequestContext.setEvent( context );
     }

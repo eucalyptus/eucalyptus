@@ -68,8 +68,6 @@ package edu.ucsb.eucalyptus.cloud.entities;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import sun.util.LocaleServiceProviderPool.LocalizedObjectGetter;
-
 import javax.persistence.*;
 
 @Entity

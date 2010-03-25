@@ -69,7 +69,7 @@ import org.apache.log4j.Logger;
 import org.apache.ws.security.WSSConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 
 public class Credentials {
   static Logger LOG            = Logger.getLogger( Credentials.class );

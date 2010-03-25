@@ -79,8 +79,8 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
-import com.eucalyptus.util.DatabaseUtil;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.DatabaseUtil;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
@@ -116,6 +116,11 @@ public class CredentialProvider extends Bootstrapper {
       throw new GeneralSecurityException( e );
     }
   }
+  
+  public static String getDName( final String name ) {
+    return String.format( "CN=localhost, OU=Eucalyptus, O=%s, L=Santa Barbara, ST=CA, C=US", name );
+  }
+
   
   public static String getCertificateAlias( final String certPem ) throws GeneralSecurityException {
     String certAlias = null;
@@ -284,7 +289,7 @@ public class CredentialProvider extends Bootstrapper {
     return user;
   }
   
-  public static List<User> getAllUsers( ) {
+  public static List<User> getEnabledUsers( ) {
     EntityWrapper<User> db = Credentials.getEntityWrapper( );
     try {
       return db.query( new User( null, true ) );
@@ -292,23 +297,42 @@ public class CredentialProvider extends Bootstrapper {
       db.commit( );
     }
   }
+
+  public static List<User> getAllUsers( ) {
+    EntityWrapper<User> db = Credentials.getEntityWrapper( );
+    try {
+      return db.query( new User( null ) );
+    } finally {
+      db.commit( );
+    }
+  }
+
   
   public static User addUser( String userName, Boolean isAdmin, String queryId, String secretKey ) throws UserExistsException {
-    User newUser = new User( userName, true );
+    return CredentialProvider.addUser( userName, isAdmin, queryId, secretKey, true );
+  }
+  public static User addUser( String userName, Boolean isAdmin, String queryId, String secretKey, Boolean isEnabled ) throws UserExistsException {
+    User newUser = new User( userName);
     newUser.setQueryId( queryId );
     newUser.setSecretKey( secretKey );
     newUser.setIsAdministrator( isAdmin );
+    newUser.setIsEnabled( isEnabled );
     EntityWrapper<User> db = Credentials.getEntityWrapper( );
     try {
       db.add( newUser );
       db.commit( );
-    } catch ( Exception e ) {
+    } catch ( Throwable t ) {
       db.rollback( );
-      throw new UserExistsException( e );
+      throw new UserExistsException( t );
     }
     return newUser;
   }
-  
+
+  public static User addDisabledUser( String userName, Boolean isAdmin ) throws UserExistsException {
+    String queryId = Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" );
+    String secretKey = Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll( "\\p{Punct}", "" );
+    return CredentialProvider.addUser( userName, isAdmin, queryId, secretKey, false );
+  }
   public static User addUser( String userName, Boolean isAdmin ) throws UserExistsException {
     String queryId = Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" );
     String secretKey = Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll( "\\p{Punct}", "" );
@@ -344,4 +368,21 @@ public class CredentialProvider extends Bootstrapper {
       throw new NoSuchUserException( e );
     }
   }
+  
+  public static String generateConfirmationCode( String userName ) {
+    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll("\\p{Punct}", "" );
+  }
+
+  public static String generateCertificateCode( String userName ) {
+    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll("\\p{Punct}", "" );
+  }
+
+  public static String generateSecretKey( String userName ) {
+    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll("\\p{Punct}", "" );
+  }
+
+  public static String generateQueryId( String userName ) {
+    return Hashes.getDigestBase64( userName, Hashes.Digest.MD5, false ).replaceAll("\\p{Punct}", "" );
+  }
+
 }

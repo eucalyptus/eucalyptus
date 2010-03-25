@@ -65,27 +65,25 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.callback.VolumeAttachCallback;
+import com.eucalyptus.cluster.callback.VolumeDetachCallback;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.util.StorageUtil;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEvent;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.cloud.cluster.VolumeAttachCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.VolumeDetachCallback;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
@@ -96,6 +94,7 @@ import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteVolumeType;
@@ -189,6 +188,7 @@ public class VolumeManager {
 
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper();
     String userName = request.isAdministrator() ? null : request.getUserId();
+    boolean reallyFailed = false;
     try {
       Volume vol = db.getUnique( Volume.named( userName, request.getVolumeId() ) );
       for( VmInstance vm : VmInstances.getInstance().listValues() ) {
@@ -199,16 +199,26 @@ public class VolumeManager {
           }
         }
       }
-      db.delete( vol );
-      db.getSession( ).flush( );
-      if( !vol.getState(  ).equals( State.ANNILATED ) ) {
-        StorageUtil.dispatchAll( new DeleteStorageVolumeType( vol.getDisplayName() ) );
+      DeleteStorageVolumeResponseType scReply = StorageUtil.send( vol.getCluster( ), new DeleteStorageVolumeType( vol.getDisplayName( ) ) );
+      if( scReply.get_return( ) ) {
+        db.delete( vol );
+        db.getSession( ).flush( );
+        if( !vol.getState(  ).equals( State.ANNILATED ) ) {
+          StorageUtil.dispatchAll( new DeleteStorageVolumeType( vol.getDisplayName() ) );
+        }
+        db.commit();
+      } else {
+        reallyFailed = true;
+        throw new EucalyptusCloudException( "Storage Controller returned false:  Contact the administrator to report the problem." );
       }
-      db.commit();
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback();
-      return reply;
+      if( reallyFailed ) {
+        throw e;
+      } else {
+        return reply;
+      }
     }
     reply.set_return( true );
     return reply;
@@ -228,17 +238,18 @@ public class VolumeManager {
       }
       
       List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
-
+      List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : volumes ) {
         if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
-          try {
-            edu.ucsb.eucalyptus.msgs.Volume aVolume = StorageUtil.getVolumeReply( attachedVolumes, v );
-            reply.getVolumeSet().add( aVolume );
-          } catch ( Exception e ) {
-            LOG.warn( "Error getting volume information from the Storage Controller: " + e );
-            LOG.debug( e, e );
-          }
+          describeVolumes.add( v );
         }
+      }
+      try {
+        ArrayList<edu.ucsb.eucalyptus.msgs.Volume> volumeReplyList = StorageUtil.getVolumeReply( attachedVolumes, volumes );
+        reply.getVolumeSet().addAll( volumeReplyList );
+      } catch ( Exception e ) {
+        LOG.warn( "Error getting volume information from the Storage Controller: " + e );
+        LOG.debug( e, e );
       }
       db.commit( );
     } catch (Throwable t ) {
@@ -299,10 +310,10 @@ public class VolumeManager {
       throw new EucalyptusCloudException("Volume is not yet available: " + request.getVolumeId());
     }
     request.setRemoteDevice( volume.getRemoteDevice() );
-    QueuedEvent<AttachVolumeType> event = QueuedEvent.make( new VolumeAttachCallback(  ), request );
-    cluster.getMessageQueue().enqueue( event );
+    new VolumeAttachCallback( request ).dispatch( cluster );
 
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName(), vm.getInstanceId(), request.getDevice(), volume.getRemoteDevice() );
+    attachVol.setStatus( "attaching" );
     vm.getVolumes().add( attachVol );
     volume.setState( State.BUSY );
     reply.setAttachedVolume( attachVol );
@@ -355,9 +366,8 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice() );
     request.setDevice( volume.getDevice().replaceAll("unknown,requested:","") );
     request.setInstanceId( vm.getInstanceId() );
-    QueuedEvent<DetachVolumeType> event = QueuedEvent.make( new VolumeDetachCallback( ), request );
-    cluster.getMessageQueue().enqueue( event );
-
+    new VolumeDetachCallback( request ).dispatch( cluster );
+    volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     return reply;
   }

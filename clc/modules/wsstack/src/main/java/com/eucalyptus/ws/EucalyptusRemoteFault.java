@@ -77,4 +77,26 @@ public class EucalyptusRemoteFault extends Exception {
     this.faultCode = faultCode;
     this.faultString = faultString;
   }
+
+  public String getRelatesTo( ) {
+    return this.relatesTo;
+  }
+
+  public String getAction( ) {
+    return this.action;
+  }
+
+  public String getFaultDetail( ) {
+    return this.faultDetail;
+  }
+
+  public String getFaultCode( ) {
+    return this.faultCode;
+  }
+
+  public String getFaultString( ) {
+    return this.faultString;
+  }
+  
+  
 }

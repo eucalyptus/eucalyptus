@@ -65,7 +65,6 @@ package com.eucalyptus.ws.handlers;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -81,12 +80,10 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.mule.DefaultMuleMessage;
 import org.mule.api.MuleMessage;
 import org.mule.transport.NullPayload;
-
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.LogUtil;
@@ -95,7 +92,6 @@ import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.Messaging;
 import com.eucalyptus.ws.util.ReplyQueue;
-
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -200,9 +196,21 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( this.msgReceiver == null ) {
           Messaging.dispatch( "vm://RequestQueue", msg );
         } else if ( ( user == null ) || ( ( user != null ) && user.getIsAdministrator( ) ) ) {
-          final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ) );
-          if(reply != null)
-              ctx.getChannel( ).write( reply.getPayload( ) );
+          try {
+            final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
+            if( reply != null ) {
+              ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
+            } else {
+              ReplyQueue.removeReplyListener( msg.getCorrelationId( ) );
+              ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.INTERNAL_SERVER_ERROR ) ).addListener( ChannelFutureListener.CLOSE );
+            }
+          } catch ( Exception e1 ) {
+            LOG.error( e1, e1 );
+            EucalyptusErrorMessageType errMsg = new EucalyptusErrorMessageType( this.msgReceiver.getService( ).getName( ), msg, (e1.getCause( )!=null?e1.getCause( ):e1).getMessage( ) );
+            errMsg.setCorrelationId( msg.getCorrelationId( ) );
+            errMsg.setException( e1.getCause( )!=null?e1.getCause( ):e1 );
+            new ReplyQueue().handle( errMsg );
+          }
         } else {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
