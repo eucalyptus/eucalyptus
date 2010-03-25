@@ -68,25 +68,25 @@ public class BaseMessage {
   }
   
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg ) {
-    return regarding( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
+    return ( TYPE ) regarding( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
   }
-
+  
   public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg ) {
-    return regardingUserRequest( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
+    return ( TYPE ) regardingUserRequest( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
   }
-
+  
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg, String subCorrelationId ) {
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
-    return regarding( );
+    return ( TYPE ) regarding( );
   }
   
   public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg, String subCorrelationId ) {
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
     this.userId = msg.getUserId( );
     this.effectiveUserId = msg.getEffectiveUserId( );
-    return (TYPE) this;
+    return ( TYPE ) this;
   }
-
+  
   public boolean isAdministrator( ) {
     return "eucalyptus".equals( this.effectiveUserId );
   }
@@ -94,12 +94,14 @@ public class BaseMessage {
   public String toString( ) {
     String str = this.toString( "msgs_eucalyptus_ucsb_edu" );
     str = ( str != null ) ? str : this.toString( "eucalyptus_ucsb_edu" );
-    str = ( str != null ) ? str : "Failed to bind message of type: " + this.getClass().getName( ) + " at " + Thread.currentThread( ).getStackTrace( )[1].toString( );
+    str = ( str != null ) ? str : "Failed to bind message of type: " + this.getClass( ).getName( ) + " at "
+                                  + Thread.currentThread( ).getStackTrace( )[1].toString( );
     return str;
   }
   
   /**
    * Get the XML form of the message.
+   * 
    * @param namespace
    * @return String representation of the object, null if binding fails.
    */
@@ -140,5 +142,5 @@ public class BaseMessage {
     reply.setEffectiveUserId( this.getEffectiveUserId( ) );
     return reply;
   }
-    
+  
 }
