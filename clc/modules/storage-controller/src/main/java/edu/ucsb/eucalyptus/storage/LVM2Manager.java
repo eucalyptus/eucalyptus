@@ -652,9 +652,6 @@ public class LVM2Manager implements LogicalStorageManager {
 		if(foundLVMVolumeInfo != null) {
 			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
 			snapshotInfo.setVolumeId(snapshotId);
-			File snapshotDir = new File(storageRootDirectory);
-			snapshotDir.mkdirs();
-
 			String vgName = foundLVMVolumeInfo.getVgName();
 			String lvName = "lv-snap-" + Hashes.getRandom(4);
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + foundLVMVolumeInfo.getLvName();
@@ -1151,7 +1148,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volInfo != null) {
-			String volumePath = lvmRootDirectory + File.pathSeparator + volInfo.getVgName() + File.pathSeparator + volInfo.getLvName();
+			String volumePath = lvmRootDirectory + File.separator + volInfo.getVgName() + File.separator + volInfo.getLvName();
 			volumeManager.finish();
 			return volumePath;
 		} else {
@@ -1178,8 +1175,9 @@ public class LVM2Manager implements LogicalStorageManager {
 				FileInputStream inStream = new FileInputStream(new File(volumePath));
 				FileChannel inChannel = inStream.getChannel();
 				FileOutputStream outStream = new FileOutputStream(new File(lvmRootDirectory + 
-						File.pathSeparator + volumeInfo.getVgName() + 
-						File.pathSeparator + volumeInfo.getLvName()));
+						File.separator + volumeInfo.getVgName() + 
+						File.separator + volumeInfo.getLvName()));
+				volumeManager.finish();
 				FileChannel outChannel = outStream.getChannel();
 				inChannel.transferTo(0, inChannel.size(), outChannel);
 				inChannel.close();
@@ -1190,11 +1188,60 @@ public class LVM2Manager implements LogicalStorageManager {
 				LOG.error(e);
 				throw new EucalyptusCloudException(e);
 			}
-			volumeManager.finish();
 		} else {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find volume with id: " + volumeId);
 		}
+	}
+
+	@Override
+	public String getSnapshotPath(String snapshotId)
+	throws EucalyptusCloudException {
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(snapshotId);
+		if(volInfo != null) {
+			String snapPath = volInfo.getLoFileName();
+			volumeManager.finish();
+			return snapPath;
+		} else {
+			volumeManager.abort();
+			throw new EntityNotFoundException("Unable to find snapshot with id: " + snapshotId);
+		}
+	}
+
+	@Override
+	public void importSnapshot(String snapshotId, String volumeId, String snapPath, int size)
+	throws EucalyptusCloudException {
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo snapInfo = volumeManager.getVolumeInfo(snapshotId);
+		if(snapInfo != null) {
+			volumeManager.finish();
+			throw new EucalyptusCloudException("Snapshot " + snapshotId + " already exists. Import failed.");
+		}
+		volumeManager.finish();
+		String snapFileName = storageRootDirectory + File.separator + snapshotId;
+		try {
+			FileInputStream inStream = new FileInputStream(new File(snapPath));
+			FileChannel inChannel = inStream.getChannel();
+			FileOutputStream outStream = new FileOutputStream(new File(snapFileName));
+			FileChannel outChannel = outStream.getChannel();
+			inChannel.transferTo(0, inChannel.size(), outChannel);
+			inChannel.close();
+			inStream.close();
+			outChannel.close();
+			outStream.close();
+		} catch (IOException e) {
+			LOG.error(e);
+			throw new EucalyptusCloudException(e);
+		}
+		volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
+		snapshotInfo.setVolumeId(snapshotId);
+		snapshotInfo.setLoFileName(snapFileName);
+		snapshotInfo.setSize(size);
+		snapshotInfo.setSnapshotOf(volumeId);
+		volumeManager.add(snapshotInfo);
+		volumeManager.finish();
 	}
 }
 

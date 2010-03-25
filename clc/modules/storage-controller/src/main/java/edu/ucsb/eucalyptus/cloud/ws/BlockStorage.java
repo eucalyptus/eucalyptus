@@ -841,18 +841,44 @@ public class BlockStorage {
 				EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
 				VolumeInfo volumeInfo = new VolumeInfo();
 				volumeInfo.setStatus(StorageProperties.Status.available.toString());
-				List<VolumeInfo> volumes = db.query(volumeInfo);
+				List<VolumeInfo> volumeInfos = db.query(volumeInfo);
+				List<VolumeInfo> volumes = new ArrayList<VolumeInfo>();
+				volumes.addAll(volumeInfos);
+
+				SnapshotInfo snapInfo = new SnapshotInfo();
+				snapInfo.setStatus(StorageProperties.Status.completed.toString());
+				EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);
+				List<SnapshotInfo> snapshotInfos = dbSnap.query(snapInfo);
+				List<SnapshotInfo> snapshots = new ArrayList<SnapshotInfo>();
+				snapshots.addAll(snapshotInfos);
+
+				db.commit();
+
 				for(VolumeInfo volume : volumes) {
 					try {
-						String volumePath = fromBlockManager.getVolumePath(volume.getVolumeId());
-						blockManager.importVolume(volume.getVolumeId(), volumePath, volume.getSize());
-						blockManager.finishVolume(volume.getVolumeId());
+						String volumeId = volume.getVolumeId();
+						String volumePath = fromBlockManager.getVolumePath(volumeId);
+						blockManager.importVolume(volumeId, volumePath, volume.getSize());
+						blockManager.finishVolume(volumeId);
 					} catch (EucalyptusCloudException ex) {
 						LOG.error(ex);
-						//continue processing the rest
+						//this one failed, continue processing the rest
 					}
 				}
-				db.commit();
+
+				for(SnapshotInfo snap : snapshots) {
+					try {
+						String snapshotId = snap.getSnapshotId();
+						String snapPath = fromBlockManager.getSnapshotPath(snapshotId);
+						int size = fromBlockManager.getSnapshotSize(snapshotId);
+						blockManager.importSnapshot(snapshotId, snap.getVolumeId(), snapPath, size);
+						blockManager.finishVolume(snapshotId);
+					} catch (EucalyptusCloudException ex) {
+						LOG.error(ex);
+						//this one failed, continue processing the rest
+					}
+				}
+
 				StorageProperties.enableStorage = StorageProperties.enableSnapshots = true;
 			}
 		}

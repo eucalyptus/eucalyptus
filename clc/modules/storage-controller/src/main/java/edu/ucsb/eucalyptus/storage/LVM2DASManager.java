@@ -957,5 +957,19 @@ public class LVM2DASManager implements LogicalStorageManager {
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public String getSnapshotPath(String snapshotId)
+			throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void importSnapshot(String snapshotId, String volumeId, String snapPath, int size)
+			throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
 }
 
