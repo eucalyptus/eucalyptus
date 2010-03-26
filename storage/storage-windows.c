@@ -22,6 +22,7 @@
 
 #include <storage-windows.h>
 #include <euca_auth.h>
+#include <misc.h>
 
 int decryptWindowsPassword(char *encpass, int encsize, char *pkfile, char **out) {
   FILE *PKFP;
@@ -140,12 +141,13 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize) {
 }
 
 
-int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *password) {
+int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
   int fd, rc, rbytes, count, encsize;
-  char *buf, *ptr, *tmp, *newpass, dest_path[1024], source_path[1024], fname[1024];
+  char *buf, *ptr, *tmp, *newpass, dest_path[1024], source_path[1024], fname[1024], password[16];
   char *encpassword;
   FILE *FH;
 
+  snprintf(password, 16, "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c", RANDALPHANUM, RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM);
   snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
   snprintf(dest_path, 1024, "%s/floppy", rundir_path);
 
