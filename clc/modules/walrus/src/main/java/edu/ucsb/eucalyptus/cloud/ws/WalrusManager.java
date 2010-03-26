@@ -91,7 +91,7 @@ import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.client.ServiceDispatcher;
@@ -117,6 +117,7 @@ import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
 import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.TorrentInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
@@ -189,7 +190,6 @@ import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 import edu.ucsb.eucalyptus.msgs.VersionEntry;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileIO;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusDataQueue;
@@ -377,7 +377,7 @@ public class WalrusManager {
 				URI walrusUri;
 				String address = null;
 				try {
-					walrusUri = new URI(EucalyptusProperties.getWalrusUrl());
+					walrusUri = new URI(SystemConfiguration.getWalrusUrl());
 					address = walrusUri.getHost();
 				} catch (URISyntaxException e) {
 					throw new EucalyptusCloudException("Could not get Walrus URL");
@@ -494,7 +494,7 @@ public class WalrusManager {
 								removeARecordType.setName(bucketName + "." + zone);
 								removeARecordType.setZone(zone);
 								try {
-									walrusUri = new URI(EucalyptusProperties.getWalrusUrl());
+									walrusUri = new URI(SystemConfiguration.getWalrusUrl());
 									address = walrusUri.getHost();
 								} catch (URISyntaxException e) {
 									throw new EucalyptusCloudException("Could not get Walrus URL");
@@ -985,7 +985,7 @@ public class WalrusManager {
 					} else {
 						reply.setBucket(bucketName);
 						reply.setKey(key);
-						reply.setLocation(EucalyptusProperties.getWalrusUrl()
+						reply.setLocation(SystemConfiguration.getWalrusUrl()
 								+ "/" + bucketName + "/" + key);
 					}
 				} else {

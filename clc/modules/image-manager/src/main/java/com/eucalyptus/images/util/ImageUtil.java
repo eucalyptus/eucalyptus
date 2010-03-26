@@ -79,27 +79,25 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import com.eucalyptus.accounts.UserGroupInfo;
+import com.eucalyptus.accounts.UserInfo;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.emory.mathcs.backport.java.util.Collections;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 import edu.ucsb.eucalyptus.cloud.ws.ImageManager;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class ImageUtil {
   private static Logger LOG = Logger.getLogger( ImageUtil.class );
@@ -225,7 +223,7 @@ public class ImageUtil {
   }
   public static String getWalrusUrl( ) throws EucalyptusCloudException {
     try {
-      return EucalyptusProperties.getWalrusUrl( ) + "/";
+      return SystemConfiguration.getWalrusUrl( ) + "/";
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Walrus has not been configured.", e );

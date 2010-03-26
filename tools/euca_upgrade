@@ -252,8 +252,9 @@ if [ "$DB" = "Y" ]; then
 	
         # upgrade the database
 	    export EUCALYPTUS="$NEW_EUCA"
-	    for FILE in ${EUCALYPTUS}/usr/share/eucalyptus/*.jar; do
-		export CLASSPATH=${FILE}:${CLASSPATH}
+	    FILES=`\ls -1 ${EUCALYPTUS}/usr/share/eucalyptus/*.jar | egrep -v ".*eucalyptus-.*1\.6\.1.*"`
+	    for FILE in $FILES; do
+		  export CLASSPATH=${FILE}:${CLASSPATH}
 	    done
 	    $OPENSSL pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes 2>/dev/null | grep -A30 "friendlyName: eucalyptus" | grep -A26 "BEGIN RSA" > ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
 	    
@@ -263,6 +264,7 @@ if [ "$DB" = "Y" ]; then
 	    
 	    echo "Upgrading your database..."
 	    if [ -f ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts/Import_${OLD_EUCA_VER_NUM}.groovy ]; then
+                rm -f $NEW_EUCA/var/lib/eucalyptus/db/*.log $NEW_EUCA/var/lib/eucalyptus/db/*.script $NEW_EUCA/var/lib/eucalyptus/db/*.properties
 		if ( ! java org.codehaus.groovy.tools.GroovyStarter --main groovy.ui.GroovyMain --classpath ${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:$CLASSPATH \
                     -Deuca.old=${OLD_EUCA} -Deuca.new=${NEW_EUCA} -Deuca.home=${NEW_EUCA} \
                     -Deuca.var.dir=${NEW_EUCA}/var/lib/eucalyptus -Deuca.conf.dir=${NEW_EUCA} -Deuca.log.dir=${NEW_EUCA}/var/log/eucalyptus \

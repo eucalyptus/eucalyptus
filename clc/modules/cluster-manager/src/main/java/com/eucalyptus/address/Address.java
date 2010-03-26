@@ -77,12 +77,12 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.cluster.callback.AssignAddressCallback;
+import com.eucalyptus.cluster.callback.QueuedEventCallback;
+import com.eucalyptus.cluster.callback.UnassignAddressCallback;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.cloud.cluster.AssignAddressCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
-import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
@@ -218,7 +218,7 @@ public class Address implements HasName {
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.name );
-        this.state.set( State.unallocated, false );
+        this.state.set( State.unallocated, false );        
       } else {
         Addresses.getInstance( ).register( this );
         this.state.set( State.allocated, false );        

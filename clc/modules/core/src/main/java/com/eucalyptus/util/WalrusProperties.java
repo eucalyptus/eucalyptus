@@ -66,8 +66,8 @@
 package com.eucalyptus.util;
 
 //import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 import org.apache.log4j.Logger;
 
@@ -232,7 +232,7 @@ public class WalrusProperties {
 
 	public static String getTrackerUrl() {
 		try {
-			String walrusUrl = EucalyptusProperties.getWalrusUrl();
+			String walrusUrl = SystemConfiguration.getWalrusUrl();
 			TRACKER_URL = "http://" + new URI(walrusUrl).getHost() + ":" + TRACKER_PORT + "/announce";
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);

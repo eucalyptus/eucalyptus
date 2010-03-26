@@ -2,18 +2,14 @@ package com.eucalyptus.cluster.handlers;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -25,7 +21,6 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
@@ -50,7 +45,6 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
-
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetKeysResponseType;

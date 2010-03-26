@@ -69,6 +69,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Map;
 
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -102,79 +104,46 @@ import org.jibx.runtime.impl.UnmarshallingContext;
 import com.eucalyptus.util.HoldMe;
 import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.WebServicesException;
+import com.google.common.collect.Maps;
 
 public class Binding {
 
   private static Logger   LOG = Logger.getLogger( Binding.class );
   private final String    name;
   private IBindingFactory bindingFactory;
-  private String          bindingErrorMsg;
-  private int[]           bindingNamespaceIndexes;
-  private String[]        bindingNamespacePrefixes;
+  private Map<String,Class> elementToClassMap = Maps.newHashMap( );
 
   protected Binding( final String name ) throws BindingException {
     this.name = name;
-    this.buildRest( );
-  }
-
-  protected Binding(final String name, final Class seedClass) throws BindingException {
-	  this(name);
-	  this.seed(seedClass);
   }
   
-  public void seed( final Class seedClass ) throws BindingException {
+  public IBindingFactory seed( final Class seed ) throws BindingException {
     try {
-      if ( seedClass.getSimpleName( ).equals( "Eucalyptus" ) ) {
-        bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.RunInstancesType.class );
-      } else if ( seedClass.getSimpleName( ).equals( "Walrus" ) ) {
-        bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType.class );
-      } else if ( seedClass.getSimpleName( ).equals( "StorageController" ) ) {
-        bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.StorageRequestType.class );
-      } else if ( seedClass.getSimpleName( ).startsWith( "VMwareBroker" ) ) {
-        bindingFactory = BindingDirectory.getFactory( this.name, edu.ucsb.eucalyptus.msgs.VMwareBrokerRequestType.class );
-      } else {
-        final Method[] methods = seedClass.getDeclaredMethods( );
-        for ( final Method m : methods ) {
+      this.bindingFactory = BindingDirectory.getFactory( this.name, seed );
+      String[] mappedClasses = bindingFactory.getMappedClasses( );
+      for( int i = 0; i < mappedClasses.length; i ++ ) {
+        if( bindingFactory.getElementNames( )[i] != null ) {
           try {
-            this.bindingFactory = BindingDirectory.getFactory( this.name, m.getReturnType( ) );
-            break;
-          } catch ( final Exception e ) {
-            this.bindingErrorMsg = e.getMessage( );
-            Binding.LOG.warn( "No binding for " + m.getName( ), e );
+            elementToClassMap.put( bindingFactory.getElementNames( )[i], Class.forName( mappedClasses[i] ) );
+            LOG.trace( "Caching binding for " + this.name + " on element " + bindingFactory.getElementNames( )[i] + " to class " + mappedClasses[i] );
+          } catch ( ClassNotFoundException e ) {
+            LOG.trace( e, e );
           }
         }
-        if ( this.bindingFactory == null ) {
-          throw new BindingException( "Failed to construct BindingFactory for class: " + seedClass );
-        }
       }
-    } catch ( JiBXException e1 ) {
-      throw new BindingException( e1 );
+    } catch ( JiBXException e ) {
+      LOG.debug( e, e );
+      throw new BindingException( "Failed to build binding factory for " + this.name + " with seed class " + seed.getCanonicalName( ) );
     }
-
-    this.buildRest( );
+    return this.bindingFactory;
   }
-
-  private void buildRest( ) {
-    int[] indexes = null;
-    String[] prefixes = null;
-    if ( bindingFactory != null ) {
-      String[] nsuris = bindingFactory.getNamespaces( );
-      int xsiindex = nsuris.length;
-      while ( --xsiindex >= 0 && !"http://www.w3.org/2001/XMLSchema-instance".equals( nsuris[xsiindex] ) );
-      // get actual size of index and prefix arrays to be allocated
-      int nscount = 0;
-      int usecount = nscount;
-      if ( xsiindex >= 0 ) usecount++;
-      // allocate and initialize the arrays
-      indexes = new int[usecount];
-      prefixes = new String[usecount];
-      if ( xsiindex >= 0 ) {
-        indexes[nscount] = xsiindex;
-        prefixes[nscount] = "xsi";
-      }
+  
+  private IBindingFactory getBindingFactory( Class c ) throws BindingException {
+    if( this.bindingFactory == null ) {
+      return this.seed( c );
+    } else {
+      return this.bindingFactory;
     }
-    this.bindingNamespaceIndexes = indexes;
-    this.bindingNamespacePrefixes = prefixes;
   }
 
   public OMElement toOM( final Object param ) throws BindingException {
@@ -187,14 +156,6 @@ public class Binding {
       throw new BindingException( "Cannot bind null value" );
     } else if ( !( param instanceof IMarshallable ) ) {
       throw new BindingException( "No JiBX <mapping> defined for class " + param.getClass( ) );
-    }
-    if ( this.bindingFactory == null ) {
-      try {
-        this.bindingFactory = BindingDirectory.getFactory( this.name, param.getClass( ) );
-      } catch ( final JiBXException e ) {
-        LOG.debug( e, e );
-        throw new BindingException( this.bindingErrorMsg );
-      }
     }
 
     final IMarshallable mrshable = ( IMarshallable ) param;
@@ -217,7 +178,7 @@ public class Binding {
           HoldMe.canHas.unlock( );
         }
       } catch ( final XMLStreamException e ) {
-        Binding.LOG.error( e, e );
+        LOG.error( e, e );
       }
     }
 
@@ -226,12 +187,7 @@ public class Binding {
 
   public UnmarshallingContext getNewUnmarshalContext( final OMElement param ) throws JiBXException {
     if ( this.bindingFactory == null ) {
-      try {
-        this.bindingFactory = BindingDirectory.getFactory( this.name, ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs." + param.getLocalName( ) + "Type" ) );
-      } catch ( final Exception e ) {
-        Binding.LOG.error( e, e );
-        throw new RuntimeException( this.bindingErrorMsg );
-      }
+      throw new RuntimeException( "Binding bootstrap failed to construct the binding factory for " + this.name );
     }
     final UnmarshallingContext ctx = ( UnmarshallingContext ) this.bindingFactory.createUnmarshallingContext( );
     final IXMLReader reader = new StAXReaderWrapper( param.getXMLStreamReader( ), "SOAP-message", true );
@@ -255,7 +211,7 @@ public class Binding {
       final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
       return ctx.unmarshalElement( type );
     } catch ( final Exception e ) {
-      Binding.LOG.fatal( e, e );
+      LOG.fatal( e, e );
       throw new WebServicesException( e.getMessage( ) );
     }
   }
@@ -263,11 +219,9 @@ public class Binding {
   public Object fromOM( final OMElement param ) throws WebServicesException {
     try {
       final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
-      return ctx.unmarshalElement( ); // ClassLoader.getSystemClassLoader().loadClass(
-                                      // "edu.ucsb.eucalyptus.msgs." +
-                                      // param.getLocalName( ) + "Type" ) );
+      return ctx.unmarshalElement( );
     } catch ( final Exception e ) {
-      Binding.LOG.fatal( e, e );
+      LOG.fatal( e, e );
       throw new WebServicesException( e.getMessage( ) );
     }
   }

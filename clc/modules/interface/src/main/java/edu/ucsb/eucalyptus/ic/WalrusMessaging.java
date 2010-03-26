@@ -69,7 +69,6 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
 import org.mule.module.client.MuleClient;

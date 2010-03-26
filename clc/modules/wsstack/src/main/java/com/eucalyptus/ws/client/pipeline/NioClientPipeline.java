@@ -75,6 +75,7 @@ import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
+import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
@@ -83,16 +84,16 @@ import com.eucalyptus.ws.util.ChannelUtil;
 
 public class NioClientPipeline implements ChannelPipelineFactory {
   private static Logger            LOG = Logger.getLogger( NioClientPipeline.class );
-  private final NioResponseHandler handler;
+  private final ResponseHandler handler;
   private BindingHandler           bindingHandler;
   
   private final WsSecHandler       wssecHandler;
   
-  public NioClientPipeline( final NioResponseHandler handler, final String clientBinding ) {
+  public NioClientPipeline( final ResponseHandler handler, final String clientBinding ) {
     this( handler, clientBinding, null );
   }
   
-  public NioClientPipeline( final NioResponseHandler handler, final String clientBinding, final WsSecHandler wssecHandler ) {
+  public NioClientPipeline( final ResponseHandler handler, final String clientBinding, final WsSecHandler wssecHandler ) {
     this.handler = handler;
     //WISHLIST: Fix wrapping of the binding
     try {
@@ -108,7 +109,7 @@ public class NioClientPipeline implements ChannelPipelineFactory {
     return this.bindingHandler;
   }
   
-  public NioResponseHandler getHandler( ) {
+  public ResponseHandler getHandler( ) {
     return this.handler;
   }
   

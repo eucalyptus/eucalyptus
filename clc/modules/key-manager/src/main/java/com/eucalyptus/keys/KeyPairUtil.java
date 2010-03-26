@@ -11,8 +11,8 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.SshKeyPair;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 

@@ -86,7 +86,7 @@ import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
