@@ -64,29 +64,33 @@
   -->
 <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:spring="http://www.springframework.org/schema/beans" xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
-  xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
+  xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0" xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
   xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
+  <mule:configuration>
+    <mule:default-threading-profile doThreading="true" maxThreadsActive="48" poolExhaustedAction="RUN" />
+  </mule:configuration>
   <euca:connector name="eucaws" />
   <!-- TODO: remove all these forward references somehow -->
   <!--interface services-->
-  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />
+  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" connector-ref="internal-async"/>
   
-  <!--
-  <vm:connector name="internal-async" queueEvents="true" /> 
+  <vm:connector name="internal-async" queueEvents="true" >
+    <vm:queueProfile persistent="false" maxOutstandingMessages="8192"/>
+  </vm:connector> 
   <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" connector-ref="internal-async"/>
-  -->
-  <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false"/>
-  <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" />
-  <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" />
-  <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" />
+  <!--endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false"/-->
+  <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" connector-ref="internal-async"/>
+  <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" connector-ref="internal-async"/>
+  <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" connector-ref="internal-async"/>
   <!--
   <exception-strategy className="com.eucalyptus.ws.ExceptionTrap"/>
   -->
   <model name="eucalyptus-bootstrap">
+<!--    <default-threading-profile  />-->
     <default-service-exception-strategy>
       <outbound-endpoint ref="ReplyQueueEndpoint" />
     </default-service-exception-strategy>

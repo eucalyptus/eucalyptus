@@ -65,7 +65,6 @@ package com.eucalyptus.bootstrap;
 
 import java.security.Security;
 import org.apache.log4j.Logger;
-import org.apache.ws.security.WSSConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.sysinfo.LogLevels;

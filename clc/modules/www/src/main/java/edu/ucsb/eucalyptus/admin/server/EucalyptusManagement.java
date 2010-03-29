@@ -78,15 +78,14 @@ import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.CredentialProvider;
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserGroupEntity;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.crypto.CryptoProviders;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventVetoedException;
-import com.eucalyptus.event.GenericEvent;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.network.NetworkGroupUtil;
@@ -313,11 +312,11 @@ public class EucalyptusManagement {
 		//webUser.setIsEnabled( false );
 
 		// TODO: add web user properly, with all keys and certs generated, too
-		webUser.setConfirmationCode( CredentialProvider.generateSessionToken( webUser.getUserName() ) );
-		webUser.setCertificateCode( CredentialProvider.generateSessionToken( webUser.getUserName() ) );
+		webUser.setConfirmationCode( CryptoProviders.generateSessionToken( webUser.getUserName() ) );
+		webUser.setCertificateCode( CryptoProviders.generateSessionToken( webUser.getUserName() ) );
 
-		webUser.setSecretKey( CredentialProvider.generateSecretKey( webUser.getUserName() ) );
-		webUser.setQueryId( CredentialProvider.generateQueryId( webUser.getUserName() ));
+		webUser.setSecretKey( CryptoProviders.generateSecretKey( webUser.getUserName() ) );
+		webUser.setQueryId( CryptoProviders.generateQueryId( webUser.getUserName() ));
 
 		UserInfo newUser = EucalyptusManagement.fromClient( webUser );
 		newUser.setReservationId( 0l );

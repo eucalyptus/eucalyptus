@@ -99,12 +99,6 @@
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/junit-3.8.2.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
-	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar" sourcepath="/home/decker/mule/mule-2.0.2/src/mule-2.0.2-src.zip"/>
-	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar" sourcepath="/home/decker/mule/mule-2.0.2/src/mule-2.0.2-src.zip"/>
-	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar" sourcepath="/home/decker/mule/mule-2.0.2/src/mule-2.0.2-src.zip"/>
 	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar" sourcepath="/bzr/third-party/netty-3.1.5.GA/src/main/java"/>
 	<classpathentry kind="lib" path="lib/regexp-1.4.jar"/>
 	<classpathentry kind="lib" path="lib/serializer.jar"/>
@@ -128,5 +122,11 @@
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry kind="lib" path="lib/proxool-0.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/proxool-cglib.jar"/>
+	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
