@@ -170,6 +170,54 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
   return(ret);
 }
 
+adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundleInstance, const axutil_env_t *env) {
+  adb_BundleInstanceResponse_t *ret=NULL;
+  adb_bundleInstanceResponseType_t *birt=NULL;
+  
+  adb_bundleInstanceType_t *bit=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  char *instanceId, *bucketName, *filePrefix, *S3URL, *userPublicKey, *cid;
+  ncMetadata ccMeta;
+  
+  bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
+  
+  ccMeta.correlationId = adb_bundleInstanceType_get_correlationId(bit, env);
+  ccMeta.userId = adb_bundleInstanceType_get_userId(bit, env);
+  
+  instanceId = adb_bundleInstanceType_get_instanceId(bit, env);
+  bucketName = adb_bundleInstanceType_get_bucketName(bit, env);
+  filePrefix = adb_bundleInstanceType_get_filePrefix(bit, env);
+  S3URL = adb_bundleInstanceType_get_S3URL(bit, env);
+  userPublicKey = adb_bundleInstanceType_get_userPublicKey(bit, env);
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
+    if (rc) {
+      logprintf("ERROR: doBundleInstance() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+  birt = adb_bundleInstanceResponseType_create(env);
+  adb_bundleInstanceResponseType_set_return(birt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_bundleInstanceResponseType_set_statusMessage(birt, env, statusMessage);
+  }
+
+  adb_bundleInstanceResponseType_set_correlationId(birt, env, ccMeta.correlationId);
+  adb_bundleInstanceResponseType_set_userId(birt, env, ccMeta.userId);
+  
+  ret = adb_BundleInstanceResponse_create(env);
+  adb_BundleInstanceResponse_set_BundleInstanceResponse(ret, env, birt);
+
+  return(ret);
+}
+
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, const axutil_env_t *env) {
   adb_StopNetworkResponse_t *ret=NULL;
   adb_stopNetworkResponseType_t *snrt=NULL;

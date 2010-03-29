@@ -103,6 +103,10 @@ vnetConfig *vnetconfig=NULL;
 sem_t *locks[ENDLOCK] = {NULL, NULL, NULL, NULL, NULL, NULL};
 int mylocks[ENDLOCK] = {0,0,0,0,0,0};
 
+int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey) {
+  return(0);
+}
+
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
   int i, j, rc, start = 0, stop = 0, ret=0;
   ccInstance *myInstance;

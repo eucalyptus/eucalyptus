@@ -187,6 +187,29 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="bundleInstanceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="bucketName" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="S3URL" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="bundleInstanceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType name="getConsoleOutputType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -450,6 +473,9 @@
       <xs:element name="DetachVolume" nillable="true" type="tns:detachVolumeType"/>
       <xs:element name="DetachVolumeResponse" nillable="true" type="tns:detachVolumeResponseType"/>
 
+      <xs:element name="BundleInstance" nillable="true" type="tns:bundleInstanceType"/>
+      <xs:element name="BundleInstanceResponse" nillable="true" type="tns:bundleInstanceResponseType"/>
+
       <xs:element name="GetConsoleOutput" nillable="true" type="tns:getConsoleOutputType"/>
       <xs:element name="GetConsoleOutputResponse" nillable="true" type="tns:getConsoleOutputResponseType"/>
 
@@ -499,6 +525,11 @@
 
   <wsdl:message name="DetachVolumeResponse">
     <wsdl:part element="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BundleInstanceResponse">
+    <wsdl:part element="tns:BundleInstanceResponse" name="BundleInstanceResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -574,6 +605,11 @@
 
   <wsdl:message name="DetachVolume">
     <wsdl:part element="tns:DetachVolume" name="DetachVolume">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BundleInstance">
+    <wsdl:part element="tns:BundleInstance" name="BundleInstance">
     </wsdl:part>
   </wsdl:message>
 
@@ -662,6 +698,13 @@
       <wsdl:input message="tns:DetachVolume" name="DetachVolume">
       </wsdl:input>
       <wsdl:output message="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BundleInstance">
+      <wsdl:input message="tns:BundleInstance" name="BundleInstance">
+      </wsdl:input>
+      <wsdl:output message="tns:BundleInstanceResponse" name="BundleInstanceResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -785,6 +828,16 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="DetachVolumeResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BundleInstance">
+      <soap:operation soapAction="EucalyptusCC#BundleInstance" style="document"/>
+      <wsdl:input name="BundleInstance">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="BundleInstanceResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
