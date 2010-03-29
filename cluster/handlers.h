@@ -103,13 +103,14 @@ typedef struct instance_t {
 
   char userData[4096];
   char launchIndex[64];
+  char platform[64];
   char groupNames[64][32];
 
   ncVolume volumes[EUCA_MAX_VOLUMES];
   int volumesSize;
 } ccInstance;
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char groupNames[][32], ncVolume *volumes, int volumesSize);
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char groupNames[][32], ncVolume *volumes, int volumesSize);
 void print_ccInstance(char *tag, ccInstance *in);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
@@ -174,7 +175,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
 int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccsLen, vnetConfig *outvnetConfig);
 
 int doDescribeInstances(ncMetadata *meta, char **instIds, int instIdsLen, ccInstance **outInsts, int *outInstsLen);
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen);
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, char *targetNode, ccInstance **outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **consoleOutput);
 int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata *meta, char **instIds, int instIdsLen, int **outStatus);

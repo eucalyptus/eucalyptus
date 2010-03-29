@@ -196,6 +196,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         (char *)adb_instanceType_get_keyName(instance, env),
         (char *)adb_instanceType_get_userData(instance, env),
         (char *)adb_instanceType_get_launchIndex(instance, env),
+	(char *)adb_instanceType_get_platform(instance, env),
         groupNames, groupNamesSize
         );
     
@@ -219,7 +220,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     return outInst;
 }
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
     axutil_env_t * env = st->env;
     axis2_stub_t * stub = st->stub;
@@ -261,6 +262,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     //    adb_ncRunInstanceType_set_vlan(request, env, vlan);
     adb_ncRunInstanceType_set_userData(request, env, userData);
     adb_ncRunInstanceType_set_launchIndex(request, env, launchIndex);
+    adb_ncRunInstanceType_set_platform(request, env, platform);
     int i;
     for (i=0; i<groupNamesSize; i++) {
         adb_ncRunInstanceType_add_groupNames(request, env, groupNames[i]);

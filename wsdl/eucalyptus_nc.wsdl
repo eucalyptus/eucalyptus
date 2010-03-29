@@ -197,6 +197,7 @@
 -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	  </xs:sequence>
 	</xs:extension>
@@ -233,6 +234,7 @@
         <!-- passed into RunInstances for safekeeping by NC -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 
         <!-- updated by NC upon Attach/DetachVolume -->

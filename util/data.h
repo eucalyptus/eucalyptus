@@ -122,6 +122,7 @@ typedef struct ncInstance_t {
     /* passed into NC via runInstances for safekeeping */
     char userData[CHAR_BUFFER_SIZE*10];
     char launchIndex[CHAR_BUFFER_SIZE];
+    char platform[CHAR_BUFFER_SIZE];
     char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE];
     int groupNamesSize;
 
@@ -171,7 +172,7 @@ ncInstance * allocate_instance(char *instanceId, char *reservationId,
                                char *ramdiskId, char *ramdiskURL, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,
-                               char *userData, char *launchIndex, char **groupNames, int groupNamesSize);
+                               char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 

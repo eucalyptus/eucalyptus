@@ -885,6 +885,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   adb_ccInstanceType_set_serviceTag(dst, env, src->serviceTag);
   adb_ccInstanceType_set_userData(dst, env, src->userData);
   adb_ccInstanceType_set_launchIndex(dst, env, src->launchIndex);
+  adb_ccInstanceType_set_platform(dst, env, src->platform);
   for (i=0; i<64; i++) {
     if (src->groupNames[i][0] != '\0') {
       adb_ccInstanceType_add_groupNames(dst, env, src->groupNames[i]);
@@ -936,7 +937,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex;
+  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *platform;
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
@@ -963,6 +964,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
     userData = strdup("");
   }
   launchIndex = adb_runInstancesType_get_launchIndex(rit, env);
+  platform = adb_runInstancesType_get_platform(rit, env);
   
   vm = adb_runInstancesType_get_instanceType(rit, env);
   ccvm.mem = adb_virtualMachineType_get_memory(vm, env);
@@ -1004,7 +1006,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   rc=1;
   if (!DONOTHING) {
-    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, NULL, &outInsts, &outInstsLen);
+    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, NULL, &outInsts, &outInstsLen);
   }
   
   if (rc) {

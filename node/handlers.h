@@ -132,6 +132,7 @@ struct handlers {
 				netConfig *netparams,
 				char *userData,
 				char *launchIndex,
+				char *platform,
 				char **groupNames,
 				int groupNamesSize,
 				ncInstance **outInst);
@@ -175,7 +176,7 @@ struct handlers {
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
 int doPowerDown			(ncMetadata *meta);
 int doDescribeInstances		(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-int doRunInstance		(ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst);
+int doRunInstance		(ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst);
 int doTerminateInstance		(ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
 int doRebootInstance		(ncMetadata *meta, char *instanceId);
 int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutput);

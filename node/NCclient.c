@@ -308,6 +308,7 @@ int main (int argc, char **argv)
         CHECK_PARAM(kernel_id, "kernel ID and manifest path");
 
         char *privMac, *pubMac, *privIp;
+	char *platform=NULL;
         int vlan = 3;
         privMac = strdup (mac_addr);
         mac_addr [0] = 'b';
@@ -351,7 +352,7 @@ int main (int argc, char **argv)
                                        "", /* key */
 				       &netparams,
 				       //                                       privMac, privIp, vlan, 
-                                       user_data, launch_index, group_names, group_names_size, /* CC stuff */
+                                       user_data, launch_index, platform, group_names, group_names_size, /* CC stuff */
                                        &outInst);
             if (rc != 0) {
                 printf("ncRunInstance() failed: instanceId=%s error=%d\n", instance_id, rc);

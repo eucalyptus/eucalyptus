@@ -265,6 +265,7 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     // passed into RunInstances for safekeeping by NC
     adb_instanceType_set_userData(instance, env, outInst->userData);
     adb_instanceType_set_launchIndex(instance, env, outInst->launchIndex);
+    adb_instanceType_set_platform(instance, env, outInst->platform);
     int i;
     for (i=0; i<outInst->groupNamesSize; i++) {
         adb_instanceType_add_groupNames(instance, env, outInst->groupNames[i]);
@@ -318,6 +319,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     snprintf(netparams.publicIp, 24, "%s", adb_netConfigType_get_publicIp(net_type, env));
     axis2_char_t * userData = adb_ncRunInstanceType_get_userData(input, env);
     axis2_char_t * launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
+    axis2_char_t * platform = adb_ncRunInstanceType_get_platform(input, env);
     int groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
     char ** groupNames = calloc (groupNamesSize, sizeof(char *));
     if (groupNames==NULL) {
@@ -346,7 +348,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
                                        ramdiskId, ramdiskURL, 
                                        keyName, 
                                        &netparams, 
-                                       userData, launchIndex, groupNames, groupNamesSize,
+                                       userData, launchIndex, platform, groupNames, groupNamesSize,
                                        &outInst);
             
             if (error) {

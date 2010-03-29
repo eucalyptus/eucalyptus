@@ -528,6 +528,7 @@ void *startup_thread (void * arg)
     }
     {
       char *ramdisk, *kernel;
+      // TODO: check for 'platform' here when sent by CLC
       if (strstr(instance->ramdiskId, "windows") || strstr(instance->kernelId, "windows") || strstr(instance->ramdiskURL, "windows") || strstr(instance->kernelURL, "windows")) {
 	ramdisk = strdup("");
 	kernel = strdup("");
@@ -982,7 +983,7 @@ int doPowerDown(ncMetadata *meta) {
 	return ret;
 }
 
-int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
 	int ret;
 
@@ -998,9 +999,9 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
 
 
 	if (nc_state.H->doRunInstance)
- 	  ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+ 	  ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
 	else
-	  ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+	  ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
 
 	return ret;
 }
