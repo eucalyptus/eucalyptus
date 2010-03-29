@@ -82,10 +82,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
@@ -144,7 +145,7 @@ public class WalrusBucketLogger {
 							String logString = entry.toFormattedString();
 							logChannel.write(ByteBuffer.wrap(logString.getBytes()), logChannel.size());
 
-							MessageDigest digest = Hashes.Digest.MD5.get();
+							MessageDigest digest = Digest.MD5.get();
 							digest.update(logString.getBytes());
 							String etag = Hashes.bytesToHex(digest.digest());
 

@@ -74,7 +74,7 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.sysinfo.LogLevels;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.handlers.ServiceSinkHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
@@ -99,7 +99,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   
   public boolean accepts( final HttpRequest message ) {
     final boolean result = this.checkAccepts( message );
-    if ( result && DebugUtil.TRACE ) {
+    if ( result && LogLevels.TRACE ) {
       LOG.trace( EventRecord.here( this.getClass(), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ) );
     }
     return result;
@@ -128,7 +128,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
       } else {
         pipeline.addLast( "service-sink", new ServiceSinkHandler( ) );
       }
-      if( DebugUtil.TRACE ) {
+      if( LogLevels.TRACE ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
           LOG.trace( EventRecord.here( this.getClass(), EventType.PIPELINE_HANDLER, e.getKey(), e.getValue( ).getClass( ).getSimpleName( ) ) );
         }

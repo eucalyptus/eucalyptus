@@ -63,21 +63,16 @@
  */
 package com.eucalyptus.ws.handlers.wssecurity;
 
-import java.security.cert.X509Certificate;
-
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-
-import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.CredentialProvider;
-import com.eucalyptus.util.HoldMe;
-import com.eucalyptus.ws.MappingHttpMessage;
+import com.eucalyptus.auth.SecurityContext;
+import com.eucalyptus.auth.callback.WsSecCredentials;
+import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.eucalyptus.ws.util.WSSecurity;
 
 @ChannelPipelineCoverage( "one" )
 public class UserWsSecHandler extends MessageStackHandler implements ChannelHandler {
@@ -89,14 +84,7 @@ public class UserWsSecHandler extends MessageStackHandler implements ChannelHand
     if ( o instanceof MappingHttpMessage ) {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
       SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
-      X509Certificate cert = null;
-      HoldMe.canHas.lock( );
-      try {
-        cert = WSSecurity.getVerifiedCertificate( envelope );
-      } finally {
-        HoldMe.canHas.unlock( );
-      }
-      httpRequest.setUser( CredentialProvider.getUser( cert ) );
+      SecurityContext.getLoginContext( new WsSecCredentials( httpRequest.getCorrelationId( ), envelope ) ).login( );
     }
   }
 

@@ -72,7 +72,8 @@ import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.config.Configuration;
-import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.sysinfo.BaseDirectory;
 
 import java.net.*;
 import java.util.List;

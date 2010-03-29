@@ -81,13 +81,15 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import com.eucalyptus.auth.AuthenticationException;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.util.HoldMe;
+import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.ws.AuthenticationException;
-import com.eucalyptus.ws.MappingHttpRequest;
 
 @ChannelPipelineCoverage("one")
 public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
@@ -153,7 +155,7 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
 			String userName = CredentialProvider.getUserName( accessKeyID );
 			User user = CredentialProvider.getUser( userName );  
-			httpRequest.setUser( user );
+      Contexts.lookup( httpRequest.getCorrelationId( ) ).setUser( user );
 		} catch(Exception ex) {
 			throw new AuthenticationException( "User authentication failed. Unable to obtain query key" );
 		}
@@ -167,10 +169,10 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 
 	protected String checkSignature( final String queryKey, final String subject ) throws AuthenticationException
 	{
-		SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hashes.Mac.HmacSHA1.toString() );
+		SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hmac.HmacSHA1.toString() );
 		try
 		{
-			Mac mac = Mac.getInstance( Hashes.Mac.HmacSHA1.toString() );
+			Mac mac = Hmac.HmacSHA1.getInstance();
 			mac.init( signingKey );
 			byte[] rawHmac = mac.doFinal( subject.getBytes() );
 			return new String(Base64.encode( rawHmac )).replaceAll( "=", "" );

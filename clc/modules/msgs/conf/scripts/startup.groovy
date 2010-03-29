@@ -2,21 +2,21 @@ import org.hibernate.HibernateException;
 
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.UserEntity;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
-import com.eucalyptus.accounts.UserGroupInfo;
-import com.eucalyptus.accounts.UserInfo;
+import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.util.UserManagement;
 import com.eucalyptus.bootstrap.DeferredInitializer;
 
 
-EntityWrapper<User> dbu = Credentials.getEntityWrapper( );
+EntityWrapper<UserEntity> dbu = Credentials.getEntityWrapper( );
 try {
-  for( User u : dbu.query( new User( ) ) ) {
+  for( UserEntity u : dbu.query( new UserEntity( ) ) ) {
     if( u.getIsEnabled() != Boolean.FALSE ) {
       u.setIsEnabled( Boolean.TRUE )
     }
@@ -39,16 +39,16 @@ try {
   db2.rollback( );
   return false;
 }
-EntityWrapper<UserGroupInfo> db3 = new EntityWrapper<UserGroupInfo>( );
+EntityWrapper<UserGroupEntity> db3 = new EntityWrapper<UserGroupEntity>( );
 try {
-  db3.getUnique( new UserGroupInfo( "all" ) );
+  db3.getUnique( new UserGroupEntity( "all" ) );
   db3.rollback();
 } catch ( EucalyptusCloudException e ) {
-  db3.add( new UserGroupInfo( "all" ) );
+  db3.add( new UserGroupEntity( "all" ) );
   db3.commit( );
 }
 try {
-  UserGroupInfo.named( "all" );
+  UserGroupEntity.named( "all" );
 } catch ( EucalyptusCloudException e1 ) {
 }
 EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );

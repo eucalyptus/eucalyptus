@@ -14,7 +14,7 @@ import javassist.Modifier;
 import javax.persistence.Entity;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import com.eucalyptus.util.SubDirectory;
+import com.eucalyptus.sysinfo.SubDirectory;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;

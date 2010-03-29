@@ -64,58 +64,25 @@
 package com.eucalyptus.ws.util;
 
 import java.io.UnsupportedEncodingException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.TreeSet;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
-import org.bouncycastle.util.encoders.UrlBase64;
-
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.ws.AuthenticationException;
+import com.eucalyptus.auth.AuthenticationException;
+import com.eucalyptus.auth.crypto.Hmac;
 
 public class HmacUtils {
-  private static Logger            LOG     = Logger.getLogger( HmacUtils.class );
-  public static String[] iso8601 = {
-      "yyyy-MM-dd'T'HH:mm:ss",
-      "yyyy-MM-dd'T'HH:mm:ssZ",
-      "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
-      "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-      "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'Z",
-      "yyyy-MM-dd'T'HH:mm:ss'Z'",
-      "yyyy-MM-dd'T'HH:mm:ss'Z'Z" };
-
-  public static Calendar parseTimestamp( final String timestamp ) throws AuthenticationException {
-    Calendar ts = Calendar.getInstance( );
-    for ( String tsPattern : iso8601 ) {
-      try {
-        SimpleDateFormat tsFormat = new SimpleDateFormat( tsPattern );
-        tsFormat.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
-        ts.setTime( tsFormat.parse( timestamp ) );
-        return ts;
-      } catch ( ParseException e ) {
-        LOG.debug( e, e );
-      }
-    }
-    throw new AuthenticationException( "Invalid timestamp format." );
-  }
-
-  public static String getSignature( final String queryKey, final String subject, final Hashes.Mac mac ) throws AuthenticationException {
+  public static Logger            LOG     = Logger.getLogger( HmacUtils.class );
+  public static String getSignature( final String queryKey, final String subject, final Hmac mac ) throws AuthenticationException {
     SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes( ), mac.toString( ) );
     try {
-      Mac digest = Mac.getInstance( mac.toString( ) );
+      Mac digest = mac.getInstance( );
       digest.init( signingKey );
       byte[] rawHmac = digest.doFinal( subject.getBytes( ) );
       return Base64.encode( rawHmac ).replaceAll( "=", "" );

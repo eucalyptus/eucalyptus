@@ -69,6 +69,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
@@ -91,7 +92,6 @@ import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.client.LocalDispatcher;
 import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.eucalyptus.ws.client.ServiceDispatcher;

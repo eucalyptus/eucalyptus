@@ -77,11 +77,12 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
-import com.eucalyptus.accounts.UserGroupInfo;
-import com.eucalyptus.accounts.UserInfo;
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
+import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventVetoedException;
@@ -99,7 +100,6 @@ import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.util.UserManagement;
 
 public class EucalyptusManagement {
 
@@ -247,9 +247,9 @@ public class EucalyptusManagement {
 		{
 			try {//TODO: temporary hack to support older user info objects
 				if( "admin".equals( userName )) {
-					UserInfo u = UserManagement.generateAdmin( );
+					UserInfo u = UserInfo.generateAdmin( );
 					dbWrapper.add( u );
-					UserGroupInfo allGroup = new UserGroupInfo( "all" );
+					UserGroupEntity allGroup = new UserGroupEntity( "all" );
 					dbWrapper.getSession( ).persist( new Counters( ) );
 					dbWrapper.commit( );
 					return EucalyptusManagement.fromServer( u );
@@ -313,11 +313,11 @@ public class EucalyptusManagement {
 		//webUser.setIsEnabled( false );
 
 		// TODO: add web user properly, with all keys and certs generated, too
-		webUser.setConfirmationCode( UserManagement.generateConfirmationCode( webUser.getUserName() ) );
-		webUser.setCertificateCode( UserManagement.generateCertificateCode( webUser.getUserName() ) );
+		webUser.setConfirmationCode( CredentialProvider.generateSessionToken( webUser.getUserName() ) );
+		webUser.setCertificateCode( CredentialProvider.generateSessionToken( webUser.getUserName() ) );
 
-		webUser.setSecretKey( UserManagement.generateSecretKey( webUser.getUserName() ) );
-		webUser.setQueryId( UserManagement.generateQueryId( webUser.getUserName() ));
+		webUser.setSecretKey( CredentialProvider.generateSecretKey( webUser.getUserName() ) );
+		webUser.setQueryId( CredentialProvider.generateQueryId( webUser.getUserName() ));
 
 		UserInfo newUser = EucalyptusManagement.fromClient( webUser );
 		newUser.setReservationId( 0l );
@@ -331,7 +331,7 @@ public class EucalyptusManagement {
 		dbWrapper.commit();
 
 		try {//FIXME: fix this nicely
-			CredentialProvider.addUser(newUser.getUserName( ),newUser.isAdministrator( ));
+			CredentialProvider.addUser(newUser.getUserName( ),newUser.isAdministrator( ),newUser.isEnabled( ));
 		} catch ( UserExistsException e ) {
 			LOG.error(e);
 		}
@@ -388,7 +388,7 @@ public class EucalyptusManagement {
 		}
 		update( target, user );
 		try {
-			CredentialProvider.updateUser(user.getUserName(), user.isEnabled());
+			CredentialProvider.updateUser(user.getUserName(), user.isAdministrator( ), user.isEnabled());
 		} catch ( NoSuchUserException e ) {
 			db.rollback();
 			LOG.error(e);

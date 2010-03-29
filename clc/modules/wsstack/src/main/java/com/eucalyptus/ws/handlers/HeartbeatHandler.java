@@ -92,19 +92,19 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.SslSetup;
+import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
-import com.eucalyptus.util.FailScriptFailException;
-import com.eucalyptus.util.GroovyUtil;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.BindingException;
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.MappingHttpResponse;
-import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
@@ -169,7 +169,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     try {
       GroovyUtil.evaluateScript( "after_database.groovy" );
       GroovyUtil.evaluateScript( "after_persistence.groovy" );
-    } catch ( FailScriptFailException e1 ) {
+    } catch ( ScriptExecutionFailedException e1 ) {
       LOG.debug( e1, e1 );
       System.exit( 123 );
     }

@@ -70,8 +70,7 @@ import java.security.MessageDigest;
 import java.util.NoSuchElementException;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
@@ -95,7 +94,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   public static String getId( Long rsvId, int launchIndex ) {
     String vmId = null;
     do {
-      MessageDigest digest = Hashes.Digest.MD5.get();
+      MessageDigest digest = Digest.MD5.get();
       digest.reset();
       digest.update( Long.toString( rsvId + launchIndex + System.currentTimeMillis() ).getBytes() );
 

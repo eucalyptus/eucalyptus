@@ -64,19 +64,15 @@
 package com.eucalyptus.bootstrap;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.log4j.Logger;
 import org.hsqldb.Server;
 import org.hsqldb.persist.HsqlProperties;
-
-import com.eucalyptus.entities.DatabaseUtil;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.util.DebugUtil;
-import com.eucalyptus.util.FailScriptFailException;
-import com.eucalyptus.util.GroovyUtil;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 @Provides( resource = Resource.Database )
@@ -140,7 +136,6 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   private static AtomicBoolean hup = new AtomicBoolean( false );
   public void hup( ) {
     if( hup.compareAndSet( false, true ) ) {
-      DebugUtil.printDebugDetails( );
       try {
         if ( this.db != null ) { 
           this.db.checkRunning( true );
@@ -159,7 +154,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   private void createDatabase( ) {    
     try {
       GroovyUtil.evaluateScript( "before_database.groovy" );//TODO: move this ASAP!
-    } catch ( FailScriptFailException e ) {
+    } catch ( ScriptExecutionFailedException e ) {
       LOG.fatal( e, e );
       LOG.fatal( "Failed to initialize the database layer." );
       System.exit( -1 );
@@ -169,7 +164,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     SystemBootstrapper.makeSystemThread( this ).start( );
     try {
       GroovyUtil.evaluateScript( "after_database.groovy" );//TODO: move this ASAP!
-    } catch ( FailScriptFailException e ) {
+    } catch ( ScriptExecutionFailedException e ) {
       LOG.fatal( e, e );
       LOG.fatal( "Failed to initialize the persistence layer." );
       System.exit( -1 );
@@ -187,7 +182,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     }
     try {
       GroovyUtil.evaluateScript( "after_persistence.groovy" );//TODO: move this ASAP!
-    } catch ( FailScriptFailException e ) {
+    } catch ( ScriptExecutionFailedException e ) {
       LOG.fatal( e, e );
       LOG.fatal( "Failed to initialize the persistence layer." );
       System.exit( -1 );

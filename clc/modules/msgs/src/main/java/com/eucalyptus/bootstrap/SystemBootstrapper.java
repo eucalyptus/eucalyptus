@@ -63,8 +63,12 @@
  */
 package com.eucalyptus.bootstrap;
 
+import java.security.Security;
 import org.apache.log4j.Logger;
-import com.eucalyptus.util.DebugUtil;
+import org.apache.ws.security.WSSConfig;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.sysinfo.LogLevels;
 import com.eucalyptus.util.LogUtil;
 
 public class SystemBootstrapper {
@@ -128,7 +132,7 @@ public class SystemBootstrapper {
   }
   
   public boolean stop( ) throws Exception {
-    ServiceBootstrapper.getInstance( ).stop( );
+    ServiceContext.stopContext( );
     return true;
   }
   
@@ -137,8 +141,9 @@ public class SystemBootstrapper {
       boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
       boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
-      DebugUtil.DEBUG = doDebug;
-      DebugUtil.TRACE = doDebug;
+      Security.addProvider( new BouncyCastleProvider( ) );
+      LogLevels.DEBUG = doDebug;
+      LogLevels.TRACE = doDebug;
     } catch ( Throwable t ) {
       t.printStackTrace( );
       System.exit( 1 );

@@ -79,9 +79,9 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-import com.eucalyptus.accounts.UserGroupInfo;
-import com.eucalyptus.accounts.UserInfo;
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
@@ -338,9 +338,9 @@ public class ImageUtil {
   public static void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo, final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
     for ( LaunchPermissionItemType perm : changeList ) {
       if ( perm.isGroup( ) ) {
-        UserGroupInfo target = new UserGroupInfo( perm.getGroup( ) );
+        UserGroupEntity target = new UserGroupEntity( perm.getGroup( ) );
         if ( adding && !imgInfo.getUserGroups( ).contains( target ) ) {
-          EntityWrapper<UserGroupInfo> dbGroup = db.recast( UserGroupInfo.class );
+          EntityWrapper<UserGroupEntity> dbGroup = db.recast( UserGroupEntity.class );
           try {
             target = dbGroup.getUnique( target );
           } catch ( EucalyptusCloudException e ) {} finally {

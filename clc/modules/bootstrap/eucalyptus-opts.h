@@ -70,6 +70,8 @@ struct eucalyptus_opts
   const char *exhaustive_user_help; /**< @brief Individually enable exhaustive connection information for client connections. help description.  */
   int exhaustive_cc_flag;	/**< @brief Individually enable exhaustive connection information for client connections. (default=off).  */
   const char *exhaustive_cc_help; /**< @brief Individually enable exhaustive connection information for client connections. help description.  */
+  int exhaustive_external_flag;	/**< @brief Individually enable exhaustive logging for external libraries. (default=off).  */
+  const char *exhaustive_external_help; /**< @brief Individually enable exhaustive logging for external libraries. help description.  */
   char * log_appender_arg;	/**< @brief Control the destination for console output. (default='console-log').  */
   char * log_appender_orig;	/**< @brief Control the destination for console output. original value given at command line.  */
   const char *log_appender_help; /**< @brief Control the destination for console output. help description.  */
@@ -144,6 +146,7 @@ struct eucalyptus_opts
   unsigned int exhaustive_db_given ;	/**< @brief Whether exhaustive-db was given.  */
   unsigned int exhaustive_user_given ;	/**< @brief Whether exhaustive-user was given.  */
   unsigned int exhaustive_cc_given ;	/**< @brief Whether exhaustive-cc was given.  */
+  unsigned int exhaustive_external_given ;	/**< @brief Whether exhaustive-external was given.  */
   unsigned int log_appender_given ;	/**< @brief Whether log-appender was given.  */
   unsigned int out_given ;	/**< @brief Whether out was given.  */
   unsigned int err_given ;	/**< @brief Whether err was given.  */

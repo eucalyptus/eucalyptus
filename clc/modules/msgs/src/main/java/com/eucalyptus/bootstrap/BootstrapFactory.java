@@ -65,18 +65,10 @@ package com.eucalyptus.bootstrap;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.net.URL;
-import java.util.Enumeration;
-import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.mule.config.ConfigResource;
-
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.sysinfo.BaseDirectory;
 import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 

@@ -72,6 +72,6 @@ import java.lang.annotation.Target;
 
 @Target({ ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface HttpBinding {
+public @interface HttpBinding {//TODO: what is this doing here?
   HttpParameterMapping[] mappings() default {};
 }

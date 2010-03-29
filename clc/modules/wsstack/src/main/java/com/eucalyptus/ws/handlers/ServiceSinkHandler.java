@@ -69,7 +69,6 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
@@ -81,19 +80,32 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
+import org.mule.DefaultMuleEvent;
 import org.mule.DefaultMuleMessage;
+import org.mule.DefaultMuleSession;
+import org.mule.api.MuleEvent;
+import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
+import org.mule.api.MuleSession;
+import org.mule.api.endpoint.OutboundEndpoint;
+import org.mule.api.transport.DispatchException;
+import org.mule.transport.AbstractConnector;
 import org.mule.transport.NullPayload;
+import org.mule.transport.vm.VMMessageDispatcherFactory;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.NioMessageReceiver;
-import com.eucalyptus.ws.util.Messaging;
 import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.constants.IsData;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
@@ -102,11 +114,11 @@ import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
-  private static Logger                          LOG          = Logger.getLogger( ServiceSinkHandler.class );
-  private AtomicLong  startTime = new AtomicLong(0l);
-  private final ChannelLocal<MappingHttpMessage> requestLocal = new ChannelLocal<MappingHttpMessage>( );
+  private static VMMessageDispatcherFactory dispatcherFactory = new VMMessageDispatcherFactory( );
+  private static Logger                     LOG               = Logger.getLogger( ServiceSinkHandler.class );
+  private AtomicLong                        startTime         = new AtomicLong( 0l );
   
-  private NioMessageReceiver                     msgReceiver;
+  private NioMessageReceiver                msgReceiver;
   
   public ServiceSinkHandler( ) {}
   
@@ -134,8 +146,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle single request-response MEP
         EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
-        if ( reply instanceof WalrusDataGetResponseType 
-                && !( reply instanceof GetObjectResponseType && ((GetObjectResponseType)reply).getBase64Data( ) != null ) ) {
+        if ( reply instanceof WalrusDataGetResponseType
+             && !( reply instanceof GetObjectResponseType && ( ( GetObjectResponseType ) reply ).getBase64Data( ) != null ) ) {
           e.getFuture( ).cancel( );
           return;
         } else {
@@ -145,26 +157,32 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         e.getFuture( ).cancel( );
         LOG.warn( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + msge.getMessage( ).getClass( ) );
       }
-      if( e.getFuture( ).isCancelled( ) ) {
+      if ( e.getFuture( ).isCancelled( ) ) {
         LOG.trace( "Cancelling send on : " + LogUtil.dumpObject( e ) );
-      } 
+      }
     } else {
       ctx.sendDownstream( e );
     }
   }
-
-  private void sendDownstreamNewEvent( ChannelHandlerContext ctx, ChannelEvent e, EucalyptusMessage reply ) {
-    final MappingHttpMessage request = this.requestLocal.get( ctx.getChannel( ) );
-    if(request != null) {
-    if ( reply == null ) {
-      LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
-      reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( EucalyptusMessage ) request.getMessage( ), "Received a NULL reply" );
+  
+  private void sendDownstreamNewEvent( ChannelHandlerContext ctx, ChannelEvent e, BaseMessage reply ) {
+    MappingHttpRequest request = null;
+    try {
+      request = Contexts.lookup( reply.getCorrelationId( ) ).getHttpRequest( );
+    } catch ( NoSuchContextException e1 ) {
+      LOG.debug( e1, e1 );
     }
-    LOG.info( EventRecord.here( Component.eucalyptus, EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ), Long.toString( System.currentTimeMillis( ) - this.startTime.get( ) ) ) );
-    final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
-    final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
-    response.setMessage( reply );
-    ctx.sendDownstream( newEvent );
+    if ( request != null ) {
+      if ( reply == null ) {
+        LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
+        reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( BaseMessage ) request.getMessage( ), "Received a NULL reply" );
+      }
+      LOG.info( EventRecord.here( Component.eucalyptus, EventType.MSG_SERVICED, reply.getClass( ).getSimpleName( ), Long.toString( System.currentTimeMillis( )
+                                                                                                                                   - this.startTime.get( ) ) ) );
+      final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
+      final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
+      response.setMessage( reply );
+      ctx.sendDownstream( newEvent );
     }
   }
   
@@ -178,12 +196,11 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       final MessageEvent event = ( MessageEvent ) e;
       if ( event.getMessage( ) instanceof MappingHttpMessage ) {
         final MappingHttpMessage request = ( MappingHttpMessage ) event.getMessage( );
-        final User user = request.getUser( );
-        this.requestLocal.set( ctx.getChannel( ), request );
+        final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
         final EucalyptusMessage msg = ( EucalyptusMessage ) request.getMessage( );
         final String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
-        if( msg.getCorrelationId( ) == null ) {
-          msg.setCorrelationId( UUID.randomUUID().toString( ) );
+        if ( msg.getCorrelationId( ) == null ) {
+          msg.setCorrelationId( UUID.randomUUID( ).toString( ) );
         }
         if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
           msg.setEffectiveUserId( msg.getUserId( ) );
@@ -192,51 +209,65 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
         }
         LOG.trace( EventRecord.here( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
-        ReplyQueue.addReplyListener( msg.getCorrelationId( ), ctx );
         if ( this.msgReceiver == null ) {
-          Messaging.dispatch( "vm://RequestQueue", msg );
+          ServiceSinkHandler.dispatchRequest( msg );
         } else if ( ( user == null ) || ( ( user != null ) && user.getIsAdministrator( ) ) ) {
-          try {
-            final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
-            if( reply != null ) {
-              ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
-            } else {
-              ReplyQueue.removeReplyListener( msg.getCorrelationId( ) );
-              ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.INTERNAL_SERVER_ERROR ) ).addListener( ChannelFutureListener.CLOSE );
-            }
-          } catch ( Exception e1 ) {
-            LOG.error( e1, e1 );
-            EucalyptusErrorMessageType errMsg = new EucalyptusErrorMessageType( this.msgReceiver.getService( ).getName( ), msg, (e1.getCause( )!=null?e1.getCause( ):e1).getMessage( ) );
-            errMsg.setCorrelationId( msg.getCorrelationId( ) );
-            errMsg.setException( e1.getCause( )!=null?e1.getCause( ):e1 );
-            new ReplyQueue().handle( errMsg );
-          }
+          this.dispatchRequest( ctx, request, msg );
         } else {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
-      } else if( e instanceof IdleStateEvent ) {
+      } else if ( e instanceof IdleStateEvent ) {
         LOG.warn( "Closing idle connection: " + e );
         e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         ctx.sendUpstream( e );
       }
-
+      
     }
+  }
+  
+  private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final EucalyptusMessage msg ) throws NoSuchContextException {
+    try {
+      final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
+      if ( reply != null ) {
+        ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
+      } else {
+        Contexts.lookup( msg.getCorrelationId( ) ).clear( );
+        ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.INTERNAL_SERVER_ERROR ) )
+           .addListener( ChannelFutureListener.CLOSE );
+      }
+    } catch ( Exception e1 ) {
+      LOG.error( e1, e1 );
+      EucalyptusErrorMessageType errMsg = new EucalyptusErrorMessageType( this.msgReceiver.getService( ).getName( ), msg,
+                                                                          ( e1.getCause( ) != null ? e1.getCause( ) : e1 ).getMessage( ) );
+      errMsg.setCorrelationId( msg.getCorrelationId( ) );
+      errMsg.setException( e1.getCause( ) != null ? e1.getCause( ) : e1 );
+      Contexts.lookup( errMsg.getCorrelationId( ) ).clear( );
+      Channels.write( ctx.getChannel( ), errMsg );
+    }
+  }
+  
+  private static void dispatchRequest( final EucalyptusMessage msg ) throws MuleException, DispatchException {
+    OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
+    if ( !endpoint.getConnector( ).isStarted( ) ) {
+      endpoint.getConnector( ).start( );
+    }
+    MuleMessage muleMsg = new DefaultMuleMessage( msg );
+    MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
+                                                      ServiceContext.getContext( ) );
+    MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
+    dispatcherFactory.create( endpoint ).dispatch( muleEvent );
   }
   
   @Override
   public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     try {
-      MappingHttpMessage httpRequest = this.requestLocal.get( ctx.getChannel( ) );
-      if ( httpRequest != null && httpRequest.getMessage( ) != null && httpRequest.getMessage( ) instanceof EucalyptusMessage ) {
-        EucalyptusMessage origRequest = ( EucalyptusMessage ) httpRequest.getMessage( );
-        ReplyQueue.removeReplyListener( origRequest.getCorrelationId( ) );
-      }
+      Contexts.lookup( ctx.getChannel( ) ).clear( );
     } catch ( Throwable e1 ) {
       LOG.warn( "Failed to remove the channel context on connection close.", e1 );
     }
     super.channelClosed( ctx, e );
   }
-
+  
   @Override
   public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
     super.messageReceived( ctx, e );

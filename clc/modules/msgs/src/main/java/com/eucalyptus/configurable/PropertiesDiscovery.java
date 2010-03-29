@@ -1,7 +1,6 @@
 package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
-import javax.persistence.Entity;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import edu.emory.mathcs.backport.java.util.Arrays;
@@ -29,7 +28,7 @@ public class PropertiesDiscovery extends ServiceJarDiscovery {
           if( prop == null ) {
             continue;
           } else {
-            LOG.info( "Adding property: " + prop.getQualifiedName( )  );
+            LOG.info( "--> Adding property: " + prop.getQualifiedName( )  );
           }
         } catch ( Throwable e ) {
           LOG.debug( e, e );

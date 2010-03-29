@@ -91,8 +91,8 @@ import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.MappingHttpResponse;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -192,9 +192,8 @@ public class WalrusImageManager {
 						} catch ( NoSuchUserException e ) {
 							throw new AccessDeniedException(userId,e);            
 						}         
-						for(X509Cert certInfo: user.getCertificates( )) {
+						for(X509Certificate cert: user.getX509Certificates( )) {
 							try {
-								X509Certificate cert = X509Cert.toCertificate( certInfo );
 								signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if (signatureVerified)
 									break;
@@ -328,9 +327,8 @@ public class WalrusImageManager {
 						throw new DecryptionFailedException("SHA1withRSA not found");
 					}
 
-					for(X509Cert certInfo: user.getCertificates( )) {
+					for(X509Certificate cert: user.getX509Certificates( )) {
 						try {
-							X509Certificate cert = X509Cert.toCertificate( certInfo );
 							PublicKey publicKey = cert.getPublicKey();
 							sigVerifier.initVerify(publicKey);
 							sigVerifier.update((machineConfiguration + image).getBytes());

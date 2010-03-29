@@ -69,7 +69,7 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 import org.hsqldb.ServerConstants;
 
-import com.eucalyptus.util.SubDirectory;
+import com.eucalyptus.sysinfo.SubDirectory;
 
 public class DatabaseConfig {
   private static DatabaseConfig singleton = new DatabaseConfig();

@@ -75,8 +75,8 @@ import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-import com.eucalyptus.accounts.UserGroupInfo;
-import com.eucalyptus.accounts.UserInfo;
+import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.util.ImageUtil;
@@ -353,7 +353,7 @@ public class ImageManager {
     try {
       db.add( imageInfo );
       UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) );
-      UserGroupInfo group = db.recast( UserGroupInfo.class ).getUnique( new UserGroupInfo( "all" ) );
+      UserGroupEntity group = db.recast( UserGroupEntity.class ).getUnique( new UserGroupEntity( "all" ) );
       imageInfo.getPermissions( ).add( user );
       imageInfo.getUserGroups( ).add( group );
       db.commit( );
@@ -449,7 +449,7 @@ public class ImageManager {
         }
       } else if ( request.getLaunchPermission( ) != null ) {
         reply.setRealResponse( reply.getLaunchPermission( ) );
-        for ( UserGroupInfo userGroup : imgInfo.getUserGroups( ) )
+        for ( UserGroupEntity userGroup : imgInfo.getUserGroups( ) )
           reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( userGroup.getName( ) ) );
         for ( UserInfo user : imgInfo.getPermissions( ) )
           reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( user.getUserName( ) ) );
@@ -513,7 +513,7 @@ public class ImageManager {
       imgInfo.getPermissions( ).clear( );
       imgInfo.getPermissions( ).add( db.recast( UserInfo.class ).getUnique( UserInfo.named( imgInfo.getImageOwnerId( ) ) ) );
       imgInfo.getUserGroups( ).clear( );
-      imgInfo.getUserGroups( ).add( db.recast( UserGroupInfo.class ).getUnique( UserGroupInfo.named( "all" ) ) );
+      imgInfo.getUserGroups( ).add( db.recast( UserGroupEntity.class ).getUnique( UserGroupEntity.named( "all" ) ) );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );

@@ -63,22 +63,12 @@
  */
 package com.eucalyptus.ws;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
-import java.util.Map;
-
 import org.apache.log4j.Logger;
-import org.mule.api.registry.RegistrationException;
-import org.mule.api.registry.Registry;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.context.support.StaticApplicationContext;
-
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
-import com.eucalyptus.bootstrap.ServiceBootstrapper;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
@@ -87,11 +77,8 @@ import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.StartComponentEvent;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.client.LocalDispatcher;
-import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
 @Provides(resource=Resource.RemoteServices)

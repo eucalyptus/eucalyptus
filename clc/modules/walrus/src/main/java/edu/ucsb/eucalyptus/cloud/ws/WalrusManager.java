@@ -88,6 +88,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
@@ -771,7 +772,7 @@ public class WalrusManager {
 								if (WalrusDataMessage.isStart(dataMessage)) {
 									tempObjectName = objectName + "."
 									+ Hashes.getRandom(12);
-									digest = Hashes.Digest.MD5.get();
+									digest = Digest.MD5.get();
 									try {
 										fileIO = storageManager.prepareForWrite(
 												bucketName, tempObjectName);
@@ -1090,7 +1091,7 @@ public class WalrusManager {
 								db.rollback();
 								throw new EucalyptusCloudException(ex);
 							}
-							md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(
+							md5 = Hashes.getHexString(Digest.MD5.get().digest(
 									base64Data));
 							foundObject.setEtag(md5);
 							Long size = (long) base64Data.length;

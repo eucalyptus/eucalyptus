@@ -178,9 +178,7 @@ public class WalrusUtil {
 
 		List<String> aliases = Lists.newArrayList();
 		try {
-			for( X509Cert x : CredentialProvider.getUser( imgInfo.getImageOwnerId( ) ).getCertificates( ) ) {
-				aliases.add( x.getAlias( ) );
-			}
+			aliases.addAll( CredentialProvider.getUser( imgInfo.getImageOwnerId( ) ).getCertificateAliases( ) );
 		} catch ( NoSuchUserException e ) {
 			throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature because of missing (deleted?) user certificate.", e );
 		}

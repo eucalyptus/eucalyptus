@@ -70,6 +70,7 @@ import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.UrlBase64;
 
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.bootstrap.Component;
 
 import java.io.ByteArrayOutputStream;
@@ -108,43 +109,6 @@ public class Hashes {
       LOG.error( e, e );//this can never happen
     }
     return x509;
-  }
-
-  static {
-    Security.addProvider( new BouncyCastleProvider( ) );
-  }
-
-  public enum Digest {
-    GOST3411,
-    Tiger,
-    Whirlpool,
-    MD2,
-    MD4,
-    MD5,
-    RipeMD128,
-    RipeMD160,
-    RipeMD256,
-    RipeMD320,
-    SHA1,
-    SHA224,
-    SHA256,
-    SHA384,
-    SHA512;
-
-    public MessageDigest get( ) {
-      try {
-        return MessageDigest.getInstance( this.name( ) );
-      } catch ( Exception e ) {
-        LOG.error( e, e );
-        System.exit( -4 );
-        return null;
-      }
-    }
-  }
-
-  public enum Mac {
-    HmacSHA1,
-    HmacSHA256
   }
 
   public static String hashPassword( String password ) throws NoSuchAlgorithmException {

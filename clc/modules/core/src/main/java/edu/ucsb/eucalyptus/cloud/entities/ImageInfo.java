@@ -84,8 +84,8 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import com.eucalyptus.accounts.UserGroupInfo;
-import com.eucalyptus.accounts.UserInfo;
+import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
@@ -131,7 +131,7 @@ public class ImageInfo {
       inverseJoinColumns = @JoinColumn( name = "user_group_id" )
   )
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-  private List<UserGroupInfo> userGroups = new ArrayList<UserGroupInfo>();
+  private List<UserGroupEntity> userGroups = new ArrayList<UserGroupEntity>();
   @ManyToMany()
   @JoinTable(
       name = "image_has_perms",
@@ -270,11 +270,11 @@ public class ImageInfo {
     this.signature = signature;
   }
 
-  public List<UserGroupInfo> getUserGroups() {
+  public List<UserGroupEntity> getUserGroups() {
     return userGroups;
   }
 
-  public void setUserGroups( final List<UserGroupInfo> userGroups ) {
+  public void setUserGroups( final List<UserGroupEntity> userGroups ) {
     this.userGroups = userGroups;
   }
 
@@ -328,7 +328,7 @@ public class ImageInfo {
   public boolean isAllowed( UserInfo user ) {
     if ( user.isAdministrator() || user.getUserName().equals( this.getImageOwnerId() ) )
       return true;
-    for ( UserGroupInfo g : this.getUserGroups() )
+    for ( UserGroupEntity g : this.getUserGroups() )
       if ( "all".equals( g.getName() ) )
         return true;
     return this.getPermissions().contains( user );

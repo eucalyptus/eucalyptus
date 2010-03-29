@@ -24,7 +24,7 @@ import javax.net.ssl.X509ExtendedKeyManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.SubDirectory;
+import com.eucalyptus.sysinfo.SubDirectory;
 import com.sun.net.ssl.internal.ssl.X509ExtendedTrustManager;
 
 public class SslSetup {

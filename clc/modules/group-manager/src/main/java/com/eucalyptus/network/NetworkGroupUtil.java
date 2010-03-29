@@ -5,9 +5,9 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.eucalyptus.accounts.UserInfo;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.IpRange;
 import com.eucalyptus.entities.NetworkPeer;

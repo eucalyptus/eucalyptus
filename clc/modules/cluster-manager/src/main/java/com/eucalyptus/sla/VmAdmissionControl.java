@@ -67,8 +67,8 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.FailScriptFailException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -120,7 +120,7 @@ public class VmAdmissionControl {
       try {
         allocator.allocate( vmAllocInfo );
         finished.add( allocator );
-      } catch (FailScriptFailException e) {
+      } catch (ScriptExecutionFailedException e) {
         if( e.getCause() != null ) {
           throw new EucalyptusCloudException( e.getCause( ).getMessage( ), e.getCause( ) );
         } else {

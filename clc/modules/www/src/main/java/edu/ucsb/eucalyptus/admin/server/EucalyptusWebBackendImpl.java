@@ -65,7 +65,7 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
-import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.sysinfo.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.gwt.user.client.rpc.SerializableException;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;

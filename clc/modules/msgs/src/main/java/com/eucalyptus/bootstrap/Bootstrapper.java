@@ -82,7 +82,6 @@ public abstract class Bootstrapper {
   public String getVersion() {
     return System.getProperty( VERSION_PROPERTY );
   }
-  //TODO: does this make sense anymore? -------------------------\/
   public abstract boolean load(Resource current) throws Exception;
   public abstract boolean start() throws Exception;
   public boolean check() throws Exception {

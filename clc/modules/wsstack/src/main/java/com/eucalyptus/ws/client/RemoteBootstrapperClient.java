@@ -64,15 +64,8 @@
 package com.eucalyptus.ws.client;
 
 import java.security.GeneralSecurityException;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
@@ -88,7 +81,7 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
-
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
@@ -103,8 +96,6 @@ import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.binding.BindingManager;
-import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
@@ -113,11 +104,6 @@ import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-
-import edu.emory.mathcs.backport.java.util.NavigableMap;
-import edu.emory.mathcs.backport.java.util.NavigableSet;
-import edu.emory.mathcs.backport.java.util.concurrent.ConcurrentSkipListMap;
-import edu.ucsb.eucalyptus.StartupChecks;
 
 @Provides( resource = Resource.RemoteConfiguration )
 @Depends( resources = Resource.Database, local = Component.eucalyptus )

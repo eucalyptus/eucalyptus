@@ -66,6 +66,8 @@ package com.eucalyptus.auth
 import java.io.Serializable;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.bouncycastle.util.encoders.UrlBase64;
 import javax.persistence.Entity;
@@ -93,6 +95,7 @@ import javax.persistence.PersistenceContext;
 
 import org.hibernate.sql.Alias
 
+import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -100,7 +103,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @PersistenceContext(name="eucalyptus_auth")
 @Table( name = "auth_users" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class User extends AbstractPersistent implements Serializable {
+public class UserEntity extends AbstractPersistent implements Serializable, User {
   @Column( name = "auth_user_name", unique=true )
   String userName
   @Column( name = "auth_user_query_id" )
@@ -115,16 +118,25 @@ public class User extends AbstractPersistent implements Serializable {
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   List<X509Cert> certificates = []
-  public User(){
+  public UserEntity(){
   }
-  public User( String userName ){
+  public UserEntity( String userName ){
     this.userName = userName
   }
-  public User( String userName, Boolean isEnabled ){
+  public UserEntity( String userName, Boolean isEnabled ){
     this(userName);
     this.isEnabled = isEnabled
   }
-  @Override
+  public String getName() {
+    return this.userName;
+  }
+  public List<X509Certificate> getX509Certificates() {
+    return new ArrayList<X509Certificate>( certificates.collect { X509Cert it -> X509Cert.toCertificate( it ) } );
+  }
+  public List<String> getCertificateAliases() {
+    return new ArrayList<String>( certificates.collect { X509Cert it -> it.alias } );
+  }
+    @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );

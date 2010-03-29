@@ -69,14 +69,11 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-
-import com.eucalyptus.auth.User;
-import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.WebServicesException;
-import com.eucalyptus.ws.binding.Binding;
-import com.eucalyptus.ws.binding.BindingManager;
-
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
@@ -128,6 +125,7 @@ public class BindingHandler extends MessageStackHandler {
         LOG.fatal( "FAILED TO PARSE:\n" + httpMessage.getMessageString( ) );
         throw new WebServicesException(e1);
       }
+      msg.setCorrelationId( httpMessage.getCorrelationId( ) );
       httpMessage.setMessage( msg );
     }
   }

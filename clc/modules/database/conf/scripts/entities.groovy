@@ -1,3 +1,4 @@
+import com.eucalyptus.sysinfo.SubDirectory;
 import com.eucalyptus.util.*;
 import javax.persistence.*;  
 

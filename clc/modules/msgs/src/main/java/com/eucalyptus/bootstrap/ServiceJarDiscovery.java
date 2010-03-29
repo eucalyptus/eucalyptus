@@ -8,6 +8,7 @@ import java.util.SortedSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import org.apache.log4j.Logger;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
@@ -16,7 +17,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
   private static SortedSet<ServiceJarDiscovery> discovery = Sets.newTreeSet( );
   private static Multimap<Class, String>        classList = Multimaps.newArrayListMultimap( );
-  
+
   @SuppressWarnings( { "deprecation", "unchecked" } )
   public static void processFile( File f ) throws IOException {
     JarFile jar = new JarFile( f );
@@ -58,7 +59,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   public static void runDiscovery( ) {
     for ( ServiceJarDiscovery s : discovery ) {
-      LOG.info( "-> Starting discovery: " + s.getClass( ).getName( ) );
+      LOG.info( LogUtil.header( "Starting discovery: " + s.getClass( ).getName( ) ) );
       for( Class c : classList.keySet( ) ) {
         try {
           s.checkClass( c );
@@ -73,6 +74,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     try {
       if ( this.processsClass( candidate ) ) {
         ServiceJarDiscovery.checkUniqueness( candidate );
+        LOG.info( "-> " + this.getClass().getSimpleName( ) + " loaded entry: " + candidate.getName( ) );
       }
     } catch ( Throwable e ) {
       LOG.trace( e, e );
@@ -87,11 +89,14 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
    */
   public abstract boolean processsClass( Class candidate ) throws Throwable;
   
+  public Double getDistinctPriority() {
+    return this.getPriority( ) + (.1d/this.getClass( ).hashCode( ));
+  }
   public abstract Double getPriority( );
   
   @Override
   public int compareTo( ServiceJarDiscovery that ) {
-    return this.getPriority( ).compareTo( that.getPriority( ) );
+    return this.getDistinctPriority( ).compareTo( that.getDistinctPriority( ) );
   }
   
 }

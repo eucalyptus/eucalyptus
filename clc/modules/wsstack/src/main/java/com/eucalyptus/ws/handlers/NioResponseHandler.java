@@ -82,10 +82,10 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.WriteCompletionEvent;
 
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpResponse;
 
 import edu.ucsb.eucalyptus.cloud.NotImplementedException;
 import edu.ucsb.eucalyptus.constants.EventType;

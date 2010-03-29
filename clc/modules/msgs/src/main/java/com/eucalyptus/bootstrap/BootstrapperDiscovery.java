@@ -15,7 +15,6 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
   @Override
   public boolean processsClass( Class candidate ) throws Throwable {
     Class bootstrapper = this.getBootstrapper( candidate );
-    LOG.info( "---> Loading bootstrapper from entry: " + bootstrapper.getName( ) );
     this.bootstrappers.add( bootstrapper );
     return true;
   }
@@ -36,8 +35,6 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
         }
       } catch ( Exception e ) {
         LOG.warn( "Error in <init>()V and getInstance()L; in bootstrapper: " + c.getCanonicalName( ) );
-        //        LOG.warn( e.getMessage( ) );
-        // LOG.debug( e, e );
       }
     }
     return ret;
@@ -45,16 +42,16 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
 
   @SuppressWarnings( "unchecked" )
   private Class getBootstrapper( Class candidate ) throws Exception {
-    if ( Bootstrapper.class.equals( candidate ) ) throw new InstantiationException( Bootstrapper.class + " is abstract." );
+    if ( Modifier.isAbstract( candidate.getModifiers( ) ) ) throw new InstantiationException( candidate.getName( ) + " is abstract." );
     if ( !Bootstrapper.class.isAssignableFrom( candidate ) ) throw new InstantiationException( candidate + " does not conform to " + Bootstrapper.class );
-    LOG.warn( "Candidate bootstrapper: " + candidate.getName( ) );
+    LOG.debug( "Candidate bootstrapper: " + candidate.getName( ) );
     if ( !Modifier.isPublic( candidate.getDeclaredConstructor( new Class[] {} ).getModifiers( ) ) ) {
       Method factory = candidate.getDeclaredMethod( "getInstance", new Class[] {} );
       if ( !Modifier.isStatic( factory.getModifiers( ) ) || !Modifier.isPublic( factory.getModifiers( ) ) ) {
         throw new InstantiationException( candidate.getCanonicalName( ) + " does not declare public <init>()V or public static getInstance()L;" );
       }
     }
-    LOG.info( "Found bootstrapper: " + candidate.getName( ) );
+    LOG.debug( "Found bootstrapper: " + candidate.getName( ) );
     return candidate;
   }
 

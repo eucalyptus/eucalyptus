@@ -72,8 +72,9 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.User;
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.MappingHttpResponse;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
@@ -102,7 +103,7 @@ public class WalrusRESTLoggerInbound extends MessageStackHandler {
 					if(userAgent != null)
 						logData.setUserAgent(userAgent);
 					logData.setTimestamp(String.format("[%1$td/%1$tb/%1$tY:%1$tH:%1$tM:%1$tS %1$tz]", Calendar.getInstance()));
-					User user = httpRequest.getUser();
+					User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser();
 					if(user != null)
 						logData.setAccessorId(user.getUserName());
 					if(request.getBucket() != null)

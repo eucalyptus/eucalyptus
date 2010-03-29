@@ -80,7 +80,6 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
 
   @Override
   public boolean load( Resource current ) throws Exception {
-    Credentials.init( );
     while ( !this.checkAllKeys( ) ) {
       LOG.fatal( "Waiting for system credentials before proceeding with startup..." );
       try {

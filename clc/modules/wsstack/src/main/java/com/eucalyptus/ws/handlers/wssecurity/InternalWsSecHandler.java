@@ -72,15 +72,18 @@ import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.ws.security.WSConstants;
 import org.apache.ws.security.WSEncryptionPart;
 import org.apache.ws.security.WSSecurityException;
+import org.apache.xml.security.signature.XMLSignature;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import org.w3c.dom.Element;
+import com.eucalyptus.auth.SecurityContext;
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.util.WSSecurity;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.util.CredentialProxy;
-import com.eucalyptus.ws.util.WSSecurity;
 import com.google.common.collect.Lists;
 
 @ChannelPipelineCoverage("one")
@@ -105,8 +108,11 @@ public class InternalWsSecHandler extends WsSecHandler {
     final Object o = event.getMessage( );
     if ( o instanceof MappingHttpRequest ) {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
-      SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
-      X509Certificate cert = WSSecurity.getVerifiedCertificate( envelope );
+      final SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
+      final Element secNode = WSSecurity.getSecurityElement( envelope );
+      final XMLSignature sig = WSSecurity.getXMLSignature( secNode );
+      SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
+      final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
       if(cert != null) {
         if( !cert.equals( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ) ) ) {
           throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );

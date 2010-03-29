@@ -170,7 +170,6 @@ public class SystemCredentialProvider extends Bootstrapper {
   @Override
   public boolean load( Resource current ) throws Exception {
     try {
-      Credentials.init( );
       for ( Component c : Component.values( ) ) {
         try {
           if ( !SystemCredentialProvider.check( c ) ) SystemCredentialProvider.init( c );

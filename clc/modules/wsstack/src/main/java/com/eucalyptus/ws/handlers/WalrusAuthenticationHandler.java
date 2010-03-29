@@ -101,21 +101,25 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
+import com.eucalyptus.auth.AuthenticationException;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.ws.AuthenticationException;
-import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.http.MappingHttpRequest;
 
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
@@ -194,7 +198,11 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			try {
 				User user = CredentialProvider.getUser( "admin" );
 				user.setIsAdministrator(true);
-				httpRequest.setUser( user );
+	      try {
+          Contexts.lookup( httpRequest.getCorrelationId( ) ).setUser( user );
+        } catch ( NoSuchContextException e ) {
+          LOG.debug( e, e );
+        }
 			} catch (NoSuchUserException e) {
 				throw new AuthenticationException( "User authentication failed." );
 			}  
@@ -293,7 +301,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
 			String userName = CredentialProvider.getUserName( accessKeyID );
 			User user = CredentialProvider.getUser( userName );  
-			httpRequest.setUser( user );
+			Contexts.lookup( httpRequest.getCorrelationId( ) ).setUser( user );
 		} catch(AuthenticationException e) {
 			throw e;
 		} catch(Exception ex) {
@@ -344,10 +352,10 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
 	protected String checkSignature( final String queryKey, final String subject ) throws AuthenticationException
 	{
-		SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hashes.Mac.HmacSHA1.toString() );
+		SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hmac.HmacSHA1.toString() );
 		try
 		{
-			Mac mac = Mac.getInstance( Hashes.Mac.HmacSHA1.toString() );
+			Mac mac = Mac.getInstance( Hmac.HmacSHA1.toString() );
 			mac.init( signingKey );
 			byte[] rawHmac = mac.doFinal( subject.getBytes() );
 			return new String(Base64.encode( rawHmac )).replaceAll( "=", "" );

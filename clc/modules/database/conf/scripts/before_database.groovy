@@ -1,3 +1,4 @@
+import com.eucalyptus.sysinfo.SubDirectory;
 /* this crap is hsqldb specific */
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;

@@ -70,6 +70,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.Configuration;
@@ -208,9 +209,9 @@ public class Registration extends HttpServlet {
   }
 
   private static String getSignature( String key, String uuid ) {
-    SecretKeySpec signingKey = new SecretKeySpec( key.getBytes(), Hashes.Mac.HmacSHA256.toString() );
+    SecretKeySpec signingKey = new SecretKeySpec( key.getBytes(), Hmac.HmacSHA256.toString() );
     try {
-      Mac mac = Mac.getInstance( Hashes.Mac.HmacSHA256.toString() );
+      Mac mac = Hmac.HmacSHA256.getInstance( );
       mac.init( signingKey );
       byte[] rawHmac = mac.doFinal( uuid.getBytes() );
       LOG.warn("\nkey='"+key+"'\nid='"+uuid+"'\nresult="+Hashes.getHexString( rawHmac ));

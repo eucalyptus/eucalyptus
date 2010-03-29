@@ -65,20 +65,24 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.util.List;
+import java.util.zip.Adler32;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
+import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.DatabaseUtil;
-import com.eucalyptus.entities.EntityWrapper;
-
-import javax.persistence.*;
-
-import java.util.List;
-import java.util.zip.Adler32;
 
 @Entity
 @PersistenceContext(name="eucalyptus_general")
@@ -124,7 +128,7 @@ public class Counters {
   {
     ensurePersistence( );
     tempId++;
-    return Hashes.getDigestBase64( Long.toString( tempId ), Hashes.Digest.SHA512, false ).replaceAll( "\\.","" );
+    return Hashes.getDigestBase64( Long.toString( tempId ), Digest.SHA512, false ).replaceAll( "\\.","" );
   }
 
   private static void ensurePersistence( )

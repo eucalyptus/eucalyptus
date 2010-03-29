@@ -4,7 +4,7 @@ import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.sysinfo.LogLevels;
 
 import edu.ucsb.eucalyptus.constants.EventType;
 
@@ -27,7 +27,7 @@ public class EventRecord extends EucalyptusMessage {
     this.eventCorrelationId = eventCorrelationId;
     this.eventId = eventId;
     this.other = ":" + other;
-    if( DebugUtil.DEBUG ) {
+    if( LogLevels.DEBUG ) {
       StackTraceElement ste = Thread.currentThread().getStackTrace( )[distance];
       if( ste != null && ste.getFileName( ) != null ) {
         this.caller = String.format( "%s.%s.%s", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
@@ -53,8 +53,8 @@ public class EventRecord extends EucalyptusMessage {
     return String.format(":%10d:%s:uid:%s:%s:%s%s:", 
                          this.timestamp, 
                          this.component, 
-                         this.eventUserId, 
                          this.eventCorrelationId, 
+                         this.eventUserId, 
                          this.eventId, 
                          this.other != null ? this.other : "",
                          this.caller 

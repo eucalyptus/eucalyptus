@@ -13,8 +13,8 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.MappingHttpRequest;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ComponentType;

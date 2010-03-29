@@ -18,8 +18,8 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.sysinfo.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.SubDirectory;
 import edu.ucsb.eucalyptus.msgs.ConfigurationMessage;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 

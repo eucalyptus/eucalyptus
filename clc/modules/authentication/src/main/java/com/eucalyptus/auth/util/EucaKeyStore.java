@@ -72,7 +72,7 @@ import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.SubDirectory;
+import com.eucalyptus.sysinfo.SubDirectory;
 
 public class EucaKeyStore extends AbstractKeyStore {
   public static String            FORMAT         = "pkcs12";
