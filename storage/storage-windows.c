@@ -142,12 +142,17 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize) {
 
 
 int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
-  int fd, rc, rbytes, count, encsize;
+  int fd, rc, rbytes, count, encsize, i;
   char *buf, *ptr, *tmp, *newpass, dest_path[1024], source_path[1024], fname[1024], password[16];
   char *encpassword;
   FILE *FH;
 
-  snprintf(password, 16, "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c", RANDALPHANUM, RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM,RANDALPHANUM);
+  bzero(password, sizeof(char)*16);
+  for (i=0; i<8; i++) {
+    char c[2];
+    snprintf(c, 2, "%c", RANDALPHANUM);
+    strcat(password, c);
+  }
   snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
   snprintf(dest_path, 1024, "%s/floppy", rundir_path);
 
