@@ -23,7 +23,7 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       1.6.2
-Release:       1
+Release:	1.1.bzr1172
 License:       GPLv3
 Group:         Applications/System
 %if %is_centos
@@ -198,9 +198,9 @@ make install
 /usr/sbin/euca_killall
 /etc/eucalyptus/httpd.conf
 /etc/eucalyptus/eucalyptus-version
-#/usr/share/eucalyptus/connect_iscsitarget.pl
-#/usr/share/eucalyptus/disconnect_iscsitarget.pl
-#/usr/share/eucalyptus/get_iscsitarget.pl
+/usr/share/eucalyptus/connect_iscsitarget.pl
+/usr/share/eucalyptus/disconnect_iscsitarget.pl
+/usr/share/eucalyptus/get_iscsitarget.pl
 
 #%files common-java -f jar_list
 %files common-java
@@ -212,6 +212,7 @@ make install
 /usr/lib/eucalyptus/liblvm2control.so
 /usr/sbin/eucalyptus-cloud
 /usr/share/eucalyptus/*jar*
+/usr/share/eucalyptus/licenses
 
 %files cloud
 
