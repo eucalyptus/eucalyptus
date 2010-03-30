@@ -1,6 +1,6 @@
 import com.eucalyptus.sysinfo.SubDirectory;
 /* this crap is hsqldb specific */
-import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.*;
 

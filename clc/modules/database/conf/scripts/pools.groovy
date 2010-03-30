@@ -1,4 +1,4 @@
-import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.bootstrap.Component;
 import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.util.LogUtil;
