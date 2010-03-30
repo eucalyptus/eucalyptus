@@ -205,8 +205,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
           msg.setEffectiveUserId( msg.getUserId( ) );
         } else if ( ( user != null ) && ( this.msgReceiver == null ) ) {
-          msg.setUserId( user.getUserName( ) );
-          msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getUserName( ) );
+          msg.setUserId( user.getName( ) );
+          msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getName( ) );
         }
         LOG.trace( EventRecord.here( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
         if ( this.msgReceiver == null ) {
@@ -227,7 +227,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   
   private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final EucalyptusMessage msg ) throws NoSuchContextException {
     try {
-      final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
+      final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), false );
       if ( reply != null ) {
         ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
       } else {

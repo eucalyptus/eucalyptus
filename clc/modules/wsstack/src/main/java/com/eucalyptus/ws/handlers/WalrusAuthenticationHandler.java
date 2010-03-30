@@ -105,8 +105,8 @@ import com.eucalyptus.auth.AuthenticationException;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
@@ -176,7 +176,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					if( !valid && certString != null ) {
 						try {
 							X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( certString ) );
-							String alias = CredentialProvider.getCertificateAlias( nodeCert );
 							PublicKey publicKey = nodeCert.getPublicKey( );
 							sig = Signature.getInstance( "SHA1withRSA" );
 							sig.initVerify( publicKey );
@@ -196,7 +195,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				throw new AuthenticationException( "User authentication failed." );
 			}
 			try {
-				User user = CredentialProvider.getUser( "admin" );
+				User user = Users.lookupUser( "admin" );
 				user.setIsAdministrator(true);
 	      try {
           Contexts.lookup( httpRequest.getCorrelationId( ) ).setUser( user );
@@ -295,12 +294,11 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
 		signature = signature.replaceAll("=", "");
 		try {
-			String queryKey = CredentialProvider.getSecretKey(accessKeyID);
+      User user = Users.lookupQueryId( accessKeyID );  
+			String queryKey = user.getSecretKey( );
 			String authSig = checkSignature( queryKey, data );
 			if (!authSig.equals(signature))
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
-			String userName = CredentialProvider.getUserName( accessKeyID );
-			User user = CredentialProvider.getUser( userName );  
 			Contexts.lookup( httpRequest.getCorrelationId( ) ).setUser( user );
 		} catch(AuthenticationException e) {
 			throw e;

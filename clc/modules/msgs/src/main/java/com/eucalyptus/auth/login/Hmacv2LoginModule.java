@@ -11,10 +11,10 @@ import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 import com.eucalyptus.auth.AuthenticationException;
-import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.SecurityContext;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.callback.HmacCredentials;
 import com.eucalyptus.auth.crypto.Hmac;
 
@@ -31,12 +31,8 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
   public boolean authenticate( HmacCredentials credentials ) throws Exception {
     String sig = credentials.getSignature( );
     SecurityContext.enqueueSignature( sig );
-    String secretKey;
-    try {
-      secretKey = CredentialProvider.getSecretKey( credentials.getQueryId( ) );
-    } catch ( Exception e ) {
-      return false;
-    }
+    User user = Users.lookupQueryId( credentials.getQueryId( ) );
+    String secretKey = user.getSecretKey( );
     String canonicalString = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ), credentials.getServicePath( ), credentials.getParameters( ) );
     String canonicalStringWithPort = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ) + ":" + credentials.getHeaderPort( ), credentials.getServicePath( ), credentials.getParameters( ) );
     String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );
@@ -53,11 +49,9 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
         }
       }
     }
-    String userName = CredentialProvider.getUserName( credentials.getQueryId( ) );
-    User user = CredentialProvider.getUser( userName );
     super.setCredential( credentials.getQueryId( ) );
     super.setPrincipal( user );
-    super.getGroups( ).addAll( Groups.getGroups( super.getPrincipal( ) ) );
+    super.getGroups( ).addAll( Groups.lookupGroups( super.getPrincipal( ) ) );
     return true;
   }
 

@@ -70,7 +70,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.util.EucaKeyStore;
-import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
@@ -150,10 +149,9 @@ public class SystemCredentialProvider extends Bootstrapper {
   }
 
   private void createSystemCredentialProviderKey( Component name ) throws Exception {
-    KeyTool keyTool = new KeyTool( );
     try {
-      KeyPair sysKp = keyTool.getKeyPair( );
-      X509Certificate sysX509 = keyTool.getCertificate( sysKp, CredentialProvider.getDName( name.name( ) ) );
+      KeyPair sysKp = Credentials.generateKeyPair( );
+      X509Certificate sysX509 = Credentials.generateServiceCertificate( sysKp, name.name( ) );
       SystemCredentialProvider.certs.put( name, sysX509 );
       SystemCredentialProvider.keypairs.put( name, sysKp );
       // TODO: might need separate keystore for euca/hsqldb/ssl/jetty/etc.

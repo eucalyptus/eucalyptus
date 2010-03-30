@@ -12,16 +12,18 @@ public class UserInfoType extends EucalyptusData {
   Boolean admin = Boolean.FALSE;
   Boolean confirmed = Boolean.FALSE;
   Boolean enabled = Boolean.FALSE;
-  ArrayList<String> activeCertificates = new ArrayList<String>();
+  String distinguishedName;
+  String certificateSerial;
   ArrayList<String> groups = new ArrayList<String>();
-  public UserInfoType( String userName, String email, String certificateCode, String confirmationCode, String accessKey, String secretKey, ArrayList<String> activeCertificates, ArrayList<String> groups, Boolean admin, Boolean enabled, Boolean confirmed ) {
+  public UserInfoType( String userName, String email, String certificateCode, String confirmationCode, String accessKey, String secretKey, String distinguishedName, String certificateSerial, ArrayList<String> groups, Boolean admin, Boolean enabled, Boolean confirmed ) {
     this.userName = userName;
     this.email = email;
     this.certificateCode = certificateCode;
     this.confirmationCode = confirmationCode;
     this.accessKey = accessKey;
     this.secretKey = secretKey;
-    this.activeCertificates = activeCertificates;
+    this.distinguishedName = distinguishedName;
+    this.certificateSerial = certificateSerial;
     this.groups = groups;
     this.enabled = enabled;
     this.confirmed = confirmed;

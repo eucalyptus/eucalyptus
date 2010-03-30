@@ -60,7 +60,7 @@ public class DatabaseWrappedGroup implements Group {
       UserGroupEntity g = db.getUnique( this.group );
       for ( UserInfo user : g.getUsers( ) ) {
         try {
-          userList.add( CredentialProvider.getUser( user.getUserName( ) ) );
+          userList.add( Users.lookupUser( user.getUserName( ) ) );
         } catch ( NoSuchUserException e ) {
           LOG.debug( e, e );
         }

@@ -44,7 +44,7 @@ public class Contexts {
     }
   }
 
-  public static Context lookup( ) throws NoSuchContextException {
+  public static Context lookup( ) {
     BaseMessage parent = null;
     MuleMessage muleMsg = null;
     if ( RequestContext.getEvent( ) != null && RequestContext.getEvent( ).getMessage( ) != null ) {
@@ -52,14 +52,19 @@ public class Contexts {
     } else if ( RequestContext.getEventContext( ) != null && RequestContext.getEventContext( ).getMessage( ) != null ) {
       muleMsg = RequestContext.getEventContext( ).getMessage( );
     } else {
-      throw new NoSuchContextException( "Failed to determine current event context." );
+      throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) outside of a service." );
     }
     Object o = muleMsg.getPayload( );
     if ( o != null && o instanceof BaseMessage ) {
       String correlationId = ( ( BaseMessage ) o ).getCorrelationId( );
-      return Contexts.lookup( correlationId );
+      try {
+        return Contexts.lookup( correlationId );
+      } catch ( NoSuchContextException e ) {
+        LOG.error( e, e );
+        throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
+      }
     } else {
-      throw new NoSuchContextException( "Event context does not have enough information to recover the context." );
+      throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request." );
     }
   }
 

@@ -57,8 +57,7 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
+ *******************************************************************************
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.auth
@@ -105,7 +104,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class UserEntity extends AbstractPersistent implements Serializable, User {
   @Column( name = "auth_user_name", unique=true )
-  String userName
+  String name
   @Column( name = "auth_user_query_id" )
   String queryId
   @Column( name = "auth_user_secretkey" )
@@ -121,26 +120,36 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   public UserEntity(){
   }
   public UserEntity( String userName ){
-    this.userName = userName
+    this.name = userName
   }
   public UserEntity( String userName, Boolean isEnabled ){
     this(userName);
     this.isEnabled = isEnabled
   }
-  public String getName() {
-    return this.userName;
+  public void revokeX509Certificate() {
+    this.certificates.clear();
   }
-  public List<X509Certificate> getX509Certificates() {
-    return new ArrayList<X509Certificate>( certificates.collect { X509Cert it -> X509Cert.toCertificate( it ) } );
+  public void revokeSecretKey() {
+    this.setSecretKey( null );
   }
-  public List<String> getCertificateAliases() {
-    return new ArrayList<String>( certificates.collect { X509Cert it -> it.alias } );
+  public X509Certificate getX509Certificate() {
+    if( certificates.size( ) > 1 ) {
+      certificates.removeAll( certificates.subList( 1, certificates.size() ) );
+    }
+    return certificates.isEmpty()?null:X509Cert.toCertificate(certificates[0]);
   }
-    @Override
+  public void setX509Certificate( X509Certificate x509 ) {
+    this.certificates.clear();
+    this.certificates.add( X509Cert.fromCertificate( x509 ) );
+  }
+  public String getNumber() {
+    return new BigInteger( this.getId(), 16 ).toString();
+  }
+  @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( userName == null ) ? 0 : userName.hashCode( ) );
+    result = prime * result + ( ( name == null ) ? 0 : name.hashCode( ) );
     return result;
   }
   @Override
@@ -149,9 +158,9 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
     if ( !super.equals( obj ) ) return false;
     if ( getClass( ).is( obj.getClass( ) ) ) return false;
     User other = ( User ) obj;
-    if ( userName == null ) {
-      if ( other.userName != null ) return false;
-    } else if ( !userName.equals( other.userName ) ) return false;
+    if ( name == null ) {
+      if ( other.name != null ) return false;
+    } else if ( !name.equals( other.name ) ) return false;
     return true;
   }  
 }

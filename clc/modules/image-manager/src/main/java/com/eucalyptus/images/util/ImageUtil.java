@@ -79,7 +79,6 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.UserGroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.util.Hashes;
@@ -119,11 +118,10 @@ public class ImageUtil {
     LOG.info( "Assigning imageId=" + query.getImageId( ) );
     return query.getImageId( );
   }
-  public static boolean verifyManifestSignature( final String signature, final String alias, String pad ) {
+  public static boolean verifyManifestSignature( final String signature, final X509Certificate cert, String pad ) {
     boolean ret = false;
     try {
       Signature sigVerifier = Signature.getInstance( "SHA1withRSA" );
-      X509Certificate cert = CredentialProvider.getCertificate( alias );
       if ( cert != null ) {
         PublicKey publicKey = cert.getPublicKey( );
         sigVerifier.initVerify( publicKey );

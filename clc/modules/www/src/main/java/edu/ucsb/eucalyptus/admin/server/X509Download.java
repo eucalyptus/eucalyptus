@@ -71,16 +71,18 @@ import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import javax.security.auth.x500.X500Principal;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.UrlBase64;
-import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.bootstrap.Component;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -150,25 +152,23 @@ public class X509Download extends HttpServlet {
   }
   
   public static byte[] getX509Zip( String userName, String newKeyName ) throws Exception {
+    User user = Users.lookupUser( userName );
     X509Certificate cloudCert = null;
     X509Certificate x509 = null;
     KeyPair keyPair = null;
     try {
-      KeyTool keyTool = new KeyTool( );
-      keyPair = keyTool.getKeyPair( );
-      x509 = keyTool.getCertificate( keyPair, CredentialProvider.getDName( userName ) );
+      keyPair = Credentials.generateKeyPair( );
+      x509 = Credentials.generateCertificate( keyPair, userName );
       x509.checkValidity( );
-      CredentialProvider.addCertificate( userName, newKeyName, x509 );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
     }
-    
-    String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) );
-    
-    String userAccessKey = CredentialProvider.getQueryId( userName );
-    String userSecretKey = CredentialProvider.getSecretKey( userAccessKey );
+    user.setX509Certificate( x509 );
+    String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) );    
+    String userAccessKey = user.getQueryId( );
+    String userSecretKey = user.getSecretKey( );
     
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );
@@ -179,7 +179,7 @@ public class X509Download extends HttpServlet {
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
       StringBuffer sb = new StringBuffer( );
       
-      String userNumber = CredentialProvider.getUserNumber( userName );
+      String userNumber = Users.lookupUser( userName ).getNumber();
       
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
       

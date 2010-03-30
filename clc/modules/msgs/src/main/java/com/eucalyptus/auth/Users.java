@@ -57,65 +57,66 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
+ *******************************************************************************
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.auth;
 
-package edu.ucsb.eucalyptus.constants;
+import java.security.cert.X509Certificate;
+import java.util.List;
+import org.apache.log4j.Logger;
 
-public enum EventType {
-  TIMEOUT,
-  MSG_SERVICED,
-  MSG_SENT,
-  MSG_REJECTED,
-  MSG_RECEIVED,
-  QUEUE_LENGTH,
-  QUEUE_TIME,
-  SERVICE_TIME,
-  MSG_PENDING,
-  VM_PREPARE,
-  VM_RESERVED,
-  VM_STARTING,
-  VM_TERMINATING,
-  MSG_POLL_INTERNAL,
-  VM_RUNNING,
-  SOCKET_OPEN,
-  SOCKET_CLOSE,
-  SOCKET_BYTES_READ,
-  SOCKET_BYTES_WRITE,
-  PIPELINE_UNROLL,
-  PIPELINE_HANDLER,
-  PIPELINE_DUPLICATE,
-  VM_TERMINATED,
-  QUEUE,
-  FLUSH_CACHE,
-  LISTENER_REGISTERED,
-  LISTENER_DEREGISTERED,
-  LISTENER_EVENT_FIRED,
-  LISTENER_EVENT_VETOD,
-  LISTENER_DESTROY_ALL,
-  TOKEN_RETURNED,
-  TOKEN_ACCEPTED,
-  TOKEN_SUBMITTED,
-  TOKEN_ALLOCATED,
-  TOKEN_REDEEMED,
-  TOKEN_SPLIT,
-  TOKEN_CHILD,
-  TOKEN_RESERVED,
-  CLUSTER_STATE_UPDATE,
-  TRANSITION,
-  MSG_PREPARED,
-  VM_STARTED,
-  CLUSTER_CERT,
-  CONTEXT_CREATE,
-  CONTEXT_USER,
-  CONTEXT_CLEAR,
-  MSG_REPLY,
-  CONTEXT_MSG,
-  CONTEXT_EVENT,
-  CONTEXT_SUBJECT,
-  GENERATE_KEYPAIR,
-  GENERATE_CERTIFICATE,
+/**
+ * Facade for accessing the system configured credential provider.
+ * 
+ * @author decker
+ * @see UserProvider
+ */
+public class Users {
+  private static Logger LOG = Logger.getLogger( Users.class );
+  private static UserProvider users;
+
+  public static void setUserProvider( UserProvider provider ) {
+    synchronized( Users.class ) {
+      LOG.info( "Setting the user provider to: " + provider.getClass( ) );
+      users = provider;
+    }
+  }
+  
+  public static UserProvider getUserProvider() {
+     return users;
+  }
+
+  public static User addUser( String userName, Boolean isAdmin, Boolean isEnabled, String secretKey, String queryId ) throws UserExistsException {
+    return Users.getUserProvider().addUser( userName, isAdmin, isEnabled, secretKey, queryId );
+  }
+
+  public static User addUser( String userName, Boolean admin, Boolean enabled ) throws UserExistsException, UnsupportedOperationException {
+    return Users.getUserProvider().addUser( userName, admin, enabled );
+  }
+
+  public static User deleteUser( String userName ) throws NoSuchUserException, UnsupportedOperationException {
+    return Users.getUserProvider().deleteUser( userName );
+  }
+
+  public static List<User> listAllUsers( ) {
+    return Users.getUserProvider().listAllUsers( );
+  }
+
+  public static List<User> listEnabledUsers( ) {
+    return Users.getUserProvider().listEnabledUsers( );
+  }
+
+  public static User lookupCertificate( X509Certificate cert ) throws NoSuchUserException {
+    return Users.getUserProvider().lookupCertificate( cert );
+  }
+
+  public static User lookupQueryId( String queryId ) throws NoSuchUserException {
+    return Users.getUserProvider().lookupQueryId( queryId );
+  }
+
+  public static User lookupUser( String userName ) throws NoSuchUserException {
+    return Users.getUserProvider( ).lookupUser( userName );
+  }
+
 }

@@ -77,12 +77,13 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserGroupEntity;
 import com.eucalyptus.auth.UserInfo;
-import com.eucalyptus.auth.crypto.CryptoProviders;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventVetoedException;
@@ -159,9 +160,10 @@ public class EucalyptusManagement {
 		String queryId = "uninitialized";
 		String secretKey = "uninitialized";
 		try {
-			queryId = CredentialProvider.getQueryId( user.getUserName( ) );
-			secretKey = CredentialProvider.getSecretKey( queryId );
-		} catch ( GeneralSecurityException e ) {
+		  User u = Users.lookupUser( user.getUserName( ) );
+			queryId = u.getQueryId( );
+			secretKey = u.getSecretKey( );
+		} catch ( Exception e ) {
 			LOG.debug( e, e );
 		}
 		target.setQueryId( queryId );
@@ -312,11 +314,11 @@ public class EucalyptusManagement {
 		//webUser.setIsEnabled( false );
 
 		// TODO: add web user properly, with all keys and certs generated, too
-		webUser.setConfirmationCode( CryptoProviders.generateSessionToken( webUser.getUserName() ) );
-		webUser.setCertificateCode( CryptoProviders.generateSessionToken( webUser.getUserName() ) );
+		webUser.setConfirmationCode( Credentials.generateSessionToken( webUser.getUserName() ) );
+		webUser.setCertificateCode( Credentials.generateSessionToken( webUser.getUserName() ) );
 
-		webUser.setSecretKey( CryptoProviders.generateSecretKey( webUser.getUserName() ) );
-		webUser.setQueryId( CryptoProviders.generateQueryId( webUser.getUserName() ));
+		webUser.setSecretKey( Credentials.generateSecretKey( webUser.getUserName() ) );
+		webUser.setQueryId( Credentials.generateQueryId( webUser.getUserName() ));
 
 		UserInfo newUser = EucalyptusManagement.fromClient( webUser );
 		newUser.setReservationId( 0l );
@@ -330,7 +332,7 @@ public class EucalyptusManagement {
 		dbWrapper.commit();
 
 		try {//FIXME: fix this nicely
-			CredentialProvider.addUser(newUser.getUserName( ),newUser.isAdministrator( ),newUser.isEnabled( ));
+			Users.addUser(newUser.getUserName( ),newUser.isAdministrator( ),newUser.isEnabled( ));
 		} catch ( UserExistsException e ) {
 			LOG.error(e);
 		}
@@ -361,7 +363,7 @@ public class EucalyptusManagement {
 		db.delete( userList.get(0) );
 		db.commit();
 		try {
-			CredentialProvider.deleteUser(userName);
+			Users.deleteUser(userName);
 		} catch ( NoSuchUserException e ) {
 			LOG.error(e);
 			throw EucalyptusManagement.makeFault( "Unable to delete user" );
@@ -387,13 +389,15 @@ public class EucalyptusManagement {
 		}
 		update( target, user );
 		try {
-			CredentialProvider.updateUser(user.getUserName(), user.isAdministrator( ), user.isEnabled());
+		  User u = Users.lookupUser( user.getUserName( ) );
+      u.setIsAdministrator( user.isAdministrator( ) );
+      u.setIsEnabled( user.isEnabled( ) );
+      db.commit();
 		} catch ( NoSuchUserException e ) {
 			db.rollback();
 			LOG.error(e);
 			throw EucalyptusManagement.makeFault( "Unable to update user" );
 		}
-		db.commit();
 	}
 
 	public static String getAdminEmail() throws SerializableException

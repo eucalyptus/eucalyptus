@@ -1,6 +1,5 @@
 import org.hibernate.HibernateException;
 
-import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.UserEntity;
 import com.eucalyptus.auth.UserExistsException;

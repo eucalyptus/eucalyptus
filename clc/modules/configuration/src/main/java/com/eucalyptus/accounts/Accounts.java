@@ -4,14 +4,14 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserGroupEntity;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.X509Cert;
-import com.eucalyptus.auth.crypto.CryptoProviders;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -31,32 +31,32 @@ import edu.ucsb.eucalyptus.msgs.UserInfoType;
 
 public class Accounts {
   private static Logger LOG = Logger.getLogger( Accounts.class );
+  
   public DescribeUsersResponseType describeUsers( DescribeUsersType request ) {
     DescribeUsersResponseType reply = request.getReply( );
     EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
     try {
-      List<UserGroupEntity> groupList = db.recast( UserGroupEntity.class ).query( new UserGroupEntity() );
-      for ( User u : CredentialProvider.getAllUsers( ) ) {
+      List<UserGroupEntity> groupList = db.recast( UserGroupEntity.class ).query( new UserGroupEntity( ) );
+      for ( User u : Users.listAllUsers( ) ) {
         try {
-          UserInfo otherInfo = db.getUnique( UserInfo.named( u.getUserName( ) ) );
+          UserInfo otherInfo = db.getUnique( UserInfo.named( u.getName( ) ) );
           String accessKey = u.getQueryId( );
           String secretKey = u.getSecretKey( );
-          ArrayList<String> certs = Lists.newArrayList( );
+          X509Certificate cert = u.getX509Certificate( );
+          String dn = cert.getSubjectX500Principal( ).toString( );
+          String certSerial = cert.getSerialNumber( ).toString( );
           ArrayList<String> groups = Lists.newArrayList( );
-          for ( X509Certificate cert : u.getX509Certificates( ) ) {
-            certs.add( cert.getSubjectDN( ).toString( ) );
-          }
-          db.recast( UserGroupEntity.class ).query( new UserGroupEntity() );
-          for( UserGroupEntity g : groupList ) {
-            if( g.getUsers( ).contains( otherInfo ) ) {
+          db.recast( UserGroupEntity.class ).query( new UserGroupEntity( ) );
+          for ( UserGroupEntity g : groupList ) {
+            if ( g.getUsers( ).contains( otherInfo ) ) {
               groups.add( g.getName( ) );
             }
           }
-          UserInfoType userInfo = new UserInfoType( u.getUserName( ), otherInfo.getEmail( ), otherInfo.getCertificateCode( ), otherInfo.getConfirmationCode( ),
-                                                    accessKey, secretKey, certs, groups, u.getIsAdministrator( ), u.getIsEnabled( ), otherInfo.isConfirmed( ) );
+          UserInfoType userInfo = new UserInfoType( u.getName( ), otherInfo.getEmail( ), otherInfo.getCertificateCode( ), otherInfo.getConfirmationCode( ),
+                                                    accessKey, secretKey, dn, certSerial, groups, u.getIsAdministrator( ), u.getIsEnabled( ),
+                                                    otherInfo.isConfirmed( ) );
           reply.getUsers( ).add( userInfo );
-        } catch ( EucalyptusCloudException e ) {
-        }
+        } catch ( EucalyptusCloudException e ) {}
       }
       db.commit( );
     } catch ( Exception e ) {
@@ -70,25 +70,25 @@ public class Accounts {
     reply.set_return( false );
     String userName = request.getUserName( );
     String email = request.getEmail( );
-    String certCode = CryptoProviders.generateSessionToken( userName );
-    String confirmCode = CryptoProviders.generateSessionToken( userName );
-    String oneTimePass = CryptoProviders.generateSessionToken( userName );
+    String certCode = Credentials.generateSessionToken( userName );
+    String confirmCode = Credentials.generateSessionToken( userName );
+    String oneTimePass = Credentials.generateSessionToken( userName );
     boolean admin = request.getAdmin( );
     try {
       User u = null;
-      if( email == null ) {
-        u = CredentialProvider.addUser( userName, admin, true );
+      if ( email == null ) {
+        u = Users.addUser( userName, admin, true );
       } else {
-        u = CredentialProvider.addUser( userName, admin, false );        
+        u = Users.addUser( userName, admin, false );
       }
-      EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
+      EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
       try {
         UserInfo newUser = null;
-        if( email == null ) {
+        if ( email == null ) {
           newUser = new UserInfo( userName, admin, confirmCode, certCode, oneTimePass );
         } else {
           //TODO: handle the email dispatch case here.
-          newUser = new UserInfo( userName, email, admin, confirmCode, certCode, oneTimePass );        
+          newUser = new UserInfo( userName, email, admin, confirmCode, certCode, oneTimePass );
           u.setIsEnabled( Boolean.FALSE );
         }
         db.add( newUser );
@@ -97,9 +97,8 @@ public class Accounts {
       } catch ( Throwable t ) {
         db.rollback( );
         try {
-          CredentialProvider.deleteUser( userName );
-        } catch ( NoSuchUserException e ) {
-        }
+          Users.deleteUser( userName );
+        } catch ( NoSuchUserException e ) {}
         throw new EucalyptusCloudException( "Error creating user: " + userName + ": " + t.getMessage( ) );
       }
     } catch ( UserExistsException e1 ) {
@@ -112,13 +111,13 @@ public class Accounts {
     DeleteUserResponseType reply = request.getReply( );
     reply.set_return( false );
     String userName = request.getUserName( );
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
+    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
     try {
       UserInfo userInfo = db.getUnique( UserInfo.named( userName ) );
       db.delete( userInfo );
       db.commit( );
       try {
-        CredentialProvider.deleteUser( userName );
+        Users.deleteUser( userName );
       } catch ( NoSuchUserException e ) {
         LOG.trace( e, e );
       }
@@ -129,16 +128,16 @@ public class Accounts {
     }
     return reply;
   }
-
+  
   public DescribeGroupsResponseType describeGroups( DescribeGroupsType request ) {
     DescribeGroupsResponseType reply = request.getReply( );
-    EntityWrapper<UserGroupEntity> db = new EntityWrapper<UserGroupEntity>();
+    EntityWrapper<UserGroupEntity> db = new EntityWrapper<UserGroupEntity>( );
     try {
-      List<UserGroupEntity> groupList = db.query( new UserGroupEntity() );
-      for( UserGroupEntity g : groupList ) {
+      List<UserGroupEntity> groupList = db.query( new UserGroupEntity( ) );
+      for ( UserGroupEntity g : groupList ) {
         try {
           GroupInfoType groupinfo = new GroupInfoType( g.getName( ) );
-          for( UserInfo u : g.getUsers( ) ) {
+          for ( UserInfo u : g.getUsers( ) ) {
             groupinfo.getUsers( ).add( u.getUserName( ) );
           }
         } catch ( Exception e ) {
@@ -151,22 +150,22 @@ public class Accounts {
       db.rollback( );
     }
     return reply;
-  }  
-
+  }
+  
   public AddGroupResponseType addGroup( AddGroupType request ) throws EucalyptusCloudException {
     AddGroupResponseType reply = request.getReply( );
-    EntityWrapper<UserGroupEntity> db = new EntityWrapper<UserGroupEntity>();
+    EntityWrapper<UserGroupEntity> db = new EntityWrapper<UserGroupEntity>( );
     UserGroupEntity group = new UserGroupEntity( request.getGroupName( ) );
     try {
       db.getUnique( group );
-      throw new EucalyptusCloudException("Group already exists: " + group.getName( ) );
+      throw new EucalyptusCloudException( "Group already exists: " + group.getName( ) );
     } catch ( Exception e ) {
       try {
         db.add( new UserGroupEntity( request.getGroupName( ) ) );
         db.commit( );
       } catch ( Exception e1 ) {
         db.rollback( );
-        throw new EucalyptusCloudException("Error adding group: " + group.getName( ) );
+        throw new EucalyptusCloudException( "Error adding group: " + group.getName( ) );
       }
     }
     return reply;

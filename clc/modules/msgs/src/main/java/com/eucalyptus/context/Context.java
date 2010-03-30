@@ -62,7 +62,7 @@ public class Context {
   
   public void setUser( User user ) {
     if ( user != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getUserName( ) ) );
+      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getName( ) ) );
       this.user = user;
     }
   }

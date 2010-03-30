@@ -65,17 +65,17 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
-
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.util.ReplyQueue;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
+import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
+import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 public class VmControl {
 
@@ -86,12 +86,6 @@ public class VmControl {
   }
 
   public DescribeInstancesResponseType DescribeInstances( DescribeInstancesType msg ) throws EucalyptusCloudException {
-    try {
-      Context ctx = Contexts.lookup( );
-      LOG.debug( EventRecord.here( VmControl.class, EventType.MSG_RECEIVED, ctx.getCorrelationId( ), msg.getClass( ).getSimpleName( ) ) );
-    } catch ( NoSuchContextException e1 ) {
-      LOG.debug( e1, e1 );
-    }    
     DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply();
     try {
       reply.setReservationSet( SystemState.handle( msg.getUserId(), msg.getInstancesSet(), msg.isAdministrator() ) );

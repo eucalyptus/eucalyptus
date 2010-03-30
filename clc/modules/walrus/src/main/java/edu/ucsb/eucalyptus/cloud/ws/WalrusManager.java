@@ -85,9 +85,9 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
@@ -279,8 +279,8 @@ public class WalrusManager {
 							+ ".000Z"));
 		}
 		try {
-			CanonicalUserType owner = new CanonicalUserType(CredentialProvider
-					.getQueryId(userId), userId);
+			CanonicalUserType owner = new CanonicalUserType(Users
+					.lookupUser(userId).getQueryId(), userId);
 			ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
 			reply.setOwner(owner);
 			bucketList.setBuckets(buckets);
@@ -569,8 +569,7 @@ public class WalrusManager {
 					String uId = grantInfo.getUserId();
 					try {
 						if (uId != null) {
-							User grantUserInfo = CredentialProvider
-							.getUser(uId);
+							User grantUserInfo = Users.lookupUser(uId);
 							addPermission(grants, grantUserInfo, grantInfo);
 						} else {
 							addPermission(grants, grantInfo);
@@ -590,9 +589,9 @@ public class WalrusManager {
 
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
-			User ownerUserInfo = CredentialProvider.getUser(ownerId);
+			User ownerUserInfo = Users.lookupUser(ownerId);
 			accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo
-					.getQueryId(), ownerUserInfo.getUserName()));
+					.getQueryId(), ownerUserInfo.getName()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (NoSuchUserException e) {
 			db.rollback();
@@ -606,7 +605,7 @@ public class WalrusManager {
 	private static void addPermission(ArrayList<Grant> grants, User userInfo,
 			GrantInfo grantInfo) {
 		CanonicalUserType user = new CanonicalUserType(userInfo.getQueryId(),
-				userInfo.getUserName());
+				userInfo.getName());
 
 		if (grantInfo.canRead() && grantInfo.canWrite()
 				&& grantInfo.canReadACP() && grantInfo.isWriteACP()) {
@@ -1456,8 +1455,7 @@ public class WalrusManager {
 								listEntry.setStorageClass(objectInfo.getStorageClass());
 								String displayName = objectInfo.getOwnerId();
 								try {
-									User userInfo = CredentialProvider
-									.getUser(displayName);
+									User userInfo = Users.lookupUser(displayName);
 									listEntry.setOwner(new CanonicalUserType(userInfo
 											.getQueryId(), displayName));
 								} catch (NoSuchUserException e) {
@@ -1536,7 +1534,7 @@ public class WalrusManager {
 							for (GrantInfo grantInfo : grantInfos) {
 								String uId = grantInfo.getUserId();
 								try {
-									User userInfo = CredentialProvider.getUser(uId);
+									User userInfo = Users.lookupUser(uId);
 									objectInfo.readPermissions(grants);
 									addPermission(grants, userInfo, grantInfo);
 								} catch (NoSuchUserException e) {
@@ -1560,9 +1558,9 @@ public class WalrusManager {
 
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
-			User ownerUserInfo = CredentialProvider.getUser(ownerId);
+			User ownerUserInfo = Users.lookupUser(ownerId);
 			accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo
-					.getQueryId(), ownerUserInfo.getUserName()));
+					.getQueryId(), ownerUserInfo.getName()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (NoSuchUserException e) {
 			throw new AccessDeniedException("Key", objectKey, logData);
@@ -2565,8 +2563,7 @@ public class WalrusManager {
 						String uId = grantInfo.getUserId();
 						try {
 							if (uId != null) {
-								User grantUserInfo = CredentialProvider
-								.getUser(uId);
+								User grantUserInfo = Users.lookupUser(uId);
 								addPermission(grants, grantUserInfo, grantInfo);
 							} else {
 								addPermission(grants, grantInfo);
@@ -2799,8 +2796,7 @@ public class WalrusManager {
 											+ ".000Z");
 									String displayName = objectInfo.getOwnerId();
 									try {
-										User userInfo = CredentialProvider
-										.getUser(displayName);
+										User userInfo = Users.lookupUser(displayName);
 										versionEntry.setOwner(new CanonicalUserType(
 												userInfo.getQueryId(), displayName));
 									} catch (NoSuchUserException e) {
@@ -2824,8 +2820,7 @@ public class WalrusManager {
 											+ ".000Z");
 									String displayName = objectInfo.getOwnerId();
 									try {
-										User userInfo = CredentialProvider
-										.getUser(displayName);
+										User userInfo = Users.lookupUser(displayName);
 										deleteMarkerEntry
 										.setOwner(new CanonicalUserType(
 												userInfo.getQueryId(),
