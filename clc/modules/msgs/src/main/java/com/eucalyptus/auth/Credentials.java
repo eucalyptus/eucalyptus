@@ -110,8 +110,8 @@ public class Credentials {
   }
   
   
-  class CryptoProviderDiscovery extends ServiceJarDiscovery {
-    
+  public static class CryptoProviderDiscovery extends ServiceJarDiscovery {
+    public CryptoProviderDiscovery( ) {}
     @Override
     public Double getPriority( ) {
       return 0.01d;
