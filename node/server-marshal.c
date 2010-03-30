@@ -671,6 +671,53 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
     return response;
 }
 
+adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t* ncBundleInstance, const axutil_env_t *env)
+{
+    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncBundleInstanceType_t * input          = adb_ncBundleInstance_get_ncBundleInstance(ncBundleInstance, env);
+    adb_ncBundleInstanceResponse_t * response   = adb_ncBundleInstanceResponse_create(env);
+    adb_ncBundleInstanceResponseType_t * output = adb_ncBundleInstanceResponseType_create(env);
+
+    // get standard fields from input
+    axis2_char_t * correlationId = adb_ncBundleInstanceType_get_correlationId(input, env);
+    axis2_char_t * userId = adb_ncBundleInstanceType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    axis2_char_t * instanceId = adb_ncBundleInstanceType_get_instanceId(input, env);
+    axis2_char_t * bucketName = adb_ncBundleInstanceType_get_bucketName(input, env);
+    axis2_char_t * filePrefix = adb_ncBundleInstanceType_get_filePrefix(input, env);
+    axis2_char_t * S3URL = adb_ncBundleInstanceType_get_S3URL(input, env);
+    axis2_char_t * userPublicKey = adb_ncBundleInstanceType_get_userPublicKey(input, env);
+    axis2_char_t * cloudPublicKey = adb_ncBundleInstanceType_get_cloudPublicKey(input, env);
+
+
+    eventlog("NC", userId, correlationId, "BundleInstance", "begin");
+    { // do it
+        ncMetadata meta = { correlationId, userId };
+
+        int error = doBundleInstance (&meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+    
+        if (error) {
+            logprintfl (EUCAERROR, "ERROR: doBundleInstance() failed error=%d\n", error);
+            adb_ncBundleInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_ncBundleInstanceResponseType_set_correlationId(output, env, correlationId);
+            adb_ncBundleInstanceResponseType_set_userId(output, env, userId);
+        } else {
+            // set standard fields in output
+            adb_ncBundleInstanceResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncBundleInstanceResponseType_set_correlationId(output, env, correlationId);
+            adb_ncBundleInstanceResponseType_set_userId(output, env, userId);
+            // no operation-specific fields in output
+        }
+    }
+    // set response to output
+    adb_ncBundleInstanceResponse_set_ncBundleInstanceResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    eventlog("NC", userId, correlationId, "BundleInstance", "end");
+    return response;
+}
+
 /***********************
  template for future ops
  ***********************

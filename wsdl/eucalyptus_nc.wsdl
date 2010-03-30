@@ -105,6 +105,30 @@
 	    </xs:extension>
 	  </xs:complexContent>
     </xs:complexType>
+
+    <xs:complexType name="ncBundleInstanceType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="bucketName" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="S3URL" type="xs:string"/>
+		<xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
+		<xs:element minOccurs="0" maxOccurs="1" name="cloudPublicKey" type="xs:string"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncBundleInstanceResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
     
     <xs:complexType name="ncGetConsoleOutputType">
       <xs:complexContent>
@@ -325,6 +349,9 @@
     <xs:element name="ncDetachVolume" nillable="true" type="tns:ncDetachVolumeType"/>
     <xs:element name="ncDetachVolumeResponse" nillable="true" type="tns:ncDetachVolumeResponseType"/>
 
+    <xs:element name="ncBundleInstance" nillable="true" type="tns:ncBundleInstanceType"/>
+    <xs:element name="ncBundleInstanceResponse" nillable="true" type="tns:ncBundleInstanceResponseType"/>
+
     <xs:element name="ncGetConsoleOutput" nillable="true" type="tns:ncGetConsoleOutputType"/>
     <xs:element name="ncGetConsoleOutputResponse" nillable="true" type="tns:ncGetConsoleOutputResponseType"/>
     
@@ -377,6 +404,11 @@
   </wsdl:part>
 </wsdl:message>
 
+<wsdl:message name="ncBundleInstanceResponse">
+  <wsdl:part element="tns:ncBundleInstanceResponse" name="ncBundleInstanceResponse">
+  </wsdl:part>
+</wsdl:message>
+
 <wsdl:message name="ncGetConsoleOutputResponse">
   <wsdl:part element="tns:ncGetConsoleOutputResponse" name="ncGetConsoleOutputResponse">
   </wsdl:part>
@@ -424,6 +456,11 @@
 
 <wsdl:message name="ncDetachVolume">
   <wsdl:part element="tns:ncDetachVolume" name="ncDetachVolume">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncBundleInstance">
+  <wsdl:part element="tns:ncBundleInstance" name="ncBundleInstance">
   </wsdl:part>
 </wsdl:message>
 
@@ -492,6 +529,13 @@
     <wsdl:input message="tns:ncDetachVolume" name="ncDetachVolume">
     </wsdl:input>
     <wsdl:output message="tns:ncDetachVolumeResponse" name="ncDetachVolumeResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncBundleInstance">
+    <wsdl:input message="tns:ncBundleInstance" name="ncBundleInstance">
+    </wsdl:input>
+    <wsdl:output message="tns:ncBundleInstanceResponse" name="ncBundleInstanceResponse">
     </wsdl:output>
   </wsdl:operation>
 
@@ -590,6 +634,16 @@
       <soap:body use="literal"/>
     </wsdl:input>
     <wsdl:output name="ncDetachVolumeResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncBundleInstance">
+    <soap:operation soapAction="EucalyptusNC#ncBundleInstance" style="document"/>
+    <wsdl:input name="ncBundleInstance">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncBundleInstanceResponse">
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>

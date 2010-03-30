@@ -447,6 +447,47 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
   return(0);
 }
 
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey, axutil_env_t *env, axis2_stub_t *stub) {
+  int i;
+  //  char meh[32];
+  adb_BundleInstance_t *input;
+  adb_BundleInstanceResponse_t *output;
+  adb_bundleInstanceType_t *sn;
+  adb_bundleInstanceResponseType_t *snrt;
+
+  sn = adb_bundleInstanceType_create(env);
+  input = adb_BundleInstance_create(env);
+  
+  adb_bundleInstanceType_set_userId(sn, env, "eucalyptus");
+  {
+    char cidstr[9];
+    bzero(cidstr, 9);
+    srand(time(NULL)+getpid());
+    for (i=0; i<8; i++) {
+      cidstr[i] = rand()%26+'a';
+    }
+    adb_bundleInstanceType_set_correlationId(sn, env, cidstr);
+  }
+  adb_bundleInstanceType_set_instanceId(sn, env, instanceId);
+  adb_bundleInstanceType_set_bucketName(sn, env, bucketName);
+  adb_bundleInstanceType_set_filePrefix(sn, env, filePrefix);
+  adb_bundleInstanceType_set_S3URL(sn, env, S3URL);
+  adb_bundleInstanceType_set_userPublicKey(sn, env, userPublicKey);
+  adb_bundleInstanceType_set_cloudPublicKey(sn, env, cloudPublicKey);
+	  
+  
+  adb_BundleInstance_set_BundleInstance(input, env, sn);
+
+  output = axis2_stub_op_EucalyptusCC_BundleInstance(stub, env, input);
+  if (!output) {
+    printf("ERROR: bundleInstance returned NULL\n");
+    return(1);
+  }
+  snrt = adb_BundleInstanceResponse_get_BundleInstanceResponse(output, env);
+  printf("bundleInstance returned status %d\n", adb_bundleInstanceResponseType_get_return(snrt, env));
+  return(0);
+}
+
 int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   //  char meh[32];

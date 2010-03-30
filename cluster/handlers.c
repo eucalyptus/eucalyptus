@@ -103,8 +103,101 @@ vnetConfig *vnetconfig=NULL;
 sem_t *locks[ENDLOCK] = {NULL, NULL, NULL, NULL, NULL, NULL};
 int mylocks[ENDLOCK] = {0,0,0,0,0,0};
 
-int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey) {
+int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey) {
+  int i, j, rc, start = 0, stop = 0, ret=0;
+  ccInstance *myInstance;
+  ncStub *ncs;
+  time_t op_start, op_timer;
+  
+  i = j = 0;
+  myInstance = NULL;
+  op_start = time(NULL);
+  op_timer = OP_TIMEOUT;
+  
+  rc = initialize();
+  if (rc) {
+    return(1);
+  }
+  logprintfl(EUCAINFO, "BundleInstance(): called\n");
+  logprintfl(EUCADEBUG, "BundleInstance(): params: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, S3URL=%s, userPublicKey=%s, cloudPublicKey=%s\n", SP(ccMeta->userId), SP(instanceId), SP(bucketName), SP(filePrefix), SP(S3URL), SP(userPublicKey), SP(cloudPublicKey));
+  if (!instanceId) {
+    logprintfl(EUCAERROR, "BundleInstance(): bad input params\n");
+    return(1);
+  }
+
+  sem_mywait(NCCALL);
+  sem_mywait(RESCACHE);
+  
+  rc = find_instanceCacheId(instanceId, &myInstance);
+  if (!rc) {
+    // found the instance in the cache
+    if (myInstance) {
+      start = myInstance->ncHostIdx;
+      stop = start+1;
+      free(myInstance);
+    }
+  } else {
+    start = 0;
+    stop = resourceCache->numResources;
+  }
+  
+
+  for (j=start; j<stop; j++) {
+    // read the instance ids
+    logprintfl(EUCAINFO,"BundleInstance(): calling bundle instance (%s) on (%s)\n", instanceId, resourceCache->resources[j].hostname);
+    if (1) {
+      int pid, status;
+      pid = fork();
+      if (pid == 0) {
+	ret=0;
+	ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
+	if (config->use_wssec) {
+	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
+	}
+	rc = 0;
+	rc = ncBundleInstanceStub(ncs, ccMeta, instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+	if (!rc) {
+	  ret = 0;
+	} else {
+	  ret = 1;
+	}
+	exit(ret);
+      } else {
+	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
+	rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
+	rc = WEXITSTATUS(status);
+	logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
+      }
+    }
+    
+    if (!rc) {
+      ret = 0;
+    } else {
+      logprintfl(EUCAERROR, "BundleInstance(): call to NC failed: instanceId=%s\n", instanceId);
+      ret = 1;
+    }
+  }
+
+  sem_mypost(RESCACHE);
+  sem_mypost(NCCALL);
+  
+  logprintfl(EUCADEBUG,"BundleInstance(): done.\n");
+  
+  shawn();
+  
+  return(ret);
+  /*
+  int rc;
+
+  rc = initialize();
+  if (rc) {
+    return(1);
+  }
+  
+  logprintfl(EUCAINFO, "BundleInstance(): called\n");
+  logprintfl(EUCAINFO, "BundleInstance(): done\n");
   return(0);
+  */
 }
 
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {

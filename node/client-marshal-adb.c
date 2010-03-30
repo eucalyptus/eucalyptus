@@ -682,6 +682,48 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     return status;
 }
 
+int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey)
+{
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
+    adb_ncBundleInstance_t     * input   = adb_ncBundleInstance_create (env); 
+    adb_ncBundleInstanceType_t * request = adb_ncBundleInstanceType_create (env);
+    
+    // set standard input fields
+    if (meta) {
+        adb_ncBundleInstanceType_set_correlationId (request, env, meta->correlationId);
+        adb_ncBundleInstanceType_set_userId (request, env, meta->userId);
+    }
+    
+    // set op-specific input fields
+    adb_ncBundleInstanceType_set_instanceId(request, env, instanceId);
+    adb_ncBundleInstanceType_set_bucketName(request, env, bucketName);
+    adb_ncBundleInstanceType_set_filePrefix(request, env, filePrefix);
+    adb_ncBundleInstanceType_set_S3URL(request, env, S3URL);
+    adb_ncBundleInstanceType_set_userPublicKey(request, env, userPublicKey);
+    adb_ncBundleInstanceType_set_cloudPublicKey(request, env, cloudPublicKey);
+    adb_ncBundleInstance_set_ncBundleInstance(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncBundleInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncBundleInstance (stub, env, input);
+        
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: BundleInstance" NULL_ERROR_MSG);
+            status = -1;
+
+        } else {
+            adb_ncBundleInstanceResponseType_t * response = adb_ncBundleInstanceResponse_get_ncBundleInstanceResponse (output, env);
+            if ( adb_ncBundleInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: BundleInstance returned an error\n");
+                status = 1;
+            }
+        }
+    }
+    
+    return status;
+}
+
 /*************************
  a template for future ops
  *************************

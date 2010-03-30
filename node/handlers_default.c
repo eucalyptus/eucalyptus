@@ -362,6 +362,20 @@ doDetachVolume(	struct nc_state_t *nc,
 	return ERROR_FATAL;
 }
 
+static int
+doBundleInstance(struct nc_state_t *nc,
+		ncMetadata *meta,
+		char *instanceId,
+		char *bucketName,
+		char *filePrefix,
+		char *S3URL,
+		char *userPublicKey, 
+		char *cloudPublicKey)
+{
+	logprintfl(EUCADEBUG, "doBundleInstance() invoked\n");
+	return 0;
+}
+
 struct handlers default_libvirt_handlers = {
     .name = "default",
     .doInitialize        = doInitialize,
@@ -374,6 +388,7 @@ struct handlers default_libvirt_handlers = {
     .doStartNetwork      = doStartNetwork,
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
-    .doDetachVolume      = doDetachVolume
+    .doDetachVolume      = doDetachVolume,
+    .doBundleInstance    = doBundleInstance
 };
 
