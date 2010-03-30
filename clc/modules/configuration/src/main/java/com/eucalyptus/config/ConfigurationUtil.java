@@ -13,7 +13,10 @@ import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.crypto.Certs;
+import com.eucalyptus.auth.crypto.Crypto;
+import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.sysinfo.SubDirectory;
@@ -67,19 +70,19 @@ public class ConfigurationUtil {
     if ( !keyDir.mkdir( ) && !keyDir.exists( ) ) { throw new EucalyptusCloudException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) ); }
     FileWriter out = null;
     try {
-      KeyPair clusterKp = Credentials.generateKeyPair( );
-      X509Certificate clusterX509 = Credentials.generateServiceCertificate( clusterKp, "cc-" + newComponent.getName( ) );
-      Credentials.writePem( directory + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
-      Credentials.writePem( directory + File.separator + "cluster-cert.pem", clusterX509 );
+      KeyPair clusterKp = Certs.generateKeyPair( );
+      X509Certificate clusterX509 = Certs.generateServiceCertificate( clusterKp, "cc-" + newComponent.getName( ) );
+      PEMFiles.writePem( directory + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
+      PEMFiles.writePem( directory + File.separator + "cluster-cert.pem", clusterX509 );
   
-      KeyPair nodeKp = Credentials.generateKeyPair( );
-      X509Certificate nodeX509 = Credentials.generateServiceCertificate( nodeKp, "nc-" + newComponent.getName( ) );
-      Credentials.writePem( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
-      Credentials.writePem( directory + File.separator + "node-cert.pem", nodeX509 );
+      KeyPair nodeKp = Certs.generateKeyPair( );
+      X509Certificate nodeX509 = Certs.generateServiceCertificate( nodeKp, "nc-" + newComponent.getName( ) );
+      PEMFiles.writePem( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
+      PEMFiles.writePem( directory + File.separator + "node-cert.pem", nodeX509 );
   
       X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
-      String hexSig = Hashes.getHexSignature( );
-      Credentials.writePem( SubDirectory.KEYS.toString( ) + File.separator + "cloud-cert.pem", systemX509 );
+      String hexSig = Hmacs.generateSystemToken( "vtunpass".getBytes( ) );
+      PEMFiles.writePem( SubDirectory.KEYS.toString( ) + File.separator + "cloud-cert.pem", systemX509 );
       out = new FileWriter( directory + File.separator + "vtunpass" );
       out.write( hexSig );
       out.flush( );

@@ -1,4 +1,4 @@
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.login;
 
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
@@ -11,7 +11,6 @@ import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
 import javax.security.auth.spi.LoginModule;
-import com.eucalyptus.auth.callback.WrappedCredentials;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.util.TimedEvictionSet;
 import com.google.common.collect.Lists;

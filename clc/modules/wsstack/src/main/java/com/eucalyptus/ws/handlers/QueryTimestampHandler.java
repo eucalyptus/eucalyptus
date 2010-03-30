@@ -71,7 +71,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.auth.AuthenticationException;
+import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.util.SecurityParameter;
 import com.eucalyptus.auth.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;

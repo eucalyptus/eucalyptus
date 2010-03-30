@@ -81,10 +81,10 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.eucalyptus.auth.AuthenticationException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmac;
+import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Contexts;

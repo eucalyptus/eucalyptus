@@ -69,8 +69,8 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.auth.SecurityContext;
-import com.eucalyptus.auth.callback.WsSecCredentials;
+import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.auth.login.WsSecCredentials;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 

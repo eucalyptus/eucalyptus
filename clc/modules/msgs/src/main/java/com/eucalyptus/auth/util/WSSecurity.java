@@ -91,8 +91,8 @@ import org.bouncycastle.openssl.PEMReader;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
-import com.eucalyptus.auth.AuthenticationException;
-import com.eucalyptus.auth.SecurityContext;
+import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.binding.HoldMe;
 
 public class WSSecurity {

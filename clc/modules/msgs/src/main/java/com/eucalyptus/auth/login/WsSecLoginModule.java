@@ -4,11 +4,9 @@ import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.signature.XMLSignature;
 import org.w3c.dom.Element;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.SecurityContext;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.callback.WsSecCredentials;
+import com.eucalyptus.auth.group.Groups;
 import com.eucalyptus.auth.util.WSSecurity;
 import com.eucalyptus.binding.HoldMe;
 

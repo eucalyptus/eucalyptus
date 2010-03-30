@@ -1,7 +1,9 @@
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.group;
 
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.Users;
 
 public class Groups {
   private static Logger LOG = Logger.getLogger( Groups.class );

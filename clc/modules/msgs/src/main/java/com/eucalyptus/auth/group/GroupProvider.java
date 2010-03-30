@@ -1,6 +1,7 @@
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.group;
 
 import java.util.List;
+import com.eucalyptus.auth.User;
 
 public interface GroupProvider {
   /**

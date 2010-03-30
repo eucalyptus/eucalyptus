@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.util.Enumeration;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.group.Group;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Iterators;

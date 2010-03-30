@@ -7,8 +7,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -79,10 +78,10 @@ public class KeyPairUtil {
     SshKeyPair newKey = new SshKeyPair( userName, keyName );
     KeyPair newKeys = null;
     try {
-      newKeys = Credentials.generateKeyPair( );
+      newKeys = Certs.generateKeyPair( );
       String authKeyString = getAuthKeyString( userName, newKeys );
       newKey.setPublicKey( authKeyString );
-      newKey.setFingerPrint( Hashes.getFingerPrint( newKeys.getPrivate( ) ) );
+      newKey.setFingerPrint( Certs.getFingerPrint( newKeys.getPrivate( ) ) );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "KeyPair generation error: Key pair creation failed.", e );
     }

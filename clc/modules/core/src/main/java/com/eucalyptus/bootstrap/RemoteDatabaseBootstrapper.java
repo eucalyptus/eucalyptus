@@ -64,8 +64,7 @@
 package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.SslSetup;
 
 @Provides( resource = Resource.Database )
@@ -78,7 +77,7 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
     SystemBootstrapper.setDatabaseBootstrapper( this );
     LOG.info( "-> database host: " + System.getProperty("euca.db.host") );
     LOG.info( "-> database port: " + System.getProperty("euca.db.port") );
-    System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
+    System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
     return true;
   }
 

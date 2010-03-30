@@ -1,9 +1,9 @@
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.bootstrap.Component;
 import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.util.LogUtil;
 
-db_pass = System.getProperty("euca.db.password")!=null && System.getProperty("euca.db.password").length()>1 ? System.getProperty("euca.db.password") : Hashes.getHexSignature( );
+db_pass = System.getProperty("euca.db.password")!=null && System.getProperty("euca.db.password").length()>1 ? System.getProperty("euca.db.password") : Credentials.generateSystemSignature( );
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
 poolProps = [
   'proxool.simultaneous-build-throttle': '16',

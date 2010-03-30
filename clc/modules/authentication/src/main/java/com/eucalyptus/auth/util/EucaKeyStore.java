@@ -66,11 +66,7 @@ package com.eucalyptus.auth.util;
 import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.sysinfo.SubDirectory;
 

@@ -1,6 +1,7 @@
 package com.eucalyptus.auth.crypto;
 
 import java.math.BigInteger;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
@@ -8,6 +9,7 @@ import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
+import java.util.zip.Adler32;
 import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 import org.bouncycastle.asn1.x509.BasicConstraints;
@@ -20,17 +22,14 @@ import com.eucalyptus.bootstrap.Component;
 import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
-public class DefaultCryptoProvider implements CryptoProvider {
+public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String  KEY_ALGORITHM         = "RSA";
   public static String  KEY_SIGNING_ALGORITHM = "SHA512WithRSA";
   public static int     KEY_SIZE              = 2048;
   public static String  PROVIDER              = "BC";
   private static Logger LOG                   = Logger.getLogger( DefaultCryptoProvider.class );
-  static {
-    Credentials.setProvider( new DefaultCryptoProvider( ) );
-  }
   
-  private DefaultCryptoProvider( ) {}
+  public DefaultCryptoProvider( ) {}
   
   /**
    * @see com.eucalyptus.auth.crypto.CryptoProvider#generateHashedPassword(java.lang.String)
@@ -91,7 +90,7 @@ public class DefaultCryptoProvider implements CryptoProvider {
   public String generateSessionToken( String userName ) {
     return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
   }
-  
+
   /**
    * @see com.eucalyptus.auth.crypto.CryptoProvider#getDigestBase64(java.lang.String, com.eucalyptus.auth.crypto.Digest, boolean)
    */
@@ -112,9 +111,13 @@ public class DefaultCryptoProvider implements CryptoProvider {
   }
   
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
-    SystemCredentialProvider sys = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus );
     X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
-    return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
+    SystemCredentialProvider sys = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus );
+    if( sys.getCertificate( ) != null ) {
+      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
+    } else {
+      return generateCertificate( keys, x500, x500, null );
+    }
   }
   
   public X509Certificate generateCertificate( KeyPair keys, String userName ) {
@@ -172,5 +175,39 @@ public class DefaultCryptoProvider implements CryptoProvider {
       return null;
     }
   }
-  
+
+  @Override
+  public String generateSystemSignature( ) {
+    return this.generateSystemToken( Component.eucalyptus.name( ).getBytes( ) );
+  }
+
+  @Override
+  public String generateSystemToken( byte[] data ) {
+    PrivateKey pk = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( );
+    return Signatures.SHA256withRSA.trySign( pk, data );    
+  }
+
+  @Override
+  public String generateId( final String userId, final String prefix ) {
+    Adler32 hash = new Adler32( );
+    String key = userId + (System.currentTimeMillis( ) * Math.random( ));
+    hash.update( key.getBytes( ) );
+    String imageId = String.format( "%s-%08X", prefix, hash.getValue( ) );
+    return imageId;
+  }
+
+  @Override
+  public String getFingerPrint( Key privKey ) {
+    try {
+      byte[] fp = Digest.SHA1.get( ).digest( privKey.getEncoded( ) );
+      StringBuffer sb = new StringBuffer( );
+      for ( byte b : fp )
+        sb.append( String.format( "%02X:", b ) );
+      return sb.substring( 0, sb.length( ) - 1 ).toLowerCase( );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      return null;
+    }
+  }
+
 }

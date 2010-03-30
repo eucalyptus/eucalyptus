@@ -72,8 +72,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.NetworkUtil;
 
 public enum Component {
-  bootstrap( "vm://EucalyptusRequestQueue" ),
   eucalyptus( "vm://EucalyptusRequestQueue" ),
+  bootstrap( "vm://EucalyptusRequestQueue" ),
   walrus( "vm://BukkitInternal" ),
   dns( "vm://DNSControlInternal" ),
   storage( "vm://StorageInternal" ),

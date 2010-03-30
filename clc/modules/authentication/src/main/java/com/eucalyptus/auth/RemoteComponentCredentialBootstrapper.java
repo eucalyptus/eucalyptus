@@ -65,8 +65,8 @@ package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.EucaKeyStore;
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Depends;
@@ -92,7 +92,7 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
       SystemCredentialProvider.init( c );
       c.markHasKeys( );
     }
-    System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
+    System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
     return true;
   }
 

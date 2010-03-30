@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.callback;
+package com.eucalyptus.auth.login;
 
 import java.io.IOException;
 import javax.security.auth.callback.Callback;

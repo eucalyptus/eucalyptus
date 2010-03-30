@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.callback;
+package com.eucalyptus.auth.login;
 
 import org.apache.axiom.soap.SOAPEnvelope;
 

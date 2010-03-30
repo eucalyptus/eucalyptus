@@ -79,6 +79,7 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
@@ -128,7 +129,7 @@ public class Counters {
   {
     ensurePersistence( );
     tempId++;
-    return Hashes.getDigestBase64( Long.toString( tempId ), Digest.SHA512, false ).replaceAll( "\\.","" );
+    return Crypto.getDigestBase64( Long.toString( tempId ), Digest.SHA512, false ).replaceAll( "\\.","" );
   }
 
   private static void ensurePersistence( )

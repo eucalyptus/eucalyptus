@@ -1,6 +1,6 @@
 import com.eucalyptus.sysinfo.SubDirectory;
 /* this crap is hsqldb specific */
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.*;
 
@@ -8,7 +8,7 @@ Component.db.markLocal( );
 Component.db.markEnabled( );
 Component.db.setHostAddress( "127.0.0.1" );
 config = "CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
-  "CREATE USER SA PASSWORD \"${Hashes.getHexSignature( )}\"\n" +  
+  "CREATE USER SA PASSWORD \"${Credentials.generateSystemSignature( )}\"\n" +  
   "GRANT DBA TO SA\n" + 
   "SET WRITE_DELAY 100 MILLIS\n" +  
   "SET SCHEMA PUBLIC\n";

@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.login;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.ws.WebServicesException;

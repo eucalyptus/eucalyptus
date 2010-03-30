@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.callback;
+package com.eucalyptus.auth.login;
 
 import java.util.Map;
 import com.eucalyptus.auth.crypto.Hmac;

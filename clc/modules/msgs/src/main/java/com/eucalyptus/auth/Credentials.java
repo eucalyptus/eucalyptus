@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copy) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -63,139 +63,87 @@
  */
 package com.eucalyptus.auth;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
-import javax.security.auth.x500.X500Principal;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
-import org.bouncycastle.openssl.PEMWriter;
+import com.eucalyptus.auth.crypto.BaseProvider;
+import com.eucalyptus.auth.crypto.CertificateProvider;
 import com.eucalyptus.auth.crypto.CryptoProvider;
-import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.auth.crypto.HmacProvider;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.entities.EntityWrapper;
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class Credentials {
   static String         DB_NAME = "eucalyptus_auth";
-  private static Logger         LOG     = Logger.getLogger( Credentials.class );
-  private static CryptoProvider provider;
-  
-  public static X509Certificate generateCertificate( final KeyPair keys, final String userName ) {
-    return getProvider().generateCertificate( keys, userName );
-  }
-  
-  public static X509Certificate generateCertificate( final KeyPair keys, final X500Principal subjectDn ) {
-    return getProvider().generateCertificate( keys, subjectDn );
-  }
-  
-  public static X509Certificate generateCertificate( final KeyPair keys, final X500Principal subjectDn, final X500Principal signer, final PrivateKey signingKey ) {
-    return getProvider().generateCertificate( keys, subjectDn, signer, signingKey );
-  }
-  
-  /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateCertificateCode(java.lang.String)
-   */
-  public static String generateCertificateCode( final String userName ) {
-    return getProvider().generateCertificateCode( userName );
-  }
-  
-  /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateConfirmationCode(java.lang.String)
-   */
-  public static String generateConfirmationCode( final String userName ) {
-    return getProvider().generateConfirmationCode( userName );
-  }
-  
-  /**
-   * @param password
-   * @return
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateHashedPassword(java.lang.String)
-   */
-  public static String generateHashedPassword( final String password ) {
-    return getProvider().generateHashedPassword( password );
-  }
-  
-  public static KeyPair generateKeyPair( ) {
-    return getProvider().generateKeyPair( );
-  }
-  
-  /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateQueryId(java.lang.String)
-   */
-  public static String generateQueryId( final String userName ) {
-    return getProvider().generateQueryId( userName );
-  }
-  
-  /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateSecretKey(java.lang.String)
-   */
-  public static String generateSecretKey( final String userName ) {
-    return getProvider().generateSecretKey( userName );
-  }
-  
-  public static X509Certificate generateServiceCertificate( final KeyPair keys, final String userName ) {
-    return getProvider().generateServiceCertificate( keys, userName );
-  }
-  
-  /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateSessionToken(java.lang.String)
-   */
-  public static String generateSessionToken( final String userName ) {
-    return getProvider().generateSessionToken( userName );
-  }
-  
-  /**
-   * @param input
-   * @param hash
-   * @param randomize
-   * @return
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#getDigestBase64(java.lang.String, com.eucalyptus.auth.crypto.Digest, boolean)
-   */
-  public static String getDigestBase64( final String input, final Digest hash, final boolean randomize ) {
-    return getProvider().getDigestBase64( input, hash, randomize );
-  }
-  
-  public static <T> EntityWrapper<T> getEntityWrapper( ) {
-    return new EntityWrapper<T>( Credentials.DB_NAME );
-  }
-  
-  public static CryptoProvider getProvider( ) {
+  public static Logger         LOG     = Logger.getLogger( Credentials.class );
+  private static CryptoProvider cryptoProvider;
+  private static CertificateProvider certProvider;
+  private static HmacProvider hmacProvider;
+  static {
     //TODO FIXME TODO BROKEN FAIL: discover this at bootstrap time.
     try {
       Class.forName( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
     } catch ( ClassNotFoundException e ) {
     }
-    //TODO FIXME TODO BROKEN FAIL: discover this at bootstrap time.
-    return provider;
   }
   
-  public static void setProvider( final CryptoProvider newProvider ) {
-    if ( provider == null ) {
-      synchronized ( Credentials.class ) {
-        LOG.info( "Setting the crypto provider to: " + newProvider.getClass( ) );
-        provider = newProvider;
-      }
+  public static <T> EntityWrapper<T> getEntityWrapper( ) {
+    return new EntityWrapper<T>( Credentials.DB_NAME );
+  }
+  private static BaseProvider DUMMY = new BaseProvider() {};
+  private static ConcurrentMap<Class, BaseProvider> providers = new ConcurrentHashMap<Class, BaseProvider>( ){{    
+    put( CertificateProvider.class, DUMMY );
+    put( HmacProvider.class, DUMMY );
+    put( CryptoProvider.class, DUMMY );
+  }};
+  
+  public static CertificateProvider getCertificateProvider( ) {
+    return (CertificateProvider) providers.get( CertificateProvider.class );
+  }
+  public static HmacProvider getHmacProvider( ) {
+    return (HmacProvider) providers.get( HmacProvider.class );
+  }
+  public static CryptoProvider getCryptoProvider( ) {
+    return (CryptoProvider) providers.get( CryptoProvider.class );
+  }
+  
+  
+  class CryptoProviderDiscovery extends ServiceJarDiscovery {
+    
+    @Override
+    public Double getPriority( ) {
+      return 0.01d;
     }
-  }
-  
-  public static void writePem( final String fileName, final Object securityToken ) {
-    PEMWriter privOut = null;
-    try {
-      privOut = new PEMWriter( new FileWriter( fileName ) );
-      privOut.writeObject( securityToken );
-      privOut.close( );
-    } catch ( final IOException e ) {
-      LOG.error( e, e );
+    @Override
+    public boolean processsClass( Class candidate ) throws Throwable {
+      if( BaseProvider.class.isAssignableFrom( candidate ) ) {
+        try {
+          BaseProvider o = ( BaseProvider ) candidate.newInstance( );
+          for( Class c : Credentials.providers.keySet( ) ) {
+            if( c.isAssignableFrom( candidate ) ) {
+              Object curr = Credentials.providers.get( c );
+              if( curr == null ) {
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, CertificateProvider.class.toString( ), candidate.getCanonicalName( ) ) );
+                Credentials.providers.put( c, o );
+              } else if( !candidate.getSimpleName( ).startsWith( "Default" ) ) {
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, CertificateProvider.class.getCanonicalName( ), curr.getClass( ).getCanonicalName( ), candidate.getCanonicalName( )  ) );
+                Credentials.providers.put( c, o );
+              } else {
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, CertificateProvider.class.toString( ) ) );
+                return false;
+              }
+            }
+          }
+          return true;
+        } catch ( Exception e ) {
+          LOG.error( e, e );
+          LOG.fatal( "Provider class " + candidate + " failed during <init>().  This must be fixed for the system to run." );
+          System.exit( -1 );
+        }
+      }
+      return false;
     }
   }
   

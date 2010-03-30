@@ -74,6 +74,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -160,9 +161,9 @@ public class UserInfo {
   }
   public static UserInfo generateAdmin( String userName ) {
     return new UserInfo( userName, "", "Eucalyptus Administrator", 0l, 
-                         Credentials.generateHashedPassword( userName ), "", "", "", "", 
-                         Credentials.generateSessionToken( userName ), 
-                         Credentials.generateSessionToken( userName ), 
+                         Crypto.generateHashedPassword( userName ), "", "", "", "", 
+                         Crypto.generateSessionToken( userName ), 
+                         Crypto.generateSessionToken( userName ), 
                          true, true, true, true, 0l );
   }
   public UserInfo( String userName, String email, String realName, Long reservationId, String bCryptedPassword, String telephoneNumber, String affiliation,

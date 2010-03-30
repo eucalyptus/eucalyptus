@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.TimeZone;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.AuthenticationException;
+import com.eucalyptus.auth.login.AuthenticationException;
 
 public class Timestamps {
   private static Logger LOG = Logger.getLogger( Timestamps.class );

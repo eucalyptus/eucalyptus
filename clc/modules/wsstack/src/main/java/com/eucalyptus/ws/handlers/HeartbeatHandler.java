@@ -90,6 +90,8 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.auth.crypto.Signatures;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.binding.BindingException;
@@ -164,7 +166,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     if( !initializedComponents.contains( Component.walrus.name( ) ) ) {
       Component.walrus.markDisabled( );
     }
-    System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
+    System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
     System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
     try {
       GroovyUtil.evaluateScript( "after_database.groovy" );

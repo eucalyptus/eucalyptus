@@ -78,10 +78,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.UrlBase64;
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
@@ -157,8 +157,8 @@ public class X509Download extends HttpServlet {
     X509Certificate x509 = null;
     KeyPair keyPair = null;
     try {
-      keyPair = Credentials.generateKeyPair( );
-      x509 = Credentials.generateCertificate( keyPair, userName );
+      keyPair = Certs.generateKeyPair( );
+      x509 = Certs.generateCertificate( keyPair, userName );
       x509.checkValidity( );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
     } catch ( Exception e ) {
@@ -172,7 +172,7 @@ public class X509Download extends HttpServlet {
     
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );
-    String fingerPrint = Hashes.getFingerPrint( keyPair.getPublic( ) );
+    String fingerPrint = Certs.getFingerPrint( keyPair.getPublic( ) );
     if ( fingerPrint != null ) {
       String baseName = X509Download.NAME_SHORT + "-" + userName + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
       

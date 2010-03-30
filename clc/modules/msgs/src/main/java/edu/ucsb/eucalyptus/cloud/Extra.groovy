@@ -183,7 +183,7 @@ public class VmRunType extends EucalyptusMessage {
   
   /** these are for more convenient binding later on but really should be done differently... sigh    **/
   
-  String reservationId, userData;
+  String reservationId, userData, platform;
   int min, max, vlan, launchIndex;
   
   VmImageInfo imageInfo;

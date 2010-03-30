@@ -97,11 +97,11 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.AuthenticationException;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmac;
+import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;

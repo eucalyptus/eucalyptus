@@ -4,7 +4,6 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.UserExistsException;
@@ -12,6 +11,7 @@ import com.eucalyptus.auth.UserGroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -70,9 +70,9 @@ public class Accounts {
     reply.set_return( false );
     String userName = request.getUserName( );
     String email = request.getEmail( );
-    String certCode = Credentials.generateSessionToken( userName );
-    String confirmCode = Credentials.generateSessionToken( userName );
-    String oneTimePass = Credentials.generateSessionToken( userName );
+    String certCode = Crypto.generateSessionToken( userName );
+    String confirmCode = Crypto.generateSessionToken( userName );
+    String oneTimePass = Crypto.generateSessionToken( userName );
     boolean admin = request.getAdmin( );
     try {
       User u = null;

@@ -70,6 +70,11 @@ import org.bouncycastle.util.encoders.UrlBase64;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
+import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.auth.group.Group;
+import com.eucalyptus.auth.group.GroupProvider;
+import com.eucalyptus.auth.group.Groups;
+import com.eucalyptus.auth.group.NoSuchGroupException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Depends;
@@ -159,7 +164,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   
   @Override
   public User addUser( String userName, Boolean admin, Boolean enabled ) throws UserExistsException, UnsupportedOperationException {
-    return this.addUser( userName, admin, enabled, Credentials.generateQueryId( userName ), Credentials.generateSecretKey( userName ) );
+    return this.addUser( userName, admin, enabled, Hmacs.generateQueryId( userName ), Hmacs.generateSecretKey( userName ) );
   }
   
   @Override
