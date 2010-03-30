@@ -170,6 +170,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
 
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey);
+int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen);
 
 int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst);
 int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst);

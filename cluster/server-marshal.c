@@ -219,6 +219,55 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
   return(ret);
 }
 
+adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundleTasks_t *describeBundleTasks, const axutil_env_t *env) {
+  adb_DescribeBundleTasksResponse_t *ret=NULL;
+  adb_describeBundleTasksResponseType_t *birt=NULL;
+  
+  adb_describeBundleTasksType_t *bit=NULL;
+  
+  int rc, instIdsLen, i;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  char **instIds=NULL, *cid;
+  ncMetadata ccMeta;
+  
+  bit = adb_DescribeBundleTasks_get_DescribeBundleTasks(describeBundleTasks, env);
+  
+  ccMeta.correlationId = adb_describeBundleTasksType_get_correlationId(bit, env);
+  ccMeta.userId = adb_describeBundleTasksType_get_userId(bit, env);
+  
+  instIdsLen = adb_describeBundleTasksType_sizeof_instanceIds(bit, env);
+  instIds = malloc(sizeof(char *) * instIdsLen);
+  
+  for (i=0; i<instIdsLen; i++) {
+    instIds[i] = adb_describeBundleTasksType_get_instanceIds_at(bit, env, i);
+  }
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doDescribeBundleTasks(&ccMeta, instIds, instIdsLen);
+    if (rc) {
+      logprintf("ERROR: doDescribeBundleTasks() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+  birt = adb_describeBundleTasksResponseType_create(env);
+  adb_describeBundleTasksResponseType_set_return(birt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_describeBundleTasksResponseType_set_statusMessage(birt, env, statusMessage);
+  }
+
+  adb_describeBundleTasksResponseType_set_correlationId(birt, env, ccMeta.correlationId);
+  adb_describeBundleTasksResponseType_set_userId(birt, env, ccMeta.userId);
+  
+  ret = adb_DescribeBundleTasksResponse_create(env);
+  adb_DescribeBundleTasksResponse_set_DescribeBundleTasksResponse(ret, env, birt);
+
+  return(ret);
+}
+
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, const axutil_env_t *env) {
   adb_StopNetworkResponse_t *ret=NULL;
   adb_stopNetworkResponseType_t *snrt=NULL;

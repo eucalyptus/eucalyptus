@@ -101,6 +101,13 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
     return doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
 }
 
+int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey) {
+  return(0);
+}
+int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen) {
+  return(0);
+}
+
 int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, ncResource **outRes)
 {
     return doDescribeResource (meta, resourceType, outRes);

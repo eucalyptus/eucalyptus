@@ -1147,6 +1147,23 @@ int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char
 	return ret;
 }
 
+int doDescribeBundleTasks (ncMetadata *meta, char **instIds, int instIdsLen)
+{
+	int ret;
+
+	if (init())
+		return 1;
+
+	logprintfl (EUCAINFO, "doDescribeBundleTasks() invoked (instIdsLen=%d)\n", instIdsLen);
+
+	if (nc_state.H->doDescribeBundleTasks)
+	  ret = nc_state.H->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen);
+	else 
+	  ret = nc_state.D->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen);
+
+	return ret;
+}
+
 int check_iscsi(char* dev_string) {
     if(strchr(dev_string, ',') == NULL)
 	return 0;

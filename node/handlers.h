@@ -179,6 +179,10 @@ struct handlers {
 				char *S3URL,
 				char *userPublicKey,
 				char *cloudPublicKey);
+    int (*doDescribeBundleTasks)	(struct nc_state_t *nc,
+					 ncMetadata *meta,
+					 char **instIds,
+					 int instIdsLen);
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
@@ -193,6 +197,7 @@ int doStartNetwork		(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen,
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey);
+int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen);
 #endif /* HANDLERS_FANOUT */
 
 

@@ -211,6 +211,34 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="describeBundleTasksType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="instanceIds" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="bundleTaskType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="instanceId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="state" type="xs:string"/>
+	  <xs:element minOccurs="0" name="manifest" type="xs:string"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="describeBundleTasksResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="bundleTasks" type="tns:bundleTaskType"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType name="getConsoleOutputType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -477,6 +505,9 @@
       <xs:element name="BundleInstance" nillable="true" type="tns:bundleInstanceType"/>
       <xs:element name="BundleInstanceResponse" nillable="true" type="tns:bundleInstanceResponseType"/>
 
+      <xs:element name="DescribeBundleTasks" nillable="true" type="tns:describeBundleTasksType"/>
+      <xs:element name="DescribeBundleTasksResponse" nillable="true" type="tns:describeBundleTasksResponseType"/>
+
       <xs:element name="GetConsoleOutput" nillable="true" type="tns:getConsoleOutputType"/>
       <xs:element name="GetConsoleOutputResponse" nillable="true" type="tns:getConsoleOutputResponseType"/>
 
@@ -531,6 +562,11 @@
 
   <wsdl:message name="BundleInstanceResponse">
     <wsdl:part element="tns:BundleInstanceResponse" name="BundleInstanceResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeBundleTasksResponse">
+    <wsdl:part element="tns:DescribeBundleTasksResponse" name="DescribeBundleTasksResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -611,6 +647,11 @@
 
   <wsdl:message name="BundleInstance">
     <wsdl:part element="tns:BundleInstance" name="BundleInstance">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeBundleTasks">
+    <wsdl:part element="tns:DescribeBundleTasks" name="DescribeBundleTasks">
     </wsdl:part>
   </wsdl:message>
 
@@ -706,6 +747,13 @@
       <wsdl:input message="tns:BundleInstance" name="BundleInstance">
       </wsdl:input>
       <wsdl:output message="tns:BundleInstanceResponse" name="BundleInstanceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeBundleTasks">
+      <wsdl:input message="tns:DescribeBundleTasks" name="DescribeBundleTasks">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeBundleTasksResponse" name="DescribeBundleTasksResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -839,6 +887,16 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="BundleInstanceResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeBundleTasks">
+      <soap:operation soapAction="EucalyptusCC#DescribeBundleTasks" style="document"/>
+      <wsdl:input name="DescribeBundleTasks">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeBundleTasksResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

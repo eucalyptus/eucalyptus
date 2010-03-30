@@ -718,6 +718,57 @@ adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t*
     return response;
 }
 
+adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescribeBundleTasks_t* ncDescribeBundleTasks, const axutil_env_t *env)
+{
+    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncDescribeBundleTasksType_t * input          = adb_ncDescribeBundleTasks_get_ncDescribeBundleTasks(ncDescribeBundleTasks, env);
+    adb_ncDescribeBundleTasksResponse_t * response   = adb_ncDescribeBundleTasksResponse_create(env);
+    adb_ncDescribeBundleTasksResponseType_t * output = adb_ncDescribeBundleTasksResponseType_create(env);
+
+    // get standard fields from input
+    axis2_char_t * correlationId = adb_ncDescribeBundleTasksType_get_correlationId(input, env);
+    axis2_char_t * userId = adb_ncDescribeBundleTasksType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    int instIdsLen = adb_ncDescribeBundleTasksType_sizeof_instanceIds(input, env);
+    char ** instIds = malloc(sizeof(char *) * instIdsLen);
+    if (instIds==NULL) {
+        logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeBundleTasksMarshal()\n");
+        adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
+
+    } else {
+        int i;
+        for (i=0; i<instIdsLen; i++) {
+            instIds[i] = adb_ncDescribeBundleTasksType_get_instanceIds_at(input, env, i);
+        }
+
+        eventlog("NC", userId, correlationId, "DescribeBundleTasks", "begin");
+        { // do it
+            ncMetadata meta = { correlationId, userId };
+
+            int error = doDescribeBundleTasks (&meta, instIds, instIdsLen);
+                                             
+            if (error) {
+                logprintfl (EUCAERROR, "ERROR: doDescribeBundleTasks() failed error=%d\n", error);
+                adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
+                
+            } else {
+                // set standard fields in output
+                adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_TRUE);
+                adb_ncDescribeBundleTasksResponseType_set_correlationId(output, env, correlationId);
+                adb_ncDescribeBundleTasksResponseType_set_userId(output, env, userId);
+            }
+        }
+    }
+
+    // set response to output
+    adb_ncDescribeBundleTasksResponse_set_ncDescribeBundleTasksResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    eventlog("NC", userId, correlationId, "DescribeBundleTasks", "end");
+    return response;
+}
+
 /***********************
  template for future ops
  ***********************

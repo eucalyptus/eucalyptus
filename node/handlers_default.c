@@ -104,7 +104,7 @@ doRunInstance (	struct nc_state_t *nc, ncMetadata *meta, char *instanceId,
 		char *ramdiskId, char *ramdiskURL, 
 		char *keyName, 
 		netConfig *netparams,
-		char *userData, char *launchIndex, 
+		char *userData, char *launchIndex, char *platform,
 		char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
 	logprintfl(EUCAERROR, "no default for doRunInstance!\n");
@@ -376,6 +376,16 @@ doBundleInstance(struct nc_state_t *nc,
 	return 0;
 }
 
+static int
+doDescribeBundleTasks(struct nc_state_t *nc,
+		      ncMetadata *meta,
+		      char **instIds,
+		      int instIdsLen)
+{
+	logprintfl(EUCADEBUG, "doDescribeBundleTasks() invoked\n");
+	return 0;
+}
+
 struct handlers default_libvirt_handlers = {
     .name = "default",
     .doInitialize        = doInitialize,
@@ -389,6 +399,7 @@ struct handlers default_libvirt_handlers = {
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume,
-    .doBundleInstance    = doBundleInstance
+    .doBundleInstance    = doBundleInstance,
+    .doDescribeBundleTasks    = doDescribeBundleTasks
 };
 

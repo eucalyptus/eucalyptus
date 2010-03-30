@@ -428,7 +428,7 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
     }
     int i;
     for (i=0; i<instIdsLen; i++) {
-        adb_ncDescribeInstancesType_set_instanceIds_at(request, env, i, instIds[i]);
+        adb_ncDescribeInstancesType_add_instanceIds(request, env, instIds[i]);
     }
     adb_ncDescribeInstances_set_ncDescribeInstances(input, env, request);
     
@@ -724,12 +724,52 @@ int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *
     return status;
 }
 
+int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen) {
+    int i;
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
+    adb_ncDescribeBundleTasks_t     * input   = adb_ncDescribeBundleTasks_create (env); 
+    adb_ncDescribeBundleTasksType_t * request = adb_ncDescribeBundleTasksType_create (env);
+    
+    // set standard input fields
+    if (meta) {
+        adb_ncDescribeBundleTasksType_set_correlationId (request, env, meta->correlationId);
+	adb_ncDescribeBundleTasksType_set_userId (request, env, meta->userId);
+    }
+    
+    // set op-specific input fields
+    for (i=0; i<instIdsLen; i++) {
+      adb_ncDescribeBundleTasksType_add_instanceIds(request, env, instIds[i]);
+    }
+
+    adb_ncDescribeBundleTasks_set_ncDescribeBundleTasks(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncDescribeBundleTasksResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeBundleTasks (stub, env, input);
+        
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: DescribeBundleTasks" NULL_ERROR_MSG);
+            status = -1;
+
+        } else {
+            adb_ncDescribeBundleTasksResponseType_t * response = adb_ncDescribeBundleTasksResponse_get_ncDescribeBundleTasksResponse (output, env);
+            if ( adb_ncDescribeBundleTasksResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: DescribeBundleTasks returned an error\n");
+                status = 1;
+            }
+        }
+    }
+    
+    return status;
+}
+
 /*************************
  a template for future ops
  *************************
 
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
+    axutil_env_t * env  = stub->env;
+    axis2_stub_t * stub = stub->stub;
     adb_ncOPERATION_t     * input   = adb_ncOPERATION_create (env); 
     adb_ncOPERATIONType_t * request = adb_ncOPERATIONType_create (env);
     

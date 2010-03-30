@@ -365,6 +365,19 @@ int main (int argc, char **argv)
         /***********************************************************/
     } else if (!strcmp(command, "powerDown")) {
       int rc = ncPowerDownStub(stub, &meta);
+    } else if (!strcmp(command, "describeBundleTasks")) {
+      char *instIds[4];
+      int instIdsLen;
+      instIds[0] = malloc(sizeof(char) * 32);
+      instIds[1] = malloc(sizeof(char) * 32);
+      instIds[2] = malloc(sizeof(char) * 32);
+      instIds[3] = malloc(sizeof(char) * 32);
+      snprintf(instIds[0], 32, "i-12345678");
+      snprintf(instIds[1], 32, "i-12345678");
+      snprintf(instIds[2], 32, "i-12345678");
+      snprintf(instIds[3], 32, "i-12345678");
+      instIdsLen=4;
+      int rc = ncDescribeBundleTasksStub(stub, &meta, instIds, instIdsLen);
     } else if (!strcmp(command, "terminateInstance")) {
         CHECK_PARAM(instance_id, "instance ID");
         
