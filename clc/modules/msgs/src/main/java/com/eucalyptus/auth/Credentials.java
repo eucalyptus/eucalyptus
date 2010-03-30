@@ -65,6 +65,7 @@ package com.eucalyptus.auth;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javassist.Modifier;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.BaseProvider;
 import com.eucalyptus.auth.crypto.CertificateProvider;
@@ -118,7 +119,7 @@ public class Credentials {
     }
     @Override
     public boolean processsClass( Class candidate ) throws Throwable {
-      if( BaseProvider.class.isAssignableFrom( candidate ) ) {
+      if( BaseProvider.class.isAssignableFrom( candidate ) && !Modifier.isInterface( candidate.getModifiers( ) ) && !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
         try {
           BaseProvider o = ( BaseProvider ) candidate.newInstance( );
           for( Class c : Credentials.providers.keySet( ) ) {
