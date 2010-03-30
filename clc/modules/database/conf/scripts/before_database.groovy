@@ -8,7 +8,7 @@ Component.db.markLocal( );
 Component.db.markEnabled( );
 Component.db.setHostAddress( "127.0.0.1" );
 config = "CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" + 
-  "CREATE USER SA PASSWORD \"${Credentials.generateSystemSignature( )}\"\n" +  
+  "CREATE USER SA PASSWORD \"${Hmacs.generateSystemSignature( )}\"\n" +  
   "GRANT DBA TO SA\n" + 
   "SET WRITE_DELAY 100 MILLIS\n" +  
   "SET SCHEMA PUBLIC\n";
