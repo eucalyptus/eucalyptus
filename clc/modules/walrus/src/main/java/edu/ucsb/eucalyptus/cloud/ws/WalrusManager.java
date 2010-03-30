@@ -1472,7 +1472,7 @@ public class WalrusManager {
 								contents.add(listEntry);
 							}
 							reply.setContents(contents);
-							if (prefix != null) {
+							if (prefixes.size() > 0) {
 								reply.setCommonPrefixes(prefixes);
 							}
 						}

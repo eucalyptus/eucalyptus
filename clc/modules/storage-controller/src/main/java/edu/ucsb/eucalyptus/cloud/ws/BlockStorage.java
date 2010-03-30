@@ -141,8 +141,6 @@ public class BlockStorage {
 		snapshotStorageManager = new FileSystemStorageManager(StorageProperties.storageRootDirectory);
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
 		checker = new BlockStorageChecker(volumeStorageManager, snapshotStorageManager, blockManager);
-		if(StorageProperties.trackUsageStatistics) 
-			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
 		configure();
@@ -154,6 +152,8 @@ public class BlockStorage {
 		} catch(EucalyptusCloudException ex) {
 			LOG.error("Startup checks failed ", ex);
 		}
+		if(StorageProperties.trackUsageStatistics) 
+			blockStorageStatistics = new BlockStorageStatistics();
 	}
 
 	private static void configure() {
