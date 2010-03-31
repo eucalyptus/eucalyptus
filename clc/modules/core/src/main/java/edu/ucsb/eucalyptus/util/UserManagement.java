@@ -70,15 +70,15 @@ import java.security.NoSuchAlgorithmException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.accounts.UserInfo;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.SubDirectory;
 import com.eucalyptus.util.WalrusProperties;
 
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
 
 public class UserManagement {
 

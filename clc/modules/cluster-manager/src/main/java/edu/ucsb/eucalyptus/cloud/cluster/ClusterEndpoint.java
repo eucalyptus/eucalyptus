@@ -63,30 +63,42 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentSkipListSet;
+import org.apache.log4j.Logger;
+import org.mule.RequestContext;
+import org.mule.api.MuleException;
+import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
 import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.Admin;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import org.apache.log4j.Logger;
-import org.mule.RequestContext;
-import org.mule.api.MuleException;
-import org.mule.api.lifecycle.Startable;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.security.GeneralSecurityException;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
+import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
+import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
+import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
+import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
+import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
+import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 
 public class ClusterEndpoint implements Startable {
 
@@ -99,34 +111,28 @@ public class ClusterEndpoint implements Startable {
   public void networkChange( Network net ) {
     try {
       Network existingNet = Networks.getInstance().lookup( net.getName() );
-      ConfigureNetworkType msg = null;
+      List<PacketFilterRule> rules = Lists.newArrayList( );
 
       if ( net.getRules().isEmpty() ) {
-        msg = Admin.makeMsg( ConfigureNetworkType.class );
-        msg.setUserId( existingNet.getUserName() );
         for ( PacketFilterRule pf : existingNet.getRules() )
-          msg.getRules().add( PacketFilterRule.revoke( pf ) );
+          rules.add( PacketFilterRule.revoke( pf ) );
         existingNet.setRules( net.getRules() );
       } else {
         existingNet.setRules( net.getRules() );
-        msg = Admin.makeMsg( ConfigureNetworkType.class );
-        msg.setUserId( existingNet.getUserName() );
-        msg.setRules( existingNet.getRules() );
+        rules.addAll( existingNet.getRules() );
       }
-      ConfigureNetworkCallback.CALLBACK.fireEventAsyncToAllClusters( msg );
+      ConfigureNetworkCallback configureNetwork = new ConfigureNetworkCallback( existingNet.getUserName( ), rules );
+      for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+        configureNetwork.newInstance( ).dispatch( c );
+      }
     } catch ( NoSuchElementException e ) {
       LOG.error( "Changed network rules not applied to inactive network: " + net.getName() );
     }
   }
 
-  public void enqueue( ClusterEnvelope msg ) {
-    Clusters.getInstance().lookup( msg.getClusterName() ).getMessageQueue().enqueue( msg.getEvent() );
-    RequestContext.getEventContext().setStopFurtherProcessing( true );
-  }
-
   public void enqueue( VmAllocationInfo vmAllocInfo ) {
     for( ResourceToken t : vmAllocInfo.getAllocationTokens( ) ) {
-      new ClusterAllocator( t, vmAllocInfo ).start( );
+       ClusterAllocator.create( t, vmAllocInfo );
     }
     RequestContext.getEventContext().setStopFurtherProcessing( true );
   }
@@ -285,9 +291,9 @@ public class ClusterEndpoint implements Startable {
   public DescribeRegionsResponseType DescribeRegions(DescribeRegionsType request) {
       DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
       try {
-        SystemConfiguration config = EucalyptusProperties.getSystemConfiguration( );
-        reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", EucalyptusProperties.getCloudUrl( ) ) );
-        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", EucalyptusProperties.getWalrusUrl( ) ) );
+        SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
+        reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
+        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", SystemConfiguration.getWalrusUrl( ) ) );
       } catch ( EucalyptusCloudException e ) {}
       return reply;
   }

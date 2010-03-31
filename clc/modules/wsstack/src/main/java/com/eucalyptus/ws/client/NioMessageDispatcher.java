@@ -77,8 +77,7 @@ import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
-
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class NioMessageDispatcher extends AbstractMessageDispatcher {
   private static Logger LOG = Logger.getLogger( NioMessageDispatcher.class );
@@ -105,14 +104,14 @@ public class NioMessageDispatcher extends AbstractMessageDispatcher {
   
   @Override
   protected void doDispatch( final MuleEvent muleEvent ) throws Exception {
-    this.client.dispatch( (EucalyptusMessage) muleEvent.getMessage( ).getPayload( ) );
+    this.client.dispatch( (BaseMessage) muleEvent.getMessage( ).getPayload( ) );
   }
 
   @Override
   protected MuleMessage doSend( final MuleEvent muleEvent ) throws Exception {
     MuleMessage muleMsg = muleEvent.getMessage( );
-    EucalyptusMessage request = ( EucalyptusMessage ) muleMsg.getPayload( );
-    EucalyptusMessage response = client.send( request );
+    BaseMessage request = ( BaseMessage ) muleMsg.getPayload( );
+    BaseMessage response = client.send( request );
     return new DefaultMuleMessage( response );
   }
 

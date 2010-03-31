@@ -12,7 +12,7 @@ build: all
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 clean:
-	rm -rf *~ *.o test
+	rm -rf *~ *.o 
 
 distclean:
 

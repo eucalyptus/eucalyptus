@@ -109,6 +109,9 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       try {
         httpRequest.setMessage( this.bind( userName, true, httpRequest ) );
       } catch ( Exception e ) {
+        if( !( e instanceof BindingException ) ) {
+          e = new BindingException( e );
+        }
         Channels.fireExceptionCaught( ctx.getChannel( ), e );
         throw e;
       }

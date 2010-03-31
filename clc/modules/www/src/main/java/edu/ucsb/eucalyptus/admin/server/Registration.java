@@ -60,17 +60,8 @@
 *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.server;
 
-import com.eucalyptus.address.Addresses;
-import com.eucalyptus.address.NullSystemAddressManager;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.util.EucalyptusCloudException;
-
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-
-import org.apache.log4j.Logger;
-
+import java.io.IOException;
+import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.ServletException;
@@ -78,8 +69,12 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.UUID;
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.util.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class Registration extends HttpServlet {
   private static Logger LOG = Logger.getLogger( Registration.class );
@@ -103,7 +98,7 @@ public class Registration extends HttpServlet {
         "  <Services type=\"array\">\n" +
         "    <Service>\n" +
         "      <Name>ec2</Name>\n" +
-        "      <EndpointUrl>" + getEucaUrl() + "</EndpointUrl>\n" +
+        "      <EndpointUrl>" + SystemConfiguration.getCloudUrl( ) + "</EndpointUrl>\n" +
         "      <Resources type=\"array\">\n" +
         "        <Resource>\n" +
         "          <Name>instances</Name>\n" +
@@ -163,16 +158,19 @@ public class Registration extends HttpServlet {
   }
 
   private static String blockStorageConfiguration() {
-    if ( EucalyptusProperties.disableBlockStorage ) {
-      return "        <Resource>\n" +
-             "          <Name>ebs_snapshots</Name>\n" +
-             "        </Resource>\n" +
-             "        <Resource>\n" +
-             "          <Name>ebs_volumes</Name>\n" +
-             "        </Resource>\n";
-    } else {
-      return "";
+    try {
+      if ( !Configuration.getStorageControllerConfigurations( ).isEmpty( ) ) {
+        return "        <Resource>\n" +
+               "          <Name>ebs_snapshots</Name>\n" +
+               "        </Resource>\n" +
+               "        <Resource>\n" +
+               "          <Name>ebs_volumes</Name>\n" +
+               "        </Resource>\n";
+      } 
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
     }
+    return "";
   }
 
   private static String publicAddressConfiguration() {
@@ -188,7 +186,7 @@ public class Registration extends HttpServlet {
   private static String getWalrusUrl() {
     String walrusUrl;
     try {
-      walrusUrl = EucalyptusProperties.getWalrusUrl( );
+      walrusUrl = SystemConfiguration.getWalrusUrl( );
     } catch ( Exception e ) {
       walrusUrl = "NOT REGISTERED.";
     }
@@ -196,12 +194,7 @@ public class Registration extends HttpServlet {
   }
 
   private static String getRegistrationId() {
-    return EucalyptusProperties.getSystemConfiguration().getRegistrationId();
-  }
-
-
-  private static String getEucaUrl() {
-    return EucalyptusProperties.getCloudUrl( );
+    return SystemConfiguration.getSystemConfiguration().getRegistrationId();
   }
 
   @Override

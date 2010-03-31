@@ -65,21 +65,16 @@
 
 package edu.ucsb.eucalyptus.ic;
 
-import com.eucalyptus.bootstrap.Component;
+import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 import edu.ucsb.eucalyptus.msgs.UnimplementedMessage;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
-import com.eucalyptus.ws.util.Messaging;
-import org.apache.log4j.Logger;
 
 public class Eucalyptus {
   
@@ -92,9 +87,9 @@ public class Eucalyptus {
     if ( msg instanceof DescribeRegionsType ) {
       DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) msg.getReply( );
       try {
-        SystemConfiguration config = EucalyptusProperties.getSystemConfiguration( );
-        reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", EucalyptusProperties.getCloudUrl( ) ) );
-        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", EucalyptusProperties.getWalrusUrl( ) ) );
+        SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
+        reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
+        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", SystemConfiguration.getWalrusUrl( ) ) );
       } catch ( EucalyptusCloudException e ) {}
       return reply;
     } else if ( msg instanceof DescribeBundleTasksType ) {

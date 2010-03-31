@@ -1,11 +1,12 @@
 package com.eucalyptus.cluster;
 
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
+import com.eucalyptus.cluster.callback.QueuedEventCallback;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public abstract class UnconditionalCallback<T> implements FailureCallback<T>, SuccessCallback<T> {
+public abstract class UnconditionalCallback<T extends BaseMessage, R extends BaseMessage> implements FailureCallback<T,R>, SuccessCallback<T> {
   
   @Override
-  public void failure( QueuedEventCallback<T> precedingCallback, Throwable t ) {
+  public void failure( QueuedEventCallback<T,R> precedingCallback, Throwable t ) {
     this.apply( );
   }
   

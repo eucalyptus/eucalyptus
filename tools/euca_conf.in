@@ -116,8 +116,8 @@ usage () {
 	echo "   --deregister-cluster <clustername>      remove cluster from EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
 	echo "   --deregister-walrus <host>       remove walrus from EUCALYPTUS"
-	echo "   --register-sc <name> <host>      add storage controller"
-	echo "   --deregister-sc <host>           remove storage controller from EUCALYPTUS"
+	echo "   --register-sc <clustername> <host>      add storage controller"
+	echo "   --deregister-sc <clustername>           remove storage controller from EUCALYPTUS"
 	echo "   --list-walruses                  list registered walrus(es)"
 	echo "   --list-clusters                  list registered CCs"
 	echo "   --list-nodes                     list registered NCs"
@@ -732,7 +732,7 @@ done
 # modify the current conf file based on an older configuration, or from import file
 if [ -n "$UPGRADE_CONF" -o -n "$IMPORTFILE" ]; then
 	VARS="EUCA_USER ENABLE_WS_SECURITY DISABLE_EBS HYPERVISOR LOGLEVEL SWAP_SIZE CC_PORT MANUAL_INSTANCES_CLEANUP NC_CACHE_SIZE SCHEDPOLICY NODES NC_SERVICE NC_PORT MAX_MEM MAX_CORES INSTANCE_PATH VNET_BRIDGE VNET_DHCPDAEMON VNET_DHCPUSER"
-	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP VNET_INTERFACE"
+	VNET_VARS="VNET_MODE VNET_SUBNET VNET_NETMASK VNET_DNS VNET_ADDRSPERNET VNET_PUBLICIPS VNET_BROADCAST VNET_ROUTER VNET_MACMAP VNET_INTERFACE VNET_CLOUDIP VNET_LOCALIP"
 	
 	if [ -n "$UPGRADE_CONF" ]; then
 	# source the old config

@@ -71,7 +71,6 @@ import org.apache.ws.security.WSEncryptionPart;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;
 

@@ -72,13 +72,13 @@ import edu.ucsb.eucalyptus.cloud.ws.HttpWriter;
 import edu.ucsb.eucalyptus.cloud.ws.SnapshotProgressCallback;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.util.EntityWrapper;
 
 import java.io.File;
 import java.net.URL;
@@ -89,16 +89,10 @@ import java.util.UUID;
 
 public class BlockStorageChecker {
 	private static Logger LOG = Logger.getLogger(BlockStorageChecker.class);
-	private StorageManager volumeStorageManager;
-	private StorageManager snapshotStorageManager;
 	private LogicalStorageManager blockManager;
 	private static boolean transferredPending = false;
 
-	public BlockStorageChecker(StorageManager volumeStorageManager, 
-			StorageManager snapshotStorageManager, 
-			LogicalStorageManager blockManager) {
-		this.volumeStorageManager = volumeStorageManager;
-		this.snapshotStorageManager = snapshotStorageManager;
+	public BlockStorageChecker(LogicalStorageManager blockManager) {
 		this.blockManager = blockManager;
 	}
 
@@ -143,11 +137,6 @@ public class BlockStorageChecker {
 			String volumeId = volInfo.getVolumeId();
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
-			try {
-				volumeStorageManager.deleteObject("", volumeId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(volInfo);
 		}
 		db.commit();
@@ -162,11 +151,6 @@ public class BlockStorageChecker {
 			String volumeId = volInfo.getVolumeId();
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
-			try {
-				volumeStorageManager.deleteObject("", volumeId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(volInfo);
 		}
 		db.commit();
@@ -180,11 +164,6 @@ public class BlockStorageChecker {
 			VolumeInfo volInfo = volumeInfos.get(0);
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
-			try {
-				volumeStorageManager.deleteObject("", volumeId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(volInfo);
 		}
 		db.commit();
@@ -199,11 +178,6 @@ public class BlockStorageChecker {
 			String snapshotId = snapInfo.getSnapshotId();
 			LOG.info("Cleaning failed snapshot " + snapshotId);
 			blockManager.cleanSnapshot(snapshotId);
-			try {
-				snapshotStorageManager.deleteObject("", snapshotId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(snapInfo);
 		}
 		db.commit();
@@ -218,11 +192,6 @@ public class BlockStorageChecker {
 			String snapshotId = snapInfo.getSnapshotId();
 			LOG.info("Cleaning failed snapshot " + snapshotId);
 			blockManager.cleanSnapshot(snapshotId);
-			try {
-				snapshotStorageManager.deleteObject("", snapshotId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(snapInfo);
 		}
 		db.commit();
@@ -236,11 +205,6 @@ public class BlockStorageChecker {
 			SnapshotInfo snapInfo = snapshotInfos.get(0);
 			LOG.info("Cleaning failed snapshot " + snapshotId);
 			blockManager.cleanSnapshot(snapshotId);
-			try {
-				snapshotStorageManager.deleteObject("", snapshotId);
-			} catch(Exception ex) {
-				LOG.warn(ex);
-			}
 			db.delete(snapInfo);
 		}
 		db.commit();
@@ -273,13 +237,13 @@ public class BlockStorageChecker {
 				getMethod.releaseConnection();
 		}
 	}
-	
+
 	private class SnapshotTransfer extends Thread {
 		private BlockStorageChecker checker;
 		public SnapshotTransfer(final BlockStorageChecker checker) {
 			this.checker = checker;
 		}
-		
+
 		public void run() {
 			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
 			SnapshotInfo snapshotInfo = new SnapshotInfo();
@@ -296,18 +260,20 @@ public class BlockStorageChecker {
 					LOG.error(e);
 					return;
 				}
-				String snapshotFileName = returnValues.get(0);
-				File snapshotFile = new File(snapshotFileName);
-				Map<String, String> httpParamaters = new HashMap<String, String>();
-				HttpWriter httpWriter;
-				SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, snapshotFile.length(), StorageProperties.TRANSFER_CHUNK_SIZE);
-				httpWriter = new HttpWriter("PUT", snapshotFile, callback, "snapset-" + UUID.randomUUID(), snapshotId, "StoreSnapshot", null, httpParamaters);
-				try {
-					httpWriter.run();
-				} catch(Exception ex) {
-					db.rollback();
-					LOG.error(ex, ex);
-					checker.cleanFailedSnapshot(snapshotId);
+				if(returnValues.size() > 0) {
+					String snapshotFileName = returnValues.get(0);
+					File snapshotFile = new File(snapshotFileName);
+					Map<String, String> httpParamaters = new HashMap<String, String>();
+					HttpWriter httpWriter;
+					SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, snapshotFile.length(), StorageProperties.TRANSFER_CHUNK_SIZE);
+					httpWriter = new HttpWriter("PUT", snapshotFile, String.valueOf(snapshotFile.length()), callback, "snapset-" + UUID.randomUUID(), snapshotId, "StoreSnapshot", null, httpParamaters);
+					try {
+						httpWriter.run();
+					} catch(Exception ex) {
+						db.rollback();
+						LOG.error(ex, ex);
+						checker.cleanFailedSnapshot(snapshotId);
+					}
 				}
 			}
 			db.commit();	

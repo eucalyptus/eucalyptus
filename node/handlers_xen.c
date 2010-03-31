@@ -93,14 +93,14 @@ static int doInitialize (struct nc_state_t *nc)
 	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
 
 	/* set up paths of Eucalyptus commands NC relies on */
-	snprintf (nc->gen_libvirt_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GEN_LIBVIRT_XML, nc->home, nc->home);
-	snprintf (nc->get_info_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_XEN_INFO, nc->home, nc->home);
-	snprintf (nc->virsh_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_VIRSH, nc->home);
-	snprintf (nc->xm_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_XM);
-	snprintf (nc->detach_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_DETACH, nc->home, nc->home);
-        snprintf (nc->connect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
-        snprintf (nc->disconnect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
-        snprintf (nc->get_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
+	snprintf (nc->gen_libvirt_cmd_path, MAX_PATH, EUCALYPTUS_GEN_LIBVIRT_XML, nc->home, nc->home);
+	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_XEN_INFO, nc->home, nc->home);
+	snprintf (nc->virsh_cmd_path, MAX_PATH, EUCALYPTUS_VIRSH, nc->home);
+	snprintf (nc->xm_cmd_path, MAX_PATH, EUCALYPTUS_XM);
+	snprintf (nc->detach_cmd_path, MAX_PATH, EUCALYPTUS_DETACH, nc->home, nc->home);
+        snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
+        snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
+        snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
 
@@ -282,7 +282,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			char **consoleOutput) {
   char *output;
   int pid, status, rc, bufsize, fd;
-  char filename[1024];  
+  char filename[MAX_PATH];  
 
   if (getuid() != 0) {
     output = strdup("NOT SUPPORTED");
@@ -299,7 +299,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   output = malloc(bufsize);
   bzero(output, bufsize);
 
-  snprintf(filename, 1024, "/tmp/consoleOutput.%s", instanceId);
+  snprintf(filename, MAX_PATH, "/tmp/consoleOutput.%s", instanceId);
   
   pid = fork();
   if (pid == 0) {
@@ -369,10 +369,11 @@ doAttachVolume (	struct nc_state_t *nc,
 			char *remoteDev,
 			char *localDev)
 {
-    int ret = OK;
+    int ret = OK, rc;
     ncInstance * instance;
     char localDevReal[32];
     virConnectPtr *conn;
+    struct stat statbuf;
 
     // fix up format of incoming local dev name, if we need to
     ret = convert_dev_names (localDev, localDevReal, NULL);
@@ -397,6 +398,7 @@ doAttachVolume (	struct nc_state_t *nc,
             char xml [1024];
             int is_iscsi_target = 0;
             char *local_iscsi_dev;
+            rc = 0;
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
@@ -407,17 +409,28 @@ doAttachVolume (	struct nc_state_t *nc,
                 snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
             } else {
 	        snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                rc = stat(remoteDev, &statbuf);
+                if (rc) {
+                   logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
+                   rc = 1;
+                }
 	    }
-            /* protect Xen calls, just in case */
-            sem_p (hyp_sem);
-            err = virDomainAttachDevice (dom, xml);
-            sem_v (hyp_sem);
-            if (err) {
-                logprintfl (EUCAERROR, "AttachVolume() failed (err=%d) XML=%s\n", err, xml);
+            if (!rc) {
+	        /* protect Xen calls, just in case */
+                sem_p (hyp_sem);
+                err = virDomainAttachDevice (dom, xml);
+                sem_v (hyp_sem);
+		if (err) {
+                   logprintfl (EUCAERROR, "AttachVolume() failed (err=%d) XML=%s\n", err, xml);
+//                   rc = doDetachVolume(nc, meta, instanceId, volumeId, remoteDev, localDev, 1);
+                   ret = ERROR;
+		} else {
+                   logprintfl (EUCAINFO, "attached %s to %s in domain %s\n", remoteDev, localDevReal, instanceId);
+		}
+            } else { 
                 ret = ERROR;
-            } else {
-                logprintfl (EUCAINFO, "attached %s to %s in domain %s\n", remoteDev, localDevReal, instanceId);
-            }
+	    }
+
 	    sem_p(hyp_sem);
             virDomainFree(dom);
 	    sem_v(hyp_sem);
@@ -483,7 +496,7 @@ doDetachVolume (	struct nc_state_t *nc,
 	sem_v(hyp_sem);
         if (dom) {
 	    int err = 0, fd, rc, pid, status;
-            char xml [1024], tmpfile[32], cmd[1024];
+            char xml [1024], tmpfile[32], cmd[MAX_PATH];
 	    FILE *FH;
 	            int is_iscsi_target = 0;
             char *local_iscsi_dev;
@@ -502,13 +515,13 @@ doDetachVolume (	struct nc_state_t *nc,
             sem_p (hyp_sem);
 	    pid = fork();
 	    if (!pid) {
-	      char cmd[1024];
+	      char cmd[MAX_PATH];
 	      snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
 	      fd = mkstemp(tmpfile);
 	      if (fd > 0) {
 		write(fd, xml, strlen(xml));
 		close(fd);
-		snprintf(cmd, 1024, "%s %s `which virsh` %s %s %s", nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, localDevReal, tmpfile);
+		snprintf(cmd, MAX_PATH, "%s %s `which virsh` %s %s %s", nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, localDevReal, tmpfile);
 		rc = system(cmd);
 		rc = rc>>8;
 		unlink(tmpfile);
@@ -518,7 +531,7 @@ doDetachVolume (	struct nc_state_t *nc,
 	      } 
 	      exit(rc);
 	    } else {
-	      rc = timewait(pid, &status, 10);
+	      rc = timewait(pid, &status, 15);
 	      if (WEXITSTATUS(status)) {
 		logprintfl(EUCAERROR, "failed to sucessfully run detach helper\n");
 		err = 1;
@@ -539,13 +552,13 @@ doDetachVolume (	struct nc_state_t *nc,
 	      if (fd > 0) {
 		write(fd, xml, strlen(xml));
 		close(fd);
-		snprintf(cmd, 1024, "%s detach-device %s %s",virsh_command_path, instanceId, tmpfile);
+		snprintf(cmd, MAX_PATH, "%s detach-device %s %s",virsh_command_path, instanceId, tmpfile);
 		logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
 		err = WEXITSTATUS(system(cmd));
 		unlink(tmpfile);
 		if (err) {
 		  logprintfl(EUCADEBUG, "first workaround command failed (%d), trying second workaround...\n", err);
-		  snprintf(cmd, 1024, "%s block-detach %s %s", xm_command_path, instanceId, localDevReal);
+		  snprintf(cmd, MAX_PATH, "%s block-detach %s %s", xm_command_path, instanceId, localDevReal);
 		  logprintfl(EUCADEBUG, "Running command: %s\n", cmd);
 		  err = WEXITSTATUS(system(cmd));
 		}

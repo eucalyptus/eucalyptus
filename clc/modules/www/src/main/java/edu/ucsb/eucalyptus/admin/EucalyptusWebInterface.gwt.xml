@@ -65,10 +65,11 @@
 <module>
 	<!-- Inherit the core Web Toolkit stuff. -->
     <inherits name='com.google.gwt.user.User'/>
+	<set-property name="user.agent" value="gecko1_8"/>
 
 	<!-- Inherit internationalization support. -->
-	<inherits name='com.google.gwt.i18n.I18N'/>
-	<extend-property name="locale" values="en,ru" />
+	<!-- inherits name='com.google.gwt.i18n.I18N'/>
+	<extend-property name="locale" values="en" /-->
 
     <!-- Inherit the default GWT style sheet.  You can change       -->
     <!-- the theme of your GWT application by uncommenting          -->

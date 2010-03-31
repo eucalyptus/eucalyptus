@@ -18,7 +18,7 @@ import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ServiceDispatcher {
   private static Logger LOG = Logger.getLogger( ServiceDispatcher.class );
@@ -72,11 +72,11 @@ public abstract class ServiceDispatcher {
     this.isLocal = isLocal;
   }
 
-  public abstract void dispatch( EucalyptusMessage msg );
+  public abstract void dispatch( BaseMessage msg );
 
-  public abstract EucalyptusMessage send( EucalyptusMessage msg ) throws EucalyptusCloudException;
+  public abstract BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException;
   @SuppressWarnings( "unchecked" )
-  public <REPLY> REPLY send( EucalyptusMessage message, Class<REPLY> replyType ) throws EucalyptusCloudException {
+  public <REPLY> REPLY send( BaseMessage message, Class<REPLY> replyType ) throws EucalyptusCloudException {
     return (REPLY) this.send( message );
   }
   public Component getComponent( ) {

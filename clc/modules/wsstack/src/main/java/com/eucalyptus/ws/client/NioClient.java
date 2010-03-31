@@ -76,10 +76,10 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
-import com.eucalyptus.ws.handlers.NioResponseHandler;
+import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class NioClient implements Client {
   private static Logger LOG = Logger.getLogger( NioClient.class );
@@ -90,7 +90,7 @@ public class NioClient implements Client {
   private int port;
   private String servicePath;
   private InetSocketAddress remoteAddr;
-  private NioResponseHandler responseHandler;
+  private ResponseHandler responseHandler;
   private ChannelFuture connectFuture;
   public NioClient( String hostname, int port, String servicePath, NioClientPipeline clientPipeline ) {
     this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
@@ -107,18 +107,18 @@ public class NioClient implements Client {
   }
   
   @Override
-  public EucalyptusMessage send( final EucalyptusMessage msg ) throws Exception {
+  public BaseMessage send( final BaseMessage msg ) throws Exception {
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostname, this.port, this.servicePath, msg );
     this.write( request );
-    EucalyptusMessage response = this.responseHandler.getResponse();
+    BaseMessage response = this.responseHandler.getResponse();
     return response;
   }
 
   @Override
-  public void dispatch( final EucalyptusMessage msg ) throws Exception {
+  public void dispatch( final BaseMessage msg ) throws Exception {
     HttpRequest request = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.hostname, this.port, this.servicePath, msg );
     this.write( request );
-    EucalyptusMessage response = this.responseHandler.getResponse();
+    BaseMessage response = this.responseHandler.getResponse();
   }
 
   @Override

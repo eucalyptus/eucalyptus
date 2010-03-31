@@ -91,6 +91,8 @@ public class DeferredInitializer {
 	public void add(Class klass) {
 		klasses.add(klass);
 	}
+	
+	
 
 	public void run() {
 		for (Class klass : klasses) {
@@ -103,8 +105,7 @@ public class DeferredInitializer {
 				} catch (IllegalAccessException e) {
 					LOG.error(e, e);
 				} catch (InvocationTargetException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+          LOG.error(e, e);
 				}
 			} catch (SecurityException e) {
 				LOG.error(e, e);
@@ -113,4 +114,21 @@ public class DeferredInitializer {
 			} 
 		}
 	}
+  
+  @Provides( resource = Resource.DeferredInitialization )
+  public static class Bootstrap extends Bootstrapper {
+
+    @Override
+    public boolean load( Resource current ) throws Exception {
+      return false;
+    }
+
+    @Override
+    public boolean start( ) throws Exception {
+      DeferredInitializer.getInstance().run();
+      return true;
+    }
+    
+  }
+
 }
