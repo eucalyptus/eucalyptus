@@ -73,6 +73,7 @@ import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.group.Group;
 import com.eucalyptus.auth.group.GroupProvider;
+import com.eucalyptus.auth.group.Groups;
 import com.eucalyptus.auth.group.NoSuchGroupException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Depends;
@@ -131,7 +132,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   @Override
   public List<Group> lookupUserGroups( User user ) {
     List<Group> userGroups = Lists.newArrayList( );
-    EntityWrapper<UserGroupEntity> db = new EntityWrapper<UserGroupEntity>( "eucalyptus_general" );
+    EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
     try {
       UserInfo userInfo = db.recast( UserInfo.class ).getUnique( UserInfo.named( user.getName( ) ) );
       for ( UserGroupEntity g : db.query( new UserGroupEntity( ) ) ) {
@@ -149,7 +150,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   
   @Override
   public Group lookupGroup( String groupName ) throws NoSuchGroupException {
-    EntityWrapper<UserGroupEntity> db = new EntityWrapper<UserGroupEntity>( "eucalyptus_general" );
+    EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
     try {
       UserGroupEntity group = db.getUnique( new UserGroupEntity( groupName ) );
       db.commit( );
@@ -256,7 +257,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
 
   @Override
   public Group addGroup( String groupName ) throws GroupExistsException {
-    EntityWrapper<UserGroupEntity> db = Credentials.getEntityWrapper( );
+    EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
     UserGroupEntity newGroup = new UserGroupEntity( groupName );
     try {
       db.add( newGroup );

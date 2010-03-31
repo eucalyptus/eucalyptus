@@ -5,10 +5,14 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.GroupExistsException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.entities.EntityWrapper;
 
 public class Groups {
   private static Logger LOG = Logger.getLogger( Groups.class );
   private static GroupProvider groups;
+  public static <T> EntityWrapper<T> getEntityWrapper( ) {
+    return new EntityWrapper<T>( "eucalyptus-general" );
+  }
 
   public static void setGroupProvider( GroupProvider provider ) {
     synchronized( Users.class ) {
