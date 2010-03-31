@@ -11,23 +11,11 @@
     <servlet-class>edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl</servlet-class>
   </servlet>
 
-<servlet-mapping>
-  <servlet-name>EucalyptusWebBackendImpl</servlet-name>
-  <url-pattern>/edu.ucsb.eucalyptus.admin.EucalyptusWebInterface/EucalyptusWebBackend</url-pattern>
-</servlet-mapping>
+  <servlet-mapping>
+	<servlet-name>EucalyptusWebBackendImpl</servlet-name>
+	<url-pattern>/edu.ucsb.eucalyptus.admin.EucalyptusWebInterface/EucalyptusWebBackend</url-pattern>
+  </servlet-mapping>
 
-<!--   
- <servlet>
-  <servlet-name>imageStoreServiceImpl</servlet-name>
-  <servlet-class>edu.ucsb.eucalyptus.admin.server.extensions.store.ImageStoreServiceImpl</servlet-class>
-</servlet>
-
-<servlet-mapping>
-  <servlet-name>imageStoreServiceImpl</servlet-name>
-  <url-pattern>/edu.ucsb.eucalyptus.admin.EucalyptusWebInterface/ImageStoreService</url-pattern>
-</servlet-mapping>
--->
- 
   <!-- Default page to serve -->
   <welcome-file-list>
     <welcome-file>EucalyptusWebInterface.html</welcome-file>
