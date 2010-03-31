@@ -73,10 +73,8 @@ import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.group.Group;
 import com.eucalyptus.auth.group.GroupProvider;
-import com.eucalyptus.auth.group.Groups;
 import com.eucalyptus.auth.group.NoSuchGroupException;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
@@ -88,14 +86,7 @@ import com.google.common.collect.Lists;
 @Provides( resource = Resource.UserCredentials )
 @Depends( resources = { Resource.Database } )
 public class DatabaseAuthProvider implements UserProvider, GroupProvider {
-  private static DatabaseAuthProvider singleton = new DatabaseAuthProvider( );
   private static Logger LOG = Logger.getLogger( DatabaseAuthProvider.class );
-  static {
-    //TODO FIXME TODO BROKEN FAIL: discover this at bootstrap time.
-    Users.setUserProvider( singleton );
-    Groups.setGroupProvider( singleton );
-    //TODO FIXME TODO BROKEN FAIL: discover this at bootstrap time.
-  }
   
   DatabaseAuthProvider( ) {}
   

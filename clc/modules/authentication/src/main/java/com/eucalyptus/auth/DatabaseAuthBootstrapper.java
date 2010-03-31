@@ -11,12 +11,14 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-@Provides( resource = Resource.UserCredentials )
+@Provides( resource = Resource.PersistenceContext )
 @Depends( resources = { Resource.Database } )
 public class DatabaseAuthBootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
   public boolean load( Resource current ) throws Exception {
-    Users.setUserProvider( new DatabaseAuthProvider( ) );
+    DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
+    Users.setUserProvider( dbAuth );
+    Groups.setGroupProvider( dbAuth );
     return true;
   }
   
