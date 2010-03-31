@@ -59,62 +59,11 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-
-package edu.ucsb.eucalyptus.storage;
-
-import com.eucalyptus.util.EucalyptusCloudException;
-
-import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+package com.eucalyptus.configurable;
 
 
-import java.util.ArrayList;
-import java.util.List;
-
-public interface LogicalStorageManager {
-	public void initialize();
-
-	public void configure();
-
-	public void checkPreconditions() throws EucalyptusCloudException;
-
-	public void reload();
-
-	public void startupChecks();
-
-	public void cleanVolume(String volumeId);
-
-	public void cleanSnapshot(String volumeId);
-
-	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
-
-	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
-
-	public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
-
-	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException;
-
-	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
-
-	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
-
-	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
-
-	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
-
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException;
-
-	public ArrayList<ComponentProperty> getStorageProps();
-
-	public void setStorageProps(ArrayList<ComponentProperty> storageParams);
-
-	public String getStorageRootDirectory(); 
+public enum ConfigurableFieldType {
+  BOOLEAN, KEYVALUE, PASSWORD, HIDDEN
 }

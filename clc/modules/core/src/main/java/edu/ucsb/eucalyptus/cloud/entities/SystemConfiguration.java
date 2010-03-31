@@ -81,7 +81,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.WalrusConfiguration;
-import com.eucalyptus.configurable.Configurable;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
@@ -100,16 +100,16 @@ public class SystemConfiguration {
   @GeneratedValue
   @Column( name = "system_info_id" )
   private Long    id = -1l;
-  @Configurable( description = "Hostname of the cloud controller." )
+  @ConfigurableField( description = "Hostname of the cloud controller." )
   @Column( name = "system_info_cloud_host" )
   private String  cloudHost;
-  @Configurable( description = "Default kernel to use when none is supplied by an image's manifest or the user at runtime." )
+  @ConfigurableField( description = "Default kernel to use when none is supplied by an image's manifest or the user at runtime." )
   @Column( name = "system_info_default_kernel" )
   private String  defaultKernel;
-  @Configurable( description = "Default ramdisk to use when none is supplied by an image's manifest or the user at runtime." )
+  @ConfigurableField( description = "Default ramdisk to use when none is supplied by an image's manifest or the user at runtime." )
   @Column( name = "system_info_default_ramdisk" )
   private String  defaultRamdisk;
-  @Configurable( description = "Unique ID of this cloud installation.", readonly = false )
+  @ConfigurableField( description = "Unique ID of this cloud installation.", readonly = false )
   @Column( name = "system_registration_id" )
   private String  registrationId;
   @Column( name = "system_max_user_public_addresses" )
@@ -120,10 +120,10 @@ public class SystemConfiguration {
   private Integer systemReservedPublicAddresses;
   @Column( name = "zero_fill_volumes" )
   private Boolean zeroFillVolumes;
-  @Configurable( description = "Domain name to use for DNS." )
+  @ConfigurableField( description = "Domain name to use for DNS." )
   @Column( name = "dns_domain" )
   private String  dnsDomain;
-  @Configurable( description = "Nameserver address." )
+  @ConfigurableField( description = "Nameserver address." )
   @Column( name = "nameserver" )
   private String  nameserver;
   @Column( name = "ns_address" )
