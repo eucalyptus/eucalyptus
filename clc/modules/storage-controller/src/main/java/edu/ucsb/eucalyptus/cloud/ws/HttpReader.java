@@ -8,12 +8,15 @@ import java.io.InputStream;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.StorageProperties;
 
+import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 
@@ -27,6 +30,7 @@ public class HttpReader extends HttpTransfer {
 	private HttpClient httpClient;
 	private HttpMethodBase method;
 	private File file;
+	private String tempPath;
 	private boolean compressed;
 
 	public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader) {
@@ -40,9 +44,10 @@ public class HttpReader extends HttpTransfer {
 		method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
 	}
 
-	public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader, boolean compressed) {
+	public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader, boolean compressed, String tempPath) {
 		this(path, getQueue, file, eucaOperation, eucaHeader);
 		this.compressed = compressed;
+		this.tempPath = tempPath;
 	}
 
 	public String getResponseAsString() {
@@ -74,25 +79,43 @@ public class HttpReader extends HttpTransfer {
 		FileOutputStream fileOutputStream = null;
 		BufferedOutputStream bufferedOut = null;
 		try {
-			File compressedFile = new File(file.getAbsolutePath() + ".gz");				
-			assert(method != null);
+			File outFile;
+			if(compressed)
+				outFile = new File(tempPath + File.separator + file.getName() + Hashes.getRandom(16) + ".gz");		
+			else
+				outFile = file;
 			httpClient.executeMethod(method);
 			InputStream httpIn;
 			httpIn = method.getResponseBodyAsStream();
 			int bytesRead;
-			fileOutputStream = new FileOutputStream(compressedFile);
+			fileOutputStream = new FileOutputStream(outFile);
 			bufferedOut = new BufferedOutputStream(fileOutputStream);
 			while((bytesRead = httpIn.read(bytes)) > 0) {
 				bufferedOut.write(bytes, 0, bytesRead);
 			}
-
+			bufferedOut.close();
 			if(compressed) {
-				SystemUtil.run(new String[]{"/bin/gunzip", compressedFile.getAbsolutePath()});
+				try
+				{
+					Runtime rt = Runtime.getRuntime();
+					Process proc = rt.exec(new String[]{ "/bin/gunzip", "-c", outFile.getAbsolutePath()});
+					StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+					StreamConsumer output = new StreamConsumer(proc.getInputStream(), file);
+					error.start();
+					output.start();
+					output.join();
+					error.join();
+				} catch (Throwable t) {
+					LOG.error(t);
+				}
+				if(!outFile.delete()) {
+					LOG.error("Unable to delete temporary file: " + outFile.getAbsolutePath());
+				}
 			}
-			method.releaseConnection();
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
 		} finally {
+			method.releaseConnection();
 			if(bufferedOut != null) {
 				try {
 					bufferedOut.close();
@@ -134,5 +157,18 @@ public class HttpReader extends HttpTransfer {
 		} else if(file != null) {
 			getResponseToFile();
 		}
+	}
+
+	public String getResponseHeader(String headerName) {
+		try {
+			httpClient.executeMethod(method);
+			Header value = method.getResponseHeader(headerName);
+			method.releaseConnection();
+			if(value != null)
+			    return value.getValue();
+		} catch(Exception ex) {
+			LOG.error(ex, ex);
+		}
+		return null;
 	}
 }

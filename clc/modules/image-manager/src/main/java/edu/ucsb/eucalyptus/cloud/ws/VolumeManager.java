@@ -199,6 +199,11 @@ public class VolumeManager {
           }
         }
       }
+      if( State.FAIL.equals(vol.getState() ) ) {
+    	  db.delete(vol);
+    	  db.commit();
+    	  return reply;
+      }      
       DeleteStorageVolumeResponseType scReply = StorageUtil.send( vol.getCluster( ), new DeleteStorageVolumeType( vol.getDisplayName( ) ) );
       if( scReply.get_return( ) ) {
         db.delete( vol );

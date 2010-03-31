@@ -18,8 +18,8 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
   private Class[]       setArgs;
   
   public SingletonDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser,
-                                Boolean readOnly ) {
-    super( definingClass, entrySetName, field.getName( ), defaultValue, description, typeParser, readOnly );
+                                Boolean readOnly, String displayName, String widgetType ) {
+    super( definingClass, entrySetName, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType );
     this.baseMethodName = field.getName( ).substring( 0, 1 ).toUpperCase( ) + field.getName( ).substring( 1 );
     this.persistenceContext = ( ( PersistenceContext ) definingClass.getAnnotation( PersistenceContext.class ) ).name( );
     this.setArgs = new Class[] { field.getType( ) };
@@ -110,17 +110,17 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
     
     @Override
     public ConfigurableProperty buildProperty( Class c, Field f ) throws ConfigurablePropertyException {
-      if ( c.isAnnotationPresent( Entity.class ) && f.isAnnotationPresent( Configurable.class ) ) {
+      if ( c.isAnnotationPresent( Entity.class ) && f.isAnnotationPresent( ConfigurableField.class ) ) {
         LOG.debug( "Checking field: " + c.getName( ) + "." + f.getName( ) );
         ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
-        Configurable annote = f.getAnnotation( Configurable.class );
+        ConfigurableField annote = f.getAnnotation( ConfigurableField.class );
         String fqPrefix = classAnnote.alias( );
         String description = annote.description( );
         String defaultValue = annote.initial( );
         PropertyTypeParser p = PropertyTypeParser.get( f.getType( ) );
         try {
           if ( !Modifier.isStatic( f.getModifiers( ) ) && !f.isAnnotationPresent( Transient.class ) ) {
-            ConfigurableProperty prop = new SingletonDatabasePropertyEntry( c, fqPrefix, f, description, defaultValue, p, annote.readonly( ) );
+            ConfigurableProperty prop = new SingletonDatabasePropertyEntry( c, fqPrefix, f, description, defaultValue, p, annote.readonly( ), annote.displayName(), annote.type().toString() );
             return prop;
           }
         } catch ( Throwable e ) {

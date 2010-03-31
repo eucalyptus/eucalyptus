@@ -131,7 +131,7 @@
 			<jvmarg value="-Xmx1024m" />
 			<jvmarg value="-Xss1024k" />
 			<arg line="-war ${gwt.war.build.dir}" />
-			<arg line="-style OBF" />
+			<arg line="-style PRETTY" />
 			<arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
 		</java>
 		<copy todir="${gwt.war.build.dir}/${gwt.module}/WEB-INF/classes">
