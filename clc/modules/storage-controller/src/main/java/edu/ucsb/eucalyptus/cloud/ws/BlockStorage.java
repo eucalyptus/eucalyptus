@@ -737,6 +737,10 @@ public class BlockStorage {
 							}
 						}
 						foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+						if(StorageProperties.trackUsageStatistics) {
+							blockStorageStatistics.incrementVolumeCount();
+							blockStorageStatistics.updateSpaceUsed((size * StorageProperties.GB));
+						}
 					} else {
 						foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
 					}
@@ -747,10 +751,6 @@ public class BlockStorage {
 					throw new EucalyptusCloudException();
 				}
 				db.commit();
-				if(StorageProperties.trackUsageStatistics) {
-					blockStorageStatistics.incrementVolumeCount();
-					blockStorageStatistics.updateSpaceUsed((size * StorageProperties.GB));
-				}
 			} catch(EucalyptusCloudException ex) {
 				db.rollback();
 				LOG.error(ex);
