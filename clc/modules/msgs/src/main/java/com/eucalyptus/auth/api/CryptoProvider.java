@@ -1,7 +1,9 @@
-package com.eucalyptus.auth.crypto;
+package com.eucalyptus.auth.api;
+
+import com.eucalyptus.auth.crypto.Digest;
 
 
-public interface CryptoProvider extends BaseProvider {
+public interface CryptoProvider extends BaseSecurityProvider {
   
   /**
    * TODO: DOCUMENT CryptoProvider.java

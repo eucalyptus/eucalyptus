@@ -1,9 +1,7 @@
 package com.eucalyptus.event;
 
 import java.util.Map;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Component;
 import com.google.common.collect.Maps;
 

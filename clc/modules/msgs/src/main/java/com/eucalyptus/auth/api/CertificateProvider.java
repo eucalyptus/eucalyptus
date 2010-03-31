@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.crypto;
+package com.eucalyptus.auth.api;
 
 import java.security.Key;
 import java.security.KeyPair;
@@ -6,7 +6,7 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import javax.security.auth.x500.X500Principal;
 
-public interface CertificateProvider extends BaseProvider {
+public interface CertificateProvider extends BaseSecurityProvider {
   /**
    * TODO: DOCUMENT CryptoProvider.java
    * @return

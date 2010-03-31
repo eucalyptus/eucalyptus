@@ -10,10 +10,11 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
-import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.crypto.Hmac;
-import com.eucalyptus.auth.group.Groups;
+import com.eucalyptus.auth.principal.User;
 
 public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
   private static Logger LOG = Logger.getLogger( Hmacv2LoginModule.class );

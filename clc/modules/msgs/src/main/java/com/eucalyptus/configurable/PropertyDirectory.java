@@ -1,12 +1,8 @@
 package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;

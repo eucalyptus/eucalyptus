@@ -1,8 +1,6 @@
 package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.group.Groups;
-import com.eucalyptus.auth.group.NoSuchGroupException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
@@ -10,10 +8,9 @@ import com.eucalyptus.bootstrap.Resource;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
-import com.eucalyptus.util.EucalyptusCloudException;
 
-@Provides( resource = Resource.PersistenceContext )
-@Depends( resources = { Resource.Database } )
+@Provides( resource = Resource.UserCredentials )
+@Depends( resources = { Resource.DatabaseInit } )
 public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
   public boolean load( Resource current ) throws Exception {
@@ -24,16 +21,21 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
   
   public boolean start( ) throws Exception {
-//    for( UserEntity u : dbu.query( new UserEntity( ) ) ) {
-//      if( u.getIsEnabled() != Boolean.FALSE ) {
-//        u.setIsEnabled( Boolean.TRUE )
-//      }
-//    }
+    this.checkUserEnabled( );
     this.ensureAllGroupExists( );
     this.ensureAdminExists( );
     this.ensureCountersExist( );
     this.ensureVmTypesExist( );
     return true;
+  }
+
+  private void checkUserEnabled( ) {
+    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
+    for( UserEntity u : db.query( new UserEntity( ) ) ) {
+      if( u.isEnabled() != Boolean.FALSE ) {
+        u.setEnabled( Boolean.TRUE );
+      }
+    }
   }
 
   private void ensureVmTypesExist( ) {
@@ -66,19 +68,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
 
   private void ensureCountersExist() {
-    EntityWrapper<Counters> db = Counters.getEntityWrapper( );
-    try {
-      db.getUnique( new Counters() );
-    } catch ( EucalyptusCloudException e ) {
-      try {
-        db.add( new Counters() );
-        db.commit( );
-      } catch ( Exception e1 ) {
-        LOG.error( e1, e1 );
-        LOG.fatal( "Failed to add the system counters." );
-        System.exit( -1 );
-      }
-    }
+    Counters.getNextId( );
   }
   
   private void ensureAdminExists( ) {

@@ -106,7 +106,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
 @Provides( resource = Resource.RemoteConfiguration )
-@Depends( resources = Resource.Database, local = Component.eucalyptus )
+@Depends( resources = Resource.DatabaseInit, local = Component.eucalyptus )
 public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPipelineFactory, EventListener {
   private static Logger                            LOG    = Logger.getLogger( RemoteBootstrapperClient.class );
   private ConcurrentMap<String, HeartbeatClient>   heartbeatMap;

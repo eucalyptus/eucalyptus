@@ -73,16 +73,17 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Lists;
 
 public enum Resource {
-  PrivilegedContext( ),
-  SystemCredentials( ),
+  PrivilegedConfiguration( ),
+  UnprivilegedConfiguration( ),
+  CredentialsConfiguration( ),/* <-- this means system credentials, not user. */
   RemoteConfiguration( ),
-  Database( ),
-  PersistenceContext( ),
-  DeferredInitialization( ),
-  ClusterCredentials( ),
-  RemoteServices( ),
+  DatabaseInit( ),
+  PersistenceContextInit( ),
+  DeferredClassInit( ),
+  ComponentCredentials( ),
+  RemoteServicesInit( ),
   UserCredentials( ),
-  CloudService( ),
+  CloudServiceInit( ),
   Verification( ),
   Anonymous( ),
   Final( );

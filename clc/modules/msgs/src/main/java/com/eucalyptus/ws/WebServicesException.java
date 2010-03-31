@@ -64,8 +64,9 @@
 package com.eucalyptus.ws;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.BaseException;
 
-public class WebServicesException extends Exception {
+public class WebServicesException extends BaseException {
 
   private static final long serialVersionUID = 1L;
   private HttpResponseStatus status = HttpResponseStatus.INTERNAL_SERVER_ERROR;;

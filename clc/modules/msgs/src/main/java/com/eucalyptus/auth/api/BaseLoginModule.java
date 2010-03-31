@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.login;
+package com.eucalyptus.auth.api;
 
 import java.util.List;
 import java.util.Map;
@@ -7,8 +7,9 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.group.Group;
+import com.eucalyptus.auth.login.WrappedCredentials;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.google.common.collect.Lists;

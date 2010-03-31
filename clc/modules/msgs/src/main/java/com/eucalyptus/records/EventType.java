@@ -57,75 +57,72 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************
+ *******************************************************************************/
+/*
+ *
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.auth;
 
-import java.security.Principal;
-import java.security.cert.X509Certificate;
+package com.eucalyptus.records;
 
-/**
- * @author decker
- *
- */
-public abstract interface User extends Principal, java.io.Serializable {
-  public abstract Boolean getIsAdministrator( );
-  public abstract void setIsAdministrator( Boolean admin );
-  public abstract Boolean getIsEnabled( );
-  public abstract void setIsEnabled( Boolean enabled );
-  public abstract X509Certificate getX509Certificate( );
-  public abstract void setX509Certificate( X509Certificate cert );
-  /**
-   * Revoke the X509 credentials for the user. 
-   */
-  public abstract void revokeX509Certificate( );
-  /**
-   * Revoke the secret key for the user. 
-   */
-  public abstract void revokeSecretKey( );
-  public abstract String getQueryId( );
-  public abstract String getSecretKey( );
-  /**
-   * Compares this principal to the specified object.  Returns true
-   * if the object passed in matches the principal represented by
-   * the implementation of this interface.
-   *
-   * @param another principal to compare with.
-   *
-   * @return true if the principal passed in is the same as that
-   * encapsulated by this principal, and false otherwise.
-
-   */
-  public abstract boolean equals(Object another);
-
-  /**
-   * Returns a string representation of this principal.
-   *
-   * @return a string representation of this principal.
-   */
-  public abstract String toString();
-
-  /**
-   * Returns a hashcode for this principal.
-   *
-   * @return a hashcode for this principal.
-   */
-  public abstract int hashCode();
-
-  /**
-   * Returns the name of this principal.
-   *
-   * @return the name of this principal.
-   */
-  public abstract String getName();
-  
-  /**
-   * Returns a unique number associated with the user.  Not to be confused with the X509Certificate serial number.
-   * @return
-   */
-  public abstract String getNumber();
-  public abstract void setQueryId( String queryId );
-  public abstract void setSecretKey( String secretKey );
-  
+public enum EventType {
+  TIMEOUT,
+  MSG_SERVICED,
+  MSG_SENT,
+  MSG_REJECTED,
+  MSG_RECEIVED,
+  QUEUE_LENGTH,
+  QUEUE_TIME,
+  SERVICE_TIME,
+  MSG_PENDING,
+  VM_PREPARE,
+  VM_RESERVED,
+  VM_STARTING,
+  VM_TERMINATING,
+  MSG_POLL_INTERNAL,
+  VM_RUNNING,
+  SOCKET_OPEN,
+  SOCKET_CLOSE,
+  SOCKET_BYTES_READ,
+  SOCKET_BYTES_WRITE,
+  PIPELINE_UNROLL,
+  PIPELINE_HANDLER,
+  PIPELINE_DUPLICATE,
+  VM_TERMINATED,
+  QUEUE,
+  FLUSH_CACHE,
+  LISTENER_REGISTERED,
+  LISTENER_DEREGISTERED,
+  LISTENER_EVENT_FIRED,
+  LISTENER_EVENT_VETOD,
+  LISTENER_DESTROY_ALL,
+  TOKEN_RETURNED,
+  TOKEN_ACCEPTED,
+  TOKEN_SUBMITTED,
+  TOKEN_ALLOCATED,
+  TOKEN_REDEEMED,
+  TOKEN_SPLIT,
+  TOKEN_CHILD,
+  TOKEN_RESERVED,
+  CLUSTER_STATE_UPDATE,
+  TRANSITION,
+  MSG_PREPARED,
+  VM_START_COMPLETED,
+  VM_START_ABORTED,
+  CLUSTER_CERT,
+  CONTEXT_CREATE,
+  CONTEXT_USER,
+  CONTEXT_CLEAR,
+  MSG_REPLY,
+  CONTEXT_MSG,
+  CONTEXT_EVENT,
+  CONTEXT_SUBJECT,
+  GENERATE_KEYPAIR,
+  GENERATE_CERTIFICATE,
+  MSG_AWAIT_RESPONSE,
+  PROVIDER_CONFIGURED,
+  PROVIDER_CONFLICT,
+  PROVIDER_IGNORED,
+  SYSTEM_DIR_CREATE,
+  SYSTEM_DIR_CHECK,
 }

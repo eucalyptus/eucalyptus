@@ -1,6 +1,8 @@
 package com.eucalyptus.auth;
 
-public class GroupExistsException extends Exception {
+import com.eucalyptus.auth.api.BaseSecurityException;
+
+public class GroupExistsException extends BaseSecurityException {
 
   public GroupExistsException( ) {
     super( );

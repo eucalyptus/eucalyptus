@@ -97,7 +97,7 @@ import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 
-@Provides( resource = Resource.RemoteServices )
+@Provides( resource = Resource.RemoteServicesInit )
 @Depends( local = Component.eucalyptus )
 public class ClusterBootstrapper extends Bootstrapper implements EventListener {
   public static Logger LOG         = Logger.getLogger( ClusterBootstrapper.class );

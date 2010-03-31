@@ -67,8 +67,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.SslSetup;
 
-@Provides( resource = Resource.Database )
-@Depends( resources = Resource.SystemCredentials, remote = Component.eucalyptus )
+@Provides( resource = Resource.DatabaseInit )
+@Depends( resources = Resource.CredentialsConfiguration, remote = Component.eucalyptus )
 public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
   @Override

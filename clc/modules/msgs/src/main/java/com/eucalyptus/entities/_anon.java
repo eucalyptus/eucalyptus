@@ -1,13 +1,20 @@
 package com.eucalyptus.entities;
 
+import java.util.List;
+import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public abstract class _anon<T> {
   private static Logger LOG = Logger.getLogger( _anon.class );
   protected final T search;
+  protected final String ctx;
   protected _anon( T search ) {
     this.search = search;
+    if( !search.getClass( ).isAnnotationPresent( PersistenceContext.class ) ) {
+      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + search.getClass( ).getCanonicalName( ) );
+    }
+    this.ctx = search.getClass( ).getAnnotation( PersistenceContext.class ).name( );
   }
   protected  abstract class _mutator {    
     public abstract void set( T e );
@@ -17,7 +24,7 @@ public abstract class _anon<T> {
         LOG.warn( ex.getMessage( ), ex );
         throw ex;
       }
-      EntityWrapper<T> db = new EntityWrapper<T>( );
+      EntityWrapper<T> db = new EntityWrapper<T>( ctx );
       try {
         T entity = db.getUnique( _anon.this.search );
         this.set( entity );
@@ -38,7 +45,7 @@ public abstract class _anon<T> {
         LOG.warn( ex.getMessage( ), ex );
         throw ex;
       }
-      EntityWrapper<T> db = new EntityWrapper<T>( );
+      EntityWrapper<T> db = new EntityWrapper<T>( ctx );
       try {
         T entity = db.getUnique( _anon.this.search );
         V result = this.get( entity );

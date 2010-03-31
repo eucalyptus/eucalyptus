@@ -16,10 +16,13 @@ import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
-import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.api.CertificateProvider;
+import com.eucalyptus.auth.api.CryptoProvider;
+import com.eucalyptus.auth.api.HmacProvider;
 import com.eucalyptus.bootstrap.Component;
-import edu.ucsb.eucalyptus.constants.EventType;
+import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
@@ -32,7 +35,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   public DefaultCryptoProvider( ) {}
   
   /**
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateHashedPassword(java.lang.String)
+   * @see com.eucalyptus.auth.api.CryptoProvider#generateHashedPassword(java.lang.String)
    */
   @Override
   public String generateHashedPassword( String password ) {
@@ -52,7 +55,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
   
   /**
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateQueryId(java.lang.String)
+   * @see com.eucalyptus.auth.api.CryptoProvider#generateQueryId(java.lang.String)
    */
   @Override
   public String generateQueryId( String userName ) {
@@ -60,7 +63,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
   
   /**
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateSecretKey(java.lang.String)
+   * @see com.eucalyptus.auth.api.CryptoProvider#generateSecretKey(java.lang.String)
    */
   @Override
   public String generateSecretKey( String userName ) {
@@ -68,7 +71,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
   
   /**
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateCertificateCode(java.lang.String)
+   * @see com.eucalyptus.auth.api.CryptoProvider#generateCertificateCode(java.lang.String)
    */
   @Override
   public String generateCertificateCode( String userName ) {
@@ -76,7 +79,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
   
   /**
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateConfirmationCode(java.lang.String)
+   * @see com.eucalyptus.auth.api.CryptoProvider#generateConfirmationCode(java.lang.String)
    */
   @Override
   public String generateConfirmationCode( String userName ) {
@@ -84,7 +87,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
   
   /**
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateSessionToken(java.lang.String)
+   * @see com.eucalyptus.auth.api.CryptoProvider#generateSessionToken(java.lang.String)
    */
   @Override
   public String generateSessionToken( String userName ) {
@@ -92,7 +95,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
 
   /**
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#getDigestBase64(java.lang.String, com.eucalyptus.auth.crypto.Digest, boolean)
+   * @see com.eucalyptus.auth.api.CryptoProvider#getDigestBase64(java.lang.String, com.eucalyptus.auth.crypto.Digest, boolean)
    */
   @Override
   public String getDigestBase64( String input, Digest hash, boolean randomize ) {
@@ -156,7 +159,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
   
   /**
-   * @see com.eucalyptus.auth.crypto.CryptoProvider#generateKeyPair()
+   * @see com.eucalyptus.auth.api.CryptoProvider#generateKeyPair()
    */
   @Override
   public KeyPair generateKeyPair( ) {

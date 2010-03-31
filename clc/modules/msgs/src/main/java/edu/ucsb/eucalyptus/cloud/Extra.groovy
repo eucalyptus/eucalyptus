@@ -65,7 +65,7 @@ package edu.ucsb.eucalyptus.cloud
 
 
 import edu.ucsb.eucalyptus.msgs.*
-import edu.ucsb.eucalyptus.constants.EventType;
+import com.eucalyptus.records.EventType;
 import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;

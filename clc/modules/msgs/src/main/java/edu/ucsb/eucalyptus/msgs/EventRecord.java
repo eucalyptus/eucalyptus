@@ -2,12 +2,10 @@ package edu.ucsb.eucalyptus.msgs;
 
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
-
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.sysinfo.LogLevels;
 
-import edu.ucsb.eucalyptus.constants.EventType;
-
+//TODO:TODO:TODO: move me to .records
 public class EventRecord extends EucalyptusMessage {
   
   private static EucalyptusMessage BOGUS = getBogusMessage();

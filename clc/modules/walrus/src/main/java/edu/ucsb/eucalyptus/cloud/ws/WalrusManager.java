@@ -86,9 +86,9 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.NeedsDeferredInitialization;

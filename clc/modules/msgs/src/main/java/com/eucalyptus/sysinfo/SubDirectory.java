@@ -64,6 +64,9 @@
 package com.eucalyptus.sysinfo;
 
 import java.io.File;
+import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 
 public enum SubDirectory {
@@ -76,6 +79,7 @@ public enum SubDirectory {
   SCRIPTS( BaseDirectory.CONF, "scripts" ),
   CONF( BaseDirectory.CONF, "conf" ),
   LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" );
+  private static Logger LOG = Logger.getLogger( SubDirectory.class );
   BaseDirectory parent;
   String        dir;
 
@@ -89,9 +93,10 @@ public enum SubDirectory {
     return this.parent.toString( ) + File.separator + this.dir;
   }
 
-  public void create( ) {
+  public void check( ) {
     final File dir = new File( this.toString( ) );
     if ( dir.exists( ) ) { return; }
+    LOG.info( EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ) );
     dir.mkdirs( );
   }
 }

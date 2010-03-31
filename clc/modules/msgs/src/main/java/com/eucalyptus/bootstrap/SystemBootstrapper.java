@@ -75,7 +75,7 @@ public class SystemBootstrapper {
   private static SystemBootstrapper   singleton;
   private static ThreadGroup          singletonGroup;
   private static DatabaseBootstrapper singletonDb;
-  private static Resource             currentStage = Resource.PrivilegedContext;
+  private static Resource             currentStage = Resource.PrivilegedConfiguration;
   
   public static boolean isFinished( ) {
     return Resource.Final.equals( currentStage );

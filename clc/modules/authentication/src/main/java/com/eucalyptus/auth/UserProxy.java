@@ -1,7 +1,9 @@
 package com.eucalyptus.auth;
 
+import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities._anon;
 import com.google.common.base.Function;
 
@@ -61,33 +63,33 @@ public class UserProxy implements User {
   }
 
   /**
-   * @see com.eucalyptus.auth.User#setIsAdministrator(java.lang.Boolean)
+   * @see com.eucalyptus.auth.principal.User#setIsAdministrator(java.lang.Boolean)
    * @param admin
    */
   @Override
-  public void setIsAdministrator( final Boolean admin ) {
+  public void setAdministrator( final Boolean admin ) {
     new _this( ) {{
         new _mutator( ) { public void set( UserEntity e ) {
-            e.setIsAdministrator( admin );
+            e.setAdministrator( admin );
           }};
     }};
   }
   
   /**
-   * @see com.eucalyptus.auth.User#setIsEnabled(java.lang.Boolean)
+   * @see com.eucalyptus.auth.principal.User#setIsEnabled(java.lang.Boolean)
    * @param enabled
    */
   @Override
-  public void setIsEnabled( final Boolean enabled ) {
+  public void setEnabled( final Boolean enabled ) {
     new _this( ) {{ 
       new _mutator( ) { public void set( UserEntity e ) {
-            e.setIsEnabled( enabled );
+            e.setEnabled( enabled );
       }};
     }};
   }
   
   /**
-   * @see com.eucalyptus.auth.User#setX509Certificate(java.security.cert.X509Certificate)
+   * @see com.eucalyptus.auth.principal.User#setX509Certificate(java.security.cert.X509Certificate)
    * @param cert
    */
   @Override
@@ -100,25 +102,25 @@ public class UserProxy implements User {
   }
   
   /**
-   * @see com.eucalyptus.auth.User#getIsAdministrator()
+   * @see com.eucalyptus.auth.principal.User#getIsAdministrator()
    * @return
    */
   @Override
-  public Boolean getIsAdministrator( ) {
-    return this.user.getIsAdministrator( );
+  public Boolean isAdministrator( ) {
+    return this.user.isAdministrator( );
   }
   
   /**
-   * @see com.eucalyptus.auth.User#getIsEnabled()
+   * @see com.eucalyptus.auth.principal.User#getIsEnabled()
    * @return
    */
   @Override
-  public Boolean getIsEnabled( ) {
-    return this.user.getIsEnabled( );
+  public Boolean isEnabled( ) {
+    return this.user.isEnabled( );
   }
   
   /**
-   * @see com.eucalyptus.auth.User#getName()
+   * @see com.eucalyptus.auth.principal.User#getName()
    * @return
    */
   @Override
@@ -127,7 +129,7 @@ public class UserProxy implements User {
   }
   
   /**
-   * @see com.eucalyptus.auth.User#getQueryId()
+   * @see com.eucalyptus.auth.principal.User#getQueryId()
    * @return
    */
   @Override
@@ -136,7 +138,7 @@ public class UserProxy implements User {
   }
   
   /**
-   * @see com.eucalyptus.auth.User#getSecretKey()
+   * @see com.eucalyptus.auth.principal.User#getSecretKey()
    * @return
    */
   @Override
@@ -145,7 +147,7 @@ public class UserProxy implements User {
   }
   
   /**
-   * @see com.eucalyptus.auth.User#getX509Certificate()
+   * @see com.eucalyptus.auth.principal.User#getX509Certificate()
    * @return
    */
   @Override
@@ -154,7 +156,7 @@ public class UserProxy implements User {
   }
   
   @Override
-  public String getNumber( ) {
+  public BigInteger getNumber( ) {
     return this.user.getNumber( );
   }
 

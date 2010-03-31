@@ -75,8 +75,8 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
-@Provides( resource = Resource.Database )
-@Depends( resources = Resource.SystemCredentials, local = Component.eucalyptus )
+@Provides( resource = Resource.DatabaseInit )
+@Depends( resources = Resource.CredentialsConfiguration, local = Component.eucalyptus )
 public class LocalDatabaseBootstrapper extends Bootstrapper implements EventListener, Runnable, DatabaseBootstrapper {
   private static Logger             LOG = Logger.getLogger( LocalDatabaseBootstrapper.class );
   private static DatabaseBootstrapper singleton;

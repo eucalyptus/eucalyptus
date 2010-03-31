@@ -92,7 +92,7 @@ import org.mule.api.transport.DispatchException;
 import org.mule.transport.AbstractConnector;
 import org.mule.transport.NullPayload;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
-import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -100,10 +100,10 @@ import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.ReplyQueue;
-import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -206,12 +206,12 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           msg.setEffectiveUserId( msg.getUserId( ) );
         } else if ( ( user != null ) && ( this.msgReceiver == null ) ) {
           msg.setUserId( user.getName( ) );
-          msg.setEffectiveUserId( user.getIsAdministrator( ) ? Component.eucalyptus.name( ) : user.getName( ) );
+          msg.setEffectiveUserId( user.isAdministrator( ) ? Component.eucalyptus.name( ) : user.getName( ) );
         }
         LOG.trace( EventRecord.here( Component.eucalyptus, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ) );
         if ( this.msgReceiver == null ) {
           ServiceSinkHandler.dispatchRequest( msg );
-        } else if ( ( user == null ) || ( ( user != null ) && user.getIsAdministrator( ) ) ) {
+        } else if ( ( user == null ) || ( ( user != null ) && user.isAdministrator( ) ) ) {
           this.dispatchRequest( ctx, request, msg );
         } else {
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );

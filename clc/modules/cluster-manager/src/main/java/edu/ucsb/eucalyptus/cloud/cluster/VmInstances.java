@@ -72,11 +72,11 @@ import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.cloud.ws.SystemState;
-import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class VmInstances extends AbstractNamedRegistry<VmInstance> {

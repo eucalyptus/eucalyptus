@@ -71,7 +71,7 @@ import org.jboss.netty.handler.codec.http.DefaultHttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.principal.User;
 
 public abstract class MappingHttpMessage extends DefaultHttpMessage implements HttpMessage {
   private String       correlationId;

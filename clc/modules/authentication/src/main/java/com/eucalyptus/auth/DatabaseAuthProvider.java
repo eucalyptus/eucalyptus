@@ -66,26 +66,21 @@ import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.UrlBase64;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
+import com.eucalyptus.auth.api.GroupProvider;
+import com.eucalyptus.auth.api.UserProvider;
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.auth.group.Group;
-import com.eucalyptus.auth.group.GroupProvider;
-import com.eucalyptus.auth.group.Groups;
-import com.eucalyptus.auth.group.NoSuchGroupException;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Depends;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.B64;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.entities.DatabaseUtil;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
-@Provides( resource = Resource.UserCredentials )
-@Depends( resources = { Resource.Database } )
 public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   private static Logger LOG = Logger.getLogger( DatabaseAuthProvider.class );
   
@@ -96,9 +91,9 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     UserEntity newUser = new UserEntity( userName );
     newUser.setQueryId( queryId );
     newUser.setSecretKey( secretKey );
-    newUser.setIsAdministrator( isAdmin );
-    newUser.setIsEnabled( isEnabled );
-    EntityWrapper<UserEntity> db = Credentials.getEntityWrapper( );
+    newUser.setAdministrator( isAdmin );
+    newUser.setEnabled( isEnabled );
+    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
       db.add( newUser );
       db.commit( );
@@ -112,7 +107,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   @Override
   public User deleteUser( String userName ) throws NoSuchUserException {
     UserEntity user = new UserEntity( userName );
-    EntityWrapper<User> db = Credentials.getEntityWrapper( );
+    EntityWrapper<User> db = Authentication.getEntityWrapper( );
     try {
       User foundUser = db.getUnique( user );
       db.delete( foundUser );
@@ -134,7 +129,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     List<Group> userGroups = Lists.newArrayList( );
     EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
     try {
-      UserInfo userInfo = db.recast( UserInfo.class ).getUnique( UserInfo.named( user.getName( ) ) );
+      UserEntity userInfo = db.recast( UserEntity.class ).getUnique( new UserEntity( user.getName( ) ) );
       for ( UserGroupEntity g : db.query( new UserGroupEntity( ) ) ) {
         if ( g.belongs( userInfo ) ) {
           userGroups.add( new DatabaseWrappedGroup( g ) );
@@ -165,9 +160,9 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   @Override
   public List<User> listAllUsers( ) {
     List<User> users = Lists.newArrayList( );
-    EntityWrapper<UserEntity> db = Credentials.getEntityWrapper( );
+    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     UserEntity searchUser = new UserEntity( );
-    searchUser.setIsEnabled( true );
+    searchUser.setEnabled( true );
     UserEntity user = null;
     try {
       users.addAll( db.query( searchUser ) );
@@ -181,9 +176,9 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   @Override
   public List<User> listEnabledUsers( ) {
     List<User> users = Lists.newArrayList( );
-    EntityWrapper<UserEntity> db = Credentials.getEntityWrapper( );
+    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     UserEntity searchUser = new UserEntity( );
-    searchUser.setIsEnabled( true );
+    searchUser.setEnabled( true );
     UserEntity user = null;
     try {
       users.addAll( db.query( searchUser ) );
@@ -196,12 +191,12 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   
   @Override
   public User lookupCertificate( X509Certificate cert ) throws NoSuchUserException {
-    String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( cert ) ) );
+    String certPem = B64.url.encString( PEMFiles.getBytes( cert ) );
     UserEntity searchUser = new UserEntity( );
     X509Cert searchCert = new X509Cert( );
     searchCert.setPemCertificate( certPem );
-    searchUser.setIsEnabled( true );
-    Session session = DatabaseUtil.getEntityManagerFactory( Credentials.DB_NAME ).getSessionFactory( ).openSession( );
+    searchUser.setEnabled( true );
+    Session session = DatabaseUtil.getEntityManagerFactory( Authentication.DB_NAME ).getSessionFactory( ).openSession( );
     try {
       Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
       Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
@@ -226,7 +221,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   @Override
   public User lookupQueryId( String queryId ) throws NoSuchUserException {
     String userName = null;
-    EntityWrapper<UserEntity> db = Credentials.getEntityWrapper( );
+    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     UserEntity searchUser = new UserEntity( );
     searchUser.setQueryId( queryId );
     UserEntity user = null;
@@ -242,7 +237,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   
   @Override
   public User lookupUser( String userName ) throws NoSuchUserException {
-    EntityWrapper<UserEntity> db = Credentials.getEntityWrapper( );
+    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     UserEntity searchUser = new UserEntity( userName );
     UserEntity user = null;
     try {
@@ -267,6 +262,18 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       throw new GroupExistsException( t );
     }
     return new DatabaseWrappedGroup( newGroup );
+  }
+
+  @Override
+  public List<Group> listAllGroups( ) {
+    List<Group> ret = Lists.newArrayList( );
+    UserGroupEntity search = new UserGroupEntity( );
+    EntityWrapper<UserGroupEntity> db = EntityWrapper.get( search );
+    List<UserGroupEntity> groupList = db.query( search );
+    for( UserGroupEntity g : groupList ) {
+      ret.add( new DatabaseWrappedGroup( g ) );
+    }
+    return ret;
   }
   
   

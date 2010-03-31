@@ -81,7 +81,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
-@Provides(resource=Resource.RemoteServices)
+@Provides(resource=Resource.RemoteServicesInit)
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
   

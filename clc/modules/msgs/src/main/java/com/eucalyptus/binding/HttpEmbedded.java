@@ -63,47 +63,15 @@
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.constants;
+package com.eucalyptus.binding;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public enum VmState {
-  PENDING("pending",0),
-  RUNNING("running",16),
-  SHUTTING_DOWN("shutting-down",32),
-  TERMINATED("terminated",48),
-  BURIED("buried",64);
-  private String name;
-  private int code;
-
-  VmState( final String name, final int code )
-  {
-    this.name = name;
-    this.code = code;
-  }
-
-  public String getName()
-  {
-    return name;
-  }
-
-  public int getCode()
-  {
-    return code;
-  }
-
-public static class Mapper {
-  private static Map<String,VmState> stateMap = getStateMap();
-  private static Map<String,VmState> getStateMap()
-  {
-    Map<String,VmState> map = new HashMap<String,VmState>();
-    map.put("Extant",VmState.RUNNING);
-    map.put("Pending", VmState.PENDING);
-    map.put("Teardown", VmState.SHUTTING_DOWN);
-    return map;
-  }
-  public static VmState get( String stateName ) { return Mapper.stateMap.get( stateName );}
+@Target({ ElementType.TYPE, ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface HttpEmbedded {
+  boolean multiple() default false;
 }
-}
-

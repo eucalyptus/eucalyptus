@@ -77,7 +77,7 @@ import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
 
-@Provides( resource = Resource.SystemCredentials )
+@Provides( resource = Resource.CredentialsConfiguration )
 @Depends( local = Component.eucalyptus )
 public class SystemCredentialProvider extends Bootstrapper {
   private static Logger                                    LOG      = Logger.getLogger( SystemCredentialProvider.class );

@@ -68,6 +68,7 @@ package com.eucalyptus.entities;
 
 import java.util.List;
 import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
@@ -88,6 +89,14 @@ public class EntityWrapper<TYPE> {
   private static final boolean TRACE = "TRACE".equals( System.getProperty( "euca.log.exhaustive.db" ) );
   public EntityWrapper( ) {
     this( "eucalyptus_general" );
+  }
+  
+  public static <T> EntityWrapper<T> get( T obj ) {
+    if( !obj.getClass( ).isAnnotationPresent( PersistenceContext.class ) ) {
+      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + obj.getClass( ).getCanonicalName( ) );
+    }
+    return new EntityWrapper<T>( obj.getClass( ).getAnnotation( PersistenceContext.class ).name( ) );
+    
   }
 
   @SuppressWarnings( "unchecked" )

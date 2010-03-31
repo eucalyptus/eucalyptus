@@ -76,7 +76,7 @@ public class ServiceContext {
     }
   }
   
-  @Provides(resource=Resource.CloudService)
+  @Provides(resource=Resource.CloudServiceInit)
   public static class ServiceBootstrapper extends Bootstrapper {
     
     public ServiceBootstrapper( ) {}

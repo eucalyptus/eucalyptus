@@ -3,7 +3,6 @@ package com.eucalyptus.event;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Timer;
 import java.util.TimerTask;
-
 import org.apache.log4j.Logger;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {

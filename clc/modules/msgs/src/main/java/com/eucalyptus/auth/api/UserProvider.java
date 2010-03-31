@@ -1,8 +1,11 @@
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.api;
 
 import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.UserExistsException;
+import com.eucalyptus.auth.principal.User;
 
 /**
  * @author decker

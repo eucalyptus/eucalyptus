@@ -78,13 +78,13 @@ import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserGroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
@@ -391,8 +391,8 @@ public class EucalyptusManagement {
 		update( target, user );
 		try {
 		  User u = Users.lookupUser( user.getUserName( ) );
-      u.setIsAdministrator( user.isAdministrator( ) );
-      u.setIsEnabled( user.isEnabled( ) );
+      u.setAdministrator( user.isAdministrator( ) );
+      u.setEnabled( user.isEnabled( ) );
       db.commit();
 		} catch ( NoSuchUserException e ) {
 			db.rollback();

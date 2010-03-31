@@ -1,10 +1,10 @@
-package com.eucalyptus.auth.group;
+package com.eucalyptus.auth;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.GroupExistsException;
-import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.api.GroupProvider;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 
 public class Groups {
@@ -23,6 +23,10 @@ public class Groups {
   
   public static GroupProvider getGroupProvider() {
      return groups;
+  }
+
+  public static List<Group> listAllGroups( ) {
+    return Groups.getGroupProvider( ).listAllGroups();
   }
 
   public static List<Group> lookupGroups( User user ) {

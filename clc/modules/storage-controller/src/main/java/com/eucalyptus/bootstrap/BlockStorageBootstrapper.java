@@ -66,7 +66,7 @@ import org.apache.log4j.Logger;
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
 
-@Provides(resource=Resource.PrivilegedContext, component=Component.storage)
+@Provides(resource=Resource.PrivilegedConfiguration, component=Component.storage)
 @Depends(local=Component.storage)
 public class BlockStorageBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );

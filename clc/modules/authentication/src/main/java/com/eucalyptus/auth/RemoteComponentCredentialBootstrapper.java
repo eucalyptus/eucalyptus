@@ -73,7 +73,7 @@ import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
 
-@Provides( resource = Resource.SystemCredentials )
+@Provides( resource = Resource.CredentialsConfiguration )
 @Depends( remote = Component.eucalyptus )
 public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteComponentCredentialBootstrapper.class );

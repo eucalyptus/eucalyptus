@@ -64,21 +64,13 @@
 package com.eucalyptus.auth.util;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.Signature;
 import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMReader;
-import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.util.encoders.UrlBase64;
-import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.bootstrap.Component;
 
 /**
  * This class is headed for the dead pool.
@@ -88,24 +80,6 @@ import com.eucalyptus.bootstrap.Component;
 public class Hashes {
   public static Logger LOG = Logger.getLogger( Hashes.class );
 
-  /**
-   * TODO: Move this up in the dependency tree.
-   * @param o
-   * @return
-   */
-  @Deprecated
-  public static byte[] getPemBytes( final Object o ) {
-    PEMWriter pemOut;
-    ByteArrayOutputStream pemByteOut = new ByteArrayOutputStream( );
-    try {
-      pemOut = new PEMWriter( new OutputStreamWriter( pemByteOut ) );
-      pemOut.writeObject( o );
-      pemOut.close( );
-    } catch ( IOException e ) {
-      LOG.error( e, e );//this can never happen
-    }
-    return pemByteOut.toByteArray( );
-  }
 
   /**
    * TODO: Move this up in the dependency tree.

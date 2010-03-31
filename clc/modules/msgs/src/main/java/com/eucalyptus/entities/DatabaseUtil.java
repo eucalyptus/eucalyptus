@@ -8,7 +8,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
-import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Collections;

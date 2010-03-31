@@ -80,9 +80,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.scripting.groovy.GroovyUtil;

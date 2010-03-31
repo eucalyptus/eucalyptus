@@ -115,7 +115,7 @@ public class DeferredInitializer {
 		}
 	}
   
-  @Provides( resource = Resource.DeferredInitialization )
+  @Provides( resource = Resource.DeferredClassInit )
   public static class Bootstrap extends Bootstrapper {
 
     @Override

@@ -67,7 +67,7 @@ import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.cloud.ws.DNSControl;
 
-@Provides(resource=Resource.PrivilegedContext,component=Component.dns)
+@Provides(resource=Resource.PrivilegedConfiguration,component=Component.dns)
 @Depends(local=Component.dns)
 public class DNSBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( DNSBootstrapper.class );

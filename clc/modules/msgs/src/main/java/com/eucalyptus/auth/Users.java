@@ -65,6 +65,8 @@ package com.eucalyptus.auth;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.api.UserProvider;
+import com.eucalyptus.auth.principal.User;
 
 /**
  * Facade for accessing the system configured credential provider.

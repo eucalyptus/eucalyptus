@@ -9,7 +9,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import com.eucalyptus.http.MappingHttpMessage;
-import edu.ucsb.eucalyptus.constants.EventType;
+import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 

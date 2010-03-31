@@ -72,9 +72,9 @@ import org.w3c.dom.Document;
 
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;

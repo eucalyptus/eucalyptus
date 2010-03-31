@@ -1,33 +1,36 @@
 package edu.ucsb.eucalyptus.msgs;
 
 import java.util.ArrayList;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.Groups;
 
 public class UserInfoType extends EucalyptusData {
   String userName;
   String email;
-  String certificateCode;
-  String confirmationCode;
   String accessKey;
   String secretKey;
   Boolean admin = Boolean.FALSE;
-  Boolean confirmed = Boolean.FALSE;
   Boolean enabled = Boolean.FALSE;
   String distinguishedName;
   String certificateSerial;
   ArrayList<String> groups = new ArrayList<String>();
-  public UserInfoType( String userName, String email, String certificateCode, String confirmationCode, String accessKey, String secretKey, String distinguishedName, String certificateSerial, ArrayList<String> groups, Boolean admin, Boolean enabled, Boolean confirmed ) {
-    this.userName = userName;
+  String certificateCode;
+  String confirmationCode;
+  
+  public UserInfoType( User u, String email, String certificateCode, String confirmationCode ) {
+    this.userName = u.getName();
+    this.accessKey = u.getQueryId();
+    this.secretKey = u.getSecretKey();
+    this.distinguishedName = u.getX509Certificate( )?.getSubjectX500Principal( )?.toString();
+    this.certificateSerial = u.getX509Certificate( )?.getSerialNumber( );
+    for( Group g : Groups.lookupGroups( u ) ) {
+      this.groups.add( it.getName() );
+    }
+    this.enabled = u.isEnabled( );
+    this.admin = u.isAdministrator( );
     this.email = email;
     this.certificateCode = certificateCode;
     this.confirmationCode = confirmationCode;
-    this.accessKey = accessKey;
-    this.secretKey = secretKey;
-    this.distinguishedName = distinguishedName;
-    this.certificateSerial = certificateSerial;
-    this.groups = groups;
-    this.enabled = enabled;
-    this.confirmed = confirmed;
-    this.admin = admin;
   }
 }  
 public class GroupInfoType extends EucalyptusData {

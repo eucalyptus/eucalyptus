@@ -94,8 +94,9 @@ import javax.persistence.PersistenceContext;
 
 import org.hibernate.sql.Alias
 
-import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.B64;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
@@ -104,46 +105,59 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class UserEntity extends AbstractPersistent implements Serializable, User {
   @Column( name = "auth_user_name", unique=true )
-  String name
+  String name;
   @Column( name = "auth_user_query_id" )
-  String queryId
+  String queryId;
   @Column( name = "auth_user_secretkey" )
-  String secretKey
+  String secretKey;
   @Column( name = "auth_user_is_admin" )
-  Boolean isAdministrator
+  Boolean administrator;
   @Column( name = "auth_user_is_enabled" )
-  Boolean isEnabled;
+  Boolean enabled;
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-  List<X509Cert> certificates = []
+  List<X509Cert> certificates = [];
+  
   public UserEntity(){
   }
+  
   public UserEntity( String userName ){
     this.name = userName
   }
-  public UserEntity( String userName, Boolean isEnabled ){
+  
+  public UserEntity( String userName, Boolean enabled ){
     this(userName);
-    this.isEnabled = isEnabled
+    this.setEnabled( enabled );
   }
+
   public void revokeX509Certificate() {
     this.certificates.clear();
   }
+  
   public void revokeSecretKey() {
     this.setSecretKey( null );
   }
+  
   public X509Certificate getX509Certificate() {
     if( certificates.size( ) > 1 ) {
       certificates.removeAll( certificates.subList( 1, certificates.size() ) );
     }
     return certificates.isEmpty()?null:X509Cert.toCertificate(certificates[0]);
   }
+  
   public void setX509Certificate( X509Certificate x509 ) {
     this.certificates.clear();
     this.certificates.add( X509Cert.fromCertificate( x509 ) );
   }
-  public String getNumber() {
-    return new BigInteger( this.getId(), 16 ).toString();
+  public Boolean isEnabled() {
+    return enabled;
+  }
+  public Boolean isAdministrator() {
+    return administrator;
+  }
+  public BigInteger getNumber() {
+    return new BigInteger( this.getId(), 16 );
   }
   @Override
   public int hashCode( ) {
@@ -183,11 +197,11 @@ public class X509Cert extends AbstractPersistent implements Serializable {
   public static X509Cert fromCertificate(X509Certificate x509) {
     X509Cert x = new X509Cert( );
     x.setAlias(x509.getSerialNumber( ).toString());
-    x.setPemCertificate( new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) ) );
+    x.setPemCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
     return x;
   }  
   public static X509Certificate toCertificate(X509Cert x509) {
-    return Hashes.getPemCert( UrlBase64.decode( x509.getPemCertificate( ).getBytes( ) ) );
+    return PEMFiles.getCert( B64.url.dec( x509.getPemCertificate( ) ) );
   }  
   
   @Override

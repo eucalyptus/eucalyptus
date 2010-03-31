@@ -71,18 +71,17 @@ import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import javax.security.auth.x500.X500Principal;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.UrlBase64;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Certs;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.B64;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -166,7 +165,7 @@ public class X509Download extends HttpServlet {
       throw e;
     }
     user.setX509Certificate( x509 );
-    String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) );    
+    String certPem = B64.url.encString( PEMFiles.getBytes( x509 ) );
     String userAccessKey = user.getQueryId( );
     String userSecretKey = user.getSecretKey( );
     
@@ -179,7 +178,7 @@ public class X509Download extends HttpServlet {
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
       StringBuffer sb = new StringBuffer( );
       
-      String userNumber = Users.lookupUser( userName ).getNumber();
+      String userNumber = Users.lookupUser( userName ).getNumber( ).toString( );
       
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
       
@@ -206,7 +205,7 @@ public class X509Download extends HttpServlet {
       
       /** write the private key to the zip stream **/
       zipOut.putNextEntry( new ZipEntry( "cloud-cert.pem" ) );
-      zipOut.write( Hashes.getPemBytes( cloudCert ) );
+      zipOut.write( PEMFiles.getBytes( cloudCert ) );
       zipOut.closeEntry( );
       
       zipOut.putNextEntry( new ZipEntry( "jssecacerts" ) );
@@ -220,12 +219,12 @@ public class X509Download extends HttpServlet {
       
       /** write the private key to the zip stream **/
       zipOut.putNextEntry( new ZipEntry( baseName + "-pk.pem" ) );
-      zipOut.write( Hashes.getPemBytes( keyPair.getPrivate( ) ) );
+      zipOut.write( PEMFiles.getBytes( keyPair.getPrivate( ) ) );
       zipOut.closeEntry( );
       
       /** write the X509 certificate to the zip stream **/
       zipOut.putNextEntry( new ZipEntry( baseName + "-cert.pem" ) );
-      zipOut.write( Hashes.getPemBytes( x509 ) );
+      zipOut.write( PEMFiles.getBytes( x509 ) );
       zipOut.closeEntry( );
     }
     /** close the zip output stream and return the bytes **/

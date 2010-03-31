@@ -5,8 +5,8 @@ import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
 
-@Provides(resource=Resource.SystemCredentials)
-@Depends( resources = { Resource.Database } )
+@Provides(resource=Resource.CredentialsConfiguration)
+@Depends( resources = { Resource.DatabaseInit } )
 public class PropertiesBootstrapper extends Bootstrapper {
 
   @Override

@@ -1,8 +1,10 @@
-package com.eucalyptus.auth.group;
+package com.eucalyptus.auth.api;
 
 import java.util.List;
 import com.eucalyptus.auth.GroupExistsException;
-import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.NoSuchGroupException;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
 
 public interface GroupProvider {
   /**
@@ -11,6 +13,7 @@ public interface GroupProvider {
    * @return
    */
   public abstract List<Group> lookupUserGroups( User user );
+  public abstract List<Group> listAllGroups( );
   /**
    * Get the group named <tt>groupName</tt>
    * @param groupName

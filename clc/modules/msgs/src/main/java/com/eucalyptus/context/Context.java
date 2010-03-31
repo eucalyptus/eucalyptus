@@ -6,9 +6,9 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.api.MuleEvent;
-import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.http.MappingHttpRequest;
-import edu.ucsb.eucalyptus.constants.EventType;
+import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 

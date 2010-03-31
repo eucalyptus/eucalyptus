@@ -67,18 +67,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javassist.Modifier;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.crypto.BaseProvider;
-import com.eucalyptus.auth.crypto.CertificateProvider;
-import com.eucalyptus.auth.crypto.CryptoProvider;
-import com.eucalyptus.auth.crypto.HmacProvider;
+import com.eucalyptus.auth.api.BaseSecurityProvider;
+import com.eucalyptus.auth.api.CertificateProvider;
+import com.eucalyptus.auth.api.CryptoProvider;
+import com.eucalyptus.auth.api.HmacProvider;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.entities.EntityWrapper;
-import edu.ucsb.eucalyptus.constants.EventType;
+import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
-public class Credentials {
+public class Authentication {
   static String         DB_NAME = "eucalyptus_auth";
-  public static Logger         LOG     = Logger.getLogger( Credentials.class );
+  public static Logger         LOG     = Logger.getLogger( Authentication.class );
   private static CryptoProvider cryptoProvider;
   private static CertificateProvider certProvider;
   private static HmacProvider hmacProvider;
@@ -91,10 +91,10 @@ public class Credentials {
   }
   
   public static <T> EntityWrapper<T> getEntityWrapper( ) {
-    return new EntityWrapper<T>( Credentials.DB_NAME );
+    return new EntityWrapper<T>( Authentication.DB_NAME );
   }
-  private static BaseProvider DUMMY = new BaseProvider() {};
-  private static ConcurrentMap<Class, BaseProvider> providers = new ConcurrentHashMap<Class, BaseProvider>( ){{    
+  private static BaseSecurityProvider DUMMY = new BaseSecurityProvider() {};
+  private static ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<Class, BaseSecurityProvider>( ){{    
     put( CertificateProvider.class, DUMMY );
     put( HmacProvider.class, DUMMY );
     put( CryptoProvider.class, DUMMY );
@@ -110,7 +110,6 @@ public class Credentials {
     return (CryptoProvider) providers.get( CryptoProvider.class );
   }
   
-  
   public static class CryptoProviderDiscovery extends ServiceJarDiscovery {
     public CryptoProviderDiscovery( ) {}
     @Override
@@ -119,20 +118,21 @@ public class Credentials {
     }
     @Override
     public boolean processsClass( Class candidate ) throws Throwable {
-      if( !Modifier.isInterface( candidate.getModifiers( ) ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && BaseProvider.class.isAssignableFrom( candidate ) ) {
+      if( !Modifier.isInterface( candidate.getModifiers( ) ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && BaseSecurityProvider.class.isAssignableFrom( candidate ) ) {
         try {
-          BaseProvider o = ( BaseProvider ) candidate.newInstance( );
-          for( Class c : Credentials.providers.keySet( ) ) {
+          BaseSecurityProvider o = ( BaseSecurityProvider ) candidate.newInstance( );
+          for( Class c : Authentication.providers.keySet( ) ) {
             if( c.isAssignableFrom( candidate ) ) {
-              Object curr = Credentials.providers.get( c );
+              Object curr = Authentication.providers.get( c );
               if( DUMMY.equals( curr ) ) {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, c.getCanonicalName( ), candidate.getCanonicalName( ) ) );
-                Credentials.providers.put( c, o );
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, c.getSimpleName( ), candidate.getCanonicalName( ) ) );
+                Authentication.providers.put( c, o );
               } else if( !candidate.getSimpleName( ).startsWith( "Default" ) ) {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getCanonicalName( ), curr.getClass( ).getCanonicalName( ), candidate.getCanonicalName( )  ) );
-                Credentials.providers.put( c, o );
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "current", curr.getClass( ).getCanonicalName( ) ) );
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "candidate", candidate.getCanonicalName( ) ) );
+                Authentication.providers.put( c, o );
               } else {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, c.getCanonicalName( ), candidate.getCanonicalName( ) ) );
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, c.getSimpleName( ), candidate.getCanonicalName( ) ) );
                 return false;
               }
             }

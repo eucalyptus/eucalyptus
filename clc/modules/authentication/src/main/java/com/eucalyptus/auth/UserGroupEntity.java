@@ -66,6 +66,7 @@ package com.eucalyptus.auth;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -75,24 +76,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@PersistenceContext(name="eucalyptus_general")//TODO: move this to eucalyptus_auth
+@PersistenceContext(name="eucalyptus_auth")
 @Table( name = "user_groups" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class UserGroupEntity {
-  @Id
-  @GeneratedValue
-  @Column( name = "user_group_id" )
-  private Long id = -1l;
-  @Column( name = "user_group_name" )
+public class UserGroupEntity extends AbstractPersistent {
+  @Column( name = "user_group_name", unique=true )
   private String name;
   @ManyToMany( cascade = CascadeType.ALL )
   @JoinTable(
-      name = "group_has_users",
-      joinColumns = { @JoinColumn( name = "user_group_id" ) },
-      inverseJoinColumns = @JoinColumn( name = "user_id" )
+      name = "auth_group_has_users",
+      joinColumns = { @JoinColumn( name = "auth_group_id" ) },
+      inverseJoinColumns = @JoinColumn( name = "auth_user_id" )
   )
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-  private List<UserInfo> users = new ArrayList<UserInfo>();
+  private List<UserEntity> users = new ArrayList<UserEntity>();
 
   public static UserGroupEntity named( String name ) throws EucalyptusCloudException {
     EntityWrapper<UserGroupEntity> db = new EntityWrapper<UserGroupEntity>();
@@ -101,8 +98,8 @@ public class UserGroupEntity {
       userGroup = db.getUnique( new UserGroupEntity( name ) );
       db.commit( );
     } catch( Exception e ) {
-      db.add( new UserGroupEntity( "all" ) );
-      db.commit( );
+      db.rollback( );
+      throw new EucalyptusCloudException( e );
     }
     return userGroup;
   }
@@ -113,10 +110,6 @@ public class UserGroupEntity {
 
   public UserGroupEntity( final String name ) {
     this.name = name;
-  }
-
-  public Long getId() {
-    return id;
   }
 
   public String getName() {
@@ -144,15 +137,15 @@ public class UserGroupEntity {
     return name.hashCode();
   }
 
-  public boolean belongs( UserInfo user ) {
+  public boolean belongs( UserEntity user ) {
     return this.users.contains( user ) || this.name.equals("all");
   }
 
-  public List<UserInfo> getUsers() {
+  public List<UserEntity> getUsers() {
     return users;
   }
 
-  public void setUsers( final List<UserInfo> users ) {
+  public void setUsers( final List<UserEntity> users ) {
     this.users = users;
   }
 }

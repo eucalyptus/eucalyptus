@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.crypto.Certs;
@@ -72,23 +72,23 @@ public class ConfigurationUtil {
     try {
       KeyPair clusterKp = Certs.generateKeyPair( );
       X509Certificate clusterX509 = Certs.generateServiceCertificate( clusterKp, "cc-" + newComponent.getName( ) );
-      PEMFiles.writePem( directory + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
-      PEMFiles.writePem( directory + File.separator + "cluster-cert.pem", clusterX509 );
+      PEMFiles.write( directory + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
+      PEMFiles.write( directory + File.separator + "cluster-cert.pem", clusterX509 );
   
       KeyPair nodeKp = Certs.generateKeyPair( );
       X509Certificate nodeX509 = Certs.generateServiceCertificate( nodeKp, "nc-" + newComponent.getName( ) );
-      PEMFiles.writePem( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
-      PEMFiles.writePem( directory + File.separator + "node-cert.pem", nodeX509 );
+      PEMFiles.write( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
+      PEMFiles.write( directory + File.separator + "node-cert.pem", nodeX509 );
   
       X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
       String hexSig = Hmacs.generateSystemToken( "vtunpass".getBytes( ) );
-      PEMFiles.writePem( SubDirectory.KEYS.toString( ) + File.separator + "cloud-cert.pem", systemX509 );
+      PEMFiles.write( SubDirectory.KEYS.toString( ) + File.separator + "cloud-cert.pem", systemX509 );
       out = new FileWriter( directory + File.separator + "vtunpass" );
       out.write( hexSig );
       out.flush( );
       out.close( );
   
-      EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+      EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
       ClusterCredentials componentCredentials = new ClusterCredentials( newComponent.getName( ) );
       try {
         List<ClusterCredentials> ccCreds = credDb.query( componentCredentials );
@@ -150,7 +150,7 @@ public class ConfigurationUtil {
   }
 
   static void removeClusterCredentials( String clusterName ) {
-    EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+    EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
     try {
       ClusterCredentials clusterCredentials = credDb.getUnique( new ClusterCredentials( clusterName ) );
       credDb.recast( X509Cert.class ).delete( clusterCredentials.getClusterCertificate( ) );

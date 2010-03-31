@@ -57,70 +57,24 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
+ *******************************************************************************
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.auth.principal;
 
-package edu.ucsb.eucalyptus.constants;
+import com.eucalyptus.auth.principal.credential.HmacPrincipal;
+import com.eucalyptus.auth.principal.credential.X509Principal;
 
-public enum EventType {
-  TIMEOUT,
-  MSG_SERVICED,
-  MSG_SENT,
-  MSG_REJECTED,
-  MSG_RECEIVED,
-  QUEUE_LENGTH,
-  QUEUE_TIME,
-  SERVICE_TIME,
-  MSG_PENDING,
-  VM_PREPARE,
-  VM_RESERVED,
-  VM_STARTING,
-  VM_TERMINATING,
-  MSG_POLL_INTERNAL,
-  VM_RUNNING,
-  SOCKET_OPEN,
-  SOCKET_CLOSE,
-  SOCKET_BYTES_READ,
-  SOCKET_BYTES_WRITE,
-  PIPELINE_UNROLL,
-  PIPELINE_HANDLER,
-  PIPELINE_DUPLICATE,
-  VM_TERMINATED,
-  QUEUE,
-  FLUSH_CACHE,
-  LISTENER_REGISTERED,
-  LISTENER_DEREGISTERED,
-  LISTENER_EVENT_FIRED,
-  LISTENER_EVENT_VETOD,
-  LISTENER_DESTROY_ALL,
-  TOKEN_RETURNED,
-  TOKEN_ACCEPTED,
-  TOKEN_SUBMITTED,
-  TOKEN_ALLOCATED,
-  TOKEN_REDEEMED,
-  TOKEN_SPLIT,
-  TOKEN_CHILD,
-  TOKEN_RESERVED,
-  CLUSTER_STATE_UPDATE,
-  TRANSITION,
-  MSG_PREPARED,
-  VM_START_COMPLETED,
-  VM_START_ABORTED,
-  CLUSTER_CERT,
-  CONTEXT_CREATE,
-  CONTEXT_USER,
-  CONTEXT_CLEAR,
-  MSG_REPLY,
-  CONTEXT_MSG,
-  CONTEXT_EVENT,
-  CONTEXT_SUBJECT,
-  GENERATE_KEYPAIR,
-  GENERATE_CERTIFICATE,
-  MSG_AWAIT_RESPONSE,
-  PROVIDER_CONFIGURED,
-  PROVIDER_CONFLICT,
-  PROVIDER_IGNORED,
+/**
+ * @author decker
+ *
+ */
+public abstract interface User extends BasePrincipal, X509Principal, HmacPrincipal {
+  public abstract Boolean isAdministrator( );
+  public abstract void setAdministrator( Boolean admin );
+  public abstract Boolean isEnabled( );
+  public abstract void setEnabled( Boolean enabled );
+
+  
+  
 }

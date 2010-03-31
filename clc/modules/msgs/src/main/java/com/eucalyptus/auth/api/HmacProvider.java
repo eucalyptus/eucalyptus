@@ -1,6 +1,7 @@
-package com.eucalyptus.auth.crypto;
+package com.eucalyptus.auth.api;
 
-public interface HmacProvider extends BaseProvider  {
+
+public interface HmacProvider extends BaseSecurityProvider  {
   /**
    * TODO: DOCUMENT CryptoProvider.java
    * @param userName

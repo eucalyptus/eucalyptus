@@ -63,15 +63,16 @@
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.annotation;
+package com.eucalyptus.binding;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ ElementType.FIELD })
+@Target({ ElementType.TYPE, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface HttpBinding {//TODO: what is this doing here?
-  HttpParameterMapping[] mappings() default {};
+public @interface HttpParameterMapping {
+  String name() default "2008-02-01"; 
+  String parameter();
 }

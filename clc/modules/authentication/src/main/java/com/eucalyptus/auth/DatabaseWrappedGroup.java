@@ -4,7 +4,8 @@ import java.security.Principal;
 import java.util.Enumeration;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.group.Group;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Iterators;
@@ -19,13 +20,13 @@ public class DatabaseWrappedGroup implements Group {
   }
   
   @Override
-  public boolean addMember( Principal user ) {
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( "eucalyptus_general" );
+  public boolean addMember( Principal principal ) {
+    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
-      UserInfo userInfo = db.getUnique( new UserInfo( user.getName( ) ) );
+      UserEntity user = db.getUnique( new UserEntity( principal.getName( ) ) );
       UserGroupEntity g = db.recast( UserGroupEntity.class ).getUnique( this.group );
-      if ( !g.belongs( userInfo ) ) {
-        g.getUsers( ).add( userInfo );
+      if ( !g.belongs( user ) ) {
+        g.getUsers( ).add( user );
         db.commit( );
         return true;
       } else {
@@ -41,9 +42,9 @@ public class DatabaseWrappedGroup implements Group {
   
   @Override
   public boolean isMember( Principal member ) {
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( "eucalyptus_general" );
+    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
-      boolean ret = this.group.belongs( db.getUnique( new UserInfo( member.getName( ) ) ) );
+      boolean ret = this.group.belongs( db.getUnique( new UserEntity( member.getName( ) ) ) );
       db.commit( );
       return ret;
     } catch ( EucalyptusCloudException e ) {
@@ -56,12 +57,12 @@ public class DatabaseWrappedGroup implements Group {
   @Override
   public Enumeration<? extends Principal> members( ) {
     List<User> userList = Lists.newArrayList( );
-    EntityWrapper<UserGroupEntity> db = new EntityWrapper<UserGroupEntity>( "eucalyptus_general" );
+    EntityWrapper<UserGroupEntity> db = Authentication.getEntityWrapper( );
     try {
       UserGroupEntity g = db.getUnique( this.group );
-      for ( UserInfo user : g.getUsers( ) ) {
+      for ( UserEntity user : g.getUsers( ) ) {
         try {
-          userList.add( Users.lookupUser( user.getUserName( ) ) );
+          userList.add( Users.lookupUser( user.getName( ) ) );
         } catch ( NoSuchUserException e ) {
           LOG.debug( e, e );
         }
@@ -76,9 +77,9 @@ public class DatabaseWrappedGroup implements Group {
   
   @Override
   public boolean removeMember( Principal user ) {
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( "eucalyptus_general" );
+    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
-      UserInfo userInfo = db.getUnique( new UserInfo( user.getName( ) ) );
+      UserEntity userInfo = db.getUnique( new UserEntity( user.getName( ) ) );
       UserGroupEntity g = db.recast( UserGroupEntity.class ).getUnique( this.group );
       if ( g.belongs( userInfo ) ) {
         g.getUsers( ).remove( userInfo );

@@ -76,12 +76,12 @@ import org.apache.axiom.om.OMElement;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;

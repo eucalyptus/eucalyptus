@@ -102,19 +102,19 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
-import com.eucalyptus.auth.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -196,7 +196,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			}
 			try {
 				User user = Users.lookupUser( "admin" );
-				user.setIsAdministrator(true);
+				user.setAdministrator(true);
 	      try {
           Contexts.lookup( httpRequest.getCorrelationId( ) ).setUser( user );
         } catch ( NoSuchContextException e ) {

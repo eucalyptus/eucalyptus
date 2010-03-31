@@ -5,7 +5,7 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import javax.security.auth.x500.X500Principal;
-import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Authentication;
 
 /**
  * Facade for generator methods providing asymmetric keys and certificates.
@@ -24,7 +24,7 @@ public class Certs {
    * @return
    */
   public static X509Certificate generateCertificate( final KeyPair keys, final X500Principal subjectDn, final X500Principal signer, final PrivateKey signingKey ) {
-    return Credentials.getCertificateProvider( ).generateCertificate( keys, subjectDn, signer, signingKey );
+    return Authentication.getCertificateProvider( ).generateCertificate( keys, subjectDn, signer, signingKey );
   }
   
   /**
@@ -35,7 +35,7 @@ public class Certs {
    * @return
    */
   public static X509Certificate generateCertificate( final KeyPair keys, final X500Principal subjectDn ) {
-    return Credentials.getCertificateProvider( ).generateCertificate( keys, subjectDn );
+    return Authentication.getCertificateProvider( ).generateCertificate( keys, subjectDn );
   }
   
   /**
@@ -46,7 +46,7 @@ public class Certs {
    * @return
    */
   public static X509Certificate generateCertificate( final KeyPair keys, final String userName ) {
-    return Credentials.getCertificateProvider( ).generateCertificate( keys, userName );
+    return Authentication.getCertificateProvider( ).generateCertificate( keys, userName );
   }
   
   /**
@@ -55,7 +55,7 @@ public class Certs {
    * @return
    */
   public static KeyPair generateKeyPair( ) {
-    return Credentials.getCertificateProvider( ).generateKeyPair( );
+    return Authentication.getCertificateProvider( ).generateKeyPair( );
   }
   
   /**
@@ -66,11 +66,11 @@ public class Certs {
    * @return
    */
   public static X509Certificate generateServiceCertificate( final KeyPair keys, final String userName ) {
-    return Credentials.getCertificateProvider( ).generateServiceCertificate( keys, userName );
+    return Authentication.getCertificateProvider( ).generateServiceCertificate( keys, userName );
   }
   
   public static String getFingerPrint( Key privKey ) {
-    return Credentials.getCertificateProvider( ).getFingerPrint( privKey );
+    return Authentication.getCertificateProvider( ).getFingerPrint( privKey );
   }
   
 }
