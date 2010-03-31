@@ -3,6 +3,7 @@ package com.eucalyptus.auth;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.group.Groups;
 import com.eucalyptus.auth.group.NoSuchGroupException;
+import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Depends;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.Resource;
@@ -13,7 +14,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 
 @Provides( resource = Resource.PersistenceContext )
 @Depends( resources = { Resource.Database } )
-public class DatabaseAuthBootstrapper {
+public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
   public boolean load( Resource current ) throws Exception {
     DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
