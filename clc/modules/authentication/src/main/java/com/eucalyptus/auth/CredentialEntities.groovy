@@ -180,9 +180,9 @@ public class X509Cert extends AbstractPersistent implements Serializable {
   public X509Cert( String alias ) {
     this.alias = alias
   }
-  public static X509Cert fromCertificate(String alias, X509Certificate x509) {
+  public static X509Cert fromCertificate(X509Certificate x509) {
     X509Cert x = new X509Cert( );
-    x.setAlias(alias);
+    x.setAlias(x509.getSerialNumber( ).toString());
     x.setPemCertificate( new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) ) );
     return x;
   }  

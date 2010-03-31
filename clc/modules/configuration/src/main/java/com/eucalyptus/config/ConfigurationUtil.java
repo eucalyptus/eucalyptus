@@ -95,8 +95,8 @@ public class ConfigurationUtil {
         for ( ClusterCredentials ccert : ccCreds ) {
           credDb.delete( ccert );
         }
-        componentCredentials.setClusterCertificate( X509Cert.fromCertificate( ccAlias, clusterX509 ) );
-        componentCredentials.setNodeCertificate( X509Cert.fromCertificate( ncAlias, nodeX509 ) );
+        componentCredentials.setClusterCertificate( X509Cert.fromCertificate( clusterX509 ) );
+        componentCredentials.setNodeCertificate( X509Cert.fromCertificate( nodeX509 ) );
         credDb.add( componentCredentials );
         credDb.commit( );
       } catch ( Exception e ) {
