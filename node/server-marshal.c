@@ -69,6 +69,8 @@ permission notice:
 #include <misc.h>
 #include <data.h>
 
+#include <windows-bundle.h>
+
 pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
 adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, const axutil_env_t *env) 
@@ -732,6 +734,10 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
     // get operation-specific fields from input
     int instIdsLen = adb_ncDescribeBundleTasksType_sizeof_instanceIds(input, env);
     char ** instIds = malloc(sizeof(char *) * instIdsLen);
+    
+    bundleTask **outBundleTasks=NULL;
+    int outBundleTasksLen=0;
+
     if (instIds==NULL) {
         logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeBundleTasksMarshal()\n");
         adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
@@ -746,8 +752,7 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
         { // do it
             ncMetadata meta = { correlationId, userId };
 
-            int error = doDescribeBundleTasks (&meta, instIds, instIdsLen);
-                                             
+            int error = doDescribeBundleTasks (&meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);                                             
             if (error) {
                 logprintfl (EUCAERROR, "ERROR: doDescribeBundleTasks() failed error=%d\n", error);
                 adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
@@ -757,6 +762,17 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
                 adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_TRUE);
                 adb_ncDescribeBundleTasksResponseType_set_correlationId(output, env, correlationId);
                 adb_ncDescribeBundleTasksResponseType_set_userId(output, env, userId);
+		// set operation specific values
+		for (i=0; i<outBundleTasksLen; i++) {
+		  adb_bundleTaskType_t *btt;
+		  btt = adb_bundleTaskType_create(env);
+		  adb_bundleTaskType_set_instanceId(btt, env, outBundleTasks[i]->instanceId);
+		  adb_bundleTaskType_set_state(btt, env, outBundleTasks[i]->state);
+		  adb_bundleTaskType_set_manifest(btt, env, outBundleTasks[i]->manifest);
+		  adb_ncDescribeBundleTasksResponseType_add_bundleTasks(output, env, btt);
+		  free(outBundleTasks[i]);
+		}
+		free(outBundleTasks);
             }
         }
     }

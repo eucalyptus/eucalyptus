@@ -86,6 +86,8 @@ permission notice:
 #include <storage.h>
 #include <eucalyptus.h>
 
+#include <windows-bundle.h>
+
 #define MONITORING_PERIOD (5)
 
 /* used by lower level handlers */
@@ -1147,19 +1149,17 @@ int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char
 	return ret;
 }
 
-int doDescribeBundleTasks (ncMetadata *meta, char **instIds, int instIdsLen)
+int doDescribeBundleTasks (ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen)
 {
 	int ret;
 
 	if (init())
 		return 1;
 
-	logprintfl (EUCAINFO, "doDescribeBundleTasks() invoked (instIdsLen=%d)\n", instIdsLen);
-
 	if (nc_state.H->doDescribeBundleTasks)
-	  ret = nc_state.H->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen);
+	  ret = nc_state.H->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
 	else 
-	  ret = nc_state.D->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen);
+	  ret = nc_state.D->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
 
 	return ret;
 }

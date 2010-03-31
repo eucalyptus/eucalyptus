@@ -532,7 +532,12 @@ int cc_describeBundleTasks(char **instIds, int instIdsLen, axutil_env_t *env, ax
     if (status == AXIS2_FALSE) {
       printf("operation fault '%s'\n", adb_describeBundleTasksResponseType_get_statusMessage(dirt, env));
     } else {
+      adb_bundleTaskType_t *bundle;
       printf("operation success\n");
+      for (i=0; i<adb_describeBundleTasksResponseType_sizeof_bundleTasks(dirt, env); i++) {
+	bundle = adb_describeBundleTasksResponseType_get_bundleTasks_at(dirt, env, i);
+	printf("BUNDLE %d: %s %s %s\n", i, adb_bundleTaskType_get_instanceId(bundle, env), adb_bundleTaskType_get_state(bundle, env), adb_bundleTaskType_get_manifest(bundle, env));
+      }
     }
   }
   return 0;

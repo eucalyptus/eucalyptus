@@ -230,7 +230,9 @@ adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundle
   char statusMessage[256];
   char **instIds=NULL, *cid;
   ncMetadata ccMeta;
-  
+  bundleTask *outBundleTasks=NULL;
+  int outBundleTasksLen=0;
+
   bit = adb_DescribeBundleTasks_get_DescribeBundleTasks(describeBundleTasks, env);
   
   ccMeta.correlationId = adb_describeBundleTasksType_get_correlationId(bit, env);
@@ -242,18 +244,31 @@ adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundle
   for (i=0; i<instIdsLen; i++) {
     instIds[i] = adb_describeBundleTasksType_get_instanceIds_at(bit, env, i);
   }
+
+  birt = adb_describeBundleTasksResponseType_create(env);
   
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doDescribeBundleTasks(&ccMeta, instIds, instIdsLen);
+    rc = doDescribeBundleTasks(&ccMeta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);
+    if (instIds) free(instIds);
     if (rc) {
       logprintf("ERROR: doDescribeBundleTasks() returned FAIL\n");
       status = AXIS2_FALSE;
       snprintf(statusMessage, 255, "ERROR");
+    } else {
+      for (i=0; i<outBundleTasksLen; i++) {
+	adb_bundleTaskType_t *bundle;
+	bundle = adb_bundleTaskType_create(env);
+	adb_bundleTaskType_set_instanceId(bundle, env, outBundleTasks[i].instanceId);
+	adb_bundleTaskType_set_state(bundle, env, outBundleTasks[i].state);
+	adb_bundleTaskType_set_manifest(bundle, env, outBundleTasks[i].manifest);
+	
+	adb_describeBundleTasksResponseType_add_bundleTasks(birt, env, bundle);
+      }
+      if (outBundleTasks) free(outBundleTasks);
     }
   }
   
-  birt = adb_describeBundleTasksResponseType_create(env);
   adb_describeBundleTasksResponseType_set_return(birt, env, status);
   if (status == AXIS2_FALSE) {
     adb_describeBundleTasksResponseType_set_statusMessage(birt, env, statusMessage);
@@ -983,7 +998,10 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   adb_ccInstanceType_set_serviceTag(dst, env, src->serviceTag);
   adb_ccInstanceType_set_userData(dst, env, src->userData);
   adb_ccInstanceType_set_launchIndex(dst, env, src->launchIndex);
-  adb_ccInstanceType_set_platform(dst, env, src->platform);
+  if (src->platform && strlen(src->platform)) {
+    logprintfl(EUCADEBUG, "HALO: %s %d\n", src->platform, strlen(src->platform));
+    adb_ccInstanceType_set_platform(dst, env, src->platform);
+  }
   for (i=0; i<64; i++) {
     if (src->groupNames[i][0] != '\0') {
       adb_ccInstanceType_add_groupNames(dst, env, src->groupNames[i]);

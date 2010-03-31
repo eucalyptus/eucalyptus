@@ -724,13 +724,12 @@ int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *
     return status;
 }
 
-int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen) {
+int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen) {
     int i;
     axutil_env_t * env  = st->env;
     axis2_stub_t * stub = st->stub;
     adb_ncDescribeBundleTasks_t     * input   = adb_ncDescribeBundleTasks_create (env); 
     adb_ncDescribeBundleTasksType_t * request = adb_ncDescribeBundleTasksType_create (env);
-    
     // set standard input fields
     if (meta) {
         adb_ncDescribeBundleTasksType_set_correlationId (request, env, meta->correlationId);
@@ -747,7 +746,7 @@ int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int
     int status = 0;
     { // do it
         adb_ncDescribeBundleTasksResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeBundleTasks (stub, env, input);
-        
+
         if (!output) {
             logprintfl (EUCAERROR, "ERROR: DescribeBundleTasks" NULL_ERROR_MSG);
             status = -1;
@@ -757,7 +756,17 @@ int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int
             if ( adb_ncDescribeBundleTasksResponseType_get_return(response, env) == AXIS2_FALSE ) {
                 logprintfl (EUCAERROR, "ERROR: DescribeBundleTasks returned an error\n");
                 status = 1;
-            }
+	    }		
+	    *outBundleTasksLen = adb_ncDescribeBundleTasksResponseType_sizeof_bundleTasks(response, env);
+	    *outBundleTasks = malloc(sizeof(bundleTask *) * *outBundleTasksLen);
+	    for (i=0; i<*outBundleTasksLen; i++) {
+	      adb_bundleTaskType_t *bundle;
+	      bundle = adb_ncDescribeBundleTasksResponseType_get_bundleTasks_at(response, env, i);
+	      (*outBundleTasks)[i] = malloc(sizeof(bundleTask));
+	      snprintf( (*outBundleTasks)[i]->instanceId, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_instanceId(bundle, env));
+	      snprintf( (*outBundleTasks)[i]->state, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_state(bundle, env));
+	      snprintf( (*outBundleTasks)[i]->manifest, 32768, "%s", adb_bundleTaskType_get_manifest(bundle, env));
+	    }
         }
     }
     

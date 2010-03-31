@@ -83,6 +83,8 @@ permission notice:
 #include "data.h"
 #include "client-marshal.h"
 
+#include <windows-cc.h>
+
 #define SUPERUSER "eucalyptus"
 
 // local globals
@@ -102,6 +104,8 @@ vnetConfig *vnetconfig=NULL;
 
 sem_t *locks[ENDLOCK] = {NULL, NULL, NULL, NULL, NULL, NULL};
 int mylocks[ENDLOCK] = {0,0,0,0,0,0};
+
+ccBundleCache *bundleCache=NULL;
 
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey) {
   int i, j, rc, start = 0, stop = 0, ret=0;
@@ -200,8 +204,8 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
   */
 }
 
-int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen) {
-  int i, j, k, rc, start = 0, stop = 0, ret=0;
+int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bundleTask **outBundleTasks, int *outBundleTasksLen) {
+  int i, j, k, rc, start = 0, stop = 0, ret=0, count=0;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start, op_timer;
@@ -218,70 +222,35 @@ int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen) {
   logprintfl(EUCAINFO, "DescribeBundleTasks(): called\n");
   logprintfl(EUCADEBUG, "DescribeBundleTasks(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta->userId), instIdsLen);
 
-  i = j = 0;
-  myInstance = NULL;
+  *outBundleTasks = NULL;
+  *outBundleTasksLen = 0;
 
-  if (!instIds) {
-    logprintfl(EUCAERROR, "DescribeBundleTasks(): bad input params\n");
-    return(1);
-  }
-  
-  for (k=0; k<instIdsLen; k++) {
-    instanceId = instIds[k];
-    sem_mywait(NCCALL);
-    sem_mywait(RESCACHE);
-
-    rc = find_instanceCacheId(instanceId, &myInstance);
-    if (!rc) {
-      // found the instance in the cache
-      if (myInstance) {
-	start = myInstance->ncHostIdx;
-	stop = start+1;
-	free(myInstance);
-      }
-    } else {
-      start = 0;
-      stop = resourceCache->numResources;
+  sem_mywait(BUNDLECACHE);
+  count=0;
+  if (bundleCache->numBundles) {
+    *outBundleTasks = malloc(sizeof(bundleTask) * bundleCache->numBundles);
+    if (!*outBundleTasks) {
+      logprintfl(EUCAFATAL, "doDescribeBundleTasks(): out of memory!\n");
+      unlock_exit(1);
     }
-    
-    for (j=start; j<stop; j++) {
-      // read the instance ids
-      logprintfl(EUCAINFO,"DescribeBundleTasks(): calling describe bundle tasks (%s) on (%s)\n", instanceId, resourceCache->resources[j].hostname);
-      if (1) {
-	int pid, status;
-	pid = fork();
-	if (pid == 0) {
-	  ret=0;
-	  ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
-	  if (config->use_wssec) {
-	    rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	  }
-	  rc = 0;
-	  rc = ncDescribeBundleTasksStub(ncs, ccMeta, instIds, instIdsLen);
-	  if (!rc) {
-	    ret = 0;
-	  } else {
-	    ret = 1;
-	  }
-	  exit(ret);
-	} else {
-	  op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	  rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
-	  rc = WEXITSTATUS(status);
-	  logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
+
+    for (i=0; i<MAXBUNDLES; i++) {
+      if (bundleCache->cacheState[i] == BUNDLEVALID) {
+	memcpy( &((*outBundleTasks)[count]), &(bundleCache->bundles[i]), sizeof(bundleTask));
+	count++;
+	if (count > bundleCache->numBundles) {
+	  logprintfl(EUCAWARN, "doDescribeBundleTasks(): found more bundles than reported by numBundles, will only report a subset of bundles\n");
+	  count=0;
 	}
       }
-      
-      if (!rc) {
-	ret = 0;
-      } else {
-	logprintfl(EUCAERROR, "DescribeBundleTasks(): call to NC failed: instanceId=%s\n", instanceId);
-	ret = 1;
-      }
     }
     
-    sem_mypost(RESCACHE);
-    sem_mypost(NCCALL);
+    *outBundleTasksLen = bundleCache->numBundles;
+  }
+  sem_mypost(BUNDLECACHE);
+
+  for (i=0; i< (*outBundleTasksLen) ; i++) {
+    logprintfl(EUCADEBUG, "DescribeBundleTasks(): returning: instanceId=%s, state=%s, manifest=%s\n", (*outBundleTasks)[i].instanceId, (*outBundleTasks)[i].state, (*outBundleTasks)[i].manifest);
   }
 
   logprintfl(EUCADEBUG,"DescribeBundleTasks(): done.\n");
@@ -2362,6 +2331,10 @@ void *monitor_thread(void *in) {
       logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
     }
 
+    rc = refresh_bundleTasks(&ccMeta, 60, 1);
+    if (rc) {
+      logprintfl(EUCAWARN, "monitor_thread(): call to refresh_bundleTasks() failed in monitor thread\n");
+    }
     
     sem_mywait(CONFIG);
     if (config->kick_dhcp) {
@@ -2502,6 +2475,16 @@ int init_thread(void) {
 	exit(1);
       }
     }
+
+    if (bundleCache == NULL) {
+      rc = setup_shared_buffer((void **)&bundleCache, "/eucalyptusCCBundleCache", sizeof(ccBundleCache), &(locks[BUNDLECACHE]), "/eucalyptusCCBundleCacheLock", SHARED_FILE);
+      if (rc != 0) {
+	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccBundleCache, exiting...\n");
+	sem_mypost(INIT);
+	exit(1);
+      }
+    }
+
     sem_mypost(INIT);
     thread_init=1;
   }

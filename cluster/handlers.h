@@ -75,7 +75,7 @@ permission notice:
 #define OP_TIMEOUT_PERNODE 20
 
 enum {SHARED_MEM, SHARED_FILE};
-enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, ENDLOCK};
+enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, BUNDLECACHE, ENDLOCK};
 
 typedef struct instance_t {
   char instanceId[16];
@@ -170,7 +170,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
 
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey);
-int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen);
+int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bundleTask **outBundleTasks, int *outBundleTasksLen);
 
 int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst);
 int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst);

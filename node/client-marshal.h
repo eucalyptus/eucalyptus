@@ -63,6 +63,8 @@ permission notice:
 #include "axis2_stub_EucalyptusNC.h" /* for axis2_ and axutil_ defs */
 #include "data.h" /* for eucalyptus defs */
 
+#include <windows-bundle.h>
+
 typedef struct ncStub_t {
   axutil_env_t * env;
   axis2_char_t * client_home;
@@ -84,6 +86,6 @@ int ncPowerDownStub  (ncStub *st, ncMetadata *meta);
 int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
 int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey);
-int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen);
+int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 
 #endif

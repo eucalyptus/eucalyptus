@@ -372,12 +372,18 @@ int main (int argc, char **argv)
       instIds[1] = malloc(sizeof(char) * 32);
       instIds[2] = malloc(sizeof(char) * 32);
       instIds[3] = malloc(sizeof(char) * 32);
-      snprintf(instIds[0], 32, "i-12345678");
-      snprintf(instIds[1], 32, "i-12345678");
-      snprintf(instIds[2], 32, "i-12345678");
-      snprintf(instIds[3], 32, "i-12345678");
+      snprintf(instIds[0], 32, "i-12345675");
+      snprintf(instIds[1], 32, "i-12345674");
+      snprintf(instIds[2], 32, "i-12345673");
+      snprintf(instIds[3], 32, "i-12345672");
       instIdsLen=4;
-      int rc = ncDescribeBundleTasksStub(stub, &meta, instIds, instIdsLen);
+      bundleTask **outBundleTasks=NULL;
+      int outBundleTasksLen=0;
+      int i, rc;
+      rc = ncDescribeBundleTasksStub(stub, &meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);
+      for (i=0; i<outBundleTasksLen; i++) {
+	printf("BUNDLE %d: %s %s %s\n", i, outBundleTasks[i]->instanceId, outBundleTasks[i]->state, outBundleTasks[i]->manifest);
+      }
     } else if (!strcmp(command, "terminateInstance")) {
         CHECK_PARAM(instance_id, "instance ID");
         

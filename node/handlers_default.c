@@ -84,6 +84,7 @@ permission notice:
 #include <vnetwork.h>
 #include <euca_auth.h>
 
+#include <windows-bundle.h>
 
 /* coming from handlers.c */
 extern sem * hyp_sem;
@@ -380,10 +381,42 @@ static int
 doDescribeBundleTasks(struct nc_state_t *nc,
 		      ncMetadata *meta,
 		      char **instIds,
-		      int instIdsLen)
+		      int instIdsLen,
+		      bundleTask ***outBundleTasks,
+		      int *outBundleTasksLen)
 {
-	logprintfl(EUCADEBUG, "doDescribeBundleTasks() invoked\n");
-	return 0;
+  bundleTask *bundle=NULL;
+  int rc, i;
+  logprintfl(EUCADEBUG, "doDescribeBundleTasks() invoked\n");
+  
+  if (instIdsLen == 0 || instIds == NULL) {
+    logprintfl(EUCADEBUG, "doDescribeBundleTasks(): input instIds empty\n");
+    *outBundleTasks = malloc(sizeof(bundleTask *) * 1);
+    *outBundleTasksLen=0;
+    
+    // for testing
+    bundle = malloc(sizeof(bundleTask));
+    allocate_bundleTask(bundle, "i-halothar", "pending", "mymanifest");
+    (*outBundleTasks)[0] = bundle;
+    (*outBundleTasksLen)++;
+    
+  } else {
+    *outBundleTasks = malloc(sizeof(bundleTask *) * instIdsLen);
+    *outBundleTasksLen=0;
+  }
+ 
+  for (i=0; i<instIdsLen; i++) {
+    bundle = malloc(sizeof(bundleTask));
+    // look up bundle state, for now just set to 'pending'
+    rc = allocate_bundleTask(bundle, instIds[i], "pending", "mymanifest");
+    if (rc) {
+    } else {
+      (*outBundleTasks)[i] = bundle;
+      (*outBundleTasksLen)++;
+    }
+  }
+  
+  return 0;
 }
 
 struct handlers default_libvirt_handlers = {

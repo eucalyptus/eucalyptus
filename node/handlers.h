@@ -66,6 +66,8 @@ permission notice:
 #include "vnetwork.h"
 #include "data.h"
 
+#include <windows-bundle.h>
+
 #define LIBVIRT_QUERY_RETRIES 5
 #define MAXDOMS 1024
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
@@ -182,7 +184,9 @@ struct handlers {
     int (*doDescribeBundleTasks)	(struct nc_state_t *nc,
 					 ncMetadata *meta,
 					 char **instIds,
-					 int instIdsLen);
+					 int instIdsLen,
+					 bundleTask ***outBundleTasks,
+					 int *outBundleTasksLen);
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
@@ -197,7 +201,7 @@ int doStartNetwork		(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen,
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey);
-int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen);
+int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 #endif /* HANDLERS_FANOUT */
 
 
