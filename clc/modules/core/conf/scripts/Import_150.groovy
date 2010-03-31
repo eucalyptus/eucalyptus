@@ -25,7 +25,7 @@ import groovy.sql.Sql;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.ProductCode;
 import com.eucalyptus.auth.UserInfo;
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import com.eucalyptus.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.cloud.state.State;

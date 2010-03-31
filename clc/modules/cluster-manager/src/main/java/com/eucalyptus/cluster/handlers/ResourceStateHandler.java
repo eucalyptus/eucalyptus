@@ -8,11 +8,11 @@ import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.http.MappingHttpResponse;
 
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
 

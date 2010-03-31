@@ -59,115 +59,156 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- *
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.entities;
 
-package edu.ucsb.eucalyptus.cloud.entities;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import java.util.List;
-import java.util.zip.Adler32;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityTransaction;
+import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
-import org.hibernate.Session;
-import org.hibernate.Transaction;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.crypto.Crypto;
-import com.eucalyptus.auth.crypto.Digest;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.entities.DatabaseUtil;
 
 @Entity
 @PersistenceContext(name="eucalyptus_general")
-@Table( name = "counters" )
+@Table( name = "vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class Counters {
+public class VmType implements Comparable {
+
+  public static String M1_SMALL = "m1.small";
+  public static String M1_LARGE = "m1.large";
+  public static String M1_XLARGE = "m1.xlarge";
+  public static String C1_MEDIUM = "c1.medium";
+  public static String C1_XLARGE = "c1.xlarge";
 
   @Id
-  @Column( name = "id" )
+  @GeneratedValue
+  @Column( name = "vm_type_id" )
   private Long id = -1l;
-  @Column( name = "msg_count" )
-  private Long messageId;
+  @Column( name = "vm_type_name" )
+  private String name;
 
-  public Counters()
+  @Column( name = "vm_type_cpu" )
+  private Integer cpu;
+  @Column( name = "vm_type_disk" )
+  private Integer disk;
+  @Column( name = "vm_type_memory" )
+  private Integer memory;
+
+  public VmType() {}
+
+  public VmType( final String name )
   {
-    this.id = 0l;
-    this.messageId = 0l;
+    this.name = name;
   }
 
-  public Long getMessageId()
+  public VmType( final String name, final Integer cpu, final Integer disk, final Integer memory )
   {
-    return messageId;
+    this.name = name;
+    this.cpu = cpu;
+    this.disk = disk;
+    this.memory = memory;
   }
 
-  public void setMessageId( Long messageId )
+  public Long getId()
   {
-    this.messageId = messageId;
+    return id;
   }
 
-  @Transient
-  private static long tempId = -1;
-  @Transient
-  private static Adler32 digest = new Adler32();
-  public static synchronized long getIdBlock( int length )
+  public String getName()
   {
-    ensurePersistence( );
-    long oldTemp = tempId;
-    tempId+=length;
-    return oldTemp;
+    return name;
   }
 
-  public synchronized static String getNextId()
+  public void setName( final String name )
   {
-    ensurePersistence( );
-    tempId++;
-    return Crypto.getDigestBase64( Long.toString( tempId ), Digest.SHA512, false ).replaceAll( "\\.","" );
+    this.name = name;
   }
 
-  private static void ensurePersistence( )
+  public Integer getCpu()
   {
-    long modulus = 100l;
-    if ( tempId < 0 )
-    {
-      Counters find = null;
-      EntityManager em = DatabaseUtil.getEntityManagerFactory( Component.eucalyptus.name( ) +"_general").createEntityManager(  );
-      Session session = (Session) em.getDelegate();
-      List<Counters> found = ( List<Counters> ) session.createSQLQuery( "select * from counters" ).addEntity( Counters.class ).list();
-      if( found.isEmpty() )
-      {
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        Counters newCounters = new Counters();
-        em.persist(newCounters);
-        em.flush();
-        tx.commit();
-        find = newCounters;
-      }
-      else
-        find = found.get(0);
-      tempId = find.getMessageId() + modulus;
-      em.close();
-    }
-    else if ( tempId % modulus == 0 )
-    {
-      EntityManager em = DatabaseUtil.getEntityManagerFactory( Component.eucalyptus.name( ) +"_general").createEntityManager(  );
-      Session session = (Session) em.getDelegate();
-      Transaction tx = session.beginTransaction();
-      tx.begin();
-      Counters find = ( Counters ) session.createSQLQuery( "select * from counters" ).addEntity( Counters.class ).list().get( 0 );
-      tempId += modulus;
-      find.setMessageId( tempId );
-      session.save( find );
-      tx.commit();
-      em.close();
-    }
+    return cpu;
+  }
+
+  public void setCpu( final Integer cpu )
+  {
+    this.cpu = cpu;
+  }
+
+  public Integer getDisk()
+  {
+    return disk;
+  }
+
+  public void setDisk( final Integer disk )
+  {
+    this.disk = disk;
+  }
+
+  public Integer getMemory()
+  {
+    return memory;
+  }
+
+  public void setMemory( final Integer memory )
+  {
+    this.memory = memory;
+  }
+
+  @Override
+  public boolean equals( final Object o )
+  {
+    if ( this == o ) return true;
+    if ( o == null || getClass() != o.getClass() ) return false;
+
+    VmType vmType = ( VmType ) o;
+
+    if ( !cpu.equals( vmType.cpu ) ) return false;
+    if ( !disk.equals( vmType.disk ) ) return false;
+    if ( !memory.equals( vmType.memory ) ) return false;
+    if ( !name.equals( vmType.name ) ) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name.hashCode();
+    result = 31 * result + cpu.hashCode();
+    result = 31 * result + disk.hashCode();
+    result = 31 * result + memory.hashCode();
+    return result;
+  }
+
+  public int compareTo( final Object o )
+  {
+    VmType that = ( VmType ) o;
+    if ( this.equals( that ) ) return 0;
+    if ( ( this.getCpu() <= that.getCpu() ) && ( this.getDisk() <= that.getDisk() ) && ( this.getMemory() <= that.getMemory() ) )
+      return -1;
+    if ( ( this.getCpu() >= that.getCpu() ) && ( this.getDisk() >= that.getDisk() ) && ( this.getMemory() >= that.getMemory() ) )
+      return 1;
+    return 0;
+  }
+
+  public VmTypeInfo getAsVmTypeInfo()
+  {
+    return new VmTypeInfo( this.getName(), this.getMemory(), this.getDisk(), this.getCpu() );
+  }
+
+  @Override
+  public String toString() {
+    return "VmType{" +
+           "name='" + name + '\'' +
+           ", cpu=" + cpu +
+           ", disk=" + disk +
+           ", mem=" + memory +
+           "}";
   }
 }

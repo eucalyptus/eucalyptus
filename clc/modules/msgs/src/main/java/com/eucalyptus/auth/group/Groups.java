@@ -2,6 +2,7 @@ package com.eucalyptus.auth.group;
 
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.GroupExistsException;
 import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.Users;
 
@@ -26,6 +27,9 @@ public class Groups {
   
   public static Group lookupGroup( String name ) throws NoSuchGroupException {
     return Groups.getGroupProvider( ).lookupGroup( name );
+  }
+  public static Group addGroup( String name ) throws GroupExistsException {
+    return Groups.getGroupProvider( ).addGroup( name );
   }
   
 }

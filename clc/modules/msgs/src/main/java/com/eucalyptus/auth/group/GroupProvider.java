@@ -1,6 +1,7 @@
 package com.eucalyptus.auth.group;
 
 import java.util.List;
+import com.eucalyptus.auth.GroupExistsException;
 import com.eucalyptus.auth.User;
 
 public interface GroupProvider {
@@ -17,5 +18,6 @@ public interface GroupProvider {
    * @throws NoSuchGroupException
    */
   public abstract Group lookupGroup( String groupName ) throws NoSuchGroupException;
+  public abstract Group addGroup( String groupName ) throws GroupExistsException;
   
 }

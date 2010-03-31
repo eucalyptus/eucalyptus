@@ -97,37 +97,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     //TODO FIXME TODO BROKEN FAIL: discover this at bootstrap time.
   }
   
-  private DatabaseAuthProvider( ) {}
-  
-  
-  @Provides( resource = Resource.UserCredentials )
-  @Depends( resources = { Resource.Database } )
-  public static class AdminUserBootstrapper extends Bootstrapper {
-    private static Logger LOG = Logger.getLogger( DatabaseAuthProvider.class );
-    
-    public boolean load( Resource current ) throws Exception {
-      Users.setUserProvider( new DatabaseAuthProvider( ) );
-      return true;
-    }
-    
-    public boolean start( ) throws Exception {
-      try {
-        Users.lookupUser( "admin" );
-        return true;
-      } catch ( NoSuchUserException e ) {
-        try {
-          Users.addUser( "admin", true, true );
-          return true;
-        } catch ( UserExistsException e1 ) {
-          LOG.fatal( e1, e1 );
-          return false;
-        } catch ( UnsupportedOperationException e1 ) {
-          LOG.fatal( e1, e1 );
-          return false;
-        }
-      }
-    }
-  }
+  DatabaseAuthProvider( ) {}
   
   @Override
   public User addUser( String userName, Boolean isAdmin, Boolean isEnabled, String secretKey, String queryId ) throws UserExistsException {
@@ -291,6 +261,20 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       throw new NoSuchUserException( e );
     }
     return user;
+  }
+
+  @Override
+  public Group addGroup( String groupName ) throws GroupExistsException {
+    EntityWrapper<UserGroupEntity> db = Credentials.getEntityWrapper( );
+    UserGroupEntity newGroup = new UserGroupEntity( groupName );
+    try {
+      db.add( newGroup );
+      db.commit( );
+    } catch ( Throwable t ) {
+      db.rollback( );
+      throw new GroupExistsException( t );
+    }
+    return new DatabaseWrappedGroup( newGroup );
   }
   
   

@@ -9,6 +9,7 @@ import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.util.ClusterUtil;
+import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.LogUtil;
@@ -16,7 +17,6 @@ import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.ws.SystemState;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 

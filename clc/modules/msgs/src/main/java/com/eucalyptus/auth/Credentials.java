@@ -119,20 +119,20 @@ public class Credentials {
     }
     @Override
     public boolean processsClass( Class candidate ) throws Throwable {
-      if( BaseProvider.class.isAssignableFrom( candidate ) && !Modifier.isInterface( candidate.getModifiers( ) ) && !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
+      if( !Modifier.isInterface( candidate.getModifiers( ) ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && BaseProvider.class.isAssignableFrom( candidate ) ) {
         try {
           BaseProvider o = ( BaseProvider ) candidate.newInstance( );
           for( Class c : Credentials.providers.keySet( ) ) {
             if( c.isAssignableFrom( candidate ) ) {
               Object curr = Credentials.providers.get( c );
-              if( curr == null ) {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, CertificateProvider.class.toString( ), candidate.getCanonicalName( ) ) );
+              if( DUMMY.equals( curr ) ) {
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, c.getCanonicalName( ), candidate.getCanonicalName( ) ) );
                 Credentials.providers.put( c, o );
               } else if( !candidate.getSimpleName( ).startsWith( "Default" ) ) {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, CertificateProvider.class.getCanonicalName( ), curr.getClass( ).getCanonicalName( ), candidate.getCanonicalName( )  ) );
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getCanonicalName( ), curr.getClass( ).getCanonicalName( ), candidate.getCanonicalName( )  ) );
                 Credentials.providers.put( c, o );
               } else {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, CertificateProvider.class.toString( ) ) );
+                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, c.getCanonicalName( ), candidate.getCanonicalName( ) ) );
                 return false;
               }
             }

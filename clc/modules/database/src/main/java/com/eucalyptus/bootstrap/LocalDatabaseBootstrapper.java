@@ -175,12 +175,6 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   public boolean start( ) throws Exception {
     this.waitForDatabase( );
     try {
-      GroovyUtil.evaluateScript( "startup.groovy" );
-    } catch ( Exception e ) {
-      LOG.fatal( e, e );
-      System.exit( -1 );
-    }
-    try {
       GroovyUtil.evaluateScript( "after_persistence.groovy" );//TODO: move this ASAP!
     } catch ( ScriptExecutionFailedException e ) {
       LOG.fatal( e, e );
