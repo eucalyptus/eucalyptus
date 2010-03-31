@@ -1038,19 +1038,17 @@ public class LVM2Manager implements LogicalStorageManager {
 				String returnValue = "";
 				int timeout = 300;
 				if(pid > 0) {
-					for(int i=0; i < 5; ++i) {
-						returnValue = aoeStatus(pid);
+					for(int i=0; i < 3; ++i) {
+						returnValue = aoeStatus(pid);						
 						if(returnValue.length() == 0) {
 							success = false;
-							try {
-								Thread.sleep(timeout);
-							} catch(InterruptedException ie) {
-								LOG.error(ie);
-							}
-							timeout += 300;
 						} else {
 							success = true;
-							break;
+						}
+						try {
+							Thread.sleep(timeout);
+						} catch(InterruptedException ie) {
+							LOG.error(ie);
 						}
 					}
 				}
