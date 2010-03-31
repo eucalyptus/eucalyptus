@@ -13,6 +13,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+
 public class PropertyDirectory {
   private static Logger                                 LOG         = Logger.getLogger( PropertyDirectory.class );
   private static Map<String, ConfigurableProperty>      fqMap       = Maps.newHashMap( );
@@ -79,4 +81,12 @@ public class PropertyDirectory {
     return "Temporary description";
   }
   
+  public static List<ComponentProperty> getComponentPropertySet( String prefix ) {
+	  List<ComponentProperty> componentProps = Lists.newArrayList();
+	  List<ConfigurableProperty> props = getPropertyEntrySet( prefix );
+	  for (ConfigurableProperty prop : props) {
+		  componentProps.add(new ComponentProperty(prop.getWidgetType(), prop.getDisplayName(), prop.getValue(), prop.getQualifiedName()));
+	  }
+	  return componentProps;
+  }
 }
