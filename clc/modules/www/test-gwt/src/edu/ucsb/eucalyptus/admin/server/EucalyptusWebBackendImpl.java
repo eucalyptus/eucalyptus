@@ -192,6 +192,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		HashMap h = new HashMap();
 		h.put("ready", true);
 		h.put("cloud-name", "Back-end stub");
+		h.put("version", "1.6.2");
 		h.put("signup-greeting", "<signup greeting>");
 		h.put("certificate-download-text", "<certificate-download-text>");
 		h.put("rest-credentials-text", "<rest-credentials-text>");
@@ -229,7 +230,10 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 	public List<StorageInfoWeb> getStorageList(String sessionId) throws SerializableException
 	{
-		return new ArrayList<StorageInfoWeb>();
+		ArrayList<StorageInfoWeb> a = new ArrayList<StorageInfoWeb>();
+		StorageInfoWeb s = new StorageInfoWeb("CLUSTER", "hostname", 54321, 55, 555, new ArrayList<String>());
+		a.add(s);
+		return a;
 	}
 
 	public void setStorageList(String sessionId, List<StorageInfoWeb> storageList ) throws SerializableException
@@ -249,7 +253,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 	public SystemConfigWeb getSystemConfig( final String sessionId ) throws SerializableException
 	{
-		return new SystemConfigWeb();
+		SystemConfigWeb c = new SystemConfigWeb();
+		c.setDoDynamicPublicAddresses(false);
+		return c;
 	}
 
 	public void setSystemConfig( final String sessionId, final SystemConfigWeb systemConfig ) throws SerializableException
