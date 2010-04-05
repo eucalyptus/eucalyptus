@@ -210,6 +210,11 @@ public class WalrusImageManager {
 									break;
 							}
 							if(!verified) {
+								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+								if(cert != null)
+									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+							}
+							if(!verified) {
 								throw new NotAuthorizedException("Invalid signature");
 							}
 						} catch (Exception ex) {
@@ -231,6 +236,17 @@ public class WalrusImageManager {
 								signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if (signatureVerified)
 									break;
+							} catch(Exception ex) {
+								db.rollback();
+								LOG.error(ex, ex);
+								throw new DecryptionFailedException("signature verification");
+							}
+						}
+						if(!signatureVerified) {
+							try {
+								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+								if(cert != null)
+									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 							} catch(Exception ex) {
 								db.rollback();
 								LOG.error(ex, ex);
@@ -378,6 +394,21 @@ public class WalrusImageManager {
 						}
 					}
 
+					//check if Eucalyptus signed it
+					if(!signatureVerified) {
+						try {
+							X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+							PublicKey publicKey = cert.getPublicKey();
+							sigVerifier.initVerify(publicKey);
+							sigVerifier.update((machineConfiguration + image).getBytes());
+							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+						} catch(Exception ex) {
+							db.rollback();
+							LOG.error(ex, ex);
+							throw new DecryptionFailedException("signature verification");
+						}
+
+					}
 					if(!signatureVerified) {
 						throw new NotAuthorizedException("Invalid signature");
 					}
@@ -531,36 +562,17 @@ public class WalrusImageManager {
 
 				if(objectInfo.canRead(userId)) {
 					String objectName = objectInfo.getObjectName();
-					String manifestString = "";
 					File file = new File(storageManager.getObjectPath(bucketName, objectName));
-					try {
-						FileInputStream inStream = new FileInputStream(file);
-						byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
-						int bytesRead = -1;
-						try {
-							while((bytesRead = inStream.read(bytes, 0, bytes.length)) > 0) {
-								manifestString += new String(bytes, 0, bytesRead);
-							}
-						} catch (IOException e) {
-							LOG.error(e);
-							throw new EucalyptusCloudException(e);
-						} finally {
-							try {
-								inStream.close();
-							} catch (IOException e) {
-								LOG.error(e);
-								throw new EucalyptusCloudException(e);
-							}
-						}
-					} catch (FileNotFoundException e) {
-						LOG.error(e, e);
-						throw new EucalyptusCloudException(e);
-					}
+					XMLParser parser = new XMLParser(file);
+					String image = parser.getXML("image");
+					String machineConfiguration = parser.getXML("machine_configuration");
+					String verificationString = machineConfiguration + image;
+
 					try {
 						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
 						Signature sigCloud = Signature.getInstance("SHA1withRSA");
 						sigCloud.initSign(pk);
-						sigCloud.update(manifestString.getBytes());
+						sigCloud.update(verificationString.getBytes());
 						String signature = new String(Hashes.bytesToHex(sigCloud.sign()));
 						//TODO: refactor
 						DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance( ).newDocumentBuilder( );
@@ -570,7 +582,7 @@ public class WalrusImageManager {
 						sigElement.setTextContent(signature);						
 						Node manifestElem = docRoot.getFirstChild();
 						manifestElem.appendChild(sigElement);
-						
+
 						fileInputStream.close();
 						Source source = new DOMSource(docRoot);
 						Result result = new StreamResult(file);
@@ -581,9 +593,11 @@ public class WalrusImageManager {
 							FileInputStream inStream = new FileInputStream(file);
 							byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
 							int bytesRead = -1;
+							long totalBytesRead = 0;
 							try {
 								while((bytesRead = inStream.read(bytes, 0, bytes.length)) > 0) {
 									digest.update(bytes, 0, bytesRead);
+									totalBytesRead += bytesRead;
 								}
 							} catch (IOException e) {
 								LOG.error(e);
@@ -598,6 +612,7 @@ public class WalrusImageManager {
 							}
 							String md5 = Hashes.bytesToHex(digest.digest());
 							objectInfo.setEtag(md5);
+							objectInfo.setSize(totalBytesRead);
 						} catch (FileNotFoundException e) {
 							LOG.error(e, e);
 							throw new EucalyptusCloudException(e);
