@@ -88,18 +88,18 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.FailureCallback;
 import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.cluster.UnconditionalCallback;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.client.NioBootstrap;
 import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
-import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
@@ -160,14 +160,15 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   
   public abstract void fail( Throwable throwable );
   
-  public void dispatch( String clusterName ) {
+  public QueuedEventCallback dispatch( String clusterName ) {
     LOG.debug( EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ) );
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    this.dispatch( cluster );
+    return this.dispatch( cluster );
   }
-  public void dispatch( Cluster cluster ) {
+  public QueuedEventCallback dispatch( Cluster cluster ) {
     LOG.debug( EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ) );
     cluster.getMessageQueue( ).enqueue( this );
+    return this;
   }
   
   public RTYPE send( String clusterName ) throws Exception, Exception {
@@ -276,9 +277,15 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     ctx.getChannel( ).close( );
   }
   
-  @Override
-  public RTYPE getResponse( ) throws Exception {
-    this.waitForResponse( );
+  public RTYPE pollResponse( Long waitMillis ) throws Exception {
+    if( this.response.get( ) == null && !this.pollForResponse( waitMillis ) ) {
+      return null;
+    } else {
+      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ) );
+      return this.checkedResponse( );
+    }
+  }
+  private RTYPE checkedResponse() throws Exception {
     if ( this.response.get( ) instanceof EucalyptusMessage ) {
       return ( RTYPE ) this.response.get( );
     } else if ( this.response.get( ) instanceof Throwable ) {
@@ -286,20 +293,32 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     }
     throw new EucalyptusClusterException( "Failed to retrieve result of asynchronous operation." );
   }
+  @Override
+  public RTYPE getResponse( ) throws Exception {
+    this.waitForResponse( );
+    LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ) );
+    return this.checkedResponse( );
+  }
   
+  public boolean pollForResponse( Long waitMillis ) {
+    boolean ret = false;
+    this.canHas.lock( );
+    try {
+      ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
+      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ) );
+    } catch ( InterruptedException e ) {
+      LOG.debug( e, e );
+      Thread.currentThread( ).interrupt( );
+    } finally {
+      this.canHas.unlock( );
+    }    
+    return ret;
+  }  
+
   public void waitForResponse( ) {
     this.canHas.lock( );
     try {
-      while ( this.response.get( ) == null ) {
-        try {
-          this.ready.await( 10000, TimeUnit.MILLISECONDS );
-          LOG.debug( "Waiting for response." );
-        } catch ( InterruptedException e ) {
-          LOG.debug( e, e );
-          Thread.currentThread( ).interrupt( );
-        }
-      }
-      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ) );
+      while ( this.response.get( ) == null && !this.pollForResponse( 5000l ) );
     } finally {
       this.canHas.unlock( );
     }
