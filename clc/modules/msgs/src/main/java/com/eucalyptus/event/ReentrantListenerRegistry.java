@@ -23,7 +23,7 @@ public class ReentrantListenerRegistry<T> {
   }
   
   public void register( T type, EventListener listener ) {
-    LOG.info( EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.toString( ), listener.getClass( ).getName( ) ) );
+    LOG.info( EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getCanonicalName( ) ) );
     this.modificationLock.lock( );
     try {
       if ( !this.listenerMap.containsEntry( type, listener ) ) {
@@ -35,7 +35,7 @@ public class ReentrantListenerRegistry<T> {
   }
   
   public void deregister( T type, EventListener listener ) {
-    LOG.info( EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.toString( ), listener.getClass( ).getName( ) ) );
+    LOG.info( EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getCanonicalName( ) ) );
     this.modificationLock.lock( );
     try {
       this.listenerMap.remove( type, listener );
@@ -45,9 +45,10 @@ public class ReentrantListenerRegistry<T> {
   }
   
   public void destroy( T type ) {
-    LOG.info( EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DESTROY_ALL, type.toString( ) ) );
-    LOG.info( String.format( "Destroying event listeners for %s", type.getClass( ).getName( ) ) );
     this.modificationLock.lock( );
+    for( EventListener e : this.listenerMap.get( type ) ) {
+      LOG.info( EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DESTROY_ALL, type.getClass( ).getSimpleName( ), e.getClass( ).getCanonicalName( ) ) );
+    }
     try {
       this.listenerMap.removeAll( type );
     } finally {
@@ -71,12 +72,12 @@ public class ReentrantListenerRegistry<T> {
       ce.advertiseEvent( e );
       if ( e.isVetoed( ) ) {
         String cause = e.getCause( ) != null ? e.getCause( ) : "no cause given";
-        LOG.info( EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_VETOD, ce.getClass( ).getName( ), e.toString( ), cause ) );
+        LOG.info( EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_VETOD, ce.getClass( ).getSimpleName( ), e.toString( ), cause ) );
         throw new EventVetoedException( String.format( "Event %s was vetoed by listener %s: %s", LogUtil.dumpObject( e ), LogUtil.dumpObject( ce ), cause ) );
       }
     }
     for ( EventListener ce : listeners ) {
-      EventRecord record = EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getName( ), e.toString( ));
+      EventRecord record = EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getSimpleName( ), e.toString( ));
       if ( e instanceof ClockTick ) {
         LOG.trace( record );
       } else {

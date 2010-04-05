@@ -355,7 +355,7 @@ public class ImageManager {
       UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) );
       UserGroupEntity group = db.recast( UserGroupEntity.class ).getUnique( new UserGroupEntity( "all" ) );
       imageInfo.getPermissions( ).add( user );
-      imageInfo.getUserGroups( ).add( group );
+//      imageInfo.getUserGroups( ).add( group );
       db.commit( );
       LOG.info( "Registering image pk=" + imageInfo.getId( ) + " ownerId=" + user.getUserName( ) );
     } catch ( EucalyptusCloudException e ) {
@@ -449,8 +449,8 @@ public class ImageManager {
         }
       } else if ( request.getLaunchPermission( ) != null ) {
         reply.setRealResponse( reply.getLaunchPermission( ) );
-        for ( UserGroupEntity userGroup : imgInfo.getUserGroups( ) )
-          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( userGroup.getName( ) ) );
+//        for ( UserGroupEntity userGroup : imgInfo.getUserGroups( ) )
+//          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( userGroup.getName( ) ) );
         for ( UserInfo user : imgInfo.getPermissions( ) )
           reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( user.getUserName( ) ) );
       } else if ( request.getProductCodes( ) != null ) {
@@ -512,8 +512,8 @@ public class ImageManager {
       if ( !request.getUserId( ).equals( imgInfo.getImageOwnerId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Not allowed to modify image: " + imgInfo.getImageId( ) );
       imgInfo.getPermissions( ).clear( );
       imgInfo.getPermissions( ).add( db.recast( UserInfo.class ).getUnique( UserInfo.named( imgInfo.getImageOwnerId( ) ) ) );
-      imgInfo.getUserGroups( ).clear( );
-      imgInfo.getUserGroups( ).add( db.recast( UserGroupEntity.class ).getUnique( UserGroupEntity.named( "all" ) ) );
+//      imgInfo.getUserGroups( ).clear( );
+//      imgInfo.getUserGroups( ).add( db.recast( UserGroupEntity.class ).getUnique( UserGroupEntity.named( "all" ) ) );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );

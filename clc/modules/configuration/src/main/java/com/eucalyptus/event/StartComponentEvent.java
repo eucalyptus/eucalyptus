@@ -5,7 +5,8 @@ import java.net.URISyntaxException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.event.ComponentEvent;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.LocalConfiguration;
 
@@ -20,19 +21,22 @@ public class StartComponentEvent extends ComponentEvent {
     }
     return new StartComponentEvent( new LocalConfiguration( config.getComponent( ), uri ), config.getComponent(), true );
   }
-  public static StartComponentEvent getLocal( Component c ) {
+  public static StartComponentEvent getLocal( com.eucalyptus.bootstrap.Component c ) {
     return new StartComponentEvent( new LocalConfiguration( c, c.getUri( ) ), c, true );
+  }
+  public static StartComponentEvent getLocal( Component c ) {
+    return new StartComponentEvent( new LocalConfiguration( c.getDelegate( ), c.getLifecycle( ).getUri( ) ), c.getDelegate( ), true );
   }
   public static StartComponentEvent getRemote( ComponentConfiguration config ) {
     return new StartComponentEvent( config, config.getComponent( ), false );
   }
   
-  private StartComponentEvent( ComponentConfiguration configuration, Component component, boolean local ) {
-    super( configuration, component, local );
+  private StartComponentEvent( ComponentConfiguration configuration, com.eucalyptus.bootstrap.Component component, boolean local ) {
+    super( configuration, component.name( ), local );
   }
   @Override
   public String toString( ) {
-    return String.format( "StartComponentEvent [component=%s, configuration=%s, local=%s]", component, configuration, local );
+    return "Start" + super.toString( );
   }
   
   

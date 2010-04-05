@@ -65,10 +65,12 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.cloud.ws.DNSControl;
 
-@Provides(resource=Resource.PrivilegedConfiguration,component=Component.dns)
-@Depends(local=Component.dns)
+@Provides(Component.dns)
+@RunDuring(Bootstrap.Stage.PrivilegedConfiguration)
+@DependsLocal(Component.dns)
 public class DNSBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( DNSBootstrapper.class );
 	private static DNSBootstrapper singleton;
@@ -96,7 +98,7 @@ public class DNSBootstrapper extends Bootstrapper {
 	}
 
 	@Override
-	public boolean load(Resource current ) throws Exception {
+	public boolean load(Stage current ) throws Exception {
 		LOG.info("Initializing DNS");
 		DNSControl.initialize();
 		return true;

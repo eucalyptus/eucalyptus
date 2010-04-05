@@ -85,9 +85,9 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.sysinfo.LogLevels;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.ServiceNotReadyException;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.PipelineRegistry;
@@ -99,7 +99,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
 
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    if ( !SystemBootstrapper.isFinished( ) ) {
+    if ( !Bootstrap.isFinished( ) ) {
       throw new ServiceNotReadyException( "System has not yet completed booting." );
     } else if ( this.first ) {
       lookupPipeline( ctx, e );

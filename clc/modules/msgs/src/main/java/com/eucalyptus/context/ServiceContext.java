@@ -10,10 +10,13 @@ import org.mule.api.registry.Registry;
 import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
-import com.eucalyptus.bootstrap.ResourceProvider;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Resource;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
@@ -76,17 +79,18 @@ public class ServiceContext {
     }
   }
   
-  @Provides(resource=Resource.CloudServiceInit)
+  @Provides(Component.servicebus)
+  @RunDuring(Bootstrap.Stage.CloudServiceInit)
   public static class ServiceBootstrapper extends Bootstrapper {
     
     public ServiceBootstrapper( ) {}
 
     @Override
-    public boolean load( Resource current ) throws Exception {
+    public boolean load( Stage current ) throws Exception {
       List<ConfigResource> configs = Lists.newArrayList( );
-      for( ResourceProvider r : current.getProviders( ) ) {
-        LOG.info( LogUtil.subheader( "Preparing configuration for: " + r ) );
-        configs.addAll( r.getConfigurations( ) );
+      for( Resource rsc : current.getResources( ) ) {
+        LOG.info( LogUtil.subheader( "Preparing configuration for: " + rsc ) );
+        configs.addAll( rsc.getConfigurations( ) );        
       }
       for( ConfigResource cfg : configs ) {
         LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );

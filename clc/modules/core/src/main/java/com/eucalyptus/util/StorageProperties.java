@@ -75,7 +75,7 @@ import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.sysinfo.BaseDirectory;
+import com.eucalyptus.system.BaseDirectory;
 
 import edu.ucsb.eucalyptus.util.SystemUtil;
 

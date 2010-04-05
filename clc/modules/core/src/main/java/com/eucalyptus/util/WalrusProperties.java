@@ -73,7 +73,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.sysinfo.BaseDirectory;
+import com.eucalyptus.system.BaseDirectory;
 
 import java.net.*;
 import java.util.List;

@@ -63,24 +63,21 @@
  */
 package com.eucalyptus.cluster;
 
-import java.net.URI;
-import java.util.List;
 import java.util.NoSuchElementException;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Depends;
+import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.cluster.handlers.ClusterCertificateHandler;
 import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -92,13 +89,10 @@ import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.LocalDispatcher;
-import com.eucalyptus.ws.client.RemoteDispatcher;
-import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.collect.Lists;
 
-@Provides( resource = Resource.RemoteServicesInit )
-@Depends( local = Component.eucalyptus )
+@Provides(Component.cluster)
+@RunDuring(Bootstrap.Stage.RemoteServicesInit)
+@DependsLocal(Component.eucalyptus)
 public class ClusterBootstrapper extends Bootstrapper implements EventListener {
   public static Logger LOG         = Logger.getLogger( ClusterBootstrapper.class );
   private boolean       initialized = false;
@@ -129,7 +123,7 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
   }
   
   @Override
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     LOG.info( "Loading clusters." );
     Component.cluster.markLocal( );
     Component.cluster.markEnabled( );

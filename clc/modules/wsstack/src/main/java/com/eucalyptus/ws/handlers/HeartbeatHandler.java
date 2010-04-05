@@ -68,7 +68,6 @@ import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -89,18 +88,18 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.auth.crypto.Signatures;
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
+import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.StartComponentEvent;
+import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -112,7 +111,6 @@ import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatType;
@@ -323,11 +321,11 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       try {
         if ( Component.walrus.equals( c ) ) {
           ComponentConfiguration config = Configuration.getWalrusConfiguration( startedComponent.getName( ) );
-          Configuration.fireStartComponent( config );
+          fireStartComponent( config );
         }
         if ( Component.storage.equals( c ) ) {
           ComponentConfiguration config = Configuration.getStorageControllerConfiguration( startedComponent.getName( ) );
-          Configuration.fireStartComponent( config );
+          fireStartComponent( config );
         }
       } catch ( Exception e1 ) {
         LOG.debug( e1, e1 );
@@ -338,10 +336,10 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       Component c = Component.valueOf( stoppedComponent.getComponent( ) );
       try {
         if ( Component.walrus.equals( c ) ) {
-          Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
+          fireStopComponent( new RemoteConfiguration( c, uri ) );
         }
         if ( Component.storage.equals( c ) ) {
-          Configuration.fireStopComponent( new RemoteConfiguration( c, uri ) );
+          fireStopComponent( new RemoteConfiguration( c, uri ) );
         }
       } catch ( Exception e1 ) {
         LOG.debug( e1, e1 );
@@ -349,6 +347,14 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     }
   }
   
+  private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventVetoedException {
+    ListenerRegistry.getInstance( ).fireEvent( StopComponentEvent.getLocal( remoteConfiguration ) );
+  }
+
+  private void fireStartComponent( ComponentConfiguration config ) throws EventVetoedException {
+    ListenerRegistry.getInstance( ).fireEvent( StartComponentEvent.getLocal( config ) );    
+  }
+
   @Override
   public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
     super.writeComplete( ctx, e );

@@ -1,4 +1,4 @@
-package com.eucalyptus.sysinfo;
+package com.eucalyptus.system;
 
 public class LogLevels {
 

@@ -66,15 +66,16 @@ package com.eucalyptus.bootstrap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.SslSetup;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 
-@Provides( resource = Resource.DatabaseInit )
-@Depends( resources = Resource.CredentialsConfiguration, remote = Component.eucalyptus )
+@Provides(Component.db)
+@RunDuring(Bootstrap.Stage.RemoteConfiguration)
+@DependsRemote(Component.eucalyptus)
 public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
   @Override
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
-    SystemBootstrapper.setDatabaseBootstrapper( this );
     LOG.info( "-> database host: " + System.getProperty("euca.db.host") );
     LOG.info( "-> database port: " + System.getProperty("euca.db.port") );
     System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );

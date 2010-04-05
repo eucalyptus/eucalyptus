@@ -64,183 +64,107 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.List;
-
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Components;
 
-import com.eucalyptus.util.NetworkUtil;
-
+@Deprecated
 public enum Component {
-  bootstrap( "vm://EucalyptusRequestQueue" ),
-  eucalyptus( "vm://EucalyptusRequestQueue" ),
-  walrus( "vm://BukkitInternal" ),
-  dns( "vm://DNSControlInternal" ),
-  storage( "vm://StorageInternal" ),
-  db( "jdbc:hsqldb:hsqls://127.0.0.1:9001/eucalyptus" ),
-  cluster( "vm://ClusterSink" ),
-  jetty( "vm://HttpServer" ),
+  bootstrap( ),
+  eucalyptus( ),
+  walrus( ),
+  dns( ),
+  storage( ),
+  db( ),
+  jetty( ),
+  configuration( ),
+  cluster( true ),
+  accounts( true ),
+  servicebus( true ),
+  remoteComponents( true ),
+  systemAuthentication( true ),
   any( true );
-  private static Logger      LOG         = Logger.getLogger( Component.class );
-  private boolean            local       = false;
-
-  private boolean            enabled     = false;
-  private boolean            initialized = true;//FIXME: set this in some useful way
-  private boolean            hasKeys     = false;
-  private String             hostAddress;
-  private int                port        = 8773;
-  private String             localUri;
-  private URI                uri;
-  private String             propertyKey;
-  private ResourceProvider   resourceProvider;
-  private List<Bootstrapper> bootstrappers;
-
+  private static Logger LOG = Logger.getLogger( Component.class );
+  private Boolean       dummy;
+  
   private Component( ) {
-    this.hostAddress = "localhost";
-    this.propertyKey = "euca." + this.name( ) + ".host";
+    this.dummy = false;
   }
-
-  private Component( String uri ) {
+  
+  private Component( Boolean whatever ) {
     this( );
-    this.localUri = uri;
-    this.setUri( uri );
+    this.dummy = whatever;
   }
-
-  private Component( boolean whatever ) {
-    this( );
-    this.local = true;
-    this.enabled = true;
+  
+  public void markHasKeys( ) {}
+  
+  public Boolean isHasKeys( ) {
+    return Components.lookup( this ).getKeys( ).getKeys( ) != null;
   }
-
-  public void markHasKeys( ) {
-    this.hasKeys = true;
-  }
-
-  public boolean isHasKeys( ) {
-    return hasKeys;
-  }
-
+  
   public void markEnabled( ) {
-    this.enabled = true;
+    Components.lookup( this ).getLifecycle( ).setEnabled( true );
   }
-
+  
   public void markDisabled( ) {
-    this.enabled = false;
+    Components.lookup( this ).getLifecycle( ).setEnabled( false );
   }
-
-  public boolean isEnabled( ) {
-    return enabled;
+  
+  public Boolean isEnabled( ) {
+    return Components.lookup( this ).getLifecycle( ).isEnabled( );
   }
-
-  public boolean isLocal( ) {
-    return local;
+  
+  public Boolean isLocal( ) {
+    return Components.lookup( this ).getLifecycle( ).isLocal( );
   }
-
+  
   public void markLocal( ) {
-    this.local = true;
+    Components.lookup( this ).getLifecycle( ).markLocal( );
   }
-
-  public ResourceProvider getResourceProvider( ) {
-    return resourceProvider;
-  }
-
-  public void setResourceProvider( ResourceProvider resourceProvider ) {
-    this.resourceProvider = resourceProvider;
-  }
-
-  public List<Bootstrapper> getBootstrappers( ) {
-    return bootstrappers;
-  }
-
-  public boolean add( Bootstrapper arg0 ) {
-    return bootstrappers.add( arg0 );
-  }
-
+  
   public String getHostAddress( ) {
-    return this.hostAddress;
+    return Components.lookup( this ).getLifecycle( ).getHost( );
   }
-
+  
   public void setHostAddress( String address ) {
-    boolean isLocal = false;
-    try {
-      isLocal = NetworkUtil.testLocal( address );
-    } catch ( Exception e1 ) {
-    }
-    if ( isLocal ) {
-      this.local = true;
-      this.hostAddress = "localhost";
-      this.setUri( this.localUri );
-    } else {
-      this.local = false;
-      this.hostAddress = address;
-      this.setUri( makeUri( address ) );
-    }
+    Components.lookup( this ).getLifecycle( ).setHost( address );
   }
-
-  public String makeUri( String address ) {
-    if ( Component.db.equals( this ) ) {
-      return String.format( "jdbc:hsqldb:hsqls://%s:%d/eucalyptus", address, 9001 );
-    } else {
-      return String.format( "http://%s:%d/internal/%s", address, 8773, this.localUri.replaceAll( "vm://", "" ) );
-    }
-  }
-
-  public String getPropertyKey( ) {
-    return propertyKey;
-  }
-
+  
   public URI getUri( ) {
-    return uri;
+    return Components.lookup( this ).getLifecycle( ).getUri( );
   }
-
-  private void setUri( String uri ) {
-    try {
-      this.uri = new URI( uri );
-      System.setProperty( this.propertyKey, this.uri.toASCIIString( ) );
-      if ( LOG != null ) LOG.info( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.uri.toASCIIString( ) ) );
-    } catch ( Exception e ) {
-      System.setProperty( this.propertyKey, this.localUri );
-      if ( LOG != null ) LOG.info( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.localUri ) );
-    }
-  }
-
+  
   public int getPort( ) {
-    return port;
+    return Components.lookup( this ).getLifecycle( ).getPort( );
   }
-
+  
   public void setPort( int port ) {
-    this.port = port;
+    Components.lookup( this ).getLifecycle( ).setPort( port );
   }
-
+  
   public String getRegistryKey( String hostName ) {
-    try {
-      if ( NetworkUtil.testLocal( hostName ) ) return this.name( ) + "@localhost";
-    } catch ( Exception e ) {
-    }
-    return this.name( ) + "@" + hostName;
+    return Components.lookup( this ).getChildKey( hostName );
   }
-
+  
   public String getLocalAddress( ) {
-    return localUri;
+    return this.getLocalUri( ).toASCIIString( );
   }
-
+  
   public URI getLocalUri( ) {
-    if ( Component.db.equals( this ) ) { return null; }
-    try {
-      return new URI( this.localUri );
-    } catch ( URISyntaxException e ) {
-      LOG.fatal( "Failed to construct the default local URI object.", e );
-      System.exit( 1 );
-      return null;
-    }
+    return Components.lookup( this ).getConfiguration( ).getLocalUri( );
   }
-
-  public boolean isInitialized( ) {
-    return initialized;
+  
+  public Boolean isInitialized( ) {
+    return Components.lookup( this ).getLifecycle( ).isInitialized( );
   }
-
-  public void setInitialized( boolean initialized ) {
-    this.initialized = initialized;
+  
+  public Boolean isDummy( ) {
+    return this.dummy;
+  }
+  
+  public static List<Component> list() {
+    return Arrays.asList( Component.values( ) );
   }
 
 }

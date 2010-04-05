@@ -61,91 +61,76 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.system;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URL;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.spi.LoggingEvent;
+import org.hibernate.exception.GenericJDBCException;
 
-import org.apache.log4j.Logger;
-import org.mule.config.ConfigResource;
-
-import net.sf.json.JSONObject;
-
-import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
-public class ResourceProvider {
-  private static Logger LOG = Logger.getLogger( ResourceProvider.class );
-  private final Resource            resource;
-  private final URL                 origin;
-  private final String              name;
-  private final Map<String, String> properties;
-  private final List<ConfigResource> configurations;
-  private Component component;
-  @SuppressWarnings( "unchecked" )
-  public ResourceProvider( Resource resource, Properties props, URL origin ) {
-    this.resource = resource;
-    this.properties = Maps.newHashMap( ( Hashtable ) props );
-    this.name = this.properties.remove( "name" );
-    this.origin = origin;
-    this.configurations = Lists.newArrayList( );
+public class EucaLayout extends PatternLayout {
+  public static int LINE_BYTES = 100;
+  static {
     try {
-      this.component = Component.valueOf( this.name );
-      component.setResourceProvider( this );
-      if( System.getProperty("euca.disable." + component.name( )) == null ) {
-        component.markEnabled( );
-        if( System.getProperty("euca.remote." + component.name( )) == null ) {
-          component.markLocal( );
-        }
+      LINE_BYTES = Integer.parseInt( System.getenv( "COLUMNS" ) );
+    } catch ( NumberFormatException e ) {}
+  }
+  public static String PATTERN = "%d{HH:mm:ss} %5p "+(LogLevels.DEBUG?"%-4.4L %-23.23c{1}":"%-23.23c{1}")+"| %m%n";
+  private String CONTINUATION = "%m%n";
+  private PatternLayout continuation = null;
+  
+
+  public EucaLayout( ) {
+    super( PATTERN );
+    
+  }
+
+  public EucaLayout( String pattern ) {
+    super( PATTERN );
+    
+  }
+
+  
+  
+  @Override
+  public String format( LoggingEvent event ) {
+    if( event.getThrowableInformation( ) != null ) {
+      Throwable t = event.getThrowableInformation( ).getThrowable( );
+      if( t != null && t instanceof GenericJDBCException ) {
+        return "";
       }
-    } catch ( Exception e ) {
-      this.component = Component.any;
+    } else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
+      return "";
     }
-  }
-  
-  public List<ConfigResource> initConfigurationResources() throws IOException {
-    if( this.component == null || this.component.isEnabled( ) ) {
-      for(String rscName : this.properties.keySet( )) {
-        try {
-          this.configurations.add( new ConfigResource( this.properties.get( rscName ) ) );
-        } catch ( IOException e ) {
-          LOG.error( String.format("Processing %s caused an error %s: %s", this.origin, e.getClass().getSimpleName( ), e.getMessage( )), e );
-          throw e;
-        } 
-      }      
-    } else {
-      LOG.info("-X skipping " + this.component + " because it is marked disabled.");
+    String renderedMessage = event.getRenderedMessage( );
+    if(renderedMessage != null) {
+	String[] messages = renderedMessage.split( "\n" );
+    StringBuffer sb = new StringBuffer( );
+    boolean con = false;
+    for( int i = 0; i < messages.length; i++ ) {
+//      String message= messages[i];
+      String substring= messages[i];
+//      while ( message.length( ) > 0 ) {
+//        int rb = LINE_BYTES>message.length( )?message.length( ):LINE_BYTES;
+//        String substring = message.substring( 0, rb );
+//        message = message.substring( rb );
+        LoggingEvent n = new LoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ), 
+                                           event.getTimeStamp( ), event.getLevel( ), 
+                                           substring, event.getThreadName( ), 
+                                           event.getThrowableInformation( ), null, null, null );
+        sb.append( (!con)?super.format( n ):continuation.format( n ) );
+        if(continuation==null) {
+          continuation = new PatternLayout(sb.toString( ).split( "\\|" )[0].replaceAll( ".", " " )+"| "+CONTINUATION);
+        }
+        con = true;        
+//      }      
+    }    
+    return sb.toString( );
     }
-    return this.configurations;
-  }
-  
-  public Resource getResource( ) {
-    return resource;
-  }
-
-  public String getName( ) {
-    return name;
-  }
-
-  public URL getOrigin( ) {
-    return origin;
-  }
-
-
-
-  public List<ConfigResource> getConfigurations( ) {
-    return configurations;
+    return null;
   }
 
   @Override
-  public String toString( ) {
-    return LogUtil.dumpObject( this );
+  public boolean ignoresThrowable( ) {
+    return false;
   }
-
 }

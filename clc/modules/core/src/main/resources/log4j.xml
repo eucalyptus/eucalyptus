@@ -38,15 +38,14 @@
   <appender name="console" class="org.apache.log4j.ConsoleAppender">
     <param name="Target" value="System.out" />
     <param name="Threshold" value="${euca.log.level}" />
-    <!--          <layout class="org.apache.log4j.PatternLayout"> -->
-    <layout class="com.eucalyptus.sysinfo.EucaLayout" />
+    <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
   <appender name="console-log" class="org.apache.log4j.RollingFileAppender">
     <param name="Threshold" value="${euca.log.level}" />
     <param name="File" value="${euca.log.dir}/cloud-output.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
-    <layout class="com.eucalyptus.sysinfo.EucaLayout" />
+    <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
   <appender name="exhaustive" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
@@ -71,7 +70,7 @@
     <param name="MaxBackupIndex" value="10" />
     <param name="Threshold" value="ERROR" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{HH:mm:ss} [%c{1}:%t] %x %-5p %m%n" />
+      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
     </layout>
   </appender>
   <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">
@@ -80,7 +79,7 @@
     <param name="MaxBackupIndex" value="10" />
     <param name="Threshold" value="${euca.log.level}" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{HH:mm:ss} [%c{1}:%t] %x %-5p %m%n" />
+      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
     </layout>
   </appender>
   <appender name="walrus-stats-log" class="org.apache.log4j.RollingFileAppender">

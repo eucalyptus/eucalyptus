@@ -12,6 +12,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.LogUtil;
@@ -40,7 +41,7 @@ public class HeartbeatClient {
     this.port = port;
   }
   
-  public void send( Collection<ComponentConfiguration> componentConfigurations ) {
+  public void send( Collection<ServiceConfiguration> componentConfigurations ) {
     try {
       HeartbeatType hbmsg = this.getMessage( componentConfigurations );
       MappingHttpRequest httpRequest = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, this.getHostName( ), this.getPort(), "/services/Heartbeat", hbmsg );
@@ -95,21 +96,21 @@ public class HeartbeatClient {
   public int getPort( ) {
     return port;
   }
-  private synchronized HeartbeatType getMessage( Collection<ComponentConfiguration> componentConfigurations ) {
+  private synchronized HeartbeatType getMessage( Collection<ServiceConfiguration> componentConfigurations ) {
     HeartbeatType hbmsg = new HeartbeatType( );
     hbmsg.getStarted( ).addAll( started );
     this.started.clear( );
     hbmsg.getStopped( ).addAll( stopped );
     this.stopped.clear( );
-    for( ComponentConfiguration c : componentConfigurations ) {
+    for( ServiceConfiguration c : componentConfigurations ) {
       hbmsg.getComponents( ).add( new HeartbeatComponentType( c.getComponent( ).name( ), c.getName( ) ) );
     }
     return hbmsg;
   }
-  public synchronized boolean addStarted( ComponentConfiguration e ) {
+  public synchronized boolean addStarted( ServiceConfiguration e ) {
     return this.started.add( new ComponentType( e.getComponent( ).name( ), e.getName( ), e.getUri( ) ) );
   }
-  public synchronized boolean addStopped( ComponentConfiguration e ) {
+  public synchronized boolean addStopped( ServiceConfiguration e ) {
     return this.stopped.add( new ComponentType( e.getComponent( ).name( ), e.getName( ), e.getUri( ) ) );
   }
 }

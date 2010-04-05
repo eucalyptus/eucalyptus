@@ -15,7 +15,7 @@ import javax.script.ScriptException;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.sysinfo.SubDirectory;
+import com.eucalyptus.system.SubDirectory;
 
 public class GroovyUtil {
   private static Logger LOG = Logger.getLogger( GroovyUtil.class );

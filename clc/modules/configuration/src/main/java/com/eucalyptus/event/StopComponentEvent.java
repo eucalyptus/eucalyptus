@@ -6,6 +6,7 @@ import java.net.URISyntaxException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.event.ComponentEvent;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.LocalConfiguration;
 
@@ -25,7 +26,7 @@ public class StopComponentEvent extends ComponentEvent{
   }
 
   private StopComponentEvent( ComponentConfiguration configuration, Component component, boolean local ) {
-    super( configuration, component, local );
+    super( configuration, component.name( ), local );
   }
   
 }

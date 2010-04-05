@@ -31,7 +31,7 @@ public class BindingDiscovery extends ServiceJarDiscovery {
       });
       for( String binding : bindings ) {
         if( binding.length( ) > 2 ) {
-          BindingManager.seedBinding( binding, candidate );
+          return BindingManager.seedBinding( binding, candidate );
         }
       }
       return true;

@@ -69,6 +69,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.google.common.collect.Lists;
 
 public class DeferredInitializer {
@@ -97,9 +98,9 @@ public class DeferredInitializer {
 	public void run() {
 		for (Class klass : klasses) {
 			try {
-				Method initializer = klass.getMethod("deferredInitializer", null);
+				Method initializer = klass.getMethod("deferredInitializer");
 				try {
-					initializer.invoke(null, null);
+					initializer.invoke(null);
 				} catch (IllegalArgumentException e) {
 					LOG.error(e, e);
 				} catch (IllegalAccessException e) {
@@ -115,12 +116,13 @@ public class DeferredInitializer {
 		}
 	}
   
-  @Provides( resource = Resource.DeferredClassInit )
-  public static class Bootstrap extends Bootstrapper {
+	@Provides(Component.bootstrap)
+  @RunDuring(Bootstrap.Stage.DeferredClassInit)
+  public static class DeferredInitializationBootstrapper extends Bootstrapper {
 
     @Override
-    public boolean load( Resource current ) throws Exception {
-      return false;
+    public boolean load( Stage current ) throws Exception {
+      return true;
     }
 
     @Override

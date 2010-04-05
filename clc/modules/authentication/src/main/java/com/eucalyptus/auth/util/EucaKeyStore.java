@@ -68,7 +68,7 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.sysinfo.SubDirectory;
+import com.eucalyptus.system.SubDirectory;
 
 public class EucaKeyStore extends AbstractKeyStore {
   public static String            FORMAT         = "pkcs12";

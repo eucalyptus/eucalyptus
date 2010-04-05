@@ -231,7 +231,7 @@ public class ImageUtil {
     return id != null && !"".equals( id );
   }
   private static boolean userHasImagePermission( final UserInfo user, final ImageInfo img ) {
-    if ( img.getUserGroups( ).isEmpty( ) && !user.getUserName( ).equals( img.getImageOwnerId( ) )
+    if ( /*img.getUserGroups( ).isEmpty( ) && */!user.getUserName( ).equals( img.getImageOwnerId( ) )
          && !user.isAdministrator( ) && !img.getPermissions( ).contains( user ) ) return true;
     return false;
   }
@@ -336,21 +336,21 @@ public class ImageUtil {
   public static void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo, final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
     for ( LaunchPermissionItemType perm : changeList ) {
       if ( perm.isGroup( ) ) {
-        UserGroupEntity target = new UserGroupEntity( perm.getGroup( ) );
-        if ( adding && !imgInfo.getUserGroups( ).contains( target ) ) {
-          EntityWrapper<UserGroupEntity> dbGroup = db.recast( UserGroupEntity.class );
-          try {
-            target = dbGroup.getUnique( target );
-          } catch ( EucalyptusCloudException e ) {} finally {
-            imgInfo.getUserGroups( ).add( target );
-            if ( "all".equals( target.getName( ) ) ) imgInfo.setPublic( true );
-          }
-        } else if ( !adding && imgInfo.getUserGroups( ).contains( target ) ) {
-          if ( "all".equals( target.getName( ) ) ) imgInfo.setPublic( false );
-          imgInfo.getUserGroups().remove(target);
-        } else if ( !adding ) {
-          throw new EucalyptusCloudException( "image attribute: cant remove nonexistant permission." );
-        }
+//        UserGroupEntity target = new UserGroupEntity( perm.getGroup( ) );
+//        if ( adding && !imgInfo.getUserGroups( ).contains( target ) ) {
+//          EntityWrapper<UserGroupEntity> dbGroup = db.recast( UserGroupEntity.class );
+//          try {
+//            target = dbGroup.getUnique( target );
+//          } catch ( EucalyptusCloudException e ) {} finally {
+//            imgInfo.getUserGroups( ).add( target );
+//            if ( "all".equals( target.getName( ) ) ) imgInfo.setPublic( true );
+//          }
+//        } else if ( !adding && imgInfo.getUserGroups( ).contains( target ) ) {
+//          if ( "all".equals( target.getName( ) ) ) imgInfo.setPublic( false );
+//          imgInfo.getUserGroups().remove(target);
+//        } else if ( !adding ) {
+//          throw new EucalyptusCloudException( "image attribute: cant remove nonexistant permission." );
+//        }
       } else if ( perm.isUser( ) ) {
         UserInfo target = new UserInfo( perm.getUserId( ) );
         if ( adding && !imgInfo.getPermissions( ).contains( target ) ) {

@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.log4j.Logger;
-import com.eucalyptus.sysinfo.SubDirectory;
+import com.eucalyptus.system.SubDirectory;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;

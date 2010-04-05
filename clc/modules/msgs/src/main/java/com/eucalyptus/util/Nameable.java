@@ -1,5 +1,7 @@
+package com.eucalyptus.util;
+
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,46 +59,11 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************/
+/**
+ * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.sysinfo;
 
-import java.io.File;
-import org.apache.log4j.Logger;
-import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
-
-public enum BaseDirectory {
-  HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LIB( "euca.lib.dir" ), LOG( "euca.log.dir" );
-  private static Logger LOGG = Logger.getLogger( BaseDirectory.class );
-  
-  private String        key;
-  
-  BaseDirectory( final String key ) {
-    this.key = key;
-  }
-  
-  public boolean check( ) {
-    if ( System.getProperty( this.key ) == null ) {
-      LOGG.fatal( "System property '" + this.key + "' must be set." );
-      return false;
-    }
-    this.create( );
-    return true;
-  }
-  
-  @Override
-  public String toString( ) {
-    return System.getProperty( this.key );
-  }
-  
-  public void create( ) {
-    final File dir = new File( this.toString( ) );
-    if ( dir.exists( ) ) {
-      return;
-    }
-    LOGG.info( EventRecord.here( BaseDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ) );
-    dir.mkdirs( );
-  }
+public interface Nameable<T> extends Comparable<T> {
+  public String getName( );
 }

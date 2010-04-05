@@ -59,7 +59,6 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- *
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
@@ -86,6 +85,8 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.auth.UserGroupEntity;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
@@ -124,14 +125,14 @@ public class ImageInfo {
   @Lob
   @Column( name = "image_signature" )
   private String signature;
-  @ManyToMany( cascade = CascadeType.PERSIST )
-  @JoinTable(
-      name = "image_has_groups",
-      joinColumns = { @JoinColumn( name = "image_id" ) },
-      inverseJoinColumns = @JoinColumn( name = "user_group_id" )
-  )
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-  private List<UserGroupEntity> userGroups = new ArrayList<UserGroupEntity>();
+//  @ManyToMany( cascade = CascadeType.PERSIST )
+//  @JoinTable(
+//      name = "image_has_groups",
+//      joinColumns = { @JoinColumn( name = "image_id" ) },
+//      inverseJoinColumns = @JoinColumn( name = "user_group_id" )
+//  )
+//  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+//  private List<Group> userGroups = new ArrayList<Group>();
   @ManyToMany()
   @JoinTable(
       name = "image_has_perms",
@@ -270,13 +271,13 @@ public class ImageInfo {
     this.signature = signature;
   }
 
-  public List<UserGroupEntity> getUserGroups() {
-    return userGroups;
-  }
-
-  public void setUserGroups( final List<UserGroupEntity> userGroups ) {
-    this.userGroups = userGroups;
-  }
+//  public List<UserGroupEntity> getUserGroups() {
+//    return userGroups;
+//  }
+//
+//  public void setUserGroups( final List<UserGroupEntity> userGroups ) {
+//    this.userGroups = userGroups;
+//  }
 
   public List<UserInfo> getPermissions() {
     return permissions;
@@ -328,10 +329,10 @@ public class ImageInfo {
   public boolean isAllowed( UserInfo user ) {
     if ( user.isAdministrator() || user.getUserName().equals( this.getImageOwnerId() ) )
       return true;
-    for ( UserGroupEntity g : this.getUserGroups() )
-      if ( "all".equals( g.getName() ) )
+//    for ( UserGroupEntity g : this.getUserGroups() )
+//      if ( "all".equals( g.getName() ) )
         return true;
-    return this.getPermissions().contains( user );
+//    return this.getPermissions().contains( user );
   }
 
   public static ImageInfo named( String imageId ) throws EucalyptusCloudException {

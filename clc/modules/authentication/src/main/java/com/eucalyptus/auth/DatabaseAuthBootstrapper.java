@@ -1,19 +1,23 @@
 package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Depends;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
 
-@Provides( resource = Resource.UserCredentials )
-@Depends( resources = { Resource.DatabaseInit } )
+@Provides(Component.accounts)
+@RunDuring(Bootstrap.Stage.UserCredentialsInit)
+@DependsLocal(Component.eucalyptus)
 public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
     Users.setUserProvider( dbAuth );
     Groups.setGroupProvider( dbAuth );

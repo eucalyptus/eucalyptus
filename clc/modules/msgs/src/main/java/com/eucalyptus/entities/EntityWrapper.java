@@ -75,7 +75,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.exception.JDBCConnectionException;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.sysinfo.LogLevels;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;

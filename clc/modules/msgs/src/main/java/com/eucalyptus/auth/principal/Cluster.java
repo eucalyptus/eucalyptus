@@ -1,7 +1,7 @@
 package com.eucalyptus.auth.principal;
 
-import com.eucalyptus.auth.principal.scope.ClusterScope;
+import com.eucalyptus.auth.principal.domain.ClusterDomain;
 
-public interface Cluster extends ClusterScope, ComponentPrincipal {
+public interface Cluster extends ClusterDomain, ComponentPrincipal {
 
 }

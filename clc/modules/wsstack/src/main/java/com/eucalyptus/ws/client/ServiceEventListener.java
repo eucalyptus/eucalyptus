@@ -1,12 +1,8 @@
 package com.eucalyptus.ws.client;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -19,13 +15,18 @@ public class ServiceEventListener implements EventListener {
 
   public static void register( ) {
     ServiceEventListener me = new ServiceEventListener( );
+    for( Component c : Component.values() ) {
+      if( !c.isDummy( ) ) {
+        ListenerRegistry.getInstance( ).register( c, me );        
+      }
+    }
+    ListenerRegistry.getInstance( ).register( Component.eucalyptus, me );
     ListenerRegistry.getInstance( ).register( Component.walrus, me );
+    ListenerRegistry.getInstance( ).register( Component.dns, me );
     ListenerRegistry.getInstance( ).register( Component.storage, me );
     ListenerRegistry.getInstance( ).register( Component.db, me );
-    ListenerRegistry.getInstance( ).register( Component.dns, me );
-    ListenerRegistry.getInstance( ).register( Component.jetty, me );
-    ListenerRegistry.getInstance( ).register( Component.eucalyptus, me );
     ListenerRegistry.getInstance( ).register( Component.cluster, me );
+    ListenerRegistry.getInstance( ).register( Component.jetty, me );
     if( Component.eucalyptus.isLocal( ) ) {
       ListenerRegistry.getInstance( ).register( ClockTick.class, RemoteBootstrapperClient.getInstance( ) ); 
       ListenerRegistry.getInstance( ).register( Component.walrus, RemoteBootstrapperClient.getInstance( ) );
@@ -39,30 +40,17 @@ public class ServiceEventListener implements EventListener {
 
   @Override
   public void fireEvent( Event event ) {
-    try {
-      if ( event instanceof StartComponentEvent ) {
-        StartComponentEvent e = ( StartComponentEvent ) event;
-        ServiceDispatcher sd = null;
-        if ( Component.db.equals( e.getComponent( ) ) ) {
-          LOG.info( LogUtil.header( "Got information for the " + e.getComponent( ) + " " + LogUtil.dumpObject( e.getConfiguration( ) ) ) );
-        }
-        if ( e.isLocal( ) ) {
-          Component c = e.getComponent( );
-          URI uri = new URI( c.getLocalAddress( ) );
-          sd = new LocalDispatcher( c, c.name( ), uri );
-          ServiceDispatcher.register( c.getRegistryKey( "localhost" ), sd );
-        } else {
-          ComponentConfiguration config = e.getConfiguration( );
-          Component c = e.getComponent( );
-          URI uri = new URI( c.makeUri( config.getHostName( ) ) );
-          sd = new RemoteDispatcher( c, c.name( ), uri );
-          ServiceDispatcher.register( c.getRegistryKey( config.getHostName( ) ), sd );
-        }
-        LOG.info( "Registering service dispatcher: " + LogUtil.dumpObject( sd ) );
+    if ( event instanceof StartComponentEvent ) {
+      StartComponentEvent e = ( StartComponentEvent ) event;
+      ServiceDispatcher sd = null;
+      if ( Component.db.equals( e.getComponent( ) ) ) {
+        LOG.info( LogUtil.header( "Got information for the " + e.getComponent( ) + " " + LogUtil.dumpObject( e.getConfiguration( ) ) ) );
       }
-    } catch ( URISyntaxException e ) {
-      LOG.warn( e, e );
+      com.eucalyptus.component.Component childComponent = Components.lookup( e.getComponent( ) ).getChild( e.getConfiguration( ).getHostName( ) );
+      LOG.info( "Registering service dispatcher: " + LogUtil.dumpObject( sd ) );
     }
   }
 
+  
+  
 }

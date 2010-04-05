@@ -85,6 +85,7 @@ import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -119,7 +120,7 @@ public class WalrusBucketLogger {
 			public void run() {
 				if(logData.size() > LOG_THRESHOLD) {
 					//dispatch
-					ServiceDispatcher dispatcher = ServiceDispatcher.lookupSingle(Component.walrus);
+					Dispatcher dispatcher = ServiceDispatcher.lookupSingle(Component.walrus);
 					List<BucketLogData> data = new ArrayList<BucketLogData>();
 					logData.drainTo(data);
 					for(BucketLogData entry : data) {

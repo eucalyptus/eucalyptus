@@ -14,7 +14,7 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
-import com.eucalyptus.sysinfo.LogLevels;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {

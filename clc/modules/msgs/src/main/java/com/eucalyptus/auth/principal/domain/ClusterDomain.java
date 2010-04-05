@@ -1,7 +1,7 @@
-package com.eucalyptus.auth.principal.scope;
+package com.eucalyptus.auth.principal.domain;
 
 import com.eucalyptus.auth.principal.Cluster;
 
-public interface ClusterScope extends Scope {
+public interface ClusterDomain extends Domain {
   public abstract Cluster getContainingCluster();
 }

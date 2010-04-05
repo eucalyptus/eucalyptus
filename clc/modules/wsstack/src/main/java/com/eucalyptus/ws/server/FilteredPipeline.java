@@ -72,7 +72,7 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.sysinfo.LogLevels;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.handlers.ServiceSinkHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;

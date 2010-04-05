@@ -75,7 +75,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
-import com.eucalyptus.sysinfo.LogLevels;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 
 public abstract class MessageStackHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {

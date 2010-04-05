@@ -264,3 +264,4 @@ public class ClusterCredentials extends AbstractPersistent implements Serializab
     return true;
   }  
 }
+

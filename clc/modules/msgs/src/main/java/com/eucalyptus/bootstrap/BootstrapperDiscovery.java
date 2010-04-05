@@ -1,10 +1,13 @@
 package com.eucalyptus.bootstrap;
 
+import static com.eucalyptus.system.Ats.From;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventType;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class BootstrapperDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( BootstrapperDiscovery.class );
@@ -14,7 +17,13 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
   
   @Override
   public boolean processsClass( Class candidate ) throws Throwable {
+    String bc = candidate.getCanonicalName( );
     Class bootstrapper = this.getBootstrapper( candidate );
+    if ( !From( candidate ).has( RunDuring.class ) ) {
+      throw BootstrapException.throwFatal( "Bootstrap class does not specify execution stage (RunDuring.value=Bootstrap.Stage): " + bc );
+    } else if ( !From( candidate ).has( Provides.class ) ) {
+      throw BootstrapException.throwFatal( "Bootstrap class does not specify provided component (Provides.value=Component): " + bc );
+    } //TODO: maybe more checks at pre-load time for bootstrappers.
     this.bootstrappers.add( bootstrapper );
     return true;
   }
@@ -25,16 +34,16 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
     for ( Class c : bootstrappers ) {
       if ( c.equals( SystemBootstrapper.class ) ) continue;
       try {
-        LOG.debug( "-> Calling <init>()V on bootstrapper: " + c.getCanonicalName( ) );
+        EventRecord.here( BootstrapperDiscovery.class, EventType.BOOTSTRAPPER_INIT,"<init>()V", c.getCanonicalName( ) ).info( );
         try {
           ret.add( ( Bootstrapper ) c.newInstance( ) );
         } catch ( Exception e ) {
-          LOG.debug( "-> Calling getInstance()L; on bootstrapper: " + c.getCanonicalName( ) );
+          EventRecord.here( BootstrapperDiscovery.class, EventType.BOOTSTRAPPER_INIT,"getInstance()L", c.getCanonicalName( ) ).info( );
           Method m = c.getDeclaredMethod( "getInstance", new Class[] {} );
           ret.add( ( Bootstrapper ) m.invoke( null, new Object[] {} ) );
         }
       } catch ( Exception e ) {
-        LOG.warn( "Error in <init>()V and getInstance()L; in bootstrapper: " + c.getCanonicalName( ) );
+        throw BootstrapException.throwFatal( "Error in <init>()V and getInstance()L; in bootstrapper: " + c.getCanonicalName( ), e );
       }
     }
     return ret;

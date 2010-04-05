@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.sysinfo;
+package com.eucalyptus.system;
 
 import java.io.File;
 import org.apache.log4j.Logger;

@@ -93,11 +93,13 @@ import javax.persistence.TemporalType;
 import javax.persistence.Version;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
-public abstract class ComponentConfiguration extends AbstractPersistent implements Serializable, Comparable {
+public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, Comparable {
   @Column( name = "config_component_name", unique=true )
   String name;
   @Column( name = "config_component_hostname" )
@@ -132,6 +134,10 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   
   public abstract Component getComponent();
 
+  public com.eucalyptus.component.Component lookup() {
+    return Components.lookup( this.getComponent() );
+  }
+  
   public Boolean isLocal() {
     try {
       return NetworkUtil.testLocal( w.getHostName( ) );
@@ -173,7 +179,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 }
 
 public class EphemeralConfiguration extends ComponentConfiguration {
-  Component c;
+  String  name;
   URI uri;
   
   public EphemeralConfiguration( Component c, URI uri ) {
@@ -182,9 +188,12 @@ public class EphemeralConfiguration extends ComponentConfiguration {
     this.uri = uri;
   }  
   public Component getComponent() {
-    return this.c;
+    return Component.valueOf(this.getName());
   }
-  public String getUri() {
+  public com.eucalyptus.component.Component lookup() {
+    return Components.lookup(this.getName());
+  }
+    public String getUri() {
     return this.uri.toASCIIString( );
   }  
 }

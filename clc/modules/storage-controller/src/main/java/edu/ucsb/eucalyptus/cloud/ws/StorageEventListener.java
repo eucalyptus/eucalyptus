@@ -64,9 +64,8 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -75,7 +74,6 @@ import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
-
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
@@ -94,11 +92,11 @@ public class StorageEventListener implements EventListener {
 	public void fireEvent(Event event) {
 		if(event instanceof StartComponentEvent) {
 			StartComponentEvent startComponentEvent = (StartComponentEvent) event;
-			ComponentConfiguration config = startComponentEvent.getConfiguration();
+			ServiceConfiguration config = startComponentEvent.getConfiguration();
 			StorageProperties.updateStorageHost(config.getHostName());
 		} else if(event instanceof StopComponentEvent) { 
 			StopComponentEvent stopComponentEvent = (StopComponentEvent) event;
-			ComponentConfiguration config = stopComponentEvent.getConfiguration();
+			ServiceConfiguration config = stopComponentEvent.getConfiguration();
 			StorageInfo storageInfo = new StorageInfo();
 			String name = StorageProperties.SC_LOCAL_NAME;
 			if(!stopComponentEvent.isLocal())

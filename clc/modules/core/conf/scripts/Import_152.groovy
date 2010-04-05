@@ -6,7 +6,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.sysinfo.SubDirectory;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;

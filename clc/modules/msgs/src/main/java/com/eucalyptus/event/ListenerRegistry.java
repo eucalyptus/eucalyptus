@@ -3,7 +3,9 @@ package com.eucalyptus.event;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.records.EventType;
 import com.google.common.collect.Maps;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class ListenerRegistry {
   private static Logger                                     LOG       = Logger.getLogger( ListenerRegistry.class );

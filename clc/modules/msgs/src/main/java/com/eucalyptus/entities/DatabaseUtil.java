@@ -65,15 +65,15 @@ public class DatabaseUtil {
 	}
 
 	private static void touchDatabase( ) {
-		if ( !SystemBootstrapper.getDatabaseBootstrapper( ).isRunning( ) ) {
-			LOG.fatal( LogUtil.header( "Database is not running.  Attempting to recover by reloading." ) );
-			System.exit( 123 );// reload.
-		} else {
+//		if ( !SystemBootstrapper.getDatabaseBootstrapper( ).isRunning( ) ) {
+//			LOG.fatal( LogUtil.header( "Database is not running.  Attempting to recover by reloading." ) );
+//			System.exit( 123 );// reload.
+//		} else {
 			if ( MAX_FAIL > failCount ) {
 				LOG.warn( LogUtil.subheader( "Error using or obtaining a database connection, will try till " + ( MAX_FAIL - failCount++ ) + ">" + MAX_FAIL + " more times before reloading." ) );
         System.exit(123);       
 			}
-		}
+//		}
 	}
 
 	public static void closeAllEMFs() {

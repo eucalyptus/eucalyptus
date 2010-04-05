@@ -57,112 +57,46 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
+ *******************************************************************************
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.system;
 
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.net.URL;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Properties;
+import java.io.File;
 import org.apache.log4j.Logger;
-import com.google.common.collect.Lists;
+import com.eucalyptus.records.EventType;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
-public enum Resource {
-  PrivilegedConfiguration( ),
-  UnprivilegedConfiguration( ),
-  CredentialsConfiguration( ),/* <-- this means system credentials, not user. */
-  RemoteConfiguration( ),
-  DatabaseInit( ),
-  PersistenceContextInit( ),
-  DeferredClassInit( ),
-  ComponentCredentials( ),
-  RemoteServicesInit( ),
-  UserCredentials( ),
-  CloudServiceInit( ),
-  Verification( ),
-  Anonymous( ),
-  Final( );
-  private String                 resourceName;
-  private static Logger          LOG = Logger.getLogger( Resource.class );
-  private List<Bootstrapper>     bootstrappers;
-  private List<ResourceProvider> providers;
+public enum BaseDirectory {
+  HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LIB( "euca.lib.dir" ), LOG( "euca.log.dir" );
+  private static Logger LOGG = Logger.getLogger( BaseDirectory.class );
   
-  private Resource( ) {
-    this.resourceName = String.format( "com.eucalyptus.%sProvider", this.name( ) );
-    this.bootstrappers = Lists.newArrayList( );
+  private String        key;
+  
+  BaseDirectory( final String key ) {
+    this.key = key;
   }
   
-  public List<ResourceProvider> getProviders( ) {
-    synchronized ( this ) {
-      if ( this.providers == null ) {
-        this.providers = Lists.newArrayList( );
-        Enumeration<URL> p1;
-        try {
-          p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( this.resourceName );
-          try {
-            URL u = null;
-            while ( p1.hasMoreElements( ) ) {
-              u = p1.nextElement( );
-              LOG.debug( "Found resource provider: " + u );
-              Properties props = new Properties( );
-              props.load( u.openStream( ) );
-              ResourceProvider p = new ResourceProvider( this, props, u );
-              providers.add( p );
-            }
-          } catch ( IOException e ) {
-            LOG.error( e, e );
-          }
-        } catch ( IOException e1 ) {
-          LOG.error( e1, e1 );
-        }
-      }
-      return providers;
+  public boolean check( ) {
+    if ( System.getProperty( this.key ) == null ) {
+      LOGG.fatal( "System property '" + this.key + "' must be set." );
+      return false;
     }
+    this.create( );
+    return true;
   }
   
-  public boolean providedBy( Class clazz ) {
-    for ( Annotation a : clazz.getAnnotations( ) ) {
-      if ( a instanceof Provides && this.equals( ( ( Provides ) a ).resource( ) ) ) {
-        return true;
-      }
+  @Override
+  public String toString( ) {
+    return System.getProperty( this.key );
+  }
+  
+  public void create( ) {
+    final File dir = new File( this.toString( ) );
+    if ( dir.exists( ) ) {
+      return;
     }
-    return false;
+    LOGG.info( EventRecord.here( BaseDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ) );
+    dir.mkdirs( );
   }
-  
-  public boolean satisfiesDependency( Class clazz ) {
-    Depends d = ( Depends ) clazz.getAnnotation( Depends.class );//TODO: lame AST parser complains about this and requires cast...
-    if ( d != null && Lists.newArrayList( d.resources( ) ).contains( this ) ) {
-      return true;
-    }
-    return false;
-  }
-  
-  public boolean add( Bootstrapper b ) {
-    if ( this.bootstrappers.contains( b ) ) {
-      throw new RuntimeException( "Duplicate bootstrapper registration: " + b.getClass( ).toString( ) );          
-    } else {
-      return this.bootstrappers.add( b );
-    }
-  }
-  
-  public List<Bootstrapper> getBootstrappers( ) {
-    return this.bootstrappers;
-  }
-  
-  public boolean add( ResourceProvider p ) {
-    return this.providers.add( p );
-  }
-  
-  public List<ResourceProvider> initProviders( ) throws IOException {
-    for ( ResourceProvider p : this.providers ) {
-      p.initConfigurationResources( );
-    }
-    return this.providers;
-  }
-  
 }

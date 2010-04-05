@@ -67,16 +67,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import org.hsqldb.Server;
 import org.hsqldb.persist.HsqlProperties;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.system.Threads;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
-@Provides( resource = Resource.DatabaseInit )
-@Depends( resources = Resource.CredentialsConfiguration, local = Component.eucalyptus )
+@Provides(Component.db)
+@RunDuring(Bootstrap.Stage.DatabaseInit)
+@DependsLocal(Component.eucalyptus)
 public class LocalDatabaseBootstrapper extends Bootstrapper implements EventListener, Runnable, DatabaseBootstrapper {
   private static Logger             LOG = Logger.getLogger( LocalDatabaseBootstrapper.class );
   private static DatabaseBootstrapper singleton;
@@ -85,7 +88,6 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     synchronized ( LocalDatabaseBootstrapper.class ) {
       if ( singleton == null ) {
         singleton = new LocalDatabaseBootstrapper( );
-        SystemBootstrapper.setDatabaseBootstrapper( singleton );
       }
     }
     return singleton;
@@ -113,7 +115,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   }
 
   @Override
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     try {
       LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.util.SslSetup" ) );
     } catch ( Throwable t ) {}
@@ -161,7 +163,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     }
     this.db = new Server( );
     this.db.setProperties( new HsqlProperties( DatabaseConfig.getProperties( ) ) );
-    SystemBootstrapper.makeSystemThread( this ).start( );
+    Threads.newThread( this ).start( );
     try {
       GroovyUtil.evaluateScript( "after_database.groovy" );//TODO: move this ASAP!
     } catch ( ScriptExecutionFailedException e ) {
