@@ -175,7 +175,7 @@ public class WalrusProperties {
 	}
 
 	public enum WalrusInternalOperations {
-		GetDecryptedImage
+		GetDecryptedImage, ValidateImage
 	}
 
 	public enum GetOptionalParameters {

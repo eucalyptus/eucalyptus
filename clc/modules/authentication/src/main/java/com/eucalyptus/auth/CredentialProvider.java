@@ -289,6 +289,21 @@ public class CredentialProvider extends Bootstrapper {
     return user;
   }
   
+  public static User getUserFromQueryId( String queryId ) throws NoSuchUserException {
+	User user = null;
+	EntityWrapper<User> db = Credentials.getEntityWrapper( );
+	User searchUser = new User( );
+	searchUser.setQueryId( queryId );
+	try {
+	  user = db.getUnique( searchUser );
+	  db.commit( );
+	} catch ( EucalyptusCloudException e ) {
+	  db.rollback( );
+	  throw new NoSuchUserException( e );
+	}
+	return user;
+   }
+
   public static List<User> getEnabledUsers( ) {
     EntityWrapper<User> db = Credentials.getEntityWrapper( );
     try {

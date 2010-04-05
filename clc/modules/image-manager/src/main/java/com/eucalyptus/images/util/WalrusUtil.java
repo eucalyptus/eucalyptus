@@ -62,6 +62,7 @@ package com.eucalyptus.images.util;
 
 import java.io.ByteArrayInputStream;
 import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.List;
 
 import javax.crypto.Cipher;
@@ -187,6 +188,11 @@ public class WalrusUtil {
 		boolean found = false;
 		for ( String alias : aliases )
 			found |= ImageUtil.verifyManifestSignature( signature, alias, machineConfiguration + image );
+		if(!found) {
+	    	//check if Eucalyptus signed it
+		    X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+			found |= ImageUtil.verifyManifestSignature(signature, cert, machineConfiguration + image);
+		}
 		if ( !found ) throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature." );
 
 		try {
