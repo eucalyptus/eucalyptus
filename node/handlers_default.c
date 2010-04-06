@@ -387,7 +387,6 @@ struct bundling_params_t {
 	char * filePrefix;
 	char * S3URL;
 	char * userPublicKey;
-	char * cloudPublicKey;
 	char * workPath; // work directory path
 	char * diskPath; // disk file path
 };
@@ -417,7 +416,6 @@ static void * bundling_thread (void *arg)
 	free (params->filePrefix);
 	free (params->S3URL);
 	free (params->userPublicKey);
-	free (params->cloudPublicKey);
 	free (params->workPath);
 	free (params->diskPath);
 	free (params);
@@ -433,8 +431,7 @@ doBundleInstance(
 	char *bucketName,
 	char *filePrefix,
 	char *S3URL,
-	char *userPublicKey, 
-	char *cloudPublicKey)
+	char *userPublicKey)
 {
 	ncInstance *instance;
 	int err;
@@ -444,8 +441,7 @@ doBundleInstance(
 		|| bucketName==NULL
 		|| filePrefix==NULL
 		|| S3URL==NULL
-		|| userPublicKey==NULL
-		|| cloudPublicKey==NULL) {
+		|| userPublicKey==NULL) {
 		logprintfl (EUCAERROR, "bundling instance called with invalid parameters\n");
 		return ERROR;
 	}
@@ -473,7 +469,6 @@ doBundleInstance(
 	params->filePrefix = strdup (filePrefix);
 	params->S3URL = strdup (S3URL);
 	params->userPublicKey = strdup (userPublicKey);
-	params->cloudPublicKey = strdup (cloudPublicKey);
 
 	params->workPath = alloc_work_path (instanceId, instance->userId); // reserve work disk space for bundling
 	if (params->workPath==NULL)
@@ -535,7 +530,7 @@ doDescribeBundleTasks(
 				logprintfl (EUCAERROR, "out of memory\n");
 				return OUT_OF_MEMORY;
 			}
-			allocate_bundleTask (bundle, instIds[i], bundling_progress_names[instance->bundling], NULL);
+			allocate_bundleTask (bundle, instIds[i], bundling_progress_names[instance->bundling]);
 		}
 		sem_v (inst_sem);
 		
@@ -548,7 +543,7 @@ doDescribeBundleTasks(
 	return OK;
 }
 
-int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey) {
+int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey) {
   int rc, ret;
   char cmd[MAX_PATH];
   char workingDir[MAX_PATH];

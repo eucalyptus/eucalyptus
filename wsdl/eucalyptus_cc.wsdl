@@ -196,7 +196,6 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="S3URL" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="1" name="cloudPublicKey" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -225,7 +224,6 @@
 	<xs:sequence>
 	  <xs:element minOccurs="0" name="instanceId" type="xs:string"/>
 	  <xs:element minOccurs="0" name="state" type="xs:string"/>
-	  <xs:element minOccurs="0" name="manifest" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
 

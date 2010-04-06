@@ -106,6 +106,8 @@ typedef struct ncInstance_t {
     char stateName[CHAR_BUFFER_SIZE];  /* as string */
     int stateCode; /* as int */
 
+  char bundleTaskStateName[CHAR_BUFFER_SIZE];
+
     /* state as NC thinks of it */
     instance_states state;
 	bundling_progress bundling;
