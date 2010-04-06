@@ -4,11 +4,11 @@ import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 
 public class Credentials implements ComponentInformation {
-  private final Component parent;
+  private final Service parent;
   private KeyPair         keys;
   private X509Certificate certificate;
   
-  public Credentials( Component parent ) {
+  public Credentials( Service parent ) {
     this.parent = parent;
   }
   
@@ -33,10 +33,7 @@ public class Credentials implements ComponentInformation {
     this.certificate = certificate;
   }
   
-  /**
-   * @return the parent
-   */
-  protected final Component getParent( ) {
+  protected final Service getParent( ) {
     return this.parent;
   }
   

@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
@@ -114,7 +115,7 @@ public class RemoteInfoHandler {
         ClusterConfiguration ccConfig = Configuration.getClusterConfiguration( clusterWeb.getName( ) );
         ccConfig.setMaxVlan( clusterWeb.getMaxVlans( ) );
         ccConfig.setMinVlan( clusterWeb.getMinVlans( ) );
-        Configuration.getEntityWrapper( ).mergeAndCommit( ccConfig );
+        ServiceConfigurations.getEntityWrapper( ).mergeAndCommit( ccConfig );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }

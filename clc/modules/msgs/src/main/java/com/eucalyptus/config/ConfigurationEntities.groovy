@@ -181,30 +181,37 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 public class EphemeralConfiguration extends ComponentConfiguration {
   String  name;
   URI uri;
+  Component c;
   
   public EphemeralConfiguration( Component c, URI uri ) {
     super( c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
-    this.c = c;
     this.uri = uri;
+    this.c = c;
   }  
   public Component getComponent() {
-    return Component.valueOf(this.getName());
+    return c;
   }
   public com.eucalyptus.component.Component lookup() {
     return Components.lookup(this.getName());
   }
-    public String getUri() {
+  public String getUri() {
     return this.uri.toASCIIString( );
   }  
 }
 public class LocalConfiguration extends EphemeralConfiguration {
   public LocalConfiguration( Component c, URI uri ) {
     super( c, uri );
-  }  
+  }
+  public Boolean isLocal() {
+    return true;
+  }
 }
 public class RemoteConfiguration extends EphemeralConfiguration {
   public RemoteConfiguration( Component c, URI uri ) {
     super( c, uri );
+  }
+  public Boolean isLocal() {
+    return false;
   }
 }
 

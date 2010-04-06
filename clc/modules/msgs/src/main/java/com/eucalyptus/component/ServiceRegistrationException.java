@@ -1,4 +1,4 @@
-package com.eucalyptus.config;
+package com.eucalyptus.component;
 
 import com.eucalyptus.util.EucalyptusCloudException;
 

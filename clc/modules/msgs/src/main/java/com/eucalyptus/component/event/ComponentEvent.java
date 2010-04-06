@@ -1,6 +1,5 @@
 package com.eucalyptus.component.event;
 
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.event.Event;
 

@@ -98,15 +98,12 @@ public class Context {
     }
   }
   
-  public void clear( ) {
-  //    Contexts.clear( this );
-  //    LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ) );
-  //    this.channel.clear( );
-  //    this.channel = null;
-  //    this.httpRequest.clear( );
-  //    this.httpRequest = null;
-  //    this.muleEvent.clear( );
-  //    this.muleEvent = null;
+  void clear( ) {
+    LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ) );
+    this.channel = null;
+    this.httpRequest = null;
+    this.muleEvent.clear( );
+    this.muleEvent = null;
   }
   
   private final static <TYPE> TYPE check( final TYPE obj ) {

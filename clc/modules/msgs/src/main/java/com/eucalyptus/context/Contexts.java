@@ -68,7 +68,7 @@ public class Contexts {
     }
   }
 
-  static void clear( Context context ) {
+  public static void clear( Context context ) {
     Context ctx = uuidContexts.remove( context.getCorrelationId( ) );
     Channel channel = null;
     if ( ctx != null && ( channel = ctx.getChannel( ) ) != null ) {

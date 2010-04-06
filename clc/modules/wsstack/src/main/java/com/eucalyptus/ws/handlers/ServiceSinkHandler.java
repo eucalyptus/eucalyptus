@@ -94,6 +94,7 @@ import org.mule.transport.NullPayload;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.context.ServiceContext;
@@ -167,8 +168,10 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   
   private void sendDownstreamNewEvent( ChannelHandlerContext ctx, ChannelEvent e, BaseMessage reply ) {
     MappingHttpRequest request = null;
+    Context reqCtx = null; 
     try {
-      request = Contexts.lookup( reply.getCorrelationId( ) ).getHttpRequest( );
+      reqCtx = Contexts.lookup( reply.getCorrelationId( ) );
+      request = reqCtx.getHttpRequest( );
     } catch ( NoSuchContextException e1 ) {
       LOG.debug( e1, e1 );
     }
@@ -183,6 +186,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
       response.setMessage( reply );
       ctx.sendDownstream( newEvent );
+      Contexts.clear( reqCtx );
     }
   }
   
@@ -231,7 +235,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       if ( reply != null ) {
         ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
       } else {
-        Contexts.lookup( msg.getCorrelationId( ) ).clear( );
+        Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
         ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.INTERNAL_SERVER_ERROR ) )
            .addListener( ChannelFutureListener.CLOSE );
       }
@@ -241,7 +245,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
                                                                           ( e1.getCause( ) != null ? e1.getCause( ) : e1 ).getMessage( ) );
       errMsg.setCorrelationId( msg.getCorrelationId( ) );
       errMsg.setException( e1.getCause( ) != null ? e1.getCause( ) : e1 );
-      Contexts.lookup( errMsg.getCorrelationId( ) ).clear( );
+      Contexts.clear( Contexts.lookup( errMsg.getCorrelationId( ) ) );
       Channels.write( ctx.getChannel( ), errMsg );
     }
   }
@@ -261,7 +265,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   @Override
   public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     try {
-      Contexts.lookup( ctx.getChannel( ) ).clear( );
+      Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
     } catch ( Throwable e1 ) {
       LOG.warn( "Failed to remove the channel context on connection close.", e1 );
     }

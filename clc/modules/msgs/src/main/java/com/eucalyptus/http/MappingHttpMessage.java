@@ -63,14 +63,11 @@
  */
 package com.eucalyptus.http;
 
-import java.util.UUID;
-
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.jboss.netty.handler.codec.http.DefaultHttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-
 import com.eucalyptus.auth.principal.User;
 
 public abstract class MappingHttpMessage extends DefaultHttpMessage implements HttpMessage {

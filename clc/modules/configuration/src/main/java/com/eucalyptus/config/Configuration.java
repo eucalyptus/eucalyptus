@@ -67,11 +67,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
@@ -86,17 +89,13 @@ import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 
 public class Configuration {
   static Logger         LOG                 = Logger.getLogger( Configuration.class );
-  private static String DB_NAME             = "eucalyptus_config";
+  public static String DB_NAME             = "eucalyptus_config";
   static String         CLUSTER_KEY_FSTRING = "cc-%s";
   static String         NODE_KEY_FSTRING    = "nc-%s";
-  static ComponentConfigurationProvider registry = new DatabaseServiceConfigurationProvider<ComponentConfiguration>( );//TODO: factory please.
-  private static Map<Class,ServiceBuilder> builders = Maps.newConcurrentHashMap( );
+
+  private static Map<Class,ServiceBuilder<ComponentConfiguration>> builders = Maps.newConcurrentHashMap( );
   public static void addBuilder( Class c, ServiceBuilder b ) {
     builders.put( c, b );
-  }
-  
-  public static <T> EntityWrapper<T> getEntityWrapper( ) {
-    return new EntityWrapper<T>( Configuration.DB_NAME );
   }
   
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
@@ -108,24 +107,8 @@ public class Configuration {
     if( !builder.checkAdd( name, host, port ) ) {
       return reply;
     }
-
-    try {
-      ComponentConfiguration existingName = registry.lookupByName( name, builder.newInstance( ) );
-      throw new EucalyptusCloudException( "Component with name=" + request.getName( ) + " already exists at host=" + existingName.getHostName( ) );      
-    } catch( EucalyptusCloudException e ) {
-      throw e;
-    } catch ( Exception e1 ) {
-      try {
-        ComponentConfiguration existingHost = registry.lookupByName( name, builder.newInstance( ) );
-        throw new EucalyptusCloudException( "Component with host=" + request.getName( ) + " already exists with name=" + existingHost.getHostName( ) );
-      } catch( EucalyptusCloudException e ) {
-        throw e;
-      } catch ( Exception e ) {
-      }      
-    }
-    
     host = NetworkUtil.tryToResolve( host );
-    ComponentConfiguration newComponent = registry.store( builder.newInstance( name, host, port, request ) );
+    ServiceConfiguration newComponent = builder.add( name, host, port );
     builder.fireStart( newComponent );
     reply.set_return( true );
     return reply;
@@ -142,10 +125,10 @@ public class Configuration {
     } catch ( Exception e ) {
       throw new ServiceRegistrationException( e.getMessage( ), e );
     }
-    ComponentConfiguration conf;
+    ServiceConfiguration conf;
     try {
-      conf = registry.lookupByName( request.getName( ), builder.newInstance( ) );
-      registry.remove( conf );
+      conf = builder.lookupByName( request.getName( ) );
+      builder.remove( conf );
       builder.fireStop( conf );
       reply.set_return( true );
     } catch( EucalyptusCloudException e ) {
@@ -164,16 +147,15 @@ public class Configuration {
 
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
-    ComponentConfiguration searchConfig = builders.get( request.getClass( ) ).newInstance( );
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
-    for( ComponentConfiguration conf : (List<ComponentConfiguration>) registry.list( searchConfig ) ) {
+    for( ComponentConfiguration conf : builders.get( request.getClass( ) ).list( ) ) {
       listConfigs.add( new ComponentInfoType( conf.getName( ), conf.getHostName( ) ) );
     }
     return reply;
   }
   
   public static List<ClusterConfiguration> getClusterConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );
+    EntityWrapper<ClusterConfiguration> db = ServiceConfigurations.getEntityWrapper( );
     try {
       List<ClusterConfiguration> componentList = db.query( new ClusterConfiguration( ) );
       for ( ClusterConfiguration cc : componentList ) {
@@ -190,7 +172,7 @@ public class Configuration {
   }
   
   public static List<StorageControllerConfiguration> getStorageControllerConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<StorageControllerConfiguration> db = Configuration.getEntityWrapper( );
+    EntityWrapper<StorageControllerConfiguration> db = ServiceConfigurations.getEntityWrapper( );
     try {
       List<StorageControllerConfiguration> componentList = db.query( new StorageControllerConfiguration( ) );
       db.commit( );
@@ -203,7 +185,7 @@ public class Configuration {
   }
   
   public static List<WalrusConfiguration> getWalrusConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<WalrusConfiguration> db = Configuration.getEntityWrapper( );
+    EntityWrapper<WalrusConfiguration> db = ServiceConfigurations.getEntityWrapper( );
     try {
       List<WalrusConfiguration> componentList = db.query( new WalrusConfiguration( ) );
       db.commit( );

@@ -77,6 +77,8 @@ import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.cluster.handlers.ClusterCertificateHandler;
 import com.eucalyptus.cluster.util.ClusterUtil;
+import com.eucalyptus.component.event.StartComponentEvent;
+import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.event.ClockTick;
@@ -85,12 +87,10 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.GenericEvent;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.StartComponentEvent;
-import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 
-@Provides(Component.cluster)
+@Provides(Component.eucalyptus)
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)
 @DependsLocal(Component.eucalyptus)
 public class ClusterBootstrapper extends Bootstrapper implements EventListener {
@@ -125,8 +125,6 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
   @Override
   public boolean load( Stage current ) throws Exception {
     LOG.info( "Loading clusters." );
-    Component.cluster.markLocal( );
-    Component.cluster.markEnabled( );
     try {
       for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) ) {
         Cluster newCluster = ClusterUtil.createCluster( c );

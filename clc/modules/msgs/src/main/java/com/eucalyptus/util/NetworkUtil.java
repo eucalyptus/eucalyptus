@@ -141,6 +141,7 @@ public class NetworkUtil {
   }
   
   public static boolean testLocal( InetAddress addr ) {
+    Exceptions.ifNullArgument( addr );
     try {
       List<String> addrs = Lists.newArrayList( );
       Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
@@ -160,6 +161,7 @@ public class NetworkUtil {
   }
 
   public static boolean testLocal( String address ) {
+    Exceptions.ifNullArgument( address );
     InetAddress addr;
       try {
         addr = InetAddress.getByName( address );

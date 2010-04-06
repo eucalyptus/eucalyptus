@@ -1,12 +1,12 @@
 package com.eucalyptus.component;
 
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.util.NetworkUtil;
 import com.google.common.collect.Lists;
 
 public class Configuration implements ComponentInformation {
@@ -80,17 +80,25 @@ public class Configuration implements ComponentInformation {
   public URI makeUri( String host, Integer port ) {
     String uri;
     try {
-      uri = String.format( this.getUriPattern( ), host, port );
-    } catch ( MissingFormatArgumentException e ) {
-      uri = String.format( this.getUriPattern( ), host, port , this.parent.getConfiguration( ).getLocalUri( ).getHost( ) );
-    }
-    try {
-      URI u = new URI( uri );
-      u.parseServerAuthority( );
-      return u;
-    } catch ( URISyntaxException e ) {
-      LOG.error( e, e );
-      return URI.create( uri );
+      if ( NetworkUtil.testLocal( host ) ) {
+        return this.getLocalUri( );
+      } else {
+        try {
+          uri = String.format( this.getUriPattern( ), host, port );
+        } catch ( MissingFormatArgumentException e ) {
+          uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ) );
+        }
+        try {
+          URI u = new URI( uri );
+          u.parseServerAuthority( );
+          return u;
+        } catch ( URISyntaxException e ) {
+          LOG.error( e, e );
+          return URI.create( uri );
+        }
+      }
+    } catch ( Exception e ) {
+      return this.getLocalUri( );
     }
   }
 

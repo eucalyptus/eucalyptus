@@ -16,6 +16,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
@@ -79,7 +80,7 @@ public class ServiceContext {
     }
   }
   
-  @Provides(Component.servicebus)
+  @Provides(Component.bootstrap)
   @RunDuring(Bootstrap.Stage.CloudServiceInit)
   public static class ServiceBootstrapper extends Bootstrapper {
     
@@ -88,9 +89,12 @@ public class ServiceContext {
     @Override
     public boolean load( Stage current ) throws Exception {
       List<ConfigResource> configs = Lists.newArrayList( );
-      for( Resource rsc : current.getResources( ) ) {
-        LOG.info( LogUtil.subheader( "Preparing configuration for: " + rsc ) );
-        configs.addAll( rsc.getConfigurations( ) );        
+      for( com.eucalyptus.component.Component comp : Components.list( ) ) {
+        if( comp.isEnabled( ) ) {
+          Resource rsc = comp.getConfiguration( ).getResource( );
+          LOG.info( LogUtil.subheader( "Preparing configuration for: " + rsc ) );
+          configs.addAll( rsc.getConfigurations( ) );        
+        }
       }
       for( ConfigResource cfg : configs ) {
         LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );

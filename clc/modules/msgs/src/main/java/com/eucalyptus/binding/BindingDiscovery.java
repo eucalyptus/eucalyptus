@@ -29,13 +29,15 @@ public class BindingDiscovery extends ServiceJarDiscovery {
           return BindingManager.sanitizeNamespace( arg0.replaceAll(".*JiBX_","").replaceAll("Factory","") );
         }        
       });
+      boolean seeded = false;
       for( String binding : bindings ) {
         if( binding.length( ) > 2 ) {
-          return BindingManager.seedBinding( binding, candidate );
+          seeded |= BindingManager.seedBinding( binding, candidate );
         }
       }
-      return true;
+      return seeded;
     } catch ( Throwable t ) {
+      LOG.error( t, t );
     }
     return false;
   }

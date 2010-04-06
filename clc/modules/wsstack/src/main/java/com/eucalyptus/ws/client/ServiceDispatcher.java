@@ -7,10 +7,8 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.log4j.Logger;
 import org.mule.module.client.MuleClient;
-
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -18,7 +16,6 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ServiceDispatcher implements Dispatcher {

@@ -3,6 +3,7 @@ package com.eucalyptus.config;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -14,16 +15,22 @@ import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.DatabaseServiceBuilder;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 
+@DiscoverableServiceBuilder(com.eucalyptus.bootstrap.Component.cluster)
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class } )
-public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration> {
+public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   @Override
   public Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException {
     if ( !testClusterCredentialsDirectory( name ) ) {
@@ -55,23 +62,18 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public ClusterConfiguration newInstance( String name, String host, Integer port, RegisterComponentType request ) {
+  public ClusterConfiguration newInstance( String name, String host, Integer port ) {
     return new ClusterConfiguration( name, host, port );
   }
   
   @Override
-  public Boolean isLocal( ) {
-    return Component.eucalyptus.isLocal( );
+  public com.eucalyptus.component.Component getComponent( ) {
+    return Components.lookup( Component.cluster );
   }
   
-  /**
-   * @see com.eucalyptus.config.AbstractServiceBuilder#fire(com.eucalyptus.config.ComponentConfiguration)
-   * @param config
-   * @return
-   * @throws ServiceRegistrationException
-   */
   @Override
-  public void fireStart( ComponentConfiguration config ) throws ServiceRegistrationException {
+  public ClusterConfiguration add( String name, String host, Integer port ) throws ServiceRegistrationException {
+    ClusterConfiguration config = super.add( name, host, port );
     try {
       /** generate the Component keys **/
       String ccAlias = String.format( Configuration.CLUSTER_KEY_FSTRING, config.getName( ) );
@@ -128,7 +130,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     } catch ( EucalyptusCloudException e ) {
       throw new ServiceRegistrationException( e.getMessage( ), e );
     }
-    super.fireStart( config );
+    return config;
   }
 
   @Override
@@ -141,7 +143,5 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     }
   }
 
-  @Override
-  public void fireStop( ComponentConfiguration config ) throws ServiceRegistrationException {}
-  
+
 }

@@ -48,10 +48,10 @@
     <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
   <appender name="exhaustive" class="org.apache.log4j.RollingFileAppender">
+    <param name="Threshold" value="TRACE" />
     <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
-    <param name="Threshold" value="TRACE" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
     </layout>
@@ -131,7 +131,7 @@
     <appender-ref ref="cloud-cluster" />
   </category>
   <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
-    <priority value="${euca.log.exhaustive.user}" />
+    <priority value="TRACE" />
     <appender-ref ref="exhaustive" />
   </category>
   <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">

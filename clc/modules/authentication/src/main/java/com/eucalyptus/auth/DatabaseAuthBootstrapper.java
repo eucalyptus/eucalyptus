@@ -12,7 +12,7 @@ import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
 
-@Provides(Component.accounts)
+@Provides(Component.bootstrap)
 @RunDuring(Bootstrap.Stage.UserCredentialsInit)
 @DependsLocal(Component.eucalyptus)
 public class DatabaseAuthBootstrapper extends Bootstrapper {
@@ -43,7 +43,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
 
   private void ensureVmTypesExist( ) {
-    EntityWrapper<VmType> db = new EntityWrapper<VmType>( );
+    EntityWrapper<VmType> db = new EntityWrapper<VmType>( "eucalyptus_general" );
     try {
       if( db.query( new VmType() ).size( ) == 0 ) { //TODO: make defaults configurable?
         db.add( new VmType( "m1.small", 1, 2, 128 ) );

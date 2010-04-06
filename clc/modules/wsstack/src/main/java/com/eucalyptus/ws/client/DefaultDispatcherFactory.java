@@ -1,9 +1,9 @@
 package com.eucalyptus.ws.client;
 
-import java.net.URI;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.DispatcherFactory;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.util.NetworkUtil;
 
 public class DefaultDispatcherFactory extends DispatcherFactory {
@@ -12,19 +12,16 @@ public class DefaultDispatcherFactory extends DispatcherFactory {
   }
 
   @Override
-  public Dispatcher buildChild( Component parent, String hostName ) {
+  public Dispatcher buildChild( Component parent, Service service ) {
     Dispatcher d = null;
-    String key = parent.getChildKey( hostName );
     if( parent.isSingleton( ) ) {
-      d = new LocalDispatcher( parent.getDelegate( ), hostName, parent.getDelegate( ).getLocalUri( ) );
-    } else if( NetworkUtil.testLocal( hostName ) ) {
-      URI uri = parent.getConfiguration( ).getLocalUri( );
-      d = new LocalDispatcher( parent.getDelegate( ), hostName, uri );
+      d = new LocalDispatcher( parent.getPeer( ), service.getName( ), service.getUri( ) );
+    } else if( NetworkUtil.testLocal( service.getHost( ) ) ) {
+      d = new LocalDispatcher( parent.getPeer( ), service.getName( ), service.getUri( ) );
     } else {
-      URI uri = parent.getLifecycle( ).getUri( hostName );
-      d = new RemoteDispatcher( parent.getDelegate( ), hostName, uri );
+      d = new RemoteDispatcher( parent.getPeer( ), service.getName( ), service.getUri( ) );
     }
-    ServiceDispatcher.register( parent.getChildKey( hostName ), d );
+    ServiceDispatcher.register( service.getName( ), d );
     return d;
   }
   

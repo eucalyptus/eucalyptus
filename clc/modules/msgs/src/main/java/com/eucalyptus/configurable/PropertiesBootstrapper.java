@@ -19,7 +19,7 @@ public class PropertiesBootstrapper extends Bootstrapper {
 
   @Override
   public boolean start( ) throws Exception {
-    return false;
+    return true;
   }
 
 }

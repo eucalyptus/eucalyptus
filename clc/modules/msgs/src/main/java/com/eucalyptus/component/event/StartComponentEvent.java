@@ -1,18 +1,15 @@
-package com.eucalyptus.event;
+package com.eucalyptus.component.event;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.event.ComponentEvent;
-import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.LocalConfiguration;
 
 public class StartComponentEvent extends ComponentEvent {
   private static Logger LOG = Logger.getLogger( StartComponentEvent.class );
-  public static StartComponentEvent getLocal( ComponentConfiguration config ) {
+  public static StartComponentEvent getLocal( ServiceConfiguration config ) {
     URI uri = null;
     try {
       uri = new URI( config.getUri( ) );
@@ -22,16 +19,16 @@ public class StartComponentEvent extends ComponentEvent {
     return new StartComponentEvent( new LocalConfiguration( config.getComponent( ), uri ), config.getComponent(), true );
   }
   public static StartComponentEvent getLocal( com.eucalyptus.bootstrap.Component c ) {
-    return new StartComponentEvent( new LocalConfiguration( c, c.getUri( ) ), c, true );
+    return new StartComponentEvent( new LocalConfiguration( c, c.getLocalUri( ) ), c, true );
   }
   public static StartComponentEvent getLocal( Component c ) {
-    return new StartComponentEvent( new LocalConfiguration( c.getDelegate( ), c.getLifecycle( ).getUri( ) ), c.getDelegate( ), true );
+    return new StartComponentEvent( new LocalConfiguration( c.getPeer( ), c.getConfiguration( ).getLocalUri( ) ), c.getPeer( ), true );
   }
-  public static StartComponentEvent getRemote( ComponentConfiguration config ) {
+  public static StartComponentEvent getRemote( ServiceConfiguration config ) {
     return new StartComponentEvent( config, config.getComponent( ), false );
   }
   
-  private StartComponentEvent( ComponentConfiguration configuration, com.eucalyptus.bootstrap.Component component, boolean local ) {
+  private StartComponentEvent( ServiceConfiguration configuration, com.eucalyptus.bootstrap.Component component, boolean local ) {
     super( configuration, component.name( ), local );
   }
   @Override

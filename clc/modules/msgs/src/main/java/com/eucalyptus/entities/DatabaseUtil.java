@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Collections;
@@ -30,7 +29,7 @@ public class DatabaseUtil {
 	        for( Exception e : illegalAccesses ) {
 	          LOG.fatal( e, e );
 	        }
-	        LogUtil.header( "Illegal Access to Persistence Context.  Database not yet configured. This is always a BUG." );
+	        LogUtil.header( "Illegal Access to Persistence Context.  Database not yet configured. This is always a BUG: " + persistenceContext );
 	        System.exit( 1 );
 	      } else if ( !emf.containsKey( persistenceContext ) ) {
           illegalAccesses = null;
@@ -47,7 +46,7 @@ public class DatabaseUtil {
 	@SuppressWarnings( "deprecation" )
 	public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
 			if ( !emf.containsKey( persistenceContext ) ) {
-			  RuntimeException e = new RuntimeException ("Attempting to access an entity wrapper before the database has been configured." );
+			  RuntimeException e = new RuntimeException ("Attempting to access an entity wrapper before the database has been configured: " + persistenceContext );
 			  illegalAccesses = illegalAccesses == null ? Collections.synchronizedList( Lists.newArrayList( ) ) : illegalAccesses;			  
 			  illegalAccesses.add( e );
 			  throw e;

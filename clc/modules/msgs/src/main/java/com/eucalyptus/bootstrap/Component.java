@@ -66,105 +66,73 @@ package com.eucalyptus.bootstrap;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NavigableSet;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 
 @Deprecated
 public enum Component {
-  bootstrap( ),
-  eucalyptus( ),
-  walrus( ),
-  dns( ),
-  storage( ),
-  db( ),
-  jetty( ),
-  configuration( ),
-  cluster( true ),
-  accounts( true ),
-  servicebus( true ),
-  remoteComponents( true ),
-  systemAuthentication( true ),
+  bootstrap( true ),
+  eucalyptus( true ),
+  walrus( true ),
+  dns( true ),
+  storage( false ),
+  db( true ),
+  jetty( true ),
+  configuration( true ),
+  cluster( false ),
   any( true );
   private static Logger LOG = Logger.getLogger( Component.class );
-  private Boolean       dummy;
+  private final Boolean singleton;
   
-  private Component( ) {
-    this.dummy = false;
-  }
-  
-  private Component( Boolean whatever ) {
-    this( );
-    this.dummy = whatever;
-  }
-  
-  public void markHasKeys( ) {}
-  
-  public Boolean isHasKeys( ) {
-    return Components.lookup( this ).getKeys( ).getKeys( ) != null;
-  }
-  
-  public void markEnabled( ) {
-    Components.lookup( this ).getLifecycle( ).setEnabled( true );
-  }
-  
-  public void markDisabled( ) {
-    Components.lookup( this ).getLifecycle( ).setEnabled( false );
+  private Component( Boolean singleton ) {
+    this.singleton = singleton;
   }
   
   public Boolean isEnabled( ) {
-    return Components.lookup( this ).getLifecycle( ).isEnabled( );
+    return Components.lookup( this ).isEnabled( );
   }
   
   public Boolean isLocal( ) {
-    return Components.lookup( this ).getLifecycle( ).isLocal( );
-  }
-  
-  public void markLocal( ) {
-    Components.lookup( this ).getLifecycle( ).markLocal( );
-  }
-  
-  public String getHostAddress( ) {
-    return Components.lookup( this ).getLifecycle( ).getHost( );
-  }
-  
-  public void setHostAddress( String address ) {
-    Components.lookup( this ).getLifecycle( ).setHost( address );
-  }
-  
-  public URI getUri( ) {
-    return Components.lookup( this ).getLifecycle( ).getUri( );
-  }
-  
-  public int getPort( ) {
-    return Components.lookup( this ).getLifecycle( ).getPort( );
-  }
-  
-  public void setPort( int port ) {
-    Components.lookup( this ).getLifecycle( ).setPort( port );
-  }
-  
-  public String getRegistryKey( String hostName ) {
-    return Components.lookup( this ).getChildKey( hostName );
+    return Components.lookup( this ).isLocal( );
   }
   
   public String getLocalAddress( ) {
     return this.getLocalUri( ).toASCIIString( );
   }
   
+  public URI getUri( ) {
+    com.eucalyptus.component.Component c = Components.lookup( this );
+    NavigableSet<Service> services = c.getServices( );
+    if( this.isSingleton( ) && services.size( ) != 1 ) {
+        throw new RuntimeException( "Singleton component has "+services.size()+" registered services (Should be exactly 1)." );
+    } else if( this.isSingleton( ) && services.size( ) == 1 ) {
+      return services.first( ).getUri( );
+    } else {
+      for( Service s : services ) {
+        if( s.isLocal( ) ) {
+          return s.getUri( );
+        }
+      }
+      throw new RuntimeException( "Attempting to get the URI for a service which is either not a singleton or has no locally defined service endpoint." );
+    }
+  }
+
   public URI getLocalUri( ) {
     return Components.lookup( this ).getConfiguration( ).getLocalUri( );
   }
   
-  public Boolean isInitialized( ) {
-    return Components.lookup( this ).getLifecycle( ).isInitialized( );
+  public Boolean isSingleton( ) {
+    return this.singleton;
   }
   
-  public Boolean isDummy( ) {
-    return this.dummy;
-  }
-  
-  public static List<Component> list() {
+  public static List<Component> list( ) {
     return Arrays.asList( Component.values( ) );
   }
 
+  public String getRegistryKey( String hostName ) {
+    return this.name( ) + "@" + hostName;
+  }
+  
 }

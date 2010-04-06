@@ -11,7 +11,7 @@ public class Groups {
   private static Logger LOG = Logger.getLogger( Groups.class );
   private static GroupProvider groups;
   public static <T> EntityWrapper<T> getEntityWrapper( ) {
-    return new EntityWrapper<T>( "eucalyptus-general" );
+    return new EntityWrapper<T>( "eucalyptus_auth" );
   }
 
   public static void setGroupProvider( GroupProvider provider ) {

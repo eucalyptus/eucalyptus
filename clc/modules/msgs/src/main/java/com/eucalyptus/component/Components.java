@@ -18,6 +18,7 @@ public class Components {
                                                                                                                                       .getLogger( Components.class );
   private static Map<Class<? extends ComponentInformation>, Map<String, ? extends ComponentInformation>> componentInformation = new ConcurrentHashMap<Class<? extends ComponentInformation>, Map<String, ? extends ComponentInformation>>( );
   static {
+    componentInformation.put( Service.class, new ConcurrentHashMap<String, Service>( ) );
     componentInformation.put( Component.class, new ConcurrentHashMap<String, Component>( ) );
     componentInformation.put( Lifecycle.class, new ConcurrentHashMap<String, Lifecycle>( ) );
     componentInformation.put( Configuration.class, new ConcurrentHashMap<String, Configuration>( ) );
@@ -59,6 +60,11 @@ public class Components {
     return Components.lookup( type ).containsKey( name );
   }
   
+  private static <T extends ComponentInformation> void remove( T componentInfo ) {
+    Map<String, T> infoMap = lookup( componentInfo.getClass( ) );
+    infoMap.remove( componentInfo.getName( ) );
+  }
+
   private static <T extends ComponentInformation> void put( T componentInfo ) {
     Map<String, T> infoMap = lookup( componentInfo.getClass( ) );
     if ( infoMap.containsKey( componentInfo.getName( ) ) ) {
@@ -68,19 +74,19 @@ public class Components {
       infoMap.put( componentInfo.getName( ), componentInfo );
     }
   }
+
+  public static <T extends ComponentInformation> void deregister( T componentInfo ) {
+    remove( componentInfo );
+    LOG.info( EventRecord.here( Bootstrap.class, EventType.COMPONENT_DEREGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ) );
+  }
   
   static <T extends ComponentInformation> void register( T componentInfo ) {
     if ( contains( componentInfo.getClass( ), componentInfo.getName( ) ) ) {
       try {
         com.eucalyptus.bootstrap.Component c = com.eucalyptus.bootstrap.Component.valueOf( componentInfo.getName( ) );
-        if ( c.isDummy( ) ) {
-          throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Dummy component '" + componentInfo.getName( ) + "' info type: "
-                                               + componentInfo.getClass( ).getSimpleName( ) + " as " + getRealType( componentInfo.getClass( ) ) );
-        } else {
-          throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Missing entry for component '" + componentInfo.getName( )
-                                               + "' info type: " + componentInfo.getClass( ).getSimpleName( ) + " as "
-                                               + getRealType( componentInfo.getClass( ) ) );
-        }
+        throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Missing entry for component '" + componentInfo.getName( )
+                                             + "' info type: " + componentInfo.getClass( ).getSimpleName( ) + " as "
+                                             + getRealType( componentInfo.getClass( ) ) );
       } catch ( Exception e ) {
         throw BootstrapException.throwFatal(
                                              "Failed bootstrapping component registry.  Missing entry for component '" + componentInfo.getName( )
@@ -118,14 +124,8 @@ public class Components {
     return Components.contains( Component.class, component.name( ) );
   }
   
-  public static Component create( String name, URI uri ) {
-    Component c = new ComponentFactory.Parent( name, uri );
-    register( c );
-    return c;
-  }
-  
-  public static Component create( String name ) {
-    Component c = new ComponentFactory.Parent( name );
+  public static Component create( String name, URI uri ) throws ServiceRegistrationException {
+    Component c = new Component( name, uri );
     register( c );
     return c;
   }

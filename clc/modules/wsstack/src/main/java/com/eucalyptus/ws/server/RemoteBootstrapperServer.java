@@ -91,7 +91,7 @@ import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
-@Provides(Component.servicebus)
+@Provides(Component.eucalyptus)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
 @DependsRemote(Component.eucalyptus)
 @ChannelPipelineCoverage( "all" )

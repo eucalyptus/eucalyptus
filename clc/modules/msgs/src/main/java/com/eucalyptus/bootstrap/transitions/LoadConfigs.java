@@ -11,6 +11,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Lifecycles;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
@@ -32,17 +33,22 @@ public class LoadConfigs extends BootstrapTransition<Bootstrap.Stage> {
       LOG.info( LogUtil.header( "Initializing component resources Bootstrap.Stage: " + stage.name( ) ) );
       while ( p1.hasMoreElements( ) ) {
         u = p1.nextElement( ).toURI( );
-        LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_RESOURCES, stage.name( ), u.toString( ) ) );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_RESOURCES, stage.name( ), u.toString( ) ).info( );
         Properties props = new Properties( );
         props.load( u.toURL( ).openStream( ) );
         String name = props.getProperty( "name" );
-        LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_CONFIGURATION, name ) );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_CONFIGURATION, name ).info( );
         if ( Components.contains( name ) ) {
           throw BootstrapException.throwFatal( "Duplicate component definition in: " + u.toASCIIString( ) );
         } else {
-          Components.create( name, u );
+          try {
+            Components.create( name, u );
+          } catch ( ServiceRegistrationException e ) {
+            LOG.debug( e, e );
+            throw BootstrapException.throwFatal( "Error in component bootstrap: " + e.getMessage( ), e );
+          }
         }
-        LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_COMPONENT, name ) );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_COMPONENT, name ).info( );
       }
     } catch ( IOException e ) {
       LOG.error( e, e );

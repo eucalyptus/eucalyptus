@@ -74,7 +74,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 
-@Provides(Component.systemAuthentication)
+@Provides(Component.bootstrap)
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)
 @DependsRemote(Component.eucalyptus)
 public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
@@ -92,7 +92,6 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
     for ( Component c : Component.values( ) ) {
       LOG.info( "Initializing system credentials for " + c.name( ) );
       SystemCredentialProvider.init( c );
-      c.markHasKeys( );
     }
     System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
     return true;

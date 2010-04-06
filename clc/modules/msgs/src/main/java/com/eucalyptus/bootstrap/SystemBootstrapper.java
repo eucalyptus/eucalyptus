@@ -66,7 +66,6 @@ package com.eucalyptus.bootstrap;
 import java.security.Security;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Lifecycles;
 import com.eucalyptus.context.ServiceContext;
@@ -136,7 +135,7 @@ public class SystemBootstrapper {
     
   public boolean start( ) throws Throwable {
     try {
-      Bootstrap.Stage stage = null;
+      Bootstrap.Stage stage = Bootstrap.transition( );
       do {
         stage.start( );
       } while( ( stage = Bootstrap.transition( ) ) != null );

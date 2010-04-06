@@ -151,7 +151,6 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       db.commit( );
       return new DatabaseWrappedGroup( group );
     } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
       db.rollback( );
       throw new NoSuchGroupException( e );
     }

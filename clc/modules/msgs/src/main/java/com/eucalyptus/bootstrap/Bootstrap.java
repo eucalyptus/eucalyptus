@@ -1,6 +1,5 @@
 package com.eucalyptus.bootstrap;
 
-import static com.eucalyptus.system.Ats.From;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +11,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Lifecycles;
 import com.eucalyptus.component.Resource;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.Committor;
 import com.eucalyptus.util.LogUtil;
@@ -46,7 +46,6 @@ public class Bootstrap {
     }
     
     private List<Bootstrapper> bootstrappers         = Lists.newArrayList( );
-    private List<Resource>     temporaryResourceList = Lists.newArrayList( );
     private List<Resource>     resources             = Lists.newArrayList( );
     
     public <A, B extends Comparable<? extends Comparable<?>>> Transition<A,Comparable<? extends Comparable<?>>> to( B s, Committor<A> c ) throws Exception {
@@ -86,23 +85,6 @@ public class Bootstrap {
       }
     }
     
-    public void start( ) {
-      this.updateBootstrapDependencies( );
-      this.printAgenda( );
-      for ( Bootstrapper b : this.bootstrappers ) {
-        try {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_START, this.name( ), b.getClass( ).getCanonicalName( ) ) );
-          boolean result = b.start( );
-          if ( !result ) {
-            throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from start( ): terminating bootstrap." );
-          }
-        } catch ( Throwable e ) {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ) );
-          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
-        }
-      }
-    }
-    
     public void load( ) {
       this.updateBootstrapDependencies( );
       this.printAgenda( );
@@ -119,7 +101,24 @@ public class Bootstrap {
         }
       }
     }
-    
+
+    public void start( ) {
+      this.updateBootstrapDependencies( );
+      this.printAgenda( );
+      for ( Bootstrapper b : this.bootstrappers ) {
+        try {
+          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_START, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          boolean result = b.start( );
+          if ( !result ) {
+            throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from start( ): terminating bootstrap." );
+          }
+        } catch ( Throwable e ) {
+          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
+        }
+      }
+    }
+        
     public String describe( ) {
       StringBuffer buf = new StringBuffer( );
       for ( Bootstrapper b : this.bootstrappers ) {
@@ -169,10 +168,14 @@ public class Bootstrap {
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
       com.eucalyptus.bootstrap.Component comp, old = com.eucalyptus.bootstrap.Component.any;
       String bc = bootstrap.getClass( ).getCanonicalName( );
-      Bootstrap.Stage stage = From( bootstrap ).get( RunDuring.class ).value( );
-      Provides p = From( bootstrap ).get( Provides.class );
+      Bootstrap.Stage stage = Ats.from( bootstrap ).get( RunDuring.class ).value( );
+      Provides p = Ats.from( bootstrap ).get( Provides.class );
       comp = ( p.value( ) == null ? old : p.value( ) );//TODO: remap orphan bootstrapper to 'any'
-      if ( !comp.isDummy( ) && !comp.isEnabled( ) && Components.contains( comp ) ) { //report skipping a bootstrapper for an enabled component
+      if ( Components.delegate.any.equals( comp ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, currentStage.name( ), bc, "Provides", comp.name( ),
+                          "Component." + comp.name( ) + ".isEnabled", "true" ).info( );
+        stage.addBootstrapper( bootstrap );
+      } else if ( !comp.isSingleton( ) && !comp.isEnabled( ) && Components.contains( comp ) ) { //report skipping a bootstrapper for an enabled component
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "Provides", comp.name( ),
                           "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
       } else if ( !bootstrap.checkLocal( ) ) {
@@ -182,7 +185,7 @@ public class Bootstrap {
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
                           "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
       } else if ( !Components.contains( comp ) ) {
-        throw BootstrapException.throwFatal( "Bootstrap class provides a component for which registration failed (" + comp.name( ) + "): " + bc );
+        throw BootstrapException.throwFatal( "Bootstrap class provides a component for which registration failed: " + bc + " provides " + comp.name( ) );
       } else {
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, currentStage.name( ), bc, "Provides", comp.name( ),
                           "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
@@ -228,56 +231,40 @@ public class Bootstrap {
   }
   
   public static Boolean isFinished( ) {
-    return Bootstrap.Stage.Final.equals( Bootstrap.getCurrentStage( ) );
+    return finished;
+  }
+
+  public static void describeComponents( String message ) {
+    LOG.info( LogUtil.header( message ) );
+    
   }
   
   public static void initialize( ) throws Throwable {
     LOG.info( LogUtil.header( "Initializing component resources." ) );
     Transition.anonymous( LoadConfigs.class ).transition( Stage.list( ) );
-    
-    LOG.info( LogUtil.header( "Initializing singleton component services." ) );
-    Lifecycles.State.DISABLED.to( Lifecycles.State.PRIMORDIAL, new Committor<com.eucalyptus.bootstrap.Component>( ) {
-      @Override
-      public void commit( com.eucalyptus.bootstrap.Component c ) throws Exception {
-        if ( c.isDummy( ) ) {
-          Components.create( c.name( ) );
-        }
-      }
-    } ).transition( Components.delegate.list( ) );
-    
-    LOG.info( LogUtil.header( "Initializing component service configurations." ) );
+    for ( Component c : Components.list( ) ) {
+      LOG.info( c.toString( ) );
+    }
+        
+    LOG.info( LogUtil.header( "Initializing discoverable bootstrap resources." ) );
+    Bootstrap.doDiscovery( );
+
+    LOG.info( LogUtil.header( "Initializing local singleton component services." ) );
     Lifecycles.State.PRIMORDIAL.to( Lifecycles.State.INITIALIZED, new Committor<Component>( ) {
       @Override
-      public void commit( Component object ) throws Exception {
-        Resource rsc = object.getConfiguration( ).getResource( );
-        if( rsc != null ) {
-          LOG.info( "Stage " + currentStage!=null?Bootstrap.getCurrentStage( ).name( ):"null" + " loaded component resources for: " + object + " @ " + rsc.getOrigin( ) );
-          for ( ConfigResource cfg : rsc.getConfigurations( ) ) {
-            LOG.info( "-> " + cfg.getUrl( ) );
-          }          
+      public void commit( Component comp ) throws Exception {
+        if( comp.isSingleton( ) && comp.isLocal( ) ) {
+          comp.buildLocalService( );
         }
       }
     } ).transition( Components.list( ) );
-    
-    LOG.info( LogUtil.header( "Initializing discoverable bootstrap resources." ) );
-    Bootstrap.doDiscovery( );
-    
-    LOG.info( LogUtil.header( "Preparing to initialize the system." ) );
-    for ( Component c : Components.list( ) ) {
-      LOG.info( c.describe( ) );
-    }
-    
+
+    Bootstrap.describeComponents( "Preparing to initialize the system." );
+
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
     
-    LOG.info( LogUtil.header( "Initialized system: ready to start bootstrap." ) );
-    for ( Component c : Components.list( ) ) {
-      LOG.info( String.format( "Component.%-15.15s enabled=%-5.5s local=%-5.5s", c.getName( ), c.getLifecycle( ).isEnabled( ), c.getLifecycle( ).isLocal( ) ) );
-      for ( Bootstrapper b : c.getConfiguration( ).getBootstrappers( ) ) {
-        LOG.info( String.format( "- Component.%-13.13s bootstrapper=%s", c.name( ), b.getClass( ).getCanonicalName( ) ) );
-      }
-    }
-    Lifecycles.State.INITIALIZED.to( Lifecycles.State.LOADED ).transition( Components.list( ) );
+    Bootstrap.describeComponents( "Initialized system: ready to start bootstrap." );
   }
   
 }
