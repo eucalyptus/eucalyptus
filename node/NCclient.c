@@ -81,6 +81,7 @@ void usage (void)
              "\t\tdescribeResource\n"
              "\t\tattachVolume\t\t[-i -V -R -L]\n"
              "\t\tdetachVolume\t\t[-i -V -R -L]\n"
+			 "\t\bundleInstance\t\t[-i]\n"
         "\toptions:\n"
              "\t\t-d \t\t- print debug output\n"
              "\t\t-h \t\t- this help information\n"
@@ -350,8 +351,8 @@ int main (int argc, char **argv)
                                        kernel_id, kernel_url, 
                                        ramdisk_id, ramdisk_url, 
                                        "", /* key */
-				       &netparams,
-				       //                                       privMac, privIp, vlan, 
+									   &netparams,
+									   //                                       privMac, privIp, vlan, 
                                        user_data, launch_index, platform, group_names, group_names_size, /* CC stuff */
                                        &outInst);
             if (rc != 0) {
@@ -363,6 +364,11 @@ int main (int argc, char **argv)
         }
     
         /***********************************************************/
+	} else if (!strcmp(command, "bundleInstance")) {
+        CHECK_PARAM(instance_id, "instance id");
+		int rc = ncBundleInstanceStub (stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "public-key-foo");
+		printf ("ncBundleInstanceStub = %d\n", rc);
+
     } else if (!strcmp(command, "powerDown")) {
       int rc = ncPowerDownStub(stub, &meta);
     } else if (!strcmp(command, "describeBundleTasks")) {

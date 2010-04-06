@@ -80,8 +80,9 @@ int scMakeInstanceImage(char *euca_home, char *user, char *imageId, char *imageU
 int scCleanupInstanceImage(char *user, char *instId);
 int scStoreStringToInstanceFile (const char *userId, const char *instanceId, const char * file, const char * data);
 char * get_disk_path (const char * instanceId, const char * userId);
-char * alloc_work_path (const char * instanceId, const char * userId);
-int free_work_path (const char * instanceId, const char * userId);
+long long get_bundling_size (const char * instanceId, const char * userId);
+char * alloc_work_path (const char * instanceId, const char * userId, const long long sizeMb);
+int free_work_path (const char * instanceId, const char * userId, const long long sizeMb);
 
 /* utility function (exported for now so it can be tested by test.c) */
 int ensure_path_exists (const char * path);

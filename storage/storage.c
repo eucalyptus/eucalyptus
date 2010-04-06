@@ -1019,7 +1019,7 @@ char * get_disk_path (
 	return strdup (file_path);
 }
 
-static long long get_bundling_size (
+long long get_bundling_size (
 	const char * instanceId, 
 	const char * userId)
 {
@@ -1037,16 +1037,18 @@ static long long get_bundling_size (
 
 char * alloc_work_path (
 	const char * instanceId, // IN: id of instance that needs work space
-	const char * userId) // IN: id of owner of the instance
+	const char * userId, // IN: id of owner of the instance
+	const long long sizeMb) // IN: size needed under work path
 {
 	char file_path [MAX_PATH_SIZE];
-	long long sizeMb = get_bundling_size (instanceId, userId);
 	if (sizeMb < 0L)
 		return NULL;
 
 	long long left = work_free_mb - sizeMb;
 	if (left>0) {
+		sem_p (sc_sem);
 		work_free_mb -= sizeMb;
+		sem_v (sc_sem);
 		if (snprintf (file_path, MAX_PATH_SIZE, "%s/%s/work/%s", sc_instance_path, EUCALYPTUS_ADMIN, instanceId)<1) { // work is in admin's directory
 			return NULL;
 		}
@@ -1061,9 +1063,9 @@ char * alloc_work_path (
 
 int free_work_path (
 	const char * instanceId, // IN: id of instance giving up work space
-	const char * userId) // IN: id of owner of the instance
+	const char * userId, // IN: id of owner of the instance
+	const long long sizeMb) // IN: size needed under work path
 {
-	long long sizeMb = get_bundling_size (instanceId, userId);
 	if (sizeMb < 0L) 
 		return ERROR;
 
@@ -1074,7 +1076,9 @@ int free_work_path (
 	if (vrun ("rm -rf %s", workPath)) {
 		logprintfl (EUCAWARN, "warning: failed to clean work directory %s\n", workPath);
 	} else {
+		sem_p (sc_sem);
 		work_free_mb += sizeMb;
+		sem_v (sc_sem);
 	}
 	return OK;
 }

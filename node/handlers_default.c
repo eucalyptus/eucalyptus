@@ -390,7 +390,15 @@ struct bundling_params_t {
 	char * cloudPublicKey;
 	char * workPath; // work directory path
 	char * diskPath; // disk file path
+	char * eucalyptusHomePath; 
+	long long sizeMb; // diskPath size
 };
+
+static void change_bundling_state (ncInstance * instance, bundling_progress state)
+{
+	instance->bundleTaskState = state;
+	strncpy (instance->bundleTaskStateName, bundling_progress_names [state], CHAR_BUFFER_SIZE);
+}
 
 static void * bundling_thread (void *arg) 
 {
@@ -398,21 +406,56 @@ static void * bundling_thread (void *arg)
 	ncInstance * instance = params->instance;
 
 	logprintfl (EUCAINFO, "started bundling instance %s\n", instance->instanceId);
-	if (vrun ("/bin/sleep 30")==0) { // TODO: call bundling code here, giving it workPath and diskPath
-		sem_p (inst_sem);
-		instance->bundling = BUNDLING_SUCCESS;
-		change_state (instance, SHUTOFF);
-		sem_v (inst_sem);
-		logprintfl (EUCAINFO, "finished bundling instance %s\n", instance->instanceId);
+	char cmd[MAX_PATH];
+	char dstDiskPath[MAX_PATH];
+	char ncBundleUploadCmd[MAX_PATH];
+	
+	snprintf(ncBundleUploadCmd, MAX_PATH, "/usr/local/bin/euca-nc-bundle-upload"); // TODO add this as a parameter to eucalyptus.conf for windows
+	snprintf(dstDiskPath, MAX_PATH, "%s/disk", params->workPath);
+  
+	int rc = rename(params->diskPath, dstDiskPath); // move disk to working directory
+	if (rc) {
+		logprintfl(EUCAERROR, "callBundleInstanceHelper(): could not rename '%s' to speficied filePrefix '%s'\n", params->diskPath, dstDiskPath);
 	} else {
-		sem_p (inst_sem);
-		instance->bundling = BUNDLING_FAILED;
-		change_state (instance, SHUTOFF);
-		sem_v (inst_sem);
-		logprintfl (EUCAINFO, "failed while bundling instance %s\n", instance->instanceId);
+		// USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
+		snprintf(cmd, MAX_PATH, 
+				 "EC2_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem "
+				 "EC2_SECRET_KEY=HALOTHAR "
+				 "EUCALYPTUS_CERT=%s/var/lib/eucalyptus/keys/cloud-cert.pem "
+				 "S3_URL=%s "
+				 "EC2_ACCESS_KEY=%s "
+				 "EC2_USER_ID=%s "
+				 "EUCA_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem "
+				 "EUCA_PRIVATE_KEY=%s/var/lib/eucalyptus/keys/node-pk.pem "
+				 "%s -i %s -d %s -b %s", 
+				 params->eucalyptusHomePath, 
+				 params->eucalyptusHomePath, 
+				 params->S3URL, 
+				 params->userPublicKey, 
+				 "123456789012", 
+				 params->eucalyptusHomePath, 
+				 params->eucalyptusHomePath, 
+				 ncBundleUploadCmd, dstDiskPath, params->workPath, params->bucketName);
+		logprintfl(EUCADEBUG, "callBundleInstanceHelper(): running cmd '%s'\n", cmd);
+		rc = system(cmd);
+		rc = rc>>8;
+
+		if (rc==0) {
+			sem_p (inst_sem);
+			change_bundling_state (instance, BUNDLING_SUCCESS);
+			change_state (instance, SHUTOFF);
+			sem_v (inst_sem);
+			logprintfl (EUCAINFO, "finished bundling instance %s\n", instance->instanceId);
+		} else {
+			sem_p (inst_sem);
+			change_bundling_state (instance, BUNDLING_FAILED);
+			change_state (instance, SHUTOFF);
+			sem_v (inst_sem);
+			logprintfl (EUCAINFO, "failed while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
+		}
 	}
 	
-	free_work_path (instance->instanceId, instance->userId);
+	free_work_path (instance->instanceId, instance->userId, params->sizeMb);
 	free (params->bucketName);
 	free (params->filePrefix);
 	free (params->S3URL);
@@ -420,6 +463,7 @@ static void * bundling_thread (void *arg)
 	free (params->cloudPublicKey);
 	free (params->workPath);
 	free (params->diskPath);
+	free (params->eucalyptusHomePath);
 	free (params);
 
 	return NULL;
@@ -461,13 +505,14 @@ doBundleInstance(
 	// while still under lock, update its state
 	instance->bundlingTime = time (NULL);
 	change_state (instance, BUNDLING);
-	instance->bundling = BUNDLING_IN_PROGRESS;
+	change_bundling_state (instance, BUNDLING_IN_PROGRESS);
     sem_v (inst_sem);
 
 	// "marshall" thread parameters
 	struct bundling_params_t * params = malloc (sizeof (struct bundling_params_t));
 	if (params==NULL)
 		goto error_exit;
+	bzero (params, sizeof (struct bundling_params_t));
 	params->instance = instance;
 	params->bucketName = strdup (bucketName);
 	params->filePrefix = strdup (filePrefix);
@@ -475,12 +520,15 @@ doBundleInstance(
 	params->userPublicKey = strdup (userPublicKey);
 	params->cloudPublicKey = strdup (cloudPublicKey);
 
-	params->workPath = alloc_work_path (instanceId, instance->userId); // reserve work disk space for bundling
+	long long sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
+	params->workPath = alloc_work_path (instanceId, instance->userId, sizeMb); // reserve work disk space for bundling
 	if (params->workPath==NULL)
 		goto error_exit;
 	params->diskPath = get_disk_path (instanceId, instance->userId); // path of the disk to bundle
 	if (params->diskPath==NULL)
 		goto error_exit;
+	params->eucalyptusHomePath = strdup (nc->home);
+	params->sizeMb = sizeMb;
 
 	// do the rest in a thread
 	pthread_attr_t tattr;
@@ -497,9 +545,10 @@ doBundleInstance(
 error_exit:
 	sem_p (inst_sem);
 	change_state (instance, SHUTOFF);
-	instance->bundling = BUNDLING_FAILED;
+	change_bundling_state (instance, BUNDLING_FAILED);
 	sem_v (inst_sem);
-
+	if (params->workPath!=NULL)
+		free_work_path (instanceId, instance->userId, sizeMb);
 	return ERROR;
 }
 
@@ -535,7 +584,7 @@ doDescribeBundleTasks(
 				logprintfl (EUCAERROR, "out of memory\n");
 				return OUT_OF_MEMORY;
 			}
-			allocate_bundleTask (bundle, instIds[i], bundling_progress_names[instance->bundling], NULL);
+			allocate_bundleTask (bundle, instIds[i], instance->bundleTaskStateName, NULL);
 		}
 		sem_v (inst_sem);
 		
@@ -546,55 +595,6 @@ doDescribeBundleTasks(
 	}
 	
 	return OK;
-}
-
-int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey) {
-  int rc, ret;
-  char cmd[MAX_PATH];
-  char workingDir[MAX_PATH];
-  char srcImagePath[MAX_PATH], dstImagePath[MAX_PATH];
-  char ncBundleUploadCmd[MAX_PATH];
-
-  sem_p (inst_sem); 
-  ncInstance *instance = find_instance (&global_instances, instanceId);
-  sem_v (inst_sem);
-  if ( instance == NULL ) {
-    logprintfl (EUCAERROR, "callBundleInstaneHelper(): cannot find instance %s\n", instanceId);
-    return ERROR;
-  }
-  
-  // start the bundle/upload.  Note that this command may take a long time to run
-
-  //euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
-
-  // TODO add this as a parameter to eucalyptus.conf for windows
-  snprintf(ncBundleUploadCmd, MAX_PATH, "/usr/local/bin/euca-nc-bundle-upload");
-  // TODO add this as a parameter to eucalyptus.conf for windows
-  snprintf(workingDir, MAX_PATH, "/tmp/ncworking/");
-
-  // move 'disk' over to 'filePrefix'
-  snprintf(srcImagePath, MAX_PATH, "%s/%s/%s/disk", scGetInstancePath(), instance->userId, instance->instanceId);
-  snprintf(dstImagePath, MAX_PATH, "%s/%s/%s/disk", scGetInstancePath(), instance->userId, instance->instanceId);
-  
-  rc = rename(srcImagePath, dstImagePath);
-  if (rc) {
-    logprintfl(EUCAERROR, "callBundleInstanceHelper(): could not rename '%s' to speficied filePrefix '%s'\n", srcImagePath, dstImagePath);
-    ret = 1;
-  } else {
-    snprintf(cmd, MAX_PATH, "EC2_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem EC2_SECRET_KEY=HALOTHAR EUCALYPTUS_CERT=%s/var/lib/eucalyptus/keys/cloud-cert.pem S3_URL=%s EC2_ACCESS_KEY=%s EC2_USER_ID=%s EUCA_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem EUCA_PRIVATE_KEY=%s/var/lib/eucalyptus/keys/node-pk.pem %s -i %s -d %s -b %s", nc->home, nc->home, S3URL, userPublicKey, "123456789012", nc->home, nc->home, ncBundleUploadCmd, dstImagePath, workingDir, bucketName);
-    logprintfl(EUCADEBUG, "callBundleInstanceHelper(): running cmd '%s'\n", cmd);
-    rc = system(cmd);
-    rc = rc>>8;
-    if (rc) {
-      // put return code specific behavior here
-      logprintfl(EUCAERROR, "doBundleInstance(): cmd failed '%d'\n", rc);
-      ret = 1;
-    } else {
-      logprintfl(EUCAERROR, "doBundleInstance(): cmd success '%d'\n", rc);
-      ret = 0;
-    }
-  }
-  return(ret);
 }
 
 struct handlers default_libvirt_handlers = {
