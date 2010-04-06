@@ -68,7 +68,6 @@ package edu.ucsb.eucalyptus.ic;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -92,8 +91,6 @@ public class Eucalyptus {
         reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", SystemConfiguration.getWalrusUrl( ) ) );
       } catch ( EucalyptusCloudException e ) {}
       return reply;
-    } else if ( msg instanceof DescribeBundleTasksType ) {
-      return msg.getReply( );
     }
     return new EucalyptusErrorMessageType( "Eucalyptus", msg, "Unknown request of type: " + msg.getClass( ).getSimpleName( ) );
   }

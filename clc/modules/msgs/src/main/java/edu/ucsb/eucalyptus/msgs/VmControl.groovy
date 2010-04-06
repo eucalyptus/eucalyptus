@@ -192,6 +192,15 @@ public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = "InstanceId.1")
   String instanceId;
 }
+public class GetPasswordDataType extends VmControlMessage {
+  String instanceId;
+}
+public class GetPasswordDataResponseType extends VmControlMessage {
+  
+  String instanceId;
+  Date timestamp;
+  String output;
+}
 /** *******************************************************************************/
 public class ReservationInfoType extends EucalyptusData {
   String reservationId;

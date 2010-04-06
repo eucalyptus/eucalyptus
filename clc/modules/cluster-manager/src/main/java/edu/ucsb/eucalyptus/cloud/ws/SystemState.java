@@ -64,6 +64,7 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +80,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
+import com.eucalyptus.cluster.callback.PasswordDataCallback;
 import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
@@ -105,6 +107,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
+import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
+import edu.ucsb.eucalyptus.msgs.GetPasswordDataType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
@@ -426,9 +430,38 @@ public class SystemState {
     return reply;
   }
   
+  public static void handle( GetPasswordDataType request ) throws Exception {
+    try {
+      Cluster cluster = null;
+      VmInstance v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
+      if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
+        throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
+      }
+      if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
+        cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
+      }
+      if( v.getPasswordData( ) == null && cluster != null) {
+        new PasswordDataCallback( request ).dispatch( cluster );
+      } else if ( v.getPasswordData( ) != null ) { 
+        GetPasswordDataResponseType reply = request.getReply( );
+        reply.set_return( true );
+        reply.setOutput( v.getPasswordData( ) );
+        reply.setTimestamp( new Date() );
+        reply.setInstanceId( v.getInstanceId( ) );
+        Messaging.dispatch( "vm://ReplyQueue", reply );        
+      } else {
+        Messaging.dispatch( "vm://ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext( ).getService( ).getComponent( ).getClass( )
+                                                                               .getSimpleName( ), request, "Failed to find required vm information" ) );        
+      }
+      return;
+    } catch ( NoSuchElementException e ) {
+      Messaging.dispatch( "vm://ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext( ).getService( ).getComponent( ).getClass( )
+                                                                                           .getSimpleName( ), request, e.getMessage( ) ) );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
+  }
+
   public static void handle( GetConsoleOutputType request ) throws Exception {
-    GetConsoleOutputResponseType reply = ( GetConsoleOutputResponseType ) request.getReply( );
-    reply.set_return( true );
     try {
       Cluster cluster = null;
       VmInstance v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
@@ -440,6 +473,9 @@ public class SystemState {
       }
       if ( cluster != null ) {
         new ConsoleOutputCallback( request ).dispatch( cluster );
+      } else {
+        Messaging.dispatch( "vm://ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext( ).getService( ).getComponent( ).getClass( )
+                                                                               .getSimpleName( ), request, "Failed to find required vm information" ) );        
       }
       return;
     } catch ( NoSuchElementException e ) {

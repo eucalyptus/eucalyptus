@@ -72,6 +72,7 @@ import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.BundleTask;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -83,6 +84,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class VmInstance implements HasName {
   private static Logger        LOG         = Logger.getLogger( VmInstance.class );
@@ -106,6 +108,34 @@ public class VmInstance implements HasName {
   private List<Network>        networks    = Lists.newArrayList( );
   private VmState              state;
   private StringBuffer         consoleOutput;
+  private String               passwordData;
+  private AtomicMarkableReference<BundleTask> bundleTask = new AtomicMarkableReference<BundleTask>( null, false );
+  public Boolean isBundling( ) {
+    return this.bundleTask.getReference( ) == null;
+  }
+  public BundleTask resetBundleTask( ) {
+    BundleTask oldTask = this.bundleTask.getReference( );
+    this.bundleTask.set( null, false );
+    return oldTask;
+  }
+  public BundleTask getBundleTask( ) {
+    return this.bundleTask.getReference( );
+  }
+  public Boolean clearPendingBundleTask( ) {
+    return this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask(), true, false );
+  }
+  public Boolean startBundleTask( BundleTask task ) {
+    return this.bundleTask.compareAndSet( null, task, false, true );
+  }
+
+  public String getPasswordData( ) {
+    return this.passwordData;
+  }
+
+  public void setPasswordData( String passwordData ) {
+    this.passwordData = passwordData;
+  }
+
   private List<AttachedVolume> volumes     = Lists.newArrayList( );
   private NetworkConfigType    networkConfig;
   private Boolean              privateNetwork;
@@ -405,6 +435,12 @@ public class VmInstance implements HasName {
 
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
     this.consoleOutput = consoleOutput;
+    if( this.passwordData == null ) {
+      String tempCo = consoleOutput.toString( ).replaceAll("[\r\n]*","");
+      if( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
+        this.passwordData = tempCo.replaceAll(".*<Password>","").replaceAll("</Password>.*","");
+      }
+    }
   }
 
   @Override

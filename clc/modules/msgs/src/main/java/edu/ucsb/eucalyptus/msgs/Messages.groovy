@@ -515,10 +515,52 @@ public class HeartbeatMessage extends EucalyptusMessage implements Cloneable, Se
 public class VmBundleMessage extends EucalyptusMessage {
 }
 
+public class BundleInstanceType extends VmBundleMessage {
+  String instanceId;
+  String bucket;
+  String prefix;
+  String awsAccessKeyId;
+  String uploadPolicy;  
+  String uploadPolicySignature;  
+}
+public class BundleInstanceResponseType extends VmBundleMessage {
+  BundleTask task;
+}
+public class CancelBundleTaskType extends VmBundleMessage {
+  String bundleId;
+}
+public class CancelBundleTaskResponseType extends VmBundleMessage {
+  BundleTask task;
+}
+public class BundleTask extends EucalyptusData {
+  String instanceId;
+  String bundleId;
+  //pending | waiting-for-shutdown | storing | canceling | complete | failed
+  String state;
+  String startTime;
+  String updateTime;
+  String progress;
+  String bucket;
+  String prefix;
+  String errorMessage;
+  String errorCode;
+  public BundleTask() {}
+  public BundleTask( String bundleId, String instanceId, String bucket, String prefix ) {
+    this.bundleId = bundleId;
+    this.instanceId = instanceId;
+    this.bucket = bucket;
+    this.prefix = prefix;
+    this.state = "pending";
+    this.startTime = new Date().toString();
+    this.updateTime = new Date().toString();
+    this.progress = "0%";
+  }
+}
 public class DescribeBundleTasksType extends VmBundleMessage {
   ArrayList<String> bundleIds = new ArrayList<String>();
 }
 public class DescribeBundleTasksResponseType extends VmBundleMessage {
+  ArrayList<BundleTask> bundleTasks = new ArrayList<BundleTask>();
 }
 
 public class StatEventRecord extends EucalyptusMessage {
