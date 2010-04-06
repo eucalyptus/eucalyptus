@@ -204,7 +204,7 @@ int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, cha
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 #endif /* HANDLERS_FANOUT */
 
-
+int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey);
 /* helper functions used by the low level handlers */
 int get_value(			char *s,
 				const char *name,

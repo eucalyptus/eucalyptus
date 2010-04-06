@@ -147,6 +147,10 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
   char *encpassword;
   FILE *FH;
 
+  if (!euca_home || !rundir_path || !keyName || !strlen(euca_home) || !strlen(rundir_path) || !strlen(keyName)) {
+    return(1);
+  }
+
   bzero(password, sizeof(char)*16);
   for (i=0; i<8; i++) {
     char c[2];

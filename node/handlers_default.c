@@ -373,8 +373,69 @@ doBundleInstance(struct nc_state_t *nc,
 		char *userPublicKey, 
 		char *cloudPublicKey)
 {
-	logprintfl(EUCADEBUG, "doBundleInstance() invoked\n");
-	return 0;
+  int rc, ret;
+  
+  logprintfl(EUCADEBUG, "doBundleInstance() invoked\n");
+
+  return 0;
+}
+
+/*
+  // for now, call bundle helper (however, this command may take a very long time to run, needs to be called from async thread)
+  rc = callBundleInstanceHelper(nc, instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+  if (rc) {
+    ret = 1;
+  } else {
+    ret = 0;
+  }
+*/
+int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey) {
+  int rc, ret;
+  char cmd[MAX_PATH];
+  char workingDir[MAX_PATH];
+  char srcImagePath[MAX_PATH], dstImagePath[MAX_PATH];
+  char ncBundleUploadCmd[MAX_PATH];
+
+  sem_p (inst_sem); 
+  ncInstance *instance = find_instance (&global_instances, instanceId);
+  sem_v (inst_sem);
+  if ( instance == NULL ) {
+    logprintfl (EUCAERROR, "callBundleInstaneHelper(): cannot find instance %s\n", instanceId);
+    return ERROR;
+  }
+  
+  // start the bundle/upload.  Note that this command may take a long time to run
+
+  //euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
+
+  // TODO add this as a parameter to eucalyptus.conf for windows
+  snprintf(ncBundleUploadCmd, MAX_PATH, "/usr/local/bin/euca-nc-bundle-upload");
+  // TODO add this as a parameter to eucalyptus.conf for windows
+  snprintf(workingDir, MAX_PATH, "/tmp/ncworking/");
+
+  // move 'disk' over to 'filePrefix'
+  snprintf(srcImagePath, MAX_PATH, "%s/%s/%s/disk", scGetInstancePath(), instance->userId, instance->instanceId);
+  snprintf(dstImagePath, MAX_PATH, "%s/%s/%s/disk", scGetInstancePath(), instance->userId, instance->instanceId);
+  
+  rc = rename(srcImagePath, dstImagePath);
+  if (rc) {
+    logprintfl(EUCAERROR, "callBundleInstanceHelper(): could not rename '%s' to speficied filePrefix '%s'\n", srcImagePath, dstImagePath);
+    ret = 1;
+  } else {
+    snprintf(cmd, MAX_PATH, "EC2_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem EC2_SECRET_KEY=HALOTHAR EUCALYPTUS_CERT=%s/var/lib/eucalyptus/keys/cloud-cert.pem S3_URL=%s EC2_ACCESS_KEY=%s EC2_USER_ID=%s EUCA_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem EUCA_PRIVATE_KEY=%s/var/lib/eucalyptus/keys/node-pk.pem %s -i %s -d %s -b %s", nc->home, nc->home, S3URL, userPublicKey, "123456789012", nc->home, nc->home, ncBundleUploadCmd, dstImagePath, workingDir, bucketName);
+    logprintfl(EUCADEBUG, "callBundleInstanceHelper(): running cmd '%s'\n", cmd);
+    rc = system(cmd);
+    rc = rc>>8;
+    if (rc) {
+      // put return code specific behavior here
+      logprintfl(EUCAERROR, "doBundleInstance(): cmd failed '%d'\n", rc);
+      ret = 1;
+    } else {
+      logprintfl(EUCAERROR, "doBundleInstance(): cmd success '%d'\n", rc);
+      ret = 0;
+    }
+  }
+  return(ret);
 }
 
 static int
