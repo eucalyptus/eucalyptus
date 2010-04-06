@@ -1361,44 +1361,62 @@ if [ -n "$NODEMODE" ]; then
 
 	# adding (or removing) nodes
 	for NEWNODE in ${NEWNODES} ; do
-		# remove is simpler: just remove the node name
-		if [ "$NODEMODE" = "REM" ]; then
-			if ! echo "$NODES"|grep "${NEWNODE}" > /dev/null ; then
-				echo "Node ${NEWNODE} is not known"
-				continue
-			fi
-			NODES="`echo $NODES|sed \"s/${NEWNODE}//\"|tr -s ' '`"
-			change_var_value $FILE NODES "${NODES}"
-			echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
-			continue
+	    # let's see if the node is already in the node list
+            its_here="0"
+            for x in $NODES ; do
+                if [ "$x" = "${NEWNODE}" ]; then
+                    its_here="1"
+                    break
+                fi
+	    done
+	    
+            # remove is simpler: just remove the node name
+            if [ "$NODEMODE" = "REM" ]; then
+                if [ "$its_here" = "0" ]; then
+                    echo "Node ${NEWNODE} is not known"
+                    continue
+                fi
+                NEW_NODES=""
+                for x in $NODES;  do
+                    if [ "$x" = "${NEWNODE}" ]; then
+                        continue
+                    fi
+                    NEW_NODES="$x $NEW_NODES"
+                done
+                change_var_value $FILE NODES "${NEW_NODES}"
+                echo "SUCCESS: removed node '${NEWNODE}' from '$FILE'"
+                continue
+            fi
+	    
+	    # let's sync keys with the nodes
+	    if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWNODE} node-cert.pem cluster-cert.pem node-pk.pem cloud-cert.pem; then
+		echo
+		echo "ERROR: could not synchronize keys with $NEWNODE!"
+		echo "The configuration will not have this node."
+		if [ "$SSHKEY" = "" ]; then
+		    echo "User $EUCA_USER may have to run ssh-keygen!"
+		else
+		    echo "Hint: to setup passwordless login to the nodes as user $EUCA_USER, you can"
+		    echo "run the following commands on node $NEWNODE:"
+		    echo "sudo -u $EUCA_USER mkdir -p ~${EUCA_USER}/.ssh"
+		    echo "sudo -u $EUCA_USER tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
+		    echo "$SSHKEY"
+		    echo "EOT"
+		    echo ""
+		    echo "Be sure that authorized_keys is not group/world readable or writable"
 		fi
+		continue
+	    fi
 
-		# let's sync keys with the nodes
-		if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${NEWNODE} node-cert.pem cluster-cert.pem node-pk.pem cloud-cert.pem; then
-			echo
-			echo "ERROR: could not synchronize keys with $NEWNODE!"
-			echo "The configuration will not have this node."
-			if [ "$SSHKEY" = "" ]; then
-				echo "User $EUCA_USER may have to run ssh-keygen!"
-			else
-				echo "Hint: to setup passwordless login to the nodes as user $EUCA_USER, you can"
-				echo "run the following commands on node $NEWNODE:"
-				echo "sudo -u $EUCA_USER mkdir -p ~${EUCA_USER}/.ssh"
-				echo "sudo -u $EUCA_USER tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
-				echo "$SSHKEY"
-				echo "EOT"
-				echo ""
-				echo "Be sure that authorized_keys is not group/world readable or writable"
-			fi
-			continue
-		fi
- 
-		# NODES list
-		if ! echo "${NODES}"|grep "${NEWNODE}" > /dev/null ; then
-			# node is not present: we need to add it
-			NODES="${NODES} $NEWNODE"
-			change_var_value $FILE NODES "${NODES}"
-		fi
+            # if the node is already listed, we are done
+            if [ "$its_here" = "1" ]; then
+                continue
+            fi
+
+            # add the node
+            NODES="${NODES} $NEWNODE"
+            change_var_value $FILE NODES "${NODES}"
+
 	done
 fi
 

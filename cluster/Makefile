@@ -84,6 +84,6 @@ install: deploy
 	@$(INSTALL) cc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
 
 uninstall:
-	@$(RM) -f $(sbindir)/$(CLIENTKILLALL)
-	@$(RM) -f $(vardir)/lib/eucalyptus/keys/cc-client-policy.xml
-	@$(RM) -rf $(AXIS2C_SERVICES)/$(SERVICE_NAME)
+	@$(RM) -f $(DESTDIR)$(sbindir)/$(CLIENTKILLALL)
+	@$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/cc-client-policy.xml
+	@$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)
