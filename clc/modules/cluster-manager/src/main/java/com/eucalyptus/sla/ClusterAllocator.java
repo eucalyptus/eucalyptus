@@ -251,7 +251,7 @@ public class ClusterAllocator extends Thread {
       }
     } );
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), imgInfo, vmInfo, keyInfo, instanceIds, macs, vlan, networkNames, netIndexes ).regardingUserRequest( request );
-    VmRunCallback cb = new VmRunCallback( run, this, childToken );
+    VmRunCallback cb = new VmRunCallback( run, childToken );
     if ( !addrList.isEmpty( ) ) {
       cb.then( new SuccessCallback<VmRunResponseType>( ) {
         @Override
@@ -272,8 +272,4 @@ public class ClusterAllocator extends Thread {
     this.messages.run( );
   }
   
-  public void rollback() {
-    this.messages.rollback( );
-  }
-      
 }
