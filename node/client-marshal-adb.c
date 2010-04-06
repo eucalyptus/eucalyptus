@@ -200,11 +200,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         groupNames, groupNamesSize
         );
 
-/* TODO
-	char * bundlingTaskStateName = adb_instanceType_get_bundlingTaskStateName(instance, env);
-	for (i = 0; i<sizeof(
-	outInst->bundling 
-*/
+	strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
 
     axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);
     if (dt!=NULL) {
