@@ -167,7 +167,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     adb_netConfigType_t * netconf = adb_instanceType_get_netParams(instance, env);
     if (netconf != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
-	ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
+		ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
         strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
         strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
         strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
@@ -196,10 +196,16 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         (char *)adb_instanceType_get_keyName(instance, env),
         (char *)adb_instanceType_get_userData(instance, env),
         (char *)adb_instanceType_get_launchIndex(instance, env),
-	(char *)adb_instanceType_get_platform(instance, env),
+		(char *)adb_instanceType_get_platform(instance, env),
         groupNames, groupNamesSize
         );
-    
+
+/* TODO
+	char * bundlingTaskStateName = adb_instanceType_get_bundlingTaskStateName(instance, env);
+	for (i = 0; i<sizeof(
+	outInst->bundling 
+*/
+
     axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);
     if (dt!=NULL) {
         outInst->launchTime = datetime_to_unix (dt, env);
@@ -213,7 +219,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
             strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
-	    strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
+			strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
         }
     }
 

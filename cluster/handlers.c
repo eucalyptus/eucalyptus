@@ -190,18 +190,6 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
   shawn();
   
   return(ret);
-  /*
-  int rc;
-
-  rc = initialize();
-  if (rc) {
-    return(1);
-  }
-  
-  logprintfl(EUCAINFO, "BundleInstance(): called\n");
-  logprintfl(EUCAINFO, "BundleInstance(): done\n");
-  return(0);
-  */
 }
 
 int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bundleTask **outBundleTasks, int *outBundleTasksLen) {
@@ -244,7 +232,6 @@ int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bu
 	}
       }
     }
-    
     *outBundleTasksLen = bundleCache->numBundles;
   }
   sem_mypost(BUNDLECACHE);

@@ -114,11 +114,19 @@ print <<EOF;
     <vcpu>VCPUS</vcpu>
     <devices>
         <emulator>/usr/bin/kvm</emulator>
-        <disk type='file'>
-            <source file='BASEPATH/disk'/>
-            <target dev='sda'/>
-        </disk>
 EOF
+
+if ($plaindisk) {
+    print "        <disk type='file'>\n";
+    print "            <source file='BASEPATH/disk'/>\n";
+    print "            <target dev='hda'/>\n";
+    print "        </disk>\n";
+} else {
+    print "        <disk type='file'>\n";
+    print "            <source file='BASEPATH/disk'/>\n";
+    print "            <target dev='sda'/>\n";
+    print "        </disk>\n";
+}
 
 if ($plaindisk) {
     print "        <disk type='file' device='floppy'>\n";

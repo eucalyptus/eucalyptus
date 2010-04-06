@@ -102,6 +102,7 @@ permission notice:
 #define CONFIG_NODES "NODES"
 #define CONFIG_HYPERVISOR "HYPERVISOR"
 #define CONFIG_NC_CACHE_SIZE "NC_CACHE_SIZE"
+#define CONFIG_NC_WORK_SIZE "NC_WORK_SIZE"
 #define CONFIG_NC_SWAP_SIZE "SWAP_SIZE"
 #define CONFIG_SAVE_INSTANCES "MANUAL_INSTANCES_CLEANUP"
 #define CONFIG_CONCURRENT_DISK_OPS "CONCURRENT_DISK_OPS"
@@ -116,7 +117,9 @@ permission notice:
 #define EUCA_MAX_GROUPS 64
 #define EUCA_MAX_VOLUMES 256
 #define DEFAULT_NC_CACHE_SIZE 99999 /* in MB */
+#define DEFAULT_NC_WORK_SIZE 99999 /* in MB */
 #define DEFAULT_SWAP_SIZE 512 /* in MB */
+#define MAX_PATH_SIZE 4096
 
 #define MEGABYTE 1048576
 #define OK 0
@@ -139,6 +142,9 @@ typedef enum instance_states_t {
     BOOTING,
     CANCELED,
 
+	/* state after running */
+	BUNDLING,
+
     /* the only three states reported to CLC */
     PENDING,  /* staging in data, starting to boot, failed to boot */ 
     EXTANT,   /* guest OS booting, running, shutting down, cleaning up state */
@@ -160,9 +166,25 @@ static char * instance_state_names[] = {
     "Booting",
     "Canceled",
 
+	"Bundling",
+
     "Pending",
     "Extant",
     "Teardown"
+};
+
+typedef enum bundling_progress_t {
+    NOT_BUNDLING = 0,
+	BUNDLING_IN_PROGRESS,
+	BUNDLING_SUCCESS,
+	BUNDLING_FAILED
+} bundling_progress; 
+
+static char * bundling_progress_names[] = {
+	"none",
+	"bundling",
+	"succeded",
+	"failed"
 };
 
 #endif

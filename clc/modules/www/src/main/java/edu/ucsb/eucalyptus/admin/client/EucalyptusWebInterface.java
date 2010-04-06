@@ -2120,7 +2120,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         parent.add(vpanel);
         int nusers = usersList.size();
         if (nusers>0) {
-            Hyperlink sort_button = new Hyperlink( sortSymbol, true, null );
+            Anchor sort_button = new Anchor( sortSymbol, true);
 			sort_button.setStyleName ("euca-small-text");
 			sort_button.addClickListener( new ClickListener() {
 				public void onClick(Widget sender) {
@@ -2195,7 +2195,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	                }
 	                ops.add(act_button);
 
-					Hyperlink del_button = new Hyperlink( "Delete", null );
+					Anchor del_button = new Anchor ( "Delete" );
 					del_button.setStyleName ("euca-action-link");
 					del_button.addClickListener( new ClickListener() {
 						public void onClick(Widget sender) {
