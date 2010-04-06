@@ -34,7 +34,7 @@ extern ccResourceCache *resourceCache;
 
 extern vnetConfig *vnetconfig;
 
-extern ccBundleCache *bundleCache;
+//extern ccBundleCache *bundleCache;
 
 extern sem_t *locks[ENDLOCK];
 extern int mylocks[ENDLOCK];

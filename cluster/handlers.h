@@ -104,13 +104,14 @@ typedef struct instance_t {
   char userData[4096];
   char launchIndex[64];
   char platform[64];
+  char bundleTaskStateName[64];
   char groupNames[64][32];
 
   ncVolume volumes[EUCA_MAX_VOLUMES];
   int volumesSize;
 } ccInstance;
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char groupNames[][32], ncVolume *volumes, int volumesSize);
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize);
 void print_ccInstance(char *tag, ccInstance *in);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};

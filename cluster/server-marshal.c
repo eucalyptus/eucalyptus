@@ -997,8 +997,10 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   adb_ccInstanceType_set_userData(dst, env, src->userData);
   adb_ccInstanceType_set_launchIndex(dst, env, src->launchIndex);
   if (src->platform && strlen(src->platform)) {
-    logprintfl(EUCADEBUG, "HALO: %s %d\n", src->platform, strlen(src->platform));
     adb_ccInstanceType_set_platform(dst, env, src->platform);
+  }
+  if (src->bundleTaskStateName && strlen(src->bundleTaskStateName)) {
+    adb_ccInstanceType_set_bundleTaskStateName(dst, env, src->bundleTaskStateName);
   }
   for (i=0; i<64; i++) {
     if (src->groupNames[i][0] != '\0') {

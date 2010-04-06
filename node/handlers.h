@@ -221,6 +221,7 @@ void adopt_instances();
 int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *userId,
 				char *instanceId,
+				char *platform,
 				char *ramdiskId,
 				char *kernelId,
 				char *disk_path,
