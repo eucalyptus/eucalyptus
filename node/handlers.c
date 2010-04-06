@@ -1136,19 +1136,19 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	return ret;
 }
 
-int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey)
+int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey)
 {
 	int ret;
 
 	if (init())
 		return 1;
 
-	logprintfl (EUCAINFO, "doBundleInstance() invoked (id=%s bucketName=%s filePrefix=%s S3URL=%s userPublicKey=%s cloudPublicKey=%s)\n", instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+	logprintfl (EUCAINFO, "doBundleInstance() invoked (id=%s bucketName=%s filePrefix=%s S3URL=%s userPublicKey=%s)\n", instanceId, bucketName, filePrefix, S3URL, userPublicKey);
 
 	if (nc_state.H->doBundleInstance)
-	  ret = nc_state.H->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+	  ret = nc_state.H->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
 	else 
-	  ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+	  ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
 
 	return ret;
 }

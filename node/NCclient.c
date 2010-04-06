@@ -366,7 +366,7 @@ int main (int argc, char **argv)
         /***********************************************************/
 	} else if (!strcmp(command, "bundleInstance")) {
         CHECK_PARAM(instance_id, "instance id");
-		int rc = ncBundleInstanceStub (stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "public-key-foo");
+		int rc = ncBundleInstanceStub (stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo");
 		printf ("ncBundleInstanceStub = %d\n", rc);
 
     } else if (!strcmp(command, "powerDown")) {
@@ -388,7 +388,7 @@ int main (int argc, char **argv)
       int i, rc;
       rc = ncDescribeBundleTasksStub(stub, &meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);
       for (i=0; i<outBundleTasksLen; i++) {
-	printf("BUNDLE %d: %s %s %s\n", i, outBundleTasks[i]->instanceId, outBundleTasks[i]->state, outBundleTasks[i]->manifest);
+	printf("BUNDLE %d: %s %s\n", i, outBundleTasks[i]->instanceId, outBundleTasks[i]->state);
       }
     } else if (!strcmp(command, "terminateInstance")) {
         CHECK_PARAM(instance_id, "instance ID");

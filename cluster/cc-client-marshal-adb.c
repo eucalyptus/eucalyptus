@@ -447,7 +447,7 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
   return(0);
 }
 
-int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey, axutil_env_t *env, axis2_stub_t *stub) {
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   //  char meh[32];
   adb_BundleInstance_t *input;
@@ -473,8 +473,6 @@ int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char
   adb_bundleInstanceType_set_filePrefix(sn, env, filePrefix);
   adb_bundleInstanceType_set_S3URL(sn, env, S3URL);
   adb_bundleInstanceType_set_userPublicKey(sn, env, userPublicKey);
-  adb_bundleInstanceType_set_cloudPublicKey(sn, env, cloudPublicKey);
-	  
   
   adb_BundleInstance_set_BundleInstance(input, env, sn);
 
@@ -536,7 +534,7 @@ int cc_describeBundleTasks(char **instIds, int instIdsLen, axutil_env_t *env, ax
       printf("operation success\n");
       for (i=0; i<adb_describeBundleTasksResponseType_sizeof_bundleTasks(dirt, env); i++) {
 	bundle = adb_describeBundleTasksResponseType_get_bundleTasks_at(dirt, env, i);
-	printf("BUNDLE %d: %s %s %s\n", i, adb_bundleTaskType_get_instanceId(bundle, env), adb_bundleTaskType_get_state(bundle, env), adb_bundleTaskType_get_manifest(bundle, env));
+	printf("BUNDLE %d: %s %s\n", i, adb_bundleTaskType_get_instanceId(bundle, env), adb_bundleTaskType_get_state(bundle, env));
       }
     }
   }

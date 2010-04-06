@@ -387,7 +387,6 @@ struct bundling_params_t {
 	char * filePrefix;
 	char * S3URL;
 	char * userPublicKey;
-	char * cloudPublicKey;
 	char * workPath; // work directory path
 	char * diskPath; // disk file path
 	char * eucalyptusHomePath; 
@@ -460,7 +459,6 @@ static void * bundling_thread (void *arg)
 	free (params->filePrefix);
 	free (params->S3URL);
 	free (params->userPublicKey);
-	free (params->cloudPublicKey);
 	free (params->workPath);
 	free (params->diskPath);
 	free (params->eucalyptusHomePath);
@@ -477,8 +475,7 @@ doBundleInstance(
 	char *bucketName,
 	char *filePrefix,
 	char *S3URL,
-	char *userPublicKey, 
-	char *cloudPublicKey)
+	char *userPublicKey)
 {
 	ncInstance *instance;
 	int err;
@@ -488,8 +485,7 @@ doBundleInstance(
 		|| bucketName==NULL
 		|| filePrefix==NULL
 		|| S3URL==NULL
-		|| userPublicKey==NULL
-		|| cloudPublicKey==NULL) {
+		|| userPublicKey==NULL) {
 		logprintfl (EUCAERROR, "bundling instance called with invalid parameters\n");
 		return ERROR;
 	}
@@ -518,7 +514,6 @@ doBundleInstance(
 	params->filePrefix = strdup (filePrefix);
 	params->S3URL = strdup (S3URL);
 	params->userPublicKey = strdup (userPublicKey);
-	params->cloudPublicKey = strdup (cloudPublicKey);
 
 	long long sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
 	params->workPath = alloc_work_path (instanceId, instance->userId, sizeMb); // reserve work disk space for bundling
@@ -584,7 +579,7 @@ doDescribeBundleTasks(
 				logprintfl (EUCAERROR, "out of memory\n");
 				return OUT_OF_MEMORY;
 			}
-			allocate_bundleTask (bundle, instIds[i], instance->bundleTaskStateName, NULL);
+			allocate_bundleTask (bundle, instIds[i], instance->bundleTaskStateName);
 		}
 		sem_v (inst_sem);
 		
