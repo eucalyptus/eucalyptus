@@ -69,8 +69,6 @@ public class StorageInfoWeb implements IsSerializable {
 	private String name;
 	private String host;
 	private Integer port;
-	private Integer maxVolumeSizeInGB;
-	private Integer totalVolumesSizeInGB;
 	private Boolean committed;	
 	private ArrayList<String> storageParams = new ArrayList<String>();
 
@@ -80,8 +78,6 @@ public class StorageInfoWeb implements IsSerializable {
 		this.name = name;
 		this.host = host;
 		this.port = port;
-		this.maxVolumeSizeInGB = StorageInfoWeb.DEFAULT_SC.getMaxVolumeSizeInGB( );
-		this.totalVolumesSizeInGB = StorageInfoWeb.DEFAULT_SC.getTotalVolumesSizeInGB( );
 		this.committed = StorageInfoWeb.DEFAULT_SC.committed;
 		this.storageParams = new ArrayList<String>();
 	}
@@ -89,14 +85,10 @@ public class StorageInfoWeb implements IsSerializable {
 	public StorageInfoWeb( final String name,
 			final String host,
 			final Integer port,
-			final Integer maxVolumeSizeInGB,
-			final Integer totalVolumesSizeInGB,
 			final ArrayList<String> storageParams) {
 		this.name = name;
 		this.host = host;
 		this.port = port;
-		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
 		this.committed = false;
 		this.storageParams = storageParams;
 	}
@@ -137,22 +129,6 @@ public class StorageInfoWeb implements IsSerializable {
 		this.port = port;
 	}
 
-	public final Integer getMaxVolumeSizeInGB() {
-		return maxVolumeSizeInGB;
-	}
-
-	public final void setMaxVolumeSizeInGB(final Integer maxVolumeSizeInGB) {
-		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-	}
-
-	public final Integer getTotalVolumesSizeInGB() {
-		return totalVolumesSizeInGB;
-	}
-
-	public final void setTotalVolumesSizeInGB(final Integer totalVolumesSizeInGB) {
-		this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-	}
-
 	public final ArrayList<String> getStorageParams() {
 		return storageParams;
 	}
@@ -186,5 +162,5 @@ public class StorageInfoWeb implements IsSerializable {
 		return name.hashCode();
 	}
 
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, 10, 50, new ArrayList<String>());
+	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, new ArrayList<String>());
 }

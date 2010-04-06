@@ -91,11 +91,13 @@ StorageInfo {
 	private Long id = -1l;
 	@Column( name = "storage_name", unique=true)
 	private String name;
+	@ConfigurableField( description = "Total disk space reserved for volumes", displayName = "Disk space reserved for volumes" )
 	@Column( name = "system_storage_volume_size_gb" )
 	private Integer maxTotalVolumeSizeInGb;
 	@ConfigurableField( description = "Storage network interface.", displayName = "Storage Interface" )
 	@Column( name = "storage_interface" )
 	private String storageInterface;
+	@ConfigurableField( description = "Max volume size", displayName = "Max volume size" )
 	@Column( name = "system_storage_max_volume_size_gb")
 	private Integer maxVolumeSizeInGB;
 	@ConfigurableField( description = "Storage volumes directory.", displayName = "Volumes path" )
