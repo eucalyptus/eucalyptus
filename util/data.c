@@ -192,7 +192,7 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
       */
     }
     inst->stateCode = stateCode;
-    
+    strncpy (inst->bundleTaskStateName, bundling_progress_names [NOT_BUNDLING], CHAR_BUFFER_SIZE);
     return inst;
 }
 
