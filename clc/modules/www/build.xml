@@ -79,7 +79,6 @@
 	<property environment="env" />
 	<path id="gwtclasspath">
 		<fileset dir="${lib.dir}">
-			<include name="**/gwt-dev-${osMask}.jar" />
 			<include name="**/*.jar" />
 		</fileset>
 		<pathelement path="conf" />
@@ -89,7 +88,7 @@
 	</path>
 	<path id="gwtcompilerclasspath">
 		<fileset dir="${lib.dir}">
-			<include name="**/gwt-dev-${osMask}.jar" />
+			<include name="**/gwt-dev.jar" />
 		</fileset>
 		<path refid="gwtclasspath" />
 		<fileset dir="${target.dir}">
@@ -131,12 +130,9 @@
 			<jvmarg value="-Xmx1024m" />
 			<jvmarg value="-Xss1024k" />
 			<arg line="-war ${gwt.war.build.dir}" />
-			<arg line="-style PRETTY" />
+			<!-- arg line="-style PRETTY" /--> <!-- PRETTY for non-obfuscated Javascript -->
 			<arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
 		</java>
-		<copy todir="${gwt.war.build.dir}/${gwt.module}/WEB-INF/classes">
-			<fileset dir="${build.dir}"/>
-		</copy>
 		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module}/" />
 	</target>
 

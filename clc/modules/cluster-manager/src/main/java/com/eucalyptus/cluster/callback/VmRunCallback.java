@@ -85,11 +85,9 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
 
   private static Logger LOG = Logger.getLogger( VmRunCallback.class );
 
-  private ClusterAllocator parent;
   private ResourceToken token;
   
-  public VmRunCallback( final VmRunType msg, final ClusterAllocator parent, final ResourceToken token ) {
-    this.parent = parent;
+  public VmRunCallback( final VmRunType msg, final ResourceToken token ) {
     this.token = token;
     this.setRequest( msg );
   }
@@ -166,7 +164,6 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     }
     LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
-    this.parent.rollback( );
   }
 
 }

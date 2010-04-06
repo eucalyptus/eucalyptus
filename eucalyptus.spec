@@ -290,7 +290,7 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	useradd -M eucalyptus -g eucalyptus
 %endif
 %if %is_centos
-	adduser -n --system eucalyptus 
+	adduser -M eucalyptus
 %endif
 %if %is_fedora
 	adduser -U -G kvm --system eucalyptus 

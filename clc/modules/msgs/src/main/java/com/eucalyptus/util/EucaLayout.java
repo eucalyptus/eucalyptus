@@ -65,7 +65,6 @@ package com.eucalyptus.util;
 
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.spi.LoggingEvent;
-import org.hibernate.exception.GenericJDBCException;
 
 public class EucaLayout extends PatternLayout {
   public static int LINE_BYTES = 100;
@@ -95,7 +94,7 @@ public class EucaLayout extends PatternLayout {
   public String format( LoggingEvent event ) {
     if( event.getThrowableInformation( ) != null ) {
       Throwable t = event.getThrowableInformation( ).getThrowable( );
-      if( t != null && t instanceof GenericJDBCException ) {
+      if( t != null ) {
         return "";
       }
     } else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
