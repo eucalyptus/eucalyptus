@@ -73,6 +73,15 @@ use FindBin;
 $OUTPUT_AUTOFLUSH = 1; # no output buffering
 
 our $use_ramdisk = 0;
+our $local_kvm="";
+
+if ( -x "/usr/bin/kvm" ) {
+    $local_kvm="/usr/bin/kvm";
+} elsif ( -x "/usr/bin/qemu-kvm" ) {
+    $local_kvm="/usr/bin/qemu-kvm";
+} else {
+    $local_kvm="kvm";
+}
 
 # deal with command-line parameters
 GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
@@ -100,7 +109,7 @@ print <<EOF;
     <memory>MEMORY</memory>
     <vcpu>VCPUS</vcpu>
     <devices>
-        <emulator>/usr/bin/kvm</emulator>
+        <emulator>$local_kvm</emulator>
         <disk type='file'>
             <source file='BASEPATH/disk'/>
             <target dev='sda'/>
