@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
+import com.eucalyptus.system.Threads;
 
 public class ClusterThreadFactory implements ThreadFactory {
   private static Map<String,ThreadFactory> factories = new HashMap<String,ThreadFactory>();
@@ -18,7 +18,7 @@ public class ClusterThreadFactory implements ThreadFactory {
   
   @Override
   public Thread newThread( final Runnable r ) {
-    return SystemBootstrapper.makeSystemThread( r, this.threadName + "-" + r.getClass( ).getSimpleName( ) + "-" + this.threadIndex.addAndGet( 1 )  );
+    return Threads.newThread( r, this.threadName + "-" + r.getClass( ).getSimpleName( ) + "-" + this.threadIndex.addAndGet( 1 )  );
   }
   
   public static ThreadFactory getThreadFactory( String clusterName ) {
