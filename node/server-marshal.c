@@ -261,6 +261,7 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     
     // reported by NC
     adb_instanceType_set_stateName(instance, env, outInst->stateName);
+	adb_instanceType_set_bundleTaskStateName(instance, env, bundling_progress_names[outInst->bundling]);
     axutil_date_time_t * dt = axutil_date_time_create_with_offset(env, outInst->launchTime - time(NULL));
     adb_instanceType_set_launchTime(instance, env, dt);
     
@@ -762,21 +763,21 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
                 adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_TRUE);
                 adb_ncDescribeBundleTasksResponseType_set_correlationId(output, env, correlationId);
                 adb_ncDescribeBundleTasksResponseType_set_userId(output, env, userId);
-		// set operation specific values
-		for (i=0; i<outBundleTasksLen; i++) {
-		  adb_bundleTaskType_t *btt;
-		  btt = adb_bundleTaskType_create(env);
-		  adb_bundleTaskType_set_instanceId(btt, env, outBundleTasks[i]->instanceId);
-		  adb_bundleTaskType_set_state(btt, env, outBundleTasks[i]->state);
-		  adb_bundleTaskType_set_manifest(btt, env, outBundleTasks[i]->manifest);
-		  adb_ncDescribeBundleTasksResponseType_add_bundleTasks(output, env, btt);
-		  free(outBundleTasks[i]);
-		}
-		free(outBundleTasks);
+				// set operation specific values
+				for (i=0; i<outBundleTasksLen; i++) {
+					adb_bundleTaskType_t *btt;
+					btt = adb_bundleTaskType_create(env);
+					adb_bundleTaskType_set_instanceId(btt, env, outBundleTasks[i]->instanceId);
+					adb_bundleTaskType_set_state(btt, env, outBundleTasks[i]->state);
+					adb_bundleTaskType_set_manifest(btt, env, outBundleTasks[i]->manifest);
+					adb_ncDescribeBundleTasksResponseType_add_bundleTasks(output, env, btt);
+					free(outBundleTasks[i]);
+				}
+				free(outBundleTasks);
             }
         }
     }
-
+	
     // set response to output
     adb_ncDescribeBundleTasksResponse_set_ncDescribeBundleTasksResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);

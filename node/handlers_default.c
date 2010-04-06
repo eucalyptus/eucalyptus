@@ -129,24 +129,23 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 	return ERROR_FATAL;
 }
 
-static int
-doTerminateInstance(	struct nc_state_t *nc,
-			ncMetadata *meta,
-			char *instanceId,
-			int *shutdownState,
-			int *previousState)
+// finds instance by ID and destroys it on the hypervisor
+// NOTE: this must be called with inst_sem semaphore held
+static int 
+find_and_destroy_instance ( 
+	char *instanceId, 
+	ncInstance **instance_p )
 {
-	ncInstance *instance, *vninstance;
+	ncInstance *instance;
 	virConnectPtr *conn;
 	int err;
 
-	sem_p (inst_sem); 
 	instance = find_instance(&global_instances, instanceId);
-	sem_v (inst_sem);
 	if (instance == NULL) 
 		return NOT_FOUND;
+	* instance_p = instance;
 
-	/* try stopping the KVM domain */
+	/* try stopping the domain */
 	conn = check_hypervisor_conn();
 	if (conn) {
 	        sem_p(hyp_sem);
@@ -168,9 +167,27 @@ doTerminateInstance(	struct nc_state_t *nc,
 				logprintfl (EUCAWARN, "warning: domain %s to be terminated not running on hypervisor\n", instanceId);
 		}
 	} 
+	return OK;
+}
 
-	/* change the state and let the monitoring_thread clean up state */
-    sem_p (inst_sem);
+static int
+doTerminateInstance(	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId,
+			int *shutdownState,
+			int *previousState)
+{
+	ncInstance *instance;
+	int err;
+
+	sem_p (inst_sem);
+	err = find_and_destroy_instance (instanceId, &instance);
+	if (err!=OK) {
+		sem_v(inst_sem);
+		return err;
+	}
+
+	// change the state and let the monitoring_thread clean up state
 	if (instance->state!=TEARDOWN) { // do not leave TEARDOWN
 		if (instance->state==BOOTING || instance->state==STAGING) {
 			change_state (instance, CANCELED);
@@ -179,6 +196,7 @@ doTerminateInstance(	struct nc_state_t *nc,
 		}
 	}
     sem_v (inst_sem);
+
 	*previousState = instance->stateCode;
 	*shutdownState = instance->stateCode;
 
@@ -363,32 +381,173 @@ doDetachVolume(	struct nc_state_t *nc,
 	return ERROR_FATAL;
 }
 
-static int
-doBundleInstance(struct nc_state_t *nc,
-		ncMetadata *meta,
-		char *instanceId,
-		char *bucketName,
-		char *filePrefix,
-		char *S3URL,
-		char *userPublicKey, 
-		char *cloudPublicKey)
-{
-  int rc, ret;
-  
-  logprintfl(EUCADEBUG, "doBundleInstance() invoked\n");
+struct bundling_params_t {
+	ncInstance * instance;
+	char * bucketName;
+	char * filePrefix;
+	char * S3URL;
+	char * userPublicKey;
+	char * cloudPublicKey;
+	char * workPath; // work directory path
+	char * diskPath; // disk file path
+};
 
-  return 0;
+static void * bundling_thread (void *arg) 
+{
+	struct bundling_params_t * params = (struct bundling_params_t *)arg;
+	ncInstance * instance = params->instance;
+
+	logprintfl (EUCAINFO, "started bundling instance %s\n", instance->instanceId);
+	if (vrun ("/bin/sleep 30")==0) { // TODO: call bundling code here, giving it workPath and diskPath
+		sem_p (inst_sem);
+		instance->bundling = BUNDLING_SUCCESS;
+		change_state (instance, SHUTOFF);
+		sem_v (inst_sem);
+		logprintfl (EUCAINFO, "finished bundling instance %s\n", instance->instanceId);
+	} else {
+		sem_p (inst_sem);
+		instance->bundling = BUNDLING_FAILED;
+		change_state (instance, SHUTOFF);
+		sem_v (inst_sem);
+		logprintfl (EUCAINFO, "failed while bundling instance %s\n", instance->instanceId);
+	}
+	
+	free_work_path (instance->instanceId, instance->userId);
+	free (params->bucketName);
+	free (params->filePrefix);
+	free (params->S3URL);
+	free (params->userPublicKey);
+	free (params->cloudPublicKey);
+	free (params->workPath);
+	free (params->diskPath);
+	free (params);
+
+	return NULL;
 }
 
-/*
-  // for now, call bundle helper (however, this command may take a very long time to run, needs to be called from async thread)
-  rc = callBundleInstanceHelper(nc, instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
-  if (rc) {
-    ret = 1;
-  } else {
-    ret = 0;
-  }
-*/
+static int
+doBundleInstance(
+	struct nc_state_t *nc,
+	ncMetadata *meta,
+	char *instanceId,
+	char *bucketName,
+	char *filePrefix,
+	char *S3URL,
+	char *userPublicKey, 
+	char *cloudPublicKey)
+{
+	ncInstance *instance;
+	int err;
+
+	// sanity checking
+	if (instanceId==NULL
+		|| bucketName==NULL
+		|| filePrefix==NULL
+		|| S3URL==NULL
+		|| userPublicKey==NULL
+		|| cloudPublicKey==NULL) {
+		logprintfl (EUCAERROR, "bundling instance called with invalid parameters\n");
+		return ERROR;
+	}
+	
+	// terminate the instance
+    sem_p (inst_sem);
+	err = find_and_destroy_instance (instanceId, &instance);
+	if (err!=OK) {
+		sem_v (inst_sem);
+		return err;
+	}
+
+	// while still under lock, update its state
+	instance->bundlingTime = time (NULL);
+	change_state (instance, BUNDLING);
+	instance->bundling = BUNDLING_IN_PROGRESS;
+    sem_v (inst_sem);
+
+	// "marshall" thread parameters
+	struct bundling_params_t * params = malloc (sizeof (struct bundling_params_t));
+	if (params==NULL)
+		goto error_exit;
+	params->instance = instance;
+	params->bucketName = strdup (bucketName);
+	params->filePrefix = strdup (filePrefix);
+	params->S3URL = strdup (S3URL);
+	params->userPublicKey = strdup (userPublicKey);
+	params->cloudPublicKey = strdup (cloudPublicKey);
+
+	params->workPath = alloc_work_path (instanceId, instance->userId); // reserve work disk space for bundling
+	if (params->workPath==NULL)
+		goto error_exit;
+	params->diskPath = get_disk_path (instanceId, instance->userId); // path of the disk to bundle
+	if (params->diskPath==NULL)
+		goto error_exit;
+
+	// do the rest in a thread
+	pthread_attr_t tattr;
+	pthread_t tid;
+	pthread_attr_init (&tattr);
+	pthread_attr_setdetachstate (&tattr, PTHREAD_CREATE_DETACHED);
+	if (pthread_create (&tid, &tattr, bundling_thread, (void *)params)!=0) {
+		logprintfl (EUCAERROR, "failed to start VM budling thread\n");
+		goto error_exit;
+	}
+
+	return OK;
+
+error_exit:
+	sem_p (inst_sem);
+	change_state (instance, SHUTOFF);
+	instance->bundling = BUNDLING_FAILED;
+	sem_v (inst_sem);
+
+	return ERROR;
+}
+
+static int
+doDescribeBundleTasks(
+	struct nc_state_t *nc,
+	ncMetadata *meta,
+	char **instIds,
+	int instIdsLen,
+	bundleTask ***outBundleTasks,
+	int *outBundleTasksLen)
+{	
+	if (instIdsLen < 1 || instIds == NULL) {
+		logprintfl(EUCADEBUG, "doDescribeBundleTasks(): input instIds empty\n");
+		return ERROR;
+	}
+	
+    *outBundleTasks = malloc(sizeof(bundleTask *) * instIdsLen); // maximum size
+	if ((*outBundleTasks) == NULL) {
+		return OUT_OF_MEMORY;
+	}
+    *outBundleTasksLen = 0; // we may return fewer than instIdsLen
+	
+	int i, j;
+	for (i=0, j=0; i<instIdsLen; i++) {
+		bundleTask * bundle = NULL;
+
+		sem_p (inst_sem);		
+		ncInstance * instance = find_instance(&global_instances, instIds[i]);
+		if (instance != NULL) {
+			bundle = malloc(sizeof(bundleTask));
+			if (bundle == NULL) {
+				logprintfl (EUCAERROR, "out of memory\n");
+				return OUT_OF_MEMORY;
+			}
+			allocate_bundleTask (bundle, instIds[i], bundling_progress_names[instance->bundling], NULL);
+		}
+		sem_v (inst_sem);
+		
+		if (bundle) {
+			(*outBundleTasks)[j++] = bundle;
+			(*outBundleTasksLen)++;
+		}
+	}
+	
+	return OK;
+}
+
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey) {
   int rc, ret;
   char cmd[MAX_PATH];
@@ -436,48 +595,6 @@ int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *buck
     }
   }
   return(ret);
-}
-
-static int
-doDescribeBundleTasks(struct nc_state_t *nc,
-		      ncMetadata *meta,
-		      char **instIds,
-		      int instIdsLen,
-		      bundleTask ***outBundleTasks,
-		      int *outBundleTasksLen)
-{
-  bundleTask *bundle=NULL;
-  int rc, i;
-  logprintfl(EUCADEBUG, "doDescribeBundleTasks() invoked\n");
-  
-  if (instIdsLen == 0 || instIds == NULL) {
-    logprintfl(EUCADEBUG, "doDescribeBundleTasks(): input instIds empty\n");
-    *outBundleTasks = malloc(sizeof(bundleTask *) * 1);
-    *outBundleTasksLen=0;
-    
-    // for testing
-    bundle = malloc(sizeof(bundleTask));
-    allocate_bundleTask(bundle, "i-halothar", "pending", "mymanifest");
-    (*outBundleTasks)[0] = bundle;
-    (*outBundleTasksLen)++;
-    
-  } else {
-    *outBundleTasks = malloc(sizeof(bundleTask *) * instIdsLen);
-    *outBundleTasksLen=0;
-  }
- 
-  for (i=0; i<instIdsLen; i++) {
-    bundle = malloc(sizeof(bundleTask));
-    // look up bundle state, for now just set to 'pending'
-    rc = allocate_bundleTask(bundle, instIds[i], "pending", "mymanifest");
-    if (rc) {
-    } else {
-      (*outBundleTasks)[i] = bundle;
-      (*outBundleTasksLen)++;
-    }
-  }
-  
-  return 0;
 }
 
 struct handlers default_libvirt_handlers = {

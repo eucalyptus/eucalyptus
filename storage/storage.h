@@ -79,6 +79,9 @@ int scGetConfigXML(char *user, char *amiId, char **out);
 int scMakeInstanceImage(char *euca_home, char *user, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instId, char *keyName, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb);
 int scCleanupInstanceImage(char *user, char *instId);
 int scStoreStringToInstanceFile (const char *userId, const char *instanceId, const char * file, const char * data);
+char * get_disk_path (const char * instanceId, const char * userId);
+char * alloc_work_path (const char * instanceId, const char * userId);
+int free_work_path (const char * instanceId, const char * userId);
 
 /* utility function (exported for now so it can be tested by test.c) */
 int ensure_path_exists (const char * path);

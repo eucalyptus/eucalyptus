@@ -105,14 +105,17 @@ typedef struct ncInstance_t {
     /* state as reported to CC & CLC */
     char stateName[CHAR_BUFFER_SIZE];  /* as string */
     int stateCode; /* as int */
+
     /* state as NC thinks of it */
-    int state;
-    
+    instance_states state;
+	bundling_progress bundling;
+
     char keyName[CHAR_BUFFER_SIZE*4];
     char privateDnsName[CHAR_BUFFER_SIZE];
     char dnsName[CHAR_BUFFER_SIZE];
     int launchTime; // timestamp of RunInstances request arrival
     int bootTime; // timestamp of STAGING->BOOTING transition
+	int bundlingTime; // timestamp of ->BUNDLING transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
     virtualMachine params;

@@ -71,6 +71,7 @@ permission notice:
 #include <dirent.h> /* open|read|close dir */
 #include <time.h> /* time() */
 
+#include "eucalyptus.h"
 #include "ipc.h"
 #include "walrus.h"
 #include "euca_auth.h"
@@ -87,6 +88,8 @@ static char add_key_command_path [BUFSIZE] = "";
 static long long swap_size_mb = DEFAULT_SWAP_SIZE; /* default swap in MB, if not specified in config file */
 static long long cache_size_mb = DEFAULT_NC_CACHE_SIZE; /* in MB */
 static long long cache_free_mb = DEFAULT_NC_CACHE_SIZE;
+static long long work_size_mb = DEFAULT_NC_WORK_SIZE;
+static long long work_free_mb = DEFAULT_NC_WORK_SIZE;
 
 static char *sc_instance_path = "";
 static char disk_convert_command_path [BUFSIZE] = "";
@@ -138,6 +141,14 @@ int scInitConfig (void)
 	  cache_free_mb = cache_size_mb;
 	  free (s); 
         }
+
+        s = getConfString(configFiles, 2, CONFIG_NC_WORK_SIZE);
+        if (s) {
+			work_size_mb = atoll (s); 
+			work_free_mb = work_size_mb;
+			free (s); 
+        }
+
 
 	s = getConfString(configFiles, 2, CONFIG_NC_SWAP_SIZE);
         if (s){ 
@@ -568,6 +579,7 @@ long long scFSCK (bunchOfInstances ** instances)
     /*** run through all users ***/
 
     char * cache_path = NULL;
+    char * work_path = NULL;
     struct dirent * inst_dir_entry;
     while ((inst_dir_entry=readdir(insts_dir))!=NULL) {
         char * uname = inst_dir_entry->d_name;
@@ -597,12 +609,22 @@ long long scFSCK (bunchOfInstances ** instances)
             snprintf (instance_path, BUFSIZE, "%s/%s", user_path, iname);
 
             if (!strcmp("cache", iname) &&
-                	!strcmp(EUCALYPTUS_ADMIN, uname)) { /* cache is in admin's dir */
-		if (cache_path) {
+				!strcmp(EUCALYPTUS_ADMIN, uname)) { /* cache is in admin's dir */
+				if (cache_path) {
                     logprintfl (EUCADEBUG, "Found a second cache_path?\n");
-		    free(cache_path);
-		}
+					free(cache_path);
+				}
                 cache_path = strdup (instance_path);
+                continue;
+            }
+
+            if (!strcmp("work", iname) &&
+				!strcmp(EUCALYPTUS_ADMIN, uname)) { /* work is in admin's dir */
+				if (work_path) {
+                    logprintfl (EUCADEBUG, "Found a second work_path?\n");
+					free(work_path);
+				}
+                work_path = strdup (instance_path);
                 continue;
             }
 
@@ -636,6 +658,14 @@ long long scFSCK (bunchOfInstances ** instances)
         return -1;
     }
     
+	// clean up work directory
+	if (work_path) {
+		if (vrun ("rm -rf %s", work_path)) {
+			logprintfl (EUCAWARN, "warning: failed to clean work directory %s\n", work_path);
+		}
+		free (work_path);
+	}
+
     return total_size + cache_bytes;
 }
 
@@ -980,6 +1010,74 @@ retry:
     return 0L;
 }
 
+char * get_disk_path (
+	const char * instanceId, 
+	const char * userId)
+{
+	char file_path [MAX_PATH_SIZE];
+	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/disk", sc_instance_path, userId, instanceId);
+	return strdup (file_path);
+}
+
+static long long get_bundling_size (
+	const char * instanceId, 
+	const char * userId)
+{
+	char file_path [MAX_PATH_SIZE];
+	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/disk", sc_instance_path, userId, instanceId);
+
+	struct stat mystat;
+	if (stat (file_path, &mystat)!=0) {
+		logprintfl (EUCAERROR, "failed to stat disk %s\n", file_path);
+		return -1L;
+	}
+
+	return ((long long)mystat.st_size)*2L; // bundling requires twice the size of disk
+}
+
+char * alloc_work_path (
+	const char * instanceId, // IN: id of instance that needs work space
+	const char * userId) // IN: id of owner of the instance
+{
+	char file_path [MAX_PATH_SIZE];
+	long long sizeMb = get_bundling_size (instanceId, userId);
+	if (sizeMb < 0L)
+		return NULL;
+
+	long long left = work_free_mb - sizeMb;
+	if (left>0) {
+		work_free_mb -= sizeMb;
+		if (snprintf (file_path, MAX_PATH_SIZE, "%s/%s/work/%s", sc_instance_path, EUCALYPTUS_ADMIN, instanceId)<1) { // work is in admin's directory
+			return NULL;
+		}
+	} else {
+		logprintfl (EUCAERROR, "work disk space limit exceeded (free=%lld size=%lld)\n", work_free_mb, sizeMb);
+		return NULL;
+	}
+	ensure_path_exists (file_path);
+
+	return strdup (file_path);
+}
+
+int free_work_path (
+	const char * instanceId, // IN: id of instance giving up work space
+	const char * userId) // IN: id of owner of the instance
+{
+	long long sizeMb = get_bundling_size (instanceId, userId);
+	if (sizeMb < 0L) 
+		return ERROR;
+
+	char workPath [MAX_PATH_SIZE];
+	if (snprintf (workPath, MAX_PATH_SIZE, "%s/%s/work/%s", sc_instance_path, EUCALYPTUS_ADMIN, instanceId)<1) { // work is in admin's directory
+		return ERROR;
+	}
+	if (vrun ("rm -rf %s", workPath)) {
+		logprintfl (EUCAWARN, "warning: failed to clean work directory %s\n", workPath);
+	} else {
+		work_free_mb += sizeMb;
+	}
+	return OK;
+}
 
 int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
 {
