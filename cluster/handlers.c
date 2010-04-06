@@ -107,7 +107,7 @@ int mylocks[ENDLOCK] = {0,0,0,0,0,0};
 
 //ccBundleCache *bundleCache=NULL;
 
-int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey) {
+int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey) {
   int i, j, rc, start = 0, stop = 0, ret=0;
   ccInstance *myInstance;
   ncStub *ncs;
@@ -123,7 +123,7 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
     return(1);
   }
   logprintfl(EUCAINFO, "BundleInstance(): called\n");
-  logprintfl(EUCADEBUG, "BundleInstance(): params: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, S3URL=%s, userPublicKey=%s\n", SP(ccMeta->userId), SP(instanceId), SP(bucketName), SP(filePrefix), SP(S3URL), SP(userPublicKey));
+  logprintfl(EUCADEBUG, "BundleInstance(): params: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, walrusURL=%s, userPublicKey=%s\n", SP(ccMeta->userId), SP(instanceId), SP(bucketName), SP(filePrefix), SP(walrusURL), SP(userPublicKey));
   if (!instanceId) {
     logprintfl(EUCAERROR, "BundleInstance(): bad input params\n");
     return(1);
@@ -159,7 +159,7 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
 	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
 	}
 	rc = 0;
-	rc = ncBundleInstanceStub(ncs, ccMeta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
+	rc = ncBundleInstanceStub(ncs, ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
 	if (!rc) {
 	  ret = 0;
 	} else {

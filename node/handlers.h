@@ -178,7 +178,7 @@ struct handlers {
 				char *instanceId,
 				char *bucketName,
 				char *filePrefix,
-				char *S3URL,
+				char *walrusURL,
 				char *userPublicKey);
     int (*doDescribeBundleTasks)	(struct nc_state_t *nc,
 					 ncMetadata *meta,
@@ -199,11 +199,11 @@ int doDescribeResource		(ncMetadata *meta, char *resourceType, ncResource **outR
 int doStartNetwork		(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
-int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey);
+int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 #endif /* HANDLERS_FANOUT */
 
-int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey);
+int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey);
 /* helper functions used by the low level handlers */
 int get_value(			char *s,
 				const char *name,
