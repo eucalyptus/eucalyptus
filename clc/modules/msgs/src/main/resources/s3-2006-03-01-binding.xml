@@ -665,6 +665,16 @@
 		</structure>
 	</mapping>
 
+	<mapping name="ValidateImage"
+		class="edu.ucsb.eucalyptus.msgs.ValidateImageType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
+			usage="optional" />
+	</mapping>
+
+	<mapping name="ValidateImageResponse"
+		class="edu.ucsb.eucalyptus.msgs.ValidateImageResponseType">
+	</mapping>
+
 	<mapping name="StoreSnapshot" class="edu.ucsb.eucalyptus.msgs.StoreSnapshotType">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType" />
 		<value name="SnapshotSize" field="snapshotSize" />

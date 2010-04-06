@@ -793,7 +793,14 @@ public class FlushCachedImageType extends WalrusDataRequestType {
 
 	def FlushCachedImageType() {}
 }
+
 public class FlushCachedImageResponseType extends WalrusDataResponseType {
+}
+
+public class ValidateImageType extends WalrusRequestType {
+}
+
+public class ValidateImageResponseType extends WalrusResponseType {
 }
 
 public class StoreSnapshotType extends WalrusDataRequestType {

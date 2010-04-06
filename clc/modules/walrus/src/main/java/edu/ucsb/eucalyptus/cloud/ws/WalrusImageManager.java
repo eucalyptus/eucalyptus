@@ -64,46 +64,20 @@ package edu.ucsb.eucalyptus.cloud.ws;
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.util.*;
-import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.stream.ChunkedFile;
-import org.jboss.netty.handler.stream.ChunkedInput;
-
-import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.CredentialProvider;
-import com.eucalyptus.auth.X509Cert;
-import com.eucalyptus.auth.util.EucaKeyStore;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.MappingHttpResponse;
-
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -113,9 +87,68 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.apache.log4j.Logger;
+import org.apache.tools.ant.util.DateUtils;
+import org.apache.xml.dtm.DTMIterator;
+import org.apache.xml.dtm.ref.DTMNodeList;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
+import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
+
+import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
+import edu.ucsb.eucalyptus.cloud.BucketLogData;
+import edu.ucsb.eucalyptus.cloud.DecryptionFailedException;
+import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
+import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
+import edu.ucsb.eucalyptus.cloud.NotAuthorizedException;
+import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
+import edu.ucsb.eucalyptus.msgs.CacheImageResponseType;
+import edu.ucsb.eucalyptus.msgs.CacheImageType;
+import edu.ucsb.eucalyptus.msgs.CheckImageResponseType;
+import edu.ucsb.eucalyptus.msgs.CheckImageType;
+import edu.ucsb.eucalyptus.msgs.FlushCachedImageResponseType;
+import edu.ucsb.eucalyptus.msgs.FlushCachedImageType;
+import edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType;
+import edu.ucsb.eucalyptus.msgs.GetDecryptedImageType;
+import edu.ucsb.eucalyptus.msgs.ValidateImageResponseType;
+import edu.ucsb.eucalyptus.msgs.ValidateImageType;
+import edu.ucsb.eucalyptus.storage.StorageManager;
+import edu.ucsb.eucalyptus.util.EucaSemaphore;
+import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
+import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
+import edu.ucsb.eucalyptus.util.WalrusMonitor;
+import edu.ucsb.eucalyptus.util.XMLParser;
 
 public class WalrusImageManager {
 	private static Logger LOG = Logger.getLogger( WalrusImageManager.class );
@@ -177,6 +210,11 @@ public class WalrusImageManager {
 									break;
 							}
 							if(!verified) {
+								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+								if(cert != null)
+									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+							}
+							if(!verified) {
 								throw new NotAuthorizedException("Invalid signature");
 							}
 						} catch (Exception ex) {
@@ -205,6 +243,17 @@ public class WalrusImageManager {
 							}
 						}
 						if(!signatureVerified) {
+							try {
+								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+								if(cert != null)
+									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+							} catch(Exception ex) {
+								db.rollback();
+								LOG.error(ex, ex);
+								throw new DecryptionFailedException("signature verification");
+							}
+						}
+						if(!signatureVerified) {
 							throw new NotAuthorizedException("Invalid signature");
 						}
 					}
@@ -226,7 +275,7 @@ public class WalrusImageManager {
 					//Assemble parts
 					String encryptedImageKey = imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
 					String encryptedImageName = storageManager.getObjectPath(bucketName, encryptedImageKey);
-                                        String decryptedImageKey = encryptedImageKey.substring(0, encryptedImageKey.lastIndexOf("crypt.gz")) + "tgz";
+					String decryptedImageKey = encryptedImageKey.substring(0, encryptedImageKey.lastIndexOf("crypt.gz")) + "tgz";
 
 					String decryptedImageName = storageManager.getObjectPath(bucketName, decryptedImageKey);
 					assembleParts(encryptedImageName, qualifiedPaths);
@@ -345,6 +394,21 @@ public class WalrusImageManager {
 						}
 					}
 
+					//check if Eucalyptus signed it
+					if(!signatureVerified) {
+						try {
+							X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+							PublicKey publicKey = cert.getPublicKey();
+							sigVerifier.initVerify(publicKey);
+							sigVerifier.update((machineConfiguration + image).getBytes());
+							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+						} catch(Exception ex) {
+							db.rollback();
+							LOG.error(ex, ex);
+							throw new DecryptionFailedException("signature verification");
+						}
+
+					}
 					if(!signatureVerified) {
 						throw new NotAuthorizedException("Invalid signature");
 					}
@@ -399,7 +463,7 @@ public class WalrusImageManager {
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		try {
 			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
-                        String cacheImageKey = foundImageCacheInfo.getImageName().substring(0, foundImageCacheInfo.getImageName().lastIndexOf(".tgz"));
+			String cacheImageKey = foundImageCacheInfo.getImageName().substring(0, foundImageCacheInfo.getImageName().lastIndexOf(".tgz"));
 			long objectSize = storageManager.getObjectSize(bucketName, cacheImageKey);
 			db.commit();
 			if(objectSize > 0) {
@@ -476,6 +540,100 @@ public class WalrusImageManager {
 		} else {
 			db.rollback();
 			LOG.warn("Cannot find image in cache" + bucketName + "/" + objectKey);
+		}
+	}
+
+	private void validateManifest(String bucketName, String objectKey, String userId) throws EucalyptusCloudException {
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		BucketInfo bucketInfo = new BucketInfo(bucketName);
+		BucketInfo bucket = null;
+		try {
+			bucket = db.getUnique(bucketInfo);
+		} catch(Throwable t) {
+			throw new EucalyptusCloudException("Unable to get bucket: " + bucketName, t);
+		}
+
+		if (bucket != null) {
+			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			if(objectInfos.size() > 0)  {
+				ObjectInfo objectInfo = objectInfos.get(0);
+
+				if(objectInfo.canRead(userId)) {
+					String objectName = objectInfo.getObjectName();
+					File file = new File(storageManager.getObjectPath(bucketName, objectName));
+					XMLParser parser = new XMLParser(file);
+					String image = parser.getXML("image");
+					String machineConfiguration = parser.getXML("machine_configuration");
+					String verificationString = machineConfiguration + image;
+
+					try {
+						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
+						Signature sigCloud = Signature.getInstance("SHA1withRSA");
+						sigCloud.initSign(pk);
+						sigCloud.update(verificationString.getBytes());
+						String signature = new String(Hashes.bytesToHex(sigCloud.sign()));
+						//TODO: refactor
+						DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance( ).newDocumentBuilder( );
+						FileInputStream fileInputStream = new FileInputStream( file );
+						Document docRoot = docBuilder.parse( fileInputStream );
+						Element sigElement = docRoot.createElement("signature");						
+						sigElement.setTextContent(signature);						
+						Node manifestElem = docRoot.getFirstChild();
+						manifestElem.appendChild(sigElement);
+
+						fileInputStream.close();
+						Source source = new DOMSource(docRoot);
+						Result result = new StreamResult(file);
+						Transformer xformer = TransformerFactory.newInstance().newTransformer();
+						xformer.transform(source,result);						
+						try {
+							MessageDigest digest = Hashes.Digest.MD5.get();
+							FileInputStream inStream = new FileInputStream(file);
+							byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
+							int bytesRead = -1;
+							long totalBytesRead = 0;
+							try {
+								while((bytesRead = inStream.read(bytes, 0, bytes.length)) > 0) {
+									digest.update(bytes, 0, bytesRead);
+									totalBytesRead += bytesRead;
+								}
+							} catch (IOException e) {
+								LOG.error(e);
+								throw new EucalyptusCloudException(e);
+							} finally {
+								try {
+									inStream.close();
+								} catch (IOException e) {
+									LOG.error(e);
+									throw new EucalyptusCloudException(e);
+								}
+							}
+							String md5 = Hashes.bytesToHex(digest.digest());
+							objectInfo.setEtag(md5);
+							objectInfo.setSize(totalBytesRead);
+						} catch (FileNotFoundException e) {
+							LOG.error(e, e);
+							throw new EucalyptusCloudException(e);
+						}
+					} catch(Exception ex) {
+						db.rollback();
+						LOG.error(ex, ex);
+						throw new EucalyptusCloudException("Unable to sign manifest: " + bucketName + "/" + objectKey);
+					}
+					db.commit();
+				} else {
+					db.rollback();
+					throw new AccessDeniedException("Key", objectKey);
+				}
+			} else {
+				db.rollback();
+				throw new NoSuchEntityException(objectKey);
+			}
+		} else {
+			db.rollback();
+			throw new NoSuchBucketException(bucketName);
 		}
 	}
 
@@ -591,9 +749,9 @@ public class WalrusImageManager {
 			//update status
 			//wake up any waiting consumers
 			String decryptedImageName = storageManager.getObjectPath(bucketName, decryptedImageKey);
-                        String imageName = decryptedImageName.substring(0, decryptedImageName.lastIndexOf(".tgz"));
-                        String tarredImageName = imageName + (".tar");
-                        String imageKey = decryptedImageKey.substring(0, decryptedImageKey.lastIndexOf(".tgz"));
+			String imageName = decryptedImageName.substring(0, decryptedImageName.lastIndexOf(".tgz"));
+			String tarredImageName = imageName + (".tar");
+			String imageKey = decryptedImageKey.substring(0, decryptedImageKey.lastIndexOf(".tgz"));
 			Long unencryptedSize;
 			int numberOfRetries = 0;
 			while((unencryptedSize = tryToCache(decryptedImageName, tarredImageName, imageName)) < 0) {
@@ -1090,6 +1248,41 @@ public class WalrusImageManager {
 		return reply;
 	}
 
+	public ValidateImageResponseType validateImage(ValidateImageType request) throws EucalyptusCloudException {
+		ValidateImageResponseType reply = (ValidateImageResponseType) request.getReply();
+		String bucketName = request.getBucket();
+		String manifestKey = request.getKey();
+		String userId = request.getUserId();
+		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		BucketInfo bucketInfo = new BucketInfo(bucketName);
+		List<BucketInfo> bucketList = db.query(bucketInfo);
+		if (bucketList.size() > 0) {
+			BucketInfo bucket = bucketList.get(0);
+			BucketLogData logData = bucket.getLoggingEnabled() ? request
+					.getLogData() : null;
+					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, manifestKey);
+					searchObjectInfo.setDeleted(false);
+					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+					if (objectInfos.size() > 0) {
+						ObjectInfo objectInfo = objectInfos.get(0);
+						if (objectInfo.canRead(userId)) {
+							//validate manifest
+							validateManifest(bucketName, manifestKey, userId);
+							db.commit();
+						} else {
+							db.rollback();
+							throw new AccessDeniedException("Key", manifestKey, logData);
+						}
+					} else {
+						db.rollback();
+						throw new NoSuchEntityException(manifestKey, logData);
+					}
+		} else {
+			db.rollback();
+			throw new NoSuchBucketException(bucketName);
+		}
 
-
+		return reply;
+	}
 }

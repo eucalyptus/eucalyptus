@@ -82,6 +82,7 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.accounts.UserGroupInfo;
 import com.eucalyptus.accounts.UserInfo;
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
@@ -134,6 +135,21 @@ public class ImageUtil {
       LOG.warn( ex.getMessage( ) );
     }
     return ret;
+  }
+  public static boolean verifyManifestSignature( final String signature, final X509Certificate cert, String pad ) {
+	boolean ret = false;
+	try {
+	  Signature sigVerifier = Signature.getInstance( "SHA1withRSA" );
+	  if ( cert != null ) {
+	    PublicKey publicKey = cert.getPublicKey( );
+	    sigVerifier.initVerify( publicKey );
+	    sigVerifier.update( pad.getBytes( ) );
+	    ret = sigVerifier.verify( Hashes.hexToBytes( signature ) );
+	  }
+	} catch ( Exception ex ) {
+	  LOG.warn( ex.getMessage( ) );
+	}
+	return ret;
   }
   public static ArrayList<String> getAncestors( String userId, String manifestPath ) {
     ArrayList<String> ancestorIds = Lists.newArrayList( );
