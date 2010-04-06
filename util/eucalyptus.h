@@ -183,7 +183,7 @@ typedef enum bundling_progress_t {
 static char * bundling_progress_names[] = {
 	"none",
 	"bundling",
-	"succeded",
+	"succeeded",
 	"failed"
 };
 
