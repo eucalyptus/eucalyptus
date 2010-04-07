@@ -78,6 +78,7 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceType;
 import edu.ucsb.eucalyptus.msgs.BundleTask;
@@ -192,7 +193,7 @@ public class VmControl {
     reply.set_return( true );
     String walrusUrl = SystemConfiguration.getWalrusUrl( );
     String instanceId = request.getInstanceId( );
-    User user;
+    User user = null;
     try {
       user = CredentialProvider.getUser( request.getUserId( ) );
     } catch ( NoSuchUserException e1 ) {
@@ -200,7 +201,12 @@ public class VmControl {
     }
     try {
       VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
-      if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
+      if( v.isBundling( ) ) {
+        reply.setTask( v.getBundleTask( ) );
+        return reply;
+      } else if( !VmState.RUNNING.equals( v.getState( ) ) ) {
+        throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
+      } else if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
         BundleTask bundleTask = new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), request.getBucket( ), request.getPrefix( ) );
         if ( v.startBundleTask( bundleTask ) ) {
           reply.setTask( bundleTask );
