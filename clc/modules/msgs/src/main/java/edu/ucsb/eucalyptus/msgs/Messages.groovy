@@ -548,8 +548,8 @@ public class BundleTask extends EucalyptusData {
   String instanceId;
   String bundleId;
   String state;
-  String startTime;
-  String updateTime;
+  Date startTime;
+  Date updateTime;
   String progress;
   String bucket;
   String prefix;
@@ -562,8 +562,8 @@ public class BundleTask extends EucalyptusData {
     this.bucket = bucket;
     this.prefix = prefix;
     this.state = "pending";
-    this.startTime = new Date().toString();
-    this.updateTime = new Date().toString();
+    this.startTime = new Date();
+    this.updateTime = new Date();
     this.progress = "0%";
   }
 }
