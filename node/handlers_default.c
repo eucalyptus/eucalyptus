@@ -391,12 +391,42 @@ struct bundling_params_t {
 	char * diskPath; // disk file path
 	char * eucalyptusHomePath; 
 	long long sizeMb; // diskPath size
+	char * ncBundleUploadCmd;
 };
 
+// helper for changing bundling task state and stateName together
 static void change_bundling_state (ncInstance * instance, bundling_progress state)
 {
 	instance->bundleTaskState = state;
 	strncpy (instance->bundleTaskStateName, bundling_progress_names [state], CHAR_BUFFER_SIZE);
+}
+
+// helper for cleaning up 
+static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_t * params, instance_states state, bundling_progress result)
+{
+	logprintfl (EUCAINFO, "cleanup_bundling_task: instance %s bundling task result=%s\n", instance->instanceId, bundling_progress_names [result]);
+	sem_p (inst_sem);
+	change_bundling_state (instance, result);
+	if (state!=NO_STATE) // do not touch instance state (these are early failures, before we destroyed the domain)
+		change_state (instance, state);
+	sem_v (inst_sem);
+
+	if (params) {
+		if (params->workPath) {
+			free_work_path (instance->instanceId, instance->userId, params->sizeMb);
+			free (params->workPath);
+		}
+		if (params->bucketName) free (params->bucketName);
+		if (params->filePrefix) free (params->filePrefix);
+		if (params->walrusURL) free (params->walrusURL);
+		if (params->userPublicKey) free (params->userPublicKey);
+		if (params->diskPath) free (params->diskPath);
+		if (params->eucalyptusHomePath) free (params->eucalyptusHomePath);
+		if (params->ncBundleUploadCmd) free (params->ncBundleUploadCmd);
+		free (params);
+	}
+
+	return (result==BUNDLING_SUCCESS)?OK:ERROR;
 }
 
 static void * bundling_thread (void *arg) 
@@ -404,19 +434,17 @@ static void * bundling_thread (void *arg)
 	struct bundling_params_t * params = (struct bundling_params_t *)arg;
 	ncInstance * instance = params->instance;
 
-	logprintfl (EUCAINFO, "started bundling instance %s\n", instance->instanceId);
-	char cmd[MAX_PATH];
+	logprintfl (EUCAINFO, "bundling_thread: started bundling instance %s\n", instance->instanceId);
+
 	char dstDiskPath[MAX_PATH];
-	char ncBundleUploadCmd[MAX_PATH];
-	
-	snprintf(ncBundleUploadCmd, MAX_PATH, "/usr/local/bin/euca-nc-bundle-upload"); // TODO add this as a parameter to eucalyptus.conf for windows
 	snprintf(dstDiskPath, MAX_PATH, "%s/disk", params->workPath);
-  
+
 	int rc = rename(params->diskPath, dstDiskPath); // move disk to working directory
 	if (rc) {
-		logprintfl(EUCAERROR, "callBundleInstanceHelper(): could not rename '%s' to speficied filePrefix '%s'\n", params->diskPath, dstDiskPath);
+		logprintfl(EUCAERROR, "bundling_thread: could not rename '%s' to speficied filePrefix '%s'\n", params->diskPath, dstDiskPath);
 	} else {
 		// USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
+		char cmd[MAX_PATH];
 		snprintf(cmd, MAX_PATH, 
 				 "EC2_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem "
 				 "EC2_SECRET_KEY=HALOTHAR "
@@ -434,35 +462,19 @@ static void * bundling_thread (void *arg)
 				 "123456789012", 
 				 params->eucalyptusHomePath, 
 				 params->eucalyptusHomePath, 
-				 ncBundleUploadCmd, dstDiskPath, params->workPath, params->bucketName);
-		logprintfl(EUCADEBUG, "callBundleInstanceHelper(): running cmd '%s'\n", cmd);
+				 params->ncBundleUploadCmd, dstDiskPath, params->workPath, params->bucketName);
+		logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s'\n", cmd);
 		rc = system(cmd);
 		rc = rc>>8;
 
 		if (rc==0) {
-			sem_p (inst_sem);
-			change_bundling_state (instance, BUNDLING_SUCCESS);
-			change_state (instance, SHUTOFF);
-			sem_v (inst_sem);
-			logprintfl (EUCAINFO, "finished bundling instance %s\n", instance->instanceId);
+			cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_SUCCESS);
+			logprintfl (EUCAINFO, "bundling_thread: finished bundling instance %s\n", instance->instanceId);
 		} else {
-			sem_p (inst_sem);
-			change_bundling_state (instance, BUNDLING_FAILED);
-			change_state (instance, SHUTOFF);
-			sem_v (inst_sem);
-			logprintfl (EUCAINFO, "failed while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
+			cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);
+			logprintfl (EUCAINFO, "bundling_thread: failed while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
 		}
 	}
-	
-	free_work_path (instance->instanceId, instance->userId, params->sizeMb);
-	free (params->bucketName);
-	free (params->filePrefix);
-	free (params->walrusURL);
-	free (params->userPublicKey);
-	free (params->workPath);
-	free (params->diskPath);
-	free (params->eucalyptusHomePath);
-	free (params);
 
 	return NULL;
 }
@@ -477,22 +489,50 @@ doBundleInstance(
 	char *walrusURL,
 	char *userPublicKey)
 {
-	ncInstance *instance;
-	int err;
-
 	// sanity checking
 	if (instanceId==NULL
 		|| bucketName==NULL
 		|| filePrefix==NULL
 		|| walrusURL==NULL
 		|| userPublicKey==NULL) {
-		logprintfl (EUCAERROR, "bundling instance called with invalid parameters\n");
+		logprintfl (EUCAERROR, "doBundleInstance: bundling instance called with invalid parameters\n");
 		return ERROR;
 	}
-	
+
+	// find the instance
+	ncInstance * instance = find_instance(&global_instances, instanceId);
+	if (instance==NULL) {
+		logprintfl (EUCAERROR, "doBundleInstance: instance %s not found\n", instanceId);
+		return ERROR;
+	}
+
+	// "marshall" thread parameters
+	struct bundling_params_t * params = malloc (sizeof (struct bundling_params_t));
+	if (params==NULL) 
+		return cleanup_bundling_task (instance, params, NO_STATE, BUNDLING_FAILED);
+
+	bzero (params, sizeof (struct bundling_params_t));
+	params->instance = instance;
+	params->bucketName = strdup (bucketName);
+	params->filePrefix = strdup (filePrefix);
+	params->walrusURL = strdup (walrusURL);
+	params->userPublicKey = strdup (userPublicKey);
+	params->eucalyptusHomePath = strdup (nc->home);
+	params->ncBundleUploadCmd = strdup (nc->ncBundleUploadCmd);
+
+	params->sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
+	if (params->sizeMb<1)
+		return cleanup_bundling_task (instance, params, NO_STATE, BUNDLING_FAILED);
+	params->workPath = alloc_work_path (instanceId, instance->userId, params->sizeMb); // reserve work disk space for bundling
+	if (params->workPath==NULL)
+		return cleanup_bundling_task (instance, params, NO_STATE, BUNDLING_FAILED);
+	params->diskPath = get_disk_path (instanceId, instance->userId); // path of the disk to bundle
+	if (params->diskPath==NULL)
+		return cleanup_bundling_task (instance, params, NO_STATE, BUNDLING_FAILED);
+
 	// terminate the instance
     sem_p (inst_sem);
-	err = find_and_destroy_instance (instanceId, &instance);
+	int err = find_and_destroy_instance (instanceId, &instance);
 	if (err!=OK) {
 		sem_v (inst_sem);
 		return err;
@@ -504,47 +544,17 @@ doBundleInstance(
 	change_bundling_state (instance, BUNDLING_IN_PROGRESS);
     sem_v (inst_sem);
 
-	// "marshall" thread parameters
-	struct bundling_params_t * params = malloc (sizeof (struct bundling_params_t));
-	if (params==NULL)
-		goto error_exit;
-	bzero (params, sizeof (struct bundling_params_t));
-	params->instance = instance;
-	params->bucketName = strdup (bucketName);
-	params->filePrefix = strdup (filePrefix);
-	params->walrusURL = strdup (walrusURL);
-	params->userPublicKey = strdup (userPublicKey);
-
-	long long sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
-	params->workPath = alloc_work_path (instanceId, instance->userId, sizeMb); // reserve work disk space for bundling
-	if (params->workPath==NULL)
-		goto error_exit;
-	params->diskPath = get_disk_path (instanceId, instance->userId); // path of the disk to bundle
-	if (params->diskPath==NULL)
-		goto error_exit;
-	params->eucalyptusHomePath = strdup (nc->home);
-	params->sizeMb = sizeMb;
-
 	// do the rest in a thread
 	pthread_attr_t tattr;
 	pthread_t tid;
 	pthread_attr_init (&tattr);
 	pthread_attr_setdetachstate (&tattr, PTHREAD_CREATE_DETACHED);
 	if (pthread_create (&tid, &tattr, bundling_thread, (void *)params)!=0) {
-		logprintfl (EUCAERROR, "failed to start VM budling thread\n");
-		goto error_exit;
+		logprintfl (EUCAERROR, "doBundleInstance: failed to start VM budling thread\n");
+		return cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);
 	}
 
 	return OK;
-
-error_exit:
-	sem_p (inst_sem);
-	change_state (instance, SHUTOFF);
-	change_bundling_state (instance, BUNDLING_FAILED);
-	sem_v (inst_sem);
-	if (params->workPath!=NULL)
-		free_work_path (instanceId, instance->userId, sizeMb);
-	return ERROR;
 }
 
 static int
@@ -557,7 +567,7 @@ doDescribeBundleTasks(
 	int *outBundleTasksLen)
 {	
 	if (instIdsLen < 1 || instIds == NULL) {
-		logprintfl(EUCADEBUG, "doDescribeBundleTasks(): input instIds empty\n");
+		logprintfl(EUCADEBUG, "doDescribeBundleTasks: input instIds empty\n");
 		return ERROR;
 	}
 	

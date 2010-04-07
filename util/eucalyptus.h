@@ -80,6 +80,7 @@ permission notice:
 #define EUCALYPTUS_CONNECT_ISCSI    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
 #define EUCALYPTUS_GET_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_iscsitarget.pl"
+#define EUCALYPTUS_NC_BUNDLE_UPLOAD "/usr/local/bin/euca-nc-bundle-upload" // can be overriden from eucalyptus.conf
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
 #define CC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
@@ -106,6 +107,7 @@ permission notice:
 #define CONFIG_NC_SWAP_SIZE "SWAP_SIZE"
 #define CONFIG_SAVE_INSTANCES "MANUAL_INSTANCES_CLEANUP"
 #define CONFIG_CONCURRENT_DISK_OPS "CONCURRENT_DISK_OPS"
+#define CONFIG_NC_BUNDLE_UPLOAD "NC_BUNDLE_UPLOAD_PATH"
 
 /* name of the administrative user within Eucalyptus */
 #define EUCALYPTUS_ADMIN "eucalyptus"
@@ -116,8 +118,8 @@ permission notice:
 #define MAXLOGFILESIZE 32768000
 #define EUCA_MAX_GROUPS 64
 #define EUCA_MAX_VOLUMES 256
-#define DEFAULT_NC_CACHE_SIZE 99999 /* in MB */
-#define DEFAULT_NC_WORK_SIZE 99999 /* in MB */
+#define DEFAULT_NC_CACHE_SIZE 999999 // in MB
+#define DEFAULT_NC_WORK_SIZE  999999 // in MB
 #define DEFAULT_SWAP_SIZE 512 /* in MB */
 #define MAX_PATH_SIZE 4096
 

@@ -105,6 +105,7 @@ struct nc_state_t {
 	char connect_storage_cmd_path[MAX_PATH];
 	char disconnect_storage_cmd_path[MAX_PATH];
 	char get_storage_cmd_path[MAX_PATH];
+	char ncBundleUploadCmd[MAX_PATH];
 };
 
 
