@@ -167,7 +167,7 @@ public class VmInstance implements HasName {
           this.getBundleTask( ).setState( next.name( ) );
           LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ), this.getBundleTask( ).getState( ) ) );
           this.getBundleTask( ).setUpdateTime( new Date( ) );
-        } else if ( BundleState.none.equals( next ) && !BundleState.pending.equals( current ) ) {
+        } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
           this.resetBundleTask( );
         }
       } else {
