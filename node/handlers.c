@@ -872,9 +872,9 @@ static int init (void)
 	// set NC helper path
 	tmp = getConfString(configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
 	if (tmp) {
-		snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, tmp);
+	  snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, "%s", tmp);
 	} else {
-		snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, EUCALYPTUS_NC_BUNDLE_UPLOAD); // default value
+	  snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, "%s", EUCALYPTUS_NC_BUNDLE_UPLOAD); // default value
 	}
 
 	/* start the monitoring thread */
