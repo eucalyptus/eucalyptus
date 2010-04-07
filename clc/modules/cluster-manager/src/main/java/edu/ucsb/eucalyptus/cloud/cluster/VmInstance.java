@@ -133,7 +133,7 @@ public class VmInstance implements HasName {
   }
 
   public Boolean isBundling( ) {
-    return this.bundleTask.getReference( ) == null;
+    return this.bundleTask.getReference( ) != null;
   }
   
   public BundleTask resetBundleTask( ) {
