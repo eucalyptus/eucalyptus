@@ -29,7 +29,7 @@ public class PasswordDataCallback extends QueuedEventCallback<GetConsoleOutputTy
   
   @Override
   public void verify( BaseMessage msg ) throws Exception {
-    this.verify( ( GetPasswordDataResponseType ) msg );
+    this.verify( ( GetConsoleOutputResponseType ) msg );
   }
   
   public void verify( GetConsoleOutputResponseType reply ) throws Exception {
