@@ -146,7 +146,13 @@ public class VmInstance implements HasName {
     LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESET, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ) ) );
     return oldTask;
   }
-  
+  private BundleState getBundleTaskState( ) {
+    if ( this.bundleTask.getReference( ) != null ) {
+      return BundleState.valueOf( this.getBundleTask( ).getState( ) );
+    } else {
+      return null;
+    }
+  }
   public void setBundleTaskState( String state ) {
     BundleState next = null;
     if ( BundleState.storing.getMappedState( ).equals( state ) ) {
@@ -337,8 +343,13 @@ public class VmInstance implements HasName {
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
     
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
-    runningInstance.setStateCode( Integer.toString( this.state.getCode( ) ) );
-    runningInstance.setStateName( this.state.getName( ) );
+    if( this.getBundleTaskState( ) != null && !BundleState.none.equals( this.getBundleTaskState( ) ) ) {
+      runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
+      runningInstance.setStateCode( VmState.TERMINATED.getName( ) );
+    } else {
+      runningInstance.setStateCode( Integer.toString( this.state.getCode( ) ) );
+      runningInstance.setStateName( this.state.getName( ) );
+    }
     runningInstance.setPlatform( this.getPlatform( ) );
     runningInstance.setInstanceId( this.instanceId );
     runningInstance.setImageId( this.imageInfo.getImageId( ) );

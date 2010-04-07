@@ -163,6 +163,11 @@ public class VmControl {
           reply.getBundleTasks( ).add( v.getBundleTask( ) );
         }
       }
+      for ( VmInstance v : VmInstances.getInstance( ).listDisabledValues( ) ) {
+        if ( v.isBundling( ) && ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) ) {
+          reply.getBundleTasks( ).add( v.getBundleTask( ) );
+        }
+      }
     } else {
       for( String bundleId : request.getBundleIds( ) ) {
         try {
