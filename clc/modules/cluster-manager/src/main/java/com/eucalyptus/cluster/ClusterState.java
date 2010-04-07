@@ -126,7 +126,7 @@ public class ClusterState {
         } ).dispatch( this.clusterName );
       } catch ( NoSuchElementException e ) {
       }
-      orphans.remove( address.getAddress( ) );
+      orphans.remove( address );
     }
   }
   
