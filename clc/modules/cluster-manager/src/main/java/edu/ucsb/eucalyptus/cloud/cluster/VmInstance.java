@@ -65,14 +65,17 @@
 package edu.ucsb.eucalyptus.cloud.cluster;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
+import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BundleTask;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -139,6 +142,7 @@ public class VmInstance implements HasName {
   public BundleTask resetBundleTask( ) {
     BundleTask oldTask = this.bundleTask.getReference( );
     this.bundleTask.set( null, false );
+    LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESET, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ) ) );
     return oldTask;
   }
   
@@ -160,6 +164,7 @@ public class VmInstance implements HasName {
           return; //already finished, wait and timeout the state along with the instance.
         } else if ( BundleState.storing.equals( next ) ) {
           this.getBundleTask( ).setState( next.name( ) );
+          LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ), this.getBundleTask( ).getState( ) ) );
           this.getBundleTask( ).setUpdateTime( new Date( ).toString( ) );
         } else if ( BundleState.none.equals( next ) && !BundleState.pending.equals( current ) ) {
           this.resetBundleTask( );
@@ -174,6 +179,7 @@ public class VmInstance implements HasName {
     if ( this.getBundleTask( ) != null ) {
       this.bundleTask.set( this.getBundleTask( ), true );
       this.getBundleTask( ).setState( BundleState.canceling.name( ) );
+      LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ), this.getBundleTask( ).getState( ) ) );
       return true;
     } else {
       return false;
@@ -188,9 +194,11 @@ public class VmInstance implements HasName {
     if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) )
          && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
       this.getBundleTask( ).setState( BundleState.storing.name( ) );
+      LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ), this.getBundleTask( ).getState( ) ) );
       return true;
     } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) )
                 && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
+      LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ), this.getBundleTask( ).getState( ) ) );
       this.resetBundleTask( );
       return true;
     } else {
