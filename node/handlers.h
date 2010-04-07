@@ -105,6 +105,7 @@ struct nc_state_t {
 	char connect_storage_cmd_path[MAX_PATH];
 	char disconnect_storage_cmd_path[MAX_PATH];
 	char get_storage_cmd_path[MAX_PATH];
+	char ncBundleUploadCmd[MAX_PATH];
 };
 
 
@@ -221,6 +222,7 @@ void adopt_instances();
 int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *userId,
 				char *instanceId,
+				char *platform,
 				char *ramdiskId,
 				char *kernelId,
 				char *disk_path,
