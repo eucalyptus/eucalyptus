@@ -235,9 +235,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       if ( reply != null ) {
         ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
       } else {
-        Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
-        ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.INTERNAL_SERVER_ERROR ) )
-           .addListener( ChannelFutureListener.CLOSE );
+        EventRecord.here( ServiceSinkHandler.class, EventType.MSG_SENT_ASYNC, msg.getClass( ).getSimpleName( ), this.msgReceiver.getEndpointURI( ).toString( ) );
       }
     } catch ( Exception e1 ) {
       LOG.error( e1, e1 );

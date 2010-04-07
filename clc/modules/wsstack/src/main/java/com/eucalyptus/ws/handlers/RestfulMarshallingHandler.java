@@ -125,7 +125,9 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
       HoldMe.canHas.lock( );
       try {
-        if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
+        if( httpResponse.getMessage( ) == null ) {
+          //TODO: do nothing here? really?
+        } else if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
           EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpResponse.getMessage( );
           byteOut.write( Binding.createRestFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getCorrelationId( ) ).getBytes( ) );
           httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );

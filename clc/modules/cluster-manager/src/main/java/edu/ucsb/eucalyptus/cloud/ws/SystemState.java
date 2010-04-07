@@ -427,8 +427,6 @@ public class SystemState {
   }
   
   public static void handle( GetConsoleOutputType request ) throws Exception {
-    GetConsoleOutputResponseType reply = ( GetConsoleOutputResponseType ) request.getReply( );
-    reply.set_return( true );
     try {
       Cluster cluster = null;
       VmInstance v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
@@ -440,6 +438,9 @@ public class SystemState {
       }
       if ( cluster != null ) {
         new ConsoleOutputCallback( request ).dispatch( cluster );
+      } else {
+        Messaging.dispatch( "vm://ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext( ).getService( ).getComponent( ).getClass( )
+                                                                               .getSimpleName( ), request, "Failed to find required vm information" ) );        
       }
       return;
     } catch ( NoSuchElementException e ) {
@@ -448,7 +449,7 @@ public class SystemState {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
   }
-  
+
   public static RebootInstancesResponseType handle( RebootInstancesType request ) throws Exception {
     RebootInstancesResponseType reply = ( RebootInstancesResponseType ) request.getReply( );
     reply.set_return( true );
