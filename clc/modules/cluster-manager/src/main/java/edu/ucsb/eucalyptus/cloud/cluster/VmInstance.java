@@ -207,7 +207,17 @@ public class VmInstance implements HasName {
   }
   
   public Boolean startBundleTask( BundleTask task ) {
-    return this.bundleTask.compareAndSet( null, task, false, true );
+    if( !this.bundleTask.compareAndSet( null, task, false, true ) ) {
+      if( this.getBundleTask( ) != null && BundleState.failed.equals( BundleState.valueOf( this.getBundleTask( ).getState( ) ) ) ) {
+        this.resetBundleTask( );
+        this.bundleTask.set( task, true );
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return true;
+    }
   }
   
   public String getPasswordData( ) {
