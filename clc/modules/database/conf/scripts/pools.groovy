@@ -10,6 +10,7 @@ poolProps = [
   'proxool.minimum-connection-count': '16',
   'proxool.maximum-connection-count': '128',
   'proxool.house-keeping-test-sql': 'SELECT * FROM COUNTERS;',
+  'proxool.trace': 'true',
   'user': 'sa',
   'password': db_pass,
 ]
