@@ -67,6 +67,7 @@ import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 import com.eucalyptus.bootstrap.Component;
+import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
 
 //TODO: Remove me
 //public class INTERNAL extends EucalyptusMessage {
@@ -517,10 +518,15 @@ public class VmBundleMessage extends EucalyptusMessage {
 
 public class BundleInstanceType extends VmBundleMessage {
   String instanceId;
+  @HttpParameterMapping(parameter="Storage.S3.Bucket")
   String bucket;
+  @HttpParameterMapping(parameter="Storage.S3.Prefix")
   String prefix;
+  @HttpParameterMapping(parameter="Storage.S3.AWSAccessKeyId")
   String awsAccessKeyId;
+  @HttpParameterMapping(parameter="Storage.S3.UploadPolicy")
   String uploadPolicy;  
+  @HttpParameterMapping(parameter="Storage.S3.UploadPolicySignature")
   String uploadPolicySignature;  
   String url;
   String userKey;

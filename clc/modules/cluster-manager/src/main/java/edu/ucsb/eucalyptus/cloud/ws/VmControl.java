@@ -188,7 +188,7 @@ public class VmControl {
   }
   
   public BundleInstanceResponseType bundleInstance( BundleInstanceType request ) throws EucalyptusCloudException {
-    BundleInstanceResponseType reply = request.getReply( );
+    BundleInstanceResponseType reply = request.getReply( );//TODO: check if the instance has platform windows.
     reply.set_return( true );
     String walrusUrl = SystemConfiguration.getWalrusUrl( );
     String instanceId = request.getInstanceId( );
