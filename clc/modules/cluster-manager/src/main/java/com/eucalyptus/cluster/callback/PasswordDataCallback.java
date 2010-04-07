@@ -40,14 +40,13 @@ public class PasswordDataCallback extends QueuedEventCallback<GetConsoleOutputTy
 //for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
       if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
     } catch ( ArrayIndexOutOfBoundsException e1 ) {}
-    reply.setOutput( new String( Base64.encode( vm.getConsoleOutput( ).toString( ).getBytes( ) ) ) );
     GetPasswordDataResponseType rep = msg.getReply( );
     rep.setInstanceId( this.getRequest( ).getInstanceId( ) );
     rep.setTimestamp( new Date( ) );
     if( vm.getPasswordData( ) != null ) {
       rep.setOutput( vm.getPasswordData( ) );
     } else {
-      rep.setOutput( "" );
+      rep.setOutput( null );
     }
     Messaging.dispatch( "vm://ReplyQueue", rep );
   }
