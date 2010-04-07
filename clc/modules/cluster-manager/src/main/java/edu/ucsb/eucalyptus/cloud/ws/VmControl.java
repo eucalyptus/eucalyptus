@@ -174,7 +174,7 @@ public class VmControl {
         }
       }
     }
-    return request.getReply( );
+    return reply;
   }
   
   public CancelBundleTaskResponseType cancelBundleTask( CancelBundleTaskType request ) throws EucalyptusCloudException {
