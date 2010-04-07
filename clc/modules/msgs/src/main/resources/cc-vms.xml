@@ -95,6 +95,7 @@
     <value name="vlan" field="vlan" usage="required"/>
     <value name="userData" field="userData" usage="required"/>
     <value name="launchIndex" field="launchIndex" usage="required"/>
+    <value name="platform" field="platform" usage="required"/>
   </mapping>
   <mapping name="RunInstancesResponse" class="edu.ucsb.eucalyptus.cloud.VmRunResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
