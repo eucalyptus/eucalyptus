@@ -277,6 +277,10 @@ public class VmImageInfo {
     this.imageLocation = imageLocation;
     this.productCodes = productCodes;
     this.platform = platform;
+    this.kernelId = "";
+    this.kernelLocation = "";
+    this.ramdiskId = "";
+    this.ramdiskLocation = "";
   }
   def VmImageInfo(final imageId, final kernelId, final ramdiskId, final imageLocation, final kernelLocation, final ramdiskLocation, final productCodes, final platform) {
     this.imageId = imageId;
