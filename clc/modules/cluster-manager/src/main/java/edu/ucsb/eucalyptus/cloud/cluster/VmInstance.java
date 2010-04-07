@@ -67,6 +67,7 @@ package edu.ucsb.eucalyptus.cloud.cluster;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
@@ -540,10 +541,10 @@ public class VmInstance implements HasName {
   public String toString( ) {
     return String
                  .format(
-                          "VmInstance [imageInfo=%s, instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
+                          "VmInstance [imageInfo=%s, instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s, bundleTask=%s]",
                           this.imageInfo, this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.ownerId,
                           this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
-                          this.volumes );
+                          this.volumes, LogUtil.dumpObject( this.getBundleTask( ) ) );
   }
   
   public void setServiceTag( String serviceTag ) {
