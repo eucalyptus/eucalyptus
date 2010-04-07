@@ -447,7 +447,7 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
   return(0);
 }
 
-int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, axutil_env_t *env, axis2_stub_t *stub) {
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   //  char meh[32];
   adb_BundleInstance_t *input;
@@ -471,7 +471,7 @@ int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char
   adb_bundleInstanceType_set_instanceId(sn, env, instanceId);
   adb_bundleInstanceType_set_bucketName(sn, env, bucketName);
   adb_bundleInstanceType_set_filePrefix(sn, env, filePrefix);
-  adb_bundleInstanceType_set_S3URL(sn, env, S3URL);
+  adb_bundleInstanceType_set_walrusURL(sn, env, walrusURL);
   adb_bundleInstanceType_set_userPublicKey(sn, env, userPublicKey);
   
   adb_BundleInstance_set_BundleInstance(input, env, sn);

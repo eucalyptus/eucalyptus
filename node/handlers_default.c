@@ -385,7 +385,7 @@ struct bundling_params_t {
 	ncInstance * instance;
 	char * bucketName;
 	char * filePrefix;
-	char * S3URL;
+	char * walrusURL;
 	char * userPublicKey;
 	char * workPath; // work directory path
 	char * diskPath; // disk file path
@@ -418,7 +418,7 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 		}
 		if (params->bucketName) free (params->bucketName);
 		if (params->filePrefix) free (params->filePrefix);
-		if (params->S3URL) free (params->S3URL);
+		if (params->walrusURL) free (params->walrusURL);
 		if (params->userPublicKey) free (params->userPublicKey);
 		if (params->diskPath) free (params->diskPath);
 		if (params->eucalyptusHomePath) free (params->eucalyptusHomePath);
@@ -457,7 +457,7 @@ static void * bundling_thread (void *arg)
 				 "%s -i %s -d %s -b %s", 
 				 params->eucalyptusHomePath, 
 				 params->eucalyptusHomePath, 
-				 params->S3URL, 
+				 params->walrusURL, 
 				 params->userPublicKey, 
 				 "123456789012", 
 				 params->eucalyptusHomePath, 
@@ -486,14 +486,14 @@ doBundleInstance(
 	char *instanceId,
 	char *bucketName,
 	char *filePrefix,
-	char *S3URL,
+	char *walrusURL,
 	char *userPublicKey)
 {
 	// sanity checking
 	if (instanceId==NULL
 		|| bucketName==NULL
 		|| filePrefix==NULL
-		|| S3URL==NULL
+		|| walrusURL==NULL
 		|| userPublicKey==NULL) {
 		logprintfl (EUCAERROR, "doBundleInstance: bundling instance called with invalid parameters\n");
 		return ERROR;
@@ -515,7 +515,7 @@ doBundleInstance(
 	params->instance = instance;
 	params->bucketName = strdup (bucketName);
 	params->filePrefix = strdup (filePrefix);
-	params->S3URL = strdup (S3URL);
+	params->walrusURL = strdup (walrusURL);
 	params->userPublicKey = strdup (userPublicKey);
 	params->eucalyptusHomePath = strdup (nc->home);
 	params->ncBundleUploadCmd = strdup (nc->ncBundleUploadCmd);

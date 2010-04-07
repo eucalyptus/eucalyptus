@@ -170,7 +170,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan);
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev);
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
 
-int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey);
+int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey);
 int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bundleTask **outBundleTasks, int *outBundleTasksLen);
 
 int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst);
@@ -205,6 +205,7 @@ int privIpCmp(ccInstance *inst, void *ip);
 int privIpSet(ccInstance *inst, void *ip);
 int pubIpCmp(ccInstance *inst, void *ip);
 int pubIpSet(ccInstance *inst, void *ip);
+int free_instanceNetwork(char *mac, int vlan);
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src);
 
 int add_resourceCache(char *host, ccResource *in);

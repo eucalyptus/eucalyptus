@@ -1144,19 +1144,19 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	return ret;
 }
 
-int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey)
+int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey)
 {
 	int ret;
 
 	if (init())
 		return 1;
 
-	logprintfl (EUCAINFO, "doBundleInstance() invoked (id=%s bucketName=%s filePrefix=%s S3URL=%s userPublicKey=%s)\n", instanceId, bucketName, filePrefix, S3URL, userPublicKey);
+	logprintfl (EUCAINFO, "doBundleInstance() invoked (id=%s bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s)\n", instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
 
 	if (nc_state.H->doBundleInstance)
-	  ret = nc_state.H->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
+	  ret = nc_state.H->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
 	else 
-	  ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
+	  ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
 
 	return ret;
 }

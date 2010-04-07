@@ -107,7 +107,7 @@ int mylocks[ENDLOCK] = {0,0,0,0,0,0};
 
 //ccBundleCache *bundleCache=NULL;
 
-int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey) {
+int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey) {
   int i, j, rc, start = 0, stop = 0, ret=0;
   ccInstance *myInstance;
   ncStub *ncs;
@@ -123,7 +123,7 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
     return(1);
   }
   logprintfl(EUCAINFO, "BundleInstance(): called\n");
-  logprintfl(EUCADEBUG, "BundleInstance(): params: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, S3URL=%s, userPublicKey=%s\n", SP(ccMeta->userId), SP(instanceId), SP(bucketName), SP(filePrefix), SP(S3URL), SP(userPublicKey));
+  logprintfl(EUCADEBUG, "BundleInstance(): params: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, walrusURL=%s, userPublicKey=%s\n", SP(ccMeta->userId), SP(instanceId), SP(bucketName), SP(filePrefix), SP(walrusURL), SP(userPublicKey));
   if (!instanceId) {
     logprintfl(EUCAERROR, "BundleInstance(): bad input params\n");
     return(1);
@@ -159,7 +159,7 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
 	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
 	}
 	rc = 0;
-	rc = ncBundleInstanceStub(ncs, ccMeta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
+	rc = ncBundleInstanceStub(ncs, ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
 	if (!rc) {
 	  ret = 0;
 	} else {
@@ -1730,6 +1730,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	// could not find resource
 	logprintfl(EUCAERROR, "RunInstances(): scheduler could not find resource to run the instance on\n");
 	// couldn't run this VM, remove networking information from system
+	free_instanceNetwork(mac, vlan);
+	/*
 	sem_mywait(VNET);
 	
 	vnetDisableHost(vnetconfig, mac, NULL, 0);
@@ -1738,6 +1740,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	}
 	
 	sem_mypost(VNET);
+	*/
       } else {
 	int pid, status, ret, rbytes;
 	int filedes[2];
@@ -1799,12 +1802,15 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  res->state = RESDOWN;
 	  i--;
 	  // couldn't run this VM, remove networking information from system
+	  free_instanceNetwork(mac, vlan);
+	  /*
 	  sem_mywait(VNET);
 	  vnetDisableHost(vnetconfig, mac, NULL, 0);
 	  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
 	    vnetDelHost(vnetconfig, mac, NULL, vlan);
 	  }
 	  sem_mypost(VNET);
+	  */
 	} else {
 	  res->availMemory -= ccvm->mem;
 	  res->availDisk -= ccvm->disk;
@@ -2133,6 +2139,8 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	(*outStatus)[i] = 0;
       }
       
+      rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan);
+      /*
       // remove private network info from system
       sem_mywait(VNET);
       
@@ -2142,6 +2150,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       }
       
       sem_mypost(VNET);
+      */
       
       free(myInstance);
     } else {
@@ -3213,6 +3222,17 @@ int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPor
   return(0);
 }
 
+int free_instanceNetwork(char *mac, int vlan) {
+  // remove private network info from system
+  sem_mywait(VNET);
+  vnetDisableHost(vnetconfig, mac, NULL, 0);
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    vnetDelHost(vnetconfig, mac, NULL, vlan);
+  }
+  sem_mypost(VNET);
+  return(0);
+}
+
 int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize) {
   if (out != NULL) {
     bzero(out, sizeof(ccInstance));
@@ -3370,6 +3390,10 @@ void invalidate_instanceCache(void) {
   
   sem_mywait(INSTCACHE);
   for (i=0; i<MAXINSTANCES; i++) {
+    // if instance is in teardown, free up network information
+    if ( !strcmp(instanceCache->instances[i].state, "Teardown") ) {
+
+    }
     if ( (instanceCache->cacheState[i] == INSTVALID) && ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout)) {
       logprintfl(EUCADEBUG, "invalidate_instanceCache(): invalidating instance '%s' (last seen %d seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
       bzero(&(instanceCache->instances[i]), sizeof(ccInstance));

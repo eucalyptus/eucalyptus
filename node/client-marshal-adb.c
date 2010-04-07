@@ -684,7 +684,7 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     return status;
 }
 
-int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey)
+int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey)
 {
     axutil_env_t * env  = st->env;
     axis2_stub_t * stub = st->stub;
@@ -701,7 +701,7 @@ int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *
     adb_ncBundleInstanceType_set_instanceId(request, env, instanceId);
     adb_ncBundleInstanceType_set_bucketName(request, env, bucketName);
     adb_ncBundleInstanceType_set_filePrefix(request, env, filePrefix);
-    adb_ncBundleInstanceType_set_S3URL(request, env, S3URL);
+    adb_ncBundleInstanceType_set_walrusURL(request, env, walrusURL);
     adb_ncBundleInstanceType_set_userPublicKey(request, env, userPublicKey);
     adb_ncBundleInstance_set_ncBundleInstance(input, env, request);
 
