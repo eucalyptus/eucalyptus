@@ -344,6 +344,7 @@ int
 get_instance_xml(	const char *gen_libvirt_cmd_path,
 			char *userId,
 			char *instanceId,
+			char *platform,
 			char *ramdiskId,
 			char *kernelId,
 			char *disk_path,
@@ -356,8 +357,8 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
     char buf [MAX_PATH];
 
     snprintf(buf, MAX_PATH, "%s", gen_libvirt_cmd_path);
-
-    if (!strstr(ramdiskId, "windows") && !strstr(kernelId, "windows")) {
+    
+    if (!strstr(platform, "windows")) {
       if (strnlen(ramdiskId, CHAR_BUFFER_SIZE) && strnlen(kernelId, CHAR_BUFFER_SIZE)) {
 	strcat(buf, " --ramdisk --kernel");
 	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --ramdisk --kernel", gen_libvirt_cmd_path);
@@ -514,7 +515,8 @@ void *startup_thread (void * arg)
                                  instance->kernelId, instance->kernelURL, 
                                  instance->ramdiskId, instance->ramdiskURL, 
                                  instance->instanceId, instance->keyName, 
-                                 &disk_path, addkey_sem, nc_state.convert_to_disk,
+				 instance->platform, &disk_path, 
+				 addkey_sem, nc_state.convert_to_disk,
 				 instance->params.disk*1024);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
@@ -532,9 +534,9 @@ void *startup_thread (void * arg)
 	if (brname) free(brname);
         return NULL;
     }
-    {
-      char *ramdisk, *kernel;
-      // TODO: check for 'platform' here when sent by CLC
+    
+    // TODO: check for 'platform' here when sent by CLC
+    /*
       if (strstr(instance->ramdiskId, "windows") || strstr(instance->kernelId, "windows") || strstr(instance->ramdiskURL, "windows") || strstr(instance->kernelURL, "windows")) {
 	ramdisk = strdup("");
 	kernel = strdup("");
@@ -542,19 +544,17 @@ void *startup_thread (void * arg)
 	ramdisk = strdup(instance->ramdiskId);
 	kernel = strdup(instance->kernelId);
       }
-	
+    */
     error = get_instance_xml (nc_state.gen_libvirt_cmd_path,
 		              instance->userId, instance->instanceId, 
-			      //                              strnlen (instance->ramdiskId, CHAR_BUFFER_SIZE), /* 0 if no ramdisk */
-			      ramdisk,
-			      kernel,
+			      instance->platform,
+			      instance->ramdiskId,
+			      instance->kernelId,
                               disk_path, 
                               &(instance->params), 
                               instance->ncnet.privateMac, 
                               brname, &xml);
-    free(ramdisk);
-    free(kernel);
-    }
+
     if (brname) free(brname);
     if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
     if (error) {
@@ -1136,19 +1136,19 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	return ret;
 }
 
-int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey)
+int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey)
 {
 	int ret;
 
 	if (init())
 		return 1;
 
-	logprintfl (EUCAINFO, "doBundleInstance() invoked (id=%s bucketName=%s filePrefix=%s S3URL=%s userPublicKey=%s cloudPublicKey=%s)\n", instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+	logprintfl (EUCAINFO, "doBundleInstance() invoked (id=%s bucketName=%s filePrefix=%s S3URL=%s userPublicKey=%s)\n", instanceId, bucketName, filePrefix, S3URL, userPublicKey);
 
 	if (nc_state.H->doBundleInstance)
-	  ret = nc_state.H->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+	  ret = nc_state.H->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
 	else 
-	  ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+	  ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
 
 	return ret;
 }

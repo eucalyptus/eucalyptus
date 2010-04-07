@@ -78,7 +78,6 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -87,60 +86,135 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class VmInstance implements HasName {
-  private static Logger        LOG         = Logger.getLogger( VmInstance.class );
+  private static Logger LOG = Logger.getLogger( VmInstance.class );
+  
+  public enum BundleState {
+    none( "none" ), pending( null ), storing( "bundling" ), canceling( null ), complete( "succeeded" ), failed( "failed" );
+    private String mappedState;
+    
+    BundleState( String mappedState ) {
+      this.mappedState = mappedState;
+    }
+    
+    public String getMappedState( ) {
+      return this.mappedState;
+    }
+  }
+  
+  public static String                        DEFAULT_IP   = "0.0.0.0";
+  public static String                        DEFAULT_TYPE = "m1.small";
+  private String                              reservationId;
+  private int                                 launchIndex;
+  private String                              instanceId;
+  private String                              ownerId;
+  private String                              placement;
+  private Date                                launchTime;
+  private StopWatch                           stopWatch;
+  
+  private String                              userData;
+  private String                              serviceTag;
+  private String                              reason;
+  private VmImageInfo                         imageInfo;
+  private VmKeyInfo                           keyInfo;
+  private VmTypeInfo                          vmTypeInfo;
+  private List<Network>                       networks     = Lists.newArrayList( );
+  private VmState                             state;
+  private StringBuffer                        consoleOutput;
+  private String                              passwordData;
+  private AtomicMarkableReference<BundleTask> bundleTask   = new AtomicMarkableReference<BundleTask>( null, false );
+  private String                              platform;
+  
+  public String getPlatform( ) {
+    return this.platform;
+  }
 
-  public static String         DEFAULT_IP  = "0.0.0.0";
-  public static String         DEFAULT_TYPE  = "m1.small";
-  private String               reservationId;
-  private int                  launchIndex;
-  private String               instanceId;
-  private String               ownerId;
-  private String               placement;
-  private Date                 launchTime;
-  private StopWatch            stopWatch;
+  public void setPlatform( String platform ) {
+    this.platform = platform;
+  }
 
-  private String               userData;
-  private String               serviceTag;
-  private String               reason;
-  private VmImageInfo          imageInfo;
-  private VmKeyInfo            keyInfo;
-  private VmTypeInfo           vmTypeInfo;
-  private List<Network>        networks    = Lists.newArrayList( );
-  private VmState              state;
-  private StringBuffer         consoleOutput;
-  private String               passwordData;
-  private AtomicMarkableReference<BundleTask> bundleTask = new AtomicMarkableReference<BundleTask>( null, false );
   public Boolean isBundling( ) {
     return this.bundleTask.getReference( ) == null;
   }
+  
   public BundleTask resetBundleTask( ) {
     BundleTask oldTask = this.bundleTask.getReference( );
     this.bundleTask.set( null, false );
     return oldTask;
   }
+  
+  public void setBundleTaskState( String state ) {
+    BundleState next = null;
+    if ( BundleState.storing.getMappedState( ).equals( state ) ) {
+      next = BundleState.storing;
+    } else if ( BundleState.complete.getMappedState( ).equals( state ) ) {
+      next = BundleState.complete;
+    } else if ( BundleState.failed.getMappedState( ).equals( state ) ) {
+      next = BundleState.failed;
+    } else {
+      next = BundleState.none;
+    }
+    if ( this.bundleTask.getReference( ) != null ) {
+      if ( !this.bundleTask.isMarked( ) ) {
+        BundleState current = BundleState.valueOf( this.getBundleTask( ).getState( ) );
+        if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) ) {
+          return; //already finished, wait and timeout the state along with the instance.
+        } else if ( BundleState.storing.equals( next ) ) {
+          this.getBundleTask( ).setState( next.name( ) );
+          this.getBundleTask( ).setUpdateTime( new Date( ).toString( ) );
+        } else if ( BundleState.none.equals( next ) && !BundleState.pending.equals( current ) ) {
+          this.resetBundleTask( );
+        }
+      } else {
+        this.getBundleTask( ).setUpdateTime( new Date( ).toString( ) );
+      }
+    }
+  }
+  
+  public Boolean cancelBundleTask( ) {
+    if ( this.getBundleTask( ) != null ) {
+      this.bundleTask.set( this.getBundleTask( ), true );
+      this.getBundleTask( ).setState( BundleState.canceling.name( ) );
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
   public BundleTask getBundleTask( ) {
     return this.bundleTask.getReference( );
   }
+  
   public Boolean clearPendingBundleTask( ) {
-    return this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask(), true, false );
+    if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) )
+         && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
+      this.getBundleTask( ).setState( BundleState.storing.name( ) );
+      return true;
+    } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) )
+                && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
+      this.resetBundleTask( );
+      return true;
+    } else {
+      return false;
+    }
   }
+  
   public Boolean startBundleTask( BundleTask task ) {
     return this.bundleTask.compareAndSet( null, task, false, true );
   }
-
+  
   public String getPasswordData( ) {
     return this.passwordData;
   }
-
+  
   public void setPasswordData( String passwordData ) {
     this.passwordData = passwordData;
   }
-
+  
   private List<AttachedVolume> volumes     = Lists.newArrayList( );
   private NetworkConfigType    networkConfig;
   private Boolean              privateNetwork;
   private List<String>         ancestorIds = Lists.newArrayList( );
-
+  
   public VmInstance( ) {
     this.launchTime = new Date( );
     this.state = VmState.PENDING;
@@ -150,10 +224,12 @@ public class VmInstance implements HasName {
     this.consoleOutput = new StringBuffer( );
     this.volumes = new ArrayList<AttachedVolume>( );
   }
-
-  public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement, final String userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks, String networkIndex ) {
+  
+  public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement,
+                     final String userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks,
+                     String networkIndex ) {
     this( );
-
+    
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
     this.instanceId = instanceId;
@@ -164,13 +240,14 @@ public class VmInstance implements HasName {
     this.keyInfo = keyInfo;
     this.vmTypeInfo = vmTypeInfo;
     this.networks = networks;
-    String mac = String.format( "%s:%s:%s:%s", this.instanceId.substring( 2, 4 ), this.instanceId.substring( 4, 6 ), this.instanceId.substring( 6, 8 ), this.instanceId.substring( 8, 10 ) );
+    String mac = String.format( "%s:%s:%s:%s", this.instanceId.substring( 2, 4 ), this.instanceId.substring( 4, 6 ), this.instanceId.substring( 6, 8 ),
+                                this.instanceId.substring( 8, 10 ) );
     this.networkConfig.setMacAddress( "d0:0d:" + mac );
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
-    this.networkConfig.setNetworkIndex(Integer.parseInt(networkIndex));
+    this.networkConfig.setNetworkIndex( Integer.parseInt( networkIndex ) );
   }
-
+  
   public String getName( ) {
     return this.instanceId;
   }
@@ -178,79 +255,79 @@ public class VmInstance implements HasName {
   public boolean equals( Object o ) {
     if ( this == o ) return true;
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
-
+    
     VmInstance vmInstance = ( VmInstance ) o;
-
+    
     if ( !instanceId.equals( vmInstance.instanceId ) ) return false;
-
+    
     return true;
   }
-
+  
   public void setLaunchTime( final Date launchTime ) {
     this.launchTime = launchTime;
   }
-
+  
   public int hashCode( ) {
     return instanceId.hashCode( );
   }
-
+  
   public String getReservationId( ) {
     return reservationId;
   }
-
+  
   public String getInstanceId( ) {
     return instanceId;
   }
-
+  
   public String getOwnerId( ) {
     return ownerId;
   }
-
+  
   public int getLaunchIndex( ) {
     return launchIndex;
   }
-
+  
   public String getPlacement( ) {
     return placement;
   }
-
+  
   public Date getLaunchTime( ) {
     return launchTime;
   }
-
+  
   public VmState getState( ) {
     return state;
   }
-
+  
   public void setState( final VmState state ) {
     if ( this.getState( ) != null && !this.getState( ).equals( state ) ) {
       LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), state ) );
     }
     this.state = state;
   }
-
+  
   public String getUserData( ) {
     return userData;
   }
-
+  
   public void setUserData( final String userData ) {
     this.userData = userData;
   }
-
+  
   public RunningInstancesItemType getAsRunningInstanceItemType( boolean dns ) {
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
-
+    
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
     runningInstance.setStateCode( Integer.toString( this.state.getCode( ) ) );
     runningInstance.setStateName( this.state.getName( ) );
-
+    runningInstance.setPlatform( this.getPlatform( ) );
     runningInstance.setInstanceId( this.instanceId );
     runningInstance.setImageId( this.imageInfo.getImageId( ) );
     runningInstance.setKernel( this.imageInfo.getKernelId( ) );
     runningInstance.setRamdisk( this.imageInfo.getRamdiskId( ) );
     runningInstance.setProductCodes( this.imageInfo.getProductCodes( ) );
-
-    if( dns ) {
+    
+    if ( dns ) {
       runningInstance.setDnsName( this.getNetworkConfig( ).getPublicDnsName( ) );
       runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getPrivateDnsName( ) );
     } else {
@@ -260,86 +337,84 @@ public class VmInstance implements HasName {
       } else {
         runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
       }
-    } 
+    }
     if ( this.getReason( ) != null || !"".equals( this.getReason( ) ) ) runningInstance.setReason( this.getReason( ) );
-
-    if ( this.getKeyInfo( ) != null ) runningInstance.setKeyName( this.getKeyInfo( ).getName( ) );
+    
+    if ( this.getKeyInfo( ) != null )
+      runningInstance.setKeyName( this.getKeyInfo( ).getName( ) );
     else runningInstance.setKeyName( "" );
-
+    
     runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
     runningInstance.setPlacement( this.placement );
-
+    
     runningInstance.setLaunchTime( this.launchTime );
-
+    
     return runningInstance;
   }
-
-
-
   
   public VmKeyInfo getKeyInfo( ) {
     return keyInfo;
   }
-
+  
   public void setKeyInfo( final VmKeyInfo keyInfo ) {
     this.keyInfo = keyInfo;
   }
-
+  
   public VmTypeInfo getVmTypeInfo( ) {
     return vmTypeInfo;
   }
-
+  
   public void setVmTypeInfo( final VmTypeInfo vmTypeInfo ) {
     this.vmTypeInfo = vmTypeInfo;
   }
-
+  
   public List<Network> getNetworks( ) {
     return networks;
   }
-
+  
   public List<String> getNetworkNames( ) {
     List<String> nets = new ArrayList<String>( );
     for ( Network net : this.getNetworks( ) )
       nets.add( net.getNetworkName( ) );
     return nets;
   }
-
+  
   public void setNetworks( final List<Network> networks ) {
     this.networks = networks;
   }
-
+  
   public NetworkConfigType getNetworkConfig( ) {
     return networkConfig;
   }
-
+  
   public void setNetworkConfig( final NetworkConfigType networkConfig ) {
     this.networkConfig = networkConfig;
   }
-
+  
   public VmImageInfo getImageInfo( ) {
     return imageInfo;
   }
-
+  
   public void setImageInfo( final VmImageInfo imageInfo ) {
     this.imageInfo = imageInfo;
   }
-
+  
   public List<AttachedVolume> getVolumes( ) {
     return volumes;
   }
-
+  
   public void setVolumes( final List<AttachedVolume> volumes ) {
     this.volumes = volumes;
   }
-
+  
   public List<String> getAncestorIds( ) {
     return ancestorIds;
   }
-
+  
   public void setAncestorIds( final List<String> ancestorIds ) {
     this.ancestorIds = ancestorIds;
   }
-
+  
   public String getByKey( String path ) {
     Map<String, String> m = getMetadataMap( );
     if ( path == null ) path = "";
@@ -347,25 +422,25 @@ public class VmInstance implements HasName {
     if ( m.containsKey( path + "/" ) ) path += "/";
     return m.get( path ).replaceAll( "\n*\\z", "" );
   }
-
+  
   private Map<String, String> getMetadataMap( ) {
     Map<String, String> m = new HashMap<String, String>( );
     m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
     m.put( "product-codes", this.getImageInfo( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     m.put( "ami-launch-index", "" + this.getLaunchIndex( ) );
     m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
-
+    
     m.put( "ami-manifest-path", this.getImageInfo( ).getImageLocation( ) );
     m.put( "hostname", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
     m.put( "instance-id", this.getInstanceId( ) );
     m.put( "instance-type", this.getVmTypeInfo( ).getName( ) );
-    if( Component.dns.isLocal( ) ) {
-      m.put( "local-hostname", this.getNetworkConfig( ).getPrivateDnsName( ) );      
+    if ( Component.dns.isLocal( ) ) {
+      m.put( "local-hostname", this.getNetworkConfig( ).getPrivateDnsName( ) );
     } else {
-      m.put( "local-hostname", this.getNetworkConfig( ).getIpAddress( ) );      
+      m.put( "local-hostname", this.getNetworkConfig( ).getIpAddress( ) );
     }
     m.put( "local-ipv4", this.getNetworkConfig( ).getIpAddress( ) );
-    if( Component.dns.isLocal( ) ) {
+    if ( Component.dns.isLocal( ) ) {
       m.put( "public-hostname", this.getNetworkConfig( ).getPublicDnsName( ) );
     } else {
       m.put( "public-hostname", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
@@ -373,23 +448,23 @@ public class VmInstance implements HasName {
     m.put( "public-ipv4", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
     m.put( "reservation-id", this.getReservationId( ) );
     m.put( "kernel-id", this.getImageInfo( ).getKernelId( ) );
-    if( this.getImageInfo( ).getRamdiskId( ) != null ) {
+    if ( this.getImageInfo( ).getRamdiskId( ) != null ) {
       m.put( "ramdisk-id", this.getImageInfo( ).getRamdiskId( ) );
     }
     m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
-
+    
     m.put( "block-device-mapping/", "emi\nephemeral0\nroot\nswap" );
     m.put( "block-device-mapping/emi", "sda1" );
     m.put( "block-device-mapping/ami", "sda1" );
     m.put( "block-device-mapping/ephemeral", "sda2" );
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
-
+    
     m.put( "public-keys/", "0=" + this.getKeyInfo( ).getName( ) );
     m.put( "public-keys/0", "openssh-key" );
     m.put( "public-keys/0/", "openssh-key" );
     m.put( "public-keys/0/openssh-key", this.getKeyInfo( ).getValue( ) );
-
+    
     m.put( "placement/", "availability-zone" );
     m.put( "placement/availability-zone", this.getPlacement( ) );
     String dir = "";
@@ -400,12 +475,12 @@ public class VmInstance implements HasName {
     m.put( "", dir );
     return m;
   }
-
+  
   public int compareTo( final Object o ) {
     VmInstance that = ( VmInstance ) o;
     return this.getName( ).compareTo( that.getName( ) );
   }
-
+  
   public synchronized long resetStopWatch( ) {
     this.stopWatch.stop( );
     long ret = this.stopWatch.getTime( );
@@ -413,57 +488,57 @@ public class VmInstance implements HasName {
     this.stopWatch.start( );
     return ret;
   }
-
+  
   public synchronized long getSplitTime( ) {
     this.stopWatch.split( );
     long ret = this.stopWatch.getSplitTime( );
     this.stopWatch.unsplit( );
     return ret;
   }
-
+  
   public String getReason( ) {
     return reason;
   }
-
+  
   public void setReason( final String reason ) {
     this.reason = reason;
   }
-
+  
   public StringBuffer getConsoleOutput( ) {
     return consoleOutput;
   }
-
+  
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
     this.consoleOutput = consoleOutput;
-    if( this.passwordData == null ) {
-      String tempCo = consoleOutput.toString( ).replaceAll("[\r\n]*","");
-      if( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
-        this.passwordData = tempCo.replaceAll(".*<Password>","").replaceAll("</Password>.*","");
+    if ( this.passwordData == null ) {
+      String tempCo = consoleOutput.toString( ).replaceAll( "[\r\n]*", "" );
+      if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
+        this.passwordData = tempCo.replaceAll( ".*<Password>", "" ).replaceAll( "</Password>.*", "" );
       }
     }
   }
-
+  
   @Override
   public String toString( ) {
-    return String.format(
+    return String
+                 .format(
                           "VmInstance [imageInfo=%s, instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
-                          this.imageInfo, this.instanceId, this.keyInfo, this.launchIndex, this.launchTime,
-                          this.networkConfig, this.networks, this.ownerId, this.placement,
-                          this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch,
-                          this.userData, this.vmTypeInfo, this.volumes );
+                          this.imageInfo, this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.ownerId,
+                          this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
+                          this.volumes );
   }
-
+  
   public void setServiceTag( String serviceTag ) {
     this.serviceTag = serviceTag;
   }
-
+  
   public String getServiceTag( ) {
     return serviceTag;
   }
-
-  public boolean hasPublicAddress() {
+  
+  public boolean hasPublicAddress( ) {
     NetworkConfigType conf = getNetworkConfig( );
-    return conf != null && !( DEFAULT_IP.equals(conf.getIgnoredPublicIp( )) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
+    return conf != null && !( DEFAULT_IP.equals( conf.getIgnoredPublicIp( ) ) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
   }
-
+  
 }

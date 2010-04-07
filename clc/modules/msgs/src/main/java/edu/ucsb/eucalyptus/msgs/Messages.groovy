@@ -522,6 +522,8 @@ public class BundleInstanceType extends VmBundleMessage {
   String awsAccessKeyId;
   String uploadPolicy;  
   String uploadPolicySignature;  
+  String url;
+  String userKey;
 }
 public class BundleInstanceResponseType extends VmBundleMessage {
   BundleTask task;
@@ -532,10 +534,13 @@ public class CancelBundleTaskType extends VmBundleMessage {
 public class CancelBundleTaskResponseType extends VmBundleMessage {
   BundleTask task;
 }
+public class BundleTaskState extends EucalyptusData {
+  String instanceId;
+  String state;
+}
 public class BundleTask extends EucalyptusData {
   String instanceId;
   String bundleId;
-  //pending | waiting-for-shutdown | storing | canceling | complete | failed
   String state;
   String startTime;
   String updateTime;
@@ -561,6 +566,7 @@ public class DescribeBundleTasksType extends VmBundleMessage {
 }
 public class DescribeBundleTasksResponseType extends VmBundleMessage {
   ArrayList<BundleTask> bundleTasks = new ArrayList<BundleTask>();
+  ArrayList<BundleTaskState> bundleTaskStates = new ArrayList<BundleTaskState>();
 }
 
 public class StatEventRecord extends EucalyptusMessage {

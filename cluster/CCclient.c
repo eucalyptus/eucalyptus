@@ -294,7 +294,7 @@ int main(int argc, char **argv) {
 	exit(1);
       }
     } else if (!strcmp(argv[2], "bundleInstance")) {
-      rc = cc_bundleInstance(argv[3], argv[4], argv[5], argv[6], argv[7], argv[8], env, stub);
+      rc = cc_bundleInstance(argv[3], argv[4], argv[5], argv[6], argv[7], env, stub);
       if (rc != 0) {
 	printf("cc_bundleInstance() failed\n");
 	exit(1);

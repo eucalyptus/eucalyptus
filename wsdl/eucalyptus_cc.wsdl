@@ -33,6 +33,8 @@
 	  <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	  <xs:element minOccurs="0" name="platform" type="xs:string"/>
+	  <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string"/>
+	  
 	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
 	  <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="volumes" type="tns:volumeType"/>
@@ -196,7 +198,6 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="S3URL" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="1" name="cloudPublicKey" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -225,7 +226,6 @@
 	<xs:sequence>
 	  <xs:element minOccurs="0" name="instanceId" type="xs:string"/>
 	  <xs:element minOccurs="0" name="state" type="xs:string"/>
-	  <xs:element minOccurs="0" name="manifest" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
 

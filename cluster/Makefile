@@ -44,8 +44,8 @@ generated/stubs: $(CCWSDL)
 
 server: $(SERVICE_SO)
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so windows-cc.o ../util/windows-bundle.o
-	$(CC) -shared generated/*.o server-marshal.o handlers.o windows-cc.o ../util/windows-bundle.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so ../util/windows-bundle.o
+	$(CC) -shared generated/*.o server-marshal.o handlers.o ../util/windows-bundle.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
 client: $(CLIENT)_full $(CLIENTKILLALL)
 
@@ -84,6 +84,6 @@ install: deploy
 	@$(INSTALL) cc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
 
 uninstall:
-	@$(RM) -f $(sbindir)/$(CLIENTKILLALL)
-	@$(RM) -f $(vardir)/lib/eucalyptus/keys/cc-client-policy.xml
-	@$(RM) -rf $(AXIS2C_SERVICES)/$(SERVICE_NAME)
+	@$(RM) -f $(DESTDIR)$(sbindir)/$(CLIENTKILLALL)
+	@$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/cc-client-policy.xml
+	@$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)

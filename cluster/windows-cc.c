@@ -34,7 +34,7 @@ extern ccResourceCache *resourceCache;
 
 extern vnetConfig *vnetconfig;
 
-extern ccBundleCache *bundleCache;
+//extern ccBundleCache *bundleCache;
 
 extern sem_t *locks[ENDLOCK];
 extern int mylocks[ENDLOCK];
@@ -169,7 +169,6 @@ int refresh_bundleTasks(ncMetadata *ccMeta, int timeout, int dolock) {
 	    // update CC instance with instance state from NC 
 	    snprintf(myBundle->instanceId, CHAR_BUFFER_SIZE, "%s", outBundleTasks[j]->instanceId);
 	    snprintf(myBundle->state, CHAR_BUFFER_SIZE, "%s", outBundleTasks[j]->state);
-	    snprintf(myBundle->manifest, 32768, "%s", outBundleTasks[j]->manifest);
 	    //	    rc = ccInstance_to_ncInstance(myInstance, ncOutInsts[j]);
 
 	    refresh_bundleCache(myBundle->instanceId, myBundle);
@@ -183,7 +182,6 @@ int refresh_bundleTasks(ncMetadata *ccMeta, int timeout, int dolock) {
 
       if (outBundleTasks) {
         for (j=0; j<outBundleTasksLen; j++) {
-	  //	  logprintfl(EUCADEBUG, "BUNDLE! %d: %s %s %s\n", j, outBundleTasks[j]->instanceId, outBundleTasks[j]->state, outBundleTasks[j]->manifest);
           free(outBundleTasks[j]);
         }
         free(outBundleTasks);
@@ -274,7 +272,7 @@ int add_bundleCache(char *instanceId, bundleTask *in){
     }
   }
   logprintfl(EUCADEBUG, "add_bundleCache(): adding '%s' to cache\n", instanceId);
-  allocate_bundleTask(&(bundleCache->bundles[firstNull]), in->instanceId, in->state, in->manifest);
+  allocate_bundleTask(&(bundleCache->bundles[firstNull]), in->instanceId, in->state);
   bundleCache->numBundles++;
   bundleCache->lastseen[firstNull] = time(NULL);
   bundleCache->cacheState[firstNull] = BUNDLEVALID;
@@ -321,7 +319,7 @@ int find_bundleCacheId(char *instanceId, bundleTask **out) {
 	unlock_exit(1);
       }
 
-      allocate_bundleTask(*out, bundleCache->bundles[i].instanceId,bundleCache->bundles[i].state, bundleCache->bundles[i].manifest);
+      allocate_bundleTask(*out, bundleCache->bundles[i].instanceId,bundleCache->bundles[i].state);
       logprintfl(EUCADEBUG, "find_bundleCache(): found instance in cache '%s'\n", bundleCache->bundles[i].instanceId);
       done++;
     }

@@ -110,6 +110,8 @@
             <structure name="volumes" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume"/>
           </collection>
         </structure>
+        <value name="platform" field="platform" usage="optional"/>
+        <value name="bundleTaskStateName" field="bundleTaskStateName" usage="optional"/>
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.AttachedVolume" abstract="true">

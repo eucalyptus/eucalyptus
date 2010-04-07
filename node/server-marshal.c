@@ -261,7 +261,7 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     
     // reported by NC
     adb_instanceType_set_stateName(instance, env, outInst->stateName);
-	adb_instanceType_set_bundleTaskStateName(instance, env, bundling_progress_names[outInst->bundling]);
+	adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
     axutil_date_time_t * dt = axutil_date_time_create_with_offset(env, outInst->launchTime - time(NULL));
     adb_instanceType_set_launchTime(instance, env, dt);
     
@@ -691,14 +691,13 @@ adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t*
     axis2_char_t * filePrefix = adb_ncBundleInstanceType_get_filePrefix(input, env);
     axis2_char_t * S3URL = adb_ncBundleInstanceType_get_S3URL(input, env);
     axis2_char_t * userPublicKey = adb_ncBundleInstanceType_get_userPublicKey(input, env);
-    axis2_char_t * cloudPublicKey = adb_ncBundleInstanceType_get_cloudPublicKey(input, env);
 
 
     eventlog("NC", userId, correlationId, "BundleInstance", "begin");
     { // do it
         ncMetadata meta = { correlationId, userId };
 
-        int error = doBundleInstance (&meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey, cloudPublicKey);
+        int error = doBundleInstance (&meta, instanceId, bucketName, filePrefix, S3URL, userPublicKey);
     
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doBundleInstance() failed error=%d\n", error);
@@ -769,7 +768,6 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
 					btt = adb_bundleTaskType_create(env);
 					adb_bundleTaskType_set_instanceId(btt, env, outBundleTasks[i]->instanceId);
 					adb_bundleTaskType_set_state(btt, env, outBundleTasks[i]->state);
-					adb_bundleTaskType_set_manifest(btt, env, outBundleTasks[i]->manifest);
 					adb_ncDescribeBundleTasksResponseType_add_bundleTasks(output, env, btt);
 					free(outBundleTasks[i]);
 				}

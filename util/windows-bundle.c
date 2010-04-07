@@ -22,12 +22,11 @@
 #include <data.h>
 #include <windows-bundle.h>
 
-int allocate_bundleTask(bundleTask *out, char *instanceId, char *state, char *manifest) {
+int allocate_bundleTask(bundleTask *out, char *instanceId, char *state) {
   if (out != NULL) {
     bzero(out, sizeof(bundleTask));
     if (instanceId) snprintf(out->instanceId, CHAR_BUFFER_SIZE, "%s", instanceId);
     if (state) snprintf(out->state, CHAR_BUFFER_SIZE, "%s", state);
-    if (manifest) snprintf(out->manifest, 32768, "%s", manifest);
   }
   return(0);
 }

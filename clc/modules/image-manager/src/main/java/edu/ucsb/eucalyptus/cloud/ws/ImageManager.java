@@ -138,7 +138,7 @@ public class ImageManager {
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
     }
-    VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId( ), vmInfo.getKernelId( ), vmInfo.getRamdiskId( ), diskUrl, null, null, productCodes );
+    VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId( ), vmInfo.getKernelId( ), vmInfo.getRamdiskId( ), diskUrl, null, null, productCodes, vmInfo.getPlatform( ) );
     if( Component.walrus.isLocal( ) ) {
       ArrayList<String> ancestorIds = ImageUtil.getAncestors( vmInfo.getOwnerId( ), diskInfo.getImageLocation( ) );
       vmImgInfo.setAncestorIds( ancestorIds );

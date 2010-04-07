@@ -234,6 +234,7 @@ public class RunningInstancesItemType extends EucalyptusData {
   String kernel;
   String ramdisk;
   boolean monitoring = false;
+  String platform;
 }
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
   String virtualName;

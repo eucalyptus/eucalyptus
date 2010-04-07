@@ -200,11 +200,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         groupNames, groupNamesSize
         );
 
-/* TODO
-	char * bundlingTaskStateName = adb_instanceType_get_bundlingTaskStateName(instance, env);
-	for (i = 0; i<sizeof(
-	outInst->bundling 
-*/
+	strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
 
     axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);
     if (dt!=NULL) {
@@ -688,7 +684,7 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     return status;
 }
 
-int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey, char *cloudPublicKey)
+int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *S3URL, char *userPublicKey)
 {
     axutil_env_t * env  = st->env;
     axis2_stub_t * stub = st->stub;
@@ -707,7 +703,6 @@ int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *
     adb_ncBundleInstanceType_set_filePrefix(request, env, filePrefix);
     adb_ncBundleInstanceType_set_S3URL(request, env, S3URL);
     adb_ncBundleInstanceType_set_userPublicKey(request, env, userPublicKey);
-    adb_ncBundleInstanceType_set_cloudPublicKey(request, env, cloudPublicKey);
     adb_ncBundleInstance_set_ncBundleInstance(input, env, request);
 
     int status = 0;
@@ -771,7 +766,6 @@ int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int
 	      (*outBundleTasks)[i] = malloc(sizeof(bundleTask));
 	      snprintf( (*outBundleTasks)[i]->instanceId, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_instanceId(bundle, env));
 	      snprintf( (*outBundleTasks)[i]->state, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_state(bundle, env));
-	      snprintf( (*outBundleTasks)[i]->manifest, 32768, "%s", adb_bundleTaskType_get_manifest(bundle, env));
 	    }
         }
     }
