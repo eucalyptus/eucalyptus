@@ -272,6 +272,12 @@ public class VmImageInfo {
   ArrayList<String> ancestorIds = new ArrayList<String>();
   Long size = 0l;
   
+  def VmImageInfo(final imageId, final imageLocation, final productCodes, final platform) {
+    this.imageId = imageId;
+    this.imageLocation = imageLocation;
+    this.productCodes = productCodes;
+    this.platform = platform;
+  }
   def VmImageInfo(final imageId, final kernelId, final ramdiskId, final imageLocation, final kernelLocation, final ramdiskLocation, final productCodes, final platform) {
     this.imageId = imageId;
     this.kernelId = kernelId;

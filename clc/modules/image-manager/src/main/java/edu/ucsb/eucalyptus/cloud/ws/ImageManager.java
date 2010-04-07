@@ -181,65 +181,64 @@ public class ImageManager {
       db.rollback( );
       throw new EucalyptusCloudException( "The requested image is deregistered." );
     }
-
-    String defaultKernelId = null;
-    String defaultRamdiskId = null;
-    try {
-      defaultKernelId = SystemConfiguration.getSystemConfiguration( ).getDefaultKernel( );
-      defaultRamdiskId = SystemConfiguration.getSystemConfiguration( ).getDefaultRamdisk( );
-    } catch ( Exception e1 ) {}
-    String kernelId = ImageUtil.getImageInfobyId( msg.getKernelId( ), diskInfo.getKernelId( ), defaultKernelId );
-    if ( kernelId == null ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "Unable to determine required kernel image." );
-    }
-    boolean nord = ( ImageUtil.isSet( msg.getKernelId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) );
-    nord |= ( !ImageUtil.isSet( msg.getKernelId() ) && ImageUtil.isSet( diskInfo.getKernelId( ) ) && !ImageUtil.isSet( diskInfo.getRamdiskId() ) && !ImageUtil.isSet( msg.getRamdiskId() ) ); 
-    String ramdiskId = nord?null:ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
-
     ImageInfo kernelInfo = null;
-    try {
-      kernelInfo = db.getUnique( new ImageInfo( kernelId ) );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find kernel image: " + kernelId );
-    }
-    if ( !diskInfo.isAllowed( user ) ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "You do not have permission to launch: " + diskInfo.getImageId( ) );
-    }
-    if ( !kernelInfo.isAllowed( user ) ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "You do not have permission to launch: " + kernelInfo.getImageId( ) );
-    }
     ImageInfo ramdiskInfo = null;
-    if ( ramdiskId != null ) {
+    if( !ImageManager.IMAGE_PLATFORM_WINDOWS.equals( diskInfo.getPlatform( ) ) ) {
+      String defaultKernelId = null;
+      String defaultRamdiskId = null;
       try {
-        ramdiskInfo = db.getUnique( new ImageInfo( ramdiskId ) );
+        defaultKernelId = SystemConfiguration.getSystemConfiguration( ).getDefaultKernel( );
+        defaultRamdiskId = SystemConfiguration.getSystemConfiguration( ).getDefaultRamdisk( );
+      } catch ( Exception e1 ) {}
+      String kernelId = ImageUtil.getImageInfobyId( msg.getKernelId( ), diskInfo.getKernelId( ), defaultKernelId );
+      if ( kernelId == null ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "Unable to determine required kernel image." );
+      }
+      boolean nord = ( ImageUtil.isSet( msg.getKernelId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) );
+      nord |= ( !ImageUtil.isSet( msg.getKernelId() ) && ImageUtil.isSet( diskInfo.getKernelId( ) ) && !ImageUtil.isSet( diskInfo.getRamdiskId() ) && !ImageUtil.isSet( msg.getRamdiskId() ) ); 
+      String ramdiskId = nord?null:ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
+  
+      try {
+        kernelInfo = db.getUnique( new ImageInfo( kernelId ) );
       } catch ( EucalyptusCloudException e ) {
         db.rollback( );
-        throw new EucalyptusCloudException( "Failed to find ramdisk image: " + ramdiskId );
+        throw new EucalyptusCloudException( "Failed to find kernel image: " + kernelId );
       }
-      if ( !ramdiskInfo.isAllowed( user ) ) {
+      if ( !diskInfo.isAllowed( user ) ) {
         db.rollback( );
-        throw new EucalyptusCloudException( "You do not have permission to launch: " + ramdiskInfo.getImageId( ) );
+        throw new EucalyptusCloudException( "You do not have permission to launch: " + diskInfo.getImageId( ) );
       }
+      if ( !kernelInfo.isAllowed( user ) ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "You do not have permission to launch: " + kernelInfo.getImageId( ) );
+      }
+      if ( ramdiskId != null ) {
+        try {
+          ramdiskInfo = db.getUnique( new ImageInfo( ramdiskId ) );
+        } catch ( EucalyptusCloudException e ) {
+          db.rollback( );
+          throw new EucalyptusCloudException( "Failed to find ramdisk image: " + ramdiskId );
+        }
+        if ( !ramdiskInfo.isAllowed( user ) ) {
+          db.rollback( );
+          throw new EucalyptusCloudException( "You do not have permission to launch: " + ramdiskInfo.getImageId( ) );
+        }
+      }
+      db.commit( );
+      if( !"kernel".equals( kernelInfo.getImageType( ) ) ) {
+        throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelInfo.toString( ) );
+      }
+      if((ramdiskInfo != null) && !"ramdisk".equals( ramdiskInfo.getImageType( ) ) ) {
+        throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskInfo.toString( ) );
+      }
+      ImageUtil.checkStoredImage( kernelInfo );
+      ImageUtil.checkStoredImage( ramdiskInfo );
     }
-    db.commit( );
-    // :: quietly add the ancestor and size information to the vm info object...
-    // this should never fail noisily :://
     ArrayList<String> ancestorIds = ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
     Long imgSize = ImageUtil.getSize( msg.getUserId( ), diskInfo.getImageLocation( ) );
-    if( !"kernel".equals( kernelInfo.getImageType( ) ) ) {
-      throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelInfo.toString( ) );
-    }
-    if((ramdiskInfo != null) && !"ramdisk".equals( ramdiskInfo.getImageType( ) ) ) {
-      throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskInfo.toString( ) );
-    }
-    ImageUtil.checkStoredImage( kernelInfo );
     ImageUtil.checkStoredImage( diskInfo );
-    ImageUtil.checkStoredImage( ramdiskInfo );
-
+    
     // :: get together the required URLs ::/
     VmImageInfo vmImgInfo = ImageUtil.getVmImageInfo( walrusUrl, diskInfo, kernelInfo, ramdiskInfo, productCodes );
     vmImgInfo.setAncestorIds( ancestorIds );

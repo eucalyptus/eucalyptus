@@ -266,15 +266,19 @@ public class ImageUtil {
   }
   public static VmImageInfo getVmImageInfo( final String walrusUrl, final ImageInfo diskInfo, final ImageInfo kernelInfo, final ImageInfo ramdiskInfo, final ArrayList<String> productCodes ) throws EucalyptusCloudException {
     String diskUrl = getImageUrl( walrusUrl, diskInfo );
-    String kernelUrl = getImageUrl( walrusUrl, kernelInfo );
-    String ramdiskUrl = null;
-    if ( ramdiskInfo != null ) ramdiskUrl = getImageUrl( walrusUrl, ramdiskInfo );
-    //:: create the response assets now since we might not have a ramdisk anyway :://
-    VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo.getImageId( ),
-      ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl, ramdiskInfo == null ? null
-                                                                                                     : ramdiskUrl,
-      productCodes, diskInfo.getPlatform( ) );
-    return vmImgInfo;
+    if( !ImageManager.IMAGE_PLATFORM_WINDOWS.equals( diskInfo.getPlatform( ) ) ) {
+      String kernelUrl = getImageUrl( walrusUrl, kernelInfo );
+      String ramdiskUrl = null;
+      if ( ramdiskInfo != null ) ramdiskUrl = getImageUrl( walrusUrl, ramdiskInfo );
+      //:: create the response assets now since we might not have a ramdisk anyway :://
+      VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo.getImageId( ),
+        ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl, ramdiskInfo == null ? null
+                                                                                                       : ramdiskUrl,
+        productCodes, diskInfo.getPlatform( ) );
+      return vmImgInfo;
+    } else { 
+      return new VmImageInfo( diskInfo.getImageId( ), diskUrl, productCodes, diskInfo.getPlatform( ) );
+    }
   }
   public static ImageInfo getImageInfobyId( String searchId ) throws EucalyptusCloudException {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
