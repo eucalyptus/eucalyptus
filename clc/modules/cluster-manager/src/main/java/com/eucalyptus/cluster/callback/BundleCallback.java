@@ -37,7 +37,6 @@ public class BundleCallback extends QueuedEventCallback<BundleInstanceType,Bundl
         VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
         vm.clearPendingBundleTask( );
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).getUserId( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ) );
-        vm.getBundleTask( ).setState( "waiting-for-shutdown" );
       } catch ( NoSuchElementException e1 ) {
       }
     }
