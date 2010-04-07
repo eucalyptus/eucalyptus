@@ -65,5 +65,5 @@ package com.eucalyptus.bootstrap;
 
 
 public enum ConfigurableFieldType {
-  BOOLEAN, KEYVALUE, KEYVALUEHIDDEN
+  BOOLEAN, KEYVALUE, KEYVALUEHIDDEN, PRIVATE
 }
