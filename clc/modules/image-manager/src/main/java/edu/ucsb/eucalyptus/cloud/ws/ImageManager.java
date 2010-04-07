@@ -205,6 +205,7 @@ public class ImageManager {
       throw new EucalyptusCloudException( "You do not have permission to launch: " + kernelInfo.getImageId( ) );
     }
     if( !"kernel".equals( kernelInfo.getImageType( ) ) ) {
+      db.rollback( );
       throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelInfo.toString( ) );
     }
     if( !ImageManager.IMAGE_PLATFORM_WINDOWS.equals( diskInfo.getPlatform( ) ) ) {
@@ -232,6 +233,8 @@ public class ImageManager {
         throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskInfo.toString( ) );
       }
       ImageUtil.checkStoredImage( ramdiskInfo );
+    } else {
+      db.commit( );
     }
     ArrayList<String> ancestorIds = ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
     Long imgSize = ImageUtil.getSize( msg.getUserId( ), diskInfo.getImageLocation( ) );
