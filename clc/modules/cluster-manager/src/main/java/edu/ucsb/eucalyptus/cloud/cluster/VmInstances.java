@@ -144,6 +144,24 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     throw new NoSuchElementException( "Can't find registered object with public ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
   }
 
+  public VmInstance lookupByBundleId ( String bundleId ) throws NoSuchElementException {
+    for( VmInstance vm : this.listValues( ) ) {
+      if( vm.getBundleTask( ) == null ) {
+        continue;
+      } else if( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
+        return vm;
+      }
+    }
+    for( VmInstance vm : this.listDisabledValues( ) ) {
+      if( vm.getBundleTask( ) == null ) {
+        continue;
+      } else if( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
+        return vm;
+      }
+    }
+    throw new NoSuchElementException( "Can't find vm with bundle task id:" + bundleId + " in " + this.getClass( ).getSimpleName( ) );
+  }
+
   public static VmInstance restrictedLookup( String userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
     VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
     if ( !administrator && !vm.getOwnerId( ).equals( userId ) ) {

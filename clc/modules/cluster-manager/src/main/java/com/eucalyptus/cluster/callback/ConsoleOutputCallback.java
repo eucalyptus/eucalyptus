@@ -82,7 +82,6 @@ public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputT
     this.setRequest( msg );
   }
   
-  
   @Override
   public void prepare( GetConsoleOutputType msg ) throws Exception {}
   

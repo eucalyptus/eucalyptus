@@ -100,6 +100,8 @@
         <value name="serviceTag" field="serviceTag" usage="optional"/>
         <value name="userData" field="userData" usage="optional"/>
         <value name="launchIndex" field="launchIndex" usage="optional"/>
+        <value name="platform" field="platform" usage="optional"/>
+        <value name="bundleTaskStateName" field="bundleTaskStateName" usage="optional"/>
         <structure usage="optional">
             <collection field="groupNames" factory="org.jibx.runtime.Utility.arrayListFactory">
                 <value name="groupNames" type="java.lang.String"/>
@@ -177,10 +179,10 @@
 
     <mapping class="edu.ucsb.eucalyptus.cloud.VmImageInfo" abstract="true">
         <value name="imageId" field="imageId" usage="required"/>
-        <value name="kernelId" field="kernelId" usage="required"/>
+        <value name="kernelId" field="kernelId" usage="optional"/>
         <value name="ramdiskId" field="ramdiskId" usage="optional"/>
         <value name="imageURL" field="imageLocation" usage="required"/>
-        <value name="kernelURL" field="kernelLocation" usage="required"/>
+        <value name="kernelURL" field="kernelLocation" usage="optional"/>
         <value name="ramdiskURL" field="ramdiskLocation" usage="optional"/>
     </mapping>
 
