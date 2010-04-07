@@ -20,6 +20,7 @@ public class PasswordDataCallback extends QueuedEventCallback<GetConsoleOutputTy
   public PasswordDataCallback( GetPasswordDataType msg ) {
     this.msg = msg;
     GetConsoleOutputType consoleOutput = new GetConsoleOutputType( ).regarding( msg );
+    consoleOutput.setInstanceId( msg.getInstanceId( ) );
     this.setRequest( consoleOutput );
   }
   
