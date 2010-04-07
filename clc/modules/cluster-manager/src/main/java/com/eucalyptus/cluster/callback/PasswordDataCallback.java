@@ -19,7 +19,7 @@ public class PasswordDataCallback extends QueuedEventCallback<GetConsoleOutputTy
   private final GetPasswordDataType msg;
   public PasswordDataCallback( GetPasswordDataType msg ) {
     this.msg = msg;
-    GetConsoleOutputType consoleOutput = new GetConsoleOutputType( ).regarding( msg );
+    GetConsoleOutputType consoleOutput = new GetConsoleOutputType( ).regardingUserRequest( msg );
     consoleOutput.setInstanceId( msg.getInstanceId( ) );
     this.setRequest( consoleOutput );
   }
@@ -37,10 +37,9 @@ public class PasswordDataCallback extends QueuedEventCallback<GetConsoleOutputTy
     String output = null;
     try {
       output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );
-//for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
       if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
     } catch ( ArrayIndexOutOfBoundsException e1 ) {}
-    GetPasswordDataResponseType rep = msg.getReply( );
+    GetPasswordDataResponseType rep = this.msg.getReply( );
     rep.setInstanceId( this.getRequest( ).getInstanceId( ) );
     rep.setTimestamp( new Date( ) );
     if( vm.getPasswordData( ) != null ) {
