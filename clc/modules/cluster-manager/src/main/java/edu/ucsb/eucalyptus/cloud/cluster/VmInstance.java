@@ -208,16 +208,16 @@ public class VmInstance implements HasName {
   }
   
   public Boolean startBundleTask( BundleTask task ) {
-    if( !this.bundleTask.compareAndSet( null, task, false, true ) ) {
+    if( this.bundleTask.compareAndSet( null, task, false, true ) ) {
+      return true;
+    } else {
       if( this.getBundleTask( ) != null && BundleState.failed.equals( BundleState.valueOf( this.getBundleTask( ).getState( ) ) ) ) {
         this.resetBundleTask( );
         this.bundleTask.set( task, true );
         return true;
       } else {
         return false;
-      }
-    } else {
-      return true;
+      }      
     }
   }
   
@@ -544,7 +544,7 @@ public class VmInstance implements HasName {
                           "VmInstance [imageInfo=%s, instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s, bundleTask=%s]",
                           this.imageInfo, this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.ownerId,
                           this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
-                          this.volumes, LogUtil.dumpObject( this.getBundleTask( ) ) );
+                          this.volumes, this.getBundleTask( )!=null?LogUtil.dumpObject( this.getBundleTask( ) ):"null" );
   }
   
   public void setServiceTag( String serviceTag ) {
