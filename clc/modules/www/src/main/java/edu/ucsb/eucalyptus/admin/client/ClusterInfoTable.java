@@ -122,7 +122,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		this.clusterList.add (new ClusterInfoWeb ("cluster-name", "cc-host", 8774, 10, 4096));
 		//these values are just defaults
-		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, 10, 50, new ArrayList<String>()));
+		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, new ArrayList<String>()));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
@@ -167,7 +167,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		final ArrayList<String> storageParams = storageInfo.getStorageParams();
 		numStorageParams = storageParams.size()/4;
-		Grid g = new Grid (10 +  numStorageParams, 2);
+		Grid g = new Grid (8 +  numStorageParams, 2);
 		g.setStyleName( "euca-table" );
 		if (row > 0) {
 			g.setStyleName( "euca-nonfirst-cluster-entry" );
@@ -290,34 +290,6 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		i++; // next row
 		g.setWidget( i, 1, new Label( "Storage Controller" ));
 
-		i++; // next row
-		g.setWidget( i, 0, new Label( "Max volume size:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox volumeMaxBox = new TextBox();
-		volumeMaxBox.addChangeListener (new ChangeCallback (this, row));
-		volumeMaxBox.setVisibleLength( 5 );
-		volumeMaxBox.setText( "" + storageInfo.getMaxVolumeSizeInGB());
-		volumeMaxBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		final HorizontalPanel volumesMaxPanel = new HorizontalPanel ();
-		volumesMaxPanel.setSpacing(4);
-		volumesMaxPanel.add (volumeMaxBox);
-		volumesMaxPanel.add (new Label ("GB"));
-		g.setWidget( i, 1, volumesMaxPanel );
-
-		i++; // next row
-		g.setWidget( i, 0, new Label( "Disk space reserved for volumes:" ) );
-		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox volumesTotalBox = new TextBox();
-		volumesTotalBox.addChangeListener (new ChangeCallback (this, row));
-		volumesTotalBox.setVisibleLength( 5 );
-		volumesTotalBox.setText( "" + storageInfo.getTotalVolumesSizeInGB());
-		volumesTotalBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		final HorizontalPanel volumesTotalPanel = new HorizontalPanel ();
-		volumesTotalPanel.setSpacing(4);
-		volumesTotalPanel.add (volumesTotalBox);
-		volumesTotalPanel.add (new Label ("GB"));
-		g.setWidget( i, 1, volumesTotalPanel );
-
 		for(int paramidx = 0; paramidx < numStorageParams; ++paramidx) {
 			i++; // next row
 			if ("KEYVALUE".equals(storageParams.get(4 * paramidx))) {
@@ -412,12 +384,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		cluster.setMaxVlans(Integer.parseInt(((TextBox)p.getWidget(2)).getText()));
 		//7 is SC label
 		// SC section
-		p = (HorizontalPanel)g.getWidget(8, 1);
-		storage.setMaxVolumeSizeInGB (Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
-		p = (HorizontalPanel)g.getWidget(9, 1);
-		storage.setTotalVolumesSizeInGB((Integer.parseInt(((TextBox)p.getWidget(0)).getText())));
-
-		int widgetStartIndex = 10;
+		int widgetStartIndex = 8;
 		ArrayList<String> storageParams = storage.getStorageParams();
 		for(int i = 0; i < numStorageParams; ++i) {
 			if(storageParams.get(4*i).startsWith("KEYVALUE"))

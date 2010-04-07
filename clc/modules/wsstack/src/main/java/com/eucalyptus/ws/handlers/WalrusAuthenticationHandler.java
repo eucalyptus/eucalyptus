@@ -191,13 +191,19 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			if(!valid) {
 				throw new AuthenticationException( "User authentication failed." );
 			}
+			String effectiveUserID = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaEffectiveUserId.toString());
 			try {
-				User user = CredentialProvider.getUser( "admin" );
-				user.setIsAdministrator(true);
+				User user = null;
+				if(effectiveUserID != null) {
+					user = CredentialProvider.getUserFromQueryId(effectiveUserID);
+				} else {
+					user = CredentialProvider.getUser( "admin" );
+					user.setIsAdministrator(true);
+				}
 				httpRequest.setUser( user );
 			} catch (NoSuchUserException e) {
 				throw new AuthenticationException( "User authentication failed." );
-			}  
+			}
 		}  else {
 			//external user request
 			String content_md5 = httpRequest.getAndRemoveHeader("Content-MD5");
