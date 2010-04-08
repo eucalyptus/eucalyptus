@@ -437,11 +437,11 @@ static void * bundling_thread (void *arg)
 	logprintfl (EUCAINFO, "bundling_thread: started bundling instance %s\n", instance->instanceId);
 
 	char dstDiskPath[MAX_PATH];
-	snprintf(dstDiskPath, MAX_PATH, "%s/disk", params->workPath);
+	snprintf(dstDiskPath, MAX_PATH, "%s/%s/%s/%s", scGetInstancePath(), params->instance->userId, params->instance->instanceId, params->filePrefix);
 
-	int rc = rename(params->diskPath, dstDiskPath); // move disk to working directory
+	int rc = rename(params->diskPath, dstDiskPath); // rename disk file to match input 'filePrefix'
 	if (rc) {
-		logprintfl(EUCAERROR, "bundling_thread: could not rename '%s' to speficied filePrefix '%s'\n", params->diskPath, dstDiskPath);
+		logprintfl(EUCAERROR, "bundling_thread: could not rename '%s' to specified filePrefix '%s'\n", params->diskPath, dstDiskPath);
 	} else {
 		// USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
 		char cmd[MAX_PATH];

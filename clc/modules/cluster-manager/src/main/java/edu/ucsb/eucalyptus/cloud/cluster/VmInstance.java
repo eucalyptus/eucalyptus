@@ -169,7 +169,7 @@ public class VmInstance implements HasName {
         BundleState current = BundleState.valueOf( this.getBundleTask( ).getState( ) );
         if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) ) {
           return; //already finished, wait and timeout the state along with the instance.
-        } else if ( BundleState.storing.equals( next ) ) {
+        } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
           this.getBundleTask( ).setState( next.name( ) );
           LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ), this.getBundleTask( ).getState( ) ) );
           this.getBundleTask( ).setUpdateTime( new Date( ) );
@@ -345,7 +345,7 @@ public class VmInstance implements HasName {
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
     if( this.getBundleTaskState( ) != null && !BundleState.none.equals( this.getBundleTaskState( ) ) ) {
       runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
-      runningInstance.setStateCode( VmState.TERMINATED.getName( ) );
+      runningInstance.setStateName( VmState.TERMINATED.getName( ) );
     } else {
       runningInstance.setStateCode( Integer.toString( this.state.getCode( ) ) );
       runningInstance.setStateName( this.state.getName( ) );
