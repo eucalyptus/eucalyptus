@@ -104,25 +104,51 @@ public class ComponentType extends EucalyptusData {
   }
   public ComponentType( ) {}  
 }
+public class ComponentProperty extends EucalyptusData {
+  private String type;
+  private String displayName;
+  private String value;
+  private String qualifiedName;
+		
+  public ComponentProperty(String type, String displayName, String value, String qualifiedName) {
+    this.type = type;
+	this.displayName = displayName;
+	this.value = value;
+	this.qualifiedName = qualifiedName;
+  }	
+  public String getType() {
+	return type;
+  }
+  public void setType(String type) {
+	this.type = type;
+  }
+  public String getQualifiedName() {
+	return qualifiedName;
+  }
+  public void setQualifiedName(String qualifiedName) {
+	this.qualifiedName = qualifiedName;
+  }
+  public String getDisplayName() {
+	return displayName;
+  }
+  public void setDisplayName(String displayName) {
+	this.displayName = displayName;
+  }
+  public String getValue() {
+	return value;
+  }
+  public void setValue(String value) {
+	this.value = value;
+  }	
+}
 public class StorageStateType extends EucalyptusMessage{
   private String name;
-  private String volumesPath;
-  private Integer maxVolumeSizeInGB;
-  private Integer totalVolumesSizeInGB;
-  private String storageInterface;
-  private Boolean zeroFillVolumes;
   
   def StorageStateType() {
   }
   
-  def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
-  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes) {
+  def StorageStateType(final name) {
     this.name = name;
-    this.volumesPath = volumesPath;
-    this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-    this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-    this.storageInterface = storageInterface;
-    this.zeroFillVolumes = zeroFillVolumes;
   }
 }
 

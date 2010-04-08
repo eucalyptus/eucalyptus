@@ -61,6 +61,10 @@ permission notice:
 #define INCLUDE_MISC_H
 
 #include <stdarg.h>
+#include <linux/limits.h>
+#ifndef MAX_PATH
+#define MAX_PATH 4096
+#endif
 
 #ifndef NO_AXIS /* for compiling on systems without Axis */
 #include <neethi_policy.h>
@@ -87,13 +91,14 @@ int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile);
   }
 
 #define SP(a) a ? a : "UNSET"
+#define RANDALPHANUM rand()%2 ? rand()%26+97 : rand()%2 ? rand()%26+65 : rand()%10+48
 
 enum {EUCADEBUG2, EUCADEBUG, EUCAINFO, EUCAWARN, EUCAERROR, EUCAFATAL};
 
 char * replace_string (char ** stringp, char * source, char * destination );
 int sscanf_lines (char * lines, char * format, void * varp);
 char * system_output (char * shell_command );
-char *getConfString(char configFiles[][1024], int numFiles, char *key);
+char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
 
 /**
  * Search in file #path# for a variable named #name#. It will put

@@ -24,7 +24,7 @@ public class HttpWriter extends HttpTransfer {
 		}
 	}
 
-	public HttpWriter(String httpVerb, File file, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
+	public HttpWriter(String httpVerb, File file, String size, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
 		httpClient = new HttpClient();
 		String walrusAddr = StorageProperties.WALRUS_URL;
 		if(walrusAddr != null) {
@@ -46,7 +46,7 @@ public class HttpWriter extends HttpTransfer {
 			method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
 			if(method != null) {
 				method.setRequestHeader("Transfer-Encoding", "chunked");
-				method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), String.valueOf(file.length()));
+				method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), size);
 				((PutMethodWithProgress)method).setOutFile(file);
 				((PutMethodWithProgress)method).setCallBack(callback);
 			}

@@ -460,7 +460,7 @@ public class WalrusManager {
 						searchObject.setDeleted(false);
 						List<ObjectInfo> objectInfos = dbObject.query(searchObject);
 						if (objectInfos.size() == 0) {
-							// asychronously flush any images in this bucket
+							//check if the bucket contains any images
 							EntityWrapper<ImageCacheInfo> dbIC = db
 							.recast(ImageCacheInfo.class);
 							ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
@@ -469,10 +469,8 @@ public class WalrusManager {
 							.query(searchImageCacheInfo);
 
 							if (foundImageCacheInfos.size() > 0) {
-								ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos
-								.get(0);
-								walrusImageManager.startImageCacheFlusher(bucketName,
-										foundImageCacheInfo.getManifestName());
+								db.rollback();
+								throw new BucketNotEmptyException(bucketName, logData);
 							}
 
 							db.delete(bucketFound);
@@ -1471,7 +1469,7 @@ public class WalrusManager {
 								contents.add(listEntry);
 							}
 							reply.setContents(contents);
-							if (prefix != null) {
+							if (prefixes.size() > 0) {
 								reply.setCommonPrefixes(prefixes);
 							}
 						}
