@@ -72,7 +72,7 @@ import edu.ucsb.eucalyptus.msgs.EventRecord;
 public enum SubDirectory {
   DB( BaseDirectory.VAR, "db" ),
   MODULES( BaseDirectory.VAR, "modules" ),
-  SERVICES( BaseDirectory.VAR, "services" ),
+/* TODO: wtf is this? SERVICES( BaseDirectory.VAR, "services" ),*/  
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
