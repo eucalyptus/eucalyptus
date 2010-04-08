@@ -3392,7 +3392,7 @@ void invalidate_instanceCache(void) {
   for (i=0; i<MAXINSTANCES; i++) {
     // if instance is in teardown, free up network information
     if ( !strcmp(instanceCache->instances[i].state, "Teardown") ) {
-
+      free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan);
     }
     if ( (instanceCache->cacheState[i] == INSTVALID) && ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout)) {
       logprintfl(EUCADEBUG, "invalidate_instanceCache(): invalidating instance '%s' (last seen %d seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
