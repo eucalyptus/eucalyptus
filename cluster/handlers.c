@@ -1731,16 +1731,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	logprintfl(EUCAERROR, "RunInstances(): scheduler could not find resource to run the instance on\n");
 	// couldn't run this VM, remove networking information from system
 	free_instanceNetwork(mac, vlan);
-	/*
-	sem_mywait(VNET);
-	
-	vnetDisableHost(vnetconfig, mac, NULL, 0);
-	if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-	  vnetDelHost(vnetconfig, mac, NULL, vlan);
-	}
-	
-	sem_mypost(VNET);
-	*/
       } else {
 	int pid, status, ret, rbytes;
 	int filedes[2];
@@ -1803,14 +1793,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  i--;
 	  // couldn't run this VM, remove networking information from system
 	  free_instanceNetwork(mac, vlan);
-	  /*
-	  sem_mywait(VNET);
-	  vnetDisableHost(vnetconfig, mac, NULL, 0);
-	  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-	    vnetDelHost(vnetconfig, mac, NULL, vlan);
-	  }
-	  sem_mypost(VNET);
-	  */
 	} else {
 	  res->availMemory -= ccvm->mem;
 	  res->availDisk -= ccvm->disk;
@@ -2140,17 +2122,6 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       }
       
       rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan);
-      /*
-      // remove private network info from system
-      sem_mywait(VNET);
-      
-      vnetDisableHost(vnetconfig, myInstance->ccnet.privateMac, NULL, 0);
-      if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-	vnetDelHost(vnetconfig, myInstance->ccnet.privateMac, NULL, myInstance->ccnet.vlan);
-      }
-      
-      sem_mypost(VNET);
-      */
       
       free(myInstance);
     } else {
