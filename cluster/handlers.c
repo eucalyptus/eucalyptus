@@ -1559,14 +1559,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	// could not find resource
 	logprintfl(EUCAERROR, "RunInstances(): scheduler could not find resource to run the instance on\n");
 	// couldn't run this VM, remove networking information from system
-	sem_mywait(VNET);
-	
-	vnetDisableHost(vnetconfig, mac, NULL, 0);
-	if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-	  vnetDelHost(vnetconfig, mac, NULL, vlan);
-	}
-	
-	sem_mypost(VNET);
+	free_instanceNetwork(mac, vlan);
       } else {
 	int pid, status, ret, rbytes;
 	int filedes[2];
@@ -1627,12 +1620,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  res->state = RESDOWN;
 	  i--;
 	  // couldn't run this VM, remove networking information from system
-	  sem_mywait(VNET);
-	  vnetDisableHost(vnetconfig, mac, NULL, 0);
-	  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-	    vnetDelHost(vnetconfig, mac, NULL, vlan);
-	  }
-	  sem_mypost(VNET);
+	  free_instanceNetwork(mac, vlan);
 	} else {
 	  res->availMemory -= ccvm->mem;
 	  res->availDisk -= ccvm->disk;
@@ -1961,16 +1949,8 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	(*outStatus)[i] = 0;
       }
       
-      // remove private network info from system
-      sem_mywait(VNET);
-      
-      vnetDisableHost(vnetconfig, myInstance->ccnet.privateMac, NULL, 0);
-      if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-	vnetDelHost(vnetconfig, myInstance->ccnet.privateMac, NULL, myInstance->ccnet.vlan);
-      }
-      
-      sem_mypost(VNET);
-      
+      rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan);
+
       free(myInstance);
     } else {
       // instance is not in cache, try all resources
@@ -3023,6 +3003,17 @@ int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPor
   return(0);
 }
 
+int free_instanceNetwork(char *mac, int vlan) {
+  // remove private network info from system
+  sem_mywait(VNET);
+  vnetDisableHost(vnetconfig, mac, NULL, 0);
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    vnetDelHost(vnetconfig, mac, NULL, vlan);
+  }
+  sem_mypost(VNET);
+  return(0);
+}
+
 int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char groupNames[][32], ncVolume *volumes, int volumesSize) {
   if (out != NULL) {
     bzero(out, sizeof(ccInstance));
@@ -3178,6 +3169,9 @@ void invalidate_instanceCache(void) {
   
   sem_mywait(INSTCACHE);
   for (i=0; i<MAXINSTANCES; i++) {
+    if ( !strcmp(instanceCache->instances[i].state, "Teardown") ) {
+
+    }
     if ( (instanceCache->cacheState[i] == INSTVALID) && ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout)) {
       logprintfl(EUCADEBUG, "invalidate_instanceCache(): invalidating instance '%s' (last seen %d seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
       bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
