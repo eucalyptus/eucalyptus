@@ -152,7 +152,7 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   
   public List<X509Certificate> getAllX509Certificates() {
     List<X509Certificate> certs = Lists.newArrayList( this.getX509Certificate() );
-    for( X509Cert c : this.getCertificates() ) {
+    for( X509Cert c : this.getOldCertificates() ) {
       certs.add( X509Cert.toCertificate( c ) );
     }
     return certs;
