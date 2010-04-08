@@ -71,8 +71,8 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadFactory;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -104,7 +104,7 @@ public class Cluster implements HasName {
   public ClusterCredentials getCredentials( ) {
     synchronized ( this ) {
       if ( this.credentials == null ) {
-        EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+        EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
         try {
           this.credentials = credDb.getUnique( new ClusterCredentials( this.configuration.getName( ) ) );
         } catch ( EucalyptusCloudException e ) {

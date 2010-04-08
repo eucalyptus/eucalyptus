@@ -75,7 +75,7 @@ import org.apache.commons.httpclient.HttpStatus;
 import org.apache.log4j.Logger;
 import org.mule.message.ExceptionMessage;
 
-import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.binding.BindingManager;
 
 public class StorageReplyQueue {
 

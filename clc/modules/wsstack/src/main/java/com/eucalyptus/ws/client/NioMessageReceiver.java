@@ -63,9 +63,6 @@
  */
 package com.eucalyptus.ws.client;
 
-import java.util.Iterator;
-import java.util.Map;
-
 import org.apache.log4j.Logger;
 import org.mule.api.component.JavaComponent;
 import org.mule.api.endpoint.InboundEndpoint;
@@ -74,7 +71,6 @@ import org.mule.api.service.Service;
 import org.mule.api.transport.Connector;
 import org.mule.transport.AbstractMessageReceiver;
 import org.mule.transport.ConnectException;
-
 import com.eucalyptus.ws.server.InternalQueryPipeline;
 import com.eucalyptus.ws.server.InternalSoapPipeline;
 import com.eucalyptus.ws.util.PipelineRegistry;

@@ -79,8 +79,8 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
+import com.eucalyptus.entities.VmType;
 import com.eucalyptus.sla.ClusterAllocator;
-import com.eucalyptus.util.DebugUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -88,9 +88,7 @@ import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
@@ -155,7 +153,6 @@ public class ClusterEndpoint implements Startable {
           this.getDescriptionEntry( reply, c, request );
         } catch ( NoSuchElementException e ) {
           if ( clusterName.equals( "coredump" ) ) {
-            DebugUtil.printDebugDetails( );
             reply.getAvailabilityZoneInfo().addAll( this.dumpState() );
           } 
         }

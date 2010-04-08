@@ -81,18 +81,18 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
-import com.eucalyptus.auth.Credentials;
+import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.User;
-import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.MappingHttpResponse;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -168,9 +168,8 @@ public class WalrusImageManager {
 					if(isAdministrator) {
 						try {
 							boolean verified = false;
-							List<String> aliases = CredentialProvider.getAliases();
-							for(String alias : aliases) {
-								X509Certificate cert = CredentialProvider.getCertificate(alias);
+							for(User user:Users.listAllUsers( )) {
+								X509Certificate cert = user.getX509Certificate( );
 								if(cert != null)
 									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								if(verified)
@@ -188,21 +187,17 @@ public class WalrusImageManager {
 						boolean signatureVerified = false;
 						User user = null;
 						try {
-							user = CredentialProvider.getUser( userId );
+							user = Users.lookupUser( userId );
 						} catch ( NoSuchUserException e ) {
 							throw new AccessDeniedException(userId,e);            
 						}         
-						for(X509Cert certInfo: user.getCertificates( )) {
-							try {
-								X509Certificate cert = X509Cert.toCertificate( certInfo );
-								signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
-								if (signatureVerified)
-									break;
-							} catch(Exception ex) {
-								db.rollback();
-								LOG.error(ex, ex);
-								throw new DecryptionFailedException("signature verification");
-							}
+						X509Certificate cert = user.getX509Certificate( );
+						try {
+							signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+						} catch(Exception ex) {
+							db.rollback();
+							LOG.error(ex, ex);
+							throw new DecryptionFailedException("signature verification");
 						}
 						if(!signatureVerified) {
 							throw new NotAuthorizedException("Invalid signature");
@@ -314,7 +309,7 @@ public class WalrusImageManager {
 
 					User user = null;
 					try {
-						user = CredentialProvider.getUser( userId );
+						user = Users.lookupUser( userId );
 					} catch ( NoSuchUserException e ) {
 						throw new AccessDeniedException(userId,e);            
 					}         
@@ -328,21 +323,16 @@ public class WalrusImageManager {
 						throw new DecryptionFailedException("SHA1withRSA not found");
 					}
 
-					for(X509Cert certInfo: user.getCertificates( )) {
-						try {
-							X509Certificate cert = X509Cert.toCertificate( certInfo );
-							PublicKey publicKey = cert.getPublicKey();
-							sigVerifier.initVerify(publicKey);
-							sigVerifier.update((machineConfiguration + image).getBytes());
-							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
-							if (signatureVerified) {
-								break;
-							}
-						} catch(Exception ex) {
-							db.rollback();
-							LOG.error(ex, ex);
-							throw new DecryptionFailedException("signature verification");
-						}
+					X509Certificate cert = user.getX509Certificate( );
+					try {
+						PublicKey publicKey = cert.getPublicKey();
+						sigVerifier.initVerify(publicKey);
+						sigVerifier.update((machineConfiguration + image).getBytes());
+						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+					} catch(Exception ex) {
+						db.rollback();
+						LOG.error(ex, ex);
+						throw new DecryptionFailedException("signature verification");
 					}
 
 					if(!signatureVerified) {

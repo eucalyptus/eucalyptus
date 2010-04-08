@@ -19,7 +19,6 @@ public class DeferredInitializerDiscovery extends ServiceJarDiscovery {
       NeedsDeferredInitialization needsDeferredInit = ( NeedsDeferredInitialization ) candidate.getAnnotation( NeedsDeferredInitialization.class );
       if ( needsDeferredInit.component( ).isEnabled( ) ) {
         DeferredInitializer.getInstance( ).add( candidate );
-        LOG.info( "---> Loading deferred initializer for entry: " + candidate.getName( ) );
         return true;
       }
     }

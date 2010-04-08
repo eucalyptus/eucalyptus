@@ -57,8 +57,7 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
+ *******************************************************************************
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.auth
@@ -66,6 +65,8 @@ package com.eucalyptus.auth
 import java.io.Serializable;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.bouncycastle.util.encoders.UrlBase64;
 import javax.persistence.Entity;
@@ -93,42 +94,74 @@ import javax.persistence.PersistenceContext;
 
 import org.hibernate.sql.Alias
 
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.B64;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @PersistenceContext(name="eucalyptus_auth")
 @Table( name = "auth_users" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class User extends AbstractPersistent implements Serializable {
+public class UserEntity extends AbstractPersistent implements Serializable, User {
   @Column( name = "auth_user_name", unique=true )
-  String userName
+  String name;
   @Column( name = "auth_user_query_id" )
-  String queryId
+  String queryId;
   @Column( name = "auth_user_secretkey" )
-  String secretKey
+  String secretKey;
+  @Column( name = "auth_user_password" )
+  String password;
   @Column( name = "auth_user_is_admin" )
-  Boolean isAdministrator
+  Boolean administrator;
   @Column( name = "auth_user_is_enabled" )
-  Boolean isEnabled;
-  @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
-  @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-  List<X509Cert> certificates = []
-  public User(){
+  Boolean enabled;
+  @Column( name = "auth_user_token" )
+  String  token;
+  @Column( name = "auth_user_certificate" )
+  String certificate;  
+  
+  public UserEntity(){
   }
-  public User( String userName ){
-    this.userName = userName
+  
+  public UserEntity( String userName ){
+    this.name = userName
   }
-  public User( String userName, Boolean isEnabled ){
+  
+  public UserEntity( String userName, Boolean enabled ){
     this(userName);
-    this.isEnabled = isEnabled
+    this.setEnabled( enabled );
+  }
+
+  public void revokeX509Certificate() {
+    this.certificates.clear();
+  }
+  
+  public void revokeSecretKey() {
+    this.setSecretKey( null );
+  }
+  
+  public X509Certificate getX509Certificate() {
+    return this.getCertificate()!=null?PEMFiles.getCert( B64.url.dec( this.getCertificate( ) ) ):null;
+  }
+  
+  public void setX509Certificate( X509Certificate x509 ) {
+    this.setCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
+  }
+  public Boolean isEnabled() {
+    return enabled;
+  }
+  public Boolean isAdministrator() {
+    return administrator;
+  }
+  public BigInteger getNumber() {
+    return new BigInteger( this.getId(), 16 );
   }
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( userName == null ) ? 0 : userName.hashCode( ) );
+    result = prime * result + ( ( name == null ) ? 0 : name.hashCode( ) );
     return result;
   }
   @Override
@@ -137,9 +170,9 @@ public class User extends AbstractPersistent implements Serializable {
     if ( !super.equals( obj ) ) return false;
     if ( getClass( ).is( obj.getClass( ) ) ) return false;
     User other = ( User ) obj;
-    if ( userName == null ) {
-      if ( other.userName != null ) return false;
-    } else if ( !userName.equals( other.userName ) ) return false;
+    if ( name == null ) {
+      if ( other.name != null ) return false;
+    } else if ( !name.equals( other.name ) ) return false;
     return true;
   }  
 }
@@ -159,14 +192,14 @@ public class X509Cert extends AbstractPersistent implements Serializable {
   public X509Cert( String alias ) {
     this.alias = alias
   }
-  public static X509Cert fromCertificate(String alias, X509Certificate x509) {
+  public static X509Cert fromCertificate(X509Certificate x509) {
     X509Cert x = new X509Cert( );
-    x.setAlias(alias);
-    x.setPemCertificate( new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) ) );
+    x.setAlias(x509.getSerialNumber( ).toString());
+    x.setPemCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
     return x;
   }  
   public static X509Certificate toCertificate(X509Cert x509) {
-    return Hashes.getPemCert( UrlBase64.decode( x509.getPemCertificate( ).getBytes( ) ) );
+    return PEMFiles.getCert( B64.url.dec( x509.getPemCertificate( ) ) );
   }  
   
   @Override
@@ -229,3 +262,4 @@ public class ClusterCredentials extends AbstractPersistent implements Serializab
     return true;
   }  
 }
+

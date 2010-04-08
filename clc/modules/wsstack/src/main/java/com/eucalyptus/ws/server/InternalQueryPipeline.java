@@ -67,10 +67,10 @@ import java.util.List;
 
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
-import com.eucalyptus.ws.stages.HmacV2UserAuthenticationStage;
+import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.QueryBindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
@@ -87,7 +87,7 @@ public class InternalQueryPipeline extends FilteredPipeline {
 
   @Override
   protected void addStages( List<UnrollableStage> stages ) {
-    stages.add( new HmacV2UserAuthenticationStage( true ) );
+    stages.add( new HmacUserAuthenticationStage( true ) );
     stages.add( new QueryBindingStage( ) );
   }
 

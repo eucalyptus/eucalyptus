@@ -1,6 +1,5 @@
 package com.eucalyptus.event;
 
-import com.eucalyptus.util.LogUtil;
 
 public abstract class Event {
   private boolean veto;

@@ -63,7 +63,9 @@
  */
 package com.eucalyptus.util;
 
-public class EucalyptusCloudException extends Exception {
+import com.eucalyptus.BaseException;
+
+public class EucalyptusCloudException extends BaseException {
 
   public EucalyptusCloudException( ) {
     super( "Internal Error." );

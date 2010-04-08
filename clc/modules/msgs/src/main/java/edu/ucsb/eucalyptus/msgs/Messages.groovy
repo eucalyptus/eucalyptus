@@ -214,7 +214,7 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
     this.message = message;
   }
   
-  public EucalyptusErrorMessageType(String source, EucalyptusMessage msg, String message) {
+  public EucalyptusErrorMessageType(String source, BaseMessage msg, String message) {
     this(source, message);
     this.correlationId = msg.getCorrelationId();
     this.userId = msg.getUserId();

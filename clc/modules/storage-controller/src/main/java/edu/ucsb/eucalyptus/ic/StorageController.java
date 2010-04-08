@@ -66,10 +66,10 @@
 package edu.ucsb.eucalyptus.ic;
 
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
-import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import org.apache.log4j.Logger;

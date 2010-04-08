@@ -64,10 +64,8 @@
 package com.eucalyptus.ws.server;
 
 import static org.jboss.netty.channel.Channels.pipeline;
-
 import java.net.InetSocketAddress;
 import java.security.GeneralSecurityException;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -76,13 +74,14 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
-
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Depends;
+import com.eucalyptus.bootstrap.DependsRemote;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
-import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.HeartbeatHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
@@ -92,8 +91,9 @@ import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
-@Provides( resource = Resource.RemoteConfiguration )
-@Depends( remote = Component.eucalyptus )
+@Provides(Component.eucalyptus)
+@RunDuring(Bootstrap.Stage.RemoteConfiguration)
+@DependsRemote(Component.eucalyptus)
 @ChannelPipelineCoverage( "all" )
 public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPipelineFactory {
   private static Logger                   LOG = Logger.getLogger( RemoteBootstrapperServer.class );
@@ -117,7 +117,7 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
   }
   
   @Override
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     this.channel = this.bootstrap.bind( new InetSocketAddress( this.port ) );
     LOG.info( "Waiting for system properties before continuing bootstrap." );
     this.channel.getCloseFuture( ).awaitUninterruptibly( );

@@ -63,10 +63,10 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
+import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmTypeVerify {

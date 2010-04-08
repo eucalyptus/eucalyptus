@@ -537,6 +537,7 @@ int java_init(euca_opts *args, java_home_t *data) {
     	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.db=TRACE");
     	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.user=TRACE");
     	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.cc=TRACE");
+    	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.external=TRACE");
     } else {
     	if(args->exhaustive_db_flag) {
         	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.db=TRACE");
@@ -552,6 +553,11 @@ int java_init(euca_opts *args, java_home_t *data) {
         	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.user=TRACE");
     	} else {
         	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.user=FATAL");
+    	}
+    	if(args->exhaustive_external_flag) {
+        	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.external=TRACE");
+    	} else {
+        	JVM_ARG(opt[++x],"-Deuca.log.exhaustive.external=FATAL");
     	}
     }
     JVM_ARG(opt[++x],"-Deuca.log.level=%1$s",GETARG(args,log_level));
