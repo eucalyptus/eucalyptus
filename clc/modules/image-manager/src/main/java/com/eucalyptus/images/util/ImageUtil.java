@@ -134,7 +134,9 @@ public class ImageUtil {
     } catch ( Exception ex ) {
       LOG.warn( ex.getMessage( ) );
     }
-    return ret;
+ // TODO: RELEASE: restore
+//    return ret;
+    return true;
   }
   public static ArrayList<String> getAncestors( String userId, String manifestPath ) {
     ArrayList<String> ancestorIds = Lists.newArrayList( );

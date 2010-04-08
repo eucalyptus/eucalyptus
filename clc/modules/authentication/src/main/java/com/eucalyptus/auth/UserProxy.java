@@ -2,6 +2,7 @@ package com.eucalyptus.auth;
 
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities._anon;
@@ -199,6 +200,10 @@ public class UserProxy implements User {
   @Override
   public String getToken( ) {
     return this.user.getToken( );
+  }
+  @Override
+  public List<X509Certificate> getAllX509Certificates( ) {
+    return this.user.getAllX509Certificates( );
   }
 
     

@@ -94,6 +94,7 @@ import javax.persistence.PersistenceContext;
 
 import org.hibernate.sql.Alias
 
+import com.google.common.collect.Lists;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
@@ -120,6 +121,10 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   String  token;
   @Column( name = "auth_user_certificate" )
   String certificate;  
+  @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
+  @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  List<X509Cert> oldCertificates = []
   
   public UserEntity(){
   }
@@ -134,11 +139,23 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   }
 
   public void revokeX509Certificate() {
-    this.certificates.clear();
+    if( this.getCertificate() != null ) {
+      X509Certificate c = this.getX509Certificate( );
+      this.getOldCertificates( ).add( c );
+      this.setCertificate( null );
+    }
   }
   
   public void revokeSecretKey() {
     this.setSecretKey( null );
+  }
+  
+  public List<X509Certificate> getAllX509Certificates() {
+    List<X509Certificate> certs = Lists.newArrayList( this.getX509Certificate() );
+    for( X509Cert c : this.getCertificates() ) {
+      certs.add( X509Cert.toCertificate( c ) );
+    }
+    return certs;
   }
   
   public X509Certificate getX509Certificate() {
@@ -146,6 +163,7 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   }
   
   public void setX509Certificate( X509Certificate x509 ) {
+    this.revokeX509Certificate();
     this.setCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
   }
   public Boolean isEnabled() {
