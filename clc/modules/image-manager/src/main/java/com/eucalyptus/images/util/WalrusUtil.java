@@ -184,8 +184,11 @@ public class WalrusUtil {
 			throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature because of missing (deleted?) user certificate.", e );
 		}
 		boolean found = false;
-		List<X509Certificate> certs = Lists.newArrayList( user.getX509Certificate( ) );
-		found |= ImageUtil.verifyManifestSignature( signature, user.getX509Certificate( ), machineConfiguration + image );
+		for( X509Certificate x : user.getAllX509Certificates( ) ) {
+		  if( ( found |= ImageUtil.verifyManifestSignature( signature, x, machineConfiguration + image ) ) ) {
+		    break;
+		  }
+		}
 		if ( !found ) throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature." );
 
 		try {
