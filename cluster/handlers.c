@@ -2122,7 +2122,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       }
       
       rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan);
-      
+
       free(myInstance);
     } else {
       // instance is not in cache, try all resources

@@ -144,19 +144,12 @@ public class ComponentProperty extends EucalyptusData {
 }
 public class StorageStateType extends EucalyptusMessage{
   private String name;
-  private String volumesPath;
-  private Integer maxVolumeSizeInGB;
-  private Integer totalVolumesSizeInGB;
   
   def StorageStateType() {
   }
   
-  def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
-  final totalVolumesSizeInGB) {
+  def StorageStateType(final name) {
     this.name = name;
-    this.volumesPath = volumesPath;
-    this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-    this.totalVolumesSizeInGB = totalVolumesSizeInGB;
   }
 }
 

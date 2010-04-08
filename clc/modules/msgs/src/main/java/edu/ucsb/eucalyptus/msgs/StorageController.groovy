@@ -103,20 +103,12 @@ public class GetStorageVolumeResponseType extends StorageResponseType {
 
 public class UpdateStorageConfigurationType extends StorageRequestType {
 	String name;
-	String storageRootDirectory;
-	Integer maxTotalVolumeSize;
-	Integer maxVolumeSize;
-	String storageInterface;
 	ArrayList<ComponentProperty> storageParams;
 
 	def UpdateStorageConfigurationType() {}
 
 	def UpdateStorageConfigurationType(StorageStateType storageState) {
 		this.name = storageState.getName();
-		this.storageRootDirectory = storageState.getVolumesPath();
-		this.maxTotalVolumeSize = storageState.getMaxVolumeSizeInGB();
-		this.maxVolumeSize = storageState.getTotalVolumesSizeInGB();
-		this.storageInterface = storageState.getStorageInterface();
 		this.storageParams = storageState.getStorageParams();
 	}
 }
@@ -135,19 +127,13 @@ public class GetStorageConfigurationType extends StorageRequestType {
 
 public class GetStorageConfigurationResponseType extends StorageResponseType {
 	String name;
-	Integer maxTotalVolumeSize;
-	Integer maxVolumeSize;
 	ArrayList<ComponentProperty> storageParams;
 
 	def GetStorageConfigurationResponseType() {}
 
 	def GetStorageConfigurationResponseType(String name,
-			Integer maxTotalVolumesSize,
-			Integer maxVolumeSize,
 			List<ComponentProperty> storageParams) {
 		this.name = name;
-		this.maxTotalVolumeSize = maxTotalVolumeSize;
-		this.maxVolumeSize = maxVolumeSize;
 		this.storageParams = storageParams;
 	}
 }

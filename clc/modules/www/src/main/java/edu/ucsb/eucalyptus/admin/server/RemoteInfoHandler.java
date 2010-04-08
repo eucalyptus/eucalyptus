@@ -151,8 +151,6 @@ public class RemoteInfoHandler {
 		for(StorageInfoWeb storageControllerWeb : newStorageList) {
 			UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType();
 			updateStorageConfiguration.setName(storageControllerWeb.getName());
-			updateStorageConfiguration.setMaxTotalVolumeSize(storageControllerWeb.getTotalVolumesSizeInGB());
-			updateStorageConfiguration.setMaxVolumeSize(storageControllerWeb.getMaxVolumeSizeInGB());
 			updateStorageConfiguration.setStorageParams(convertStorageProps(storageControllerWeb.getStorageParams()));
 			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, 
 					storageControllerWeb.getHost());
@@ -187,8 +185,6 @@ public class RemoteInfoHandler {
 				try {
 					GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
 					if( c.getName( ).equals( getStorageConfigResponse.getName( ) ) ) {
-						scInfo.setMaxVolumeSizeInGB( getStorageConfigResponse.getMaxVolumeSize( ) );
-						scInfo.setTotalVolumesSizeInGB( getStorageConfigResponse.getMaxTotalVolumeSize( ) );
 						scInfo.setStorageParams(convertStorageParams(getStorageConfigResponse.getStorageParams()));
 					} else {
 						LOG.debug("Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception());
