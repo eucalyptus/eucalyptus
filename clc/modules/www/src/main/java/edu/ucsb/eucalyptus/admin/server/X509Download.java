@@ -166,6 +166,7 @@ public class X509Download extends HttpServlet {
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
       Transactions.one( new UserEntity( userName ), new Tx<User>() {
         public void fire( User user ) throws Throwable {
+          user.revokeX509Certificate( );
           user.setX509Certificate( x509 );        
         }});
     } catch ( Exception e ) {

@@ -62,6 +62,7 @@ package com.eucalyptus.images.util;
 
 import java.io.ByteArrayInputStream;
 import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.List;
 
 import javax.crypto.Cipher;
@@ -183,6 +184,7 @@ public class WalrusUtil {
 			throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature because of missing (deleted?) user certificate.", e );
 		}
 		boolean found = false;
+		List<X509Certificate> certs = Lists.newArrayList( user.getX509Certificate( ) );
 		found |= ImageUtil.verifyManifestSignature( signature, user.getX509Certificate( ), machineConfiguration + image );
 		if ( !found ) throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature." );
 

@@ -356,6 +356,7 @@ public class ImageManager {
       UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) );
       UserGroupEntity group = db.recast( UserGroupEntity.class ).getUnique( new UserGroupEntity( "all" ) );
       imageInfo.getPermissions( ).add( user );
+// TODO: RELEASE: restore
 //      imageInfo.getUserGroups( ).add( group );
       db.commit( );
       LOG.info( "Registering image pk=" + imageInfo.getId( ) + " ownerId=" + user.getUserName( ) );
@@ -450,6 +451,7 @@ public class ImageManager {
         }
       } else if ( request.getLaunchPermission( ) != null ) {
         reply.setRealResponse( reply.getLaunchPermission( ) );
+// TODO: RELEASE: restore
 //        for ( UserGroupEntity userGroup : imgInfo.getUserGroups( ) )
 //          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( userGroup.getName( ) ) );
         for ( UserInfo user : imgInfo.getPermissions( ) )
@@ -513,6 +515,7 @@ public class ImageManager {
       if ( !request.getUserId( ).equals( imgInfo.getImageOwnerId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Not allowed to modify image: " + imgInfo.getImageId( ) );
       imgInfo.getPermissions( ).clear( );
       imgInfo.getPermissions( ).add( db.recast( UserInfo.class ).getUnique( new UserInfo( imgInfo.getImageOwnerId( ) ) ) );
+// TODO: RELEASE: restore
 //      imgInfo.getUserGroups( ).clear( );
 //      imgInfo.getUserGroups( ).add( db.recast( UserGroupEntity.class ).getUnique( UserGroupEntity.named( "all" ) ) );
       db.commit( );

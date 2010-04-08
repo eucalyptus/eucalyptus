@@ -23,6 +23,7 @@ public class Transactions {
       db.rollback( );
       throw new TransactionException( e.getMessage( ), e );
     } catch ( Throwable e ) {
+      db.rollback( );
       LOG.error( e, e );
       throw new TransactionFireException( e.getMessage( ), e );
     }
@@ -67,6 +68,7 @@ public class Transactions {
       db.rollback( );
       throw new TransactionException( e.getMessage( ), e );
     } catch ( Throwable e ) {
+      db.rollback( );
       LOG.error( e, e );
       throw new TransactionFireException( e.getMessage( ), e );
     }
