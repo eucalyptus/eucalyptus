@@ -103,7 +103,6 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getName( );
       try {
         BaseMessage msg = ( BaseMessage ) this.bind( userName, true, httpRequest );
-//        msg.setCorrelationId( httpRequest.getCorrelationId( ) );
         httpRequest.setMessage( msg );
       } catch ( Exception e ) {
         if ( !( e instanceof BindingException ) ) {
