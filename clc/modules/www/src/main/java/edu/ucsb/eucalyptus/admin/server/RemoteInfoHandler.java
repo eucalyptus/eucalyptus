@@ -323,7 +323,7 @@ public class RemoteInfoHandler {
         new Configuration( ).registerComponent( regComponent );
       }
     } catch ( Exception e ) {
-      LOG.error( e );
+      LOG.error( e, e );
       throw new EucalyptusCloudException( "Changing component configurations failed: " + e.getMessage( ), e );
     }
     

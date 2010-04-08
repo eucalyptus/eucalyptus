@@ -154,6 +154,7 @@ public class ReplyQueue {
     EucalyptusErrorMessageType errMsg = null;
     if ( exception != null ) {
       String desc = exception.getMessage( );
+      LOG.error( exception, exception );
       for( Throwable e = exception; e.getCause( ) != null; e = e.getCause( ) ) {
         desc += "\n" + e.getMessage( );
       }

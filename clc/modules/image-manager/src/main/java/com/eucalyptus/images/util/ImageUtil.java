@@ -452,7 +452,7 @@ public class ImageUtil {
     try {
       for ( String execUserId : executable ) {
         if ( "all".equals( execUserId ) ) continue;
-        final UserInfo execUser = db.recast( UserInfo.class ).getUnique( UserInfo.named( execUserId ) );
+        final UserInfo execUser = db.recast( UserInfo.class ).getUnique( new UserInfo( execUserId ) );
         Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.ALL ), new Predicate<ImageInfo>( ) {
           @Override public boolean apply( ImageInfo arg0 ) {
             return arg0.isAllowed( execUser ) || arg0.getPublic( );

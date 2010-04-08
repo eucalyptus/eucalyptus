@@ -77,13 +77,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.UserEntity;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
-import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class X509Download extends HttpServlet {
@@ -151,24 +153,25 @@ public class X509Download extends HttpServlet {
   }
   
   public static byte[] getX509Zip( String userName, String newKeyName ) throws Exception {
-    User user = Users.lookupUser( userName );
     X509Certificate cloudCert = null;
-    X509Certificate x509 = null;
+    final X509Certificate x509;
+    User u = Users.lookupUser( userName );
+    String userAccessKey = u.getQueryId( );
+    String userSecretKey = u.getSecretKey( );
     KeyPair keyPair = null;
     try {
       keyPair = Certs.generateKeyPair( );
       x509 = Certs.generateCertificate( keyPair, userName );
       x509.checkValidity( );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
+      Transactions.one( new UserEntity( userName ), new Tx<User>() {
+        public void fire( User user ) throws Throwable {
+          user.setX509Certificate( x509 );        
+        }});
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
-    }
-    user.setX509Certificate( x509 );
-    String certPem = B64.url.encString( PEMFiles.getBytes( x509 ) );
-    String userAccessKey = user.getQueryId( );
-    String userSecretKey = user.getSecretKey( );
-    
+    }    
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );
     String fingerPrint = Certs.getFingerPrint( keyPair.getPublic( ) );

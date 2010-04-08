@@ -32,8 +32,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
     EntityWrapper<T> db = ServiceConfigurations.getEntityWrapper( );
     T existingName = null;
     try {
-      T searchConfig = ( T ) type.getClass( ).newInstance( );
-      existingName = db.getUnique( searchConfig );
+      existingName = db.getUnique( type );
       db.rollback( );
       return existingName;
     } catch ( Exception e ) {
@@ -62,8 +61,10 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
   public T remove( T t ) throws ServiceRegistrationException {
     EntityWrapper<T> db = ServiceConfigurations.getEntityWrapper( );
     try {
-      T exists = this.lookup( t );
-      db.delete( t );
+      T searchConfig = ( T ) t.getClass( ).newInstance( );
+      searchConfig.setName( t.getName( ) );
+      T exists = db.getUnique( searchConfig );
+      db.delete( exists );
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );

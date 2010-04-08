@@ -74,8 +74,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
@@ -174,7 +172,7 @@ public class UserInfo {
   }
   
   public void setApproved( Boolean approved ) {
-    approved = approved;
+    this.approved = approved;
   }
   
   public String getProjectDescription( ) {
@@ -253,15 +251,4 @@ public class UserInfo {
     return userName.hashCode( );
   }
   
-  public static UserInfo named( String userId ) throws EucalyptusCloudException {
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
-    UserInfo user = null;
-    try {
-      user = db.getUnique( new UserInfo( userId ) );
-      db.commit( );
-    } catch ( Throwable t ) {
-      db.commit( );
-    }
-    return user;
-  }
 }

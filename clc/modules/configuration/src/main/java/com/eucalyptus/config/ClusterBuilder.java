@@ -3,10 +3,10 @@ package com.eucalyptus.config;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.URI;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.SystemCredentialProvider;
@@ -15,11 +15,9 @@ import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.system.SubDirectory;
@@ -28,9 +26,10 @@ import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
-@DiscoverableServiceBuilder(com.eucalyptus.bootstrap.Component.cluster)
+@DiscoverableServiceBuilder( com.eucalyptus.bootstrap.Component.cluster )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class } )
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
+  private static Logger LOG = Logger.getLogger( ClusterBuilder.class );
   @Override
   public Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException {
     if ( !testClusterCredentialsDirectory( name ) ) {
@@ -45,9 +44,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     File keyDir = new File( directory );
     if ( !keyDir.exists( ) ) {
       try {
-        keyDir.mkdir( );
-        keyDir.delete( );
-        return true;
+        return keyDir.mkdir( ) && keyDir.canWrite( );
       } catch ( Exception e ) {
         return false;
       }
@@ -81,19 +78,21 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
       File keyDir = new File( directory );
       Configuration.LOG.info( "creating keys in " + directory );
-      if ( !keyDir.mkdir( ) && !keyDir.exists( ) ) { throw new EucalyptusCloudException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) ); }
+      if ( !keyDir.mkdir( ) && !keyDir.exists( ) ) {
+        throw new EucalyptusCloudException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) );
+      }
       FileWriter out = null;
       try {
         KeyPair clusterKp = Certs.generateKeyPair( );
         X509Certificate clusterX509 = Certs.generateServiceCertificate( clusterKp, "cc-" + config.getName( ) );
         PEMFiles.write( directory + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
         PEMFiles.write( directory + File.separator + "cluster-cert.pem", clusterX509 );
-    
+        
         KeyPair nodeKp = Certs.generateKeyPair( );
         X509Certificate nodeX509 = Certs.generateServiceCertificate( nodeKp, "nc-" + config.getName( ) );
         PEMFiles.write( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
         PEMFiles.write( directory + File.separator + "node-cert.pem", nodeX509 );
-    
+        
         X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
         String hexSig = Hmacs.generateSystemToken( "vtunpass".getBytes( ) );
         PEMFiles.write( SubDirectory.KEYS.toString( ) + File.separator + "cloud-cert.pem", systemX509 );
@@ -101,7 +100,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         out.write( hexSig );
         out.flush( );
         out.close( );
-    
+        
         EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
         ClusterCredentials componentCredentials = new ClusterCredentials( config.getName( ) );
         try {
@@ -120,11 +119,10 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       } catch ( Exception eee ) {
         throw new EucalyptusCloudException( eee );
       } finally {
-        if(out != null)
-        try {
-          out.close();
-        } catch (IOException e) {
-          Configuration.LOG.error(e);
+        if ( out != null ) try {
+          out.close( );
+        } catch ( IOException e ) {
+          LOG.error( e );
         }
       }
     } catch ( EucalyptusCloudException e ) {
@@ -132,7 +130,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     }
     return config;
   }
-
+  
   @Override
   public Boolean checkRemove( String name ) throws ServiceRegistrationException {
     try {
@@ -142,6 +140,5 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       return true;
     }
   }
-
-
+  
 }

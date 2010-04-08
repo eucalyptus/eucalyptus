@@ -41,7 +41,7 @@ public class Accounts {
       public UserInfoType apply( User u ) {
         UserInfo otherInfo;
         try {
-          otherInfo = db.getUnique( UserInfo.named( u.getName( ) ) );
+          otherInfo = db.getUnique( new UserInfo( u.getName( ) ) );
           return new UserInfoType( u, otherInfo.getEmail( ), otherInfo.getConfirmationCode( ) );
         } catch ( EucalyptusCloudException e ) {
           return new UserInfoType( u, null, null );
@@ -89,25 +89,14 @@ public class Accounts {
   public DeleteUserResponseType deleteUser( DeleteUserType request ) throws EucalyptusCloudException {
     DeleteUserResponseType reply = request.getReply( );
     reply.set_return( false );
-    UserInfo userInfo = UserInfo.named( request.getUserName( ) );
-    EntityWrapper<UserInfo> db = EntityWrapper.get( userInfo );
     try {
-      UserInfo deleteUserInfo = db.getUnique( userInfo );
-      db.delete( deleteUserInfo );
-      try {
-        Users.deleteUser( request.getUserName( ) );
-      } catch ( NoSuchUserException e ) {
-        db.rollback( );
-        throw new EucalyptusCloudException( "No such user exists: " + request.getUserName( ), e );
-      } catch ( UnsupportedOperationException e ) {
-        db.rollback( );
-        throw new EucalyptusCloudException( "System is configured to be read only.", e );
-      }
-      db.commit( );
-      reply.set_return( true );
-    } catch ( Exception e1 ) {
-      throw new EucalyptusCloudException( "System is configured to be read only." );
+      Users.deleteUser( request.getUserName( ) );
+    } catch ( NoSuchUserException e ) {
+      throw new EucalyptusCloudException( "No such user exists: " + request.getUserName( ), e );
+    } catch ( UnsupportedOperationException e ) {
+      throw new EucalyptusCloudException( "System is configured to be read only.", e );
     }
+    reply.set_return( true );
     return reply;
   }
   
@@ -119,6 +108,7 @@ public class Accounts {
       for ( User u : ( List<User> ) EnumerationUtils.toList( g.members( ) ) ) {
         groupinfo.getUsers( ).add( u.getName( ) );
       }
+      reply.getGroups( ).add( groupinfo );
     }
     return reply;
   }

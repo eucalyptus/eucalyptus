@@ -5,17 +5,17 @@ from euca_admin import EucaAdmin
 from optparse import OptionParser
 
 SERVICE_PATH = '/services/Configuration'
-class Cluster():
+class StorageController():
   
   
-  def __init__(self, cluster_name=None, host_name=None, port=None):
-    self.cluster_name = cluster_name
+  def __init__(self, storage_name=None, host_name=None, port=None):
+    self.storage_name = storage_name
     self.host_name = host_name
     self.euca = EucaAdmin(path=SERVICE_PATH)
 
           
   def __repr__(self):
-      return 'CLUSTER %s %s' % (self.cluster_name, self.host_name) 
+      return 'CLUSTER %s %s' % (self.storage_name, self.host_name) 
 
   def startElement(self, name, attrs, connection):
       return None
@@ -24,7 +24,7 @@ class Cluster():
     if name == 'euca:detail':
       self.host_name = value
     elif name == 'euca:name':
-      self.cluster_name = value
+      self.storage_name = value
     else:
       setattr(self, name, value)
   
@@ -32,7 +32,7 @@ class Cluster():
     parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
     (options, args) = parser.parse_args()
     try:
-      list = self.euca.connection.get_list('DescribeClusters', {}, [('euca:item', Cluster)])
+      list = self.euca.connection.get_list('DescribeStorageControllers', {}, [('euca:item', StorageController)])
       for i in list:
         print i
     except EC2ResponseError, ex:
@@ -41,27 +41,27 @@ class Cluster():
 
   def get_register_parser(self):
     parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-n","--name",dest="cc_name",help="Name of the cluster.")
-    parser.add_option("-H","--host",dest="cc_host",help="Hostname of the cluster.")
-    parser.add_option("-p","--port",dest="cc_port",type="int",default=8774,help="Port for the cluster.")
+    parser.add_option("-n","--name",dest="sc_name",help="Name of the storage controller.")
+    parser.add_option("-H","--host",dest="sc_host",help="Hostname of the storage.")
+    parser.add_option("-p","--port",dest="sc_port",type="int",default=8773,help="Port for the storage.")
     return parser
 
 
-  def register(self, cc_name, cc_host, cc_port=8773):
+  def register(self, sc_name, sc_host, sc_port=8773):
     try:
-      reply = self.euca.connection.get_object('RegisterCluster', {'Name':cc_name,'Host':cc_host,'Port':cc_port}, BooleanResponse)
+      reply = self.euca.connection.get_object('RegisterStorageController', {'Name':sc_name,'Host':sc_host,'Port':sc_port}, BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
   def get_deregister_parser(self):
     parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-n","--name",dest="cc_name",help="Name of the cluster.")
+    parser.add_option("-n","--name",dest="sc_name",help="Name of the storage controller.")
     return parser
             
-  def deregister(self, cc_name):
+  def deregister(self, sc_name):
     try:
-      reply = self.euca.connection.get_object('DeregisterCluster', {'Name':cc_name},BooleanResponse)
+      reply = self.euca.connection.get_object('DeregisterStorageController', {'Name':sc_name},BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)

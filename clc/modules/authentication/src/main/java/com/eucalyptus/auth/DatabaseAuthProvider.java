@@ -119,6 +119,14 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   @Override
   public User deleteUser( String userName ) throws NoSuchUserException {
     UserEntity user = new UserEntity( userName );
+    EntityWrapper<UserInfo> dbU = EntityWrapper.get( UserInfo.class );
+    try {
+      UserInfo newUserInfo = dbU.getUnique( new UserInfo( userName ) );
+      dbU.delete( newUserInfo );
+      dbU.commit( );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }    
     EntityWrapper<User> db = Authentication.getEntityWrapper( );
     try {
       User foundUser = db.getUnique( user );

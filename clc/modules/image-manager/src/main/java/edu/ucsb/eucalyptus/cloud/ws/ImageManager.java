@@ -128,7 +128,7 @@ public class ImageManager {
 
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
-      diskInfo = db.getUnique( ImageInfo.named( vmInfo.getImageId( ) ) );
+      diskInfo = db.getUnique( new ImageInfo( vmInfo.getImageId( ) ) );
       for ( ProductCode p : diskInfo.getProductCodes( ) ) {
         productCodes.add( p.getValue( ) );
       }
@@ -512,7 +512,7 @@ public class ImageManager {
 
       if ( !request.getUserId( ).equals( imgInfo.getImageOwnerId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Not allowed to modify image: " + imgInfo.getImageId( ) );
       imgInfo.getPermissions( ).clear( );
-      imgInfo.getPermissions( ).add( db.recast( UserInfo.class ).getUnique( UserInfo.named( imgInfo.getImageOwnerId( ) ) ) );
+      imgInfo.getPermissions( ).add( db.recast( UserInfo.class ).getUnique( new UserInfo( imgInfo.getImageOwnerId( ) ) ) );
 //      imgInfo.getUserGroups( ).clear( );
 //      imgInfo.getUserGroups( ).add( db.recast( UserGroupEntity.class ).getUnique( UserGroupEntity.named( "all" ) ) );
       db.commit( );

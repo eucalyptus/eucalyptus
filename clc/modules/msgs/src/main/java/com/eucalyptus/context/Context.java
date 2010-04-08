@@ -73,7 +73,7 @@ public class Context {
   
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_EVENT, this.correlationId, event.getService( ).getName( ) ) );
+      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_EVENT, this.correlationId, event ) );
       this.muleEvent = new WeakReference<MuleEvent>( event );
     }
   }

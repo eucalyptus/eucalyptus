@@ -50,15 +50,15 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
       ServiceConfiguration existingName = this.lookupByHost( name );
       throw new EucalyptusCloudException( "Component with name=" + name + " already exists at host=" + existingName.getHostName( ) );      
     } catch( EucalyptusCloudException e ) {
-      throw new ServiceRegistrationException( e );
-    } catch ( Exception e1 ) {
       try {
         ServiceConfiguration existingHost = this.lookupByHost( host );
         throw new EucalyptusCloudException( "Component with host=" + name + " already exists with name=" + existingHost.getHostName( ) );
-      } catch( EucalyptusCloudException e ) {
-        throw new ServiceRegistrationException( e );
-      } catch ( Exception e ) {
+      } catch( EucalyptusCloudException e1 ) {
+      } catch ( Exception e1 ) {
+        throw new ServiceRegistrationException( e1 );
       }      
+    } catch ( Exception e ) {
+      throw new ServiceRegistrationException( e );
     }
     return true;
   }
@@ -73,7 +73,7 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   @Override
   public ServiceConfiguration add( URI uri ) throws ServiceRegistrationException {
     try {
-      if( NetworkUtil.testLocal( uri.getHost( ) ) ) {
+      if( "vm".equals( uri.getScheme( ) ) || NetworkUtil.testLocal( uri.getHost( ) ) ) {
         return new LocalConfiguration( this.getComponent( ).getPeer( ), uri );      
       } else {
         return new RemoteConfiguration( this.getComponent( ).getPeer( ), uri );

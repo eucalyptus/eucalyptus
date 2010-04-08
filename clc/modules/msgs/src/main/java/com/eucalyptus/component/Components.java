@@ -81,19 +81,7 @@ public class Components {
   }
   
   static <T extends ComponentInformation> void register( T componentInfo ) {
-    if ( contains( componentInfo.getClass( ), componentInfo.getName( ) ) ) {
-      try {
-        com.eucalyptus.bootstrap.Component c = com.eucalyptus.bootstrap.Component.valueOf( componentInfo.getName( ) );
-        throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Missing entry for component '" + componentInfo.getName( )
-                                             + "' info type: " + componentInfo.getClass( ).getSimpleName( ) + " as "
-                                             + getRealType( componentInfo.getClass( ) ) );
-      } catch ( Exception e ) {
-        throw BootstrapException.throwFatal(
-                                             "Failed bootstrapping component registry.  Missing entry for component '" + componentInfo.getName( )
-                                                 + "' info type: " + componentInfo.getClass( ).getSimpleName( ) + " as "
-                                                 + getRealType( componentInfo.getClass( ) ), e );
-      }
-    } else {
+    if ( !contains( componentInfo.getClass( ), componentInfo.getName( ) ) ) {
       LOG.info( EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ) );
       Components.put( componentInfo );
     }

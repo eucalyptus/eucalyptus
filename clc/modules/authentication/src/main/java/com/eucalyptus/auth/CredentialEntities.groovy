@@ -118,11 +118,8 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   Boolean enabled;
   @Column( name = "auth_user_token" )
   String  token;
-  
-  @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
-  @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-  List<X509Cert> certificates = [];
+  @Column( name = "auth_user_certificate" )
+  String certificate;  
   
   public UserEntity(){
   }
@@ -145,15 +142,11 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   }
   
   public X509Certificate getX509Certificate() {
-    if( certificates.size( ) > 1 ) {
-      certificates.removeAll( certificates.subList( 1, certificates.size() ) );
-    }
-    return certificates.isEmpty()?null:X509Cert.toCertificate(certificates[0]);
+    return this.getCertificate()!=null?PEMFiles.getCert( B64.url.dec( this.getCertificate( ) ) ):null;
   }
   
   public void setX509Certificate( X509Certificate x509 ) {
-    this.certificates.clear();
-    this.certificates.add( X509Cert.fromCertificate( x509 ) );
+    this.setCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
   }
   public Boolean isEnabled() {
     return enabled;

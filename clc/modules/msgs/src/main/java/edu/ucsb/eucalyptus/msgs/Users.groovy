@@ -13,9 +13,9 @@ public class UserInfoType extends EucalyptusData {
   Boolean enabled = Boolean.FALSE;
   String distinguishedName;
   String certificateSerial;
-  ArrayList<String> groups = new ArrayList<String>();
   String certificateCode;
   String confirmationCode;
+  ArrayList<String> groups = new ArrayList<String>();
   
   public UserInfoType( User u, String email, String confirmationCode ) {
     this.userName = u.getName();

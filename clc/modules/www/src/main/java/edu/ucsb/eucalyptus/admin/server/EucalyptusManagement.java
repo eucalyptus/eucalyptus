@@ -119,12 +119,12 @@ public class EucalyptusManagement {
 	/* TODO: for now 'pattern' is ignored and all users are returned */
 	public static List <UserInfoWeb> getWebUsers (String pattern) throws SerializableException
 	{
-    final EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>();
+    final EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get( UserInfo.class );
 	  List<UserInfoWeb> webUsersList = Lists.transform( Users.listAllUsers( ), new Function<User,UserInfoWeb>() {
       @Override
       public UserInfoWeb apply( User u ) {
         try {
-          UserInfo userInfo = dbWrapper.getUnique( UserInfo.named( u.getName( ) ) );
+          UserInfo userInfo = dbWrapper.getUnique( new UserInfo( u.getName( ) ) );
           return Composites.composeNew( UserInfoWeb.class, userInfo, u );
         } catch ( Exception e ) {
           return new UserInfoWeb();

@@ -35,7 +35,7 @@ public class CompositeHelper<T> {
         }
       }
     }
-    dest.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each { LOG.debug("${dest.class.name}.${it.name} = ${dest[it.name]}"); }
+    dest.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each { LOG.debug("${dest.class.simpleName}.${it.name} = ${dest[it.name]}"); }
     return dest;
   }
   
