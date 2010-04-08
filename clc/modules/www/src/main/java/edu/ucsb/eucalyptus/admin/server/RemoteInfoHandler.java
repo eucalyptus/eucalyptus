@@ -88,6 +88,7 @@ import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
 import edu.ucsb.eucalyptus.msgs.DeregisterStorageControllerType;
@@ -147,11 +148,7 @@ public class RemoteInfoHandler {
     for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
       UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
       updateStorageConfiguration.setName( storageControllerWeb.getName( ) );
-      updateStorageConfiguration.setMaxTotalVolumeSize( storageControllerWeb.getTotalVolumesSizeInGB( ) );
-      updateStorageConfiguration.setMaxVolumeSize( storageControllerWeb.getMaxVolumeSizeInGB( ) );
-      updateStorageConfiguration.setStorageInterface( storageControllerWeb.getStorageInterface( ) );
-      updateStorageConfiguration.setStorageRootDirectory( storageControllerWeb.getVolumesPath( ) );
-      updateStorageConfiguration.setZeroFillVolumes( storageControllerWeb.getZeroFillVolumes( ) );
+      updateStorageConfiguration.setStorageParams( convertStorageProps( storageControllerWeb.getStorageParams( ) ) );
       Dispatcher scDispatch = ServiceDispatcher.lookup( Component.storage, storageControllerWeb.getHost( ) );
       if ( Component.eucalyptus.isLocal( ) ) {
         updateStorageConfiguration.setName( StorageProperties.SC_LOCAL_NAME );
@@ -184,11 +181,7 @@ public class RemoteInfoHandler {
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
           if ( c.getName( ).equals( getStorageConfigResponse.getName( ) ) ) {
-            scInfo.setVolumesPath( getStorageConfigResponse.getStorageRootDirectory( ) );
-            scInfo.setMaxVolumeSizeInGB( getStorageConfigResponse.getMaxVolumeSize( ) );
-            scInfo.setTotalVolumesSizeInGB( getStorageConfigResponse.getMaxTotalVolumeSize( ) );
-            scInfo.setStorageInterface( getStorageConfigResponse.getStorageInterface( ) );
-            scInfo.setZeroFillVolumes( getStorageConfigResponse.getZeroFillVolumes( ) );
+            scInfo.setStorageParams( convertStorageParams( getStorageConfigResponse.getStorageParams( ) ) );
           } else {
             LOG.debug( "Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception( ) );
             LOG.debug( "Expected configuration for SC related to CC: " + LogUtil.dumpObject( c ) );
@@ -328,4 +321,23 @@ public class RemoteInfoHandler {
     }
     
   }
+  private static ArrayList<String> convertStorageParams( ArrayList<ComponentProperty> properties ) {
+    ArrayList<String> params = new ArrayList<String>( );
+    for ( ComponentProperty property : properties ) {
+      params.add( property.getType( ) );
+      params.add( property.getDisplayName( ) );
+      params.add( property.getValue( ) );
+      params.add( property.getQualifiedName( ) );
+    }
+    return params;
+  }
+  
+  private static ArrayList<ComponentProperty> convertStorageProps( ArrayList<String> params ) {
+    ArrayList<ComponentProperty> props = new ArrayList<ComponentProperty>( );
+    for ( int i = 0; i < ( params.size( ) / 4 ); ++i ) {
+      props.add( new ComponentProperty( params.get( 4 * i ), params.get( 4 * i + 1 ), params.get( 4 * i + 2 ), params.get( 4 * i + 3 ) ) );
+    }
+    return props;
+  }
+
 }
