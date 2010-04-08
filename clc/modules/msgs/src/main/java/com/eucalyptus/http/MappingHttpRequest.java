@@ -73,6 +73,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class MappingHttpRequest extends MappingHttpMessage implements HttpRequest {
   
@@ -127,6 +128,14 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.formFields = null;
     super.setMessage( source );
     this.addHeader( HttpHeaders.Names.HOST, host + ":" + port );
+  }
+  
+  @Override
+  public void setMessage( Object message ) {
+    if( message instanceof BaseMessage ) {
+      ((BaseMessage)message).setCorrelationId( this.getCorrelationId( ) );
+    }
+    super.setMessage( message );
   }
 
   public String getServicePath( ) {
