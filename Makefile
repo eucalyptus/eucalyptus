@@ -57,7 +57,7 @@ install: deploy
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
 uninstall:
-	@$(RM) -f $(etcdir)/eucalyptus/eucalyptus-version
+	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus-version
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 

@@ -106,78 +106,50 @@ public class ComponentType extends EucalyptusData {
   }
   public ComponentType( ) {}  
 }
-
 public class ComponentProperty extends EucalyptusData {
-	private String type;
-	private String key;
-	private String value;
-	
-	
-	public ComponentProperty(String type, String key, String value) {
-		this.type = type;
-		this.key = key;
-		this.value = value;
-	}
-	
-	public String getType() {
-		return type;
-	}
-	public void setType(String type) {
-		this.type = type;
-	}
-	public String getKey() {
-		return key;
-	}
-	public void setKey(String key) {
-		this.key = key;
-	}
-	public String getValue() {
-		return value;
-	}
-	public void setValue(String value) {
-		this.value = value;
-	}	
+  private String type;
+  private String displayName;
+  private String value;
+  private String qualifiedName;
+		
+  public ComponentProperty(String type, String displayName, String value, String qualifiedName) {
+    this.type = type;
+	this.displayName = displayName;
+	this.value = value;
+	this.qualifiedName = qualifiedName;
+  }	
+  public String getType() {
+	return type;
+  }
+  public void setType(String type) {
+	this.type = type;
+  }
+  public String getQualifiedName() {
+	return qualifiedName;
+  }
+  public void setQualifiedName(String qualifiedName) {
+	this.qualifiedName = qualifiedName;
+  }
+  public String getDisplayName() {
+	return displayName;
+  }
+  public void setDisplayName(String displayName) {
+	this.displayName = displayName;
+  }
+  public String getValue() {
+	return value;
+  }
+  public void setValue(String value) {
+	this.value = value;
+  }	
 }
-
 public class StorageStateType extends EucalyptusMessage{
   private String name;
-  private String volumesPath;
-  private Integer maxVolumeSizeInGB;
-  private Integer totalVolumesSizeInGB;
-  private String storageInterface;
-  private Boolean zeroFillVolumes;
-  private String DASDevice;
-  private ArrayList<ComponentProperty> storageParams;
-
   def StorageStateType() {
   }
   
-  def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
-  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
-  final DASDevice, final List<ComponentProperty> storageParams) {
+  def StorageStateType(final name) {
     this.name = name;
-    this.volumesPath = volumesPath;
-    this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-    this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-    this.storageInterface = storageInterface;
-    this.zeroFillVolumes = zeroFillVolumes;
-    this.DASDevice = DASDevice;
-    this.storageParams = storageParams;
-  }
-
-  def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
-  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
-  final List<ComponentProperty> storageParams) {
-    this.name = name;
-    this.volumesPath = volumesPath;
-    this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-    this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-    this.storageInterface = storageInterface;
-    this.zeroFillVolumes = zeroFillVolumes;
-    this.sanHost = sanHost;
-    this.sanUser = sanUser;
-    this.sanPassword = sanPassword;
-    this.storageParams = storageParams;
   }
 }
 

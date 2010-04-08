@@ -59,70 +59,129 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- *
- * Author: Neil Soman neil@eucalyptus.com
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-
-package edu.ucsb.eucalyptus.storage;
-
-import java.security.PrivateKey;
-import java.security.PublicKey;
-
-import javax.crypto.Cipher;
+package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.X509Cert;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
-public class BlockStorageUtil {
-	private static Logger LOG = Logger.getLogger(BlockStorageUtil.class);
+import javax.persistence.*;
 
-	public static String encryptNodeTargetPassword(String password) throws EucalyptusCloudException {
-		EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
-		try {
-			ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
-			PublicKey ncPublicKey = X509Cert.toCertificate(credentials.getNodeCertificate()).getPublicKey();
-			credDb.commit();
-			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-			cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
-			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
-		} catch ( Exception e ) {
-			LOG.error( "Unable to encrypt storage target password" );
-			credDb.rollback( );
-			throw new EucalyptusCloudException(e.getMessage(), e);
-		}
+@Entity
+@PersistenceContext(name="eucalyptus_storage")
+@Table( name = "das_info" )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@ConfigurableClass(alias = "storage.das", description = "Basic storage controller configuration for DAS.")
+public class
+DASInfo {
+	private static Logger LOG = Logger.getLogger( DASInfo.class );
+
+	@Id
+	@GeneratedValue
+	@Column( name = "storage_das_id" )
+	private Long id = -1l;
+	@Column( name = "storage_name", unique=true)
+	private String name;
+	@ConfigurableField( description = "Direct attached storage device location", displayName = "Direct attached storage device" )
+	@Column(name = "das_device")
+	private String DASDevice;
+
+	public DASInfo(){
+		this.name = StorageProperties.NAME;
 	}
 
-	public static String encryptSCTargetPassword(String password) throws EucalyptusCloudException {
-		PublicKey scPublicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getKeyPair().getPublic();
-		Cipher cipher;
-		try {
-			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-			cipher.init(Cipher.ENCRYPT_MODE, scPublicKey);
-			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
-		} catch (Exception e) {
-			LOG.error("Unable to encrypted storage target password");
-			throw new EucalyptusCloudException(e.getMessage(), e);
-		}
+	public DASInfo( final String name )
+	{
+		this.name = name;
 	}
 
-	public static String decryptSCTargetPassword(String encryptedPassword) throws EucalyptusCloudException {
-		PrivateKey scPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getPrivateKey();
+	public DASInfo(final String name, 
+			final String DASDevice) {
+		this.name = name;
+		this.DASDevice = DASDevice;
+	}
+
+	public Long getId()
+	{
+		return id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getDASDevice() {
+		return DASDevice;
+	}
+
+	public void setDASDevice(String DASDevice) {
+		this.DASDevice = DASDevice;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		DASInfo other = (DASInfo) obj;
+		if (name == null) {
+			if (other.name != null)
+				return false;
+		} else if (!name.equals(other.name))
+			return false;
+		return true;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((name == null) ? 0 : name.hashCode());
+		return result;
+	}
+
+	@Override
+	public String toString()
+	{
+		return this.name;
+	}
+
+	public static DASInfo getStorageInfo() {
+		EntityWrapper<DASInfo> storageDb = new EntityWrapper<DASInfo>(StorageProperties.DB_NAME);
+		DASInfo conf = null;
 		try {
-			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);
-			return new String(cipher.doFinal(Base64.decode(encryptedPassword)));
-		} catch(Exception ex) {
-			LOG.error(ex);
-			throw new EucalyptusCloudException("Unable to decrypt storage target password", ex);
+			conf = storageDb.getUnique(new DASInfo(StorageProperties.NAME));
+			storageDb.commit();
 		}
+		catch ( EucalyptusCloudException e ) {
+			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
+			conf =  new DASInfo(StorageProperties.NAME, 
+					StorageProperties.DAS_DEVICE);
+			storageDb.add(conf);
+			storageDb.commit();
+		}
+		catch (Throwable t) {
+			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
+			storageDb.rollback();
+			return new DASInfo(StorageProperties.NAME, 
+					StorageProperties.DAS_DEVICE);
+		}
+		return conf;
 	}
 }

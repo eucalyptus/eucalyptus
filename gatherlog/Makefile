@@ -69,4 +69,4 @@ distclean:
 install:
 
 uninstall:
-	@$(RM) -rf $(AXIS2C_SERVICES)/$(SERVICE_NAME)
+	@$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)

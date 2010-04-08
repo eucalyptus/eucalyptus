@@ -7,8 +7,8 @@ import org.apache.log4j.Logger;
 public class StaticPropertyEntry extends AbstractConfigurableProperty {
   static Logger LOG = Logger.getLogger( StaticPropertyEntry.class );
   private Field         field;
-  public StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser, Boolean readOnly ) {
-    super( definingClass, entrySetName, field.getName( ), defaultValue, description, typeParser, readOnly );
+  public StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType ) {
+    super( definingClass, entrySetName, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType );
     this.field = field;
   }
   public Field getField( ) {
@@ -44,9 +44,9 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
 
     @Override
     public ConfigurableProperty buildProperty( Class c, Field field ) throws ConfigurablePropertyException {
-      if( c.isAnnotationPresent( ConfigurableClass.class ) && field.isAnnotationPresent( Configurable.class ) ) {
+      if( c.isAnnotationPresent( ConfigurableClass.class ) && field.isAnnotationPresent( ConfigurableField.class ) ) {
         ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
-        Configurable annote = ( Configurable ) field.getAnnotation( Configurable.class );
+        ConfigurableField annote = ( ConfigurableField ) field.getAnnotation( ConfigurableField.class );
         String description = annote.description( );
         String defaultValue = annote.initial( );
         String fq = qualifiedName( c, field );
@@ -55,7 +55,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         ConfigurableProperty entry = null;
         int modifiers = field.getModifiers( );
         if ( Modifier.isPublic( modifiers ) && Modifier.isStatic( modifiers ) ) {
-          entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ) );
+          entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName(), annote.type() );
           entry.setValue( defaultValue );
           return entry;
         } 

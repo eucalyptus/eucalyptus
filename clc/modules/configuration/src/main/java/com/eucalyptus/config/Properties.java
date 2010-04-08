@@ -1,6 +1,8 @@
 package com.eucalyptus.config;
 
 import java.util.List;
+
+import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurationProperties;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -21,12 +23,18 @@ public class Properties {
     List<Property> props = reply.getProperties( );
     if ( request.getProperties( ).isEmpty( ) ) {
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
-        props.add( new Property( entry.getQualifiedName( ), entry.getValue( ), entry.getDescription( ) ) );
+    	String value = "********";
+    	if (!entry.getWidgetType().equals(ConfigurableFieldType.KEYVALUEHIDDEN))
+    		value = entry.getValue();
+        props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
       }
     } else {
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
         if ( request.getProperties( ).contains( entry.getQualifiedName( ) ) ) {
-          props.add( new Property( entry.getQualifiedName( ), entry.getValue( ), entry.getDescription( ) ) );
+          String value = "********";
+          if (!entry.getWidgetType().equals(ConfigurableFieldType.KEYVALUEHIDDEN))
+        	value = entry.getValue();
+          props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
         }
       }
     }
@@ -40,7 +48,9 @@ public class Properties {
     ModifyPropertyValueResponseType reply = request.getReply( );
     try {
       ConfigurableProperty entry = PropertyDirectory.getPropertyEntry( request.getName( ) );
-      String oldValue = entry.getValue( );
+      String oldValue = "********";
+      if (!entry.getWidgetType().equals(ConfigurableFieldType.KEYVALUEHIDDEN))
+    	oldValue = entry.getValue();
       reply.setOldValue( oldValue );
       try {
         entry.setValue( request.getValue( ) );

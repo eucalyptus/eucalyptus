@@ -84,7 +84,7 @@ import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.configurable.Configurable;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -117,9 +117,9 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 public class SystemState {
   
   private static Logger      LOG                 = Logger.getLogger( SystemState.class );
-  @Configurable( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
+  @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
   public static Integer      BURY_TIME           = -1;
-  @Configurable( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
+  @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
   public static Integer      SHUT_DOWN_TIME      = -1;
   public static final String INSTANCE_EXPIRED    = "Instance no longer reported as existing.";
   public static final String INSTANCE_FAILED     = "Starting the instance failed.";

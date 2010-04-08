@@ -155,6 +155,8 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       ctx.getChannel( ).close( );
     } else if ( cause instanceof TooLongFrameException ) {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST );
+    } else if ( cause instanceof IllegalArgumentException ) {
+      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST);
     } else {
       LOG.debug( "Internal Error.", cause );
       if ( ch.isConnected( ) ) {

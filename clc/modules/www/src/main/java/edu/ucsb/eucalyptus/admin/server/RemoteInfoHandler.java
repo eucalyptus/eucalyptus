@@ -90,24 +90,20 @@ import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
+import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
+import edu.ucsb.eucalyptus.msgs.DeregisterStorageControllerType;
+import edu.ucsb.eucalyptus.msgs.DeregisterWalrusType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType;
-import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
-import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
-import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
-import edu.ucsb.eucalyptus.msgs.DeregisterStorageControllerType;
-import edu.ucsb.eucalyptus.msgs.DeregisterWalrusType;
-import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 import edu.ucsb.eucalyptus.msgs.RegisterStorageControllerType;
 import edu.ucsb.eucalyptus.msgs.RegisterWalrusType;
+import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
+import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
 public class RemoteInfoHandler {
 
@@ -151,8 +147,6 @@ public class RemoteInfoHandler {
 		for(StorageInfoWeb storageControllerWeb : newStorageList) {
 			UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType();
 			updateStorageConfiguration.setName(storageControllerWeb.getName());
-			updateStorageConfiguration.setMaxTotalVolumeSize(storageControllerWeb.getTotalVolumesSizeInGB());
-			updateStorageConfiguration.setMaxVolumeSize(storageControllerWeb.getMaxVolumeSizeInGB());
 			updateStorageConfiguration.setStorageParams(convertStorageProps(storageControllerWeb.getStorageParams()));
 			ServiceDispatcher scDispatch = ServiceDispatcher.lookup(Component.storage, 
 					storageControllerWeb.getHost());
@@ -187,8 +181,6 @@ public class RemoteInfoHandler {
 				try {
 					GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
 					if( c.getName( ).equals( getStorageConfigResponse.getName( ) ) ) {
-						scInfo.setMaxVolumeSizeInGB( getStorageConfigResponse.getMaxVolumeSize( ) );
-						scInfo.setTotalVolumesSizeInGB( getStorageConfigResponse.getMaxTotalVolumeSize( ) );
 						scInfo.setStorageParams(convertStorageParams(getStorageConfigResponse.getStorageParams()));
 					} else {
 						LOG.debug("Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception());
@@ -343,16 +335,17 @@ public class RemoteInfoHandler {
 		ArrayList<String> params = new ArrayList<String>();
 		for (ComponentProperty property : properties) {
 			params.add(property.getType());
-			params.add(property.getKey());
+			params.add(property.getDisplayName());
 			params.add(property.getValue());
+			params.add(property.getQualifiedName());
 		}
 		return params;
 	}
 
 	private static ArrayList<ComponentProperty> convertStorageProps(ArrayList<String> params) {
 		ArrayList<ComponentProperty> props = new ArrayList<ComponentProperty>();
-		for(int i = 0 ; i < (params.size() / 3); ++i) {
-			props.add(new ComponentProperty(params.get(3*i), params.get(3*i + 1), params.get(3*i + 2)));
+		for(int i = 0 ; i < (params.size() / 4); ++i) {
+			props.add(new ComponentProperty(params.get(4*i), params.get(4*i + 1), params.get(4*i + 2), params.get(4*i + 3)));
 		}
 		return props;
 	}

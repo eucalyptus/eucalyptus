@@ -109,6 +109,20 @@ my $ephemeral_size_sectors = ($ephemeral_size_mb * 2000);
 my $first_sector = 63; # common starting sector because of DOS
 my $last_sector = $first_sector + $root_size_sectors;
 
+# we need to be sure that the console.log is writable by the qemu user
+my $quser = "";
+my $console_log = $partition;
+my $idcheck = untaint(`id qemu 2>/dev/null`);
+if ( $idcheck ) {
+    $quser = "qemu";
+} else {
+    $quser = "eucalyptus";
+}
+$console_log =~ s|(.*)/(.*)|$1/console.log|;
+untaint(`touch $console_log`);
+untaint(`chown $quser.eucalyptus $console_log`);
+untaint(`chmod 0660 $console_log`);
+
 my $magic=`$FILE $partition`;
 chomp($magic);
 if (!($magic =~ /partition [0-99]/) && !($magic =~ /Qcow/)) { # if not a disk image already

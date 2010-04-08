@@ -85,15 +85,9 @@ import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Configurable;
-import com.eucalyptus.bootstrap.ConfigurableField;
-import com.eucalyptus.bootstrap.ConfigurableFieldType;
-import com.eucalyptus.bootstrap.ConfigurableManagement;
-
-import edu.ucsb.eucalyptus.msgs.ComponentProperty;
-
-import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
@@ -101,13 +95,15 @@ import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.DASInfo;
+import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
-@Configurable(component = Component.storage)
 public class LVM2DASManager implements LogicalStorageManager {
 
 	public static final String lvmRootDirectory = "/dev";
@@ -122,15 +118,6 @@ public class LVM2DASManager implements LogicalStorageManager {
 	private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
 	public static StorageExportManager exportManager;
 	private static String volumeGroup;
-
-	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "DAS Device")
-	public static String DAS_DEVICE = "/dev/blockdev";
-	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "Interface")
-	public static String iface = "eth0";
-	@ConfigurableField(type = ConfigurableFieldType.BOOLEAN, displayName = "Zero-fill Volumes")
-	public static boolean zeroFillVolumes = false;
-	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "Volumes path")
-	public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
 
 	public void checkPreconditions() throws EucalyptusCloudException {
 		//check if binaries exist, commands can be executed, etc.
@@ -168,22 +155,22 @@ public class LVM2DASManager implements LogicalStorageManager {
 
 	private void updateVolumeGroup() throws EucalyptusCloudException {
 		if(volumeGroup == null) {
-			if(LVM2DASManager.DAS_DEVICE != null) {
+			if(StorageProperties.DAS_DEVICE != null) {
 				try {
-					String returnValue = getPhysicalVolume(LVM2DASManager.DAS_DEVICE);
-					if(!returnValue.matches("(?s:.*)PV Name.*" + LVM2DASManager.DAS_DEVICE + "(?s:.*)")) {
-						returnValue = createPhysicalVolume(LVM2DASManager.DAS_DEVICE);
+					String returnValue = getPhysicalVolume(StorageProperties.DAS_DEVICE);
+					if(!returnValue.matches("(?s:.*)PV Name.*" + StorageProperties.DAS_DEVICE + "(?s:.*)")) {
+						returnValue = createPhysicalVolume(StorageProperties.DAS_DEVICE);
 						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create physical volume on device: " + LVM2DASManager.DAS_DEVICE);
+							throw new EucalyptusCloudException("Unable to create physical volume on device: " + StorageProperties.DAS_DEVICE);
 						}
 					}
 					//PV is initialized at this point.
 					returnValue = getVolumeGroupsVerbose();
-					if(!returnValue.matches("(?s:.*)PV Name.*" + LVM2DASManager.DAS_DEVICE + "(?s:.*)")) {
+					if(!returnValue.matches("(?s:.*)PV Name.*" + StorageProperties.DAS_DEVICE + "(?s:.*)")) {
 						volumeGroup = "vg-" + Hashes.getRandom(10);
-						returnValue = createVolumeGroup(LVM2DASManager.DAS_DEVICE, volumeGroup);
+						returnValue = createVolumeGroup(StorageProperties.DAS_DEVICE, volumeGroup);
 						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + LVM2DASManager.DAS_DEVICE);
+							throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + StorageProperties.DAS_DEVICE);
 						}
 					} else {
 						Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
@@ -191,7 +178,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 						if(m.find()) 
 							volumeGroup = m.group(1).trim();
 						else
-							throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + LVM2DASManager.DAS_DEVICE);
+							throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + StorageProperties.DAS_DEVICE);
 					}
 				} catch (ExecutionException e) {
 					LOG.error(e);
@@ -244,7 +231,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 	}
 
 	private String createFile(String fileName, long size) throws ExecutionException {
-		if(!LVM2DASManager.zeroFillVolumes)
+		if(!DirectStorageInfo.getStorageInfo().getZeroFillVolumes())
 			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + blockSize, "seek=" + (size -1)});
 		else
 			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + blockSize});
@@ -271,6 +258,10 @@ public class LVM2DASManager implements LogicalStorageManager {
 
 	public void configure() {
 		exportManager.configure();
+		//TODO: initialize this correctly
+		LOG.info(StorageInfo.getStorageInfo().getName());
+		LOG.info(DirectStorageInfo.getStorageInfo().getName());
+		LOG.info(DASInfo.getStorageInfo().getName());
 	}
 
 	public void startupChecks() {
@@ -362,7 +353,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 
 	public void createVolume(String volumeId, int size) throws EucalyptusCloudException {
 		updateVolumeGroup();
-		File volumeDir = new File(storageRootDirectory);
+		File volumeDir = new File(DirectStorageInfo.getStorageInfo().getVolumesDir());
 		volumeDir.mkdirs();
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 
@@ -412,7 +403,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 				String lvName = "lv-" + Hashes.getRandom(4);
 				LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
 				try {
-					File snapshotFile = new File(storageRootDirectory + PATH_SEPARATOR + foundSnapshotInfo.getVolumeId());
+					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + foundSnapshotInfo.getVolumeId());
 					assert(snapshotFile.exists());
 					size = (int)(snapshotFile.length() / StorageProperties.GB);
 					//create physical volume, volume group and logical volume
@@ -448,7 +439,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 	}
 
 	public void addSnapshot(String snapshotId) throws EucalyptusCloudException {
-		String snapshotRawFileName = storageRootDirectory + "/" + snapshotId;
+		String snapshotRawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + snapshotId;
 		File snapshotFile = new File(snapshotRawFileName);
 		if(snapshotFile.exists()) {
 			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -501,7 +492,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 		if(foundLVMVolumeInfo != null) {
 			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
 			snapshotInfo.setVolumeId(snapshotId);
-			File snapshotDir = new File(storageRootDirectory);
+			File snapshotDir = new File(DirectStorageInfo.getStorageInfo().getVolumesDir());
 			snapshotDir.mkdirs();
 
 			String lvName = "lv-snap-" + Hashes.getRandom(4);
@@ -514,7 +505,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 				if(returnValue.length() == 0) {
 					throw new EucalyptusCloudException("Unable to create snapshot logical volume " + lvName + " for volume " + lvName);
 				}
-				String snapRawFileName = storageRootDirectory + "/" + snapshotId;
+				String snapRawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + snapshotId;
 				String absoluteSnapLVName = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + lvName;
 
 				duplicateLogicalVolume(absoluteSnapLVName, snapRawFileName);
@@ -547,7 +538,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 		ArrayList<String> returnValues = new ArrayList<String>();
 
 		if(foundLVMVolumeInfo != null) {
-			returnValues.add(storageRootDirectory + PATH_SEPARATOR + foundLVMVolumeInfo.getVolumeId());
+			returnValues.add(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + foundLVMVolumeInfo.getVolumeId());
 			volumeManager.finish();
 		} else {
 			volumeManager.abort();
@@ -666,7 +657,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 					if(returnValue.length() == 0) {
 						int majorNumber = aoeVolumeInfo.getMajorNumber();
 						int minorNumber = aoeVolumeInfo.getMinorNumber();
-						pid = exportManager.exportVolume(LVM2DASManager.iface, absoluteLVName, majorNumber, minorNumber);
+						pid = exportManager.exportVolume(DirectStorageInfo.getStorageInfo().getStorageInterface(), absoluteLVName, majorNumber, minorNumber);
 						aoeVolumeInfo.setVbladePid(pid);
 						File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
 						FileOutputStream fileOutStream = null;
@@ -818,7 +809,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 				int majorNumber = aoeVolumeInfo.getMajorNumber();
 				int minorNumber = aoeVolumeInfo.getMinorNumber();
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				int pid = exportManager.exportVolume(LVM2DASManager.iface, absoluteLVName, majorNumber, minorNumber);
+				int pid = exportManager.exportVolume(DirectStorageInfo.getStorageInfo().getStorageInterface(), absoluteLVName, majorNumber, minorNumber);
 				boolean success = false;
 				String returnValue = "";
 				int timeout = 300;
@@ -840,7 +831,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 					}
 				}
 				if(!success) {
-					throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + LVM2DASManager.iface + " pid: " + pid + " returnValue: " + returnValue);
+					throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + DirectStorageInfo.getStorageInfo().getStorageInterface() + " pid: " + pid + " returnValue: " + returnValue);
 				}
 
 				File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
@@ -887,55 +878,52 @@ public class LVM2DASManager implements LogicalStorageManager {
 	@Override
 	public String prepareSnapshot(String snapshotId, int sizeExpected)
 	throws EucalyptusCloudException {
-		return storageRootDirectory + File.separator + snapshotId;
+		return DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId;
 	}
 
 	@Override
-	public ArrayList<ComponentProperty> getStorageProps() {
-		return ConfigurableManagement.getInstance().getProperties(this.getClass());		
-	}
-
-	@Override
-	public void setStorageProps(ArrayList<ComponentProperty> storageParams) {
-		ConfigurableManagement.getInstance().setProperties(this.getClass(), storageParams);
-		EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();
-		StorageInfo storageInfo;
-		try {
-			storageInfo = db.getUnique(new StorageInfo(StorageProperties.NAME));
-			storageInfo.setMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
-			storageInfo.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
-			storageInfo.setZeroFillVolumes(zeroFillVolumes);
-			storageInfo.setStorageInterface(iface);
-			storageInfo.setVolumesDir(storageRootDirectory);
-			storageInfo.setDASDevice(DAS_DEVICE);
-			db.commit();
-		} catch(EucalyptusCloudException ex) {
-			storageInfo = new StorageInfo(StorageProperties.NAME, 
-					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-					iface, 
-					StorageProperties.MAX_VOLUME_SIZE, 
-					storageRootDirectory,
-					zeroFillVolumes,
-					null,
-					null,
-					null,
-					DAS_DEVICE);
-			db.add(storageInfo);
-			db.commit();
+	public ArrayList<ComponentProperty> getStorageProps() {		
+		ArrayList<ComponentProperty> componentProperties = null;
+		ConfigurableClass configurableClass = StorageInfo.class.getAnnotation(ConfigurableClass.class);
+		if(configurableClass != null) {
+			String prefix = configurableClass.alias();
+			componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
 		}
-		File volumeDir = new File(storageRootDirectory);
-		if(!volumeDir.exists()) {
-			if(!volumeDir.mkdirs()) {
-				LOG.fatal("Unable to make volume root directory: " + storageRootDirectory);
+		configurableClass = DirectStorageInfo.class.getAnnotation(ConfigurableClass.class);
+		if(configurableClass != null) {
+			String prefix = configurableClass.alias();
+			if(componentProperties == null)
+				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
+			else 
+				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(prefix));
+		}
+		configurableClass = DASInfo.class.getAnnotation(ConfigurableClass.class);
+		if(configurableClass != null) {
+			String prefix = configurableClass.alias();
+			if(componentProperties == null)
+				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
+			else 
+				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(prefix));
+		}			
+		return componentProperties;
+	}
+
+	@Override
+	public void setStorageProps(ArrayList<ComponentProperty> storageProps) {
+		for (ComponentProperty prop : storageProps) {
+			try {
+				ConfigurableProperty entry = PropertyDirectory.getPropertyEntry(prop.getQualifiedName());
+				//type parser will correctly covert the value
+				entry.setValue(prop.getValue());
+			} catch (IllegalAccessException e) {
+				LOG.error(e, e);
 			}
-		} else if(!volumeDir.canWrite()) {
-			LOG.fatal("Cannot write to volume root directory: " + storageRootDirectory);
 		}
 	}
 
 	@Override
 	public String getStorageRootDirectory() {
-		return storageRootDirectory;
+		return DirectStorageInfo.getStorageInfo().getVolumesDir();
 	}
 }
 

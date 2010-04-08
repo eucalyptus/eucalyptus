@@ -160,14 +160,15 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   
   public abstract void fail( Throwable throwable );
   
-  public void dispatch( String clusterName ) {
+  public QueuedEventCallback dispatch( String clusterName ) {
     LOG.debug( EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ) );
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-    this.dispatch( cluster );
+    return this.dispatch( cluster );
   }
-  public void dispatch( Cluster cluster ) {
+  public QueuedEventCallback dispatch( Cluster cluster ) {
     LOG.debug( EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ) );
     cluster.getMessageQueue( ).enqueue( this );
+    return this;
   }
   
   public RTYPE send( String clusterName ) throws Exception, Exception {
@@ -276,9 +277,15 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     ctx.getChannel( ).close( );
   }
   
-  @Override
-  public RTYPE getResponse( ) throws Exception {
-    this.waitForResponse( );
+  public RTYPE pollResponse( Long waitMillis ) throws Exception {
+    if( this.response.get( ) == null && !this.pollForResponse( waitMillis ) ) {
+      return null;
+    } else {
+      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ) );
+      return this.checkedResponse( );
+    }
+  }
+  private RTYPE checkedResponse() throws Exception {
     if ( this.response.get( ) instanceof EucalyptusMessage ) {
       return ( RTYPE ) this.response.get( );
     } else if ( this.response.get( ) instanceof Throwable ) {
@@ -286,20 +293,32 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     }
     throw new EucalyptusClusterException( "Failed to retrieve result of asynchronous operation." );
   }
+  @Override
+  public RTYPE getResponse( ) throws Exception {
+    this.waitForResponse( );
+    LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ) );
+    return this.checkedResponse( );
+  }
   
+  public boolean pollForResponse( Long waitMillis ) {
+    boolean ret = false;
+    this.canHas.lock( );
+    try {
+      ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
+      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ) );
+    } catch ( InterruptedException e ) {
+      LOG.debug( e, e );
+      Thread.currentThread( ).interrupt( );
+    } finally {
+      this.canHas.unlock( );
+    }    
+    return ret;
+  }  
+
   public void waitForResponse( ) {
     this.canHas.lock( );
     try {
-      while ( this.response.get( ) == null ) {
-        try {
-          this.ready.await( 10000, TimeUnit.MILLISECONDS );
-          LOG.debug( "Waiting for response." );
-        } catch ( InterruptedException e ) {
-          LOG.debug( e, e );
-          Thread.currentThread( ).interrupt( );
-        }
-      }
-      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ) );
+      while ( this.response.get( ) == null && !this.pollForResponse( 5000l ) );
     } finally {
       this.canHas.unlock( );
     }
