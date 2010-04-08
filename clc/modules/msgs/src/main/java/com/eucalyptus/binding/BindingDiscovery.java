@@ -20,26 +20,30 @@ public class BindingDiscovery extends ServiceJarDiscovery {
   
   @Override
   public boolean processsClass( Class candidate ) throws Throwable {
+    Field f;
+    String bindingList;
     try {
-      Field f = candidate.getDeclaredField( "JiBX_bindingList" );
-      String bindingList = ( String ) f.get( null );
-      List<String> bindings = Lists.transform( Arrays.asList( bindingList.split( "\\|" ) ), new Function<String,String>() {
-        @Override
-        public String apply( String arg0 ) {
-          return BindingManager.sanitizeNamespace( arg0.replaceAll(".*JiBX_","").replaceAll("Factory","") );
-        }        
-      });
-      boolean seeded = false;
-      for( String binding : bindings ) {
-        if( binding.length( ) > 2 ) {
+      f = candidate.getDeclaredField( "JiBX_bindingList" );
+      bindingList = ( String ) f.get( null );
+    } catch ( Exception e ) {
+      return false;
+    }
+    List<String> bindings = Lists.transform( Arrays.asList( bindingList.split( "\\|" ) ), new Function<String,String>() {
+      @Override
+      public String apply( String arg0 ) {
+        return BindingManager.sanitizeNamespace( arg0.replaceAll(".*JiBX_","").replaceAll("Factory","") );
+      }        
+    });
+    boolean seeded = false;
+    for( String binding : bindings ) {
+      if( binding.length( ) > 2 ) {
+        try {
           seeded |= BindingManager.seedBinding( binding, candidate );
+        } catch ( Exception e ) {
         }
       }
-      return seeded;
-    } catch ( Throwable t ) {
-      LOG.error( t, t );
     }
-    return false;
+    return seeded;
   }
   
 }

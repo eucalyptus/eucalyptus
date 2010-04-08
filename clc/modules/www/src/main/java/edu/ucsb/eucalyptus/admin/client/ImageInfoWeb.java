@@ -168,4 +168,5 @@ public class ImageInfoWeb implements IsSerializable
     public void setPublic(Boolean aPublic) {
         isPublic = aPublic;
     }
+
 }

@@ -111,14 +111,14 @@ public class X509Download extends HttpServlet {
       return;
     }
     
-    UserInfoWeb user = null;
+    User user = null;
     try {
-      user = EucalyptusManagement.getWebUser( userName );
+      user = Users.lookupUser( userName );
     } catch ( Exception e ) {
       hasError( "User does not exist", response );
       return;
     }
-    if ( !user.getCertificateCode( ).equals( code ) ) {
+    if ( !user.getToken( ).equals( code ) ) {
       hasError( "Confirmation code is invalid", response );
       return;
     }

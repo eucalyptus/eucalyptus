@@ -91,123 +91,25 @@ import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
+import com.eucalyptus.images.Image;
+import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.network.NetworkGroupUtil;
+import com.eucalyptus.util.Composites;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.ImageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
-import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class EucalyptusManagement {
 
 	private static Logger LOG = Logger.getLogger( EucalyptusManagement.class );
-
-	public static UserInfoWeb fromServer( UserInfo source )
-	{
-		UserInfoWeb target = new UserInfoWeb();
-		update( target, source );
-		return target;
-	}
-
-	public static UserInfo fromClient( UserInfoWeb source )
-	{
-		UserInfo target = new UserInfo();
-		update( target, source );
-		return target;
-	}
-
-	public static void update( UserInfo target, UserInfo user )
-	{
-		target.setUserName( user.getUserName() );
-		target.setRealName( user.getRealName() );
-		target.setEmail( user.getEmail() );
-		target.setBCryptedPassword( user.getBCryptedPassword() );
-		target.setTelephoneNumber( user.getTelephoneNumber() );
-		target.setAffiliation( user.getAffiliation() );
-		target.setProjectDescription( user.getProjectDescription() );
-		target.setProjectPIName( user.getProjectPIName() );
-		target.setConfirmationCode( user.getConfirmationCode() );
-		target.setCertificateCode( user.getCertificateCode() );
-		target.setIsApproved( user.isApproved() );
-		target.setIsConfirmed( user.isConfirmed() );
-		target.setIsEnabled( user.isEnabled() );
-		target.setIsAdministrator( user.isAdministrator() );
-		target.setPasswordExpires( user.getPasswordExpires() );
-		target.setTemporaryPassword( user.getTemporaryPassword() );
-	}
-
-	public static void update( UserInfoWeb target, UserInfo user )
-	{
-		target.setUserName( user.getUserName() );
-		target.setRealName( user.getRealName() );
-		target.setEmail( user.getEmail() );
-		target.setBCryptedPassword( user.getBCryptedPassword() );
-		target.setTelephoneNumber( user.getTelephoneNumber() );
-		target.setAffiliation( user.getAffiliation() );
-		target.setProjectDescription( user.getProjectDescription() );
-		target.setProjectPIName( user.getProjectPIName() );
-		target.setConfirmationCode( user.getConfirmationCode() );
-		target.setCertificateCode( user.getCertificateCode() );
-		target.setIsApproved( user.isApproved() );
-		target.setIsConfirmed( user.isConfirmed() );
-		target.setIsEnabled( user.isEnabled() );
-		target.setIsAdministrator( user.isAdministrator() );
-		target.setPasswordExpires( user.getPasswordExpires() );
-		target.setTemporaryPassword( user.getTemporaryPassword() );
-		String queryId = "uninitialized";
-		String secretKey = "uninitialized";
-		try {
-		  User u = Users.lookupUser( user.getUserName( ) );
-			queryId = u.getQueryId( );
-			secretKey = u.getSecretKey( );
-		} catch ( Exception e ) {
-			LOG.debug( e, e );
-		}
-		target.setQueryId( queryId );
-		target.setSecretKey( secretKey );
-	}
-
-	public static void update( UserInfo target, UserInfoWeb user )
-	{
-		target.setUserName( user.getUserName() );
-		target.setRealName( user.getRealName() );
-		target.setEmail( user.getEmail() );
-		target.setBCryptedPassword( user.getBCryptedPassword() );
-		target.setTelephoneNumber( user.getTelephoneNumber() );
-		target.setAffiliation( user.getAffiliation() );
-		target.setProjectDescription( user.getProjectDescription() );
-		target.setProjectPIName( user.getProjectPIName() );
-		target.setConfirmationCode( user.getConfirmationCode() );
-		target.setCertificateCode( user.getCertificateCode() );
-		target.setIsApproved( user.isApproved() );
-		target.setIsConfirmed( user.isConfirmed() );
-		target.setIsEnabled( user.isEnabled() );
-		target.setIsAdministrator( user.isAdministrator() );
-		target.setPasswordExpires( user.getPasswordExpires() );
-		target.setTemporaryPassword( user.getTemporaryPassword() );
-	}
-
-	public static ImageInfoWeb imageConvertToWeb ( ImageInfo source)
-	{
-		ImageInfoWeb target = new ImageInfoWeb();
-
-		target.setId(source.getId());
-		target.setImageId(source.getImageId());
-		target.setImageLocation(source.getImageLocation());
-		target.setImageState(source.getImageState());
-		target.setImageOwnerId(source.getImageOwnerId());
-		target.setArchitecture(source.getArchitecture());
-		target.setImageType(source.getImageType());
-		target.setKernelId(source.getKernelId());
-		target.setRamdiskId(source.getRamdiskId());
-		target.setPublic(source.getPublic());
-
-		return target;
-	}
 
 	public static String getError( String message )
 	{
@@ -217,126 +119,96 @@ public class EucalyptusManagement {
 	/* TODO: for now 'pattern' is ignored and all users are returned */
 	public static List <UserInfoWeb> getWebUsers (String pattern) throws SerializableException
 	{
-		UserInfo searchUser = new UserInfo(); /* empty => return all */
-		EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = dbWrapper.query( searchUser );
-
-		List<UserInfoWeb> webUsersList = new ArrayList<UserInfoWeb>();
-		for ( UserInfo u : userList)
-			webUsersList.add(fromServer(u));
+    final EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>();
+	  List<UserInfoWeb> webUsersList = Lists.transform( Users.listAllUsers( ), new Function<User,UserInfoWeb>() {
+      @Override
+      public UserInfoWeb apply( User u ) {
+        try {
+          UserInfo userInfo = dbWrapper.getUnique( UserInfo.named( u.getName( ) ) );
+          return Composites.composeNew( UserInfoWeb.class, userInfo, u );
+        } catch ( Exception e ) {
+          return new UserInfoWeb();
+        }
+      }} );
 		dbWrapper.commit();
 		return webUsersList;
 	}
 
 	/* TODO: for now 'pattern' is ignored and all images are returned */
-	public static List <ImageInfoWeb> getWebImages (String pattern) throws SerializableException
-	{
-		ImageInfo searchImage = new ImageInfo(); /* empty => return all */
-		EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-		List<ImageInfo> results= db.query( searchImage );
-		List<ImageInfoWeb> imagesList = new ArrayList<ImageInfoWeb>();
-		for ( ImageInfo i : results )
-			imagesList.add(imageConvertToWeb(i));
-		db.commit();
-		return imagesList;
+	public static List <ImageInfoWeb> getWebImages (String pattern) throws SerializableException {
+		return Lists.transform( Images.listAllImages( ), new Function<Image,ImageInfoWeb>() {
+      @Override
+      public ImageInfoWeb apply( Image i ) {
+        return Composites.update( i, new ImageInfoWeb( ) );
+      }} );
 	}
 
-	public static UserInfoWeb getWebUser( String userName ) throws SerializableException
-	{
-		EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = dbWrapper.query( new UserInfo( userName ) );
-		if ( userList.size() != 1 )
-		{
-			try {//TODO: temporary hack to support older user info objects
-				if( "admin".equals( userName )) {
-					UserInfo u = UserInfo.generateAdmin( );
-					dbWrapper.add( u );
-					UserGroupEntity allGroup = new UserGroupEntity( "all" );
-					dbWrapper.getSession( ).persist( new Counters( ) );
-					dbWrapper.commit( );
-					return EucalyptusManagement.fromServer( u );
-				} else {
-					dbWrapper.rollback( );
-					throw EucalyptusManagement.makeFault("User does not exist" );	        
-				}
-			} catch ( Exception e ) {
-				dbWrapper.rollback( );
-				throw EucalyptusManagement.makeFault("User does not exist" );
-			}
-		}
-		dbWrapper.commit();
-		return EucalyptusManagement.fromServer( userList.get( 0 ) );
+	public static UserInfoWeb getWebUser( String userName ) throws SerializableException {
+	  return EucalyptusManagement.getWebUserByExample( new UserInfo( userName ) );
 	}
 
-	public static UserInfoWeb getWebUserByEmail( String emailAddress ) throws SerializableException
-	{
-		UserInfo searchUser = new UserInfo( );
-		searchUser.setEmail ( emailAddress );
-		EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = dbWrapper.query( searchUser );
-		if ( userList.size() != 1 )
-		{
-			dbWrapper.rollback();
-			throw EucalyptusManagement.makeFault("User does not exist" );
-		}
-		dbWrapper.commit();
-		return EucalyptusManagement.fromServer( userList.get( 0 ) );
-	}
+  public static UserInfoWeb getWebUserByEmail( String emailAddress ) throws SerializableException {
+    UserInfo s = new UserInfo( );
+    s.setEmail( emailAddress );
+    return EucalyptusManagement.getWebUserByExample( s );
+  }
 
-	public static UserInfoWeb getWebUserByCode( String code ) throws SerializableException
-	{
-		UserInfo searchUser = new UserInfo( );
-		searchUser.setConfirmationCode ( code );
-		EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = dbWrapper.query( searchUser );
-		if ( userList.size() != 1 )
-		{
-			dbWrapper.rollback();
-			throw EucalyptusManagement.makeFault("Invalid confirmation code" );
-		}
-		dbWrapper.commit();
-		return EucalyptusManagement.fromServer( userList.get( 0 ) );
-	}
+  public static UserInfoWeb getWebUserByCode( String confCode ) throws SerializableException {
+    UserInfo s = new UserInfo( );
+    s.setConfirmationCode( confCode );
+    return EucalyptusManagement.getWebUserByExample( s );
+  }
+  
+  private static UserInfoWeb getWebUserByExample( UserInfo ex ) throws SerializableException {
+    EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
+    try {
+      UserInfo userInfo = dbWrapper.getUnique( ex );
+      User user = Users.lookupUser( userInfo.getUserName( ) );
+      UserInfoWeb webUser = Composites.composeNew( UserInfoWeb.class, userInfo, user );
+      dbWrapper.commit( );
+      return webUser;
+    } catch ( EucalyptusCloudException e ) {
+      dbWrapper.rollback( );
+      throw EucalyptusManagement.makeFault( "Error looking up user information: " + e.getMessage( ) );
+    } catch ( NoSuchUserException e ) {
+      dbWrapper.rollback( );
+      throw EucalyptusManagement.makeFault( "User does not exist" );
+    }
+  }
 
 	public static synchronized void addWebUser( UserInfoWeb webUser ) throws SerializableException
 	{
-		EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = dbWrapper.query( new UserInfo( webUser.getUserName() ) );
-		if ( userList.size() != 0 )
-		{
-			dbWrapper.rollback();
-			throw EucalyptusManagement.makeFault("User already exists" );
-		}
-
-		//String hash = BCrypt.hashpw( webUser.getBCryptedPassword(), BCrypt.gensalt() );
-		//webUser.setBCryptedPassword( hash );
-		//webUser.setIsAdministrator( false );
-		//webUser.setIsApproved( false );
-		//webUser.setIsEnabled( false );
-
-		// TODO: add web user properly, with all keys and certs generated, too
-		webUser.setConfirmationCode( Crypto.generateSessionToken( webUser.getUserName() ) );
-		webUser.setCertificateCode( Crypto.generateSessionToken( webUser.getUserName() ) );
-
-		webUser.setSecretKey( Hmacs.generateSecretKey( webUser.getUserName() ) );
-		webUser.setQueryId( Hmacs.generateQueryId( webUser.getUserName() ));
-
-		UserInfo newUser = EucalyptusManagement.fromClient( webUser );
-		newUser.setReservationId( 0l );
-		try {
-			NetworkGroupUtil.createUserNetworkRulesGroup( newUser.getUserName( ), NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
-		} catch ( EucalyptusCloudException e1 ) {
-			LOG.debug( e1, e1 );
-		}
-
-		dbWrapper.add( newUser );
-		dbWrapper.commit();
-
-		try {//FIXME: fix this nicely
-			Users.addUser(newUser.getUserName( ),newUser.isAdministrator( ),newUser.isEnabled( ));
-		} catch ( UserExistsException e ) {
-			LOG.error(e);
-		}
+	  User user = null;
+	  try {
+      user = Users.lookupUser( webUser.getUserName( ) );
+      throw EucalyptusManagement.makeFault("User already exists" );
+    } catch ( NoSuchUserException e ) {
+      try {
+        user = Users.addUser( webUser.getUserName( ), webUser.isAdministrator( ), webUser.isEnabled( ) );
+        EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>("eucalyptus_general");
+        try {
+          UserInfo userInfo = Composites.updateNew( webUser, UserInfo.class );
+          userInfo.setConfirmationCode( Crypto.generateSessionToken( webUser.getUserName() ) );
+          try {
+            NetworkGroupUtil.createUserNetworkRulesGroup( userInfo.getUserName( ), NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
+          } catch ( EucalyptusCloudException e1 ) {
+            LOG.debug( e1, e1 );
+          }
+          dbWrapper.add( userInfo );
+          dbWrapper.commit();
+        } catch ( Exception e1 ) {
+          dbWrapper.rollback();
+          LOG.error( e1, e1 );
+          throw EucalyptusManagement.makeFault("Error adding user: " + e1.getMessage( ) );
+        }
+      } catch ( UserExistsException e1 ) {
+        LOG.error( e1, e1 );
+        throw EucalyptusManagement.makeFault("User already exists" );
+      } catch ( UnsupportedOperationException e1 ) {
+        LOG.error( e1, e1 );
+        throw EucalyptusManagement.makeFault("Error adding user: " + e1.getMessage( ) );
+      }
+    }	  
 	}
 
 	private static SerializableException makeFault(String message)
@@ -354,75 +226,66 @@ public class EucalyptusManagement {
 
 	public static void deleteUser( String userName ) throws SerializableException
 	{
-		EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = db.query( new UserInfo( userName )  );
-		if ( userList.size() != 1 )
-		{
-			db.rollback();
-			throw EucalyptusManagement.makeFault("User already exists" );
-		}
-		db.delete( userList.get(0) );
-		db.commit();
-		try {
-			Users.deleteUser(userName);
-		} catch ( NoSuchUserException e ) {
-			LOG.error(e);
-			throw EucalyptusManagement.makeFault( "Unable to delete user" );
-		}
+	  try {
+      Users.deleteUser( userName );
+      EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
+      try {
+        UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
+        dbWrapper.delete( userInfo );
+        dbWrapper.commit( );
+      } catch ( EucalyptusCloudException e1 ) {
+        dbWrapper.rollback( );
+        LOG.error( e1, e1 );
+        throw EucalyptusManagement.makeFault("Error while deleting user: " + e1.getMessage( ) );      
+      }
+    } catch ( NoSuchUserException e1 ) {
+      LOG.debug( e1, e1 );
+      throw EucalyptusManagement.makeFault( "Unable to delete user" );
+    } catch ( UnsupportedOperationException e1 ) {
+      LOG.debug( e1, e1 );
+      throw EucalyptusManagement.makeFault("Error while deleting user: " + e1.getMessage( ) );      
+    }
 	}
 
 	public static void commitWebUser( UserInfoWeb webUser ) throws SerializableException
 	{
-		UserInfo user = fromClient( webUser );
-		commitUser( user );
-	}
-
-	public static void commitUser( UserInfo user ) throws SerializableException
-	{
-		UserInfo searchUser = new UserInfo( user.getUserName() );
-		EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = db.query( searchUser );
-		UserInfo target = userList.get( 0 );
-		if ( userList.size() != 1 )
-		{
-			db.rollback();
-			throw EucalyptusManagement.makeFault( "User does not exist" );
-		}
-		update( target, user );
-		try {
-		  User u = Users.lookupUser( user.getUserName( ) );
-      u.setAdministrator( user.isAdministrator( ) );
-      u.setEnabled( user.isEnabled( ) );
-      db.commit();
-		} catch ( NoSuchUserException e ) {
-			db.rollback();
-			LOG.error(e);
-			throw EucalyptusManagement.makeFault( "Unable to update user" );
-		}
+	  String userName = webUser.getUserName( );
+    try {
+      User user = Users.lookupUser( userName );
+      EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
+      try {
+        UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
+        Composites.project( webUser, userInfo, user );
+        dbWrapper.commit( );
+      } catch ( EucalyptusCloudException e1 ) {
+        dbWrapper.rollback( );
+        LOG.error( e1, e1 );
+        throw EucalyptusManagement.makeFault("Error while updating user: " + e1.getMessage( ) );      
+      }
+    } catch ( NoSuchUserException e1 ) {
+      LOG.error( e1, e1 );
+      throw EucalyptusManagement.makeFault( "Unable to update user" );
+    } catch ( UnsupportedOperationException e1 ) {
+      LOG.error( e1, e1 );
+      throw EucalyptusManagement.makeFault("Error while updating user: " + e1.getMessage( ) );      
+    }
 	}
 
 	public static String getAdminEmail() throws SerializableException
 	{
-		UserInfo searchUser = new UserInfo();
-		searchUser.setIsAdministrator( true );
-		EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>();
-		List<UserInfo> userList = db.query( searchUser );
-		if ( userList.size() < 1 || userList.isEmpty() )
-		{
-			db.rollback();
-			throw EucalyptusManagement.makeFault("Administrator account not found" );
-		}
-
-		UserInfo first = userList.get( 0 );
-		String addr = first.getEmail();
-		if (addr==null || addr.equals("")) {
-			db.rollback();
-			throw EucalyptusManagement.makeFault( "Email address is not set" );
-		}
-		db.commit();
+		EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>(  );
+		String addr = null;
+		try {
+      UserInfo adminUser = db.getUnique( new UserInfo("admin") );
+      addr = adminUser.getEmail( );
+      db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      throw EucalyptusManagement.makeFault("Administrator account not found" );
+    }
+    if (addr==null || addr.equals("")) {
+      throw EucalyptusManagement.makeFault( "Email address is not set" );
+    }
 		return addr;
-
-		//return Configuration.getConfiguration().getAdminEmail();
 	}
 
 	public static void deleteImage(String imageId)
@@ -435,7 +298,7 @@ public class EucalyptusManagement {
 
 		if ( imgList.size() > 0 && !imgList.isEmpty() )
 		{
-			ImageInfo foundimgSearch = imgList.get( 0 );
+			Image foundimgSearch = imgList.get( 0 );
 			foundimgSearch.setImageState( "deregistered" );
 			db.commit();
 		}
@@ -448,47 +311,32 @@ public class EucalyptusManagement {
 	public static void disableImage(String imageId)
 	throws SerializableException
 	{
-		ImageInfo searchImg = new ImageInfo( );
-		searchImg.setImageId( imageId );
-		EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-		List<ImageInfo> imgList= db.query( searchImg );
-
-		if ( imgList.size() > 0 && !imgList.isEmpty() )
-		{
-			ImageInfo foundimgSearch = imgList.get( 0 );
-			foundimgSearch.setImageState( "deregistered" );
-			db.commit();
-		}
-		else
-		{
-			db.rollback();
-			throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
-		}
+	  try {
+      new Images._byId( imageId ) {{ new _mutator() {
+          @Override public void set( ImageInfo e ) {
+            e.setImageState( "deregistered" );
+          }}.set( );
+      }};
+    } catch ( EucalyptusCloudException e ) {
+      throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
+    }
 	}
 	public static void enableImage(String imageId)
 	throws SerializableException
 	{
-		ImageInfo searchImg = new ImageInfo( );
-		searchImg.setImageId( imageId );
-		EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-		List<ImageInfo> imgList= db.query( searchImg );
-
-		if ( imgList.size() > 0 && !imgList.isEmpty() )
-		{
-			ImageInfo foundimgSearch = imgList.get( 0 );
-			foundimgSearch.setImageState( "available" );
-			db.commit();
-		}
-		else
-		{
-			db.rollback();
-			throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
-		}
+    try {
+      new Images._byId( imageId ) {{ new _mutator() {
+          @Override public void set( ImageInfo e ) {
+            e.setImageState( "available" );
+          }}.set( );
+      }};
+    } catch ( EucalyptusCloudException e ) {
+      throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
+    }
 	}
 
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
 	{
-		EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>();
 		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration();
 		return new SystemConfigWeb( 
 				sysConf.getDefaultKernel(),

@@ -77,12 +77,12 @@ import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.images.Image;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.ws.ImageManager;
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
 import edu.ucsb.eucalyptus.msgs.CheckImageType;
@@ -96,7 +96,7 @@ import edu.ucsb.eucalyptus.util.XMLParser;
 
 public class WalrusUtil {
 
-	public static void checkValid( ImageInfo imgInfo ) {
+	public static void checkValid( Image imgInfo ) {
 		String[] parts = imgInfo.getImageLocation().split( "/" );
 		CheckImageType check = new CheckImageType();
 		check.setUserId( imgInfo.getImageOwnerId( ) );
@@ -105,7 +105,7 @@ public class WalrusUtil {
 		RemoteDispatcher.lookupSingle( Component.walrus ).dispatch( check );
 	}
 
-	public static void triggerCaching( ImageInfo imgInfo ) {
+	public static void triggerCaching( Image imgInfo ) {
 		String[] parts = imgInfo.getImageLocation().split( "/" );
 		CacheImageType cache = new CacheImageType();
 		cache.setUserId( imgInfo.getImageOwnerId( ) );
@@ -114,7 +114,7 @@ public class WalrusUtil {
 		RemoteDispatcher.lookupSingle( Component.walrus ).dispatch( cache );
 	}
 
-	public static void invalidate( ImageInfo imgInfo ) {
+	public static void invalidate( Image imgInfo ) {
 		String[] parts = imgInfo.getImageLocation().split( "/" );
 		imgInfo.setImageState( "deregistered" );
 		try {
@@ -155,7 +155,7 @@ public class WalrusUtil {
 		return null;
 	}
 
-	public static void verifyManifestIntegrity( final ImageInfo imgInfo ) throws EucalyptusCloudException {
+	public static void verifyManifestIntegrity( final Image imgInfo ) throws EucalyptusCloudException {
 		String[] imagePathParts = imgInfo.getImageLocation().split( "/" );
 		GetObjectResponseType reply = null;
 		GetObjectType msg = new GetObjectType( imagePathParts[ 0 ], imagePathParts[ 1 ], true, false, true );

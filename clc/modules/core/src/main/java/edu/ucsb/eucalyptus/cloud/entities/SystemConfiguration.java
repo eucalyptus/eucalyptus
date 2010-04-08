@@ -84,6 +84,8 @@ import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.Configurable;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.images.Image;
+import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;

@@ -144,6 +144,7 @@ public class GenerateJiBXBinding {
         || field.getName( ).equals( "metaClass" ) 
         || field.getName( ).startsWith( "JiBX_" ) 
         || itsType.getSimpleName( ).endsWith( "Channel" ) 
+        || itsType.getSimpleName( ).endsWith( "Closure" ) 
         || itsType.getSimpleName( ).endsWith( "HttpResponseStatus" ) ) {
       return;
     } else if ( itsType.getSuperclass( ) != null && "EucalyptusData".equals( itsType.getSuperclass( ).getSimpleName( ) ) ) {

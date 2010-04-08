@@ -5,6 +5,7 @@ import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities._anon;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 
 public class UserProxy implements User {
@@ -31,61 +32,85 @@ public class UserProxy implements User {
   }
   @Override
   public void setQueryId( final String queryId ) {
-    new _this( ) {{
-      new _mutator( ) { public void set( UserEntity e ) {
-          e.setQueryId( queryId );
-        }};
-    }};
+    try {
+      new _this( ) {{
+        new _mutator( ) { public void set( UserEntity e ) {
+            e.setQueryId( queryId );
+          }}.set();
+      }};
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+    }
   }
   @Override
   public void setSecretKey( final String secretKey ) {
-    new _this( ) {{
-      new _mutator( ) { public void set( UserEntity e ) {
-          e.setSecretKey( secretKey );
-        }};
-    }};
+    try {
+      new _this( ) {{
+        new _mutator( ) { public void set( UserEntity e ) {
+            e.setSecretKey( secretKey );
+          }}.set();
+      }};
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+    }
   }
   @Override
   public void revokeSecretKey( ) {
-    new _this( ) {{
-      new _mutator( ) { public void set( UserEntity e ) {
-          e.revokeSecretKey( );
-        }};
-    }};
+    try {
+      new _this( ) {{
+        new _mutator( ) { public void set( UserEntity e ) {
+            e.revokeSecretKey( );
+        }}.set();
+      }};
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+    }
   }
   @Override
   public void revokeX509Certificate( ) {
-    new _this( ) {{
-      new _mutator( ) { public void set( UserEntity e ) {
-          e.revokeX509Certificate( );
-        }};
-    }};
+    try {
+      new _this( ) {{
+        new _mutator( ) { public void set( UserEntity e ) {
+            e.revokeX509Certificate( );
+        }}.set();
+      }};
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+    }
   }
 
   /**
-   * @see com.eucalyptus.auth.principal.User#setIsAdministrator(java.lang.Boolean)
+   * @see com.eucalyptus.auth.principal.User#setAdministrator(java.lang.Boolean)
    * @param admin
    */
   @Override
   public void setAdministrator( final Boolean admin ) {
-    new _this( ) {{
-        new _mutator( ) { public void set( UserEntity e ) {
-            e.setAdministrator( admin );
-          }};
-    }};
+    try {
+      new _this( ) {{
+          new _mutator( ) { public void set( UserEntity e ) {
+              e.setAdministrator( admin );
+          }}.set();
+      }};
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+    }
   }
   
   /**
-   * @see com.eucalyptus.auth.principal.User#setIsEnabled(java.lang.Boolean)
+   * @see com.eucalyptus.auth.principal.User#setEnabled(java.lang.Boolean)
    * @param enabled
    */
   @Override
   public void setEnabled( final Boolean enabled ) {
-    new _this( ) {{ 
-      new _mutator( ) { public void set( UserEntity e ) {
-            e.setEnabled( enabled );
+    try {
+      new _this( ) {{ 
+        new _mutator( ) { public void set( UserEntity e ) {
+              e.setEnabled( enabled );
+        }}.set();
       }};
-    }};
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+    }
   }
   
   /**
@@ -94,11 +119,15 @@ public class UserProxy implements User {
    */
   @Override
   public void setX509Certificate( final X509Certificate cert ) {
-    new _this( ) {{ 
-      new _mutator( ) { public void set( UserEntity e ) {
-            e.setX509Certificate( cert );
+    try {
+      new _this( ) {{ 
+        new _mutator( ) { public void set( UserEntity e ) {
+              e.setX509Certificate( cert );
+        }}.set();
       }};
-    }};
+    } catch ( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
+    }
   }
   
   /**
@@ -155,9 +184,21 @@ public class UserProxy implements User {
     return this.user.getX509Certificate( );
   }
   
+  /**
+   * @see com.eucalyptus.auth.principal.credential.CredentialPrincipal#getNumber()
+   * @return
+   */
   @Override
   public BigInteger getNumber( ) {
     return this.user.getNumber( );
+  }
+  /**
+   * @see com.eucalyptus.auth.principal.User#getToken()
+   * @return
+   */
+  @Override
+  public String getToken( ) {
+    return this.user.getToken( );
   }
 
     

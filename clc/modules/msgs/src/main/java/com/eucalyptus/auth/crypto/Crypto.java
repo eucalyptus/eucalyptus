@@ -10,24 +10,6 @@ import com.eucalyptus.auth.Authentication;
 public class Crypto {
   
   /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.auth.api.CryptoProvider#generateCertificateCode(java.lang.String)
-   */
-  public static String generateCertificateCode( final String userName ) {
-    return Authentication.getCryptoProvider( ).generateCertificateCode( userName );
-  }
-  
-  /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.auth.api.CryptoProvider#generateConfirmationCode(java.lang.String)
-   */
-  public static String generateConfirmationCode( final String userName ) {
-    return Authentication.getCryptoProvider( ).generateConfirmationCode( userName );
-  }
-  
-  /**
    * @param password
    * @return
    * @see com.eucalyptus.auth.api.CryptoProvider#generateHashedPassword(java.lang.String)
@@ -56,6 +38,12 @@ public class Crypto {
     return Authentication.getCryptoProvider( ).getDigestBase64( input, hash, randomize );
   }
   
+  /**
+   * @param userId
+   * @param prefix
+   * @return
+   * @see com.eucalyptus.auth.api.CryptoProvider#generateId(String, String)
+   */
   public static String generateId( final String userId, final String prefix ) {
     return Authentication.getCryptoProvider( ).generateId( userId, prefix );
   }

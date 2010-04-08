@@ -1,3 +1,4 @@
+
 package com.eucalyptus.entities;
 
 import java.util.List;
@@ -15,6 +16,10 @@ public abstract class _anon<T> {
       throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + search.getClass( ).getCanonicalName( ) );
     }
     this.ctx = search.getClass( ).getAnnotation( PersistenceContext.class ).name( );
+  }
+  public _anon set( _mutator m ) throws EucalyptusCloudException {
+    m.set( );
+    return this;
   }
   protected  abstract class _mutator {    
     public abstract void set( T e );

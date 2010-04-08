@@ -91,12 +91,14 @@ public class EntityWrapper<TYPE> {
     this( "eucalyptus_general" );
   }
   
-  public static <T> EntityWrapper<T> get( T obj ) {
-    if( !obj.getClass( ).isAnnotationPresent( PersistenceContext.class ) ) {
-      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + obj.getClass( ).getCanonicalName( ) );
+  public static <T> EntityWrapper<T> get( Class<T> type ) {
+    if( !type.isAnnotationPresent( PersistenceContext.class ) ) {
+      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
     }
-    return new EntityWrapper<T>( obj.getClass( ).getAnnotation( PersistenceContext.class ).name( ) );
-    
+    return new EntityWrapper<T>( type.getAnnotation( PersistenceContext.class ).name( ) );    
+  }
+  public static <T> EntityWrapper<T> get( T obj ) {
+    return get( (Class<T>) obj.getClass( ) );
   }
 
   @SuppressWarnings( "unchecked" )

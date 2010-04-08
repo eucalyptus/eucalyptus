@@ -21,5 +21,4 @@ public interface HmacPrincipal extends CredentialPrincipal {
    * Set the secret key for this principal.
    */
   public abstract void setSecretKey( String secretKey );
-
 }

@@ -281,13 +281,13 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		String response;
 		if (admin) {
 			/* enable the new user right away */
-			user.setIsApproved(true);
-			user.setIsEnabled(true);
+			user.setApproved(true);
+			user.setEnabled(true);
 			response = notifyUserApproved(user);
 		} else {
 			/* if anonymous, then notify admin */
-			user.setIsApproved(false);
-			user.setIsEnabled(false);
+			user.setApproved(false);
+			user.setEnabled(false);
 			notifyAdminOfSignup (user);
 			response = thanks_for_signup;
 		}
@@ -338,7 +338,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			/* try email then */
 			db_user = EucalyptusManagement.getWebUserByEmail(web_user.getEmail());
 		}
-		db_user.setTemporaryPassword (web_user.getBCryptedPassword());
+		db_user.setPassword (web_user.getPassword());
 		EucalyptusManagement.commitWebUser(db_user);
 		return notifyUserRecovery(db_user);
 	}
@@ -416,7 +416,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 		// you can get a sessionId with an expired password so you can change it => false
 		user = verifyUser (null, userId, false);
-		if (!user.getBCryptedPassword().equals( md5Password )) {
+		if (!user.getPassword().equals( md5Password )) {
 			throw new SerializableException("Incorrect password");
 		}
 
@@ -486,11 +486,11 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			String response;
 
 			if (action.equals("confirm")) {
-				user.setIsConfirmed(true);
+				user.setConfirmed(true);
 				EucalyptusManagement.commitWebUser(user);
 				response = "Your account is now active.";
 			} else {
-				user.setBCryptedPassword (user.getTemporaryPassword());
+				user.setPassword (user.getPassword());
 				long now = System.currentTimeMillis();
 				user.setPasswordExpires( new Long(now + pass_expiration_ms) );
 				EucalyptusManagement.commitWebUser(user);
@@ -514,9 +514,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			}
 			UserInfoWeb new_user = EucalyptusManagement.getWebUser(userName);
 			if (action.equals("approve")) {
-				new_user.setIsApproved(true);
-				new_user.setIsEnabled(true);
-				new_user.setIsConfirmed(false);
+				new_user.setApproved(true);
+				new_user.setEnabled(true);
+				new_user.setConfirmed(false);
 				EucalyptusManagement.commitWebUser(new_user);
 				response = notifyUserApproved(new_user);
 			} else if (action.equals("reject")) {
@@ -526,10 +526,10 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 				EucalyptusManagement.deleteWebUser(new_user);
 				/* TODO: maybe tell the user that his account was deleted? */
 			} else if (action.equals("disable")) {
-				new_user.setIsEnabled(false);
+				new_user.setEnabled(false);
 				EucalyptusManagement.commitWebUser(new_user);
 			} else if (action.equals("enable")) {
-				new_user.setIsEnabled(true);
+				new_user.setEnabled(true);
 				EucalyptusManagement.commitWebUser(new_user);
 			}
 			response = "Request to " + action + " user '" + userName + "' succeeded.";
@@ -619,7 +619,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		SessionInfo session = verifySession (sessionId);
 		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
 
-		return user.getCertificateCode();
+		return user.getToken();
 	}
 
 	public HashMap getProperties()
@@ -647,11 +647,11 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 		/* check old password if the user is changing password voluntarily */
 		if ( !isPasswordExpired((UserInfoWeb)user) ) {
-			if ( !oldPassword.equals(user.getBCryptedPassword()) ) {
+			if ( !oldPassword.equals(user.getPassword()) ) {
 				throw new SerializableException("Old password is incorrect");
 			}
 		}
-		user.setBCryptedPassword( newPassword );
+		user.setPassword( newPassword );
 		final long now = System.currentTimeMillis();
 		user.setPasswordExpires( new Long(now + pass_expiration_ms) );
 		EucalyptusManagement.commitWebUser( user );
@@ -686,18 +686,18 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		/* TODO: Any checks? */
 		oldRecord.setRealName (newRecord.getRealName());
 		oldRecord.setEmail (newRecord.getEmail());
-		oldRecord.setBCryptedPassword (newRecord.getBCryptedPassword());
+		oldRecord.setPassword (newRecord.getPassword());
 		oldRecord.setTelephoneNumber (newRecord.getTelephoneNumber());
 		oldRecord.setAffiliation (newRecord.getAffiliation());
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
-		oldRecord.setIsAdministrator(newRecord.isAdministrator());
+		oldRecord.setAdministrator(newRecord.isAdministrator());
 
 		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
 		if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {
-			oldRecord.setIsConfirmed(true);
-			oldRecord.setIsEnabled(true);
-			oldRecord.setIsApproved(true);
+			oldRecord.setConfirmed(true);
+			oldRecord.setEnabled(true);
+			oldRecord.setApproved(true);
 		}
 
 		EucalyptusManagement.commitWebUser( oldRecord );

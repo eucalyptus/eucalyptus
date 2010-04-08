@@ -62,11 +62,10 @@
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud.entities;
+package com.eucalyptus.images;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -79,25 +78,21 @@ import javax.persistence.ManyToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
-import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserInfo;
-import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
-
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 @Entity
 @PersistenceContext(name="eucalyptus_general")
 @Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class ImageInfo {
+public class ImageInfo implements Image {
   @Transient
   public static ImageInfo ALL = new ImageInfo();
   @Id
@@ -191,82 +186,162 @@ public class ImageInfo {
     return this.id;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getArchitecture()
+   * @return
+   */
   public String getArchitecture() {
     return architecture;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setArchitecture(java.lang.String)
+   * @param architecture
+   */
   public void setArchitecture( String architecture ) {
     this.architecture = architecture;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getImageId()
+   * @return
+   */
   public String getImageId() {
     return imageId;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setImageId(java.lang.String)
+   * @param imageId
+   */
   public void setImageId( String imageId ) {
     this.imageId = imageId;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getImageLocation()
+   * @return
+   */
   public String getImageLocation() {
     return imageLocation;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setImageLocation(java.lang.String)
+   * @param imageLocation
+   */
   public void setImageLocation( String imageLocation ) {
     this.imageLocation = imageLocation;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getImageOwnerId()
+   * @return
+   */
   public String getImageOwnerId() {
     return imageOwnerId;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setImageOwnerId(java.lang.String)
+   * @param imageOwnerId
+   */
   public void setImageOwnerId( String imageOwnerId ) {
     this.imageOwnerId = imageOwnerId;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getImageState()
+   * @return
+   */
   public String getImageState() {
     return imageState;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setImageState(java.lang.String)
+   * @param imageState
+   */
   public void setImageState( String imageState ) {
     this.imageState = imageState;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getImageType()
+   * @return
+   */
   public String getImageType() {
     return imageType;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setImageType(java.lang.String)
+   * @param imageType
+   */
   public void setImageType( String imageType ) {
     this.imageType = imageType;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getPublic()
+   * @return
+   */
   public Boolean getPublic() {
     return isPublic;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setPublic(java.lang.Boolean)
+   * @param aPublic
+   */
   public void setPublic( Boolean aPublic ) {
     isPublic = aPublic;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getKernelId()
+   * @return
+   */
   public String getKernelId() {
     return kernelId;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setKernelId(java.lang.String)
+   * @param kernelId
+   */
   public void setKernelId( String kernelId ) {
     this.kernelId = kernelId;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getRamdiskId()
+   * @return
+   */
   public String getRamdiskId() {
     return ramdiskId;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setRamdiskId(java.lang.String)
+   * @param ramdiskId
+   */
   public void setRamdiskId( String ramdiskId ) {
     this.ramdiskId = ramdiskId;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getSignature()
+   * @return
+   */
   public String getSignature() {
     return signature;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setSignature(java.lang.String)
+   * @param signature
+   */
   public void setSignature( final String signature ) {
     this.signature = signature;
   }
@@ -287,6 +362,10 @@ public class ImageInfo {
     this.permissions = permissions;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getAsImageDetails()
+   * @return
+   */
   public ImageDetails getAsImageDetails() {
     ImageDetails i = new ImageDetails();
     i.setArchitecture( this.getArchitecture() );
@@ -301,14 +380,27 @@ public class ImageInfo {
     return i;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#getProductCodes()
+   * @return
+   */
   public List<ProductCode> getProductCodes() {
     return productCodes;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#setProductCodes(java.util.List)
+   * @param productCodes
+   */
   public void setProductCodes( final List<ProductCode> productCodes ) {
     this.productCodes = productCodes;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#equals(java.lang.Object)
+   * @param o
+   * @return
+   */
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -321,14 +413,27 @@ public class ImageInfo {
     return true;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#hashCode()
+   * @return
+   */
   @Override
   public int hashCode() {
     return imageId.hashCode();
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#isAllowed(com.eucalyptus.auth.UserInfo)
+   * @param user
+   * @return
+   */
   public boolean isAllowed( UserInfo user ) {
-    if ( user.isAdministrator() || user.getUserName().equals( this.getImageOwnerId() ) )
-      return true;
+    try {
+      if ( Users.lookupUser( user.getUserName( ) ).isAdministrator() || user.getUserName().equals( this.getImageOwnerId() ) )
+        return true;
+    } catch ( NoSuchUserException e ) {
+      return false;
+    }
 //    for ( UserGroupEntity g : this.getUserGroups() )
 //      if ( "all".equals( g.getName() ) )
         return true;
@@ -347,6 +452,10 @@ public class ImageInfo {
     return image;
   }
 
+  /**
+   * @see com.eucalyptus.images.Image#toString()
+   * @return
+   */
   @Override
   public String toString() {
     return this.imageId;

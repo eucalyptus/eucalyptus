@@ -153,12 +153,12 @@ public class ReplyQueue {
   private EucalyptusErrorMessageType getErrorMessageType( final String componentName, final Throwable exception, final BaseMessage msg ) {
     EucalyptusErrorMessageType errMsg = null;
     if ( exception != null ) {
-      Throwable e = exception;
-      if ( e != null ) {
-        errMsg = new EucalyptusErrorMessageType( componentName, msg, e.getMessage( ) );
+      String desc = exception.getMessage( );
+      for( Throwable e = exception; e.getCause( ) != null; e = e.getCause( ) ) {
+        desc += "\n" + e.getMessage( );
       }
-    }
-    if ( errMsg == null ) {
+      errMsg = new EucalyptusErrorMessageType( componentName, msg, desc );
+    } else {
       ByteArrayOutputStream exStream = new ByteArrayOutputStream( );
       if(exception != null)
           exception.printStackTrace( new PrintStream( exStream ) );

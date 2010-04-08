@@ -74,7 +74,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -87,105 +86,55 @@ public class UserInfo {
   @Id
   @GeneratedValue
   @Column( name = "user_id" )
-  private Long    id = -1l;
+  private Long          id          = -1l;
   @Column( name = "user_name" )
-  private String  userName;
+  private String        userName;
   @Column( name = "user_email" )
-  private String  email;
+  private String        email;
   @Column( name = "user_real_name" )
-  private String  realName;
-  @Column( name = "user_reservation_id" )
-  private Long    reservationId;
-  @Column( name = "user_b_crypted_password" )
-  private String  bCryptedPassword;
+  private String        realName;
   @Column( name = "user_telephone_number" )
-  private String  telephoneNumber;
+  private String        telephoneNumber;
   @Column( name = "user_affiliation" )
-  private String  affiliation;
+  private String        affiliation;
   @Column( name = "user_project_description" )
-  private String  projectDescription;
+  private String        projectDescription;
   @Column( name = "user_project_pi_name" )
-  private String  projectPIName;
-  @Column( name = "user_confirmation_code" )
-  private String  confirmationCode;
-  @Column( name = "user_certificate_code" )
-  private String  certificateCode;
+  private String        projectPIName;
   @Column( name = "user_is_approved" )
-  private Boolean isApproved;
+  private Boolean       approved;
   @Column( name = "user_is_confirmed" )
-  private Boolean isConfirmed;
-  @Column( name = "user_is_enabled" )
-  private Boolean isEnabled;
-  @Column( name = "user_is_admin" )
-  private Boolean isAdministrator;
+  private Boolean       confirmed;
   @Column( name = "password_expires" )
-  private Long    passwordExpires;
-  @Column( name = "user_temporary_password" )
-  private String  temporaryPassword;
+  private Long          passwordExpires;
+  @Column( name = "user_confirmation_code" )
+  private String        confirmationCode;
   
   @Transient
   private static String BOGUS_ENTRY = "N/A";
+  
   public UserInfo( ) {}
   
-  public UserInfo( String userName, Boolean admin, String confirmationCode, String certificateCode, String oneTimePass ) {
-    this( userName, BOGUS_ENTRY, admin, confirmationCode, certificateCode, oneTimePass );
-    this.isApproved = true;
-    this.isConfirmed = true;
-    this.isEnabled = true;
-    this.bCryptedPassword = BOGUS_ENTRY;
+  public UserInfo( String userName, String confirmationCode ) {
+    this( userName, BOGUS_ENTRY, confirmationCode );
+    this.approved = true;
+    this.confirmed = true;
   }
   
-  public UserInfo( String userName, String email, Boolean admin, String confirmationCode, String certificateCode, String oneTimePass ) {
-    this.isApproved = true;
-    this.isConfirmed = false;
-    this.isEnabled = false;    
-    this.reservationId = 0l;
-    this.passwordExpires = 0l;    
-
-    this.userName = userName;
-    this.isAdministrator = admin;
-    this.email = email;
+  public UserInfo( String userName, String email, String confirmationCode ) {
+    this.approved = true;
+    this.confirmed = false;
     this.confirmationCode = confirmationCode;
-    this.certificateCode = certificateCode;
-    this.bCryptedPassword = oneTimePass;
-
+    this.passwordExpires = 0l;
+    
+    this.userName = userName;
+    this.email = email;
+    
     this.realName = BOGUS_ENTRY;
     this.telephoneNumber = BOGUS_ENTRY;
     this.affiliation = BOGUS_ENTRY;
     this.projectDescription = BOGUS_ENTRY;
     this.projectPIName = BOGUS_ENTRY;
-  }  
-  
-  public static UserInfo generateAdmin( ) {
-    return UserInfo.generateAdmin( "admin" );
-  }
-  public static UserInfo generateAdmin( String userName ) {
-    return new UserInfo( userName, "", "Eucalyptus Administrator", 0l, 
-                         Crypto.generateHashedPassword( userName ), "", "", "", "", 
-                         Crypto.generateSessionToken( userName ), 
-                         Crypto.generateSessionToken( userName ), 
-                         true, true, true, true, 0l );
-  }
-  public UserInfo( String userName, String email, String realName, Long reservationId, String bCryptedPassword, String telephoneNumber, String affiliation,
-                   String projectDescription, String projectPIName, String confirmationCode, String certificateCode, Boolean isApproved, Boolean isConfirmed,
-                   Boolean isEnabled, Boolean isAdministrator, Long passwordExpires ) {
-    super( );
-    this.userName = userName;
-    this.email = email;
-    this.realName = realName;
-    this.reservationId = reservationId;
-    this.bCryptedPassword = bCryptedPassword;
-    this.telephoneNumber = telephoneNumber;
-    this.affiliation = affiliation;
-    this.projectDescription = projectDescription;
-    this.projectPIName = projectPIName;
-    this.confirmationCode = confirmationCode;
-    this.certificateCode = certificateCode;
-    this.isApproved = isApproved;
-    this.isConfirmed = isConfirmed;
-    this.isEnabled = isEnabled;
-    this.isAdministrator = isAdministrator;
-    this.passwordExpires = passwordExpires;
   }
   
   public UserInfo( String userName ) {
@@ -212,38 +161,6 @@ public class UserInfo {
     this.affiliation = affiliation;
   }
   
-  public String getBCryptedPassword( ) {
-    return bCryptedPassword;
-  }
-  
-  public void setBCryptedPassword( String bCryptedPassword ) {
-    this.bCryptedPassword = bCryptedPassword;
-  }
-  
-  public String getConfirmationCode( ) {
-    return confirmationCode;
-  }
-  
-  public void setConfirmationCode( String confirmationCode ) {
-    this.confirmationCode = confirmationCode;
-  }
-  
-  public String getCertificateCode( ) {
-    return certificateCode;
-  }
-  
-  public void setCertificateCode( String certificateCode ) {
-    this.certificateCode = certificateCode;
-  }
-  
-  public Boolean isAdministrator( ) {
-    return isAdministrator;
-  }
-  
-  public void setIsAdministrator( Boolean administrator ) {
-    isAdministrator = administrator;
-  }
-  
   public Long getPasswordExpires( ) {
     return passwordExpires;
   }
@@ -252,36 +169,12 @@ public class UserInfo {
     this.passwordExpires = passwordExpires;
   }
   
-  public String getTemporaryPassword( ) {
-    return this.temporaryPassword;
-  }
-  
-  public void setTemporaryPassword( String password ) {
-    this.temporaryPassword = password;
-  }
-  
   public Boolean isApproved( ) {
-    return isApproved;
+    return approved;
   }
   
-  public void setIsApproved( Boolean approved ) {
-    isApproved = approved;
-  }
-  
-  public Boolean isConfirmed( ) {
-    return isConfirmed;
-  }
-  
-  public void setIsConfirmed( Boolean confirmed ) {
-    isConfirmed = confirmed;
-  }
-  
-  public Boolean isEnabled( ) {
-    return isEnabled;
-  }
-  
-  public void setIsEnabled( Boolean enabled ) {
-    isEnabled = enabled;
+  public void setApproved( Boolean approved ) {
+    approved = approved;
   }
   
   public String getProjectDescription( ) {
@@ -323,15 +216,28 @@ public class UserInfo {
   public void setEmail( String email ) {
     this.email = email;
   }
-  
-  public Long getReservationId( ) {
-    return reservationId++;
+
+  public Boolean getConfirmed( ) {
+    return this.confirmed;
   }
-  
-  public void setReservationId( Long reservationId ) {
-    this.reservationId = reservationId;
+
+  public void setConfirmed( Boolean confirmed ) {
+    this.confirmed = confirmed;
   }
-  
+
+  public String getConfirmationCode( ) {
+    return this.confirmationCode;
+  }
+
+  public void setConfirmationCode( String confirmationCode ) {
+    this.confirmationCode = confirmationCode;
+  }
+
+  public Boolean getApproved( ) {
+    return this.approved;
+  }
+
+
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( o == null || getClass( ) != o.getClass( ) ) return false;

@@ -54,31 +54,17 @@ public interface UserProvider {
   public abstract List<User> listAllUsers( );
   
   /**
-   * Add a user who is enabled. Generates the needed query ID, secret key, etc.
+   * Add a user with system generated query ID, secret key, session tokens, etc.
    * 
    * @param userName
    * @param admin
-   * @param queryId
-   * @param secretKey
-   * @return
-   * @throws UserExistsException
-   * @throws UnsupportedOperationException
-   */
-  public abstract User addUser( String userName, Boolean admin, Boolean enabled ) throws UserExistsException, UnsupportedOperationException;
-  
-  /**
-   * Add a user.
-   * 
-   * @param userName
-   * @param isAdmin
-   * @param isEnabled
-   * @param secretKey
-   * @param queryId
+   * @param enabled
    * @return
    * @throws UserExistsException
    *           if the user exists. User
+   * @throws UnsupportedOperationException
    */
-  public abstract User addUser( String userName, Boolean isAdmin, Boolean isEnabled, String secretKey, String queryId ) throws UserExistsException;
+  public abstract User addUser( String userName, Boolean admin, Boolean enabled ) throws UserExistsException, UnsupportedOperationException;
   
   /**
    * Delete the user with the given userName

@@ -89,10 +89,6 @@ public class Users {
      return users;
   }
 
-  public static User addUser( String userName, Boolean isAdmin, Boolean isEnabled, String secretKey, String queryId ) throws UserExistsException {
-    return Users.getUserProvider().addUser( userName, isAdmin, isEnabled, secretKey, queryId );
-  }
-
   public static User addUser( String userName, Boolean admin, Boolean enabled ) throws UserExistsException, UnsupportedOperationException {
     return Users.getUserProvider().addUser( userName, admin, enabled );
   }

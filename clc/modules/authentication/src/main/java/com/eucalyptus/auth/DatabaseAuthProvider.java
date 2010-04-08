@@ -71,6 +71,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.auth.api.GroupProvider;
 import com.eucalyptus.auth.api.UserProvider;
+import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
@@ -87,12 +88,14 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   DatabaseAuthProvider( ) {}
   
   @Override
-  public User addUser( String userName, Boolean isAdmin, Boolean isEnabled, String secretKey, String queryId ) throws UserExistsException {
+  public User addUser( String userName, Boolean isAdmin, Boolean isEnabled ) throws UserExistsException {
     UserEntity newUser = new UserEntity( userName );
-    newUser.setQueryId( queryId );
-    newUser.setSecretKey( secretKey );
+    newUser.setQueryId( Hmacs.generateQueryId( userName ) );
+    newUser.setSecretKey( Hmacs.generateSecretKey( userName ) );
     newUser.setAdministrator( isAdmin );
     newUser.setEnabled( isEnabled );
+    newUser.setPassword( Crypto.generateHashedPassword( userName ) );
+    newUser.setToken( Crypto.generateSessionToken( userName ) );
     EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
       db.add( newUser );
@@ -101,6 +104,15 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       db.rollback( );
       throw new UserExistsException( t );
     }
+    EntityWrapper<UserInfo> dbU = EntityWrapper.get( UserInfo.class );
+    try {
+      String confirmCode = Crypto.generateSessionToken( userName );
+      UserInfo newUserInfo = new UserInfo( userName, confirmCode );
+      dbU.add( newUserInfo );
+      dbU.commit( );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }    
     return newUser;
   }
   
@@ -117,11 +129,6 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       db.rollback( );
       throw new NoSuchUserException( e );
     }
-  }
-  
-  @Override
-  public User addUser( String userName, Boolean admin, Boolean enabled ) throws UserExistsException, UnsupportedOperationException {
-    return this.addUser( userName, admin, enabled, Hmacs.generateQueryId( userName ), Hmacs.generateSecretKey( userName ) );
   }
   
   @Override
@@ -248,7 +255,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     }
     return user;
   }
-
+  
   @Override
   public Group addGroup( String groupName ) throws GroupExistsException {
     EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
@@ -262,19 +269,17 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     }
     return new DatabaseWrappedGroup( newGroup );
   }
-
+  
   @Override
   public List<Group> listAllGroups( ) {
     List<Group> ret = Lists.newArrayList( );
     UserGroupEntity search = new UserGroupEntity( );
     EntityWrapper<UserGroupEntity> db = EntityWrapper.get( search );
     List<UserGroupEntity> groupList = db.query( search );
-    for( UserGroupEntity g : groupList ) {
+    for ( UserGroupEntity g : groupList ) {
       ret.add( new DatabaseWrappedGroup( g ) );
     }
     return ret;
   }
   
-  
-
 }

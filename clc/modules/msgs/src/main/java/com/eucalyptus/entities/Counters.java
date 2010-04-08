@@ -148,15 +148,18 @@ public class Counters extends AbstractPersistent implements Serializable {
     } else {
       idStart = tempId.addAndGet( length );
       if ( ( idStart - lastSave.get( ) ) > 1000 ) {
-        new _this( ) {
-          {
-            new _mutator( ) {
-              public void set( Counters c ) {
-                c.setMessageId( idStart );
-              }
-            };
-          }
-        };
+        try {
+          new _this( ) {{
+              new _mutator( ) {
+                public void set( Counters c ) {
+                  c.setMessageId( idStart );
+                }
+              }.set( );
+            }
+          };
+        } catch ( EucalyptusCloudException e ) {
+          LOG.debug( e, e );
+        }
         lastSave.set( idStart );
       }
     }

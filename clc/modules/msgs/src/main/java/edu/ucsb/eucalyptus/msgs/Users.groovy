@@ -17,19 +17,19 @@ public class UserInfoType extends EucalyptusData {
   String certificateCode;
   String confirmationCode;
   
-  public UserInfoType( User u, String email, String certificateCode, String confirmationCode ) {
+  public UserInfoType( User u, String email, String confirmationCode ) {
     this.userName = u.getName();
     this.accessKey = u.getQueryId();
     this.secretKey = u.getSecretKey();
     this.distinguishedName = u.getX509Certificate( )?.getSubjectX500Principal( )?.toString();
     this.certificateSerial = u.getX509Certificate( )?.getSerialNumber( );
     for( Group g : Groups.lookupGroups( u ) ) {
-      this.groups.add( it.getName() );
+      this.groups.add( g.getName() );
     }
     this.enabled = u.isEnabled( );
     this.admin = u.isAdministrator( );
     this.email = email;
-    this.certificateCode = certificateCode;
+    this.certificateCode = u.getToken();
     this.confirmationCode = confirmationCode;
   }
 }  

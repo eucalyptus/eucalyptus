@@ -110,10 +110,15 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   String queryId;
   @Column( name = "auth_user_secretkey" )
   String secretKey;
+  @Column( name = "auth_user_password" )
+  String password;
   @Column( name = "auth_user_is_admin" )
   Boolean administrator;
   @Column( name = "auth_user_is_enabled" )
   Boolean enabled;
+  @Column( name = "auth_user_token" )
+  String  token;
+  
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )

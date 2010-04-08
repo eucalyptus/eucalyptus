@@ -23,7 +23,7 @@ import org.bouncycastle.util.encoders.UrlBase64;
 import groovy.sql.Sql;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.cloud.entities.ProductCode;
+import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
@@ -32,7 +32,7 @@ import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.cloud.ws.SnapshotManager;
 import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
 
-import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
+import com.eucalyptus.images.ImageInfo;
 
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.UserGroupInfo;
