@@ -584,7 +584,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 				throw new SerializableException("Only administrators can view users");
 			}
 			if (userId.equals("*")) {
-				l = EucalyptusManagement.getWebUsers(userId); /* NOTE: userId is currently ignored */
+				l.addAll( EucalyptusManagement.getWebUsers(userId) ); /* NOTE: userId is currently ignored */
 			} else {
 				l.add(EucalyptusManagement.getWebUser(user.getUserName()));
 			}

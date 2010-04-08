@@ -120,27 +120,26 @@ public class EucalyptusManagement {
 	public static List <UserInfoWeb> getWebUsers (String pattern) throws SerializableException
 	{
     final EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get( UserInfo.class );
-	  List<UserInfoWeb> webUsersList = Lists.transform( Users.listAllUsers( ), new Function<User,UserInfoWeb>() {
-      @Override
-      public UserInfoWeb apply( User u ) {
-        try {
-          UserInfo userInfo = dbWrapper.getUnique( new UserInfo( u.getName( ) ) );
-          return Composites.composeNew( UserInfoWeb.class, userInfo, u );
-        } catch ( Exception e ) {
-          return new UserInfoWeb();
-        }
-      }} );
+	  final List<UserInfoWeb> webUsersList = Lists.newArrayList();
+	  for( User u : Users.listAllUsers( ) ) {
+      try {
+        UserInfo userInfo = dbWrapper.getUnique( new UserInfo( u.getName( ) ) );
+        webUsersList.add( Composites.composeNew( UserInfoWeb.class, userInfo, u ) );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
+	  }
 		dbWrapper.commit();
 		return webUsersList;
 	}
 
 	/* TODO: for now 'pattern' is ignored and all images are returned */
 	public static List <ImageInfoWeb> getWebImages (String pattern) throws SerializableException {
-		return Lists.transform( Images.listAllImages( ), new Function<Image,ImageInfoWeb>() {
-      @Override
-      public ImageInfoWeb apply( Image i ) {
-        return Composites.update( i, new ImageInfoWeb( ) );
-      }} );
+		List<ImageInfoWeb> ret = Lists.newArrayList( );
+	  for( Image i : Images.listAllImages( ) ) {
+        ret.add( Composites.update( i, new ImageInfoWeb( ) ) );
+	  }
+    return ret;
 	}
 
 	public static UserInfoWeb getWebUser( String userName ) throws SerializableException {
