@@ -349,7 +349,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
       strncat(console_output, console_append, 4096);
     }
     if (console_main) {
-      strncat(console_output, console_main, 4096);
+      strncat(console_output, console_main, 1024*64);
     }
     *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
     ret = 0;
