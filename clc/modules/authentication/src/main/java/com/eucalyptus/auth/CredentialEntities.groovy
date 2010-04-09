@@ -71,6 +71,7 @@ import java.util.ArrayList;
 import org.bouncycastle.util.encoders.UrlBase64;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Transient;
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.GenericGenerator
@@ -93,6 +94,7 @@ import javax.persistence.Version;
 import javax.persistence.PersistenceContext;
 
 import org.hibernate.sql.Alias
+import org.apache.log4j.Logger
 
 import com.google.common.collect.Lists;
 import com.eucalyptus.auth.principal.User;
@@ -105,6 +107,8 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Table( name = "auth_users" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class UserEntity extends AbstractPersistent implements Serializable, User {
+  @Transient
+  private static Logger LOG = Logger.getLogger( UserEntity.class );
   @Column( name = "auth_user_name", unique=true )
   String name;
   @Column( name = "auth_user_query_id" )
@@ -142,6 +146,7 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
     if( this.getCertificate() != null ) {
       X509Certificate c = this.getX509Certificate( );
       this.getOldCertificates( ).add( c );
+      LOG.debug( "Revoked old user certificate: " + c.getSubjectX500Principal( ) + " " + c.getSerialNumber( )  );
       this.setCertificate( null );
     }
   }
@@ -164,6 +169,7 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   
   public void setX509Certificate( X509Certificate x509 ) {
     this.revokeX509Certificate();
+    LOG.debug( "Setting new user certificate: " + x509.getSubjectX500Principal( ) + " " + x509.getSerialNumber( ) );
     this.setCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
   }
   public Boolean isEnabled() {
@@ -202,6 +208,8 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
 public class X509Cert extends AbstractPersistent implements Serializable {
   @Column( name = "auth_x509_alias", unique=true )
   String alias
+  @Column( name = "auth_x509_revoked_on" )
+  Date revokedOn
   @Lob
   @Column( name = "auth_x509_pem_certificate" )
   String pemCertificate

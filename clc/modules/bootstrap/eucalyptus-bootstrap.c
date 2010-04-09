@@ -255,10 +255,10 @@ static int child( euca_opts *args, java_home_t *data, uid_t uid, gid_t gid ) {
 	setpgrp( );
 	__die(java_init( args, data ) != 1, "Failed to initialize Eucalyptus.");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.init))==0,"Failed to init Eucalyptus.");
-    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.load))==0,"Failed to load Eucalyptus.");
 	__abort(4, set_keys_ownership( GETARG( args, home ), uid, gid ) != 0,"Setting ownership of keyfile failed." );
 	__abort(4, linuxset_user_group( GETARG( args, user ), uid, gid ) != 0,"Setting the user failed." );
 	__abort(4, (set_caps(0)!=0), "set_caps (0) failed");
+    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.load))==0,"Failed to load Eucalyptus.");
     __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.start))==0,"Failed to start Eucalyptus.");
 	handle._hup = signal_set( SIGHUP, handler );
 	handle._term = signal_set( SIGTERM, handler );

@@ -70,6 +70,7 @@ import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.auth.api.GroupProvider;
+import com.eucalyptus.auth.api.NoSuchCertificateException;
 import com.eucalyptus.auth.api.UserProvider;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.crypto.Hmacs;
@@ -113,7 +114,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     } catch ( Exception e ) {
       LOG.debug( e, e );
     }    
-    return newUser;
+    return new UserProxy( newUser );
   }
   
   @Override
@@ -142,10 +143,10 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   @Override
   public List<Group> lookupUserGroups( User user ) {
     List<Group> userGroups = Lists.newArrayList( );
-    EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
+    EntityWrapper<GroupEntity> db = Groups.getEntityWrapper( );
     try {
       UserEntity userInfo = db.recast( UserEntity.class ).getUnique( new UserEntity( user.getName( ) ) );
-      for ( UserGroupEntity g : db.query( new UserGroupEntity( ) ) ) {
+      for ( GroupEntity g : db.query( new GroupEntity( ) ) ) {
         if ( g.belongs( userInfo ) ) {
           userGroups.add( new DatabaseWrappedGroup( g ) );
         }
@@ -160,9 +161,9 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   
   @Override
   public Group lookupGroup( String groupName ) throws NoSuchGroupException {
-    EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
+    EntityWrapper<GroupEntity> db = Groups.getEntityWrapper( );
     try {
-      UserGroupEntity group = db.getUnique( new UserGroupEntity( groupName ) );
+      GroupEntity group = db.getUnique( new GroupEntity( groupName ) );
       db.commit( );
       return new DatabaseWrappedGroup( group );
     } catch ( EucalyptusCloudException e ) {
@@ -207,6 +208,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   public User lookupCertificate( X509Certificate cert ) throws NoSuchUserException {
     String certPem = B64.url.encString( PEMFiles.getBytes( cert ) );
     UserEntity searchUser = new UserEntity( );
+    searchUser.setCertificate( certPem );
     X509Cert searchCert = new X509Cert( );
     searchCert.setPemCertificate( certPem );
     searchUser.setEnabled( true );
@@ -214,7 +216,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     try {
       Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
       Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
-      List<User> users = ( List<User> ) session.createCriteria( User.class ).setCacheable( true ).add( qbeUser ).createCriteria( "certificates" )
+      List<User> users = ( List<User> ) session.createCriteria( User.class ).setCacheable( true ).add( qbeUser ).createCriteria( "oldCertificates" )
                                                .setCacheable( true ).add( qbeCert ).list( );
       User ret = users.size( ) == 1 ? users.get( 0 ) : null;
       int size = users.size( );
@@ -231,6 +233,33 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       } catch ( Throwable t ) {}
     }
   }
+  
+  @Override
+  public boolean checkRevokedCertificate( X509Certificate cert ) throws NoSuchCertificateException {
+    String certPem = B64.url.encString( PEMFiles.getBytes( cert ) );
+    UserEntity searchUser = new UserEntity( );
+    X509Cert searchCert = new X509Cert( );
+    searchCert.setPemCertificate( certPem );
+    searchUser.setEnabled( true );
+    Session session = DatabaseUtil.getEntityManagerFactory( Authentication.DB_NAME ).getSessionFactory( ).openSession( );
+    try {
+      Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
+      Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
+      List<User> users = ( List<User> ) session.createCriteria( User.class ).setCacheable( true ).add( qbeUser ).createCriteria( "oldCertificates" )
+                                               .setCacheable( true ).add( qbeCert ).list( );
+      if( users.isEmpty( ) || users.size( ) > 1 ) {
+        session.close( );
+        throw new NoSuchCertificateException( "Failed to identify user (found " + users.size() + ") from certificate information: " + cert.getSubjectX500Principal( ).toString( ) );
+      } else {
+        return true;
+      }
+    } finally {
+      try {
+        session.close( );
+      } catch ( Throwable t ) {}
+    }
+  }
+  
   
   @Override
   public User lookupQueryId( String queryId ) throws NoSuchUserException {
@@ -266,8 +295,8 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   
   @Override
   public Group addGroup( String groupName ) throws GroupExistsException {
-    EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
-    UserGroupEntity newGroup = new UserGroupEntity( groupName );
+    EntityWrapper<GroupEntity> db = Groups.getEntityWrapper( );
+    GroupEntity newGroup = new GroupEntity( groupName );
     try {
       db.add( newGroup );
       db.commit( );
@@ -281,10 +310,10 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   @Override
   public List<Group> listAllGroups( ) {
     List<Group> ret = Lists.newArrayList( );
-    UserGroupEntity search = new UserGroupEntity( );
-    EntityWrapper<UserGroupEntity> db = EntityWrapper.get( search );
-    List<UserGroupEntity> groupList = db.query( search );
-    for ( UserGroupEntity g : groupList ) {
+    GroupEntity search = new GroupEntity( );
+    EntityWrapper<GroupEntity> db = EntityWrapper.get( search );
+    List<GroupEntity> groupList = db.query( search );
+    for ( GroupEntity g : groupList ) {
       ret.add( new DatabaseWrappedGroup( g ) );
     }
     return ret;
@@ -292,10 +321,10 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
 
   @Override
   public void deleteGroup( String groupName ) throws NoSuchGroupException {
-    EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
-    UserGroupEntity delGroup = new UserGroupEntity( groupName );
+    EntityWrapper<GroupEntity> db = Groups.getEntityWrapper( );
+    GroupEntity delGroup = new GroupEntity( groupName );
     try {
-      UserGroupEntity g = db.getUnique( delGroup );
+      GroupEntity g = db.getUnique( delGroup );
       db.delete( g );
       db.commit( );
     } catch ( Throwable t ) {

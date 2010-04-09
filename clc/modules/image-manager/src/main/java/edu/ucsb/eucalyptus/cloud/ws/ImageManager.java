@@ -75,7 +75,7 @@ import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;

@@ -10,7 +10,6 @@ import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;

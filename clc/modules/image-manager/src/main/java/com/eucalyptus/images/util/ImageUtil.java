@@ -80,7 +80,7 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.util.Hashes;

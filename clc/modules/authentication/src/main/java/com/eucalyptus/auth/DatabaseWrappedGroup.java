@@ -13,9 +13,9 @@ import com.google.common.collect.Lists;
 
 public class DatabaseWrappedGroup implements Group {
   private static Logger   LOG = Logger.getLogger( DatabaseWrappedGroup.class );
-  private UserGroupEntity group;
+  private GroupEntity group;
   
-  public DatabaseWrappedGroup( UserGroupEntity group ) {
+  public DatabaseWrappedGroup( GroupEntity group ) {
     this.group = group;
   }
   
@@ -24,7 +24,7 @@ public class DatabaseWrappedGroup implements Group {
     EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
       UserEntity user = db.getUnique( new UserEntity( principal.getName( ) ) );
-      UserGroupEntity g = db.recast( UserGroupEntity.class ).getUnique( this.group );
+      GroupEntity g = db.recast( GroupEntity.class ).getUnique( this.group );
       if ( !g.belongs( user ) ) {
         g.getUsers( ).add( user );
         db.commit( );
@@ -57,9 +57,9 @@ public class DatabaseWrappedGroup implements Group {
   @Override
   public Enumeration<? extends Principal> members( ) {
     List<User> userList = Lists.newArrayList( );
-    EntityWrapper<UserGroupEntity> db = Authentication.getEntityWrapper( );
+    EntityWrapper<GroupEntity> db = Authentication.getEntityWrapper( );
     try {
-      UserGroupEntity g = db.getUnique( this.group );
+      GroupEntity g = db.getUnique( this.group );
       for ( UserEntity user : g.getUsers( ) ) {
         try {
           userList.add( Users.lookupUser( user.getName( ) ) );
@@ -80,7 +80,7 @@ public class DatabaseWrappedGroup implements Group {
     EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
       UserEntity userInfo = db.getUnique( new UserEntity( user.getName( ) ) );
-      UserGroupEntity g = db.recast( UserGroupEntity.class ).getUnique( this.group );
+      GroupEntity g = db.recast( GroupEntity.class ).getUnique( this.group );
       if ( g.belongs( userInfo ) ) {
         g.getUsers( ).remove( userInfo );
         db.commit( );
@@ -104,8 +104,8 @@ public class DatabaseWrappedGroup implements Group {
   @Override
   public boolean equals( Object o ) {
     if ( this == o ) return true;
-    if ( o instanceof UserGroupEntity ) {
-      UserGroupEntity that = ( UserGroupEntity ) o;
+    if ( o instanceof GroupEntity ) {
+      GroupEntity that = ( GroupEntity ) o;
       return this.getWrappedGroup( ).equals( that );
     } else if ( o instanceof DatabaseWrappedGroup ) {
       DatabaseWrappedGroup that = ( DatabaseWrappedGroup ) o;
@@ -115,7 +115,7 @@ public class DatabaseWrappedGroup implements Group {
     }
   }
   
-  public UserGroupEntity getWrappedGroup( ) {
+  public GroupEntity getWrappedGroup( ) {
     return this.group;
   }
   

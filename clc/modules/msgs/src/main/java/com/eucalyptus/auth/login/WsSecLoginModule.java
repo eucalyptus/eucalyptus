@@ -5,6 +5,7 @@ import org.apache.log4j.Logger;
 import org.apache.xml.security.signature.XMLSignature;
 import org.w3c.dom.Element;
 import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;
@@ -30,10 +31,22 @@ public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
       final XMLSignature sig = WSSecurity.getXMLSignature( secNode );
       SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
       final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
-      final User user = Users.lookupCertificate( cert );
-      super.setCredential( cert );
-      super.setPrincipal( user );
-      super.getGroups( ).addAll( Groups.lookupGroups( super.getPrincipal( ) ) );
+      try {
+        final User user = Users.lookupCertificate( cert );
+        super.setCredential( cert );
+        super.setPrincipal( user );
+        super.getGroups( ).addAll( Groups.lookupGroups( super.getPrincipal( ) ) );
+      } catch ( NoSuchUserException e ) {
+        try {
+          if ( Users.getUserProvider( ).checkRevokedCertificate( cert ) ) {
+            throw new NoSuchUserException( "Certificate has been revoked: " + e.getMessage( ), e );
+          } else {
+            throw e;
+          }
+        } catch ( Exception ex ) {
+          throw e;
+        }
+      }
     } finally {
       HoldMe.canHas.unlock( );
     }

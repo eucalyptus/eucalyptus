@@ -112,16 +112,16 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
     this.bootstrap.setPipelineFactory( this );
   }
   
-  public boolean start( ) {
-    return true;
-  }
-  
   @Override
   public boolean load( Stage current ) throws Exception {
     this.channel = this.bootstrap.bind( new InetSocketAddress( this.port ) );
     LOG.info( "Waiting for system properties before continuing bootstrap." );
     this.channel.getCloseFuture( ).awaitUninterruptibly( );
     LOG.info( "Channel closed, proceeding with bootstrap." );
+    return true;
+  }
+
+  public boolean start( ) {
     return true;
   }
   

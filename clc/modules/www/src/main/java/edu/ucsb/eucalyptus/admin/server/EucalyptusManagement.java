@@ -79,7 +79,7 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
-import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
