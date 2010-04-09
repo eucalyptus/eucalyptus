@@ -38,11 +38,11 @@ class User():
     return r
       
   def startElement(self, name, attrs, connection):
-    if name == 'euca:groups':
-      self.user_list = self.user_groups
-    elif name == 'euca:revoked':
-      self.user_list = self.user_revoked
-    return None
+#    if name == 'euca:groups':
+#      self.user_list = self.user_groups
+#    elif name == 'euca:revoked':
+#      self.user_list = self.user_revoked
+    return None    
 
   def endElement(self, name, value, connection):
     if name == 'euca:userName':
