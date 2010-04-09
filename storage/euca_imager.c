@@ -40,6 +40,7 @@ static void usage (const char * msg)
     exit (1); 
 }
 
+extern char **environ;
 static char * key = NULL;
 char debug = 0;
 
@@ -98,6 +99,10 @@ int main (int argc, char * argv[])
             for (i=0; i<argc; i++) {
                 fprintf (stderr, "%s ", argv[i]); // for debugging
             }
+			char ** entry;
+			for (entry  = environ; *entry; entry++) {
+				fprintf (stderr, "%s\n", *entry);
+			}
             fprintf (stderr, "\n");
             break;
             
