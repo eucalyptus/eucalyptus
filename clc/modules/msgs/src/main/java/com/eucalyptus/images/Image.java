@@ -27,9 +27,9 @@ public interface Image {
   
   public abstract void setImageType( String imageType );
   
-  public abstract Boolean getPublic( );
+  public abstract Boolean getImagePublic( );
   
-  public abstract void setPublic( Boolean aPublic );
+  public abstract void setImagePublic( Boolean aPublic );
   
   public abstract String getKernelId( );
   

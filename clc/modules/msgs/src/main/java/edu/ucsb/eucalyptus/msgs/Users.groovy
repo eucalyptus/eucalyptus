@@ -1,5 +1,6 @@
 package edu.ucsb.eucalyptus.msgs;
 
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.Groups;
@@ -16,13 +17,19 @@ public class UserInfoType extends EucalyptusData {
   String certificateCode;
   String confirmationCode;
   ArrayList<String> groups = new ArrayList<String>();
-  
+  ArrayList<String> revoked = new ArrayList<String>();
+    
   public UserInfoType( User u, String email, String confirmationCode ) {
     this.userName = u.getName();
     this.accessKey = u.getQueryId();
     this.secretKey = u.getSecretKey();
     this.distinguishedName = u.getX509Certificate( )?.getSubjectX500Principal( )?.toString();
     this.certificateSerial = u.getX509Certificate( )?.getSerialNumber( );
+    for( X509Certificate x : u.getAllX509Certificates() ) {
+      if( !this.certificateSerial.equals(x.getSerialNumber().toString())) {
+        this.revoked.add( x.getSerialNumber() );
+      }
+    }
     for( Group g : Groups.lookupGroups( u ) ) {
       this.groups.add( g.getName() );
     }
@@ -40,40 +47,64 @@ public class GroupInfoType extends EucalyptusData {
     this.groupName = name;
   }
 }
+public class ManagementMessage extends EucalyptusMessage {}
+public class UserManagementMessage extends ManagementMessage {}
 
-public class DescribeUsersType extends EucalyptusMessage {
+public class DescribeUsersType extends UserManagementMessage {
   ArrayList<String> userNames = new ArrayList<String>();  
 }
-public class DescribeUsersResponseType extends EucalyptusMessage {
+public class DescribeUsersResponseType extends UserManagementMessage {
   ArrayList<UserInfoType> users = new ArrayList<UserInfoType>();
 }
-public class AddUserType extends EucalyptusMessage {
+public class AddUserType extends UserManagementMessage {
   String userName;
   Boolean admin;
   String email;
 }
 
-public class AddUserResponseType extends EucalyptusMessage {
-}
-public class DeleteUserType extends EucalyptusMessage {
+public class AddUserResponseType extends UserManagementMessage {}
+public class DeleteUserType extends UserManagementMessage {
   String userName;
 }
-public class DeleteUserResponseType extends EucalyptusMessage {
-}
+public class DeleteUserResponseType extends UserManagementMessage {}
 
-public class DescribeGroupsType extends EucalyptusMessage {
+
+public class GroupManagementMessage extends ManagementMessage  {}
+public class DescribeGroupsType extends GroupManagementMessage {
   ArrayList<String> groupNames = new ArrayList<String>();  
 }
-public class DescribeGroupsResponseType extends EucalyptusMessage {
+public class DescribeGroupsResponseType extends GroupManagementMessage {
   ArrayList<GroupInfoType> groups = new ArrayList<GroupInfoType>();
 }
-public class AddGroupType extends EucalyptusMessage {
+public class AddGroupType extends GroupManagementMessage {
   String groupName;
 }
-public class AddGroupResponseType extends EucalyptusMessage {
-}
+public class AddGroupResponseType extends GroupManagementMessage {}
 public class DeleteGroupType extends EucalyptusMessage {
   String groupName;
 }
-public class DeleteGroupResponseType extends EucalyptusMessage {
+public class DeleteGroupResponseType extends GroupManagementMessage {}
+public class AddGroupMemberType extends GroupManagementMessage {
+  String groupName;
+  String userName;
+  Boolean admin;
 }
+public class AddGroupMemberResponseType extends GroupManagementMessage {}
+public class DeleteGroupMemberType extends EucalyptusMessage {
+  String groupName;
+  String userName;
+}
+public class DeleteGroupMemberResponseType extends GroupManagementMessage {}
+public class GrantGroupAdminType extends EucalyptusMessage {
+  String groupName;
+  String userName;
+}
+public class GrantGroupAdminResponseType extends GroupManagementMessage {}
+public class RevokeGroupAdminType extends EucalyptusMessage {
+  String groupName;
+  String userName;
+}
+public class RevokeGroupAdminResponseType extends GroupManagementMessage {}
+
+
+

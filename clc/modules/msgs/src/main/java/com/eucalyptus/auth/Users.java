@@ -93,8 +93,8 @@ public class Users {
     return Users.getUserProvider().addUser( userName, admin, enabled );
   }
 
-  public static User deleteUser( String userName ) throws NoSuchUserException, UnsupportedOperationException {
-    return Users.getUserProvider().deleteUser( userName );
+  public static void deleteUser( String userName ) throws NoSuchUserException, UnsupportedOperationException {
+    Users.getUserProvider().deleteUser( userName );
   }
 
   public static List<User> listAllUsers( ) {

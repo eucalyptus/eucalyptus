@@ -7,6 +7,9 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities._anon;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TransactionException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
 
 public class UserProxy implements User {
@@ -19,9 +22,9 @@ public class UserProxy implements User {
   
   private static Logger                         LOG           = Logger.getLogger( UserProxy.class );
   private final UserEntity                      searchUser;
-  private UserEntity                            user;
+  private User                                  user;
   
-  public UserProxy( UserEntity user ) {
+  public UserProxy( User user ) {
     this.searchUser = new UserEntity( user.getName( ) );
     this.user = user;
   }
@@ -35,68 +38,52 @@ public class UserProxy implements User {
   @Override
   public void setQueryId( final String queryId ) {
     try {
-      new _this( ) {
-        {
-          new _mutator( ) {
-            public void set( UserEntity e ) {
-              e.setQueryId( queryId );
-            }
-          }.set( );
+      Transactions.one( this.searchUser, new Tx<User>( ) {
+        public void fire( User t ) throws Throwable {
+          t.setQueryId( queryId );
         }
-      };
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
     }
   }
   
   @Override
   public void setSecretKey( final String secretKey ) {
     try {
-      new _this( ) {
-        {
-          new _mutator( ) {
-            public void set( UserEntity e ) {
-              e.setSecretKey( secretKey );
-            }
-          }.set( );
+      Transactions.one( this.searchUser, new Tx<User>( ) {
+        public void fire( User t ) throws Throwable {
+          t.setSecretKey( secretKey );
         }
-      };
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
     }
   }
   
   @Override
   public void revokeSecretKey( ) {
     try {
-      new _this( ) {
-        {
-          new _mutator( ) {
-            public void set( UserEntity e ) {
-              e.revokeSecretKey( );
-            }
-          }.set( );
+      Transactions.one( this.searchUser, new Tx<User>( ) {
+        public void fire( User t ) throws Throwable {
+          t.revokeSecretKey( );
         }
-      };
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
     }
   }
   
   @Override
   public void revokeX509Certificate( ) {
     try {
-      new _this( ) {
-        {
-          new _mutator( ) {
-            public void set( UserEntity e ) {
-              e.revokeX509Certificate( );
-            }
-          }.set( );
+      Transactions.one( this.searchUser, new Tx<User>( ) {
+        public void fire( User t ) throws Throwable {
+          t.revokeX509Certificate( );
         }
-      };
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
     }
   }
   
@@ -107,17 +94,13 @@ public class UserProxy implements User {
   @Override
   public void setAdministrator( final Boolean admin ) {
     try {
-      new _this( ) {
-        {
-          new _mutator( ) {
-            public void set( UserEntity e ) {
-              e.setAdministrator( admin );
-            }
-          }.set( );
+      Transactions.one( this.searchUser, new Tx<User>( ) {
+        public void fire( User t ) throws Throwable {
+          t.setAdministrator( admin );
         }
-      };
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
     }
   }
   
@@ -128,17 +111,13 @@ public class UserProxy implements User {
   @Override
   public void setEnabled( final Boolean enabled ) {
     try {
-      new _this( ) {
-        {
-          new _mutator( ) {
-            public void set( UserEntity e ) {
-              e.setEnabled( enabled );
-            }
-          }.set( );
+      Transactions.one( this.searchUser, new Tx<User>( ) {
+        public void fire( User t ) throws Throwable {
+          t.setEnabled( enabled );
         }
-      };
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
     }
   }
   
@@ -149,17 +128,13 @@ public class UserProxy implements User {
   @Override
   public void setX509Certificate( final X509Certificate cert ) {
     try {
-      new _this( ) {
-        {
-          new _mutator( ) {
-            public void set( UserEntity e ) {
-              e.setX509Certificate( cert );
-            }
-          }.set( );
+      Transactions.one( this.searchUser, new Tx<User>( ) {
+        public void fire( User t ) throws Throwable {
+          t.setX509Certificate( cert );
         }
-      };
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
     }
   }
   

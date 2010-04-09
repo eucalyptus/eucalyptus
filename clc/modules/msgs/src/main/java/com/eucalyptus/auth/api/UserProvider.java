@@ -73,6 +73,14 @@ public interface UserProvider {
    * @throws NoSuchUserException
    * @throws UnsupportedOperationException
    */
-  public abstract User deleteUser( String userName ) throws NoSuchUserException, UnsupportedOperationException;
+  public abstract void deleteUser( String userName ) throws NoSuchUserException, UnsupportedOperationException;
+
+  /**
+   * TODO: DOCUMENT UserProvider.java
+   * @param cert
+   * @return
+   * @throws NoSuchCertificateException
+   */
+  public abstract boolean checkRevokedCertificate( X509Certificate cert ) throws NoSuchCertificateException;
   
 }

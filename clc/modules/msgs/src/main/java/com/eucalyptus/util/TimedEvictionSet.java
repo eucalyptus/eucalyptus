@@ -3,19 +3,16 @@ package com.eucalyptus.util;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.mortbay.log.Log;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.log4j.Logger;
 
 public class TimedEvictionSet<E extends Comparable> implements Set<E> {
+  private static Logger LOG = Logger.getLogger( TimedEvictionSet.class );
   private NavigableSet<E> entries = new ConcurrentSkipListSet<E>();
   private NavigableSet<TimestampedElement> timestamps = new ConcurrentSkipListSet<TimestampedElement>();
   private Long evictionMillis = 15*1000*60l;
@@ -23,18 +20,18 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   
   class TimestampedElement implements Comparable<TimestampedElement> {
     private E element;
-    private Long timeMillis;
+    private Long timeNanos;
     public TimestampedElement( E element ) {
       super( );
       this.element = element;
-      this.timeMillis = System.currentTimeMillis( );
+      this.timeNanos = System.nanoTime( );
     }
     @Override
     public int hashCode( ) {
       final int prime = 31;
       int result = 1;
       result = prime * result + ( ( this.element == null ) ? 0 : this.element.hashCode( ) );
-      result = prime * result + ( ( this.timeMillis == null ) ? 0 : this.timeMillis.hashCode( ) );
+      result = prime * result + ( ( this.timeNanos == null ) ? 0 : this.timeNanos.hashCode( ) );
       return result;
     }
     
@@ -47,28 +44,28 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
       if ( this.element == null ) {
         if ( other.element != null ) return false;
       } else if ( !this.element.equals( other.element ) ) return false;
-      if ( this.timeMillis == null ) {
-        if ( other.timeMillis != null ) return false;
-      } else if ( !this.timeMillis.equals( other.timeMillis ) ) return false;
+      if ( this.timeNanos == null ) {
+        if ( other.timeNanos != null ) return false;
+      } else if ( !this.timeNanos.equals( other.timeNanos ) ) return false;
       return true;
     }
     
     @Override
     public int compareTo( TimestampedElement that ) {
-      if( !this.equals( that ) && this.timeMillis.compareTo( that.timeMillis ) == 0 ) {
+      if( !this.equals( that ) && this.timeNanos.compareTo( that.timeNanos ) == 0 ) {
         return this.element.compareTo( that.element );
       } else {
-        return this.timeMillis.compareTo( that.timeMillis );
+        return this.timeNanos.compareTo( that.timeNanos );
       }
     }
     public boolean isExpired( ) {
-      return System.currentTimeMillis( ) > ( this.timeMillis + TimedEvictionSet.this.evictionMillis );
+      return System.nanoTime( ) > ( this.timeNanos + TimedEvictionSet.this.evictionMillis );
     }
     public E get( ) {
       return this.element;
     }
-    public Long getTimestampe( ) {
-      return this.timeMillis;
+    public Long getTimestamp( ) {
+      return this.timeNanos;
     }
   }
   private boolean timestamp( E e ) {
@@ -78,7 +75,12 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
       this.timestamps.add( elem );
       return true;
     } else {
-      return false;
+      TimestampedElement elem = new TimestampedElement( e );
+      if( this.timestamps.contains( elem ) && TimeUnit.SECONDS.convert( System.nanoTime( ) - elem.getTimestamp( ), TimeUnit.NANOSECONDS ) < 2 ) {
+        return true;
+      } else {
+        return false;
+      }
     }
   }
   public TimedEvictionSet( Long evictionMillis ) {
@@ -92,7 +94,7 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
         TimestampedElement elem = null;        
         while( !this.timestamps.isEmpty( ) && this.timestamps.first( ).isExpired( ) && ( elem = this.timestamps.pollFirst( ) )!= null ) {
           this.entries.remove( elem.get( ) );
-          Log.debug( "Evicting previous entry: " + elem.get( ) + " " + elem.getTimestampe( ) );
+          LOG.debug( "Evicting previous entry: " + elem.get( ) + " " + elem.getTimestamp( ) );
         }
       } finally {
         this.busy.lazySet( false );

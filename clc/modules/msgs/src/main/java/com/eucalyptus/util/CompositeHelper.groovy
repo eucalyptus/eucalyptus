@@ -50,6 +50,7 @@ public class CompositeHelper<T> {
   }
   
   public static Object update( Object source, Object dest ) {
+    def props = dest.metaClass.properties.collect{ p -> p.name };
     source.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class"&&props.contains(it.name)&&source[it.name]!=null }.each{ sourceField ->
       LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
       dest[sourceField.name]=source[sourceField.name];
@@ -57,6 +58,7 @@ public class CompositeHelper<T> {
   }
   
   public static Object updateNulls( Object source, Object dest ) {
+    def props = dest.metaClass.properties.collect{ p -> p.name };
     source.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class"&&props.contains(it.name) }.each{ sourceField ->
       LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
       dest[sourceField.name]=source[sourceField.name];

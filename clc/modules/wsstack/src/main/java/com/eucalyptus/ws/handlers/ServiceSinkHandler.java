@@ -186,7 +186,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
       response.setMessage( reply );
       ctx.sendDownstream( newEvent );
-      Contexts.clear( reqCtx );
+//      Contexts.clear( reqCtx );
     }
   }
   

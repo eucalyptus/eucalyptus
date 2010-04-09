@@ -21,6 +21,8 @@ class User():
     self.user_admin = admin
     self.user_enabled = enabled
     self.user_groups = []
+    self.user_revoked = []
+    self.user_list = self.user_groups
     self.euca = EucaAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
@@ -28,13 +30,19 @@ class User():
     for s in self.user_groups:
       r = '%s\nUSER-GROUP\t%s\t%s' % (r,self.user_userName,s)
     r = '%s\nUSER-CERT\t%s\t%s\t%s' % (r,self.user_userName,self.user_distinguishedName,self.user_certificateSerial)
+    for s in self.user_revoked:
+      r = '%s\nUSER-REVOKED\t%s\t%s' % (r,self.user_userName,s)
     r = '%s\nUSER-KEYS\t%s\t%s\t%s' % (r,self.user_userName,self.user_accessKey,self.user_secretKey)
     r = '%s\nUSER-CODE\t%s\t%s' % (r,self.user_userName,self.user_certificateCode)
     r = '%s\nUSER-WEB \t%s\t%s' % (r,self.user_userName,self.user_confirmationCode)
     return r
       
   def startElement(self, name, attrs, connection):
-      return None
+    if name == 'euca:groups':
+      self.user_list = self.user_groups
+    elif name == 'euca:revoked':
+      self.user_list = self.user_revoked
+    return None
 
   def endElement(self, name, value, connection):
     if name == 'euca:userName':
@@ -60,7 +68,7 @@ class User():
     elif name == 'euca:secretKey':
       self.user_secretKey = value
     elif name == 'euca:entry':
-      self.user_groups.append(value)
+      self.user_list.append(value)
     else:
       setattr(self, name, value)
           

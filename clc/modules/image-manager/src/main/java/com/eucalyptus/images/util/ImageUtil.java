@@ -80,7 +80,7 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.UserGroupEntity;
+import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.util.Hashes;
@@ -436,7 +436,7 @@ public class ImageUtil {
         Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.byOwnerId( userName ) ), new Predicate<ImageInfo>( ) {
           @Override public boolean apply( ImageInfo arg0 ) {
             return ( imgList.isEmpty( ) || imgList.contains( arg0 ) )
-                   && ( arg0.getPublic( ) || arg0.isAllowed( user ) );
+                   && ( arg0.getImagePublic( ) || arg0.isAllowed( user ) );
           }
         } );
         repList.addAll( Lists.transform( Lists.newArrayList( results ), ImageInfo.TO_IMAGE_DETAILS ) );
@@ -457,7 +457,7 @@ public class ImageUtil {
         final UserInfo execUser = db.recast( UserInfo.class ).getUnique( new UserInfo( execUserId ) );
         Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.ALL ), new Predicate<ImageInfo>( ) {
           @Override public boolean apply( ImageInfo arg0 ) {
-            return arg0.isAllowed( execUser ) || arg0.getPublic( );
+            return arg0.isAllowed( execUser ) || arg0.getImagePublic( );
           }
         } );
         repList.addAll( Lists.transform( Lists.newArrayList( results ), ImageInfo.TO_IMAGE_DETAILS ) );
