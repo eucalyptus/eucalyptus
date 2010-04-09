@@ -15,7 +15,9 @@ typedef struct _img_creds {
 typedef struct _img_loc {
     enum { PATH, HTTP, VSPHERE, WALRUS, SFTP } type;
     char url [SIZE];
-    char path [SIZE];
+    char path [SIZE]; // dir/file
+	char dir [SIZE]; 
+	char file [SIZE];
     char vsphere_host [SIZE];
     char vsphere_dcPath [SIZE];
     char vsphere_dsName [SIZE];

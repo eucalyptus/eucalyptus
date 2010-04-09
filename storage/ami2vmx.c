@@ -213,10 +213,7 @@ int verify_input(char *file, char *kernel, char *ramdisk, char *modules, int for
   }
   if (strstr(output, "ext2 filesystem") || strstr(output, "ext3 filesystem") || strstr(output, "ext4 filesystem")) {
   } else {
-    printf("ERROR: supplied image is not an ext2, ext3 or ext4 filesystem '%s'\n", file);
-    if (!force) {
-      return(1);
-    }
+    printf("WARNING: supplied image is not an ext2, ext3 or ext4 filesystem '%s'\n", file);
   }
   free(output);
 
@@ -228,8 +225,7 @@ int verify_input(char *file, char *kernel, char *ramdisk, char *modules, int for
   }
   if (strstr(output, "Linux kernel")) {
   } else {
-    printf("ERROR: supplied kernel is not a Linux kernel '%s'\n", kernel);
-    if (!force) return(1);
+    printf("WARNING: supplied kernel may not be a Linux kernel '%s'\n", kernel);
   }
   free(output);
 

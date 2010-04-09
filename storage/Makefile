@@ -5,14 +5,16 @@
 include ../Makedefs
 
 STORAGE_LIBS = -lcurl
-IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o walrus.o img.o cache.o ami2vmx.o do_convert.o http.o
+IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o walrus.o img.o cache.o ami2vmx.o do_convert.o http.o vmdk.o
+VDDK_PATH = /home/dmitrii/Desktop/eucalyptus/branches/main-vmware-broker/packages/vmware-vix-disklib
+VDDK_FLAGS = -I$(VDDK_PATH)/include  -L$(VDDK_PATH)/lib64 -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
 
 all: storage.o walrus.o Wclient euca_imager
 
 build: all
 
 euca_imager: Makefile euca_imager.c $(IMAGER_LIBS)
-	$(CC) $(CFLAGS) $(INCLUDES) euca_imager.c -o euca_imager $(IMAGER_LIBS) -lcurl -lrt
+	$(CC) $(CFLAGS) $(INCLUDES) euca_imager.c -o euca_imager $(IMAGER_LIBS) $(VDDK_FLAGS) -lcurl -lrt
 
 Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
 	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o http.o $(STORAGE_LIBS)
@@ -24,7 +26,7 @@ test: test.c storage.h storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../
 	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o http.o $(STORAGE_LIBS) -o test
 
 .c.o: 
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CFLAGS) $(INCLUDES) $(VDDK_FLAGS) $<
 
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h
 	make -C ../util
