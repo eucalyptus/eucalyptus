@@ -1015,7 +1015,16 @@ char * get_disk_path (
 	const char * userId)
 {
 	char file_path [MAX_PATH_SIZE];
+	struct stat mystat;
+
 	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/disk", sc_instance_path, userId, instanceId);
+	if (stat (file_path, &mystat)!=0) {
+        	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/root", sc_instance_path, userId, instanceId);
+                if (stat (file_path, &mystat) !=0) {
+		  logprintfl (EUCAERROR, "failed to stat disk %s\n", file_path);
+		  return NULL;
+                }
+	}
 	return strdup (file_path);
 }
 
@@ -1024,12 +1033,15 @@ long long get_bundling_size (
 	const char * userId)
 {
 	char file_path [MAX_PATH_SIZE];
-	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/disk", sc_instance_path, userId, instanceId);
-
 	struct stat mystat;
+
+	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/disk", sc_instance_path, userId, instanceId);
 	if (stat (file_path, &mystat)!=0) {
-		logprintfl (EUCAERROR, "failed to stat disk %s\n", file_path);
-		return -1L;
+        	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/root", sc_instance_path, userId, instanceId);
+                if (stat (file_path, &mystat) !=0) {
+		  logprintfl (EUCAERROR, "failed to stat disk %s\n", file_path);
+		  return -1L;
+                }
 	}
 
 	return ((long long)mystat.st_size)*2L; // bundling requires twice the size of disk
