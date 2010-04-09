@@ -354,7 +354,7 @@ public class ImageManager {
     try {
       db.add( imageInfo );
       UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) );
-      UserGroupEntity group = db.recast( UserGroupEntity.class ).getUnique( new UserGroupEntity( "all" ) );
+//      UserGroupEntity group = db.recast( UserGroupEntity.class ).getUnique( new UserGroupEntity( "all" ) );
       imageInfo.getPermissions( ).add( user );
 // TODO: RELEASE: restore
 //      imageInfo.getUserGroups( ).add( group );
