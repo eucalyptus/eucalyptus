@@ -32,6 +32,7 @@ static void usage (const char * msg)
         "\t-u [string]                  unique string for this invocation\n"
         "\t-h                           print this message\n"
         "\t-a                           print whole argv[]\n"
+		"\t-d                           debug mode (no cleanup)\n"
         "\n* - SPEC consists of source & destination file paths or URLs + unique ID\n"
         "    e.g.: -I http://localhost:8773/services/Walrus/bucket/image.manifest.xml,emi-12345\n"
         "\n"  
@@ -40,6 +41,7 @@ static void usage (const char * msg)
 }
 
 static char * key = NULL;
+char debug = 0;
 
 static void err (const char *format, ...)
 {
@@ -90,76 +92,80 @@ int main (int argc, char * argv[])
 
     int i;    
     int ch;
-    while ((ch = getopt (argc, argv, "af:I:K:S:R:D:k:W:C:A:l:p:h")) != -1) {
+    while ((ch = getopt (argc, argv, "adf:I:K:S:R:D:k:W:C:A:l:p:h")) != -1) {
         switch (ch) {
-            case 'a':
+		case 'a':
             for (i=0; i<argc; i++) {
                 fprintf (stderr, "%s ", argv[i]); // for debugging
             }
             fprintf (stderr, "\n");
             break;
             
-            case 'f':
+		case 'd':
+			debug = 1;
+			break;
+			
+		case 'f':
             fmt = optarg; 
             break;
-
-            case 'I':
+			
+		case 'I':
             strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%255s %255s", isrc, iid)!=2)
                 usage ("failed to parse -I parameter");
             break;
-
-            case 'K':
+			
+		case 'K':
             strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%255s %255s", ksrc, kid)!=2)
                 usage ("failed to parse -K parameter");
             break;
-
-            case 'R':
+			
+		case 'R':
             strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%255s %255s", rsrc, rid)!=2)
                 usage ("failed to parse -R parameter");
             break;
-
-            case 'D':
+			
+		case 'D':
             strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%255s %255s", dst, did)!=2)
                 usage ("failed to parse -D parameter");
             break;
-
-            case 'S':
+			
+		case 'S':
             strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%d %d %d", &rlimit, &ssize, &esize)!=3)
                 usage ("failed to parse -S parameter");
             break;
-
-            case 'k':
+			
+		case 'k':
             key_file = optarg;
             break;
-
-            case 'W':
+			
+		case 'W':
             strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%255s %d", wdir, &wdir_max)!=2)
                 usage ("failed to parse the working dir spec");
             break;
-
-            case 'C':
+			
+		case 'C':
             strnsubchr (sizeof(s), s, optarg, ',', ' ');
             if (sscanf (s, "%255s %d", cdir, &cdir_max)!=2)
                 usage ("failed to parse the cache dir spec");
             break;
             
-            case 'l':
+		case 'l':
             login = optarg;
             break;
             
-            case 'p':
+		case 'p':
             password = optarg;
             break;
-
-            case 'h': 
-            case '?':
-            default:
+			
+		case 'h': 
+		case '?':
+		default:
             usage (NULL);
         }
     }
@@ -242,8 +248,8 @@ int main (int argc, char * argv[])
     // do all the hard work
     int ret = img_convert (&root, &kernel, &ramdisk, &destination, key, rlimit, ssize, esize);
     if (ret) err ("download, conversion, or upload failed");
-    
-    img_cleanup ();
+
+	img_cleanup ();
     free (key);
     return ret;
 }
