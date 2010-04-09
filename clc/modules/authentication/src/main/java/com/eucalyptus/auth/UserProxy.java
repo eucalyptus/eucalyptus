@@ -11,15 +11,15 @@ import com.google.common.base.Function;
 
 public class UserProxy implements User {
   
-  public static Function<UserEntity,UserProxy> proxyFunction = new Function<UserEntity,UserProxy>() {
-    public UserProxy apply( UserEntity arg0 ) {
-      return new UserProxy( arg0 );
-    }    
-  };
+  public static Function<UserEntity, UserProxy> proxyFunction = new Function<UserEntity, UserProxy>( ) {
+                                                                public UserProxy apply( UserEntity arg0 ) {
+                                                                  return new UserProxy( arg0 );
+                                                                }
+                                                              };
   
-  private static Logger    LOG = Logger.getLogger( UserProxy.class );
-  private final UserEntity searchUser;
-  private UserEntity       user;
+  private static Logger                         LOG           = Logger.getLogger( UserProxy.class );
+  private final UserEntity                      searchUser;
+  private UserEntity                            user;
   
   public UserProxy( UserEntity user ) {
     this.searchUser = new UserEntity( user.getName( ) );
@@ -31,55 +31,75 @@ public class UserProxy implements User {
       super( UserProxy.this.searchUser );
     }
   }
+  
   @Override
   public void setQueryId( final String queryId ) {
     try {
-      new _this( ) {{
-        new _mutator( ) { public void set( UserEntity e ) {
-            e.setQueryId( queryId );
-          }}.set();
-      }};
+      new _this( ) {
+        {
+          new _mutator( ) {
+            public void set( UserEntity e ) {
+              e.setQueryId( queryId );
+            }
+          }.set( );
+        }
+      };
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
     }
   }
+  
   @Override
   public void setSecretKey( final String secretKey ) {
     try {
-      new _this( ) {{
-        new _mutator( ) { public void set( UserEntity e ) {
-            e.setSecretKey( secretKey );
-          }}.set();
-      }};
+      new _this( ) {
+        {
+          new _mutator( ) {
+            public void set( UserEntity e ) {
+              e.setSecretKey( secretKey );
+            }
+          }.set( );
+        }
+      };
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
     }
   }
+  
   @Override
   public void revokeSecretKey( ) {
     try {
-      new _this( ) {{
-        new _mutator( ) { public void set( UserEntity e ) {
-            e.revokeSecretKey( );
-        }}.set();
-      }};
+      new _this( ) {
+        {
+          new _mutator( ) {
+            public void set( UserEntity e ) {
+              e.revokeSecretKey( );
+            }
+          }.set( );
+        }
+      };
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
     }
   }
+  
   @Override
   public void revokeX509Certificate( ) {
     try {
-      new _this( ) {{
-        new _mutator( ) { public void set( UserEntity e ) {
-            e.revokeX509Certificate( );
-        }}.set();
-      }};
+      new _this( ) {
+        {
+          new _mutator( ) {
+            public void set( UserEntity e ) {
+              e.revokeX509Certificate( );
+            }
+          }.set( );
+        }
+      };
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
     }
   }
-
+  
   /**
    * @see com.eucalyptus.auth.principal.User#setAdministrator(java.lang.Boolean)
    * @param admin
@@ -87,11 +107,15 @@ public class UserProxy implements User {
   @Override
   public void setAdministrator( final Boolean admin ) {
     try {
-      new _this( ) {{
-          new _mutator( ) { public void set( UserEntity e ) {
+      new _this( ) {
+        {
+          new _mutator( ) {
+            public void set( UserEntity e ) {
               e.setAdministrator( admin );
-          }}.set();
-      }};
+            }
+          }.set( );
+        }
+      };
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
     }
@@ -104,11 +128,15 @@ public class UserProxy implements User {
   @Override
   public void setEnabled( final Boolean enabled ) {
     try {
-      new _this( ) {{ 
-        new _mutator( ) { public void set( UserEntity e ) {
+      new _this( ) {
+        {
+          new _mutator( ) {
+            public void set( UserEntity e ) {
               e.setEnabled( enabled );
-        }}.set();
-      }};
+            }
+          }.set( );
+        }
+      };
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
     }
@@ -121,11 +149,15 @@ public class UserProxy implements User {
   @Override
   public void setX509Certificate( final X509Certificate cert ) {
     try {
-      new _this( ) {{ 
-        new _mutator( ) { public void set( UserEntity e ) {
+      new _this( ) {
+        {
+          new _mutator( ) {
+            public void set( UserEntity e ) {
               e.setX509Certificate( cert );
-        }}.set();
-      }};
+            }
+          }.set( );
+        }
+      };
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
     }
@@ -193,6 +225,7 @@ public class UserProxy implements User {
   public BigInteger getNumber( ) {
     return this.user.getNumber( );
   }
+  
   /**
    * @see com.eucalyptus.auth.principal.User#getToken()
    * @return
@@ -201,10 +234,14 @@ public class UserProxy implements User {
   public String getToken( ) {
     return this.user.getToken( );
   }
+  
+  /**
+   * @see com.eucalyptus.auth.principal.credential.X509Principal#getAllX509Certificates()
+   * @return
+   */
   @Override
   public List<X509Certificate> getAllX509Certificates( ) {
     return this.user.getAllX509Certificates( );
   }
-
-    
+  
 }

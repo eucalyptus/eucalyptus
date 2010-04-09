@@ -1032,7 +1032,7 @@ getSecretKey() {
      export AKEY=""
      return 1
    fi
-   AKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1))
+   AKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1 | sed 's/[()]//g'))
 
     return 0
 }
@@ -1095,7 +1095,7 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
 	echo "cannot find code field in database, please go to the Eucalyptus web UI to obtain credentials."
 	exit 1
     fi
-    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1))
+    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1 | sed 's/[()]//g'))
     if [ -z "$KEY" ]; then
 	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
 	exit 1
