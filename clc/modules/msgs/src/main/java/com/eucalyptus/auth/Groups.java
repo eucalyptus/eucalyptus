@@ -39,5 +39,9 @@ public class Groups {
   public static Group addGroup( String name ) throws GroupExistsException {
     return Groups.getGroupProvider( ).addGroup( name );
   }
+
+  public static void deleteGroup( String groupName ) throws NoSuchGroupException {
+    Groups.getGroupProvider( ).deleteGroup( groupName );
+  }
   
 }
