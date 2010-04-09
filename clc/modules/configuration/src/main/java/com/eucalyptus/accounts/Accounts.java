@@ -5,6 +5,7 @@ import org.apache.commons.collections.EnumerationUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.GroupExistsException;
 import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserInfo;
@@ -20,6 +21,8 @@ import edu.ucsb.eucalyptus.msgs.AddGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.AddGroupType;
 import edu.ucsb.eucalyptus.msgs.AddUserResponseType;
 import edu.ucsb.eucalyptus.msgs.AddUserType;
+import edu.ucsb.eucalyptus.msgs.DeleteGroupResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteGroupType;
 import edu.ucsb.eucalyptus.msgs.DeleteUserResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteUserType;
 import edu.ucsb.eucalyptus.msgs.DescribeGroupsResponseType;
@@ -99,6 +102,19 @@ public class Accounts {
     reply.set_return( true );
     return reply;
   }
+  public DeleteGroupResponseType deleteUser( DeleteGroupType request ) throws EucalyptusCloudException {
+    DeleteGroupResponseType reply = request.getReply( );
+    reply.set_return( false );
+    try {
+      Groups.deleteGroup( request.getGroupName( ) );
+    } catch ( NoSuchGroupException e ) {
+      throw new EucalyptusCloudException( "No such group exists: " + request.getGroupName( ), e );
+    } catch ( UnsupportedOperationException e ) {
+      throw new EucalyptusCloudException( "System is configured to be read only.", e );
+    }
+    reply.set_return( true );
+    return reply;
+  }
   
   public DescribeGroupsResponseType describeGroups( DescribeGroupsType request ) {
     DescribeGroupsResponseType reply = request.getReply( );
@@ -117,6 +133,7 @@ public class Accounts {
     AddGroupResponseType reply = request.getReply( );
     try {
       Groups.addGroup( request.getGroupName( ) );
+      reply.set_return( true );
     } catch ( GroupExistsException e ) {
       throw new EucalyptusCloudException( "Group already exists: " + request.getGroupName( ), e );
     }

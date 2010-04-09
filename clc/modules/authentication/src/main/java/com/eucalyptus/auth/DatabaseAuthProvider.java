@@ -289,5 +289,21 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     }
     return ret;
   }
+
+  @Override
+  public void deleteGroup( String groupName ) throws NoSuchGroupException {
+    EntityWrapper<UserGroupEntity> db = Groups.getEntityWrapper( );
+    UserGroupEntity delGroup = new UserGroupEntity( groupName );
+    try {
+      UserGroupEntity g = db.getUnique( delGroup );
+      db.delete( g );
+      db.commit( );
+    } catch ( Throwable t ) {
+      db.rollback( );
+      throw new NoSuchGroupException( t );
+    }    
+  }
+
+  
   
 }

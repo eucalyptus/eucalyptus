@@ -22,5 +22,6 @@ public interface GroupProvider {
    */
   public abstract Group lookupGroup( String groupName ) throws NoSuchGroupException;
   public abstract Group addGroup( String groupName ) throws GroupExistsException;
+  public abstract void deleteGroup( String groupName ) throws NoSuchGroupException;
   
 }

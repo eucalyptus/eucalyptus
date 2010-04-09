@@ -37,7 +37,6 @@ class User():
       return None
 
   def endElement(self, name, value, connection):
-    print "%s = %s" % (name,value)
     if name == 'euca:userName':
       self.user_userName = value
     elif name == 'euca:email':
