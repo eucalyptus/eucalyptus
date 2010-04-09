@@ -123,12 +123,10 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   Boolean enabled;
   @Column( name = "auth_user_token" )
   String  token;
-  @Column( name = "auth_user_certificate" )
-  String certificate;  
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-  List<X509Cert> oldCertificates = []
+  List<X509Cert> certificates = []
   
   public UserEntity(){
   }
@@ -143,12 +141,10 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   }
 
   public void revokeX509Certificate() {
-    if( this.getCertificate() != null ) {
-      X509Certificate c = this.getX509Certificate( );
-      this.getOldCertificates( ).add( c );
-      LOG.debug( "Revoked old user certificate: " + c.getSubjectX500Principal( ) + " " + c.getSerialNumber( )  );
-      this.setCertificate( null );
+    for( X509Cert cert : this.getCertificates() ) {
+      cert.setRevoked(true);
     }
+    LOG.debug("Current certificate for ${this.getName()}: ${this.getX509Certificate()?.getSerialNumber()}");
   }
   
   public void revokeSecretKey() {
@@ -156,21 +152,25 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   }
   
   public List<X509Certificate> getAllX509Certificates() {
-    List<X509Certificate> certs = Lists.newArrayList( this.getX509Certificate() );
-    for( X509Cert c : this.getOldCertificates() ) {
+    List<X509Certificate> certs = Lists.newArrayList( );
+    for( X509Cert c : this.getCertificates() ) {
       certs.add( X509Cert.toCertificate( c ) );
     }
     return certs;
   }
   
   public X509Certificate getX509Certificate() {
-    return this.getCertificate()!=null?PEMFiles.getCert( B64.url.dec( this.getCertificate( ) ) ):null;
+    for( X509Cert cert : this.getCertificates() ) {
+      if( !cert.getRevoked( ) ) {
+        return X509Cert.toCertificate( cert );
+      }
+    }
+    return null;
   }
   
   public void setX509Certificate( X509Certificate x509 ) {
-    this.revokeX509Certificate();
     LOG.debug( "Setting new user certificate: " + x509.getSubjectX500Principal( ) + " " + x509.getSerialNumber( ) );
-    this.setCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
+    this.getCertificates( ).add( X509Cert.fromCertificate( x509 ) );
   }
   public Boolean isEnabled() {
     return enabled;
@@ -208,8 +208,8 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
 public class X509Cert extends AbstractPersistent implements Serializable {
   @Column( name = "auth_x509_alias", unique=true )
   String alias
-  @Column( name = "auth_x509_revoked_on" )
-  Date revokedOn
+  @Column( name = "auth_x509_revoked" )
+  Boolean revoked
   @Lob
   @Column( name = "auth_x509_pem_certificate" )
   String pemCertificate
@@ -217,6 +217,9 @@ public class X509Cert extends AbstractPersistent implements Serializable {
   }
   public X509Cert( String alias ) {
     this.alias = alias
+  }
+  public Boolean isRevoked( ) {
+    return this.revoked;
   }
   public static X509Cert fromCertificate(X509Certificate x509) {
     X509Cert x = new X509Cert( );

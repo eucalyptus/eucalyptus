@@ -26,7 +26,7 @@ public class UserInfoType extends EucalyptusData {
     this.distinguishedName = u.getX509Certificate( )?.getSubjectX500Principal( )?.toString();
     this.certificateSerial = u.getX509Certificate( )?.getSerialNumber( );
     for( X509Certificate x : u.getAllX509Certificates() ) {
-      if( !this.certificateSerial.equals(x.getSerialNumber())) {
+      if( !this.certificateSerial.equals(x.getSerialNumber().toString())) {
         this.revoked.add( x.getSerialNumber() );
       }
     }

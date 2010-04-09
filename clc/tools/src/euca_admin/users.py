@@ -38,7 +38,11 @@ class User():
     return r
       
   def startElement(self, name, attrs, connection):
-      return None
+    if name == 'euca:groups':
+      self.user_list = self.user_groups
+    elif name == 'euca:revoked':
+      self.user_list = self.user_revoked
+    return None
 
   def endElement(self, name, value, connection):
     if name == 'euca:userName':
@@ -63,10 +67,6 @@ class User():
       self.user_accessKey = value
     elif name == 'euca:secretKey':
       self.user_secretKey = value
-    elif name == 'euca:groups':
-      self.user_list = self.user_groups
-    elif name == 'euca:revoked':
-      self.user_list = self.user_revoked
     elif name == 'euca:entry':
       self.user_list.append(value)
     else:

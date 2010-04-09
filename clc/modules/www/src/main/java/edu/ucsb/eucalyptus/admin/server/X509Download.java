@@ -164,16 +164,19 @@ public class X509Download extends HttpServlet {
       x509 = Certs.generateCertificate( keyPair, userName );
       x509.checkValidity( );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
+      u.revokeX509Certificate( );
       u.setX509Certificate( x509 );
-//      Transactions.one( new UserEntity( userName ), new Tx<User>() {
-//        public void fire( User user ) throws Throwable {
-//          user.revokeX509Certificate( );
-//          user.setX509Certificate( x509 );        
-//        }});
+      //      Transactions.one( new UserEntity( userName ), new Tx<UserEntity>() {
+      //        public void fire( UserEntity user ) throws Throwable {
+      //          user.revokeX509Certificate( );
+      //          user.setCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
+      //        }});
+      User now = Users.lookupUser( userName );
+      LOG.info( "Current user certificate: " + now.getX509Certificate( ) != null ? now.getX509Certificate( ).getSerialNumber( ) : null );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
-    }    
+    }
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );
     String fingerPrint = Certs.getFingerPrint( keyPair.getPublic( ) );

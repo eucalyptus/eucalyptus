@@ -118,7 +118,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   }
   
   @Override
-  public User deleteUser( String userName ) throws NoSuchUserException {
+  public void deleteUser( String userName ) throws NoSuchUserException {
     UserEntity user = new UserEntity( userName );
     EntityWrapper<UserInfo> dbU = EntityWrapper.get( UserInfo.class );
     try {
@@ -133,7 +133,6 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       User foundUser = db.getUnique( user );
       db.delete( foundUser );
       db.commit( );
-      return foundUser;
     } catch ( Exception e ) {
       db.rollback( );
       throw new NoSuchUserException( e );
@@ -180,7 +179,9 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     searchUser.setEnabled( true );
     UserEntity user = null;
     try {
-      users.addAll( db.query( searchUser ) );
+      for( UserEntity u : db.query( searchUser ) ) {
+        users.add( new UserProxy( u ) );
+      }
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
@@ -196,7 +197,9 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     searchUser.setEnabled( true );
     UserEntity user = null;
     try {
-      users.addAll( db.query( searchUser ) );
+      for( UserEntity u : db.query( searchUser ) ) {
+        users.add( new UserProxy( u ) );
+      }
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
@@ -208,10 +211,10 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   public User lookupCertificate( X509Certificate cert ) throws NoSuchUserException {
     String certPem = B64.url.encString( PEMFiles.getBytes( cert ) );
     UserEntity searchUser = new UserEntity( );
-    searchUser.setCertificate( certPem );
+    searchUser.setEnabled( true );
     X509Cert searchCert = new X509Cert( );
     searchCert.setPemCertificate( certPem );
-    searchUser.setEnabled( true );
+    searchCert.setRevoked( null );
     Session session = DatabaseUtil.getEntityManagerFactory( Authentication.DB_NAME ).getSessionFactory( ).openSession( );
     try {
       Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
@@ -221,7 +224,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       User ret = users.size( ) == 1 ? users.get( 0 ) : null;
       int size = users.size( );
       if ( ret != null ) {
-        return ret;
+        return new UserProxy( ret );
       } else {
         throw new GeneralSecurityException( ( size == 0 ) ? "No user with the specified certificate." : "Multiple users with the same certificate." );
       }
@@ -238,9 +241,10 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
   public boolean checkRevokedCertificate( X509Certificate cert ) throws NoSuchCertificateException {
     String certPem = B64.url.encString( PEMFiles.getBytes( cert ) );
     UserEntity searchUser = new UserEntity( );
+    searchUser.setEnabled( true );
     X509Cert searchCert = new X509Cert( );
     searchCert.setPemCertificate( certPem );
-    searchUser.setEnabled( true );
+    searchCert.setRevoked( true );
     Session session = DatabaseUtil.getEntityManagerFactory( Authentication.DB_NAME ).getSessionFactory( ).openSession( );
     try {
       Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
@@ -275,7 +279,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       db.rollback( );
       throw new NoSuchUserException( e );
     }
-    return user;
+    return new UserProxy( user );
   }
   
   @Override
@@ -290,7 +294,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       db.rollback( );
       throw new NoSuchUserException( e );
     }
-    return user;
+    return new UserProxy( user );
   }
   
   @Override

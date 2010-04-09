@@ -116,7 +116,7 @@ public class ImageInfo implements Image {
   @Column( name = "image_ramdisk_id" )
   private String ramdiskId;
   @Column( name = "image_is_public" )
-  private Boolean isPublic;
+  private Boolean imagePublic;
   @Lob
   @Column( name = "image_signature" )
   private String signature;
@@ -167,7 +167,7 @@ public class ImageInfo implements Image {
     this.imageLocation = imageLocation;
     this.imageOwnerId = imageOwnerId;
     this.imageState = imageState;
-    this.isPublic = aPublic;
+    this.imagePublic = aPublic;
   }
 
   public ImageInfo( String architecture, String imageId, String imageLocation, String imageOwnerId, String imageState, String imageType, Boolean aPublic, String kernelId, String ramdiskId ) {
@@ -177,7 +177,7 @@ public class ImageInfo implements Image {
     this.imageOwnerId = imageOwnerId;
     this.imageState = imageState;
     this.imageType = imageType;
-    this.isPublic = aPublic;
+    this.imagePublic = aPublic;
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
   }
@@ -286,16 +286,16 @@ public class ImageInfo implements Image {
    * @see com.eucalyptus.images.Image#getPublic()
    * @return
    */
-  public Boolean getPublic() {
-    return isPublic;
+  public Boolean getImagePublic() {
+    return imagePublic;
   }
 
   /**
    * @see com.eucalyptus.images.Image#setPublic(java.lang.Boolean)
    * @param aPublic
    */
-  public void setPublic( Boolean aPublic ) {
-    isPublic = aPublic;
+  public void setImagePublic( Boolean aPublic ) {
+    imagePublic = aPublic;
   }
 
   /**
@@ -374,7 +374,7 @@ public class ImageInfo implements Image {
     i.setImageOwnerId( this.getImageOwnerId() );
     i.setImageState( this.getImageState() );
     i.setImageType( this.getImageType() );
-    i.setIsPublic( this.getPublic() );
+    i.setIsPublic( this.getImagePublic() );
     i.setKernelId( this.getKernelId() );
     i.setRamdiskId( this.getRamdiskId() );
     return i;
