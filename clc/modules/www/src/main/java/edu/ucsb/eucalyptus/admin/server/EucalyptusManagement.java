@@ -184,7 +184,7 @@ public class EucalyptusManagement {
     } catch ( NoSuchUserException e ) {
       try {
         user = Users.addUser( webUser.getUserName( ), webUser.isAdministrator( ), webUser.isEnabled( ) );
-        EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>("eucalyptus_general");
+        EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get( UserInfo.class );
         try {
           UserInfo userInfo = Composites.updateNew( webUser, UserInfo.class );
           userInfo.setConfirmationCode( Crypto.generateSessionToken( webUser.getUserName() ) );
