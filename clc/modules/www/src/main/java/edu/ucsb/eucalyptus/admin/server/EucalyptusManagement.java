@@ -124,7 +124,7 @@ public class EucalyptusManagement {
 	  for( User u : Users.listAllUsers( ) ) {
       try {
         UserInfo userInfo = dbWrapper.getUnique( new UserInfo( u.getName( ) ) );
-        webUsersList.add( Composites.composeNew( UserInfoWeb.class, userInfo, u ) );
+        webUsersList.add( Composites.composeNew( UserInfoWeb.class, userInfo, u.getDelegate( ) ) );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
@@ -163,7 +163,7 @@ public class EucalyptusManagement {
     try {
       UserInfo userInfo = dbWrapper.getUnique( ex );
       User user = Users.lookupUser( userInfo.getUserName( ) );
-      UserInfoWeb webUser = Composites.composeNew( UserInfoWeb.class, userInfo, user );
+      UserInfoWeb webUser = Composites.composeNew( UserInfoWeb.class, userInfo, user.getDelegate( ) );
       dbWrapper.commit( );
       return webUser;
     } catch ( EucalyptusCloudException e ) {
@@ -254,7 +254,7 @@ public class EucalyptusManagement {
       EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
       try {
         UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
-        Composites.project( webUser, userInfo, user );
+        Composites.project( webUser, userInfo, user.getDelegate( ) );
         dbWrapper.commit( );
       } catch ( EucalyptusCloudException e1 ) {
         dbWrapper.rollback( );

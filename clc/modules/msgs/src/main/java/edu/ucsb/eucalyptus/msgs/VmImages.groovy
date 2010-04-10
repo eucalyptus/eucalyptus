@@ -166,6 +166,13 @@ public class RegisterImageResponseType extends VmImageMessage {
 public class RegisterImageType extends VmImageMessage {
   String imageLocation;
   String amiId;
+  String name;
+  String description;
+  String architecture;
+  String kernelId;
+  String ramdiskId;
+  String rootDeviceName;
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
 }
 /** *******************************************************************************/
 public class ResetImageAttributeResponseType extends VmImageMessage {
