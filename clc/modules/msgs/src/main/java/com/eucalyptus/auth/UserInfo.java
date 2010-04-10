@@ -123,7 +123,7 @@ public class UserInfo {
     this.approved = true;
     this.confirmed = false;
     this.confirmationCode = confirmationCode;
-    this.passwordExpires = 0l;
+    this.passwordExpires = 1000 * 60 * 60 * 24 * 365L;
     
     this.userName = userName;
     this.email = email;
