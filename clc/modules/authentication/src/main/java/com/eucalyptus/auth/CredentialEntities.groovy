@@ -131,6 +131,10 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   public UserEntity(){
   }
   
+  public User getDelegate( ) {
+    return this;
+  }
+  
   public UserEntity( String userName ){
     this.name = userName
   }

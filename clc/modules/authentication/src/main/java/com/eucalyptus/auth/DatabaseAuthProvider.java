@@ -219,9 +219,9 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     try {
       Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
       Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
-      List<User> users = ( List<User> ) session.createCriteria( User.class ).setCacheable( true ).add( qbeUser ).createCriteria( "oldCertificates" )
+      List<UserEntity> users = ( List<UserEntity> ) session.createCriteria( UserEntity.class ).setCacheable( true ).add( qbeUser ).createCriteria( "certificates" )
                                                .setCacheable( true ).add( qbeCert ).list( );
-      User ret = users.size( ) == 1 ? users.get( 0 ) : null;
+      UserEntity ret = users.size( ) == 1 ? users.get( 0 ) : null;
       int size = users.size( );
       if ( ret != null ) {
         return new UserProxy( ret );
@@ -249,7 +249,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     try {
       Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
       Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
-      List<User> users = ( List<User> ) session.createCriteria( User.class ).setCacheable( true ).add( qbeUser ).createCriteria( "oldCertificates" )
+      List<User> users = ( List<User> ) session.createCriteria( User.class ).setCacheable( true ).add( qbeUser ).createCriteria( "certificates" )
                                                .setCacheable( true ).add( qbeCert ).list( );
       if( users.isEmpty( ) || users.size( ) > 1 ) {
         session.close( );

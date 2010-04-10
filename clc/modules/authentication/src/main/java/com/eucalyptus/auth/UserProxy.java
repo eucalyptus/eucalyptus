@@ -6,7 +6,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities._anon;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
@@ -22,9 +21,9 @@ public class UserProxy implements User {
   
   private static Logger                         LOG           = Logger.getLogger( UserProxy.class );
   private final UserEntity                      searchUser;
-  private User                                  user;
+  private UserEntity                                  user;
   
-  public UserProxy( User user ) {
+  public UserProxy( UserEntity user ) {
     this.searchUser = new UserEntity( user.getName( ) );
     this.user = user;
   }
@@ -217,6 +216,11 @@ public class UserProxy implements User {
   @Override
   public List<X509Certificate> getAllX509Certificates( ) {
     return this.user.getAllX509Certificates( );
+  }
+
+  @Override
+  public User getDelegate( ) {
+    return this.user;
   }
   
 }
