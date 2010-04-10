@@ -309,6 +309,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     console_main = strdup("NOT SUPPORTED");
     if (!console_main) {
       fprintf(stderr, "strdup failed (out of memory?)\n");
+      if (console_append) free(console_append);
       return 1;
     }
   } else {

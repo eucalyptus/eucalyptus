@@ -253,26 +253,24 @@ public class VmControl {
       }
       if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
         cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
+      } else {
+        throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " does not exist." );
       }
-      if( v.getPasswordData( ) == null && cluster != null) {
+      RequestContext.getEventContext( ).setStopFurtherProcessing( true );
+      if( v.getPasswordData( ) == null) {
         new PasswordDataCallback( request ).dispatch( cluster );
-      } else if ( v.getPasswordData( ) != null ) { 
+      } else { 
         GetPasswordDataResponseType reply = request.getReply( );
         reply.set_return( true );
         reply.setOutput( v.getPasswordData( ) );
         reply.setTimestamp( new Date() );
         reply.setInstanceId( v.getInstanceId( ) );
         Messaging.dispatch( "vm://ReplyQueue", reply );        
-      } else {
-        Messaging.dispatch( "vm://ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext( ).getService( ).getComponent( ).getClass( )
-                                                                               .getSimpleName( ), request, "Failed to find required vm information" ) );        
       }
-      return;
     } catch ( NoSuchElementException e ) {
       Messaging.dispatch( "vm://ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext( ).getService( ).getComponent( ).getClass( )
                                                                                            .getSimpleName( ), request, e.getMessage( ) ) );
     }
-    RequestContext.getEventContext( ).setStopFurtherProcessing( true );
   }
   
 }
