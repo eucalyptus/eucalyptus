@@ -66,10 +66,10 @@
 package edu.ucsb.eucalyptus.storage.fs;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.ws.MappingHttpResponse;
 import com.eucalyptus.ws.util.ChannelUtil;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 

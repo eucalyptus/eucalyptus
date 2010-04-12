@@ -64,20 +64,17 @@
 package com.eucalyptus.ws.handlers;
 
 import java.net.URLDecoder;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.TimeZone;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-
-import com.eucalyptus.ws.AuthenticationException;
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.handlers.HmacV2Handler.SecurityParameter;
-import com.eucalyptus.ws.util.HmacUtils;
+import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.util.SecurityParameter;
+import com.eucalyptus.auth.util.Timestamps;
+import com.eucalyptus.http.MappingHttpRequest;
 
 @ChannelPipelineCoverage( "one" )
 public class QueryTimestampHandler extends MessageStackHandler {
@@ -100,17 +97,17 @@ public class QueryTimestampHandler extends MessageStackHandler {
         if ( parameters.containsKey( SecurityParameter.Timestamp.toString( ) ) ) {
           timestamp = parameters.remove( SecurityParameter.Timestamp.toString( ) );
           try {
-            expires = HmacUtils.parseTimestamp( timestamp );
+            expires = Timestamps.parseTimestamp( timestamp );
           } catch ( Exception e ) {
-            expires = HmacUtils.parseTimestamp( URLDecoder.decode( timestamp ) );
+            expires = Timestamps.parseTimestamp( URLDecoder.decode( timestamp ) );
           }
           expires.add( Calendar.MINUTE, 15 );
         } else {
           exp = parameters.remove( SecurityParameter.Expires.toString( ) );
           try {
-            expires = HmacUtils.parseTimestamp( exp );
+            expires = Timestamps.parseTimestamp( exp );
           } catch ( Exception e ) {
-            expires = HmacUtils.parseTimestamp( URLDecoder.decode( exp ) );
+            expires = Timestamps.parseTimestamp( URLDecoder.decode( exp ) );
           }
         }
       } catch ( Throwable t ) {

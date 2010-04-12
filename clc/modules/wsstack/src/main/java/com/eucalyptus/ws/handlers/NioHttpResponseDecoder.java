@@ -68,8 +68,8 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.MappingHttpResponse;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
 
 public class NioHttpResponseDecoder extends HttpResponseDecoder {
 

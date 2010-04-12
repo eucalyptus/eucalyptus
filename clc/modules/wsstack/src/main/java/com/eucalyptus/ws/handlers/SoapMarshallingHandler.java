@@ -84,9 +84,9 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
-import com.eucalyptus.util.HoldMe;
-import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
 
 @ChannelPipelineCoverage( "all" )
 public class SoapMarshallingHandler extends MessageStackHandler {

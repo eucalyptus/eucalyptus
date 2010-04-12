@@ -71,6 +71,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -93,19 +94,19 @@ import edu.ucsb.eucalyptus.msgs.StorageVolume;
 public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
   
-  public static ServiceDispatcher lookup( String hostName ) {
+  public static Dispatcher lookup( String hostName ) {
     return ServiceDispatcher.lookup( Component.storage, hostName );
   }
   
   public static <TYPE> TYPE send( String clusterName, EucalyptusMessage message ) throws EucalyptusCloudException {
     StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( clusterName );
-    ServiceDispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
+    Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
     TYPE reply = (TYPE) sc.send( message );
     return reply;
   }
   
   public static void dispatchAll( EucalyptusMessage message ) throws EucalyptusCloudException {
-    for( ServiceDispatcher sc : ServiceDispatcher.lookupMany( Component.storage ) ) {
+    for( Dispatcher sc : ServiceDispatcher.lookupMany( Component.storage ) ) {
       sc.dispatch( message );
     }
   }
@@ -125,7 +126,7 @@ public class StorageUtil {
         }
       } );
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
-      ServiceDispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
+      Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
       DescribeStorageVolumesResponseType volState = sc.send( descVols, DescribeStorageVolumesResponseType.class );    
       for ( StorageVolume vol : volState.getVolumeSet( ) ) {    
         idStorageVolumeMap.put( vol.getVolumeId( ), vol );

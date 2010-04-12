@@ -4,11 +4,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.callback.BroadcastCallback;
 import com.eucalyptus.cluster.callback.QueuedEventCallback;
+import com.eucalyptus.records.EventType;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class StatefulMessageSet<E extends Enum<E>> {

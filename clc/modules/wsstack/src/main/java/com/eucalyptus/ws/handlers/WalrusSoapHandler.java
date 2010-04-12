@@ -89,11 +89,11 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
-import com.eucalyptus.util.HoldMe;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
-import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.binding.Binding;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;

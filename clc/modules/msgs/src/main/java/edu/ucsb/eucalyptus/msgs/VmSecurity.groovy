@@ -63,8 +63,8 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
 
 public class VmSecurityMessage extends EucalyptusMessage{}
 /** *******************************************************************************/

@@ -63,42 +63,38 @@
  */
 package com.eucalyptus.cluster;
 
-import java.net.URI;
-import java.util.List;
 import java.util.NoSuchElementException;
-
 import org.apache.log4j.Logger;
-
+import com.eucalyptus.auth.Authentication;
+import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Depends;
+import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.cluster.handlers.ClusterCertificateHandler;
-import com.eucalyptus.cluster.util.ClusterUtil;
+import com.eucalyptus.component.event.StartComponentEvent;
+import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.GenericEvent;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.StartComponentEvent;
-import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.BindingException;
-import com.eucalyptus.ws.client.LocalDispatcher;
-import com.eucalyptus.ws.client.RemoteDispatcher;
-import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.collect.Lists;
 
-@Provides( resource = Resource.RemoteServices )
-@Depends( local = Component.eucalyptus )
+@Provides(Component.eucalyptus)
+@RunDuring(Bootstrap.Stage.RemoteServicesInit)
+@DependsLocal(Component.eucalyptus)
 public class ClusterBootstrapper extends Bootstrapper implements EventListener {
   public static Logger LOG         = Logger.getLogger( ClusterBootstrapper.class );
   private boolean       initialized = false;
@@ -129,13 +125,11 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
   }
   
   @Override
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     LOG.info( "Loading clusters." );
-    Component.cluster.markLocal( );
-    Component.cluster.markEnabled( );
     try {
       for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) ) {
-        Cluster newCluster = ClusterUtil.createCluster( c );
+        Cluster newCluster = ClusterBootstrapper.lookupCluster( c );
         this.registerClusterStateHandler( newCluster );
         ListenerRegistry.getInstance( ).fireEvent( new NewClusterEvent( ).setMessage( newCluster ) );
       }
@@ -152,25 +146,25 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
 
   @Override
   public void advertiseEvent( Event event ) {
-    if ( event instanceof StartComponentEvent ) {
-      StartComponentEvent e = ( StartComponentEvent ) event;
-      if ( Component.cluster.equals( e.getComponent( ) ) ) {
-        try {
-          Cluster c = Clusters.getInstance( ).lookup( e.getConfiguration( ).getName( ) );
-          e.veto( "Cluster by that name already exists: " + LogUtil.dumpObject( c ) );
-        } catch ( NoSuchElementException e1 ) {
-        }
-      }
-    } else if ( event instanceof StopComponentEvent ) {
-      StopComponentEvent e = ( StopComponentEvent ) event;
-      if ( Component.cluster.equals( e.getComponent( ) ) ) {
-        try {
-          Cluster c = Clusters.getInstance( ).lookup( e.getConfiguration( ).getName( ) );
-        } catch ( NoSuchElementException e1 ) {
-          e.veto( "No cluster by that name exists: " + e.getConfiguration( ).getName( ) );
-        }
-      }
-    }
+//    if ( event instanceof StartComponentEvent ) {
+//      StartComponentEvent e = ( StartComponentEvent ) event;
+//      if ( Component.cluster.equals( e.getComponent( ) ) ) {
+//        try {
+//          Cluster c = Clusters.getInstance( ).lookup( e.getConfiguration( ).getName( ) );
+//          e.veto( "Cluster by that name already exists: " + LogUtil.dumpObject( c ) );
+//        } catch ( NoSuchElementException e1 ) {
+//        }
+//      }
+//    } else if ( event instanceof StopComponentEvent ) {
+//      StopComponentEvent e = ( StopComponentEvent ) event;
+//      if ( Component.cluster.equals( e.getComponent( ) ) ) {
+//        try {
+//          Cluster c = Clusters.getInstance( ).lookup( e.getConfiguration( ).getName( ) );
+//        } catch ( NoSuchElementException e1 ) {
+//          e.veto( "No cluster by that name exists: " + e.getConfiguration( ).getName( ) );
+//        }
+//      }
+//    }
   }
 
   @Override
@@ -180,15 +174,13 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
       if ( Component.cluster.equals( e.getComponent( ) ) && e.getConfiguration( ) instanceof ClusterConfiguration ) {
         try {
           LOG.info( "Starting up cluster: " + LogUtil.dumpObject( e ) );
-          Cluster newCluster = ClusterUtil.createCluster( ( ClusterConfiguration ) e.getConfiguration( ) );
+          Cluster newCluster = ClusterBootstrapper.lookupCluster( ( ClusterConfiguration ) e.getConfiguration( ) );
           this.registerClusterStateHandler( newCluster );
           ListenerRegistry.getInstance( ).fireEvent( new NewClusterEvent( ).setMessage( newCluster ) );
           return;
         } catch ( EucalyptusCloudException e1 ) {
-          e.setFail( e1 );
           return;
         } catch ( EventVetoedException e1 ) {
-          e.setFail( e1 );
           return;
         }
       }
@@ -204,7 +196,6 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
           this.deregisterClusterStateHandler( c );
           return;
         } catch ( EventVetoedException e1 ) {
-          e.setFail( e1 );
           return;
         }
       }
@@ -219,6 +210,22 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
     } catch ( BindingException e1 ) {
       LOG.error( e1, e1 );
     } 
+  }
+
+  private static Cluster lookupCluster( ClusterConfiguration c ) throws EucalyptusCloudException {
+    ClusterCredentials credentials = null;
+    EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
+    try {
+      credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
+      credDb.rollback( );
+    } catch ( EucalyptusCloudException e ) {
+      LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
+      credDb.rollback( );
+      throw e;
+    }
+    Cluster newCluster = new Cluster( c, credentials );
+    Clusters.getInstance( ).register( newCluster );
+    return newCluster;
   }
 
 }

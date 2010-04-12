@@ -65,7 +65,7 @@ package edu.ucsb.eucalyptus.cloud
 
 
 import edu.ucsb.eucalyptus.msgs.*
-import edu.ucsb.eucalyptus.constants.EventType;
+import com.eucalyptus.records.EventType;
 import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
@@ -183,7 +183,7 @@ public class VmRunType extends EucalyptusMessage {
   
   /** these are for more convenient binding later on but really should be done differently... sigh    **/
   
-  String reservationId, userData;
+  String reservationId, userData, platform;
   int min, max, vlan, launchIndex;
   
   VmImageInfo imageInfo;

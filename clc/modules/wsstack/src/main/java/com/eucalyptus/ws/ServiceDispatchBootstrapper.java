@@ -63,127 +63,42 @@
  */
 package com.eucalyptus.ws;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.Map;
-
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import org.mule.api.registry.RegistrationException;
-import org.mule.api.registry.Registry;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.context.support.StaticApplicationContext;
-
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
-import com.eucalyptus.bootstrap.ServiceBootstrapper;
-import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.RemoteConfiguration;
-import com.eucalyptus.config.StorageControllerConfiguration;
-import com.eucalyptus.config.WalrusConfiguration;
-import com.eucalyptus.event.EventVetoedException;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.StartComponentEvent;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.client.LocalDispatcher;
-import com.eucalyptus.ws.client.RemoteDispatcher;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
-@Provides(resource=Resource.RemoteServices)
+@Provides(com.eucalyptus.bootstrap.Component.any)
+@RunDuring(Bootstrap.Stage.RemoteServicesInit)
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
   
   @Override
-  public boolean load( Resource current ) throws Exception {
-    
+  public boolean load( Stage current ) throws Exception {    
     LOG.trace( "Touching class: " + ServiceDispatcher.class);
-    for( Component v : Component.values( ) ) {
-      LOG.info("Ensure component is initialized: " + LogUtil.dumpObject( v ) );
-    }
-    if( !Component.eucalyptus.isLocal( ) ) {
-      Component.eucalyptus.setHostAddress( Component.db.getHostAddress( ) );
-      registerComponent( Component.eucalyptus, new RemoteConfiguration( Component.eucalyptus, Component.eucalyptus.getUri( ) ) );
-      Component.jetty.setHostAddress( Component.db.getHostAddress( ) );
-      registerComponent( Component.jetty, new RemoteConfiguration( Component.jetty, Component.jetty.getUri( ) ) );
-      Component.cluster.setHostAddress( Component.db.getHostAddress( ) );
-      registerComponent( Component.cluster, new RemoteConfiguration( Component.cluster, Component.cluster.getUri( ) ) );
-      Component.dns.setHostAddress( Component.db.getHostAddress( ) );
-      registerComponent( Component.dns, new RemoteConfiguration( Component.dns, Component.dns.getUri( ) ) );
-    } else if( Component.eucalyptus.isLocal( ) ) {
+    for( com.eucalyptus.bootstrap.Component c : com.eucalyptus.bootstrap.Component.values( ) ) {
+      if( com.eucalyptus.bootstrap.Component.any.equals( c) ) continue;
       try {
-        registerLocalComponent( Component.db );
-        Component.db.setHostAddress( "127.0.0.1" ); //reset this afterwards due to brain damages.
-        System.setProperty( "euca.db.url", Component.db.getUri( ).toASCIIString( ) );
-        registerLocalComponent( Component.dns );
-        registerLocalComponent( Component.eucalyptus );
-        registerLocalComponent( Component.cluster );
-        registerLocalComponent( Component.jetty );
-      } catch ( Exception e ) {
-        LOG.fatal( e, e );
-        return false;
-      }      
-    }
-
-    if( !Component.walrus.isEnabled( ) || !Component.walrus.isLocal( ) ) {
-      List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
-      for( WalrusConfiguration w : walri ) {
-        try {
-          if( NetworkUtil.testLocal( w.getHostName( ) )) {
-            Component.walrus.markLocal( );
-            registerLocalComponent( Component.walrus );
-            break;
-          } else {
-            Component.walrus.setHostAddress( w.getHostName( ) );
-            registerComponent( Component.walrus, w );
-            break;
-          }
-        } catch ( Exception e ) {
-          LOG.error( "Failed to create walrus service proxy: " + e );
+        EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, c.name( ), c.isEnabled( ).toString( ) ).info( );
+        Component comp = Components.lookup( c );
+        for( ServiceConfiguration s : comp.list( ) ) {
+          comp.buildService( s );
         }
-        break;
-      }
-    } else {
-      registerLocalComponent( Component.walrus );
-    }
-
-    List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
-    boolean hasLocal = false;
-    for( StorageControllerConfiguration sc : scs ) {
-      try {
-        if( NetworkUtil.testLocal( sc.getHostName( ) )) { 
-          hasLocal = true;
-        } else {
-          registerComponent( Component.storage, sc );
-        }
-      } catch ( Exception e ) {
-        LOG.error( "Failed to create storage controller "+sc.getName( )+" service proxy: " + e );
-      }
-      if( hasLocal ) {
-        Component.storage.markLocal( );
-        System.setProperty( "euca.storage.name", sc.getName( ) );
-        LOG.info(LogUtil.subheader( "Setting euca.storage.name="+sc.getName( ) + " for: " + LogUtil.dumpObject( sc ) ));
-        registerLocalComponent( Component.storage );
-        hasLocal = false;
+      } catch ( NoSuchElementException e ) {
+        throw Exceptions.uncatchable( "Failed to lookup required component: " + c.name( ) );
       }
     }
     return true;
-  }
-
-  private void registerLocalComponent( Component component ) throws EventVetoedException {
-    ListenerRegistry.getInstance( ).fireEvent( component, StartComponentEvent.getLocal( component ) );
-  }
-
-  private void registerLocalComponent( ComponentConfiguration componentConfiguration ) throws EventVetoedException {
-    ListenerRegistry.getInstance( ).fireEvent( componentConfiguration.getComponent( ), StartComponentEvent.getLocal( componentConfiguration ));
-  }
-  
-  private void registerComponent( Component component, ComponentConfiguration componentConfiguration ) throws Exception {
-    ListenerRegistry.getInstance( ).fireEvent( componentConfiguration.getComponent( ), StartComponentEvent.getRemote( componentConfiguration ) );
   }
 
   @Override

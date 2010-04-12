@@ -20,7 +20,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.transport.NullPayload;
 
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.util.Messaging;
 

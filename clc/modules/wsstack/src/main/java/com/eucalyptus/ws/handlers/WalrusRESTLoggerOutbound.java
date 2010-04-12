@@ -71,9 +71,9 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.auth.User;
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.MappingHttpResponse;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;

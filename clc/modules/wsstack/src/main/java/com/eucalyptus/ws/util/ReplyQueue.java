@@ -65,75 +65,70 @@ package com.eucalyptus.ws.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
 import org.mule.api.MessagingException;
 import org.mule.api.MuleMessage;
 import org.mule.message.ExceptionMessage;
-
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.binding.BindingManager;
-
 import edu.ucsb.eucalyptus.cloud.RequestTransactionScript;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class ReplyQueue {
-
   private static Logger                                 LOG                   = Logger.getLogger( ReplyQueue.class );
-  //TODO: measure me
-  private static int                                    MAP_CAPACITY          = 64;
-  private static int                                    MAP_NUM_CONCURRENT    = MAP_CAPACITY / 2;
-  private static float                                  MAP_BIN_AVG_THRESHOLD = 1.0f;
-  private static long                                   MAP_GET_WAIT_MS       = 10;
-  private static ConcurrentMap<String, ChannelHandlerContext> pending               = new ConcurrentHashMap<String, ChannelHandlerContext>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
-  private static ReplyQueue                                   singleton             = new ReplyQueue( );
   
-  public static void addReplyListener( String correlationId, ChannelHandlerContext ctx ) {
-    LOG.trace("Adding reply listener: " + correlationId + " with ctx=" + ctx );
-    pending.put( correlationId, ctx );
-  }
-  public static void removeReplyListener( String correlationId ) {
-    ChannelHandlerContext ctx = pending.remove( correlationId );
-    LOG.trace("Removing reply listener: " + correlationId + " with ctx=" + ctx );
-  }
-  
-  public static void handle( String service, MuleMessage responseMessage, EucalyptusMessage request ) {
-    EucalyptusMessage reply = null;
+  public static void handle( String service, MuleMessage responseMessage, BaseMessage request ) {
+    BaseMessage reply = null;
     if ( responseMessage.getExceptionPayload( ) == null ) {
-      reply = ( EucalyptusMessage ) responseMessage.getPayload( );
+      reply = ( BaseMessage ) responseMessage.getPayload( );
     } else {
       Throwable t = responseMessage.getExceptionPayload( ).getException( );
       t = ( t.getCause() == null ) ? t : t.getCause( );
       reply = new EucalyptusErrorMessageType( service, request, t.getMessage( ) );
     }
     String corrId = reply.getCorrelationId( );
-    ChannelHandlerContext ctx = pending.remove( corrId );
-    Channels.write( ctx.getChannel( ), reply );
+    LOG.debug( EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, reply.getCorrelationId( ), reply.getClass( ).getSimpleName( ) ) );    
+    try {
+      Context context = Contexts.lookup( corrId );
+      Channel channel = context.getChannel( );
+//      context.clear( );
+      Channels.write( channel, reply );
+    } catch ( NoSuchContextException e ) {
+      LOG.debug( e, e );
+    }
   }
   
   @SuppressWarnings( "unchecked" )
-  public void handle( EucalyptusMessage responseMessage ) {
+  public void handle( BaseMessage responseMessage ) {
+    LOG.debug( EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ) );
     String corrId = responseMessage.getCorrelationId( );
-    ChannelHandlerContext ctx = pending.remove( corrId );
-    if ( ctx == null ) {
-      LOG.warn( "Received a reply for absent client:  No channel to write response message." );
+    try {
+      Context context = Contexts.lookup( corrId );
+      Channel channel = context.getChannel( );
+      Channels.write( channel, responseMessage );
+//      context.clear( );
+    } catch ( NoSuchContextException e ) {
+      LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
       LOG.debug( responseMessage );
-    } else {
-      Channels.write( ctx.getChannel( ), responseMessage );
     }
   }
 
   public void handle( ExceptionMessage exMsg ) {
-    LOG.debug( "Caught exception while servicing: " + exMsg.getPayload( ) );
+    LOG.debug( EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ) );
+    LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
     Throwable exception = exMsg.getException( );
     Object payload = null;
-    EucalyptusMessage msg = null;
+    BaseMessage msg = null;
     if ( exception instanceof MessagingException ) {
       MessagingException ex = ( MessagingException ) exception;
       MuleMessage muleMsg = ex.getUmoMessage( );
@@ -149,26 +144,27 @@ public class ReplyQueue {
           return;
         }
       }
-      EucalyptusErrorMessageType errMsg = getErrorMessageType( exMsg, msg );
+      EucalyptusErrorMessageType errMsg = getErrorMessageType( exMsg.getComponentName( ), exMsg.getException( ), msg );
       errMsg.setException( exception.getCause( ) );
       this.handle( errMsg );
     }
   }
 
-  private EucalyptusErrorMessageType getErrorMessageType( final ExceptionMessage exMsg, final EucalyptusMessage msg ) {
-    Throwable exception = exMsg.getException( );
+  private EucalyptusErrorMessageType getErrorMessageType( final String componentName, Throwable exception, final BaseMessage msg ) {
     EucalyptusErrorMessageType errMsg = null;
     if ( exception != null ) {
-      Throwable e = exMsg.getException( ).getCause( );
-      if ( e != null ) {
-        errMsg = new EucalyptusErrorMessageType( exMsg.getComponentName( ), msg, e.getMessage( ) );
+      String desc = "";
+      LOG.error( exception, exception );
+      exception = exception.getCause( ) != null ? exception.getCause( ) : exception;
+      for( Throwable e = exception; e != null; e = e.getCause( ) ) {
+        desc += "\n" + e.getMessage( );
       }
-    }
-    if ( errMsg == null ) {
+      errMsg = new EucalyptusErrorMessageType( componentName, msg, desc );
+    } else {
       ByteArrayOutputStream exStream = new ByteArrayOutputStream( );
       if(exception != null)
           exception.printStackTrace( new PrintStream( exStream ) );
-      errMsg = new EucalyptusErrorMessageType( exMsg.getComponentName( ), msg, "Internal Error: \n" + exStream.toString( ) );
+      errMsg = new EucalyptusErrorMessageType( componentName, msg, "Internal Error: " + exStream.toString( ) );
     }
     return errMsg;
   }

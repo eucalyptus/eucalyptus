@@ -65,6 +65,9 @@
 
 package edu.ucsb.eucalyptus.admin.client;
 
+import com.eucalyptus.auth.UserEntity;
+import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.util.Composite;
 import com.google.gwt.user.client.rpc.IsSerializable;
 
 /**
@@ -74,39 +77,41 @@ import com.google.gwt.user.client.rpc.IsSerializable;
  * Time: 3:35:41 PM
  * To change this template use File | Settings | File Templates.
  */
-
+@Composite({UserInfo.class,UserEntity.class})
 public class UserInfoWeb implements IsSerializable
 {
+    /** these come from com.eucalyptus.auth.UserInfo.class **/
     private String userName;
     private String realName;
-    private String emailAddress;
-    private String bCryptedPassword;
+    private String email;
     private String telephoneNumber;
     private String affiliation;
     private String projectDescription;
     private String projectPIName;
+    private Boolean approved;
+    private Boolean confirmed;
     private String confirmationCode;
-    private String certificateCode;
-    private Boolean isApproved;
-    private Boolean isConfirmed;
-    private Boolean isEnabled;
-    private Boolean isAdministrator;
     private Long passwordExpires;
+    
+    /** these come from com.eucalyptus.auth.UserEntity.class **/
+    private Boolean enabled;
+    private Boolean administrator;
+    private String password;
+    private String token;
     private String queryId;
     private String secretKey;
-    private String temporaryPassword;
 
 	// displayUserRecordPage relies on empty strings and isAdministrator set
     public UserInfoWeb() {
-		userName = "";
-		realName = "";
-		emailAddress = "";
-		bCryptedPassword = "";
-		telephoneNumber = "";
-		affiliation = "";
-		projectDescription = "";
-		projectPIName = "";
-		isAdministrator = false;
+      this.userName = "";
+      this.realName = "";
+      this.email = "";
+      this.password = "";
+      this.telephoneNumber = "";
+      this.affiliation = "";
+      this.projectDescription = "";
+      this.projectPIName = "";
+      this.administrator = false;
 	}
 
     public UserInfoWeb( String userName )
@@ -115,14 +120,14 @@ public class UserInfoWeb implements IsSerializable
     }
 
     // this sets all the mandatory fields in UserInfoWeb
-    public UserInfoWeb( String userName, String realName, String emailAddress, String bCryptedPassword)
+    public UserInfoWeb( String userName, String realName, String email, String password)
     {
         this.userName = userName;
         this.realName = realName;
-        this.emailAddress = emailAddress;
-        this.bCryptedPassword = bCryptedPassword;
-        this.isAdministrator = false;
-        this.isConfirmed = false;
+        this.email = email;
+        this.password = password;
+        this.administrator = false;
+        this.confirmed = false;
     }
 
     public String getUserName()
@@ -144,27 +149,19 @@ public class UserInfoWeb implements IsSerializable
     }
 
     public String getEmail() {
-        return emailAddress;
+        return email;
     }
 
     public void setEmail(String emailAddress) {
-        this.emailAddress = emailAddress;
+        this.email = emailAddress;
     }
 
-    public String getBCryptedPassword() {
-        return bCryptedPassword;
+    public String getPassword() {
+        return password;
     }
 
-    public void setBCryptedPassword(String bCryptedPassword) {
-        this.bCryptedPassword = bCryptedPassword;
-    }
-
-    public String getTemporaryPassword() {
-        return temporaryPassword;
-    }
-
-    public void setTemporaryPassword(String password) {
-        this.temporaryPassword = password;
+    public void setPassword(String bCryptedPassword) {
+        this.password = bCryptedPassword;
     }
 
     public String getTelephoneNumber() {
@@ -207,52 +204,52 @@ public class UserInfoWeb implements IsSerializable
         this.confirmationCode = confirmationCode;
     }
 
-    public String getCertificateCode() {
-        return certificateCode;
+    public String getToken() {
+        return token;
     }
 
-    public void setCertificateCode(String certificateCode) {
-        this.certificateCode = certificateCode;
+    public void setToken(String token) {
+        this.token = token;
     }
 
   public Boolean isApproved()
   {
-    return isApproved;
+    return approved;
   }
 
-  public void setIsApproved( Boolean approved )
+  public void setApproved( Boolean approved )
   {
-    isApproved = approved;
+    this.approved = approved;
   }
 
   public Boolean isConfirmed()
   {
-    return isConfirmed;
+    return confirmed;
   }
 
-  public void setIsConfirmed( Boolean confirmed )
+  public void setConfirmed( Boolean confirmed )
   {
-    isConfirmed = confirmed;
+    this.confirmed = confirmed;
   }
 
   public Boolean isEnabled()
   {
-    return isEnabled;
+    return enabled;
   }
 
-  public void setIsEnabled( Boolean enabled )
+  public void setEnabled( Boolean enabled )
   {
-    isEnabled = enabled;
+    this.enabled = enabled;
   }
 
   public Boolean isAdministrator()
   {
-    return isAdministrator;
+    return administrator;
   }
 
-  public void setIsAdministrator( Boolean administrator )
+  public void setAdministrator( Boolean administrator )
   {
-    isAdministrator = administrator;
+    this.administrator = administrator;
   }
 
     public Long getPasswordExpires()

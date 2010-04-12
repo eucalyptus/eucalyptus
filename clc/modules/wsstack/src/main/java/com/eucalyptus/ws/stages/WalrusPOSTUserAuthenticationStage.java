@@ -66,7 +66,7 @@ package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
 
-import com.eucalyptus.ws.handlers.HmacV2Handler;
+import com.eucalyptus.ws.handlers.HmacHandler;
 import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler;

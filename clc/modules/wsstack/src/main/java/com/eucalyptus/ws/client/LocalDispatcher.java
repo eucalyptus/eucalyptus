@@ -1,16 +1,13 @@
 package com.eucalyptus.ws.client;
 
 import java.net.URI;
-
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleMessage;
 import org.mule.module.client.MuleClient;
-
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class LocalDispatcher extends ServiceDispatcher {

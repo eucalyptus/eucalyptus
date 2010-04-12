@@ -79,7 +79,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.Users;
 
 @Entity
 @PersistenceContext(name="eucalyptus_walrus")
@@ -184,10 +185,10 @@ public class GrantInfo {
 						if(id == null || id.length() == 0)
 							continue;
 						try {
-							displayName = CredentialProvider.getUserName( id );
-						} catch ( GeneralSecurityException e ) {
-							LOG.warn(e,e);
-						}
+							displayName = Users.lookupQueryId(id).getName();
+						} catch ( NoSuchUserException e ) {
+              LOG.warn(e,e);
+            }
 						if(displayName == null)
 							continue;
 					}

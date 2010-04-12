@@ -1,0 +1,6 @@
+name=cluster
+euca.model.dns=cluster-model.xml
+euca.model.dns.services=cluster-services.xml
+euca.url.local=vm://ClusterEndpoint
+euca.url.pattern=http://%s:%d/axis2/services/EucalyptusCC
+euca.url.port=8774

@@ -74,8 +74,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.stages.HmacV2UserAuthenticationStage;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.QueryBindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
@@ -85,7 +85,7 @@ public class EucalyptusQueryPipeline extends FilteredPipeline {
 
   @Override
   protected void addStages( List<UnrollableStage> stages ) {
-    stages.add( new HmacV2UserAuthenticationStage( ) );
+    stages.add( new HmacUserAuthenticationStage( ) );
     stages.add( new QueryBindingStage( ) );
   }
 
@@ -101,7 +101,7 @@ public class EucalyptusQueryPipeline extends FilteredPipeline {
         buffer.readBytes( read );
         String query = new String( read );
         buffer.resetReaderIndex( );
-        for ( String p : query.split( "&" ) ) {          
+        for ( String p : query.split( "&" ) ) {
           String[] splitParam = p.split( "=" );
           String lhs = splitParam[0];
           String rhs = splitParam.length == 2 ? splitParam[1] : null;
