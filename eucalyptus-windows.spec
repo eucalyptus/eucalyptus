@@ -36,7 +36,7 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus-windows
 Version:       1.0
-Release:       0.1200
+Release:       0.1202
 License:       GPLv3
 Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
