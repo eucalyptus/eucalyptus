@@ -119,4 +119,11 @@ public class WalrusUtil {
 	public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
 		return URLDecoder.decode(objectKey, "UTF-8").replace("%20", "+").replace("%2A", "*").replace("~", "%7E").replace(" ", "+");
 	}
+
+	public static String[] getTarget(String operationPath) {
+		operationPath = operationPath.replaceAll("/{2,}", "/");
+		if(operationPath.startsWith("/"))
+			operationPath = operationPath.substring(1);
+		return operationPath.split("/");
+	}
 }

@@ -150,7 +150,7 @@ public class WalrusProperties {
 	}
 	
 	public enum Headers {
-		Bucket, Key, RandomKey, VolumeId
+		Bucket, Key, RandomKey, VolumeId, S3UploadPolicy, S3UploadPolicySignature
 	}
 
 	public enum ExtendedGetHeaders {
