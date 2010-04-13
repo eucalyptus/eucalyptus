@@ -60,15 +60,12 @@
  *******************************************************************************/
 package com.eucalyptus.ws.handlers;
 
-import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.InputMismatchException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.Set;
 
 import javax.crypto.Mac;
@@ -97,11 +94,11 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.AuthenticationException;
 import com.eucalyptus.ws.MappingHttpRequest;
 
@@ -141,11 +138,10 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 			Map formFields = httpRequest.getFormFields();
 			String boundary = processPOSTHeaders(httpRequest, formFields);
 			processPOSTParams(boundary, formFields, httpRequest.getContent());
-			checkPolicy(httpRequest, formFields);
+			UploadPolicyChecker.checkPolicy(httpRequest, formFields);
 			handle(httpRequest);
 		} else if(event.getMessage() instanceof DefaultHttpChunk) {
 			DefaultHttpChunk httpChunk = (DefaultHttpChunk) event.getMessage();
-			//if(httpChunk.isLast()) {
 			ChannelBuffer newBuffer = getDataChunk(httpChunk.getContent(), boundary);
 			if(newBuffer != null) {
 				DefaultHttpChunk newChunk = new DefaultHttpChunk(newBuffer);
@@ -160,13 +156,6 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 		if(httpRequest.getFormFields().size() > 0) {
 			String data = httpRequest.getAndRemoveHeader(WalrusProperties.FormField.FormUploadPolicyData.toString());
 			String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
-			/*try {
-				User user = CredentialProvider.getUser( "admin" );
-				user.setIsAdministrator(true);
-				httpRequest.setUser( user );
-			} catch (NoSuchUserException e) {
-				throw new AuthenticationException( "User authentication failed." );
-			} */
 			if(auth_part != null) {
 				String sigString[] = getSigInfo(auth_part);
 				String signature = sigString[1];				
@@ -226,7 +215,8 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 				boundary = "--" + boundary + "\r\n";
 				this.boundary = boundary;
 			}
-			String[] target = getTarget(httpRequest);
+			String operationPath = httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
+			String[] target = WalrusUtil.getTarget(operationPath);
 			formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
 			return boundary;
 		} else {
@@ -252,86 +242,6 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 		}
 	}
 
-	private void checkPolicy(MappingHttpRequest httpRequest, Map<String, String> formFields) throws AuthenticationException {
-		if(formFields.containsKey(WalrusProperties.FormField.policy.toString())) {
-			String authenticationHeader = "";
-			String policy = new String(Base64.decode(formFields.remove(WalrusProperties.FormField.policy.toString())));
-			String policyData;
-			try {
-				policyData = new String(Base64.encode(policy.getBytes()));
-			} catch (Exception ex) {
-				LOG.warn(ex, ex);
-				throw new AuthenticationException("error reading policy data.");
-			}
-			//parse policy
-			try {
-				JsonSlurper jsonSlurper = new JsonSlurper();
-				JSONObject policyObject = (JSONObject)jsonSlurper.parseText(policy);
-				String expiration = (String) policyObject.get(WalrusProperties.PolicyHeaders.expiration.toString());
-				if(expiration != null) {
-					Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
-					if((new Date()).getTime() > expirationDate.getTime()) {
-						LOG.warn("Policy has expired.");
-						throw new AuthenticationException("Policy has expired.");
-					}
-				}
-				List<String> policyItemNames = new ArrayList<String>();
-
-				JSONArray conditions = (JSONArray) policyObject.get(WalrusProperties.PolicyHeaders.conditions.toString());
-				for (int i = 0 ; i < conditions.size() ; ++i) {
-					Object policyItem = conditions.get(i);
-					if(policyItem instanceof JSONObject) {
-						JSONObject jsonObject = (JSONObject) policyItem;
-						if(!exactMatch(jsonObject, formFields, policyItemNames)) {
-							LOG.warn("Policy verification failed. ");
-							throw new AuthenticationException("Policy verification failed.");
-						}
-					} else if(policyItem instanceof  JSONArray) {
-						JSONArray jsonArray = (JSONArray) policyItem;
-						if(!partialMatch(jsonArray, formFields, policyItemNames)) {
-							LOG.warn("Policy verification failed. ");
-							throw new AuthenticationException("Policy verification failed.");
-						}
-					}
-				}
-
-				Set<String> formFieldsKeys = formFields.keySet();
-				for(String formKey : formFieldsKeys) {
-					if(formKey.startsWith(WalrusProperties.IGNORE_PREFIX))
-						continue;
-					boolean fieldOkay = false;
-					for(WalrusProperties.IgnoredFields field : WalrusProperties.IgnoredFields.values()) {
-						if(formKey.equals(field.toString())) {
-							fieldOkay = true;
-							break;
-						}
-					}
-					if(fieldOkay)
-						continue;
-					if(policyItemNames.contains(formKey))
-						continue;
-					LOG.warn("All fields except those marked with x-ignore- should be in policy.");
-					throw new AuthenticationException("All fields except those marked with x-ignore- should be in policy.");
-				}
-			} catch(Exception ex) {
-				//rethrow
-				LOG.warn(ex);
-				if(ex instanceof AuthenticationException)
-					throw (AuthenticationException)ex;
-			}
-			//all form uploads without a policy are anonymous
-			if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString())) {
-				String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString());
-				authenticationHeader += "AWS" + " " + accessKeyId + ":";
-			}
-			if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
-				String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
-				authenticationHeader += signature;
-				httpRequest.addHeader(WalrusPOSTAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
-			}
-			httpRequest.addHeader(WalrusProperties.FormField.FormUploadPolicyData.toString(), policyData);
-		}
-	}
 
 	private Map<String, String> getFormField(String message, String key) {
 		Map<String, String> keymap = new HashMap<String, String>();
@@ -463,66 +373,6 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 				return lastIndex;
 		}
 		return lastIndex;
-	}
-
-	private boolean exactMatch(JSONObject jsonObject, Map<String, String> formFields, List<String> policyItemNames) {
-		Iterator<String> iterator = jsonObject.keys();
-		String key = null;
-		boolean returnValue = false;
-		while(iterator.hasNext()) {
-			key = iterator.next();
-			key = key.replaceAll("\\$", "");
-			policyItemNames.add(key);
-			try {
-				if(jsonObject.get(key).equals(formFields.get(key).trim()))
-					returnValue = true;
-				else
-					returnValue = false;
-			} catch(Exception ex) {
-				LOG.error(ex);
-				return false;
-			}
-		}
-		if(!returnValue)
-			LOG.error("exact match on " + key + " failed");
-		return returnValue;
-	}
-
-	private boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
-		boolean returnValue = false;
-		String key;
-		if(jsonArray.size() != 3)
-			return false;
-		try {
-			String condition = (String) jsonArray.get(0);
-			key = (String) jsonArray.get(1);
-			key = key.replaceAll("\\$", "");
-			policyItemNames.add(key);
-			String value = (String) jsonArray.get(2);
-			if(condition.contains("eq")) {
-				if(value.equals(formFields.get(key).trim()))
-					returnValue = true;
-			} else if(condition.contains("starts-with")) {
-				if(!formFields.containsKey(key))
-					return false;
-				if(formFields.get(key).trim().startsWith(value))
-					returnValue = true;
-			}
-		} catch(Exception ex) {
-			LOG.error(ex);
-			return false;
-		}
-		if(!returnValue)
-			LOG.error("partial match on " + key + " failed");
-		return returnValue;
-	}
-
-	private static String[] getTarget(MappingHttpRequest httpRequest) {
-		String operationPath = httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
-		operationPath = operationPath.replaceAll("/{2,}", "/");
-		if(operationPath.startsWith("/"))
-			operationPath = operationPath.substring(1);
-		return operationPath.split("/");
 	}
 
 	@Override

@@ -60,17 +60,12 @@
  *******************************************************************************/
 package com.eucalyptus.ws.handlers;
 
-import java.io.StringReader;
-import java.net.URLDecoder;
-import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -78,18 +73,9 @@ import java.util.TreeMap;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-import net.sf.json.groovy.JsonSlurper;
-
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
-import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -102,21 +88,18 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.CredentialProvider;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.util.AbstractKeyStore;
-import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.ws.AuthenticationException;
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
-import com.eucalyptus.auth.User;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.ws.AuthenticationException;
+import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.ws.handlers.WalrusPOSTAuthenticationHandler.SecurityParameter;
 
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
@@ -138,6 +121,9 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+			if(httpRequest.containsHeader(WalrusProperties.Headers.S3UploadPolicy.toString())) {
+				checkUploadPolicy(httpRequest);
+			}
 			handle(httpRequest);
 		}
 	}
@@ -192,16 +178,18 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			if(!valid) {
 				throw new AuthenticationException( "User authentication failed." );
 			}
-			String effectiveUserID = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaEffectiveUserId.toString());
+			String effectiveUserID = httpRequest.getAndRemoveHeader(SecurityParameter.AWSAccessKeyId.toString());
 			try {
 				User user = null;
-				if(effectiveUserID != null) {
-					user = CredentialProvider.getUserFromQueryId(effectiveUserID);
-				} else {
-					user = CredentialProvider.getUser( "admin" );
-					user.setIsAdministrator(true);
+				if(httpRequest.getUser() == null) {
+					if(effectiveUserID != null) {
+						user = CredentialProvider.getUserFromQueryId(effectiveUserID);
+					} else {
+						user = CredentialProvider.getUser( "admin" );
+						user.setIsAdministrator(true);
+					}
+					httpRequest.setUser( user );
 				}
-				httpRequest.setUser( user );
 			} catch (NoSuchUserException e) {
 				throw new AuthenticationException( "User authentication failed." );
 			}
@@ -364,6 +352,42 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			LOG.error( e, e );
 			throw new AuthenticationException( "Failed to compute signature" );
 		}
+	}
+
+	private void checkUploadPolicy(MappingHttpRequest httpRequest) throws AuthenticationException {
+		Map<String, String> fields = new HashMap<String, String>();
+		String policy = httpRequest.getAndRemoveHeader(WalrusProperties.Headers.S3UploadPolicy.toString());
+		fields.put(WalrusProperties.FormField.policy.toString(), policy);
+		String policySignature = httpRequest.getAndRemoveHeader(WalrusProperties.Headers.S3UploadPolicySignature.toString());
+		if(policySignature == null)
+			throw new AuthenticationException("Policy signature must be specified with policy.");
+		String awsAccessKeyId = httpRequest.getAndRemoveHeader(SecurityParameter.AWSAccessKeyId.toString());
+		if(awsAccessKeyId == null)
+			throw new AuthenticationException("AWSAccessKeyID must be specified.");
+		fields.put(WalrusProperties.FormField.signature.toString(), policySignature);
+		fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
+		String acl = httpRequest.getAndRemoveHeader(WalrusProperties.AMZ_ACL.toString());
+		if(acl != null)
+			fields.put(WalrusProperties.FormField.acl.toString(), acl);
+		String operationPath = httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
+		String[] target = WalrusUtil.getTarget(operationPath);
+		if(target != null) {
+			fields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
+			if(target.length > 1)
+				fields.put(WalrusProperties.FormField.key.toString(), target[1]);
+		}
+		UploadPolicyChecker.checkPolicy(httpRequest, fields);
+
+		String data = httpRequest.getAndRemoveHeader(WalrusProperties.FormField.FormUploadPolicyData.toString());
+		String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
+		if(auth_part != null) {
+			String sigString[] = getSigInfo(auth_part);
+			String signature = sigString[1];				
+			authenticate(httpRequest, sigString[0], signature, data);
+		} else {
+			throw new AuthenticationException("User authentication failed. Invalid policy signature.");
+		}
+
 	}
 
 	@Override

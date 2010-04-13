@@ -369,13 +369,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		msg.setProperty("timeStamp", new Date());
 	}
 
-	private static String[] getTarget(String operationPath) {
-		operationPath = operationPath.replaceAll("/{2,}", "/");
-		if(operationPath.startsWith("/"))
-			operationPath = operationPath.substring(1);
-		return operationPath.split("/");
-	}
-
 	private String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws BindingException {
 		String[] target = null;
 		String path = getOperationPath(httpRequest);
@@ -388,7 +381,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 
 		if(path.length() > 0) {
-			target = getTarget(path);
+			target = WalrusUtil.getTarget(path);
 		}
 
 		String verb = httpRequest.getMethod().getName();
@@ -515,7 +508,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 							operationParams.put("SourceVersionId", sourceParts[1].replaceFirst("versionId=", "").trim());
 						}
 						copySource = sourceParts[0];
-						String[] sourceTarget = getTarget(copySource);
+						String[] sourceTarget = WalrusUtil.getTarget(copySource);
 						String sourceObjectKey = "";
 						String sourceSplitOn = "";
 						if(sourceTarget.length > 1) {
