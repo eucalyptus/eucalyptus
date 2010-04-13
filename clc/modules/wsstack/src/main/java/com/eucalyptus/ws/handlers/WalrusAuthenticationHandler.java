@@ -181,7 +181,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			String effectiveUserID = httpRequest.getAndRemoveHeader(SecurityParameter.AWSAccessKeyId.toString());
 			try {
 				User user = null;
-				if(httpRequest.getUser() != null) {
+				if(httpRequest.getUser() == null) {
 					if(effectiveUserID != null) {
 						user = CredentialProvider.getUserFromQueryId(effectiveUserID);
 					} else {
