@@ -200,7 +200,6 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/share/eucalyptus/connect_iscsitarget.pl
 /usr/share/eucalyptus/disconnect_iscsitarget.pl
 /usr/share/eucalyptus/get_iscsitarget.pl
-/usr/share/eucalyptus/accept.sh
 
 #%files common-java -f jar_list
 %files common-java

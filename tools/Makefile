@@ -48,7 +48,6 @@ install: build
 	@$(INSTALL) -m 755 disconnect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 get_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 644 floppy $(DESTDIR)$(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 accept.sh $(DESTDIR)$(datarootdir)/eucalyptus
 
 uninstall: 
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud

@@ -265,13 +265,6 @@ do_start() {
 	fi
 
     # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
-	if [ -f "$EUCALYPTUS/usr/share/eucalyptus/accept.sh" ]; then 
-	    if ( ! $EUCALYPTUS/usr/share/eucalyptus/accept.sh ); then
-		echo "Exiting."
-		exit 1
-	    fi
-	fi
-
 	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -L console-log >/dev/null 2>&1
 
 	return $?
