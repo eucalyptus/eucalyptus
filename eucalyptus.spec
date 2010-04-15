@@ -57,7 +57,7 @@ eucalyptus-nc (or all of them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus = 1.6.2, %{euca_java}, lvm2
+Requires:     eucalyptus = main, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description common-java
@@ -70,7 +70,7 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java = 1.6.2, %{euca_java}, lvm2
+Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description walrus
@@ -85,7 +85,7 @@ cloud controller.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-common-java = 1.6.2, %{euca_java}, lvm2, vblade
+Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2, vblade
 Group:        Applications/System
 
 %description sc
@@ -100,7 +100,7 @@ alongside the cluster-controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java = 1.6.2, %{euca_java}, lvm2
+Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -115,7 +115,7 @@ the cloud clients.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus = 1.6.2, eucalyptus-gl = 1.6.2, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
+Requires:     eucalyptus = main, eucalyptus-gl = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
 Group:        Applications/System
 
 %description cc
@@ -129,7 +129,7 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus = 1.6.2, eucalyptus-gl = 1.6.2, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
+Requires:     eucalyptus = main, eucalyptus-gl = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
 Group:        Applications/System
 
 %description nc
@@ -143,7 +143,7 @@ components that handles the instances.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus = 1.6.2, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Requires:     eucalyptus = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Group:        Applications/System
 
 %description gl
@@ -293,7 +293,7 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	adduser -M eucalyptus
 %endif
 %if %is_fedora
-	adduser -U -G kvm --system eucalyptus 
+	adduser -U --system eucalyptus 
 %endif
 fi
 
@@ -398,6 +398,9 @@ fi
 
 %post nc
 chkconfig --add eucalyptus-nc
+%if %is_fedora
+	usermod -G kvm eucalyptus
+%endif
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
