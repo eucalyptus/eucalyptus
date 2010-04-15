@@ -35,7 +35,7 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 %endif
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       1.6.2
+Version:       main
 Release:       1
 License:       GPLv3
 Group:         Applications/System
