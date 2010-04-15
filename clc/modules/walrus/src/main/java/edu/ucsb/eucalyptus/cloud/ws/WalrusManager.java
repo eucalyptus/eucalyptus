@@ -496,6 +496,7 @@ public class WalrusManager {
 									walrusUri = new URI(SystemConfiguration.getWalrusUrl());
 									address = walrusUri.getHost();
 								} catch (URISyntaxException e) {
+									db.rollback();
 									throw new EucalyptusCloudException("Could not get Walrus URL");
 								}
 								removeARecordType.setAddress(address);
@@ -809,7 +810,7 @@ public class WalrusManager {
 											foundObject.setGrants(grantInfos);
 										}
 										if (WalrusProperties.enableTorrents) {
-											EntityWrapper<TorrentInfo> dbTorrent = db
+											EntityWrapper<TorrentInfo> dbTorrent = dbObject
 											.recast(TorrentInfo.class);
 											TorrentInfo torrentInfo = new TorrentInfo(bucketName,
 													objectKey);
@@ -885,6 +886,7 @@ public class WalrusManager {
 										monitor.setMd5(md5);
 										monitor.notifyAll();
 									}
+									messenger.removeMonitor(key);
 									messenger.removeQueue(key, randomKey);
 									LOG.info("Transfer complete: " + key);
 									break;
