@@ -91,9 +91,7 @@ public class StorageEventListener implements EventListener {
 	@Override
 	public void fireEvent(Event event) {
 		if(event instanceof StartComponentEvent) {
-			StartComponentEvent startComponentEvent = (StartComponentEvent) event;
-			ServiceConfiguration config = startComponentEvent.getConfiguration();
-			StorageProperties.updateStorageHost(config.getHostName());
+			BlockStorage.configure();
 		} else if(event instanceof StopComponentEvent) { 
 			StopComponentEvent stopComponentEvent = (StopComponentEvent) event;
 			ServiceConfiguration config = stopComponentEvent.getConfiguration();
