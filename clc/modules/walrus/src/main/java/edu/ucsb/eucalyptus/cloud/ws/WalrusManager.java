@@ -91,7 +91,6 @@ import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -196,7 +195,6 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 
-@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger(WalrusManager.class);
 
@@ -204,7 +202,7 @@ public class WalrusManager {
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = null;
 
-	public static void deferredInitializer() {
+	public static void configure() {
 		walrusStatistics = new WalrusStatistics();
 	}
 
@@ -496,6 +494,7 @@ public class WalrusManager {
 									walrusUri = new URI(SystemConfiguration.getWalrusUrl());
 									address = walrusUri.getHost();
 								} catch (URISyntaxException e) {
+									db.rollback();
 									throw new EucalyptusCloudException("Could not get Walrus URL");
 								}
 								removeARecordType.setAddress(address);
@@ -809,7 +808,7 @@ public class WalrusManager {
 											foundObject.setGrants(grantInfos);
 										}
 										if (WalrusProperties.enableTorrents) {
-											EntityWrapper<TorrentInfo> dbTorrent = db
+											EntityWrapper<TorrentInfo> dbTorrent = dbObject
 											.recast(TorrentInfo.class);
 											TorrentInfo torrentInfo = new TorrentInfo(bucketName,
 													objectKey);
@@ -885,6 +884,7 @@ public class WalrusManager {
 										monitor.setMd5(md5);
 										monitor.notifyAll();
 									}
+									messenger.removeMonitor(key);
 									messenger.removeQueue(key, randomKey);
 									LOG.info("Transfer complete: " + key);
 									break;
