@@ -60,48 +60,56 @@ public class Component implements ComponentInformation, Nameable<Component> {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
   }
   
-  public Service buildService( String hostName ) throws ServiceRegistrationException {
-    return this.buildService( hostName, this.getConfiguration( ).getDefaultPort( ) );
-  }
-  
-  public Service buildService( String hostName, Integer port ) throws ServiceRegistrationException {
-    this.enabled = true;
-    ServiceConfiguration config = this.builder.add( name, hostName, port );
-    Service service = new Service( this, config.getHostName( ), config.getPort( ) );
-    return setupService( config, service );
-  }
-  
+//  public Service buildService( String hostName ) throws ServiceRegistrationException {
+//    return this.buildService( hostName, this.getConfiguration( ).getDefaultPort( ) );
+//  }
+//  
+//  public Service buildService( String hostName, Integer port ) throws ServiceRegistrationException {
+//    this.enabled = true;
+//    ServiceConfiguration config = this.builder.add( name, hostName, port );
+//    Service service = new Service( this, config );
+//    return setupService( config, service );
+//  }
+//  
   public Service buildService( URI uri ) throws ServiceRegistrationException {
     this.enabled = true;
     ServiceConfiguration config = this.builder.add( uri );
-    Service service = null;
-    if ( config.isLocal( ) ) {
-      service = new Service( this );
-    } else {
-      service = new Service( this, config.getHostName( ), config.getPort( ) );
-    }
+    Service service = new Service( this, config );
     return this.setupService( config, service );
   }
   
   public Service buildService( ServiceConfiguration config ) throws ServiceRegistrationException {
     this.enabled = true;
-    Service service = new Service( this, config.getHostName( ), config.getPort( ) );
+    Service service = new Service( this, config );
     return this.setupService( config, service );
   }
   
   public Service buildLocalService( ) throws ServiceRegistrationException {
     this.enabled = true;
     ServiceConfiguration conf = this.builder.add( this.getConfiguration( ).getLocalUri( ) );
-    Service service = new Service( this );
+    Service service = new Service( this, conf );
     return this.setupService( conf, service );
   }
   
   private Service setupService( ServiceConfiguration config, Service service ) throws ServiceRegistrationException {
     this.services.put( service.getName( ), service );
     Components.register( service );
-    this.builder.fireStart( config );
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     return service;
+  }
+  
+  public void start( ) {
+    for( Service s : this.services.values( ) ) {
+      try {
+        if( s.getDispatcher( ).isLocal( ) ) {
+          this.builder.fireStart( s.getServiceConfiguration( ) );
+        } else if ( com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
+          this.builder.fireStart( s.getServiceConfiguration( ) );
+        }
+      } catch ( ServiceRegistrationException e ) {
+        LOG.debug( e, e );
+      }
+    }
   }
   
   public Boolean isSingleton( ) {

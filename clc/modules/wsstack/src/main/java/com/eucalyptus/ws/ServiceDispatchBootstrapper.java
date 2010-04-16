@@ -103,6 +103,18 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
 
   @Override
   public boolean start( ) throws Exception {
+    for( com.eucalyptus.bootstrap.Component c : com.eucalyptus.bootstrap.Component.values( ) ) {
+      if( com.eucalyptus.bootstrap.Component.any.equals( c) ) continue;
+      try {
+        EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, c.name( ), c.isEnabled( ).toString( ) ).info( );
+        Component comp = Components.lookup( c );
+        for( ServiceConfiguration s : comp.list( ) ) {
+          comp.buildService( s );
+        }
+      } catch ( NoSuchElementException e ) {
+        throw Exceptions.uncatchable( "Failed to lookup required component: " + c.name( ) );
+      }
+    }
     return true;
   }
 
