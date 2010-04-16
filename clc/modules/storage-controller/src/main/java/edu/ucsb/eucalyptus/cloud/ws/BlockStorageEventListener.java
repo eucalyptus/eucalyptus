@@ -77,11 +77,11 @@ import com.eucalyptus.util.StorageProperties;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 
-public class StorageEventListener implements EventListener {
-	private static Logger LOG  = Logger.getLogger( StorageEventListener.class );
+public class BlockStorageEventListener implements EventListener {
+	private static Logger LOG  = Logger.getLogger( BlockStorageEventListener.class );
 
 	public static void register() {
-		ListenerRegistry.getInstance( ).register( Component.storage, new StorageEventListener() );
+		ListenerRegistry.getInstance( ).register( Component.storage, new BlockStorageEventListener() );
 	}
 
 	@Override
@@ -92,24 +92,6 @@ public class StorageEventListener implements EventListener {
 	public void fireEvent(Event event) {
 		if(event instanceof StartComponentEvent) {
 			BlockStorage.configure();
-		} else if(event instanceof StopComponentEvent) { 
-			StopComponentEvent stopComponentEvent = (StopComponentEvent) event;
-			ServiceConfiguration config = stopComponentEvent.getConfiguration();
-			StorageInfo storageInfo = new StorageInfo();
-			String name = StorageProperties.SC_LOCAL_NAME;
-			if(!stopComponentEvent.isLocal())
-				name = config.getName();
-			storageInfo.setName(name);
-			EntityWrapper<StorageInfo> db = StorageController.getEntityWrapper();
-			try {
-				StorageInfo foundStorageInfo = db.getUnique(storageInfo);
-				db.delete(foundStorageInfo);
-				db.commit();
-			} catch(EucalyptusCloudException ex) {
-				db.rollback();
-				LOG.error(ex);
-			}
-		}
+		} 
 	}
-
 }
