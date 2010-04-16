@@ -720,6 +720,46 @@ adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t*
     return response;
 }
 
+adb_ncCancelBundleTaskResponse_t* ncCancelBundleTaskMarshal (adb_ncCancelBundleTask_t* ncCancelBundleTask, const axutil_env_t *env) {
+    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncCancelBundleTaskType_t * input          = adb_ncCancelBundleTask_get_ncCancelBundleTask(ncCancelBundleTask, env);
+    adb_ncCancelBundleTaskResponse_t * response   = adb_ncCancelBundleTaskResponse_create(env);
+    adb_ncCancelBundleTaskResponseType_t * output = adb_ncCancelBundleTaskResponseType_create(env);
+
+    // get standard fields from input
+    axis2_char_t * correlationId = adb_ncCancelBundleTaskType_get_correlationId(input, env);
+    axis2_char_t * userId = adb_ncCancelBundleTaskType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    axis2_char_t * instanceId = adb_ncCancelBundleTaskType_get_instanceId(input, env);
+
+    eventlog("NC", userId, correlationId, "CancelBundleTask", "begin");
+    { // do it
+        ncMetadata meta = { correlationId, userId };
+
+        int error = doCancelBundleTask (&meta, instanceId);
+    
+        if (error) {
+            logprintfl (EUCAERROR, "ERROR: doCancelBundleTask() failed error=%d\n", error);
+            adb_ncCancelBundleTaskResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_ncCancelBundleTaskResponseType_set_correlationId(output, env, correlationId);
+            adb_ncCancelBundleTaskResponseType_set_userId(output, env, userId);
+        } else {
+            // set standard fields in output
+            adb_ncCancelBundleTaskResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncCancelBundleTaskResponseType_set_correlationId(output, env, correlationId);
+            adb_ncCancelBundleTaskResponseType_set_userId(output, env, userId);
+            // no operation-specific fields in output
+        }
+    }
+    // set response to output
+    adb_ncCancelBundleTaskResponse_set_ncCancelBundleTaskResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    eventlog("NC", userId, correlationId, "CancelBundleTask", "end");
+    return response;
+}
+
 adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescribeBundleTasks_t* ncDescribeBundleTasks, const axutil_env_t *env)
 {
     pthread_mutex_lock(&ncHandlerLock);

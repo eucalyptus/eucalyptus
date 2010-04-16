@@ -1161,6 +1161,23 @@ int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char
 	return ret;
 }
 
+int doCancelBundleTask (ncMetadata *meta, char *instanceId)
+{
+	int ret;
+
+	if (init())
+		return 1;
+
+	logprintfl (EUCAINFO, "doCancelBundleTask() invoked (id=%s)\n", instanceId);
+
+	if (nc_state.H->doCancelBundleTask)
+	  ret = nc_state.H->doCancelBundleTask (&nc_state, meta, instanceId);
+	else 
+	  ret = nc_state.D->doCancelBundleTask (&nc_state, meta, instanceId);
+
+	return ret;
+}
+
 int doDescribeBundleTasks (ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen)
 {
 	int ret;

@@ -558,6 +558,15 @@ doBundleInstance(
 }
 
 static int
+doCancelBundleTask(
+	struct nc_state_t *nc,
+	ncMetadata *meta,
+	char *instanceId)
+{
+  return(OK);
+}
+
+static int
 doDescribeBundleTasks(
 	struct nc_state_t *nc,
 	ncMetadata *meta,
@@ -616,6 +625,7 @@ struct handlers default_libvirt_handlers = {
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume,
     .doBundleInstance    = doBundleInstance,
+    .doCancelBundleTask  = doCancelBundleTask,
     .doDescribeBundleTasks    = doDescribeBundleTasks
 };
 

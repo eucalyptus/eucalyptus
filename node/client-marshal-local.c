@@ -104,6 +104,11 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
 int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey) {
   return(0);
 }
+
+int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId) {
+  return(0);
+}
+
 int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen) {
   return(0);
 }

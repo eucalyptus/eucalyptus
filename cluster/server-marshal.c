@@ -218,6 +218,50 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
   return(ret);
 }
 
+adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *cancelBundleTask, const axutil_env_t *env) {
+  adb_CancelBundleTaskResponse_t *ret=NULL;
+  adb_cancelBundleTaskResponseType_t *birt=NULL;
+  
+  adb_cancelBundleTaskType_t *bit=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  char *instanceId, *bucketName, *filePrefix, *walrusURL, *userPublicKey, *cid;
+  ncMetadata ccMeta;
+  
+  bit = adb_CancelBundleTask_get_CancelBundleTask(cancelBundleTask, env);
+  
+  ccMeta.correlationId = adb_cancelBundleTaskType_get_correlationId(bit, env);
+  ccMeta.userId = adb_cancelBundleTaskType_get_userId(bit, env);
+  
+  instanceId = adb_cancelBundleTaskType_get_instanceId(bit, env);
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doCancelBundleTask(&ccMeta, instanceId);
+    if (rc) {
+      logprintf("ERROR: doCancelBundleTask() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+  birt = adb_cancelBundleTaskResponseType_create(env);
+  adb_cancelBundleTaskResponseType_set_return(birt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_cancelBundleTaskResponseType_set_statusMessage(birt, env, statusMessage);
+  }
+
+  adb_cancelBundleTaskResponseType_set_correlationId(birt, env, ccMeta.correlationId);
+  adb_cancelBundleTaskResponseType_set_userId(birt, env, ccMeta.userId);
+  
+  ret = adb_CancelBundleTaskResponse_create(env);
+  adb_CancelBundleTaskResponse_set_CancelBundleTaskResponse(ret, env, birt);
+
+  return(ret);
+}
+
 adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundleTasks_t *describeBundleTasks, const axutil_env_t *env) {
   adb_DescribeBundleTasksResponse_t *ret=NULL;
   adb_describeBundleTasksResponseType_t *birt=NULL;

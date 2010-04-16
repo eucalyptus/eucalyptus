@@ -181,6 +181,9 @@ struct handlers {
 				char *filePrefix,
 				char *walrusURL,
 				char *userPublicKey);
+    int (*doCancelBundleTask)   (struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId);
     int (*doDescribeBundleTasks)	(struct nc_state_t *nc,
 					 ncMetadata *meta,
 					 char **instIds,
@@ -201,6 +204,7 @@ int doStartNetwork		(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen,
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey);
+int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 #endif /* HANDLERS_FANOUT */
 

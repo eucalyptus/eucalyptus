@@ -73,5 +73,6 @@ adb_ncGetConsoleOutputResponse_t* ncGetConsoleOutputMarshal (adb_ncGetConsoleOut
 adb_ncAttachVolumeResponse_t* ncAttachVolumeMarshal (adb_ncAttachVolume_t* ncAttachVolume, const axutil_env_t *env);
 adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDetachVolume, const axutil_env_t *env);
 adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t* ncBundleInstance, const axutil_env_t *env);
+adb_ncCancelBundleTaskResponse_t* ncCancelBundleTaskMarshal (adb_ncCancelBundleTask_t* ncCancelBundleTask, const axutil_env_t *env);
 adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescribeBundleTasks_t* ncDescribeBundleTasks, const axutil_env_t *env);
 #endif

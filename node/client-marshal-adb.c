@@ -725,6 +725,43 @@ int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *
     return status;
 }
 
+int ncCancelBundleTaskStub (ncStub *st, ncMetadata *meta, char *instanceId)
+{
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
+    adb_ncCancelBundleTask_t     * input   = adb_ncCancelBundleTask_create (env); 
+    adb_ncCancelBundleTaskType_t * request = adb_ncCancelBundleTaskType_create (env);
+    
+    // set standard input fields
+    if (meta) {
+        adb_ncCancelBundleTaskType_set_correlationId (request, env, meta->correlationId);
+        adb_ncCancelBundleTaskType_set_userId (request, env, meta->userId);
+    }
+    
+    // set op-specific input fields
+    adb_ncCancelBundleTaskType_set_instanceId(request, env, instanceId);
+    adb_ncCancelBundleTask_set_ncCancelBundleTask(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncCancelBundleTaskResponse_t * output = axis2_stub_op_EucalyptusNC_ncCancelBundleTask (stub, env, input);
+        
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: CancelBundleTask" NULL_ERROR_MSG);
+            status = -1;
+
+        } else {
+            adb_ncCancelBundleTaskResponseType_t * response = adb_ncCancelBundleTaskResponse_get_ncCancelBundleTaskResponse (output, env);
+            if ( adb_ncCancelBundleTaskResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: CancelBundleTask returned an error\n");
+                status = 1;
+            }
+        }
+    }
+    
+    return status;
+}
+
 int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen) {
     int i;
     axutil_env_t * env  = st->env;

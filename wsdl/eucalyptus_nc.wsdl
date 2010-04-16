@@ -130,6 +130,25 @@
 	  </xs:complexContent>
     </xs:complexType>
 
+    <xs:complexType name="ncCancelBundleTaskType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncCancelBundleTaskResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+
     <xs:complexType name="ncDescribeBundleTasksType">
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
@@ -381,6 +400,9 @@
     <xs:element name="ncBundleInstance" nillable="true" type="tns:ncBundleInstanceType"/>
     <xs:element name="ncBundleInstanceResponse" nillable="true" type="tns:ncBundleInstanceResponseType"/>
 
+    <xs:element name="ncCancelBundleTask" nillable="true" type="tns:ncCancelBundleTaskType"/>
+    <xs:element name="ncCancelBundleTaskResponse" nillable="true" type="tns:ncCancelBundleTaskResponseType"/>
+
     <xs:element name="ncDescribeBundleTasks" nillable="true" type="tns:ncDescribeBundleTasksType"/>
     <xs:element name="ncDescribeBundleTasksResponse" nillable="true" type="tns:ncDescribeBundleTasksResponseType"/>
 
@@ -441,6 +463,11 @@
   </wsdl:part>
 </wsdl:message>
 
+<wsdl:message name="ncCancelBundleTaskResponse">
+  <wsdl:part element="tns:ncCancelBundleTaskResponse" name="ncCancelBundleTaskResponse">
+  </wsdl:part>
+</wsdl:message>
+
 <wsdl:message name="ncDescribeBundleTasksResponse">
   <wsdl:part element="tns:ncDescribeBundleTasksResponse" name="ncDescribeBundleTasksResponse">
   </wsdl:part>
@@ -498,6 +525,11 @@
 
 <wsdl:message name="ncBundleInstance">
   <wsdl:part element="tns:ncBundleInstance" name="ncBundleInstance">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncCancelBundleTask">
+  <wsdl:part element="tns:ncCancelBundleTask" name="ncCancelBundleTask">
   </wsdl:part>
 </wsdl:message>
 
@@ -578,6 +610,13 @@
     <wsdl:input message="tns:ncBundleInstance" name="ncBundleInstance">
     </wsdl:input>
     <wsdl:output message="tns:ncBundleInstanceResponse" name="ncBundleInstanceResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncCancelBundleTask">
+    <wsdl:input message="tns:ncCancelBundleTask" name="ncCancelBundleTask">
+    </wsdl:input>
+    <wsdl:output message="tns:ncCancelBundleTaskResponse" name="ncCancelBundleTaskResponse">
     </wsdl:output>
   </wsdl:operation>
 
@@ -693,6 +732,16 @@
       <soap:body use="literal"/>
     </wsdl:input>
     <wsdl:output name="ncBundleInstanceResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncCancelBundleTask">
+    <soap:operation soapAction="EucalyptusNC#ncCancelBundleTask" style="document"/>
+    <wsdl:input name="ncCancelBundleTask">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncCancelBundleTaskResponse">
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>
