@@ -45,7 +45,7 @@ public class DefaultServiceBuilder extends AbstractServiceBuilder<ServiceConfigu
       } else {
         return new RemoteConfiguration( this.component.getPeer( ), uri );      
       }
-    } catch ( Exception e ) {
+    } catch ( Throwable t ) {
       return new LocalConfiguration( this.component.getPeer( ), uri );      
     }
   }
