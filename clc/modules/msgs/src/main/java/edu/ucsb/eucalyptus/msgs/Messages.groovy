@@ -529,6 +529,7 @@ public class BundleInstanceResponseType extends VmBundleMessage {
 }
 public class CancelBundleTaskType extends VmBundleMessage {
   String bundleId;
+  String instanceId;
 }
 public class CancelBundleTaskResponseType extends VmBundleMessage {
   BundleTask task;

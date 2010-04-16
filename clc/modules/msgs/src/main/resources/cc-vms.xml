@@ -179,6 +179,12 @@
   <mapping name="BundleInstanceResponse" class="edu.ucsb.eucalyptus.msgs.BundleInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
+  <mapping name="CancelBundleTask" class="edu.ucsb.eucalyptus.msgs.CancelBundleTaskType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <value name="instanceId" field="instanceId" usage="required" />
+  </mapping>
+  <mapping name="CancelBundleTaskResponse" class="edu.ucsb.eucalyptus.msgs.CancelBundleTaskResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
 
 
   <mapping name="GetConsoleOutput" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">

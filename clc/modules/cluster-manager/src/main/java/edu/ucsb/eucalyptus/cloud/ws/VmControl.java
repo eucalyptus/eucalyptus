@@ -75,6 +75,7 @@ import com.eucalyptus.auth.User;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.BundleCallback;
+import com.eucalyptus.cluster.callback.CancelBundleCallback;
 import com.eucalyptus.cluster.callback.PasswordDataCallback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.util.Messaging;
@@ -191,14 +192,20 @@ public class VmControl {
       if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
         v.getBundleTask( ).setState( "canceling" );
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, request.getUserId( ), v.getBundleTask( ).getBundleId( ), v.getInstanceId( ) ) );
-        //TODO: dispatch cancel bundle.
+        
+	Cluster cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
+
+	request.setInstanceId(v.getInstanceId());
+	reply.setTask(v.getBundleTask());
+	new CancelBundleCallback(request).dispatch(cluster);
+
+	return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
       }
     } catch ( NoSuchElementException e ) {
       throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
     }
-    return reply;
   }
   
   public BundleInstanceResponseType bundleInstance( BundleInstanceType request ) throws EucalyptusCloudException {
