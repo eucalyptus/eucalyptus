@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.Event;
@@ -88,21 +89,10 @@ public class WalrusEventListener implements EventListener {
 
 	@Override
 	public void fireEvent(Event event) {
-		if(event instanceof StopComponentEvent) {
-			StopComponentEvent stopComponentEvent = (StopComponentEvent) event;
-			ServiceConfiguration config = stopComponentEvent.getConfiguration();
-			WalrusInfo walrusInfo = new WalrusInfo();
-			walrusInfo.setName(WalrusProperties.NAME);
-			EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
-			try {
-				WalrusInfo foundWalrusInfo = db.getUnique(walrusInfo);
-				db.delete(foundWalrusInfo);
-				db.commit();
-			} catch(EucalyptusCloudException ex) {
-				db.rollback();
-				LOG.error(ex);
-			}
-		}
+		if(event instanceof StartComponentEvent) {
+			if(((StartComponentEvent) event).isLocal())
+				WalrusControl.configure();
+		} 
 	}
 
 }

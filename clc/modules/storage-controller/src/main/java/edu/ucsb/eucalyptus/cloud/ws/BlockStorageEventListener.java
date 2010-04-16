@@ -91,7 +91,8 @@ public class BlockStorageEventListener implements EventListener {
 	@Override
 	public void fireEvent(Event event) {
 		if(event instanceof StartComponentEvent) {
-			BlockStorage.configure();
+			if(((StartComponentEvent) event).isLocal())
+				BlockStorage.configure();
 		} 
 	}
 }

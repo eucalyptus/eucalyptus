@@ -91,7 +91,6 @@ import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -196,7 +195,6 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 
-@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger(WalrusManager.class);
 
@@ -204,7 +202,7 @@ public class WalrusManager {
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = null;
 
-	public static void deferredInitializer() {
+	public static void configure() {
 		walrusStatistics = new WalrusStatistics();
 	}
 
