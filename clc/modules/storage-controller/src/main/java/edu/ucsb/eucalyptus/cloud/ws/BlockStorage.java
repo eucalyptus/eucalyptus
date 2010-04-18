@@ -555,6 +555,9 @@ public class BlockStorage {
 			}
 		}
 		db.commit();
+		/*ConvertVolumesType req = new ConvertVolumesType();
+		req.setOriginalProvider("edu.ucsb.eucalyptus.storage.LVM2Manager");
+		ConvertVolumes(req);*/
 		return reply;
 	}
 
@@ -565,6 +568,7 @@ public class BlockStorage {
 			//different backend provider. Try upgrade
 			try {
 				LogicalStorageManager fromBlockManager = (LogicalStorageManager) Class.forName(provider).newInstance();
+				fromBlockManager.checkPreconditions();
 				//initialize fromBlockManager
 				new VolumesConvertor(fromBlockManager).start();
 			} catch(InstantiationException e) {
@@ -859,7 +863,6 @@ public class BlockStorage {
 						String volumeId = volume.getVolumeId();
 						String volumePath = fromBlockManager.getVolumePath(volumeId);
 						blockManager.importVolume(volumeId, volumePath, volume.getSize());
-						blockManager.finishVolume(volumeId);
 					} catch (EucalyptusCloudException ex) {
 						LOG.error(ex);
 						//this one failed, continue processing the rest
@@ -872,7 +875,6 @@ public class BlockStorage {
 						String snapPath = fromBlockManager.getSnapshotPath(snapshotId);
 						int size = fromBlockManager.getSnapshotSize(snapshotId);
 						blockManager.importSnapshot(snapshotId, snap.getVolumeId(), snapPath, size);
-						blockManager.finishVolume(snapshotId);
 					} catch (EucalyptusCloudException ex) {
 						LOG.error(ex);
 						//this one failed, continue processing the rest

@@ -85,6 +85,7 @@ import com.eucalyptus.bootstrap.ConfigurableFieldType;
 import com.eucalyptus.bootstrap.ConfigurableManagement;
 import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 
@@ -93,6 +94,7 @@ import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 @Configurable(component = Component.storage)
 public class SANManager implements LogicalStorageManager {
@@ -100,11 +102,11 @@ public class SANManager implements LogicalStorageManager {
 	private SANProvider connectionManager;
 
 	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "SAN Host")
-	public static String SAN_HOST = "sanHost";
+	public static String SAN_HOST = "192.168.7.189";
 	@ConfigurableField(type = ConfigurableFieldType.KEYVALUE, displayName = "SAN Username")
-	public static String SAN_USERNAME = "sanUser";
+	public static String SAN_USERNAME = "grpadmin";
 	@ConfigurableField(type = ConfigurableFieldType.KEYVALUEHIDDEN, displayName = "SAN Password")
-	public static String SAN_PASSWORD = "sanPassword";
+	public static String SAN_PASSWORD = "zoomzoom";
 
 	private static SANManager singleton;
 	private static Logger LOG = Logger.getLogger(SANManager.class);
@@ -475,6 +477,10 @@ public class SANManager implements LogicalStorageManager {
 	@Override
 	public void importVolume(String volumeId, String volumePath, int size)
 	throws EucalyptusCloudException {
+		String eucaHomeDir = System.getProperty("euca.home");
+		if(eucaHomeDir == null) {
+			throw new EucalyptusCloudException("euca.home not set");
+		}
 		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
 		try {
 			db.getUnique(new EquallogicVolumeInfo(volumeId));
@@ -489,18 +495,12 @@ public class SANManager implements LogicalStorageManager {
 			String deviceName = connectionManager.connectTarget(iqn);
 			//now copy
 			try {
-				FileInputStream inStream = new FileInputStream(new File(volumePath));
-				FileChannel inChannel = inStream.getChannel();
-				FileOutputStream outStream = new FileOutputStream(new File(deviceName));
-				FileChannel outChannel = outStream.getChannel();
-				inChannel.transferTo(0, inChannel.size(), outChannel);
-				inChannel.close();
-				inStream.close();
-				outChannel.close();
-				outStream.close();
-			} catch (IOException e) {
+				SystemUtil.run(new String[]{eucaHomeDir + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + volumePath, "of=" + deviceName, "bs=" + StorageProperties.blockSize});			
+			} catch (ExecutionException e) {
 				LOG.error(e);
 				throw new EucalyptusCloudException(e);
+			} finally {
+				connectionManager.disconnectTarget(iqn);
 			}
 			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);
 			db = StorageController.getEntityWrapper();
@@ -518,6 +518,10 @@ public class SANManager implements LogicalStorageManager {
 	@Override
 	public void importSnapshot(String snapshotId, String volumeId, String snapPath, int size)
 	throws EucalyptusCloudException {
+		String eucaHomeDir = System.getProperty("euca.home");
+		if(eucaHomeDir == null) {
+			throw new EucalyptusCloudException("euca.home not set");
+		}
 		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
 		try {
 			db.getUnique(new EquallogicVolumeInfo(snapshotId));
@@ -532,18 +536,12 @@ public class SANManager implements LogicalStorageManager {
 			String deviceName = connectionManager.connectTarget(iqn);
 			//now copy
 			try {
-				FileInputStream inStream = new FileInputStream(new File(snapPath));
-				FileChannel inChannel = inStream.getChannel();
-				FileOutputStream outStream = new FileOutputStream(new File(deviceName));
-				FileChannel outChannel = outStream.getChannel();
-				inChannel.transferTo(0, inChannel.size(), outChannel);
-				inChannel.close();
-				inStream.close();
-				outChannel.close();
-				outStream.close();
-			} catch (IOException e) {
+				SystemUtil.run(new String[]{eucaHomeDir + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + snapPath, "of=" + deviceName, "bs=" + StorageProperties.blockSize});			
+			} catch (ExecutionException e) {
 				LOG.error(e);
 				throw new EucalyptusCloudException(e);
+			} finally {
+				connectionManager.disconnectTarget(iqn);
 			}
 			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);
 			volumeInfo.setSnapshotOf(volumeId);

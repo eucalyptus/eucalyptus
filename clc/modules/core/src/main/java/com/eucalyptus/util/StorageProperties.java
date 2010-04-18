@@ -174,4 +174,8 @@ public class StorageProperties {
 	public enum StorageParameters {
 		EucaSignature, EucaSnapSize, EucaCert
 	}
+
+	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
+
+	public static final String blockSize = "1M";
 }

@@ -113,8 +113,6 @@ public class LVM2Manager implements LogicalStorageManager {
 	public static final String PATH_SEPARATOR = File.separator;
 	public static boolean initialized = false;
 	public static final int MAX_LOOP_DEVICES = 256;
-	private  static final String blockSize = "1M";
-	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 	public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
 	private static Logger LOG = Logger.getLogger(LVM2Manager.class);
 	public static String eucaHome = System.getProperty("euca.home");
@@ -135,8 +133,8 @@ public class LVM2Manager implements LogicalStorageManager {
 			throw new EucalyptusCloudException("euca.home not set");
 		}
 		eucaHome = eucaHomeDir;
-		if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
-			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + eucaHome + EUCA_ROOT_WRAPPER);
+		if(!new File(eucaHome + StorageProperties.EUCA_ROOT_WRAPPER).exists()) {
+			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + eucaHome + StorageProperties.EUCA_ROOT_WRAPPER);
 		}
 		File varDir = new File(eucaHome + EUCA_VAR_RUN_PATH);
 		if(!varDir.exists()) {
@@ -163,66 +161,66 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	private String getLvmVersion() throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvm", "version"});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvm", "version"});
 	}
 
 	private String findFreeLoopback() throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
 	}
 
 	private  String getLoopback(String loDevName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", loDevName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "losetup", loDevName});
 	}
 
 	private String createPhysicalVolume(String loDevName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvcreate", loDevName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "pvcreate", loDevName});
 	}
 
 	private String createVolumeGroup(String pvName, String vgName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgcreate", vgName, pvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgcreate", vgName, pvName});
 	}
 
 	private String extendVolumeGroup(String pvName, String vgName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
 	}
 
 	private String createLogicalVolume(String vgName, String lvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-l", "100%FREE", vgName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-l", "100%FREE", vgName});
 	}
 
 	private String createSnapshotLogicalVolume(String lvName, String snapLvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-l", "100%FREE", lvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-l", "100%FREE", lvName});
 	}
 
 	private String removeLogicalVolume(String lvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
 	}
 
 	private String removeVolumeGroup(String vgName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgremove", vgName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgremove", vgName});
 	}
 
 	private String removePhysicalVolume(String loDevName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvremove", loDevName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "pvremove", loDevName});
 	}
 
 	private String removeLoopback(String loDevName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
 	}
 
 	private String reduceVolumeGroup(String vgName, String pvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
 	}
 
 	private String enableLogicalVolume(String lvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
 	}
 
 	private int losetup(String absoluteFileName, String loDevName) {
 		try
 		{
 			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", loDevName, absoluteFileName});
+			Process proc = rt.exec(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "losetup", loDevName, absoluteFileName});
 			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -240,14 +238,14 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	private String duplicateLogicalVolume(String oldLvName, String newLvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + blockSize});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createFile(String fileName, long size) throws ExecutionException {
 		if(!zeroFillVolumes)
-			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + blockSize, "seek=" + (size -1)});
+			return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + StorageProperties.blockSize, "seek=" + (size -1)});
 		else
-			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + blockSize});
+			return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createEmptyFile(String fileName, int size) throws ExecutionException {
