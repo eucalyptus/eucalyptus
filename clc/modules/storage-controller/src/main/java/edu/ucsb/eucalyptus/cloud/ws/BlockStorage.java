@@ -863,6 +863,7 @@ public class BlockStorage {
 						String volumeId = volume.getVolumeId();
 						String volumePath = fromBlockManager.getVolumePath(volumeId);
 						blockManager.importVolume(volumeId, volumePath, volume.getSize());
+						fromBlockManager.finishVolume(volumeId);
 					} catch (EucalyptusCloudException ex) {
 						LOG.error(ex);
 						//this one failed, continue processing the rest
@@ -875,6 +876,7 @@ public class BlockStorage {
 						String snapPath = fromBlockManager.getSnapshotPath(snapshotId);
 						int size = fromBlockManager.getSnapshotSize(snapshotId);
 						blockManager.importSnapshot(snapshotId, snap.getVolumeId(), snapPath, size);
+						fromBlockManager.finishVolume(snapshotId);
 					} catch (EucalyptusCloudException ex) {
 						LOG.error(ex);
 						//this one failed, continue processing the rest

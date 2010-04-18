@@ -1170,19 +1170,11 @@ public class LVM2Manager implements LogicalStorageManager {
 		LVMVolumeInfo volumeInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volumeInfo != null) {
 			try {
-				FileInputStream inStream = new FileInputStream(new File(volumePath));
-				FileChannel inChannel = inStream.getChannel();
-				FileOutputStream outStream = new FileOutputStream(new File(lvmRootDirectory + 
-						File.separator + volumeInfo.getVgName() + 
-						File.separator + volumeInfo.getLvName()));
-				volumeManager.finish();
-				FileChannel outChannel = outStream.getChannel();
-				inChannel.transferTo(0, inChannel.size(), outChannel);
-				inChannel.close();
-				inStream.close();
-				outChannel.close();
-				outStream.close();
-			} catch (IOException e) {
+				SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
+						"dd", "if=" + volumePath, 
+						"of=" + lvmRootDirectory + File.separator + volumeInfo.getVgName() + 
+						File.separator + volumeInfo.getLvName(), "bs=" + StorageProperties.blockSize});			
+			} catch (ExecutionException e) {
 				LOG.error(e);
 				throw new EucalyptusCloudException(e);
 			}
@@ -1219,16 +1211,10 @@ public class LVM2Manager implements LogicalStorageManager {
 		volumeManager.finish();
 		String snapFileName = storageRootDirectory + File.separator + snapshotId;
 		try {
-			FileInputStream inStream = new FileInputStream(new File(snapPath));
-			FileChannel inChannel = inStream.getChannel();
-			FileOutputStream outStream = new FileOutputStream(new File(snapFileName));
-			FileChannel outChannel = outStream.getChannel();
-			inChannel.transferTo(0, inChannel.size(), outChannel);
-			inChannel.close();
-			inStream.close();
-			outChannel.close();
-			outStream.close();
-		} catch (IOException e) {
+			SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
+					"dd", "if=" + snapPath, 
+					"of=" + snapFileName, "bs=" + StorageProperties.blockSize});			
+		} catch (ExecutionException e) {
 			LOG.error(e);
 			throw new EucalyptusCloudException(e);
 		}
