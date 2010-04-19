@@ -65,6 +65,12 @@
 
 package edu.ucsb.eucalyptus.storage;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,6 +81,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 
@@ -84,6 +91,7 @@ import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class SANManager implements LogicalStorageManager {
 
@@ -108,7 +116,7 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void addSnapshot(String snapshotId) throws EucalyptusCloudException {
-		finishSnapshot(snapshotId);
+		finishVolume(snapshotId);
 	}
 
 	@Override
@@ -327,7 +335,7 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException {
+	public void finishVolume(String snapshotId) throws EucalyptusCloudException {
 		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
 		try {
 			EquallogicVolumeInfo snapInfo = db.getUnique(new EquallogicVolumeInfo(snapshotId));
@@ -379,13 +387,9 @@ public class SANManager implements LogicalStorageManager {
 	public void setStorageProps(ArrayList<ComponentProperty> storageProps) {
 		for (ComponentProperty prop : storageProps) {
 			try {
-				/*if("storage.san.san_password".equals(prop.getQualifiedName())) {
-					SANInfo.getStorageInfo().setSanPassword(prop.getValue());
-				} else {*/
 					ConfigurableProperty entry = PropertyDirectory.getPropertyEntry(prop.getQualifiedName());
 					//type parser will correctly covert the value
 					entry.setValue(prop.getValue());
-				//}
 			} catch (IllegalAccessException e) {
 				LOG.error(e, e);
 			}
@@ -397,6 +401,101 @@ public class SANManager implements LogicalStorageManager {
 	public String getStorageRootDirectory() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public String getVolumePath(String volumeId)
+	throws EucalyptusCloudException {
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		List<String> returnValues = new ArrayList<String>();
+		try {
+			EquallogicVolumeInfo volumeInfo = db.getUnique(new EquallogicVolumeInfo(volumeId));
+			String iqn = volumeInfo.getIqn();
+			String deviceName = connectionManager.connectTarget(iqn);
+			return deviceName;
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Unable to find volume: " + volumeId);
+			throw ex;
+		} finally {
+			db.commit();
+		}
+	}
+
+	@Override
+	public void importVolume(String volumeId, String volumePath, int size)
+	throws EucalyptusCloudException {
+		String eucaHomeDir = System.getProperty("euca.home");
+		if(eucaHomeDir == null) {
+			throw new EucalyptusCloudException("euca.home not set");
+		}
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		try {
+			db.getUnique(new EquallogicVolumeInfo(volumeId));
+			throw new EucalyptusCloudException("Volume " + volumeId + " already exists. Import failed.");
+		} catch (EucalyptusCloudException ex) {
+			//all okay. proceed with import
+		} finally {
+			db.commit();
+		}
+		String iqn = connectionManager.createVolume(volumeId, size);
+		if(iqn != null) {
+			String deviceName = connectionManager.connectTarget(iqn);
+			//now copy
+			try {
+				SystemUtil.run(new String[]{eucaHomeDir + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + volumePath, "of=" + deviceName, "bs=" + StorageProperties.blockSize});			
+			} catch (ExecutionException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} finally {
+				connectionManager.disconnectTarget(iqn);
+			}
+			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);
+			db = StorageController.getEntityWrapper();
+			db.add(volumeInfo);
+			db.commit();
+		}		
+	}
+
+	@Override
+	public String getSnapshotPath(String snapshotId)
+	throws EucalyptusCloudException {
+		return getVolumePath(snapshotId);
+	}
+
+	@Override
+	public void importSnapshot(String snapshotId, String volumeId, String snapPath, int size)
+	throws EucalyptusCloudException {
+		String eucaHomeDir = System.getProperty("euca.home");
+		if(eucaHomeDir == null) {
+			throw new EucalyptusCloudException("euca.home not set");
+		}
+		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		try {
+			db.getUnique(new EquallogicVolumeInfo(snapshotId));
+			throw new EucalyptusCloudException("Snapshot " + snapshotId + " already exists. Import failed.");
+		} catch (EucalyptusCloudException ex) {
+			//all okay. proceed with import
+		} finally {
+			db.commit();
+		}
+		String iqn = connectionManager.createVolume(snapshotId, size);
+		if(iqn != null) {
+			String deviceName = connectionManager.connectTarget(iqn);
+			//now copy
+			try {
+				SystemUtil.run(new String[]{eucaHomeDir + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + snapPath, "of=" + deviceName, "bs=" + StorageProperties.blockSize});			
+			} catch (ExecutionException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} finally {
+				connectionManager.disconnectTarget(iqn);
+			}
+			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);
+			volumeInfo.setSnapshotOf(volumeId);
+			db = StorageController.getEntityWrapper();
+			db.add(volumeInfo);
+			db.commit();
+		}		
 	}
 }
 

@@ -178,6 +178,10 @@ public class StorageProperties {
 		EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
 	}
 
+	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
+
+	public static final String blockSize = "1M";
+
 	public static String SAN_HOST = "sanHost";
 
 	public static String SAN_USERNAME = "sanUser";

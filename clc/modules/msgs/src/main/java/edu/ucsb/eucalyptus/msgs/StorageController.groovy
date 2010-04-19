@@ -58,12 +58,12 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.msgs
 /*
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
+package edu.ucsb.eucalyptus.msgs;
 
 public class StorageResponseType extends EucalyptusMessage {
 	def StorageResponseType() {}
@@ -76,14 +76,14 @@ public class StorageRequestType extends EucalyptusMessage {
 public class StorageErrorMessageType extends EucalyptusMessage {
 	def StorageErrorMessageType() {
 	}
-
+	
 	def StorageErrorMessageType(String code, String message, Integer httpCode, String requestId) {
 		this.code = code;
 		this.message = message;
 		this.requestId = requestId;
 		this.httpCode = httpCode;
 	}
-
+	
 	public String toString() {
 		return "StrorageErrorMessage:" + message;
 	}
@@ -106,9 +106,9 @@ public class GetStorageVolumeResponseType extends StorageResponseType {
 public class UpdateStorageConfigurationType extends StorageRequestType {
 	String name;
 	ArrayList<ComponentProperty> storageParams;
-
+	
 	def UpdateStorageConfigurationType() {}
-
+	
 	def UpdateStorageConfigurationType(StorageStateType storageState) {
 		this.name = storageState.getName();
 		this.storageParams = storageState.getStorageParams();
@@ -121,7 +121,7 @@ public class UpdateStorageConfigurationResponseType extends StorageResponseType 
 public class GetStorageConfigurationType extends StorageRequestType {
 	String name;
 	def GetStorageConfigurationType() {}
-
+	
 	def GetStorageConfigurationType(String name) {
 		this.name = name;		
 	}
@@ -131,7 +131,7 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 	String name;
 	ArrayList<ComponentProperty> storageParams;
 	def GetStorageConfigurationResponseType() {}
-
+	
 	def GetStorageConfigurationResponseType(String name,
 			List<ComponentProperty> storageParams) {
 		this.name = name;
@@ -143,10 +143,10 @@ public class CreateStorageVolumeType extends StorageRequestType {
 	String volumeId;
 	String size;
 	String snapshotId;
-
+	
 	def CreateStorageVolumeType() {
 	}
-
+	
 	def CreateStorageVolumeType(final String volumeId, final String size, final String snapshotId) {
 		this.volumeId = volumeId;
 		this.size = size;
@@ -165,12 +165,12 @@ public class CreateStorageVolumeResponseType extends StorageResponseType {
 public class CreateStorageSnapshotType extends StorageRequestType {
 	String volumeId;
 	String snapshotId;
-
+	
 	def CreateStorageSnapshotType(final String volumeId, final String snapshotId) {
 		this.volumeId = volumeId;
 		this.snapshotId = snapshotId;
 	}
-
+	
 	def CreateStorageSnapshotType() {
 	}
 }
@@ -184,14 +184,14 @@ public class CreateStorageSnapshotResponseType extends StorageResponseType {
 
 public class DeleteStorageVolumeType extends StorageRequestType {
 	String volumeId;
-
+	
 	def DeleteStorageVolumeType() {
 	}
-
+	
 	def DeleteStorageVolumeType(final String volumeId) {
 		this.volumeId = volumeId;
 	}
-
+	
 }
 
 public class DeleteStorageVolumeResponseType extends StorageResponseType {
@@ -199,10 +199,10 @@ public class DeleteStorageVolumeResponseType extends StorageResponseType {
 
 public class DeleteStorageSnapshotType extends StorageRequestType {
 	String snapshotId;
-
+	
 	def DeleteStorageSnapshotType() {
 	}
-
+	
 	def DeleteStorageSnapshotType(final String snapshotId) {
 		this.snapshotId = snapshotId;
 	}
@@ -212,7 +212,7 @@ public class DeleteStorageSnapshotResponseType extends StorageResponseType {
 }
 
 public class StorageVolume extends EucalyptusData {
-
+	
 	String volumeId;
 	String size;
 	String snapshotId;
@@ -220,7 +220,7 @@ public class StorageVolume extends EucalyptusData {
 	String createTime;
 	String actualDeviceName;
 	def StorageVolume() {}
-
+	
 	def StorageVolume(String volumeId) {
 		this.volumeId = volumeId;
 	}
@@ -228,14 +228,14 @@ public class StorageVolume extends EucalyptusData {
 
 public class DescribeStorageVolumesType extends StorageRequestType {
 	ArrayList<String> volumeSet = new ArrayList<String>();
-
+	
 	def DescribeStorageVolumesType() {
 	}
-
+	
 	def DescribeStorageVolumesType(final volumeSet) {
 		this.volumeSet = volumeSet;
 	}
-
+	
 }
 public class DescribeStorageVolumesResponseType extends StorageResponseType {
 	ArrayList<StorageVolume> volumeSet = new ArrayList<StorageVolume>();
@@ -251,49 +251,52 @@ public class StorageSnapshot extends EucalyptusData {
 
 public class DescribeStorageSnapshotsType extends StorageRequestType {
 	ArrayList<String> snapshotSet = new ArrayList<String>();
-
+	
 	def DescribeStorageSnapshotsType() {
 	}
-
+	
 	def DescribeStorageSnapshotsType(final snapshotSet) {
 		this.snapshotSet = snapshotSet;
 	}
-
+	
 }
 public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
 	ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
 }
 
-public class StorageControllerHeartbeatMessage extends HeartbeatMessage {
+public class ConvertVolumesType extends StorageRequestType {
+	String originalProvider;
+	
+	def ConvertVolumesType() {		
+	}
+}
 
-	def StorageControllerHeartbeatMessage() {}
-
-	def StorageControllerHeartbeatMessage(final String heartbeatId) {
-		super(heartbeatId);
+public class ConvertVolumesResponseType extends StorageResponseType {
+	def ConvertVolumesResponseType() {		
 	}
 }
 
 public class StorageUsageStatsRecord extends StatEventRecord {
 	Long totalSpaceUsed;
 	Integer numberOfVolumes;
-
+	
 	def StorageUsageStatsRecord() {}
-
+	
 	def StorageUsageStatsRecord(final Integer numberOfVolumes, 
-			final Long totalSpaceUsed) {			
+	final Long totalSpaceUsed) {			
 		super("StorageController", System.getProperty("euca.version"));
 		this.totalSpaceUsed = totalSpaceUsed;
 		this.numberOfVolumes = numberOfVolumes;
 	}
-
+	
 	public String toString() {
 		return String.format("Service: %s Version: %s Volumes: %d Space Used: %s", 
-				service, 
-				version, 
-				numberOfVolumes, 
-				totalSpaceUsed);
+		service, 
+		version, 
+		numberOfVolumes, 
+		totalSpaceUsed);
 	}
-
+	
 	public static StorageUsageStatsRecord create(Integer numberOfVolumes, Long totalSpaceUsed) {
 		return new StorageUsageStatsRecord(numberOfVolumes, totalSpaceUsed);
 	}

@@ -102,13 +102,13 @@ public class ISCSIManager implements StorageExportManager {
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
 		String returnValue;
-		returnValue = SystemUtil.run(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "tgtadm", "--help"});
+		returnValue = SystemUtil.run(new String[]{LVM2Manager.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "tgtadm", "--help"});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
 		} else {
 			LOG.info(returnValue);
 		}
-		if(SystemUtil.runAndGetCode(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{LVM2Manager.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
 			throw new EucalyptusCloudException("Unable to connect to tgt daemon. Is tgtd loaded?");
 		}
 	}

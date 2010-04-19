@@ -110,7 +110,6 @@ public class LVM2DASManager implements LogicalStorageManager {
 	public static final String PATH_SEPARATOR = "/";
 	public static boolean initialized = false;
 	public static final int MAX_LOOP_DEVICES = 256;
-	private  static final String blockSize = "1M";
 	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 	public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
 	private static Logger LOG = Logger.getLogger(LVM2DASManager.class);
@@ -227,14 +226,14 @@ public class LVM2DASManager implements LogicalStorageManager {
 	}
 
 	private String duplicateLogicalVolume(String oldLvName, String newLvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + blockSize});
+		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createFile(String fileName, long size) throws ExecutionException {
 		if(!DirectStorageInfo.getStorageInfo().getZeroFillVolumes())
-			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + blockSize, "seek=" + (size -1)});
+			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + StorageProperties.blockSize, "seek=" + (size -1)});
 		else
-			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + blockSize});
+			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createEmptyFile(String fileName, int size) throws ExecutionException {
@@ -871,11 +870,6 @@ public class LVM2DASManager implements LogicalStorageManager {
 
 	}
 	@Override
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException{
-		//Nothing to do here
-	}
-
-	@Override
 	public String prepareSnapshot(String snapshotId, int sizeExpected)
 	throws EucalyptusCloudException {
 		return DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId;
@@ -924,6 +918,40 @@ public class LVM2DASManager implements LogicalStorageManager {
 	@Override
 	public String getStorageRootDirectory() {
 		return DirectStorageInfo.getStorageInfo().getVolumesDir();
+	}
+
+	@Override
+	public void finishVolume(String snapshotId) throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String getSnapshotPath(String snapshotId)
+			throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String getVolumePath(String volumeId)
+			throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void importSnapshot(String snapshotId, String snapPath,
+			String volumeId, int size) throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void importVolume(String volumeId, String volumePath, int size)
+			throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
 	}
 }
 

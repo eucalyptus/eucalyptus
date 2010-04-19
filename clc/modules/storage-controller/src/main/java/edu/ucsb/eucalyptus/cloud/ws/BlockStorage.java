@@ -73,6 +73,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.persistence.EntityNotFoundException;
+
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 
@@ -94,6 +96,8 @@ import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+import edu.ucsb.eucalyptus.msgs.ConvertVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.ConvertVolumesType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
@@ -535,9 +539,35 @@ public class BlockStorage {
 			}
 		}
 		db.commit();
+		/*ConvertVolumesType req = new ConvertVolumesType();
+		req.setOriginalProvider("edu.ucsb.eucalyptus.storage.LVM2Manager");
+		ConvertVolumes(req);*/
 		return reply;
 	}
 
+	public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
+		ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
+		String provider = request.getOriginalProvider();
+		if(!blockManager.getClass().getName().equals(provider)) {
+			//different backend provider. Try upgrade
+			try {
+				LogicalStorageManager fromBlockManager = (LogicalStorageManager) Class.forName(provider).newInstance();
+				fromBlockManager.checkPreconditions();
+				//initialize fromBlockManager
+				new VolumesConvertor(fromBlockManager).start();
+			} catch(InstantiationException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} catch(ClassNotFoundException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} catch(IllegalAccessException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			}
+		}
+		return reply;
+	}
 
 	private StorageVolume convertVolumeInfo(VolumeInfo volInfo) throws EucalyptusCloudException {
 		StorageVolume volume = new StorageVolume();
@@ -601,7 +631,7 @@ public class BlockStorage {
 				}
 				snapshotFileName = returnValues.get(0);
 				transferSnapshot(returnValues.get(1));
-				blockManager.finishSnapshot(snapshotId);
+				blockManager.finishVolume(snapshotId);
 			} catch(Exception ex) {
 				LOG.error(ex);
 			}
@@ -779,6 +809,65 @@ public class BlockStorage {
 			} catch (EucalyptusCloudException e) {
 				db.rollback();
 				LOG.error(e);	
+			}
+		}
+	}
+
+	public class VolumesConvertor extends Thread {
+		private LogicalStorageManager fromBlockManager;
+
+		public VolumesConvertor(LogicalStorageManager fromBlockManager) {
+			this.fromBlockManager = fromBlockManager;
+		}
+
+		@Override
+		public void run() {
+			//This is a heavy weight operation. It must execute atomically.
+			//All other volume operations are forbidden when a conversion is in progress.
+			synchronized (this) {
+				StorageProperties.enableStorage = StorageProperties.enableSnapshots = false;
+				EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+				VolumeInfo volumeInfo = new VolumeInfo();
+				volumeInfo.setStatus(StorageProperties.Status.available.toString());
+				List<VolumeInfo> volumeInfos = db.query(volumeInfo);
+				List<VolumeInfo> volumes = new ArrayList<VolumeInfo>();
+				volumes.addAll(volumeInfos);
+
+				SnapshotInfo snapInfo = new SnapshotInfo();
+				snapInfo.setStatus(StorageProperties.Status.completed.toString());
+				EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);
+				List<SnapshotInfo> snapshotInfos = dbSnap.query(snapInfo);
+				List<SnapshotInfo> snapshots = new ArrayList<SnapshotInfo>();
+				snapshots.addAll(snapshotInfos);
+
+				db.commit();
+
+				for(VolumeInfo volume : volumes) {
+					try {
+						String volumeId = volume.getVolumeId();
+						String volumePath = fromBlockManager.getVolumePath(volumeId);
+						blockManager.importVolume(volumeId, volumePath, volume.getSize());
+						fromBlockManager.finishVolume(volumeId);
+					} catch (EucalyptusCloudException ex) {
+						LOG.error(ex);
+						//this one failed, continue processing the rest
+					}
+				}
+
+				for(SnapshotInfo snap : snapshots) {
+					try {
+						String snapshotId = snap.getSnapshotId();
+						String snapPath = fromBlockManager.getSnapshotPath(snapshotId);
+						int size = fromBlockManager.getSnapshotSize(snapshotId);
+						blockManager.importSnapshot(snapshotId, snap.getVolumeId(), snapPath, size);
+						fromBlockManager.finishVolume(snapshotId);
+					} catch (EucalyptusCloudException ex) {
+						LOG.error(ex);
+						//this one failed, continue processing the rest
+					}
+				}
+
+				StorageProperties.enableStorage = StorageProperties.enableSnapshots = true;
 			}
 		}
 	}
