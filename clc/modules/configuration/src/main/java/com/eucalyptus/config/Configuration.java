@@ -65,19 +65,18 @@ package com.eucalyptus.config;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.configurable.ConfigurationProperties;
+import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.StartComponentEvent;
 import com.eucalyptus.event.StopComponentEvent;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.NetworkUtil;
-
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
@@ -86,7 +85,10 @@ import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
 import edu.ucsb.eucalyptus.msgs.DescribeNodesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNodesType;
+import edu.ucsb.eucalyptus.msgs.DescribePropertiesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribePropertiesType;
 import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
+import edu.ucsb.eucalyptus.msgs.Property;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
@@ -98,20 +100,20 @@ public class Configuration {
   private static String DB_NAME             = "eucalyptus_config";
   static String         CLUSTER_KEY_FSTRING = "cc-%s";
   static String         NODE_KEY_FSTRING    = "nc-%s";
-
+  
   public static <T> EntityWrapper<T> getEntityWrapper( ) {
     return new EntityWrapper<T>( Configuration.DB_NAME );
   }
-
+  
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     reply.set_return( true );
     boolean isGood;
     try {
-      if( !NetworkUtil.testGoodAddress( request.getHost( ) ) ) {
-        throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );        
+      if ( !NetworkUtil.testGoodAddress( request.getHost( ) ) ) {
+        throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );
       }
-      if( request instanceof RegisterClusterType && !ConfigurationUtil.testClusterCredentialsDirectory( request.getName( ) ) ) {
+      if ( request instanceof RegisterClusterType && !ConfigurationUtil.testClusterCredentialsDirectory( request.getName( ) ) ) {
         throw new EucalyptusCloudException( "Cluster registration failed because the key directory cannot be created." );
       }
     } catch ( EucalyptusCloudException e ) {
@@ -128,19 +130,22 @@ public class Configuration {
     }
     if ( request instanceof RegisterStorageControllerType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.storage.isLocal( ) ) {
       throw new EucalyptusCloudException( "You do not have a local storage controller enabled (or it is not installed)." );
-    } else if ( request instanceof RegisterWalrusType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.walrus.isLocal( ) ) { 
+    } else if ( request instanceof RegisterWalrusType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.walrus.isLocal( ) ) {
       throw new EucalyptusCloudException( "You do not have a local walrus enabled (or it is not installed)." );
     } else if ( request instanceof RegisterStorageControllerType ) {
       try {
         Configuration.getClusterConfiguration( request.getName( ) );
       } catch ( Exception e1 ) {
-        throw new EucalyptusCloudException( "Storage controllers may only be registered with a corresponding Cluster of the same name.  No cluster found with the name: " + request.getName( ) );
+        throw new EucalyptusCloudException(
+                                            "Storage controllers may only be registered with a corresponding Cluster of the same name.  No cluster found with the name: "
+                                                + request.getName( ) );
       }
     }
     EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
     ComponentConfiguration newComponent;
     try {
-      newComponent = ConfigurationUtil.getConfigurationInstance( request, request.getName( ), NetworkUtil.tryToResolve( request.getHost( ) ), request.getPort( ) );
+      newComponent = ConfigurationUtil
+                                      .getConfigurationInstance( request, request.getName( ), NetworkUtil.tryToResolve( request.getHost( ) ), request.getPort( ) );
       db.add( newComponent );
       db.commit( );
     } catch ( Exception e ) {
@@ -154,7 +159,7 @@ public class Configuration {
     fireStartComponent( newComponent );
     return reply;
   }
-
+  
   public static void fireStartComponent( ComponentConfiguration newComponent ) throws EucalyptusCloudException {
     StartComponentEvent e = null;
     if ( Component.walrus.equals( newComponent.getComponent( ) ) && NetworkUtil.testLocal( newComponent.getHostName( ) ) ) {
@@ -170,7 +175,7 @@ public class Configuration {
       throw new EucalyptusCloudException( e1.getMessage( ), e1 );
     }
   }
-
+  
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     reply.set_return( true );
@@ -186,7 +191,7 @@ public class Configuration {
     } catch ( Exception e ) {
       db.rollback( );
       return reply;
-//      throw new EucalyptusCloudException( "Failed to find configuration for " + request.getClass( ).getSimpleName( ) + " named " + request.getName( ) );
+      //      throw new EucalyptusCloudException( "Failed to find configuration for " + request.getClass( ).getSimpleName( ) + " named " + request.getName( ) );
     }
     if ( request instanceof DeregisterClusterType ) {
       try {
@@ -208,7 +213,7 @@ public class Configuration {
     fireStopComponent( componentConfig );
     return reply;
   }
-
+  
   public static void fireStopComponent( ComponentConfiguration componentConfig ) throws EucalyptusCloudException {
     StopComponentEvent e = null;
     if ( Component.walrus.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
@@ -225,7 +230,7 @@ public class Configuration {
     }
   }
   public DescribeNodesResponseType listComponents( DescribeNodesType request ) throws EucalyptusCloudException {
-    DescribeNodesResponseType reply = (DescribeNodesResponseType) request.getReply( );
+    DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
     reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
     return reply;
   }
@@ -255,14 +260,14 @@ public class Configuration {
     }
     return reply;
   }
-
+  
   public static List<ClusterConfiguration> getClusterConfigurations( ) throws EucalyptusCloudException {
     EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );
     try {
       List<ClusterConfiguration> componentList = db.query( new ClusterConfiguration( ) );
-      for( ClusterConfiguration cc : componentList ) {
-        if( cc.getMinVlan( ) == null ) cc.setMinVlan( 10 );
-        if( cc.getMaxVlan( ) == null ) cc.setMaxVlan( 4095 );
+      for ( ClusterConfiguration cc : componentList ) {
+        if ( cc.getMinVlan( ) == null ) cc.setMinVlan( 10 );
+        if ( cc.getMaxVlan( ) == null ) cc.setMaxVlan( 4095 );
       }
       db.commit( );
       return componentList;
@@ -272,7 +277,7 @@ public class Configuration {
       throw new EucalyptusCloudException( e );
     }
   }
-
+  
   public static List<StorageControllerConfiguration> getStorageControllerConfigurations( ) throws EucalyptusCloudException {
     EntityWrapper<StorageControllerConfiguration> db = Configuration.getEntityWrapper( );
     try {
@@ -285,7 +290,7 @@ public class Configuration {
       throw new EucalyptusCloudException( e );
     }
   }
-
+  
   public static List<WalrusConfiguration> getWalrusConfigurations( ) throws EucalyptusCloudException {
     EntityWrapper<WalrusConfiguration> db = Configuration.getEntityWrapper( );
     try {
@@ -298,7 +303,7 @@ public class Configuration {
       throw new EucalyptusCloudException( e );
     }
   }
-
+  
   public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException {
     List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
     for ( StorageControllerConfiguration sc : scs ) {
@@ -308,7 +313,7 @@ public class Configuration {
     }
     throw new NoSuchComponentException( StorageControllerConfiguration.class.getSimpleName( ) + " named " + scName );
   }
-
+  
   public static WalrusConfiguration getWalrusConfiguration( String walrusName ) throws EucalyptusCloudException {
     List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
     for ( WalrusConfiguration w : walri ) {
@@ -318,7 +323,7 @@ public class Configuration {
     }
     throw new NoSuchComponentException( WalrusConfiguration.class.getSimpleName( ) + " named " + walrusName );
   }
-
+  
   public static ClusterConfiguration getClusterConfiguration( String clusterName ) throws EucalyptusCloudException {
     List<ClusterConfiguration> clusters = Configuration.getClusterConfigurations( );
     for ( ClusterConfiguration c : clusters ) {
@@ -328,4 +333,5 @@ public class Configuration {
     }
     throw new NoSuchComponentException( ClusterConfiguration.class.getSimpleName( ) + " named " + clusterName );
   }
+    
 }

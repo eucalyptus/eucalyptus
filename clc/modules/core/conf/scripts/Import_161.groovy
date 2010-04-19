@@ -1,13 +1,13 @@
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.bootstrap.Component;
 import groovy.sql.Sql;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
-import com.eucalyptus.util.DatabaseUtil;
+import com.eucalyptus.entities.DatabaseUtil;
 
 
 /* euca.*.dir are set by euca_upgrade when calling this script */

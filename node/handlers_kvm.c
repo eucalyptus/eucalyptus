@@ -91,11 +91,11 @@ static int doInitialize (struct nc_state_t *nc)
 	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
 
 	/* set up paths of Eucalyptus commands NC relies on */
-	snprintf (nc->gen_libvirt_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
-	snprintf (nc->get_info_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
-	snprintf (nc->connect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_CONNECT_ISCSI, nc->home);
-	snprintf (nc->disconnect_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_DISCONNECT_ISCSI, nc->home);
-	snprintf (nc->get_storage_cmd_path, CHAR_BUFFER_SIZE, EUCALYPTUS_GET_ISCSI, nc->home);
+	snprintf (nc->gen_libvirt_cmd_path, MAX_PATH, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
+	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
+	snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home);
+	snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home);
+	snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
@@ -224,8 +224,8 @@ static void * rebooting_thread (void *arg)
     virConnectPtr *conn;
     ncInstance * instance = (ncInstance *)arg;
 
-    char xml_path [1024];
-    snprintf (xml_path, 1024, "%s/%s/%s/libvirt.xml", scGetInstancePath(), instance->userId, instance->instanceId);
+    char xml_path [MAX_PATH];
+    snprintf (xml_path, MAX_PATH, "%s/%s/%s/libvirt.xml", scGetInstancePath(), instance->userId, instance->instanceId);
     char * xml = file2str (xml_path);
     if (xml == NULL) {
         logprintfl (EUCAERROR, "cannot obtain XML file %s\n", xml_path);
@@ -301,7 +301,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			char *instanceId,
 			char **consoleOutput) {
   char *console_output;
-  char console_file[1024];
+  char console_file[MAX_PATH];
   int rc, fd;
   struct stat statbuf;
 
@@ -313,7 +313,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     return(1);
   }
   
-  snprintf(console_file, 1024, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
+  snprintf(console_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
   
   rc = stat(console_file, &statbuf);
   if (rc < 0) {
@@ -346,10 +346,11 @@ doAttachVolume (	struct nc_state_t *nc,
 			char *remoteDev,
 			char *localDev)
 {
-    int ret = OK;
+    int ret = OK, rc;
     ncInstance *instance;
     virConnectPtr *conn;
     char localDevReal[32], localDevTag[256];
+    struct stat statbuf;
 
     // fix up format of incoming local dev name, if we need to
     ret = convert_dev_names (localDev, localDevReal, localDevTag);
@@ -373,6 +374,7 @@ doAttachVolume (	struct nc_state_t *nc,
             char xml [1024];
             int is_iscsi_target = 0;
             char *local_iscsi_dev;
+            rc = 0;
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
@@ -383,17 +385,26 @@ doAttachVolume (	struct nc_state_t *nc,
                 snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
             } else {
                 snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                rc = stat(remoteDev, &statbuf);
+                if (rc) {
+                   logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
+                   rc = 1;
+                }
 	    }
-            /* protect KVM calls, just in case */
-            sem_p (hyp_sem);
-            err = virDomainAttachDevice (dom, xml);
-            sem_v (hyp_sem);
-            if (err) {
+	    if (!rc) {
+	      /* protect KVM calls, just in case */
+	      sem_p (hyp_sem);
+	      err = virDomainAttachDevice (dom, xml);
+	      sem_v (hyp_sem);
+	      if (err) {
                 logprintfl (EUCAERROR, "virDomainAttachDevice() failed (err=%d) XML=%s\n", err, xml);
                 ret = ERROR;
-            } else {
+	      } else {
                 logprintfl (EUCAINFO, "attached %s to %s in domain %s\n", remoteDev, localDevReal, instanceId);
-            }
+	      }
+	    } else {
+	      ret = ERROR;
+	    }
             virDomainFree(dom);
             if(is_iscsi_target) {
                 free(local_iscsi_dev);

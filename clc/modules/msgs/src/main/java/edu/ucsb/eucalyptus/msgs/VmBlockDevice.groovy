@@ -139,7 +139,9 @@ public class DescribeSnapshotsType extends BlockSnapshotMessage {
 
   @HttpParameterMapping (parameter = "SnapshotId")
   ArrayList<String> snapshotSet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "Owner")
   ArrayList<String> ownersSet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "RestorableBy")
   ArrayList<String> restorableBySet = new ArrayList<String>();
 }
 public class DescribeSnapshotsResponseType extends BlockSnapshotMessage {

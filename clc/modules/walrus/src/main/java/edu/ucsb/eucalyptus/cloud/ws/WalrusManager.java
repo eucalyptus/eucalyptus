@@ -91,7 +91,7 @@ import com.eucalyptus.auth.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.client.ServiceDispatcher;
@@ -117,6 +117,7 @@ import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
 import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.TorrentInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
@@ -189,7 +190,6 @@ import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 import edu.ucsb.eucalyptus.msgs.VersionEntry;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileIO;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusDataQueue;
@@ -377,7 +377,7 @@ public class WalrusManager {
 				URI walrusUri;
 				String address = null;
 				try {
-					walrusUri = new URI(EucalyptusProperties.getWalrusUrl());
+					walrusUri = new URI(SystemConfiguration.getWalrusUrl());
 					address = walrusUri.getHost();
 				} catch (URISyntaxException e) {
 					throw new EucalyptusCloudException("Could not get Walrus URL");
@@ -459,7 +459,7 @@ public class WalrusManager {
 						searchObject.setDeleted(false);
 						List<ObjectInfo> objectInfos = dbObject.query(searchObject);
 						if (objectInfos.size() == 0) {
-							// asychronously flush any images in this bucket
+							//check if the bucket contains any images
 							EntityWrapper<ImageCacheInfo> dbIC = db
 							.recast(ImageCacheInfo.class);
 							ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
@@ -468,10 +468,8 @@ public class WalrusManager {
 							.query(searchImageCacheInfo);
 
 							if (foundImageCacheInfos.size() > 0) {
-								ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos
-								.get(0);
-								walrusImageManager.startImageCacheFlusher(bucketName,
-										foundImageCacheInfo.getManifestName());
+								db.rollback();
+								throw new BucketNotEmptyException(bucketName, logData);
 							}
 
 							db.delete(bucketFound);
@@ -486,11 +484,20 @@ public class WalrusManager {
 							}
 
 							if (WalrusProperties.enableVirtualHosting) {
+								URI walrusUri;
+								String address;
 								RemoveARecordType removeARecordType = new RemoveARecordType();
 								removeARecordType.setUserId(userId);
 								String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
 								removeARecordType.setName(bucketName + "." + zone);
 								removeARecordType.setZone(zone);
+								try {
+									walrusUri = new URI(SystemConfiguration.getWalrusUrl());
+									address = walrusUri.getHost();
+								} catch (URISyntaxException e) {
+									throw new EucalyptusCloudException("Could not get Walrus URL");
+								}
+								removeARecordType.setAddress(address);
 								try {
 									ServiceDispatcher.lookupSingle(Component.dns).send(
 											removeARecordType);
@@ -976,7 +983,7 @@ public class WalrusManager {
 					} else {
 						reply.setBucket(bucketName);
 						reply.setKey(key);
-						reply.setLocation(EucalyptusProperties.getWalrusUrl()
+						reply.setLocation(SystemConfiguration.getWalrusUrl()
 								+ "/" + bucketName + "/" + key);
 					}
 				} else {
@@ -1463,7 +1470,7 @@ public class WalrusManager {
 								contents.add(listEntry);
 							}
 							reply.setContents(contents);
-							if (prefix != null) {
+							if (prefixes.size() > 0) {
 								reply.setCommonPrefixes(prefixes);
 							}
 						}

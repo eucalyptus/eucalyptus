@@ -9,9 +9,9 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRule;
 import com.eucalyptus.entities.NetworkRulesGroup;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.util.Messaging;
 import com.google.common.base.Predicate;

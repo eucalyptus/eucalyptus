@@ -78,7 +78,7 @@ import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.TextParseException;
 
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class TransientZone extends Zone {
   private static Logger LOG = Logger.getLogger( TransientZone.class );
@@ -102,7 +102,7 @@ public class TransientZone extends Zone {
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
       Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-        Name.fromString( InetAddress.getByName( EucalyptusProperties.getCloudHost( ) ).getCanonicalHostName( )+"." ) );
+        Name.fromString( InetAddress.getByName( SystemConfiguration.getCloudHostAddress( ) ).getCanonicalHostName( )+"." ) );
       return new TransientZone( name, new Record[] { soarec, nsrec } );
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -111,7 +111,7 @@ public class TransientZone extends Zone {
   }
 
   public static Name getExternalName( ) throws TextParseException {
-    String nameString = "eucalyptus."+EucalyptusProperties.getSystemConfiguration( ).getDnsDomain( )+".";
+    String nameString = "eucalyptus."+SystemConfiguration.getSystemConfiguration( ).getDnsDomain( )+".";
     Name name = Name.fromString( nameString );
     return name;
   }
@@ -128,7 +128,7 @@ public class TransientZone extends Zone {
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
       Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-        Name.fromString( InetAddress.getByName( EucalyptusProperties.getCloudHost( ) ).getCanonicalHostName( ) +".") );
+        Name.fromString( InetAddress.getByName( SystemConfiguration.getCloudHostAddress( ) ).getCanonicalHostName( ) +".") );
       return new TransientZone( name, new Record[] { soarec, nsrec } );
     } catch ( Exception e ) {
       LOG.error( e, e );

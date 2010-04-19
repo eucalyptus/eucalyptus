@@ -70,14 +70,15 @@ import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 import com.eucalyptus.bootstrap.Component;
 
-public class INTERNAL extends EucalyptusMessage {
-  
-  def INTERNAL() {
-    super();
-    this.userId = "eucalyptus";
-    this.effectiveUserId = "eucalyptus";
-  }
-}
+//TODO: Remove me
+//public class INTERNAL extends EucalyptusMessage {
+//  
+//  def INTERNAL() {
+//    super();
+//    this.userId = "eucalyptus";
+//    this.effectiveUserId = "eucalyptus";
+//  }
+//}
 
 public class HeartbeatType extends EucalyptusMessage {
   ArrayList<HeartbeatComponentType> components = new ArrayList<HeartbeatComponentType>();
@@ -105,78 +106,50 @@ public class ComponentType extends EucalyptusData {
   }
   public ComponentType( ) {}  
 }
-
 public class ComponentProperty extends EucalyptusData {
-	private String type;
-	private String key;
-	private String value;
-	
-	
-	public ComponentProperty(String type, String key, String value) {
-		this.type = type;
-		this.key = key;
-		this.value = value;
-	}
-	
-	public String getType() {
-		return type;
-	}
-	public void setType(String type) {
-		this.type = type;
-	}
-	public String getKey() {
-		return key;
-	}
-	public void setKey(String key) {
-		this.key = key;
-	}
-	public String getValue() {
-		return value;
-	}
-	public void setValue(String value) {
-		this.value = value;
-	}	
+  private String type;
+  private String displayName;
+  private String value;
+  private String qualifiedName;
+		
+  public ComponentProperty(String type, String displayName, String value, String qualifiedName) {
+    this.type = type;
+	this.displayName = displayName;
+	this.value = value;
+	this.qualifiedName = qualifiedName;
+  }	
+  public String getType() {
+	return type;
+  }
+  public void setType(String type) {
+	this.type = type;
+  }
+  public String getQualifiedName() {
+	return qualifiedName;
+  }
+  public void setQualifiedName(String qualifiedName) {
+	this.qualifiedName = qualifiedName;
+  }
+  public String getDisplayName() {
+	return displayName;
+  }
+  public void setDisplayName(String displayName) {
+	this.displayName = displayName;
+  }
+  public String getValue() {
+	return value;
+  }
+  public void setValue(String value) {
+	this.value = value;
+  }	
 }
-
 public class StorageStateType extends EucalyptusMessage{
   private String name;
-  private String volumesPath;
-  private Integer maxVolumeSizeInGB;
-  private Integer totalVolumesSizeInGB;
-  private String storageInterface;
-  private Boolean zeroFillVolumes;
-  private String DASDevice;
-  private ArrayList<ComponentProperty> storageParams;
-
   def StorageStateType() {
   }
   
-  def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
-  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
-  final DASDevice, final List<ComponentProperty> storageParams) {
+  def StorageStateType(final name) {
     this.name = name;
-    this.volumesPath = volumesPath;
-    this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-    this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-    this.storageInterface = storageInterface;
-    this.zeroFillVolumes = zeroFillVolumes;
-    this.DASDevice = DASDevice;
-    this.storageParams = storageParams;
-  }
-
-  def StorageStateType(final name, final volumesPath, final maxVolumeSizeInGB,
-  final totalVolumesSizeInGB, final storageInterface, final zeroFillVolumes,
-  final List<ComponentProperty> storageParams) {
-    this.name = name;
-    this.volumesPath = volumesPath;
-    this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-    this.totalVolumesSizeInGB = totalVolumesSizeInGB;
-    this.storageInterface = storageInterface;
-    this.zeroFillVolumes = zeroFillVolumes;
-    this.sanHost = sanHost;
-    this.sanUser = sanUser;
-    this.sanPassword = sanPassword;
-    this.storageParams = storageParams;
   }
 }
 
@@ -203,16 +176,10 @@ public class WalrusStateType extends EucalyptusMessage{
 }
 
 
-public class EucalyptusMessage implements Cloneable, Serializable {
-  
-  String correlationId;
-  String userId;
-  String effectiveUserId;
-  boolean _return;
-  String statusMessage;
-  
+public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
+    
   public EucalyptusMessage() {
-    this.correlationId = UUID.randomUUID();
+    super();
   }
   
   public EucalyptusMessage( EucalyptusMessage msg ) {
@@ -232,66 +199,6 @@ public class EucalyptusMessage implements Cloneable, Serializable {
     return metaClass;
   }
   
-  public String getEffectiveUserId() {
-    if ( isAdministrator() ) return "eucalyptus";
-    return effectiveUserId;
-  }
-  
-  public boolean isAdministrator() {
-    return "eucalyptus".equals(this.effectiveUserId);
-  }
-  
-  public String toString() {
-    ByteArrayOutputStream temp = new ByteArrayOutputStream();
-    Class targetClass = this.getClass();
-    while ( !targetClass.getSimpleName().endsWith("Type") ) targetClass = targetClass.getSuperclass();
-    IBindingFactory bindingFactory = null;
-    try {
-      bindingFactory = BindingDirectory.getFactory("msgs_eucalyptus_ucsb_edu", targetClass);
-    } catch( Throwable t ) {
-      bindingFactory = BindingDirectory.getFactory("eucalyptus_ucsb_edu", targetClass);
-    }
-    IMarshallingContext mctx = bindingFactory.createMarshallingContext();
-    mctx.setIndent(2);
-    mctx.marshalDocument(this, "UTF-8", null, temp);
-    return temp.toString();
-  }
-  
-  public String toString(String namespace) {
-    ByteArrayOutputStream temp = new ByteArrayOutputStream();
-    Class targetClass = this.getClass();
-    while ( !targetClass.getSimpleName().endsWith("Type") ) targetClass = targetClass.getSuperclass();
-    IBindingFactory bindingFactory = BindingDirectory.getFactory(namespace, targetClass);
-    IMarshallingContext mctx = bindingFactory.createMarshallingContext();
-    mctx.setIndent(2);
-    mctx.marshalDocument(this, "UTF-8", null, temp);
-    return temp;
-  }
-  
-  public Object clone() {
-    return super.clone();
-  }
-  
-  public EucalyptusMessage getReply() {
-    Class msgClass = this.getClass();
-    if ( !this.getClass().getSimpleName().endsWith("Type") )
-      msgClass = msgClass.getSuperclass();
-    Class responseClass = ClassLoader.getSystemClassLoader().loadClass(msgClass.getName().replaceAll("Type", "") + "ResponseType");
-    EucalyptusMessage reply = (EucalyptusMessage) responseClass.newInstance();
-    reply.setCorrelationId(this.getCorrelationId());
-    reply.setUserId(this.getUserId());
-    reply.setEffectiveUserId(this.getEffectiveUserId());
-    return reply;
-  }
-  
-  public Class getReplyType() {
-    Class msgClass = this.getClass();
-    if ( !this.getClass().getSimpleName().endsWith("Type") )
-      msgClass = msgClass.getSuperclass();
-    Class responseClass = ClassLoader.getSystemClassLoader().loadClass(msgClass.getName().replaceAll("Type", "") + "ResponseType");
-    return responseClass;
-  }
-
 }
 public class EucalyptusErrorMessageType extends EucalyptusMessage {
   
@@ -364,12 +271,12 @@ public class VmTypeInfo extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "VmTypeInfo{" +
+    return "VmTypeInfo [" +
     "name='" + name + '\'' +
     ", memory=" + memory +
     ", disk=" + disk +
     ", cores=" + cores +
-    '}';
+    ']';
   }
   
 }
@@ -398,15 +305,14 @@ public class NetworkConfigType extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "NetworkConfigType{" +
-    "macAddress='" + macAddress + '\'' +
-    ", ipAddress='" + ipAddress + '\'' +
+    return "NetworkConfigType [" +
+    ", privateIp='" + ipAddress + '\'' +
     ", publicIp='" + ignoredPublicIp + '\'' +
     ", privateDnsName='" + privateDnsName + '\'' +
     ", publicDnsName='" + publicDnsName + '\'' +
     ", networkIndex='" + networkIndex + '\'' +
     ", vlan=" + vlan +
-    '}';
+    ']';
   }
   
 }
@@ -460,18 +366,18 @@ public class PacketFilterRule extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "PacketFilterRule{" +
+    return "PacketFilterRule [" +
     "destUserName='" + destUserName + '\'' +
     "destNetworkName='" + destNetworkName + '\'' +
     ", policy='" + policy + '\'' +
     ", protocol='" + protocol + '\'' +
     ", portMin=" + portMin +
     ", portMax=" + portMax +
-    ", sourceCidrs=" + sourceCidrs +
-    ", peers=" + peers +
-    ", sourceNetworkNames=" + sourceNetworkNames +
-    ", sourceUserNames=" + sourceUserNames +
-    '}';
+    ((!sourceCidrs.isEmpty())?"":", sourceCidrs=" + sourceCidrs) +
+    ((!peers.isEmpty())?"":", peers=" + peers) +
+    ((!sourceNetworkNames.isEmpty())?"":", sourceNetworkNames=" + sourceNetworkNames) +
+    ((!sourceUserNames.isEmpty())?"":", sourceUserNames=" + sourceUserNames) +
+    ']';
   }
   
   
@@ -565,11 +471,11 @@ public class NodeCertInfo extends EucalyptusData implements Comparable {
   
   @Override
   public String toString() {
-    return "NodeCertInfo{" +
+    return "NodeCertInfo [" +
     "serviceTag='" + serviceTag.replaceAll("services/EucalyptusNC","") + '\'' +
     ", ccCert='" + ccCert + '\'' +
     ", ncCert='" + ncCert + '\'' +
-    '}';
+    ']';
   }
   
 }

@@ -11,8 +11,7 @@ import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;
-
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class LocalDispatcher extends ServiceDispatcher {
   private static Logger LOG = Logger.getLogger( LocalDispatcher.class );
@@ -23,7 +22,7 @@ public class LocalDispatcher extends ServiceDispatcher {
   }
 
   @Override
-  public void dispatch( EucalyptusMessage msg ) {
+  public void dispatch( BaseMessage msg ) {
     MuleEvent context = RequestContext.getEvent( );
     try {
       this.getMuleClient( ).dispatch( this.getComponent( ).getLocalAddress( ), msg, null );
@@ -35,14 +34,14 @@ public class LocalDispatcher extends ServiceDispatcher {
   }
 
   @Override
-  public EucalyptusMessage send( EucalyptusMessage msg ) throws EucalyptusCloudException {
+  public BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException {
     MuleEvent context = RequestContext.getEvent( );
     try {
       MuleMessage reply = this.getMuleClient( ).send( this.getComponent( ).getLocalAddress( ), msg, null );
       if ( reply.getExceptionPayload( ) != null ) {
         throw new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
       } else {
-        return ( EucalyptusMessage ) reply.getPayload( );
+        return ( BaseMessage ) reply.getPayload( );
       }
     } catch ( Exception e ) {
       LOG.error( e, e );

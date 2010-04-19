@@ -88,6 +88,7 @@ public class StorageProperties {
 	public static String DB_NAME             = "eucalyptus_storage";
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
 	public static final String EUCALYPTUS_HEADER = "EucaHeader";
+	public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
 	public static String WALRUS_URL = "http://localhost:8773/services/Walrus";
 	public static int MAX_TOTAL_VOLUME_SIZE = 50;
 	public static int MAX_VOLUME_SIZE = 10;
@@ -99,10 +100,12 @@ public class StorageProperties {
 	public static boolean enableStorage = false;
 	public static boolean shouldEnforceUsageLimits = true;
 	public static final String ETHERD_PREFIX = "/dev/etherd/e";
+	public static String iface = "eth0";
+	public static boolean zeroFillVolumes = false;
 
 	public static final String DUMMY_SAN_PASSWORD = "password";
- 	public static final String DUMMY_SAN_HOST = "san_host";
-	
+	public static final String DUMMY_SAN_HOST = "san_host";
+
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
 
@@ -172,10 +175,18 @@ public class StorageProperties {
 	}
 
 	public enum StorageParameters {
-		EucaSignature, EucaSnapSize, EucaCert
+		EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
 	}
 
 	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 
 	public static final String blockSize = "1M";
+
+	public static String SAN_HOST = "sanHost";
+
+	public static String SAN_USERNAME = "sanUser";
+
+	public static String SAN_PASSWORD = "sanPassword";
+
+	public static String DAS_DEVICE = "/dev/blockdev";
 }

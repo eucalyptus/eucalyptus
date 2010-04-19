@@ -86,8 +86,11 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.ws.ServiceNotReadyException;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.PipelineRegistry;
 
@@ -98,7 +101,9 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
 
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    if ( this.first ) {
+    if ( !SystemBootstrapper.isFinished( ) ) {
+      throw new ServiceNotReadyException( "System has not yet completed booting." );
+    } else if ( this.first ) {
       lookupPipeline( ctx, e );
     } else if ( e.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) e.getMessage( );
@@ -150,6 +155,8 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       ctx.getChannel( ).close( );
     } else if ( cause instanceof TooLongFrameException ) {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST );
+    } else if ( cause instanceof IllegalArgumentException ) {
+      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST);
     } else {
       LOG.debug( "Internal Error.", cause );
       if ( ch.isConnected( ) ) {

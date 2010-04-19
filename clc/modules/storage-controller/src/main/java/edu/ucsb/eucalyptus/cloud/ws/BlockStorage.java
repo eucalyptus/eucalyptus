@@ -80,7 +80,7 @@ import org.apache.tools.ant.util.DateUtils;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
@@ -92,6 +92,7 @@ import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
 import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
@@ -183,13 +184,6 @@ public class BlockStorage {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
-		String storageRootDirectory = request.getStorageRootDirectory();
-		Integer maxTotalVolumeSize = request.getMaxTotalVolumeSize();
-		if(maxTotalVolumeSize != null) 
-			StorageProperties.MAX_TOTAL_VOLUME_SIZE = maxTotalVolumeSize;        
-		Integer maxVolumeSize = request.getMaxVolumeSize();
-		if(maxVolumeSize != null)
-			StorageProperties.MAX_VOLUME_SIZE = maxVolumeSize;
 		//test connection to Walrus
 		StorageProperties.updateWalrusUrl();
 		try {
@@ -201,7 +195,7 @@ public class BlockStorage {
 		}
 		if(request.getStorageParams() != null) {
 			for(ComponentProperty param : request.getStorageParams()) {
-				LOG.info("Storage Param: " + param.getKey() + " Value: " + param.getValue());
+				LOG.info("Storage Param: " + param.getDisplayName() + " Qname: " + param.getQualifiedName() + " Value: " + param.getValue());
 			}
 			blockManager.setStorageProps(request.getStorageParams());
 		}
@@ -214,8 +208,6 @@ public class BlockStorage {
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		if(StorageProperties.NAME.equals(request.getName())) {
-			reply.setMaxTotalVolumeSize(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
-			reply.setMaxVolumeSize(StorageProperties.MAX_VOLUME_SIZE);
 			reply.setName(StorageProperties.NAME);
 			ArrayList<ComponentProperty> storageParams = blockManager.getStorageProps();
 			reply.setStorageParams(storageParams);
@@ -448,8 +440,8 @@ public class BlockStorage {
 			if(size != null) {
 				sizeAsInt = Integer.parseInt(size);
 				int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
-				if(((totalVolumeSize + sizeAsInt) > StorageProperties.MAX_TOTAL_VOLUME_SIZE) ||
-						(sizeAsInt > StorageProperties.MAX_VOLUME_SIZE))
+				;				if(((totalVolumeSize + sizeAsInt) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb()) ||
+						(sizeAsInt > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB()))
 					throw new EntityTooLargeException(volumeId);
 			}
 		}
@@ -493,16 +485,8 @@ public class BlockStorage {
 		String snapshotLocation = "snapshots" + "/" + snapshotId;
 		String absoluteSnapshotPath = snapDestination;
 		File file = new File(absoluteSnapshotPath);
-		/*if(file.exists()) {
-			//something went wrong in the past. remove and retry
-			file.delete();
-		}*/
 		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, blockManager.getStorageRootDirectory());
 		snapshotGetter.run();
-		/*int snapshotSize = (int)(file.length() / StorageProperties.GB);
-		if(snapshotSize == 0) {
-			throw new EucalyptusCloudException("could not download snapshot: " + snapshotId + " from Walrus.");
-		} */
 		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		snapshotInfo.setProgress("100");
@@ -766,8 +750,8 @@ public class BlockStorage {
 						if(StorageProperties.shouldEnforceUsageLimits && 
 								StorageProperties.trackUsageStatistics) {
 							int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
-							if((totalVolumeSize + size) > StorageProperties.MAX_TOTAL_VOLUME_SIZE ||
-									(size > StorageProperties.MAX_VOLUME_SIZE)) {
+							if((totalVolumeSize + size) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb() ||
+									(size > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB())) {
 								LOG.error("Volume size limit exceeeded");
 								db.commit();
 								checker.cleanFailedVolume(volumeId);
@@ -775,6 +759,10 @@ public class BlockStorage {
 							}
 						}
 						foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+						if(StorageProperties.trackUsageStatistics) {
+							blockStorageStatistics.incrementVolumeCount();
+							blockStorageStatistics.updateSpaceUsed((size * StorageProperties.GB));
+						}
 					} else {
 						foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
 					}
@@ -785,10 +773,6 @@ public class BlockStorage {
 					throw new EucalyptusCloudException();
 				}
 				db.commit();
-				if(StorageProperties.trackUsageStatistics) {
-					blockStorageStatistics.incrementVolumeCount();
-					blockStorageStatistics.updateSpaceUsed((size * StorageProperties.GB));
-				}
 			} catch(EucalyptusCloudException ex) {
 				db.rollback();
 				LOG.error(ex);

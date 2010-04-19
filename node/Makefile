@@ -103,7 +103,7 @@ install: deploy
 	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
 
 uninstall:
-	$(RM) -f $(vardir)/lib/eucalyptus/keys/nc-client-policy.xml
-	$(RM) -f $(sbindir)/euca_test_nc
-	$(RM) -rf $(AXIS2C_SERVICES)/$(SERVICE_NAME)
+	$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/nc-client-policy.xml
+	$(RM) -f $(DESTDIR)$(sbindir)/euca_test_nc
+	$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)
 

@@ -72,13 +72,15 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.BaseDirectory;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -107,9 +109,10 @@ public class EquallogicProvider implements SANProvider {
 	public EquallogicProvider() {}
 
 	public void configure() {
-		this.host = "192.168.7.189";//SANManager.SAN_HOST;
-		this.username = "grpadmin";//SANManager.SAN_USERNAME;
-		this.password = "zoomzoom";//SANManager.SAN_PASSWORD;
+		SANInfo sanInfo = SANInfo.getStorageInfo();
+		this.host = sanInfo.getSanHost();
+		this.username = sanInfo.getSanUser();
+		this.password = sanInfo.getSanPassword();
 		if(sessionManager != null)
 			try {
 				if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) {

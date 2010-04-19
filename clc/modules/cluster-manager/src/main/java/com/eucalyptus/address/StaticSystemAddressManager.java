@@ -4,15 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.cluster.QueuedEventCallback;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 
 public class StaticSystemAddressManager extends AbstractSystemAddressManager {

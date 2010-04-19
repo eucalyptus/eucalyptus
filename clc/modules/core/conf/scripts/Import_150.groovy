@@ -2,11 +2,11 @@
 import java.security.*;
 import javax.crypto.spec.*;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.auth.CredentialProvider;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.SshKeyPair;
@@ -25,7 +25,7 @@ import groovy.sql.Sql;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.ProductCode;
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
+import com.eucalyptus.accounts.UserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
@@ -35,8 +35,8 @@ import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
 
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
+import com.eucalyptus.accounts.UserInfo;
+import com.eucalyptus.accounts.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
@@ -54,7 +54,7 @@ import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import java.net.URI;
-import com.eucalyptus.util.DatabaseUtil;
+import com.eucalyptus.entities.DatabaseUtil;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
@@ -116,7 +116,7 @@ try {
 
 
 db.rows('SELECT * FROM SYSTEM_INFO').each{ 
-  SystemConfiguration config = edu.ucsb.eucalyptus.util.EucalyptusProperties.getSystemConfiguration();
+  SystemConfiguration config = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration();
   EntityWrapper<SystemConfiguration> confDb = new EntityWrapper<SystemConfiguration>();
   try {
     config.setDefaultKernel(it.SYSTEM_INFO_DEFAULT_KERNEL);
