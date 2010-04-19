@@ -110,6 +110,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
         Component comp = Components.lookup( c );
         for( ServiceConfiguration s : comp.list( ) ) {
           comp.buildService( s );
+          comp.start( );
         }
       } catch ( NoSuchElementException e ) {
         throw Exceptions.uncatchable( "Failed to lookup required component: " + c.name( ) );
