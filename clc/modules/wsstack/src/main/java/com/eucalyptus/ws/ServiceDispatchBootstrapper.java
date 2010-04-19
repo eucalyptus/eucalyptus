@@ -109,7 +109,6 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
         EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, c.name( ), c.isEnabled( ).toString( ) ).info( );
         Component comp = Components.lookup( c );
         for( ServiceConfiguration s : comp.list( ) ) {
-          comp.buildService( s );
           comp.start( );
         }
       } catch ( NoSuchElementException e ) {
