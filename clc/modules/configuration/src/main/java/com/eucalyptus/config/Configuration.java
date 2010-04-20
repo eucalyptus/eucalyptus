@@ -101,14 +101,14 @@ public class Configuration {
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     reply.set_return( false );
-    String name = request.getName( ), host = request.getHost( );
+    String name = request.getName( );
+    String hostName = request.getHost();
     Integer port = request.getPort( );
     ServiceBuilder builder = builders.get( request.getClass( ) );
-    if( !builder.checkAdd( name, host, port ) ) {
+    if( !builder.checkAdd( name, hostName, port ) ) {
       return reply;
     }
-    host = NetworkUtil.tryToResolve( host );
-    ServiceConfiguration newComponent = builder.add( name, host, port );
+    ServiceConfiguration newComponent = builder.add( name, hostName, port );
     builder.fireStart( newComponent );
     reply.set_return( true );
     return reply;

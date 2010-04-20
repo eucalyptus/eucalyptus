@@ -140,7 +140,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   
   public Boolean isLocal() {
     try {
-      return NetworkUtil.testLocal( w.getHostName( ) );
+      return NetworkUtil.testLocal( this.getHostName( ) );
     } catch ( Exception e ) {
       return false;
     }
