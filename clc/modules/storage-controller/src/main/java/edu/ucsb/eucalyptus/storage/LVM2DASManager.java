@@ -77,6 +77,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
+import javax.persistence.EntityNotFoundException;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
@@ -921,29 +922,88 @@ public class LVM2DASManager implements LogicalStorageManager {
 	@Override
 	public String getSnapshotPath(String snapshotId)
 			throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return null;
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(snapshotId);
+		if(volInfo != null) {
+			String snapPath = volInfo.getLoFileName();
+			volumeManager.finish();
+			return snapPath;
+		} else {
+			volumeManager.abort();
+			throw new EntityNotFoundException("Unable to find snapshot with id: " + snapshotId);
+		}
 	}
 
 	@Override
 	public String getVolumePath(String volumeId)
 			throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return null;
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+		if(volInfo != null) {
+			String volumePath = lvmRootDirectory + File.separator + volInfo.getVgName() + File.separator + volInfo.getLvName();
+			volumeManager.finish();
+			return volumePath;
+		} else {
+			volumeManager.abort();
+			throw new EntityNotFoundException("Unable to find volume with id: " + volumeId);
+		}
 	}
 
 	@Override
 	public void importSnapshot(String snapshotId, String snapPath,
 			String volumeId, int size) throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo snapInfo = volumeManager.getVolumeInfo(snapshotId);
+		if(snapInfo != null) {
+			volumeManager.finish();
+			throw new EucalyptusCloudException("Snapshot " + snapshotId + " already exists. Import failed.");
+		}
+		volumeManager.finish();
+		String snapFileName = getStorageRootDirectory() + File.separator + snapshotId;
+		try {
+			SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
+					"dd", "if=" + snapPath, 
+					"of=" + snapFileName, "bs=" + StorageProperties.blockSize});			
+		} catch (ExecutionException e) {
+			LOG.error(e);
+			throw new EucalyptusCloudException(e);
+		}
+		volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
+		snapshotInfo.setVolumeId(snapshotId);
+		snapshotInfo.setLoFileName(snapFileName);
+		snapshotInfo.setSize(size);
+		snapshotInfo.setSnapshotOf(volumeId);
+		volumeManager.add(snapshotInfo);
+		volumeManager.finish();
 	}
 
 	@Override
 	public void importVolume(String volumeId, String volumePath, int size)
 			throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+		if(volInfo != null) {
+			volumeManager.finish();
+			throw new EucalyptusCloudException("Volume " + volumeId + " already exists. Import failed.");
+		}
+		volumeManager.finish();
+		createVolume(volumeId, size);
+		volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volumeInfo = volumeManager.getVolumeInfo(volumeId);
+		if(volumeInfo != null) {
+			try {
+				SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
+						"dd", "if=" + volumePath, 
+						"of=" + lvmRootDirectory + File.separator + volumeInfo.getVgName() + 
+						File.separator + volumeInfo.getLvName(), "bs=" + StorageProperties.blockSize});			
+			} catch (ExecutionException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			}
+		} else {
+			volumeManager.abort();
+			throw new EucalyptusCloudException("Unable to find volume with id: " + volumeId);
+		}
 	}
 }
-

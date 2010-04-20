@@ -120,7 +120,6 @@ public class LVM2Manager implements LogicalStorageManager {
 
 	public static String iface = "eth0";
 	public static boolean zeroFillVolumes = false;
-	public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
 
 	public void checkPreconditions() throws EucalyptusCloudException {
 		//check if binaries exist, commands can be executed, etc.
@@ -259,10 +258,10 @@ public class LVM2Manager implements LogicalStorageManager {
 		if(!initialized) {
 			System.loadLibrary("lvm2control");
 			registerSignals();
-			File storageRootDir = new File(storageRootDirectory);
+			File storageRootDir = new File(getStorageRootDirectory());
 			if(!storageRootDir.exists()) {
 				if(!storageRootDir.mkdirs()) {
-					LOG.fatal("Unable to make volume root directory: " + storageRootDirectory);
+					LOG.fatal("Unable to make volume root directory: " + getStorageRootDirectory());
 				}
 			}
 			initialized = true;
@@ -1166,7 +1165,7 @@ public class LVM2Manager implements LogicalStorageManager {
 			throw new EucalyptusCloudException("Snapshot " + snapshotId + " already exists. Import failed.");
 		}
 		volumeManager.finish();
-		String snapFileName = storageRootDirectory + File.separator + snapshotId;
+		String snapFileName = getStorageRootDirectory() + File.separator + snapshotId;
 		try {
 			SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
 					"dd", "if=" + snapPath, 

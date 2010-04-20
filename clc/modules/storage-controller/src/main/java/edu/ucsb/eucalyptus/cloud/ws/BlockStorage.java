@@ -539,9 +539,6 @@ public class BlockStorage {
 			}
 		}
 		db.commit();
-		/*ConvertVolumesType req = new ConvertVolumesType();
-		req.setOriginalProvider("edu.ucsb.eucalyptus.storage.LVM2Manager");
-		ConvertVolumes(req);*/
 		return reply;
 	}
 
