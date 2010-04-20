@@ -154,22 +154,22 @@ public class LVM2DASManager implements LogicalStorageManager {
 
 	private void updateVolumeGroup() throws EucalyptusCloudException {
 		if(volumeGroup == null) {
-			if(StorageProperties.DAS_DEVICE != null) {
+			if(DASInfo.getStorageInfo().getDASDevice() != null) {
 				try {
-					String returnValue = getPhysicalVolume(StorageProperties.DAS_DEVICE);
-					if(!returnValue.matches("(?s:.*)PV Name.*" + StorageProperties.DAS_DEVICE + "(?s:.*)")) {
-						returnValue = createPhysicalVolume(StorageProperties.DAS_DEVICE);
+					String returnValue = getPhysicalVolume(DASInfo.getStorageInfo().getDASDevice());
+					if(!returnValue.matches("(?s:.*)PV Name.*" + DASInfo.getStorageInfo().getDASDevice() + "(?s:.*)")) {
+						returnValue = createPhysicalVolume(DASInfo.getStorageInfo().getDASDevice());
 						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create physical volume on device: " + StorageProperties.DAS_DEVICE);
+							throw new EucalyptusCloudException("Unable to create physical volume on device: " + DASInfo.getStorageInfo().getDASDevice());
 						}
 					}
 					//PV is initialized at this point.
 					returnValue = getVolumeGroupsVerbose();
-					if(!returnValue.matches("(?s:.*)PV Name.*" + StorageProperties.DAS_DEVICE + "(?s:.*)")) {
+					if(!returnValue.matches("(?s:.*)PV Name.*" + DASInfo.getStorageInfo().getDASDevice() + "(?s:.*)")) {
 						volumeGroup = "vg-" + Hashes.getRandom(10);
-						returnValue = createVolumeGroup(StorageProperties.DAS_DEVICE, volumeGroup);
+						returnValue = createVolumeGroup(DASInfo.getStorageInfo().getDASDevice(), volumeGroup);
 						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + StorageProperties.DAS_DEVICE);
+							throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + DASInfo.getStorageInfo().getDASDevice());
 						}
 					} else {
 						Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
@@ -177,7 +177,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 						if(m.find()) 
 							volumeGroup = m.group(1).trim();
 						else
-							throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + StorageProperties.DAS_DEVICE);
+							throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + DASInfo.getStorageInfo().getDASDevice());
 					}
 				} catch (ExecutionException e) {
 					LOG.error(e);
@@ -882,14 +882,6 @@ public class LVM2DASManager implements LogicalStorageManager {
 		if(configurableClass != null) {
 			String prefix = configurableClass.alias();
 			componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
-		}
-		configurableClass = DirectStorageInfo.class.getAnnotation(ConfigurableClass.class);
-		if(configurableClass != null) {
-			String prefix = configurableClass.alias();
-			if(componentProperties == null)
-				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
-			else 
-				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(prefix));
 		}
 		configurableClass = DASInfo.class.getAnnotation(ConfigurableClass.class);
 		if(configurableClass != null) {
