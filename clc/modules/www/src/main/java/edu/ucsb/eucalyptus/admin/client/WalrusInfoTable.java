@@ -159,7 +159,9 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 
 	private Grid addWalrusEntry ( int row, WalrusInfoWeb walrusInfo)
 	{
-		Grid g = new Grid (6, 2);
+		final ArrayList<String> properties = walrusInfo.getProperties();
+		int numProperties = properties.size() / 4;
+		Grid g = new Grid (1 + numProperties, 2);
 		g.setStyleName( "euca-table" );
 		g.setCellPadding( 4 );
 
@@ -176,6 +178,49 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		p.add (walrusHost_box);
 		p.add (new Button ("Deregister", new DeleteCallback( this, row )));
 		
+		for(int propIdx = 0 ; propIdx < numProperties ; ++propIdx) {
+			i++; // next row
+			if ("KEYVALUE".equals(properties.get(4 * propIdx))) {
+				g.setWidget( i, 0, new Label(properties.get(4*propIdx + 1) + ": ") );
+				g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+				final TextBox propTextBox = new TextBox();
+				propTextBox.addChangeListener (new ChangeCallback (this, row));
+				propTextBox.setVisibleLength( 30 );
+				propTextBox.setText(properties.get(4*propIdx + 2));
+				propTextBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+				g.setWidget( i, 1, propTextBox );
+			} else if ("KEYVALUEHIDDEN".equals(properties.get(4 * propIdx))) {
+				g.setWidget( i, 0, new Label(properties.get(4*propIdx + 1) + ": ") );
+				g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+				final TextBox propTextBox = new PasswordTextBox();
+				propTextBox.addChangeListener (new ChangeCallback (this, row));
+				propTextBox.setVisibleLength( 30 );
+				propTextBox.setText(properties.get(4*propIdx + 2));
+				propTextBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+				g.setWidget( i, 1, propTextBox );
+			}	else if("BOOLEAN".equals(properties.get(4 * propIdx))) {
+				final int index = propIdx;
+				final CheckBox propCheckbox = new CheckBox ();
+				g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+				g.setWidget( i, 0, propCheckbox );
+				if (Boolean.parseBoolean(properties.get(4*index + 2))) {
+					propCheckbox.setChecked(true);
+				} else {
+					propCheckbox.setChecked(false);
+				}
+				propCheckbox.addClickListener (new ClickListener() {
+					public void onClick( Widget sender )
+					{
+						if (((CheckBox)sender).isChecked()) {
+							properties.set(4 * index + 2,  String.valueOf(true) );
+						} else {
+							properties.set(4 * index + 2,  String.valueOf(false) );
+						}
+					}
+				});
+				g.setWidget( i, 1, new Label (properties.get(propIdx * 4 + 1)) );
+			}
+		}
 /*		i++; // next row
 		g.setWidget( i, 0, new Label( "Buckets path:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
@@ -244,6 +289,12 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		Grid g = (Grid)this.grid.getWidget(row, 0);
 		HorizontalPanel p = (HorizontalPanel)g.getWidget(0, 1);
 		walrus.setHost                 (((TextBox)p.getWidget(0)).getText());
+		int widgetStartIndex = 1;
+		ArrayList<String> properties = walrus.getProperties();
+		for(int i = 0; i < (properties.size() / 4); ++i) {
+			if(properties.get(4*i).startsWith("KEYVALUE"))
+				properties.set(4*i + 2, ((TextBox)g.getWidget(widgetStartIndex + i, 1)).getText());
+		}
 /*		walrus.setBucketsRootDirectory (((TextBox)g.getWidget(1, 1)).getText());		
 		walrus.setMaxBucketsPerUser    (Integer.parseInt (((TextBox)g.getWidget(2, 0)).getText()));
 		walrus.setMaxBucketSizeInMB    (Long.parseLong   (((TextBox)g.getWidget(3, 0)).getText()));
