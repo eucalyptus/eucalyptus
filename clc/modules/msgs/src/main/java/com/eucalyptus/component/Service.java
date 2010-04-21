@@ -26,7 +26,11 @@ public class Service implements ComponentInformation, Comparable<Service> {
     } else {
       Boolean local = false;
       try {
-        local = NetworkUtil.testLocal( serviceConfig.getHostName( ) );
+        if( serviceConfig.getHostName( ) != null ) {
+          local = NetworkUtil.testLocal( serviceConfig.getHostName( ) );
+        } else {
+          local = true;
+        }
       } catch ( Exception e ) {
         local = true;
       }
