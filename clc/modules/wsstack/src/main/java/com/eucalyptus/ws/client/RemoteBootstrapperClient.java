@@ -90,7 +90,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.event.ComponentEvent;
+import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.config.ComponentConfiguration;
@@ -189,8 +189,8 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
 
   @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof ComponentEvent ) {
-      ComponentEvent e = ( ComponentEvent ) event;
+    if ( event instanceof LifecycleEvent ) {
+      LifecycleEvent e = ( LifecycleEvent ) event;
       if ( !Component.walrus.equals( e.getComponent( ) ) && !Component.storage.equals( e.getComponent( ) ) ) {
         return;
       } else if ( e.getConfiguration( ).getPort( ) < 0 ) {

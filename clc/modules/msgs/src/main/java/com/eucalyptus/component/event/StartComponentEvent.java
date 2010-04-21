@@ -7,7 +7,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.LocalConfiguration;
 
-public class StartComponentEvent extends ComponentEvent {
+public class StartComponentEvent extends LifecycleEvent {
   private static Logger LOG = Logger.getLogger( StartComponentEvent.class );
   public static StartComponentEvent getLocal( ServiceConfiguration config ) {
     URI uri = null;
