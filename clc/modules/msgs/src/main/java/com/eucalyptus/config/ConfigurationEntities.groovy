@@ -256,6 +256,10 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   public Component getComponent() {
     return Component.cluster;
   }
+  @Override
+  public Boolean isLocal() {
+    return false;
+  }
 }
 
 @Entity
