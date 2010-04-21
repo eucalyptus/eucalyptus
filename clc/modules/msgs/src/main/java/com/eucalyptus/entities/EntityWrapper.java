@@ -144,7 +144,7 @@ public class EntityWrapper<TYPE> {
   private void exceptionCaught( Throwable e ) {
     if( e instanceof JDBCConnectionException || e instanceof IllegalStateException ) {
       LOG.error( e, e );
-      DatabaseUtil.handleConnectionError( e );
+      PersistenceContexts.handleConnectionError( e );
     }
   }
 

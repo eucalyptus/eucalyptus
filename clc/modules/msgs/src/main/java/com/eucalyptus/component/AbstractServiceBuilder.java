@@ -2,7 +2,6 @@ package com.eucalyptus.component;
 
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
-import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.util.NetworkUtil;

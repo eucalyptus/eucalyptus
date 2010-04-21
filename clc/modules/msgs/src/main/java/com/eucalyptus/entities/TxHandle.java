@@ -35,7 +35,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
     this.startTime = Calendar.getInstance( );
     this.stopWatch = new StopWatch( );
     this.stopWatch.start( );
-    EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) DatabaseUtil.getEntityManagerFactory( ctx );
+    EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
     try {
       this.em = anemf.createEntityManager( );
       this.delegate = em.getTransaction( );

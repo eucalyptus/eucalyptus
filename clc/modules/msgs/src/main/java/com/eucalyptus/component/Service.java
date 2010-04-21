@@ -10,31 +10,42 @@ public class Service implements ComponentInformation, Comparable<Service> {
   private final Credentials     keys;
   private final ServiceEndpoint endpoint;
   private final Dispatcher      dispatcher;
+  private final ServiceConfiguration serviceConfiguration;
   
-  public Service( Component parent ) {
+  public ServiceConfiguration getServiceConfiguration( ) {
+    return this.serviceConfiguration;
+  }
+
+  public Service( Component parent, ServiceConfiguration serviceConfig ) {
     this.parent = parent;
-    this.name = parent.getName( ) + LOCAL_HOSTNAME;
-    URI uri = this.parent.getConfiguration( ).getLocalUri( );
-    this.endpoint = new ServiceEndpoint( this, true, uri );
+    this.serviceConfiguration = serviceConfig;
+    if( serviceConfig.isLocal( ) ) {
+      URI uri = this.parent.getConfiguration( ).getLocalUri( );
+      this.name = parent.getName( ) + LOCAL_HOSTNAME;
+      this.endpoint = new ServiceEndpoint( this, true, uri );      
+    } else {
+      Boolean local = false;
+      try {
+        if( serviceConfig.getHostName( ) != null ) {
+          local = NetworkUtil.testLocal( serviceConfig.getHostName( ) );
+        } else {
+          local = true;
+        }
+      } catch ( Exception e ) {
+        local = true;
+      }
+      URI uri = null;
+      if ( local ) {
+        this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
+        uri = this.parent.getConfiguration( ).makeUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
+      } else {
+        this.name = parent.getName( ) + LOCAL_HOSTNAME;
+        uri = this.parent.getConfiguration( ).getLocalUri( );
+      }
+      this.endpoint = new ServiceEndpoint( this, local, uri );      
+    }
     this.keys = new Credentials( this );//TODO: integration with JAAS
     this.dispatcher = DispatcherFactory.build( parent, this );    
-  }
-  public Service( Component parent, String host, Integer port ) {
-    this.parent = parent;
-    Boolean local = false;
-    URI uri = null;
-    if ( NetworkUtil.testLocal( host ) ) {
-      local = false;
-      this.name = parent.getName( ) + "@" + host;
-      uri = this.parent.getConfiguration( ).makeUri( host, port );
-    } else {
-      local = true;
-      this.name = parent.getName( ) + LOCAL_HOSTNAME;
-      uri = this.parent.getConfiguration( ).getLocalUri( );
-    }
-    this.endpoint = new ServiceEndpoint( this, local, uri );
-    this.keys = new Credentials( this );//TODO: integration with JAAS
-    this.dispatcher = DispatcherFactory.build( parent, this );
   }
   
   public Boolean isLocal( ) {

@@ -72,11 +72,14 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class NetworkUtil {
@@ -140,21 +143,31 @@ public class NetworkUtil {
     return ret;
   }
   
-  public static boolean testLocal( InetAddress addr ) {
+  public static boolean testLocal( final InetAddress addr ) {
     Exceptions.ifNullArgument( addr );
     try {
-      List<String> addrs = Lists.newArrayList( );
-      Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
-      while( ifaces.hasMoreElements( ) ) {
-        NetworkInterface iface = ifaces.nextElement( );
-        for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
-          InetAddress ifaceAddr = iaddr.getAddress( );
-          if( ifaceAddr.equals( addr ) ) {
-            return true;
-          }
-        }
-      }
-      return addr.isAnyLocalAddress( );
+      Boolean result = addr.isAnyLocalAddress( ); 
+      result |= Iterables.any( Collections.list( NetworkInterface.getNetworkInterfaces( ) ), new Predicate<NetworkInterface>() {
+        @Override public boolean apply( NetworkInterface arg0 ) {
+          return Iterables.any( arg0.getInterfaceAddresses( ), new Predicate<InterfaceAddress>() {
+            @Override public boolean apply( InterfaceAddress arg0 ) {
+              return arg0.getAddress( ).equals( addr );
+            }} );
+        }} );
+      return result;
+//      List<String> addrs = Lists.transform( Lists.newArrayList( Collections.list( NetworkInterface.getNetworkInterfaces( ) ) ), new Function<>)
+//      Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
+//      
+//      while( ifaces.hasMoreElements( ) ) {
+//        NetworkInterface iface = ifaces.nextElement( );
+//        for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
+//          InetAddress ifaceAddr = iaddr.getAddress( );
+//          if( ifaceAddr.equals( addr ) ) {
+//            return true;
+//          }
+//        }
+//      }
+//      return addr.isAnyLocalAddress( );
     } catch ( Exception e ) {
       return Exceptions.eat( e.getMessage( ), e );
     }    
@@ -171,16 +184,6 @@ public class NetworkUtil {
       }
   }
   
-  public static String tryToResolve( String address ) {
-    InetAddress addr;
-    try {
-      addr = InetAddress.getByName( address );
-      return addr.getHostAddress( );
-    } catch ( UnknownHostException e ) {
-      return address;
-    }
-  }
-
   public static boolean testGoodAddress( String address ) throws Exception {
     InetAddress addr = InetAddress.getByName( address );
     LOG.debug( addr + " site=" + addr.isSiteLocalAddress( ) );
