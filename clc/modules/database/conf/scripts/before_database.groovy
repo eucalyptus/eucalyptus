@@ -1,4 +1,5 @@
 import com.eucalyptus.system.SubDirectory;
+import com.eucalyptus.entities.PersistenceContexts;
 /* this crap is hsqldb specific */
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.bootstrap.Component;
@@ -11,8 +12,9 @@ config = "CREATE SCHEMA PUBLIC AUTHORIZATION DBA\n" +
   "CREATE USER SA PASSWORD \"${Hmacs.generateSystemSignature( )}\"\n" +  
   "GRANT DBA TO SA\n" + 
   "SET WRITE_DELAY 100 MILLIS\n" +  
+  "SET LOG_SIZE 10\n" +  
   "SET SCHEMA PUBLIC\n";
-['general','images','auth','config','walrus','storage','dns'].each{ context_name ->
+PersistenceContexts.list( ).each{ context_name ->
   d = new File("${SubDirectory.DB.toString()}/eucalyptus_${context_name}.script");
   if( !d.exists() ) {
     d.write(config);

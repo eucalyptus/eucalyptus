@@ -191,7 +191,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   public void fireEvent( Event event ) {
     if ( event instanceof LifecycleEvent ) {
       LifecycleEvent e = ( LifecycleEvent ) event;
-      if ( !Component.walrus.equals( e.getComponent( ) ) && !Component.storage.equals( e.getComponent( ) ) ) {
+      if ( !Component.walrus.equals( e.getPeer( ) ) && !Component.storage.equals( e.getPeer( ) ) ) {
         return;
       } else if ( e.getConfiguration( ).getPort( ) < 0 ) {
         return;

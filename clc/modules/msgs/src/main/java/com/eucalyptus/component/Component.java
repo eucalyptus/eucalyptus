@@ -14,6 +14,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
+/**
+ * @author decker
+ *
+ */
 public class Component implements ComponentInformation, Nameable<Component> {
   private static Logger                            LOG             = Logger.getLogger( Component.class );
   public static String                             DISABLE_PATTERN = "euca.disable.%s";
@@ -61,6 +65,11 @@ public class Component implements ComponentInformation, Nameable<Component> {
                         service.getName( ), service.getUri( ).toString( ) ).info( );
   }
   
+  /**
+   * Builds a Service instance for this component using a service configuration created with the specified URI.
+   * @return
+   * @throws ServiceRegistrationException
+   */
   public Service buildService( URI uri ) throws ServiceRegistrationException {
     this.enabled = true;
     ServiceConfiguration config = this.builder.add( uri );
@@ -68,14 +77,26 @@ public class Component implements ComponentInformation, Nameable<Component> {
     return this.setupService( config, service );
   }
   
+  /**
+   * Builds a Service instance for this component using the provided service configuration.
+   * @return
+   * @throws ServiceRegistrationException
+   */
   public Service buildService( ServiceConfiguration config ) throws ServiceRegistrationException {
     this.enabled = true;
     Service service = new Service( this, config );
     return this.setupService( config, service );
   }
   
-  public Service buildLocalService( ) throws ServiceRegistrationException {
+  
+  /**
+   * Builds a Service instance for this component using the local default values.
+   * @return
+   * @throws ServiceRegistrationException
+   */
+  public Service buildService( ) throws ServiceRegistrationException {
     this.enabled = true;
+    this.builder.add( null );
     ServiceConfiguration conf = this.builder.add( this.getConfiguration( ).getLocalUri( ) );
     Service service = new Service( this, conf );
     return this.setupService( conf, service );
@@ -89,7 +110,7 @@ public class Component implements ComponentInformation, Nameable<Component> {
     return service;
   }
   
-  public void start( ServiceConfiguration service ) {
+  public void startService( ServiceConfiguration service ) {
     try {
       if ( service.isLocal( ) ) {
         EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );

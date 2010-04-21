@@ -17,7 +17,7 @@ public class LifecycleEvent extends Event {
     return configuration;
   }
   
-  public com.eucalyptus.bootstrap.Component getComponent( ) {
+  public com.eucalyptus.bootstrap.Component getPeer( ) {
     return this.getConfiguration( ).getComponent( );
   }
 
