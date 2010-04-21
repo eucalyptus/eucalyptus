@@ -69,11 +69,13 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 import org.hsqldb.ServerConstants;
 
+import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.system.SubDirectory;
 
 public class DatabaseConfig {
   private static DatabaseConfig singleton = new DatabaseConfig();
   private static Logger LOG = Logger.getLogger( DatabaseConfig.class );
+  private static int index = 0;
   public static DatabaseConfig getInstance() {
     return singleton;
   }
@@ -81,18 +83,14 @@ public class DatabaseConfig {
     singleton = dbConfig;
   }
   
-  enum Internal {
-    general,images,auth,config,walrus,storage,dns;
-    public String getDatabaseName() {
-      return Component.eucalyptus.name( ) + "_" + this.name();
-    }
-    public Properties getProperties() {
-      Properties props = new Properties( );
-      props.setProperty( ServerConstants.SC_KEY_DATABASE + "." + this.ordinal( ), SubDirectory.DB.toString( ) + File.separator + this.getDatabaseName( ) );
-      props.setProperty( ServerConstants.SC_KEY_DBNAME + "."+ this.ordinal( ), this.getDatabaseName( ) );
-      return props;
-    }
+  private static Properties getProperties( String context ) {
+    Properties props = new Properties( );
+    props.setProperty( ServerConstants.SC_KEY_DATABASE + "." + index, SubDirectory.DB.toString( ) + File.separator + context );
+    props.setProperty( ServerConstants.SC_KEY_DBNAME + "."+ index, context );
+    index++;
+    return props;
   }
+
   
   public static Properties getProperties() {
     Properties props = new Properties( );
@@ -100,8 +98,8 @@ public class DatabaseConfig {
     props.setProperty( ServerConstants.SC_KEY_PORT, "9001" );
     props.setProperty( ServerConstants.SC_KEY_REMOTE_OPEN_DB, Boolean.TRUE.toString( ) );
     props.setProperty( ServerConstants.SC_KEY_TLS, Boolean.TRUE.toString( ) );
-    for ( DatabaseConfig.Internal i : DatabaseConfig.Internal.values( ) ) {
-      props.putAll( i.getProperties( ) );
+    for( String context : PersistenceContexts.list( ) ) {
+      props.putAll( DatabaseConfig.getProperties( context ) );
     }
     return props;
   }

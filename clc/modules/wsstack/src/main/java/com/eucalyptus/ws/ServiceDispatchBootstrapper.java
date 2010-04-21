@@ -96,6 +96,22 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       }
     }
     LOG.trace( "Touching class: " + ServiceDispatcher.class );
+    boolean failed = false;
+    for ( Component comp : Components.list( ) ) {
+      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
+      for ( ServiceConfiguration s : comp.list( ) ) {
+        try {
+          comp.buildService( s );
+        } catch ( Throwable ex ) {
+          LOG.warn( ex );
+          LOG.error( ex, ex );
+          failed = true;
+        }
+      }
+    }
+    if ( failed ) {
+      BootstrapException.throwFatal( "Failures occurred while attempting to start component services.  See the log files for more information." );
+    }
     return true;
   }
   
@@ -106,7 +122,6 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
         try {
-          comp.buildService( s );
           comp.startService( s );
         } catch ( Throwable ex ) {
           LOG.warn( ex );

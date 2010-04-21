@@ -11,24 +11,25 @@ hiber_config = [
   'hibernate.generate_statistics': 'true',
 ]
 contexts = PersistenceContexts.list( );
-contexts.each {
+contexts.each { String ctxName ->
+  String it = ctxName.replaceAll("eucalyptus_","")
   pool_config = new pools(new Binding([context_name:it])).run()
   cache_config  = new caches(new Binding([context_name:it])).run()
   config = new Ejb3Configuration();
-  LogUtil.logHeader( "Hibernate for ${it}" ).log(hiber_config.inspect())
+  LogUtil.logHeader( "Hibernate for ${ctxName}" ).log(hiber_config.inspect())
   hiber_config.each { k, v -> config.setProperty(k, v) }
-  LogUtil.logHeader( "Pool for ${it}").log( pool_config.inspect() )
+  LogUtil.logHeader( "Pool for ${ctxName}").log( pool_config.inspect() )
   pool_config.each { k, v -> config.setProperty(k, v) }
-  LogUtil.logHeader( "Cache for ${it}").log( cache_config )
+  LogUtil.logHeader( "Cache for ${ctxName}").log( cache_config )
   cache_config.each { k, v -> config.setProperty(k, v) }
-  entity_list = PersistenceContexts.listEntities( it )
-  LogUtil.logHeader("Entities for ${it}")
+  entity_list = PersistenceContexts.listEntities( ctxName )
+  LogUtil.logHeader("Entities for ${ctxName}")
   entity_list.each{ ent ->
     LogUtil.log( ent.toString() )
     config.addAnnotatedClass( ent )
   }
   try {
-    PersistenceContexts.registerPersistenceContext("eucalyptus_${it}", config)
+    PersistenceContexts.registerPersistenceContext("${ctxName}", config)
   } catch( Throwable t ) {
     t.printStackTrace();
     System.exit(1)
