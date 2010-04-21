@@ -67,6 +67,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
@@ -156,7 +157,7 @@ public class WalrusBlockStorageManager {
 			for (WalrusSnapshotInfo sInfo : sInfos) {
 				totalSnapshotSize += sInfo.getSize();
 			}
-			if ((totalSnapshotSize + snapshotSize) > WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
+			if ((totalSnapshotSize + snapshotSize) > WalrusInfo.getWalrusInfo().getStorageMaxTotalSnapshotSizeInGb()) {
 				db.rollback();
 				throw new EntityTooLargeException(snapshotId);
 			}

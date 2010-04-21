@@ -155,23 +155,12 @@ public class StorageStateType extends EucalyptusMessage{
 
 public class WalrusStateType extends EucalyptusMessage{
   private String name;
-  private String bucketsRootDirectory;
-  private Integer maxBucketsPerUser;
-  private Integer maxBucketSizeInMB;
-  private Integer maxCacheSizeInMB;
-  private Integer snapshotsTotalInGB;
   
   def WalrusStateType() {
   }
   
-  def StorageStateType(final name, final bucketsRootDirectory, final maxBucketsPerUser,
-  final maxBucketSizeInMB, final maxCacheSizeInMB, final snapshotsTotalInGB) {
+  def WalrusStateType(final name) {
     this.name = name;
-    this.bucketsRootDirectory = bucketsRootDirectory;
-    this.maxBucketsPerUser = maxBucketsPerUser;
-    this.maxBucketSizeInMB = maxBucketSizeInMB;
-    this.maxCacheSizeInMB = maxCacheSizeInMB;
-    this.snapshotsTotalInGB = snapshotsTotalInGB;
   }
 }
 

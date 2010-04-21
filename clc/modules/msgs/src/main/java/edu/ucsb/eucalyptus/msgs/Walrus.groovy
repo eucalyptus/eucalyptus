@@ -59,6 +59,7 @@ package edu.ucsb.eucalyptus.msgs
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
+import java.util.ArrayList;
 import java.util.Date;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
@@ -709,22 +710,9 @@ public class AddObjectType extends WalrusDataRequestType {
 
 public class UpdateWalrusConfigurationType extends WalrusRequestType {
 	String name;
-	String bucketRootDirectory;
-	Integer maxBucketsPerUser;
-	Long maxBucketSize;
-	Long imageCacheSize;
-	Integer totalSnapshotSize;
+	ArrayList<ComponentProperty> properties;
 
 	def UpdateWalrusConfigurationType() {}
-
-	def UpdateWalrusConfigurationType(WalrusStateType walrusState) {
-		this.name = walrusState.getName();
-		this.bucketRootDirectory = walrusState.getBucketsRootDirectory();
-		this.maxBucketsPerUser = walrusState.getMaxBucketsPerUser();
-		this.maxBucketSize = walrusState.getMaxBucketSizeInMB();
-		this.imageCacheSize = walrusState.getMaxCacheSizeInMB();
-		this.totalSnapshotSize = walrusState.getSnapshotsTotalInGB();
-	}
 }
 
 public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
@@ -742,27 +730,9 @@ public class GetWalrusConfigurationType extends WalrusRequestType {
 
 public class GetWalrusConfigurationResponseType extends WalrusRequestType {
 	String name;
-	String bucketRootDirectory;
-	Integer maxBucketsPerUser;
-	Long maxBucketSize;
-	Long imageCacheSize;
-	Integer totalSnapshotSize;
+	ArrayList<ComponentProperty> properties;
 
 	def GetWalrusConfigurationResponseType() {}
-
-	def GetWalrusConfigurationResponseType(String name,
-			String bucketRootDirectory,
-			Integer maxBucketsPerUser,
-			Long maxBucketSize,
-			Long imageCacheSize,
-			Integer totalSnapshotSize) {
-		this.name = name;
-		this.bucketRootDirectory = bucketRootDirectory;
-		this.maxBucketsPerUser = maxBucketsPerUser;
-		this.maxBucketSize = maxBucketSize;
-		this.imageCacheSize = imageCacheSize;
-		this.totalSnapshotSize = totalSnapshotSize;
-	}
 }
 
 public class GetDecryptedImageType extends WalrusDataGetRequestType {

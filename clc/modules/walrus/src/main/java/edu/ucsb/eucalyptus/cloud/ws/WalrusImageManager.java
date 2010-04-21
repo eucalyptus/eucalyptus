@@ -552,7 +552,7 @@ public class WalrusImageManager {
 					}
 				}
 				db.commit();
-				if((oldCacheSize + unencryptedSize) > WalrusProperties.IMAGE_CACHE_SIZE) {
+				if((oldCacheSize + unencryptedSize) > (WalrusInfo.getWalrusInfo().getStorageMaxCacheSizeInMB() * WalrusProperties.M)) {
 					LOG.error("Maximum image cache size exceeded when decrypting " + bucketName + "/" + manifestKey);
 					failed = true;
 					imageSizeExceeded = true;

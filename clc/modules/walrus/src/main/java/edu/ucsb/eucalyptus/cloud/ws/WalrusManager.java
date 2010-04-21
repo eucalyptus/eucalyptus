@@ -119,6 +119,7 @@ import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.TorrentInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
@@ -218,17 +219,17 @@ public class WalrusManager {
 	}
 
 	public void check() throws EucalyptusCloudException {
-		File bukkitDir = new File(WalrusProperties.bucketRootDirectory);
+		File bukkitDir = new File(WalrusInfo.getWalrusInfo().getStorageDir());
 		if (!bukkitDir.exists()) {
 			if (!bukkitDir.mkdirs()) {
 				LOG.fatal("Unable to make bucket root directory: "
-						+ WalrusProperties.bucketRootDirectory);
+						+ WalrusInfo.getWalrusInfo().getStorageDir());
 				throw new EucalyptusCloudException(
 				"Invalid bucket root directory");
 			}
 		} else if (!bukkitDir.canWrite()) {
 			LOG.fatal("Cannot write to bucket root directory: "
-					+ WalrusProperties.bucketRootDirectory);
+					+ WalrusInfo.getWalrusInfo().getStorageDir());
 			throw new EucalyptusCloudException("Invalid bucket root directory");
 		}
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
@@ -322,7 +323,7 @@ public class WalrusManager {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(userId);
 			List<BucketInfo> bucketList = db.query(searchBucket);
-			if (bucketList.size() >= WalrusProperties.MAX_BUCKETS_PER_USER) {
+			if (bucketList.size() >= WalrusInfo.getWalrusInfo().getStorageMaxBucketsPerUser()) {
 				db.rollback();
 				throw new TooManyBucketsException(bucketName);
 			}
@@ -854,7 +855,7 @@ public class WalrusManager {
 										Long bucketSize = bucket.getBucketSize();
 										long newSize = bucketSize + oldBucketSize
 										+ size;
-										if (newSize > WalrusProperties.MAX_BUCKET_SIZE) {
+										if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
 											messenger.removeQueue(key, randomKey);
 											dbObject.rollback();
 											throw new EntityTooLargeException(
@@ -1097,7 +1098,7 @@ public class WalrusManager {
 									&& !request.isAdministrator()) {
 								Long bucketSize = bucket.getBucketSize();
 								long newSize = bucketSize + oldBucketSize + size;
-								if (newSize > WalrusProperties.MAX_BUCKET_SIZE) {
+								if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
 									db.rollback();
 									throw new EntityTooLargeException("Key", objectKey,
 											logData);

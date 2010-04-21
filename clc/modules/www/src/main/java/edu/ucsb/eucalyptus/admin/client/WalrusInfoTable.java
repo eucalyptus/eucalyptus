@@ -117,7 +117,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 
 	public void onClick( final Widget widget ) // Register walrus button
 	{
-		this.walrusList.add (new WalrusInfoWeb("Walrus", "host", 8773, "/var/lib/eucalyptus/bukkits", 5, 5120l, 30720L, 50)); //these values are just defaults
+		this.walrusList.add (new WalrusInfoWeb("Walrus", "host", 8773, new ArrayList<String>())); //these values are just defaults
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
@@ -176,7 +176,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		p.add (walrusHost_box);
 		p.add (new Button ("Deregister", new DeleteCallback( this, row )));
 		
-		i++; // next row
+/*		i++; // next row
 		g.setWidget( i, 0, new Label( "Buckets path:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox walrusPath_box = new TextBox();
@@ -224,7 +224,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		g.setWidget( i, 0, totalSnapshots_box );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		g.setWidget( i, 1, new Label ("GB of disk are reserved for snapshots"));
-
+*/
 		return g;
 	}
 
@@ -244,11 +244,11 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		Grid g = (Grid)this.grid.getWidget(row, 0);
 		HorizontalPanel p = (HorizontalPanel)g.getWidget(0, 1);
 		walrus.setHost                 (((TextBox)p.getWidget(0)).getText());
-		walrus.setBucketsRootDirectory (((TextBox)g.getWidget(1, 1)).getText());		
+/*		walrus.setBucketsRootDirectory (((TextBox)g.getWidget(1, 1)).getText());		
 		walrus.setMaxBucketsPerUser    (Integer.parseInt (((TextBox)g.getWidget(2, 0)).getText()));
 		walrus.setMaxBucketSizeInMB    (Long.parseLong   (((TextBox)g.getWidget(3, 0)).getText()));
 		walrus.setMaxCacheSizeInMB     (Long.parseLong   (((TextBox)g.getWidget(4, 0)).getText()));
-		walrus.setSnapshotsTotalInGB   (Integer.parseInt (((TextBox)g.getWidget(5, 0)).getText()));
+		walrus.setSnapshotsTotalInGB   (Integer.parseInt (((TextBox)g.getWidget(5, 0)).getText()));*/
 	}
 
 	public void MarkCommitted ()
