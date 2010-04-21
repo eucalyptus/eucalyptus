@@ -96,7 +96,6 @@ public class Component implements ComponentInformation, Nameable<Component> {
    */
   public Service buildService( ) throws ServiceRegistrationException {
     this.enabled = true;
-    this.builder.add( null );
     ServiceConfiguration conf = this.builder.add( this.getConfiguration( ).getLocalUri( ) );
     Service service = new Service( this, conf );
     return this.setupService( conf, service );
