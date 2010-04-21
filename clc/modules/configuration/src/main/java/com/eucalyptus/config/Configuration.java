@@ -109,6 +109,7 @@ public class Configuration {
       return reply;
     }
     ServiceConfiguration newComponent = builder.add( name, hostName, port );
+    builder.getComponent( ).buildService( newComponent );
     builder.fireStart( newComponent );
     reply.set_return( true );
     return reply;
@@ -129,6 +130,7 @@ public class Configuration {
     try {
       conf = builder.lookupByName( request.getName( ) );
       builder.remove( conf );
+      builder.getComponent( ).removeService( conf );
       builder.fireStop( conf );
       reply.set_return( true );
     } catch( EucalyptusCloudException e ) {
