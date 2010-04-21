@@ -66,6 +66,7 @@ package com.eucalyptus.ws;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
@@ -85,35 +86,52 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   
   @Override
   public boolean load( Stage current ) throws Exception {    
-    LOG.trace( "Touching class: " + ServiceDispatcher.class);
+    /** TODO: ultimately remove this: it is legacy and enforces a one-to-one relationship between component impls **/
     for( com.eucalyptus.bootstrap.Component c : com.eucalyptus.bootstrap.Component.values( ) ) {
       if( com.eucalyptus.bootstrap.Component.any.equals( c) ) continue;
       try {
-        EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, c.name( ), c.isEnabled( ).toString( ) ).info( );
-        Component comp = Components.lookup( c );
-        for( ServiceConfiguration s : comp.list( ) ) {
-          comp.buildService( s );
-        }
+        Components.lookup( c );
       } catch ( NoSuchElementException e ) {
         throw Exceptions.uncatchable( "Failed to lookup required component: " + c.name( ) );
       }
+    }
+    LOG.trace( "Touching class: " + ServiceDispatcher.class);
+    boolean failed = false;
+    for( Component comp : Components.list( ) ) {
+      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
+      for( ServiceConfiguration s : comp.list( ) ) {
+        try {
+          comp.buildService( s );
+        } catch ( Throwable ex ) {
+          LOG.warn( ex );
+          LOG.error( ex, ex );
+          failed = true;
+        }
+      }
+    }
+    if( failed ) {
+      BootstrapException.throwFatal( "Failures occurred while attempting to initialize component services.  See the log files for more information." );
     }
     return true;
   }
 
   @Override
   public boolean start( ) throws Exception {
-    for( com.eucalyptus.bootstrap.Component c : com.eucalyptus.bootstrap.Component.values( ) ) {
-      if( com.eucalyptus.bootstrap.Component.any.equals( c) ) continue;
-      try {
-        EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, c.name( ), c.isEnabled( ).toString( ) ).info( );
-        Component comp = Components.lookup( c );
-        for( ServiceConfiguration s : comp.list( ) ) {
-          comp.start( );
+    boolean failed = false;
+    for( Component comp : Components.list( ) ) {
+      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
+      for( ServiceConfiguration s : comp.list( ) ) {
+        try {
+          comp.start( s );
+        } catch ( Throwable ex ) {
+          LOG.warn( ex );
+          LOG.error( ex, ex );
+          failed = true;
         }
-      } catch ( NoSuchElementException e ) {
-        throw Exceptions.uncatchable( "Failed to lookup required component: " + c.name( ) );
       }
+    }
+    if( failed ) {
+      BootstrapException.throwFatal( "Failures occurred while attempting to start component services.  See the log files for more information." );
     }
     return true;
   }

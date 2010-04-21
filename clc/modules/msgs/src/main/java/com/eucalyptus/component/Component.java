@@ -57,20 +57,10 @@ public class Component implements ComponentInformation, Nameable<Component> {
     Service service = this.services.remove( config.getName( ) );
     Components.deregister( service );
     this.builder.fireStop( config );
-    EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+    EventRecord.caller( Component.class, config.isLocal( ) ? EventType.COMPONENT_SERVICE_STOP : EventType.COMPONENT_SERVICE_STOP_REMOTE, this.getName( ),
+                        service.getName( ), service.getUri( ).toString( ) ).info( );
   }
   
-//  public Service buildService( String hostName ) throws ServiceRegistrationException {
-//    return this.buildService( hostName, this.getConfiguration( ).getDefaultPort( ) );
-//  }
-//  
-//  public Service buildService( String hostName, Integer port ) throws ServiceRegistrationException {
-//    this.enabled = true;
-//    ServiceConfiguration config = this.builder.add( name, hostName, port );
-//    Service service = new Service( this, config );
-//    return setupService( config, service );
-//  }
-//  
   public Service buildService( URI uri ) throws ServiceRegistrationException {
     this.enabled = true;
     ServiceConfiguration config = this.builder.add( uri );
@@ -94,21 +84,22 @@ public class Component implements ComponentInformation, Nameable<Component> {
   private Service setupService( ServiceConfiguration config, Service service ) throws ServiceRegistrationException {
     this.services.put( service.getName( ), service );
     Components.register( service );
-    EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+    EventRecord.caller( Component.class, config.isLocal( ) ? EventType.COMPONENT_SERVICE_INIT : EventType.COMPONENT_SERVICE_INIT_REMOTE, this.getName( ),
+                        service.getName( ), service.getUri( ).toString( ) ).info( );
     return service;
   }
   
-  public void start( ) {
-    for( Service s : this.services.values( ) ) {
-      try {
-        if( s.getDispatcher( ).isLocal( ) ) {
-          this.builder.fireStart( s.getServiceConfiguration( ) );
-        } else if ( com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
-          this.builder.fireStart( s.getServiceConfiguration( ) );
-        }
-      } catch ( ServiceRegistrationException e ) {
-        LOG.debug( e, e );
+  public void start( ServiceConfiguration service ) {
+    try {
+      if ( service.isLocal( ) ) {
+        EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+        this.builder.fireStart( service );
+      } else {
+        EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START_REMOTE, this.getName( ), service.getName( ), service.getUri( ).toString( ) )
+                   .info( );
       }
+    } catch ( ServiceRegistrationException e ) {
+      LOG.debug( e, e );
     }
   }
   

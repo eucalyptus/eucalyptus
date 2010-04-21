@@ -145,27 +145,7 @@ public class ClusterBootstrapper extends Bootstrapper implements EventListener {
   }
 
   @Override
-  public void advertiseEvent( Event event ) {
-//    if ( event instanceof StartComponentEvent ) {
-//      StartComponentEvent e = ( StartComponentEvent ) event;
-//      if ( Component.cluster.equals( e.getComponent( ) ) ) {
-//        try {
-//          Cluster c = Clusters.getInstance( ).lookup( e.getConfiguration( ).getName( ) );
-//          e.veto( "Cluster by that name already exists: " + LogUtil.dumpObject( c ) );
-//        } catch ( NoSuchElementException e1 ) {
-//        }
-//      }
-//    } else if ( event instanceof StopComponentEvent ) {
-//      StopComponentEvent e = ( StopComponentEvent ) event;
-//      if ( Component.cluster.equals( e.getComponent( ) ) ) {
-//        try {
-//          Cluster c = Clusters.getInstance( ).lookup( e.getConfiguration( ).getName( ) );
-//        } catch ( NoSuchElementException e1 ) {
-//          e.veto( "No cluster by that name exists: " + e.getConfiguration( ).getName( ) );
-//        }
-//      }
-//    }
-  }
+  public void advertiseEvent( Event event ) {}
 
   @Override
   public void fireEvent( Event event ) {
