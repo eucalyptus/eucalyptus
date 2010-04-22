@@ -69,20 +69,24 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
+import com.eucalyptus.address.ClusterAddressInfo;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
-import com.eucalyptus.net.util.ClusterAddressInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
-import edu.ucsb.eucalyptus.cloud.cluster.UnassignAddressCallback;
+import edu.ucsb.eucalyptus.constants.EventType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 
 public class ClusterState {
   private static Logger                           LOG                   = Logger.getLogger( ClusterState.class );
@@ -110,7 +114,18 @@ public class ClusterState {
     LOG.warn( "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
     if ( orphanCount > 10 ) {
       LOG.warn( "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
-      new UnassignAddressCallback( address ).dispatch( this.clusterName );
+      try {
+        final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
+        new UnassignAddressCallback( address ).then( new SuccessCallback( ) {
+          @Override
+          public void apply( BaseMessage t ) {
+            if ( addr.isSystemOwned( ) ) {
+              Addresses.getAddressManager( ).releaseSystemAddress( addr );
+            }
+          }
+        } ).dispatch( this.clusterName );
+      } catch ( NoSuchElementException e ) {
+      }
       orphans.remove( address.getAddress( ) );
     }
   }
@@ -182,7 +197,7 @@ public class ClusterState {
     try {
       Network network = getVlanAssignedNetwork( networkName );      
       NetworkToken token = network.createNetworkToken( clusterName );
-      LOG.debug( EventRecord.here( ClusterState.class, EucalyptusProperties.TokenState.preallocate, token.toString( ) ) );
+      LOG.info( EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, token.toString( ) ) );
       return token;
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
@@ -200,14 +215,14 @@ public class ClusterState {
         ClusterState.availableVlans.add( vlan );
         throw new NotEnoughResourcesAvailable( "Not enough resources available: an error occured obtaining a usable vlan tag" );
       } else {
-        LOG.debug( EventRecord.here( ClusterState.class, EucalyptusProperties.TokenState.assigned, network.toString( ) ) );
+        LOG.info( EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, network.toString( ) ) );
       }
     }
     return network;
   }
   
   public void releaseNetworkAllocation( NetworkToken token ) {
-    LOG.debug( EventRecord.here( ClusterState.class, EucalyptusProperties.TokenState.returned, token.toString() ) );
+    LOG.info( EventRecord.caller( NetworkToken.class, EventType.TOKEN_RETURNED, token.toString( ) ) );
     try {
       Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
       if ( !existingNet.hasTokens( ) ) {

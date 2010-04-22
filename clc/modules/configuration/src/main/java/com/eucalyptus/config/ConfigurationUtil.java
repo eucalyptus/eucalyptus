@@ -9,19 +9,17 @@ import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.KeyTool;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.EntityWrapper;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.SubDirectory;
-
 import edu.ucsb.eucalyptus.msgs.ConfigurationMessage;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 
@@ -74,12 +72,12 @@ public class ConfigurationUtil {
     try {
       KeyTool keyTool = new KeyTool( );
       KeyPair clusterKp = keyTool.getKeyPair( );
-      X509Certificate clusterX509 = keyTool.getCertificate( clusterKp, EucalyptusProperties.getDName( "cc-" + newComponent.getName( ) ) );
+      X509Certificate clusterX509 = keyTool.getCertificate( clusterKp, CredentialProvider.getDName( "cc-" + newComponent.getName( ) ) );
       keyTool.writePem( directory + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
       keyTool.writePem( directory + File.separator + "cluster-cert.pem", clusterX509 );
   
       KeyPair nodeKp = keyTool.getKeyPair( );
-      X509Certificate nodeX509 = keyTool.getCertificate( nodeKp, EucalyptusProperties.getDName( "nc-" + newComponent.getName( ) ) );
+      X509Certificate nodeX509 = keyTool.getCertificate( nodeKp, CredentialProvider.getDName( "nc-" + newComponent.getName( ) ) );
       keyTool.writePem( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
       keyTool.writePem( directory + File.separator + "node-cert.pem", nodeX509 );
   

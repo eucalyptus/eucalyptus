@@ -72,7 +72,6 @@ import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.EucalyptusProperties;
 import com.eucalyptus.util.SubDirectory;
 
 public class EucaKeyStore extends AbstractKeyStore {

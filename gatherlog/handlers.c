@@ -62,13 +62,19 @@ permission notice:
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <linux/limits.h>
+#ifndef MAX_PATH
+#define MAX_PATH 4096
+#endif
 
 #include <gl-client-marshal.h>
 #include <handlers.h>
 #include <euca_auth.h>
 
+
+
 int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLog, char **outAxis2Log) {
-  char *home, file[1024], *buf;
+  char *home, file[MAX_PATH], *buf;
   int fd, rc, bufsize;
   
   *outCCLog = *outNCLog = *outHTTPDLog = *outAxis2Log = NULL;
@@ -96,7 +102,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
     }
 
     
-    snprintf(file, 1024, "%s/var/log/eucalyptus/cc.log", home);
+    snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/cc.log", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);
@@ -110,7 +116,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
       *outCCLog = NULL;
     }
     
-    snprintf(file, 1024, "%s/var/log/eucalyptus/nc.log", home);
+    snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/nc.log", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);
@@ -125,10 +131,10 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
     }
     
     bzero(buf, bufsize);
-    snprintf(file, 1024, "%s/var/log/eucalyptus/httpd-nc_error_log", home);
+    snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/httpd-nc_error_log", home);
     fd = open(file, O_RDONLY);
     if (fd < 0) {
-      snprintf(file, 1024, "%s/var/log/eucalyptus/httpd-cc_error_log", home);
+      snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/httpd-cc_error_log", home);
       fd = open(file, O_RDONLY);
     }
     if (fd >= 0) {
@@ -143,7 +149,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
     }
     
     bzero(buf, bufsize);
-    snprintf(file, 1024, "%s/var/log/eucalyptus/axis2c.log", home);
+    snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/axis2c.log", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);
@@ -234,7 +240,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
 }
 
 int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
-  char *home, file[1024], *buf;
+  char *home, file[MAX_PATH], *buf;
   int fd, rc, bufsize;
 
   *outCCCert = *outNCCert = NULL;
@@ -262,7 +268,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
       return 1;
     }
     
-    snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/cluster-cert.pem", home);
+    snprintf(file, MAX_PATH, "%s/var/lib/eucalyptus/keys/cluster-cert.pem", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);
@@ -277,7 +283,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
     }
     
     bzero(buf, bufsize);
-    snprintf(file, 1024, "%s/var/lib/eucalyptus/keys/node-cert.pem", home);
+    snprintf(file, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);

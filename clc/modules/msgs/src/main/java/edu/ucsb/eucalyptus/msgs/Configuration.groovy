@@ -79,7 +79,6 @@ public class NodeComponentInfoType extends EucalyptusData {
     this.clusterName = clusterName;
   }
 }
-
 public class ConfigurationMessage extends EucalyptusMessage {
   String getComponentName(){
     String className = this.getClass().getSimpleName();

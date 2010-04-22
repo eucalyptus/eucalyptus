@@ -91,7 +91,6 @@ import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
-import edu.ucsb.eucalyptus.util.Admin;
 import edu.ucsb.eucalyptus.util.XMLParser;
 
 public class WalrusUtil {
@@ -146,7 +145,7 @@ public class WalrusUtil {
 	}
 
 	public static GetBucketAccessControlPolicyResponseType getBucketAcl( RegisterImageType request, String[] imagePathParts ) throws EucalyptusCloudException {
-		GetBucketAccessControlPolicyType getBukkitInfo = Admin.makeMsg( GetBucketAccessControlPolicyType.class, request );
+		GetBucketAccessControlPolicyType getBukkitInfo = new GetBucketAccessControlPolicyType( ).regarding( request );
 		if(getBukkitInfo != null) {
 			getBukkitInfo.setBucket( imagePathParts[ 0 ] );
 			GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) RemoteDispatcher.lookupSingle( Component.walrus ).send( getBukkitInfo );		

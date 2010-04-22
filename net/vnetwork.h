@@ -61,13 +61,18 @@ permission notice:
 #include <stdint.h>
 #include <stdarg.h>
 #include <eucalyptus.h>
+#include <linux/limits.h>
 
 #ifndef INCLUDE_VNETWORK_H
 #define INCLUDE_VNETWORK_H
 
+#ifndef MAX_PATH
+#define MAX_PATH 4096
+#endif
+
 #define NUMBER_OF_VLANS 4096
-#define NUMBER_OF_HOSTS_PER_VLAN 256
-#define NUMBER_OF_PUBLIC_IPS 256
+#define NUMBER_OF_HOSTS_PER_VLAN 2048
+#define NUMBER_OF_PUBLIC_IPS 2048
 #define NUMBER_OF_CCS 8
 
 typedef struct netEntry_t {
@@ -103,9 +108,9 @@ typedef struct tunnelData_t {
 } tunnelData;
 
 typedef struct vnetConfig_t {
-  char eucahome[1024];
-  char path[1024];
-  char dhcpdaemon[1024];
+  char eucahome[MAX_PATH];
+  char path[MAX_PATH];
+  char dhcpdaemon[MAX_PATH];
   char dhcpuser[32];
   char pubInterface[32];
   char privInterface[32];

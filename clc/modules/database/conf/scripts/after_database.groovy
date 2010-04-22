@@ -1,3 +1,4 @@
+import com.eucalyptus.entities.DatabaseUtil;
 import org.hibernate.ejb.*
 import com.eucalyptus.util.*
 import edu.ucsb.eucalyptus.cloud.ws.*;

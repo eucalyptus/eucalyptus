@@ -67,8 +67,8 @@ package com.eucalyptus.cloud.ws;
 
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.dns.TransientZone;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
-import com.eucalyptus.util.EntityWrapper;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -76,7 +76,6 @@ import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.*;
-import org.xbill.DNS.Address;
 
 import java.net.UnknownHostException;
 import java.util.List;
@@ -136,12 +135,12 @@ public class DNSControl {
 			for(ARecordInfo aRecInfo : aRecInfos) {
 				ZoneManager.addRecord(aRecInfo);
 			}
-      try {
-        ZoneManager.registerZone( TransientZone.getExternalName( ), TransientZone.getInstanceExternalZone( ) );
-        ZoneManager.registerZone( TransientZone.getInternalName( ), TransientZone.getInstanceInternalZone( ) );
-      } catch ( Throwable e ) {
-        LOG.debug( e, e );
-      }
+			try {
+				ZoneManager.registerZone( TransientZone.getExternalName( ), TransientZone.getInstanceExternalZone( ) );
+				ZoneManager.registerZone( TransientZone.getInternalName( ), TransientZone.getInstanceInternalZone( ) );
+			} catch ( Throwable e ) {
+				LOG.debug( e, e );
+			}
 			db.commit();
 		} catch(EucalyptusCloudException ex) {		
 			db.rollback();
@@ -170,6 +169,8 @@ public class DNSControl {
 		EntityWrapper<ARecordInfo> db = DNSControl.getEntityWrapper();
 		ARecordInfo aRecordInfo = new ARecordInfo();
 		aRecordInfo.setName(name);
+		aRecordInfo.setAddress(address);
+		aRecordInfo.setZone(zone);
 		List<ARecordInfo> arecords = db.query(aRecordInfo);
 		if(arecords.size() > 0) {
 			aRecordInfo = arecords.get(0);
@@ -211,10 +212,12 @@ public class DNSControl {
 		RemoveARecordResponseType reply = (RemoveARecordResponseType) request.getReply();
 		String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
+		String address = request.getAddress();
 		EntityWrapper<ARecordInfo> db = DNSControl.getEntityWrapper();
 		ARecordInfo aRecordInfo = new ARecordInfo();
 		aRecordInfo.setName(name);
 		aRecordInfo.setZone(zone);
+		aRecordInfo.setAddress(address);
 		try {
 			ARecordInfo foundARecordInfo = db.getUnique(aRecordInfo);
 			ARecord arecord = new ARecord(Name.fromString(name), DClass.IN, foundARecordInfo.getTtl(), Address.getByAddress(foundARecordInfo.getAddress()));
@@ -242,11 +245,13 @@ public class DNSControl {
 		UpdateCNAMERecordResponseType reply = (UpdateCNAMERecordResponseType) request.getReply();
 		String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
-		String alias = request.getAlias();
+		String alias = request.getAlias() + DNSProperties.DOMAIN + ".";
 		long ttl = request.getTtl();
 		EntityWrapper<CNAMERecordInfo> db = DNSControl.getEntityWrapper();
 		CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
 		cnameRecordInfo.setName(name);
+		cnameRecordInfo.setAlias(alias);
+		cnameRecordInfo.setZone(zone);
 		List<CNAMERecordInfo> cnamerecords = db.query(cnameRecordInfo);
 		if(cnamerecords.size() > 0) {
 			cnameRecordInfo = cnamerecords.get(0);
@@ -289,10 +294,12 @@ public class DNSControl {
 		RemoveCNAMERecordResponseType reply = (RemoveCNAMERecordResponseType) request.getReply();
 		String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
+		String alias = request.getAlias() + DNSProperties.DOMAIN + ".";
 		EntityWrapper<CNAMERecordInfo> db = DNSControl.getEntityWrapper();
 		CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
 		cnameRecordInfo.setName(name);
 		cnameRecordInfo.setZone(zone);
+		cnameRecordInfo.setAlias(alias);
 		try {
 			CNAMERecordInfo foundCNAMERecordInfo = db.getUnique(cnameRecordInfo);
 			CNAMERecord cnameRecord = new CNAMERecord(Name.fromString(name), DClass.IN, foundCNAMERecordInfo.getTtl(), Name.fromString(foundCNAMERecordInfo.getAlias()));

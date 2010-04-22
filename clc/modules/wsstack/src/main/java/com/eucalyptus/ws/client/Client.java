@@ -63,7 +63,7 @@
  */
 package com.eucalyptus.ws.client;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public interface Client {
 
@@ -73,9 +73,9 @@ public interface Client {
 
   public String getServicePath( );
 
-  public EucalyptusMessage send( EucalyptusMessage msg ) throws Exception;
+  public BaseMessage send( BaseMessage msg ) throws Exception;
 
-  public void dispatch( EucalyptusMessage msg ) throws Exception;
+  public void dispatch( BaseMessage msg ) throws Exception;
 
   public String getUri( );
 

@@ -77,9 +77,12 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
+import com.eucalyptus.accounts.UserGroupInfo;
+import com.eucalyptus.accounts.UserInfo;
 import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.GenericEvent;
@@ -87,7 +90,6 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.DNSProperties;
-import com.eucalyptus.util.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
@@ -97,9 +99,6 @@ import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.cloud.entities.Counters;
 import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.cloud.entities.UserGroupInfo;
-import edu.ucsb.eucalyptus.cloud.entities.UserInfo;
-import edu.ucsb.eucalyptus.util.EucalyptusProperties;
 import edu.ucsb.eucalyptus.util.UserManagement;
 
 public class EucalyptusManagement {
@@ -486,7 +485,7 @@ public class EucalyptusManagement {
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
 	{
 		EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>();
-		SystemConfiguration sysConf = EucalyptusProperties.getSystemConfiguration();
+		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration();
 		return new SystemConfigWeb( 
 				sysConf.getDefaultKernel(),
 				sysConf.getDefaultRamdisk(),
@@ -596,9 +595,9 @@ public class EucalyptusManagement {
 	public static CloudInfoWeb getCloudInfo (boolean setExternalHostPort) throws SerializableException
 	{
 		String cloudRegisterId = null;
-	    cloudRegisterId = EucalyptusProperties.getSystemConfiguration().getRegistrationId();
+	    cloudRegisterId = SystemConfiguration.getSystemConfiguration().getRegistrationId();
 		CloudInfoWeb cloudInfo = new CloudInfoWeb();
-		cloudInfo.setInternalHostPort (EucalyptusProperties.getInternalIpAddress() + ":8443");
+		cloudInfo.setInternalHostPort (SystemConfiguration.getInternalIpAddress() + ":8443");
 		if (setExternalHostPort) {
 			String ipAddr = getExternalIpAddress();
 			if (ipAddr!=null) {

@@ -81,7 +81,7 @@ permission notice:
 
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   int i, done, rc, j;
-  char *tok, *toka, *path, *helper, file[1024], *save, *savea;
+  char *tok, *toka, *path, *helper, file[MAX_PATH], *save, *savea;
   struct stat statbuf;
 
   for (i=0; i<LASTHELPER; i++) {
@@ -98,7 +98,7 @@ int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
       helper = strdup(helpers[i]);
       toka = strtok_r(helper, ",", &savea);
       while(toka && !done) {
-        snprintf(file, 1024, "%s/%s", tok, toka);
+        snprintf(file, MAX_PATH, "%s/%s", tok, toka);
         rc = stat(file, &statbuf);
         if (rc) {
         } else {
@@ -149,7 +149,7 @@ int timelog=0; /* change to 1 for TIMELOG entries */
 int logging=0;
 int loglevel=EUCADEBUG;
 FILE *LOGFH=NULL;
-char logFile[1024];
+char logFile[MAX_PATH];
 
 int param_check(char *func, ...) {
   int fail;
@@ -249,11 +249,11 @@ int param_check(char *func, ...) {
 }
 
 int check_process(pid_t pid, char *search) {
-  char file[1024], buf[1024];
+  char file[MAX_PATH], buf[1024];
   FILE *FH=NULL;
   int rc, ret=0;
 
-  snprintf(file, 1024, "/proc/%d/cmdline", pid);
+  snprintf(file, MAX_PATH, "/proc/%d/cmdline", pid);
   rc = check_file(file);
   if (!rc) {
     // cmdline exists
@@ -477,7 +477,7 @@ char * system_output (char * shell_command )
 }
 
 
-char *getConfString(char configFiles[][1024], int numFiles, char *key) {
+char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key) {
   int rc, i, done;
   char *tmpstr=NULL;
 
@@ -524,8 +524,8 @@ get_conf_var(	const char *path,
 	}
 
 	len = strlen(name);
-	buf = malloc(sizeof(char) * 4096);
-	while (fgets(buf, 4096, f)) {
+	buf = malloc(sizeof(char) * 32768);
+	while (fgets(buf, 32768, f)) {
 		/* the process here is fairly simple: spaces are not
 		 * considered (unless between "") so we remove them
 		 * before every step. We look for the variable *name*
@@ -671,7 +671,7 @@ int logfile(char *file, int in_loglevel) {
       fclose(LOGFH);
     }
     
-    snprintf(logFile, 1024, "%s", file);
+    snprintf(logFile, MAX_PATH, "%s", file);
     LOGFH = fopen(file, "a");
     if (LOGFH) {
       logging=1;
@@ -754,17 +754,17 @@ int logprintfl(int level, const char *format, ...) {
       rc = fstat(fd, &statbuf);
       if (!rc && ((int)statbuf.st_size > MAXLOGFILESIZE)) {
 	int i;
-	char oldFile[1024], newFile[1024];
+	char oldFile[MAX_PATH], newFile[MAX_PATH];
 	
 	rc = stat(logFile, &statbuf);
 	if (!rc && ((int)statbuf.st_size > MAXLOGFILESIZE)) {
 	  for (i=4; i>=0; i--) {
-	    snprintf(oldFile, 1024, "%s.%d", logFile, i);
-	    snprintf(newFile, 1024, "%s.%d", logFile, i+1);
+	    snprintf(oldFile, MAX_PATH, "%s.%d", logFile, i);
+	    snprintf(newFile, MAX_PATH, "%s.%d", logFile, i+1);
 	    rename(oldFile, newFile);
 	  }
-	  snprintf(oldFile, 1024, "%s", logFile);
-	  snprintf(newFile, 1024, "%s.%d", logFile, 0);
+	  snprintf(oldFile, MAX_PATH, "%s", logFile);
+	  snprintf(newFile, MAX_PATH, "%s.%d", logFile, 0);
 	  rename(oldFile, newFile);
 	}
 	fclose(LOGFH);
@@ -838,7 +838,7 @@ char * get_string_stats (const char * s)
    kill and then re-daemonize */
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap) {
   int rc, found, ret;
-  char cmdstr[1024], file[1024];
+  char cmdstr[MAX_PATH], file[MAX_PATH];
   FILE *FH;
   
   if (!cmd || !procname) {
@@ -853,11 +853,11 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
       // pidfile exists
       pidstr = file2str(pidfile);
       if (pidstr) {
-	snprintf(file, 1024, "/proc/%s/cmdline", pidstr);
+	snprintf(file, MAX_PATH, "/proc/%s/cmdline", pidstr);
 	if (!check_file(file)) {
 	  FH = fopen(file, "r");
 	  if (FH) {
-	    if (fgets(cmdstr, 1024, FH)) {
+	    if (fgets(cmdstr, MAX_PATH, FH)) {
 	      if (strstr(cmdstr, procname)) {
 		// process is running, and is indeed procname
 		found=1;
@@ -967,12 +967,12 @@ int daemonrun(char *incmd, char *pidfile) {
 /* given printf-style arguments, run the resulting string in the shell */
 int vrun (const char * fmt, ...)
 {
-	char buf [BUFSIZE];
+	char buf [MAX_PATH];
 	int e;
 	
 	va_list ap;
     va_start (ap, fmt);
-	vsnprintf (buf, BUFSIZE, fmt, ap);
+	vsnprintf (buf, MAX_PATH, fmt, ap);
 	va_end (ap);
 	
     logprintfl (EUCAINFO, "vrun(): [%s]\n", buf);
@@ -1103,8 +1103,8 @@ long long dir_size (const char * path)
             break;
         }
         
-        char filepath [BUFSIZE];
-        snprintf (filepath, BUFSIZE, "%s/%s", path, name);
+        char filepath [MAX_PATH];
+        snprintf (filepath, MAX_PATH, "%s/%s", path, name);
         if (stat (filepath, &mystat) < 0 ) {
             logprintfl (EUCAWARN, "warning: could not stat file %s\n", filepath);
             size = -1;
@@ -1254,7 +1254,7 @@ int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap) {
 }
 
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap) {
-  char cmdstr[1024], file[1024], cmd[1024];
+  char cmdstr[MAX_PATH], file[MAX_PATH], cmd[MAX_PATH];
   FILE *FH;
   int ret;
 
@@ -1262,14 +1262,14 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap) {
     return(1);
   }
   
-  snprintf(file, 1024, "/proc/%d/cmdline", pid);
+  snprintf(file, MAX_PATH, "/proc/%d/cmdline", pid);
   if (check_file(file)) {
     return(1);
   }
 
   FH = fopen(file, "r");
   if (FH) {
-    if (!fgets(cmdstr, 1024, FH)) {
+    if (!fgets(cmdstr, MAX_PATH, FH)) {
       fclose(FH);
       return(1);
     }
@@ -1284,7 +1284,7 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap) {
   if (strstr(cmdstr, procname)) {
     // passed in cmd matches running cmd
     if (rootwrap) {
-      snprintf(cmd, 1024, "%s kill -%d %d", rootwrap, sig, pid);
+      snprintf(cmd, MAX_PATH, "%s kill -%d %d", rootwrap, sig, pid);
       ret = system(cmd)>>8;
     } else {
       ret = kill(pid, sig);

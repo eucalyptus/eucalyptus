@@ -10,6 +10,7 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -23,6 +24,7 @@ import com.eucalyptus.ws.MappingHttpRequest;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.util.Messaging;
 
+@ChannelPipelineCoverage( "one" )
 public class MetadataPipeline extends FilteredPipeline implements UnrollableStage, ChannelUpstreamHandler {
   private static Logger LOG = Logger.getLogger( MetadataPipeline.class );
   @Override
