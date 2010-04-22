@@ -209,7 +209,9 @@ check_java() {
 }
 
 do_start() {
-	local CLOUD_OPTS=""
+	if [ -z "$CLOUD_OPTS" ]; then
+		local CLOUD_OPTS="--log-level=TRACE"
+	fi
 
 	# basic checks
 	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then

@@ -13,6 +13,7 @@ option "exhaustive"       x   "Exhaustive connection information for internal, c
 option "exhaustive-db"       -   "Individually enable exhaustive connection information for database connections." flag off
 option "exhaustive-user"       -   "Individually enable exhaustive connection information for client connections." flag off
 option "exhaustive-cc"       -   "Individually enable exhaustive connection information for client connections." flag off
+option "exhaustive-external"       -   "Individually enable exhaustive logging for external libraries." flag off
 option "log-appender"       L   "Control the destination for console output."   string  typestr="log4j-appender-name"  default="console-log" no
 option "out"       o   "Redirect standard out to file."   string  typestr="filename"  default="&1" no
 option "err"       e   "Redirect standard error to file."   string  typestr="filename"  default="&2" no

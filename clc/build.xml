@@ -181,11 +181,19 @@
     <copy todir="${DESTDIR}${euca.lib.dir}">
       <fileset dir="${basedir}/target">
         <include name="**/*.jar"/>
+		<exclude name="**/gwt-api-checker.jar"/>
+		<exclude name="**/gwt-dev.jar"/>
+		<exclude name="**/gwt-soyc-vis.jar"/>
+		<exclude name="**/gwt-user.jar"/>
       </fileset>
     </copy>
     <copy todir="${DESTDIR}${euca.lib.dir}">
       <fileset dir="${deps.lib.dir}">
         <include name="**/*"/>
+		<exclude name="**/gwt-api-checker.jar"/>
+		<exclude name="**/gwt-dev.jar"/>
+		<exclude name="**/gwt-soyc-vis.jar"/>
+		<exclude name="**/gwt-user.jar"/>
       </fileset>
     </copy>
     <mkdir dir="${DESTDIR}${euca.conf.dir}"/>

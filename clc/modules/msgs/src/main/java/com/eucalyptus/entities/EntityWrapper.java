@@ -67,23 +67,19 @@
 package com.eucalyptus.entities;
 
 import java.util.List;
-
 import javax.persistence.EntityManager;
-
+import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.exception.JDBCConnectionException;
-
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.ExceptionNotRelatedException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class EntityWrapper<TYPE> {
@@ -93,6 +89,16 @@ public class EntityWrapper<TYPE> {
   private static final boolean TRACE = "TRACE".equals( System.getProperty( "euca.log.exhaustive.db" ) );
   public EntityWrapper( ) {
     this( "eucalyptus_general" );
+  }
+  
+  public static <T> EntityWrapper<T> get( Class<T> type ) {
+    if( !type.isAnnotationPresent( PersistenceContext.class ) ) {
+      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
+    }
+    return new EntityWrapper<T>( type.getAnnotation( PersistenceContext.class ).name( ) );    
+  }
+  public static <T> EntityWrapper<T> get( T obj ) {
+    return get( (Class<T>) obj.getClass( ) );
   }
 
   @SuppressWarnings( "unchecked" )
@@ -136,10 +142,9 @@ public class EntityWrapper<TYPE> {
 
   @SuppressWarnings( "unchecked" )
   private void exceptionCaught( Throwable e ) {
-    Throwable cause = DebugUtil.checkForCauseOfInterest( e, JDBCConnectionException.class, IllegalStateException.class );
-    if ( !( cause instanceof ExceptionNotRelatedException ) ) {
-      LOG.error( cause, cause );
-      DatabaseUtil.handleConnectionError( cause );
+    if( e instanceof JDBCConnectionException || e instanceof IllegalStateException ) {
+      LOG.error( e, e );
+      PersistenceContexts.handleConnectionError( e );
     }
   }
 
@@ -226,7 +231,7 @@ public class EntityWrapper<TYPE> {
       return this.name( ) + ":END";
     }
     public String getMessage( ) {
-      if( DebugUtil.TRACE ) {
+      if( LogLevels.TRACE ) {
         return EntityWrapper.getMyStackTraceElement( ).toString( );
       } else {
         return "n.a";

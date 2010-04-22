@@ -60,6 +60,8 @@
 *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.client;
 
+import java.util.ArrayList;
+
 import com.google.gwt.user.client.rpc.IsSerializable;
 
 public class WalrusInfoWeb implements IsSerializable {
@@ -67,31 +69,19 @@ public class WalrusInfoWeb implements IsSerializable {
 	private String host;
 	private Integer port;
 	private Boolean committed;
-    private String bucketsRootDirectory;
-    private Integer maxBucketsPerUser;
-    private Long maxBucketSizeInMB;
-    private Long maxCacheSizeInMB;
-    private Integer snapshotsTotalInGB;
+	private ArrayList<String> properties = new ArrayList<String>();
 
 	public WalrusInfoWeb() {}
 
 	public WalrusInfoWeb( final String name,
 			final String host,
 			final Integer port,
-            final String bucketsRootDirectory,
-            final Integer maxBucketsPerUser,
-            final Long maxBucketSizeInMB,
-            final Long maxCacheSizeInMB,
-            final Integer snapshotsTotalInGB) {
+			final ArrayList<String> properties) {
 		this.name = name;
 		this.host = host;
 		this.port = port;
 		this.committed = false;
-        this.bucketsRootDirectory = bucketsRootDirectory;
-        this.maxBucketsPerUser = maxBucketsPerUser;
-        this.maxBucketSizeInMB = maxBucketSizeInMB;
-        this.maxCacheSizeInMB = maxCacheSizeInMB;
-        this.snapshotsTotalInGB = snapshotsTotalInGB;
+        this.properties = properties;
 	}
 
 
@@ -129,55 +119,13 @@ public class WalrusInfoWeb implements IsSerializable {
 		this.port = port;
 	}
 
-	public String getBucketsRootDirectory()
-    {
-        return bucketsRootDirectory;
-    }
+	public ArrayList<String> getProperties() {
+		return properties;
+	}
 
-    public void setBucketsRootDirectory( final String bucketsRootDirectory )
-    {
-        this.bucketsRootDirectory = bucketsRootDirectory;
-    }
-
-    public Long getMaxBucketSizeInMB()
-    {
-        return maxBucketSizeInMB;
-    }
-
-    public void setMaxBucketSizeInMB( final Long maxBucketSizeInMB )
-    {
-        this.maxBucketSizeInMB = maxBucketSizeInMB;
-    }
-
-    public Integer getMaxBucketsPerUser()
-    {
-        return maxBucketsPerUser;
-    }
-
-    public void setMaxBucketsPerUser( final Integer maxBucketsPerUser )
-    {
-        this.maxBucketsPerUser = maxBucketsPerUser;
-    }
-
-    public Long getMaxCacheSizeInMB()
-    {
-        return maxCacheSizeInMB;
-    }
-
-    public void setMaxCacheSizeInMB( final Long maxCacheSizeInMB )
-    {
-        this.maxCacheSizeInMB = maxCacheSizeInMB;
-    }
-
-    public Integer getSnapshotsTotalInGB()
-    {
-        return snapshotsTotalInGB;
-    }
-
-    public void setSnapshotsTotalInGB( final Integer snapshotsTotalInGB )
-    {
-        this.snapshotsTotalInGB = snapshotsTotalInGB;
-    }
+	public void setProperties(ArrayList<String> properties) {
+		this.properties = properties;
+	}
 
 	@Override
 	public boolean equals( final Object o )

@@ -79,17 +79,20 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.AddObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.AddObjectType;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
@@ -118,7 +121,7 @@ public class WalrusBucketLogger {
 			public void run() {
 				if(logData.size() > LOG_THRESHOLD) {
 					//dispatch
-					ServiceDispatcher dispatcher = ServiceDispatcher.lookupSingle(Component.walrus);
+					Dispatcher dispatcher = ServiceDispatcher.lookupSingle(Component.walrus);
 					List<BucketLogData> data = new ArrayList<BucketLogData>();
 					logData.drainTo(data);
 					for(BucketLogData entry : data) {
@@ -131,7 +134,7 @@ public class WalrusBucketLogger {
 							//check if bucket exists, if not create it.
 							try {
 								String logFileName = "logentry-" + uuid;
-								FileChannel channel = new FileOutputStream(new File(WalrusProperties.bucketRootDirectory + 
+								FileChannel channel = new FileOutputStream(new File(WalrusInfo.getWalrusInfo().getStorageDir() + 
 										"/" + bucket + "/" + logFileName)).getChannel();
 								logFileMap.put(bucket, new LogFileEntry(logFileName, channel));
 							} catch (FileNotFoundException e) {
@@ -144,7 +147,7 @@ public class WalrusBucketLogger {
 							String logString = entry.toFormattedString();
 							logChannel.write(ByteBuffer.wrap(logString.getBytes()), logChannel.size());
 
-							MessageDigest digest = Hashes.Digest.MD5.get();
+							MessageDigest digest = Digest.MD5.get();
 							digest.update(logString.getBytes());
 							String etag = Hashes.bytesToHex(digest.digest());
 
@@ -157,7 +160,7 @@ public class WalrusBucketLogger {
 							request.setEtag(etag);
 							String ownerId = entry.getOwnerId();
 							try {
-								User userInfo = CredentialProvider.getUser(ownerId);
+								User userInfo = Users.lookupUser(ownerId);
 								ArrayList<Grant> grants = new ArrayList<Grant>();
 								grants.add(new Grant(new Grantee(new CanonicalUserType(userInfo.getQueryId(), ownerId)), 
 										"FULL_CONTROL"));

@@ -9,9 +9,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

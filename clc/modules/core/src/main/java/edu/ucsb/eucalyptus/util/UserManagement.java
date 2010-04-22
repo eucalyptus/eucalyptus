@@ -66,85 +66,21 @@
  */
 package edu.ucsb.eucalyptus.util;
 
-import java.security.NoSuchAlgorithmException;
-
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.accounts.UserInfo;
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.NetworkRulesGroup;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.SubDirectory;
 import com.eucalyptus.util.WalrusProperties;
 
 
 public class UserManagement {
 
-  private static Logger LOG     = Logger.getLogger( UserManagement.class );
-  private static String keyPath = SubDirectory.KEYS.toString( );
-
-  public static UserInfo generateAdmin( ) {
-    UserInfo admin = new UserInfo( "admin" );
-    admin.setUserName( admin.getUserName( ) );
-    admin.setEmail( "" );
-    admin.setRealName( "" );
-    admin.setTelephoneNumber( "" );
-
-    admin.setAffiliation( "" );
-    admin.setProjectDescription( "" );
-    admin.setProjectPIName( "" );
-
-    admin.setPasswordExpires( 0L ); /* must be changed upon login */
-    try {
-      admin.setBCryptedPassword( Hashes.hashPassword( admin.getUserName( ) ) );
-    } catch ( NoSuchAlgorithmException e ) {
-    }
-
-    admin.setConfirmationCode( UserManagement.generateConfirmationCode( admin.getUserName( ) ) );
-    admin.setCertificateCode( UserManagement.generateCertificateCode( admin.getUserName( ) ) );
-
-    admin.setReservationId( 0l );
-
-    admin.setIsApproved( true );
-    admin.setIsConfirmed( true );
-    admin.setIsEnabled( true );
-    admin.setIsAdministrator( true );
-
-    return admin;
-  }
-
-  public static String generateConfirmationCode( String userName ) {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll("\\p{Punct}", "" );
-  }
-
-  public static String generateCertificateCode( String userName ) {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA512, true ).replaceAll("\\p{Punct}", "" );
-  }
-
-  public static String generateSecretKey( String userName ) {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.SHA224, true ).replaceAll("\\p{Punct}", "" );
-  }
-
-  public static String generateQueryId( String userName ) {
-    return Hashes.getDigestBase64( userName, Hashes.Digest.MD5, false ).replaceAll("\\p{Punct}", "" );
-  }
-
+  /**
+   * TODO: REMOVE THIS METHOD
+   * @param userId
+   * @return
+   * boolean
+   */
   public static boolean isAdministrator( String userId ) {
     if ( Component.eucalyptus.name( ).equals( userId ) || WalrusProperties.ADMIN.equals( userId ) ) return true;
     return false;
   }
 
-  public static String getUserName( String queryId ) {
-    EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>( );
-    UserInfo userInfo = new UserInfo( );
-    try {
-      UserInfo foundUserInfo = db.getUnique( userInfo );
-      return foundUserInfo.getUserName( );
-    } catch ( EucalyptusCloudException ex ) {
-      LOG.warn( ex, ex );
-    }
-    return null;
-  }
 }

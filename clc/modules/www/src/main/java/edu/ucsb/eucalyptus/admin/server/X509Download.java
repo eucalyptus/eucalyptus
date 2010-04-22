@@ -76,13 +76,16 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.UrlBase64;
-import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.auth.UserEntity;
+import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.crypto.Certs;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.B64;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
-import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class X509Download extends HttpServlet {
@@ -110,14 +113,14 @@ public class X509Download extends HttpServlet {
       return;
     }
     
-    UserInfoWeb user = null;
+    User user = null;
     try {
-      user = EucalyptusManagement.getWebUser( userName );
+      user = Users.lookupUser( userName );
     } catch ( Exception e ) {
       hasError( "User does not exist", response );
       return;
     }
-    if ( !user.getCertificateCode( ).equals( code ) ) {
+    if ( !user.getToken( ).equals( code ) ) {
       hasError( "Confirmation code is invalid", response );
       return;
     }
@@ -135,7 +138,7 @@ public class X509Download extends HttpServlet {
       op.write( x509zip );
       op.flush( );
       
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       LOG.error( e, e );
     }
   }
@@ -151,35 +154,39 @@ public class X509Download extends HttpServlet {
   
   public static byte[] getX509Zip( String userName, String newKeyName ) throws Exception {
     X509Certificate cloudCert = null;
-    X509Certificate x509 = null;
+    final X509Certificate x509;
+    User u = Users.lookupUser( userName );
+    String userAccessKey = u.getQueryId( );
+    String userSecretKey = u.getSecretKey( );
     KeyPair keyPair = null;
     try {
-      KeyTool keyTool = new KeyTool( );
-      keyPair = keyTool.getKeyPair( );
-      x509 = keyTool.getCertificate( keyPair, CredentialProvider.getDName( userName ) );
+      keyPair = Certs.generateKeyPair( );
+      x509 = Certs.generateCertificate( keyPair, userName );
       x509.checkValidity( );
-      CredentialProvider.addCertificate( userName, newKeyName, x509 );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
+      u.revokeX509Certificate( );
+      u.setX509Certificate( x509 );
+      //      Transactions.one( new UserEntity( userName ), new Tx<UserEntity>() {
+      //        public void fire( UserEntity user ) throws Throwable {
+      //          user.revokeX509Certificate( );
+      //          user.setCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
+      //        }});
+      User now = Users.lookupUser( userName );
+      LOG.info( "Current user certificate: " + now.getX509Certificate( ) != null ? now.getX509Certificate( ).getSerialNumber( ) : null );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
     }
-    
-    String certPem = new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) );
-    
-    String userAccessKey = CredentialProvider.getQueryId( userName );
-    String userSecretKey = CredentialProvider.getSecretKey( userAccessKey );
-    
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );
-    String fingerPrint = Hashes.getFingerPrint( keyPair.getPublic( ) );
+    String fingerPrint = Certs.getFingerPrint( keyPair.getPublic( ) );
     if ( fingerPrint != null ) {
       String baseName = X509Download.NAME_SHORT + "-" + userName + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
       
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
       StringBuffer sb = new StringBuffer( );
       
-      String userNumber = CredentialProvider.getUserNumber( userName );
+      String userNumber = Users.lookupUser( userName ).getNumber( ).toString( );
       
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
       
@@ -206,7 +213,7 @@ public class X509Download extends HttpServlet {
       
       /** write the private key to the zip stream **/
       zipOut.putNextEntry( new ZipEntry( "cloud-cert.pem" ) );
-      zipOut.write( Hashes.getPemBytes( cloudCert ) );
+      zipOut.write( PEMFiles.getBytes( cloudCert ) );
       zipOut.closeEntry( );
       
       zipOut.putNextEntry( new ZipEntry( "jssecacerts" ) );
@@ -220,12 +227,12 @@ public class X509Download extends HttpServlet {
       
       /** write the private key to the zip stream **/
       zipOut.putNextEntry( new ZipEntry( baseName + "-pk.pem" ) );
-      zipOut.write( Hashes.getPemBytes( keyPair.getPrivate( ) ) );
+      zipOut.write( PEMFiles.getBytes( keyPair.getPrivate( ) ) );
       zipOut.closeEntry( );
       
       /** write the X509 certificate to the zip stream **/
       zipOut.putNextEntry( new ZipEntry( baseName + "-cert.pem" ) );
-      zipOut.write( Hashes.getPemBytes( x509 ) );
+      zipOut.write( PEMFiles.getBytes( x509 ) );
       zipOut.closeEntry( );
     }
     /** close the zip output stream and return the bytes **/

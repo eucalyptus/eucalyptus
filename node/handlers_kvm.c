@@ -202,7 +202,7 @@ doRunInstance (	struct nc_state_t *nc,
     pthread_attr_init(attr);
     pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
 
-    if ( pthread_create (&(instance->tcb), NULL, startup_thread, (void *)instance) ) {
+    if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
         pthread_attr_destroy(attr);
         logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
         sem_p (inst_sem);
@@ -292,6 +292,10 @@ doRebootInstance(	struct nc_state_t *nc,
     if ( pthread_create (&tcb, NULL, rebooting_thread, (void *)instance) ) {
         logprintfl (EUCAFATAL, "failed to spawn a reboot thread\n");
         return ERROR_FATAL;
+    }
+    if (pthread_detach(tcb)) {
+      logprintfl(EUCAFATAL, "failed to detach the monitoring thread\n");
+      return ERROR_FATAL;
     }
     
     return OK;

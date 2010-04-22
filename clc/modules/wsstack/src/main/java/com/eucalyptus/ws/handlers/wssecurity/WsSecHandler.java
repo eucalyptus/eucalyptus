@@ -65,7 +65,6 @@ package com.eucalyptus.ws.handlers.wssecurity;
 
 import java.util.Collection;
 import java.util.Vector;
-
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMException;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
@@ -84,10 +83,8 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
-import com.eucalyptus.auth.Credentials;
-import com.eucalyptus.util.HoldMe;
-import com.eucalyptus.ws.MappingHttpMessage;
+import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.util.CredentialProxy;
 
@@ -95,9 +92,6 @@ import com.eucalyptus.ws.util.CredentialProxy;
 public abstract class WsSecHandler extends MessageStackHandler {
   private static Logger         LOG    = Logger.getLogger( WsSecHandler.class );
   private final CredentialProxy credentials;
-  static {
-    Credentials.init( );
-  }
 
   public WsSecHandler( final CredentialProxy credentials ) {
     this.credentials = credentials;

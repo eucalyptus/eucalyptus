@@ -85,12 +85,12 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -119,6 +119,7 @@ import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.TorrentInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
@@ -195,7 +196,6 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 
-@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger(WalrusManager.class);
 
@@ -203,7 +203,7 @@ public class WalrusManager {
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = null;
 
-	public static void deferredInitializer() {
+	public static void configure() {
 		walrusStatistics = new WalrusStatistics();
 	}
 
@@ -218,17 +218,17 @@ public class WalrusManager {
 	}
 
 	public void check() throws EucalyptusCloudException {
-		File bukkitDir = new File(WalrusProperties.bucketRootDirectory);
+		File bukkitDir = new File(WalrusInfo.getWalrusInfo().getStorageDir());
 		if (!bukkitDir.exists()) {
 			if (!bukkitDir.mkdirs()) {
 				LOG.fatal("Unable to make bucket root directory: "
-						+ WalrusProperties.bucketRootDirectory);
+						+ WalrusInfo.getWalrusInfo().getStorageDir());
 				throw new EucalyptusCloudException(
 				"Invalid bucket root directory");
 			}
 		} else if (!bukkitDir.canWrite()) {
 			LOG.fatal("Cannot write to bucket root directory: "
-					+ WalrusProperties.bucketRootDirectory);
+					+ WalrusInfo.getWalrusInfo().getStorageDir());
 			throw new EucalyptusCloudException("Invalid bucket root directory");
 		}
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
@@ -278,8 +278,8 @@ public class WalrusManager {
 							+ ".000Z"));
 		}
 		try {
-			CanonicalUserType owner = new CanonicalUserType(CredentialProvider
-					.getQueryId(userId), userId);
+			CanonicalUserType owner = new CanonicalUserType(Users
+					.lookupUser(userId).getQueryId(), userId);
 			ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
 			reply.setOwner(owner);
 			bucketList.setBuckets(buckets);
@@ -322,7 +322,7 @@ public class WalrusManager {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(userId);
 			List<BucketInfo> bucketList = db.query(searchBucket);
-			if (bucketList.size() >= WalrusProperties.MAX_BUCKETS_PER_USER) {
+			if (bucketList.size() >= WalrusInfo.getWalrusInfo().getStorageMaxBucketsPerUser()) {
 				db.rollback();
 				throw new TooManyBucketsException(bucketName);
 			}
@@ -459,7 +459,7 @@ public class WalrusManager {
 						searchObject.setDeleted(false);
 						List<ObjectInfo> objectInfos = dbObject.query(searchObject);
 						if (objectInfos.size() == 0) {
-							// asychronously flush any images in this bucket
+							//check if the bucket contains any images
 							EntityWrapper<ImageCacheInfo> dbIC = db
 							.recast(ImageCacheInfo.class);
 							ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
@@ -468,10 +468,8 @@ public class WalrusManager {
 							.query(searchImageCacheInfo);
 
 							if (foundImageCacheInfos.size() > 0) {
-								ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos
-								.get(0);
-								walrusImageManager.startImageCacheFlusher(bucketName,
-										foundImageCacheInfo.getManifestName());
+								db.rollback();
+								throw new BucketNotEmptyException(bucketName, logData);
 							}
 
 							db.delete(bucketFound);
@@ -497,6 +495,7 @@ public class WalrusManager {
 									walrusUri = new URI(SystemConfiguration.getWalrusUrl());
 									address = walrusUri.getHost();
 								} catch (URISyntaxException e) {
+									db.rollback();
 									throw new EucalyptusCloudException("Could not get Walrus URL");
 								}
 								removeARecordType.setAddress(address);
@@ -568,8 +567,7 @@ public class WalrusManager {
 					String uId = grantInfo.getUserId();
 					try {
 						if (uId != null) {
-							User grantUserInfo = CredentialProvider
-							.getUser(uId);
+							User grantUserInfo = Users.lookupUser(uId);
 							addPermission(grants, grantUserInfo, grantInfo);
 						} else {
 							addPermission(grants, grantInfo);
@@ -589,9 +587,9 @@ public class WalrusManager {
 
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
-			User ownerUserInfo = CredentialProvider.getUser(ownerId);
+			User ownerUserInfo = Users.lookupUser(ownerId);
 			accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo
-					.getQueryId(), ownerUserInfo.getUserName()));
+					.getQueryId(), ownerUserInfo.getName()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (NoSuchUserException e) {
 			db.rollback();
@@ -605,7 +603,7 @@ public class WalrusManager {
 	private static void addPermission(ArrayList<Grant> grants, User userInfo,
 			GrantInfo grantInfo) {
 		CanonicalUserType user = new CanonicalUserType(userInfo.getQueryId(),
-				userInfo.getUserName());
+				userInfo.getName());
 
 		if (grantInfo.canRead() && grantInfo.canWrite()
 				&& grantInfo.canReadACP() && grantInfo.isWriteACP()) {
@@ -771,7 +769,7 @@ public class WalrusManager {
 								if (WalrusDataMessage.isStart(dataMessage)) {
 									tempObjectName = objectName + "."
 									+ Hashes.getRandom(12);
-									digest = Hashes.Digest.MD5.get();
+									digest = Digest.MD5.get();
 									try {
 										fileIO = storageManager.prepareForWrite(
 												bucketName, tempObjectName);
@@ -811,7 +809,7 @@ public class WalrusManager {
 											foundObject.setGrants(grantInfos);
 										}
 										if (WalrusProperties.enableTorrents) {
-											EntityWrapper<TorrentInfo> dbTorrent = db
+											EntityWrapper<TorrentInfo> dbTorrent = dbObject
 											.recast(TorrentInfo.class);
 											TorrentInfo torrentInfo = new TorrentInfo(bucketName,
 													objectKey);
@@ -856,7 +854,7 @@ public class WalrusManager {
 										Long bucketSize = bucket.getBucketSize();
 										long newSize = bucketSize + oldBucketSize
 										+ size;
-										if (newSize > WalrusProperties.MAX_BUCKET_SIZE) {
+										if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
 											messenger.removeQueue(key, randomKey);
 											dbObject.rollback();
 											throw new EntityTooLargeException(
@@ -887,6 +885,7 @@ public class WalrusManager {
 										monitor.setMd5(md5);
 										monitor.notifyAll();
 									}
+									messenger.removeMonitor(key);
 									messenger.removeQueue(key, randomKey);
 									LOG.info("Transfer complete: " + key);
 									break;
@@ -1090,7 +1089,7 @@ public class WalrusManager {
 								db.rollback();
 								throw new EucalyptusCloudException(ex);
 							}
-							md5 = Hashes.getHexString(Hashes.Digest.MD5.get().digest(
+							md5 = Hashes.getHexString(Digest.MD5.get().digest(
 									base64Data));
 							foundObject.setEtag(md5);
 							Long size = (long) base64Data.length;
@@ -1099,7 +1098,7 @@ public class WalrusManager {
 									&& !request.isAdministrator()) {
 								Long bucketSize = bucket.getBucketSize();
 								long newSize = bucketSize + oldBucketSize + size;
-								if (newSize > WalrusProperties.MAX_BUCKET_SIZE) {
+								if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
 									db.rollback();
 									throw new EntityTooLargeException("Key", objectKey,
 											logData);
@@ -1455,8 +1454,7 @@ public class WalrusManager {
 								listEntry.setStorageClass(objectInfo.getStorageClass());
 								String displayName = objectInfo.getOwnerId();
 								try {
-									User userInfo = CredentialProvider
-									.getUser(displayName);
+									User userInfo = Users.lookupUser(displayName);
 									listEntry.setOwner(new CanonicalUserType(userInfo
 											.getQueryId(), displayName));
 								} catch (NoSuchUserException e) {
@@ -1472,7 +1470,7 @@ public class WalrusManager {
 								contents.add(listEntry);
 							}
 							reply.setContents(contents);
-							if (prefix != null) {
+							if (prefixes.size() > 0) {
 								reply.setCommonPrefixes(prefixes);
 							}
 						}
@@ -1535,7 +1533,7 @@ public class WalrusManager {
 							for (GrantInfo grantInfo : grantInfos) {
 								String uId = grantInfo.getUserId();
 								try {
-									User userInfo = CredentialProvider.getUser(uId);
+									User userInfo = Users.lookupUser(uId);
 									objectInfo.readPermissions(grants);
 									addPermission(grants, userInfo, grantInfo);
 								} catch (NoSuchUserException e) {
@@ -1559,9 +1557,9 @@ public class WalrusManager {
 
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
-			User ownerUserInfo = CredentialProvider.getUser(ownerId);
+			User ownerUserInfo = Users.lookupUser(ownerId);
 			accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo
-					.getQueryId(), ownerUserInfo.getUserName()));
+					.getQueryId(), ownerUserInfo.getName()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (NoSuchUserException e) {
 			throw new AccessDeniedException("Key", objectKey, logData);
@@ -2566,8 +2564,7 @@ public class WalrusManager {
 						String uId = grantInfo.getUserId();
 						try {
 							if (uId != null) {
-								User grantUserInfo = CredentialProvider
-								.getUser(uId);
+								User grantUserInfo = Users.lookupUser(uId);
 								addPermission(grants, grantUserInfo, grantInfo);
 							} else {
 								addPermission(grants, grantInfo);
@@ -2800,8 +2797,7 @@ public class WalrusManager {
 											+ ".000Z");
 									String displayName = objectInfo.getOwnerId();
 									try {
-										User userInfo = CredentialProvider
-										.getUser(displayName);
+										User userInfo = Users.lookupUser(displayName);
 										versionEntry.setOwner(new CanonicalUserType(
 												userInfo.getQueryId(), displayName));
 									} catch (NoSuchUserException e) {
@@ -2825,8 +2821,7 @@ public class WalrusManager {
 											+ ".000Z");
 									String displayName = objectInfo.getOwnerId();
 									try {
-										User userInfo = CredentialProvider
-										.getUser(displayName);
+										User userInfo = Users.lookupUser(displayName);
 										deleteMarkerEntry
 										.setOwner(new CanonicalUserType(
 												userInfo.getQueryId(),

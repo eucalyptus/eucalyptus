@@ -57,8 +57,7 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
+ *******************************************************************************
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.auth
@@ -66,10 +65,13 @@ package com.eucalyptus.auth
 import java.io.Serializable;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.bouncycastle.util.encoders.UrlBase64;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Transient;
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.GenericGenerator
@@ -92,43 +94,102 @@ import javax.persistence.Version;
 import javax.persistence.PersistenceContext;
 
 import org.hibernate.sql.Alias
+import org.apache.log4j.Logger
 
-import com.eucalyptus.auth.util.Hashes;
+import com.google.common.collect.Lists;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.B64;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @PersistenceContext(name="eucalyptus_auth")
 @Table( name = "auth_users" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class User extends AbstractPersistent implements Serializable {
+public class UserEntity extends AbstractPersistent implements Serializable, User {
+  @Transient
+  private static Logger LOG = Logger.getLogger( UserEntity.class );
   @Column( name = "auth_user_name", unique=true )
-  String userName
+  String name;
   @Column( name = "auth_user_query_id" )
-  String queryId
+  String queryId;
   @Column( name = "auth_user_secretkey" )
-  String secretKey
+  String secretKey;
+  @Column( name = "auth_user_password" )
+  String password;
   @Column( name = "auth_user_is_admin" )
-  Boolean isAdministrator
+  Boolean administrator;
   @Column( name = "auth_user_is_enabled" )
-  Boolean isEnabled;
+  Boolean enabled;
+  @Column( name = "auth_user_token" )
+  String  token;
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
   @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   List<X509Cert> certificates = []
-  public User(){
+  
+  public UserEntity(){
   }
-  public User( String userName ){
-    this.userName = userName
+  
+  public User getDelegate( ) {
+    return this;
   }
-  public User( String userName, Boolean isEnabled ){
+  
+  public UserEntity( String userName ){
+    this.name = userName
+  }
+  
+  public UserEntity( String userName, Boolean enabled ){
     this(userName);
-    this.isEnabled = isEnabled
+    this.setEnabled( enabled );
+  }
+
+  public void revokeX509Certificate() {
+    for( X509Cert cert : this.getCertificates() ) {
+      cert.setRevoked(true);
+    }
+    LOG.debug("Current certificate for ${this.getName()}: ${this.getX509Certificate()?.getSerialNumber()}");
+  }
+  
+  public void revokeSecretKey() {
+    this.setSecretKey( null );
+  }
+  
+  public List<X509Certificate> getAllX509Certificates() {
+    List<X509Certificate> certs = Lists.newArrayList( );
+    for( X509Cert c : this.getCertificates() ) {
+      certs.add( X509Cert.toCertificate( c ) );
+    }
+    return certs;
+  }
+  
+  public X509Certificate getX509Certificate() {
+    for( X509Cert cert : this.getCertificates() ) {
+      if( !cert.getRevoked( ) ) {
+        return X509Cert.toCertificate( cert );
+      }
+    }
+    return null;
+  }
+  
+  public void setX509Certificate( X509Certificate x509 ) {
+    LOG.debug( "Setting new user certificate: " + x509.getSubjectX500Principal( ) + " " + x509.getSerialNumber( ) );
+    this.getCertificates( ).add( X509Cert.fromCertificate( x509 ) );
+  }
+  public Boolean isEnabled() {
+    return enabled;
+  }
+  public Boolean isAdministrator() {
+    return administrator;
+  }
+  public BigInteger getNumber() {
+    return new BigInteger( this.getId(), 16 );
   }
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( userName == null ) ? 0 : userName.hashCode( ) );
+    result = prime * result + ( ( name == null ) ? 0 : name.hashCode( ) );
     return result;
   }
   @Override
@@ -137,9 +198,9 @@ public class User extends AbstractPersistent implements Serializable {
     if ( !super.equals( obj ) ) return false;
     if ( getClass( ).is( obj.getClass( ) ) ) return false;
     User other = ( User ) obj;
-    if ( userName == null ) {
-      if ( other.userName != null ) return false;
-    } else if ( !userName.equals( other.userName ) ) return false;
+    if ( name == null ) {
+      if ( other.name != null ) return false;
+    } else if ( !name.equals( other.name ) ) return false;
     return true;
   }  
 }
@@ -151,6 +212,8 @@ public class User extends AbstractPersistent implements Serializable {
 public class X509Cert extends AbstractPersistent implements Serializable {
   @Column( name = "auth_x509_alias", unique=true )
   String alias
+  @Column( name = "auth_x509_revoked" )
+  Boolean revoked
   @Lob
   @Column( name = "auth_x509_pem_certificate" )
   String pemCertificate
@@ -159,14 +222,17 @@ public class X509Cert extends AbstractPersistent implements Serializable {
   public X509Cert( String alias ) {
     this.alias = alias
   }
-  public static X509Cert fromCertificate(String alias, X509Certificate x509) {
+  public Boolean isRevoked( ) {
+    return this.revoked;
+  }
+  public static X509Cert fromCertificate(X509Certificate x509) {
     X509Cert x = new X509Cert( );
-    x.setAlias(alias);
-    x.setPemCertificate( new String( UrlBase64.encode( Hashes.getPemBytes( x509 ) ) ) );
+    x.setAlias(x509.getSerialNumber( ).toString());
+    x.setPemCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
     return x;
   }  
   public static X509Certificate toCertificate(X509Cert x509) {
-    return Hashes.getPemCert( UrlBase64.decode( x509.getPemCertificate( ).getBytes( ) ) );
+    return PEMFiles.getCert( B64.url.dec( x509.getPemCertificate( ) ) );
   }  
   
   @Override
@@ -229,3 +295,4 @@ public class ClusterCredentials extends AbstractPersistent implements Serializab
     return true;
   }  
 }
+

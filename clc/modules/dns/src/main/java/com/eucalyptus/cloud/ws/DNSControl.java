@@ -226,6 +226,7 @@ public class DNSControl {
 			db.commit();
 
 		} catch(Exception ex) {
+			db.rollback();
 			LOG.error(ex);
 		}
 		return reply;
@@ -307,6 +308,7 @@ public class DNSControl {
 			db.delete(foundCNAMERecordInfo);
 			db.commit();
 		} catch(Exception ex) {
+			db.rollback();
 			LOG.error(ex);
 		}
 		return reply;
@@ -325,6 +327,7 @@ public class DNSControl {
 			db.delete(foundZoneInfo);
 			db.commit();
 		} catch(Exception ex) {
+			db.rollback();
 			LOG.error(ex);
 		}
 		ZoneManager.deleteZone(name);

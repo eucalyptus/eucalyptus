@@ -72,14 +72,14 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.stages.HmacV2UserAuthenticationStage;
+import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.QueryBindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.stages.WalrusOutboundStage;
 import com.eucalyptus.ws.stages.WalrusPOSTUserAuthenticationStage;
 import com.eucalyptus.ws.stages.WalrusRESTBindingStage;
 import com.eucalyptus.ws.stages.WalrusUserAuthenticationStage;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.WalrusProperties;
 
 

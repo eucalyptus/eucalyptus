@@ -64,15 +64,15 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import com.google.common.collect.Lists;
-import com.eucalyptus.auth.util.Hashes;
+import java.util.List;
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.util.StorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.StorageProperties;
-
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
@@ -81,17 +81,12 @@ import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 import edu.ucsb.eucalyptus.msgs.DeleteSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSnapshotType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
-import com.eucalyptus.ws.util.Messaging;
-import org.apache.log4j.Logger;
-
-import java.util.List;
 
 public class SnapshotManager {
 
@@ -115,7 +110,7 @@ public class SnapshotManager {
     String newId = null;
     Snapshot snap = null;
     while ( true ) {
-      newId = Hashes.generateId( request.getUserId( ), ID_PREFIX );
+      newId = Crypto.generateId( request.getUserId( ), ID_PREFIX );
       try {
         db.getUnique( Snapshot.ownedBy( newId ) );
       } catch ( EucalyptusCloudException e ) {
