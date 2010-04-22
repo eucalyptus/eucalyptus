@@ -175,7 +175,6 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     List<User> users = Lists.newArrayList( );
     EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     UserEntity searchUser = new UserEntity( );
-    searchUser.setEnabled( true );
     UserEntity user = null;
     try {
       for( UserEntity u : db.query( searchUser ) ) {

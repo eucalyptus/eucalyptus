@@ -85,6 +85,7 @@ public class Accounts {
     } catch ( UserExistsException e1 ) {
       throw new EucalyptusCloudException( "User already exists: " + userName );
     }
+    reply.set_return( true );
     return reply;
   }
   
