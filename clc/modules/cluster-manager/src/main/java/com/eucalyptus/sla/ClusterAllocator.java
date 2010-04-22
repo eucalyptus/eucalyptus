@@ -82,7 +82,9 @@ import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
 import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.vm.VmState;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -98,8 +100,6 @@ import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.ws.SystemState;
-import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -251,7 +251,7 @@ public class ClusterAllocator extends Thread {
       }
     } );
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), imgInfo, vmInfo, keyInfo, instanceIds, macs, vlan, networkNames, netIndexes ).regardingUserRequest( request );
-    VmRunCallback cb = new VmRunCallback( run, this, childToken );
+    VmRunCallback cb = new VmRunCallback( run, childToken );
     if ( !addrList.isEmpty( ) ) {
       cb.then( new SuccessCallback<VmRunResponseType>( ) {
         @Override
@@ -272,8 +272,4 @@ public class ClusterAllocator extends Thread {
     this.messages.run( );
   }
   
-  public void rollback() {
-    this.messages.rollback( );
-  }
-      
 }

@@ -5,7 +5,6 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.auth.CredentialProvider;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.auth.util.Hashes;
@@ -24,19 +23,19 @@ import org.bouncycastle.util.encoders.UrlBase64;
 import groovy.sql.Sql;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.cloud.entities.ProductCode;
-import com.eucalyptus.accounts.UserInfo;
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import com.eucalyptus.images.ProductCode;
+import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.entities.VmType;
 import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.cloud.ws.SnapshotManager;
 import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
 
-import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
+import com.eucalyptus.images.ImageInfo;
 
-import com.eucalyptus.accounts.UserInfo;
-import com.eucalyptus.accounts.UserGroupInfo;
+import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.UserGroupInfo;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;

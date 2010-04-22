@@ -64,184 +64,76 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.List;
-
+import java.util.NavigableSet;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 
-import com.eucalyptus.util.NetworkUtil;
-
+@Deprecated
 public enum Component {
-  bootstrap( "vm://EucalyptusRequestQueue" ),
-  eucalyptus( "vm://EucalyptusRequestQueue" ),
-  walrus( "vm://BukkitInternal" ),
-  dns( "vm://DNSControlInternal" ),
-  storage( "vm://StorageInternal" ),
-  db( "jdbc:hsqldb:hsqls://127.0.0.1:9001/eucalyptus" ),
-  cluster( "vm://ClusterSink" ),
-  jetty( "vm://HttpServer" ),
-  vmwarebroker("vm://VMwareBrokerInternal"),
+  bootstrap( true ),
+  eucalyptus( true ),
+  walrus( true ),
+  dns( true ),
+  storage( false ),
+  db( true ),
+  jetty( true ),
+  configuration( true ),
+  cluster( false ),
+  vmwarebroker( false ),
   any( true );
-  private static Logger      LOG         = Logger.getLogger( Component.class );
-  private boolean            local       = false;
-
-  private boolean            enabled     = false;
-  private boolean            initialized = true;//FIXME: set this in some useful way
-  private boolean            hasKeys     = false;
-  private String             hostAddress;
-  private int                port        = 8773;
-  private String             localUri;
-  private URI                uri;
-  private String             propertyKey;
-  private ResourceProvider   resourceProvider;
-  private List<Bootstrapper> bootstrappers;
-
-  private Component( ) {
-    this.hostAddress = "localhost";
-    this.propertyKey = "euca." + this.name( ) + ".host";
+  private static Logger LOG = Logger.getLogger( Component.class );
+  private final Boolean singleton;
+  
+  private Component( Boolean singleton ) {
+    this.singleton = singleton;
   }
-
-  private Component( String uri ) {
-    this( );
-    this.localUri = uri;
-    this.setUri( uri );
+  
+  public Boolean isEnabled( ) {
+    return Components.lookup( this ).isEnabled( );
   }
-
-  private Component( boolean whatever ) {
-    this( );
-    this.local = true;
-    this.enabled = true;
+  
+  public Boolean isLocal( ) {
+    return Components.lookup( this ).isLocal( );
   }
-
-  public void markHasKeys( ) {
-    this.hasKeys = true;
-  }
-
-  public boolean isHasKeys( ) {
-    return hasKeys;
-  }
-
-  public void markEnabled( ) {
-    this.enabled = true;
-  }
-
-  public void markDisabled( ) {
-    this.enabled = false;
-  }
-
-  public boolean isEnabled( ) {
-    return enabled;
-  }
-
-  public boolean isLocal( ) {
-    return local;
-  }
-
-  public void markLocal( ) {
-    this.local = true;
-  }
-
-  public ResourceProvider getResourceProvider( ) {
-    return resourceProvider;
-  }
-
-  public void setResourceProvider( ResourceProvider resourceProvider ) {
-    this.resourceProvider = resourceProvider;
-  }
-
-  public List<Bootstrapper> getBootstrappers( ) {
-    return bootstrappers;
-  }
-
-  public boolean add( Bootstrapper arg0 ) {
-    return bootstrappers.add( arg0 );
-  }
-
-  public String getHostAddress( ) {
-    return this.hostAddress;
-  }
-
-  public void setHostAddress( String address ) {
-    boolean isLocal = false;
-    try {
-      isLocal = NetworkUtil.testLocal( address );
-    } catch ( Exception e1 ) {
-    }
-    if ( isLocal ) {
-      this.local = true;
-      this.hostAddress = "localhost";
-      this.setUri( this.localUri );
-    } else {
-      this.local = false;
-      this.hostAddress = address;
-      this.setUri( makeUri( address ) );
-    }
-  }
-
-  public String makeUri( String address ) {
-    if ( Component.db.equals( this ) ) {
-      return String.format( "jdbc:hsqldb:hsqls://%s:%d/eucalyptus", address, 9001 );
-    } else {
-      return String.format( "http://%s:%d/internal/%s", address, 8773, this.localUri.replaceAll( "vm://", "" ) );
-    }
-  }
-
-  public String getPropertyKey( ) {
-    return propertyKey;
-  }
-
-  public URI getUri( ) {
-    return uri;
-  }
-
-  private void setUri( String uri ) {
-    try {
-      this.uri = new URI( uri );
-      System.setProperty( this.propertyKey, this.uri.toASCIIString( ) );
-      if ( LOG != null ) LOG.info( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.uri.toASCIIString( ) ) );
-    } catch ( Exception e ) {
-      System.setProperty( this.propertyKey, this.localUri );
-      if ( LOG != null ) LOG.info( String.format( "-> Setting address of component %s to %s=%s", this.name( ), this.propertyKey, this.localUri ) );
-    }
-  }
-
-  public int getPort( ) {
-    return port;
-  }
-
-  public void setPort( int port ) {
-    this.port = port;
-  }
-
-  public String getRegistryKey( String hostName ) {
-    try {
-      if ( NetworkUtil.testLocal( hostName ) ) return this.name( ) + "@localhost";
-    } catch ( Exception e ) {
-    }
-    return this.name( ) + "@" + hostName;
-  }
-
+  
   public String getLocalAddress( ) {
-    return localUri;
+    return this.getLocalUri( ).toASCIIString( );
+  }
+  
+  public URI getUri( ) {
+    com.eucalyptus.component.Component c = Components.lookup( this );
+    NavigableSet<Service> services = c.getServices( );
+    if( this.isSingleton( ) && services.size( ) != 1 ) {
+        throw new RuntimeException( "Singleton component has "+services.size()+" registered services (Should be exactly 1)." );
+    } else if( this.isSingleton( ) && services.size( ) == 1 ) {
+      return services.first( ).getUri( );
+    } else {
+      for( Service s : services ) {
+        if( s.isLocal( ) ) {
+          return s.getUri( );
+        }
+      }
+      throw new RuntimeException( "Attempting to get the URI for a service which is either not a singleton or has no locally defined service endpoint." );
+    }
   }
 
   public URI getLocalUri( ) {
-    if ( Component.db.equals( this ) ) { return null; }
-    try {
-      return new URI( this.localUri );
-    } catch ( URISyntaxException e ) {
-      LOG.fatal( "Failed to construct the default local URI object.", e );
-      System.exit( 1 );
-      return null;
-    }
+    return Components.lookup( this ).getConfiguration( ).getLocalUri( );
+  }
+  
+  public Boolean isSingleton( ) {
+    return this.singleton;
+  }
+  
+  public static List<Component> list( ) {
+    return Arrays.asList( Component.values( ) );
   }
 
-  public boolean isInitialized( ) {
-    return initialized;
+  public String getRegistryKey( String hostName ) {
+    return this.name( ) + "@" + hostName;
   }
-
-  public void setInitialized( boolean initialized ) {
-    this.initialized = initialized;
-  }
-
+  
 }

@@ -14,7 +14,7 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
-import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
@@ -31,11 +31,11 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
 
   private volatile long splitTime = 0l;
   public TxHandle( String ctx ) {
-    this.txUuid = String.format("%s:%s:%s",ctx, DebugUtil.TRACE ? EntityWrapper.getMyStackTraceElement( ) : "n.a", UUID.randomUUID( ).toString( ) );
+    this.txUuid = String.format("%s:%s:%s",ctx, LogLevels.TRACE ? EntityWrapper.getMyStackTraceElement( ) : "n.a", UUID.randomUUID( ).toString( ) );
     this.startTime = Calendar.getInstance( );
     this.stopWatch = new StopWatch( );
     this.stopWatch.start( );
-    EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) DatabaseUtil.getEntityManagerFactory( ctx );
+    EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
     try {
       this.em = anemf.createEntityManager( );
       this.delegate = em.getTransaction( );

@@ -3,7 +3,6 @@ package com.eucalyptus.event;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Timer;
 import java.util.TimerTask;
-
 import org.apache.log4j.Logger;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
@@ -22,7 +21,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
         timer = new Timer("SystemClockTimer");
         clock = new SystemClock();
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy() );
-        timer.scheduleAtFixedRate( clock, 5000, 3000 );//TODO: review selection of timer frequency
+        timer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: review selection of timer frequency
       }
     }
   }

@@ -64,17 +64,16 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.event.StartComponentEvent;
+import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
-
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 
 public class WalrusEventListener implements EventListener {
@@ -90,21 +89,10 @@ public class WalrusEventListener implements EventListener {
 
 	@Override
 	public void fireEvent(Event event) {
-		if(event instanceof StopComponentEvent) {
-			StopComponentEvent stopComponentEvent = (StopComponentEvent) event;
-			ComponentConfiguration config = stopComponentEvent.getConfiguration();
-			WalrusInfo walrusInfo = new WalrusInfo();
-			walrusInfo.setName(WalrusProperties.NAME);
-			EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>();
-			try {
-				WalrusInfo foundWalrusInfo = db.getUnique(walrusInfo);
-				db.delete(foundWalrusInfo);
-				db.commit();
-			} catch(EucalyptusCloudException ex) {
-				db.rollback();
-				LOG.error(ex);
-			}
-		}
+		if(event instanceof StartComponentEvent) {
+			if(((StartComponentEvent) event).isLocal())
+				WalrusControl.configure();
+		} 
 	}
 
 }

@@ -72,6 +72,7 @@ import org.mule.api.MuleEvent;
 import org.mule.api.MuleMessage;
 import org.mule.api.endpoint.OutboundEndpoint;
 
+import com.eucalyptus.ws.Client;
 import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.eucalyptus.ws.client.pipeline.LogClientPipeline;

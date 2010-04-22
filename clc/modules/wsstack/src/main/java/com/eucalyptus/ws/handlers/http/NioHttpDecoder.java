@@ -65,7 +65,8 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 import org.mortbay.log.Log;
 
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.util.HttpUtils;
 
 public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
@@ -124,7 +125,9 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
           checkpoint( State.SKIP_CONTROL_CHARS );
           return null;
         }
-        message = new MappingHttpRequest( HttpVersion.valueOf( initialLine[2] ), HttpMethod.valueOf( initialLine[0] ), initialLine[1] );
+        MappingHttpRequest newMessage = new MappingHttpRequest( HttpVersion.valueOf( initialLine[2] ), HttpMethod.valueOf( initialLine[0] ), initialLine[1] );
+        Contexts.create( newMessage, ctx.getChannel( ) );
+        message = newMessage;
         checkpoint( State.READ_HEADER );
       }
       case READ_HEADER: {

@@ -64,16 +64,11 @@
 package com.eucalyptus.ws.server;
 
 import static org.jboss.netty.channel.Channels.pipeline;
-
-import javax.net.ssl.SSLEngine;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
-
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
-import com.eucalyptus.ws.handlers.http.NioSslHandler;
 
 public class NioServerPipelineFactory implements ChannelPipelineFactory {
   public ChannelPipeline getPipeline( ) throws Exception {

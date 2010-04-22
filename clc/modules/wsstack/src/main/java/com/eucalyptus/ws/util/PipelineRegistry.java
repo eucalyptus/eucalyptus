@@ -69,12 +69,12 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.eucalyptus.util.DebugUtil;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.server.DuplicatePipelineException;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.server.NoAcceptingPipelineException;
 
-import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class PipelineRegistry {
@@ -101,7 +101,7 @@ public class PipelineRegistry {
     FilteredPipeline candidate = null;
     for ( FilteredPipeline f : this.pipelines) {
       if ( f.accepts( request ) ) {
-        if( !DebugUtil.DEBUG ) {
+        if( !LogLevels.DEBUG ) {
           return f;
         } else if ( candidate != null ) {
           LOG.trace( EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getPipelineName( ), f.getClass( ).getSimpleName( ) ) );

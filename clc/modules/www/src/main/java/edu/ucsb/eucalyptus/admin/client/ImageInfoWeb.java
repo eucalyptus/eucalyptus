@@ -85,7 +85,7 @@ public class ImageInfoWeb implements IsSerializable
     private String imageType;
     private String kernelId;
     private String ramdiskId;
-    private Boolean isPublic;
+    private Boolean imagePublic;
 
     public ImageInfoWeb() { }
 
@@ -161,11 +161,12 @@ public class ImageInfoWeb implements IsSerializable
         this.ramdiskId = ramdiskId;
     }
 
-    public Boolean getPublic() {
-        return isPublic;
+    public Boolean getImagePublic() {
+        return imagePublic;
     }
 
-    public void setPublic(Boolean aPublic) {
-        isPublic = aPublic;
+    public void setImagePublic(Boolean aPublic) {
+        this.imagePublic = aPublic;
     }
+
 }

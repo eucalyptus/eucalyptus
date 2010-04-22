@@ -1,17 +1,15 @@
 package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 public class PropertyDirectory {
   private static Logger                                 LOG         = Logger.getLogger( PropertyDirectory.class );
@@ -79,4 +77,12 @@ public class PropertyDirectory {
     return "Temporary description";
   }
   
+  public static List<ComponentProperty> getComponentPropertySet( String prefix ) {
+	  List<ComponentProperty> componentProps = Lists.newArrayList();
+	  List<ConfigurableProperty> props = getPropertyEntrySet( prefix );
+	  for (ConfigurableProperty prop : props) {
+		  componentProps.add(new ComponentProperty(prop.getWidgetType(), prop.getDisplayName(), prop.getValue(), prop.getQualifiedName()));
+	  }
+	  return componentProps;
+  }
 }

@@ -63,29 +63,21 @@
  */
 package com.eucalyptus.bootstrap;
 
+import java.security.Security;
 import org.apache.log4j.Logger;
-import com.eucalyptus.util.DebugUtil;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Lifecycles;
+import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 
 public class SystemBootstrapper {
   private static Logger               LOG          = Logger.getLogger( SystemBootstrapper.class );
+  
   private static SystemBootstrapper   singleton;
   private static ThreadGroup          singletonGroup;
-  private static DatabaseBootstrapper singletonDb;
-  private static Resource             currentStage = Resource.PrivilegedContext;
-  
-  public static boolean isFinished( ) {
-    return Resource.Final.equals( currentStage );
-  }
-  public static Resource getCurrentStage( ) {
-    return currentStage;
-  }
-  public static DatabaseBootstrapper getDatabaseBootstrapper( ) {
-    return singletonDb;
-  }
-  public static void setDatabaseBootstrapper( DatabaseBootstrapper dbBootstrapper ) {
-    singletonDb = dbBootstrapper;
-  }
+
   public static SystemBootstrapper getInstance( ) {
     synchronized ( SystemBootstrapper.class ) {
       if ( singleton == null ) {
@@ -97,126 +89,64 @@ public class SystemBootstrapper {
     }
     return singleton;
   }
-  public static ThreadGroup getThreadGroup( ) {
-    synchronized ( SystemBootstrapper.class ) {
-      if ( singletonGroup == null ) {
-        singletonGroup = new EucalyptusThreadGroup( );
-        LOG.info( "Creating Bootstrapper instance." );
-      } else {
-        LOG.info( "Returning Bootstrapper instance." );
-      }
-    }
-    return singletonGroup;
-  }
-  public static Thread makeSystemThread( Runnable r ) {
-    return new Thread( getThreadGroup( ), r );
-  }
-  public static Thread makeSystemThread( Runnable r, String name ) {
-    return new Thread( getThreadGroup( ), r, name );
-  }
-  
-  static class EucalyptusThreadGroup extends ThreadGroup {
-    EucalyptusThreadGroup( ) {
-      super( "Eucalyptus" );
-    }
-  }
   
   public SystemBootstrapper( ) {}
-  
-  public boolean destroy( ) {
-    return true;
-  }
-  
-  public boolean stop( ) throws Exception {
-    ServiceBootstrapper.getInstance( ).stop( );
-    return true;
-  }
   
   public boolean init( ) throws Exception {
     try {
       boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
       boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
-      DebugUtil.DEBUG = doDebug;
-      DebugUtil.TRACE = doDebug;
+      Security.addProvider( new BouncyCastleProvider( ) );
+      LogLevels.DEBUG = doDebug;
+      LogLevels.TRACE = doDebug;
     } catch ( Throwable t ) {
       t.printStackTrace( );
       System.exit( 1 );
     }
     try {
-      LOG.info( LogUtil.header( "Initializing resource providers." ) );
-      BootstrapFactory.initResourceProviders( );
-      LOG.info( LogUtil.header( "Initializing configuration resources." ) );
-      BootstrapFactory.initConfigurationResources( );
-      LOG.info( LogUtil.header( "Initializing discoverable bootstrap resources." ) );
-      BootstrapFactory.initDiscovery( );
-      LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
-      BootstrapFactory.initBootstrappers( );
+      Bootstrap.initialize( );
       return true;
-    } catch ( Throwable e ) {
-      LOG.fatal( e, e );
+    } catch ( BootstrapException e ) {
+      throw e;
+    } catch ( Throwable t ) {
+      LOG.fatal( t, t );
       System.exit( 1 );
       return false;
     }
   }
-  
-  public boolean load( ) throws Exception {
+
+  public boolean load( ) throws Throwable {
     try {
-      for ( Resource r : Resource.values( ) ) {
-        if ( r.getBootstrappers( ).isEmpty( ) ) {
-          LOG.info( "Skipping " + r + "... nothing to do." );
-        } else {
-          LOG.info( LogUtil.header( "Loading " + r ) );
-        }
-        for ( Bootstrapper b : r.getBootstrappers( ) ) {
-          if ( !Bootstrapper.delayedDependsCheck( b ) ) {
-            LOG.info( "-X Skipping load since depends check failed: " + b.getClass( ) );
-          } else {
-            try {
-              LOG.info( "-> load: " + b.getClass( ) );
-              boolean result = b.load( r );
-            } catch ( Throwable e ) {
-              LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
-              LOG.fatal( e, e );
-              return false;
-            }
-          }
-        }
-      }
-    } catch ( Throwable e ) {
-      LOG.fatal( e, e );
+      Bootstrap.Stage stage = Bootstrap.transition( );
+      do {
+        stage.load( );
+      } while( ( stage = Bootstrap.transition( ) ) != null );
+    } catch ( BootstrapException e ) {
+      throw e;
+    } catch ( Throwable t ) {
+      LOG.fatal( t, t );
       System.exit( 1 );
+      throw t;
     }
+    Lifecycles.State.INITIALIZED.to( Lifecycles.State.LOADED ).transition( Components.list( ) );
     return true;
   }
-  
-  public boolean start( ) throws Exception {
+    
+  public boolean start( ) throws Throwable {
     try {
-      for ( Resource r : Resource.values( ) ) {
-        SystemBootstrapper.currentStage = r;
-        if ( r.getBootstrappers( ).isEmpty( ) ) {
-          LOG.info( "Skipping " + r + "... nothing to do." );
-        } else {
-          LOG.info( LogUtil.header( "Starting " + r ) );
-        }
-        for ( Bootstrapper b : r.getBootstrappers( ) ) {
-          if ( !Bootstrapper.delayedDependsCheck( b ) ) {
-            LOG.info( "-X Skipping start since depends check failed: " + b.getClass( ) );
-          } else {
-            try {
-              LOG.info( "-> start: " + b.getClass( ) );
-              boolean result = b.start( );
-            } catch ( Exception e ) {
-              LOG.error( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
-              System.exit( 123 );
-            }
-          }
-        }
-      }
-    } catch ( Throwable e ) {
-      LOG.fatal( e, e );
+      Bootstrap.Stage stage = Bootstrap.transition( );
+      do {
+        stage.start( );
+      } while( ( stage = Bootstrap.transition( ) ) != null );
+    } catch ( BootstrapException e ) {
+      throw e;
+    } catch ( Throwable t ) {
+      LOG.fatal( t, t );
       System.exit( 1 );
+      throw t;
     }
+    Lifecycles.State.LOADED.to( Lifecycles.State.STARTED ).transition( Components.list( ) );
     return true;
   }
   
@@ -227,6 +157,16 @@ public class SystemBootstrapper {
   public boolean check( ) {
     return true;
   }
+
+  public boolean destroy( ) {
+    return true;
+  }
+  
+  public boolean stop( ) throws Exception {
+    ServiceContext.stopContext( );
+    return true;
+  }
+  
   
   private static native void shutdown( boolean reload );
   

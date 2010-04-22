@@ -64,23 +64,22 @@
 package com.eucalyptus.bootstrap;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.log4j.Logger;
 import org.hsqldb.Server;
 import org.hsqldb.persist.HsqlProperties;
-
-import com.eucalyptus.entities.DatabaseUtil;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.util.DebugUtil;
-import com.eucalyptus.util.FailScriptFailException;
-import com.eucalyptus.util.GroovyUtil;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.system.Threads;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
-@Provides( resource = Resource.Database )
-@Depends( resources = Resource.SystemCredentials, local = Component.eucalyptus )
+@Provides(Component.db)
+@RunDuring(Bootstrap.Stage.DatabaseInit)
+@DependsLocal(Component.eucalyptus)
 public class LocalDatabaseBootstrapper extends Bootstrapper implements EventListener, Runnable, DatabaseBootstrapper {
   private static Logger             LOG = Logger.getLogger( LocalDatabaseBootstrapper.class );
   private static DatabaseBootstrapper singleton;
@@ -89,7 +88,6 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     synchronized ( LocalDatabaseBootstrapper.class ) {
       if ( singleton == null ) {
         singleton = new LocalDatabaseBootstrapper( );
-        SystemBootstrapper.setDatabaseBootstrapper( singleton );
       }
     }
     return singleton;
@@ -117,7 +115,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   }
 
   @Override
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     try {
       LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.util.SslSetup" ) );
     } catch ( Throwable t ) {}
@@ -140,7 +138,6 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   private static AtomicBoolean hup = new AtomicBoolean( false );
   public void hup( ) {
     if( hup.compareAndSet( false, true ) ) {
-      DebugUtil.printDebugDetails( );
       try {
         if ( this.db != null ) { 
           this.db.checkRunning( true );
@@ -159,17 +156,17 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   private void createDatabase( ) {    
     try {
       GroovyUtil.evaluateScript( "before_database.groovy" );//TODO: move this ASAP!
-    } catch ( FailScriptFailException e ) {
+    } catch ( ScriptExecutionFailedException e ) {
       LOG.fatal( e, e );
       LOG.fatal( "Failed to initialize the database layer." );
       System.exit( -1 );
     }
     this.db = new Server( );
     this.db.setProperties( new HsqlProperties( DatabaseConfig.getProperties( ) ) );
-    SystemBootstrapper.makeSystemThread( this ).start( );
+    Threads.newThread( this ).start( );
     try {
       GroovyUtil.evaluateScript( "after_database.groovy" );//TODO: move this ASAP!
-    } catch ( FailScriptFailException e ) {
+    } catch ( ScriptExecutionFailedException e ) {
       LOG.fatal( e, e );
       LOG.fatal( "Failed to initialize the persistence layer." );
       System.exit( -1 );
@@ -180,14 +177,8 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   public boolean start( ) throws Exception {
     this.waitForDatabase( );
     try {
-      GroovyUtil.evaluateScript( "startup.groovy" );
-    } catch ( Exception e ) {
-      LOG.fatal( e, e );
-      System.exit( -1 );
-    }
-    try {
       GroovyUtil.evaluateScript( "after_persistence.groovy" );//TODO: move this ASAP!
-    } catch ( FailScriptFailException e ) {
+    } catch ( ScriptExecutionFailedException e ) {
       LOG.fatal( e, e );
       LOG.fatal( "Failed to initialize the persistence layer." );
       System.exit( -1 );

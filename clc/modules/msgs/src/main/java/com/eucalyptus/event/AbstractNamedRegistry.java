@@ -65,14 +65,16 @@
 
 package com.eucalyptus.event;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import com.eucalyptus.util.HasName;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 public abstract class AbstractNamedRegistry<TYPE extends HasName> {

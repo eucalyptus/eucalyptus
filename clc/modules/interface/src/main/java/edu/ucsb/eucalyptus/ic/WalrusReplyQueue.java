@@ -75,7 +75,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.mule.message.ExceptionMessage;
 
-import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.binding.BindingManager;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;

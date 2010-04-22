@@ -55,4 +55,4 @@ clean:
 distclean: clean
 
 uninstall:
-	@$(RM) -f $(sbindir)/eucalyptus-cloud
+	@$(RM) -f $(DESTDIR)$(sbindir)/eucalyptus-cloud

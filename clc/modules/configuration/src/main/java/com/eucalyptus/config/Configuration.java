@@ -65,210 +65,99 @@ package com.eucalyptus.config;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.configurable.ConfigurationProperties;
-import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.event.EventVetoedException;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.StartComponentEvent;
-import com.eucalyptus.event.StopComponentEvent;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.GroovyUtil;
 import com.eucalyptus.util.NetworkUtil;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
-import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
 import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
 import edu.ucsb.eucalyptus.msgs.DescribeNodesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNodesType;
-import edu.ucsb.eucalyptus.msgs.DescribePropertiesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribePropertiesType;
 import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
-import edu.ucsb.eucalyptus.msgs.Property;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
-import edu.ucsb.eucalyptus.msgs.RegisterStorageControllerType;
-import edu.ucsb.eucalyptus.msgs.RegisterWalrusType;
-import edu.ucsb.eucalyptus.msgs.RegisterVMwareBrokerType;
 
 public class Configuration {
   static Logger         LOG                 = Logger.getLogger( Configuration.class );
-  private static String DB_NAME             = "eucalyptus_config";
+  public static String DB_NAME             = "eucalyptus_config";
   static String         CLUSTER_KEY_FSTRING = "cc-%s";
   static String         NODE_KEY_FSTRING    = "nc-%s";
-  
-  public static <T> EntityWrapper<T> getEntityWrapper( ) {
-    return new EntityWrapper<T>( Configuration.DB_NAME );
+
+  private static Map<Class,ServiceBuilder<ComponentConfiguration>> builders = Maps.newConcurrentHashMap( );
+  public static void addBuilder( Class c, ServiceBuilder b ) {
+    builders.put( c, b );
   }
   
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
+    reply.set_return( false );
+    String name = request.getName( );
+    String hostName = request.getHost();
+    Integer port = request.getPort( );
+    ServiceBuilder builder = builders.get( request.getClass( ) );
+    if( !builder.checkAdd( name, hostName, port ) ) {
+      return reply;
+    }
+    ServiceConfiguration newComponent = builder.add( name, hostName, port );
+    builder.getComponent( ).buildService( newComponent );
+    builder.fireStart( newComponent );
     reply.set_return( true );
-    try {
-      if ( !NetworkUtil.testGoodAddress( request.getHost( ) ) ) {
-        throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );
-      }
-      if ( request instanceof RegisterClusterType && !ConfigurationUtil.testClusterCredentialsDirectory( request.getName( ) ) ) {
-        throw new EucalyptusCloudException( "Cluster registration failed because the key directory cannot be created." );
-      }
-    } catch ( EucalyptusCloudException e ) {
-      throw e;
-    } catch ( Exception e1 ) {
-      throw new EucalyptusCloudException( e1.getMessage( ), e1 );
-    }
-    try {
-      if ( ConfigurationUtil.checkComponentExists( request ) ) {
-        return reply;
-      }
-    } catch ( Exception e2 ) {
-      throw new EucalyptusCloudException( e2 );
-    }
-    if ( request instanceof RegisterStorageControllerType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.storage.isLocal( ) ) {
-      throw new EucalyptusCloudException( "You do not have a local storage controller enabled (or it is not installed)." );
-    } else if ( request instanceof RegisterWalrusType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.walrus.isLocal( ) ) {
-      throw new EucalyptusCloudException( "You do not have a local walrus enabled (or it is not installed)." );
-    } else if ( request instanceof RegisterVMwareBrokerType && NetworkUtil.testLocal( request.getHost( ) ) && !Component.vmwarebroker.isLocal( ) ) { 
-        throw new EucalyptusCloudException( "You do not have a local vmware broker enabled (or it is not installed)." );    
-    } else if ( request instanceof RegisterStorageControllerType ) {
-      try {
-        Configuration.getClusterConfiguration( request.getName( ) );
-      } catch ( Exception e1 ) {
-        throw new EucalyptusCloudException(
-                                            "Storage controllers may only be registered with a corresponding Cluster of the same name.  No cluster found with the name: "
-                                                + request.getName( ) );
-      }
-    }
-    EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
-    ComponentConfiguration newComponent;
-    try {
-      newComponent = ConfigurationUtil
-                                      .getConfigurationInstance( request, request.getName( ), NetworkUtil.tryToResolve( request.getHost( ) ), request.getPort( ) );
-      db.add( newComponent );
-      db.commit( );
-    } catch ( Exception e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
-    }
-    if ( request instanceof RegisterClusterType ) {
-      ConfigurationUtil.setupClusterCredentials( newComponent );
-    }
-    fireStartComponent( newComponent );
     return reply;
   }
-  
-  public static void fireStartComponent( ComponentConfiguration newComponent ) throws EucalyptusCloudException {
-    StartComponentEvent e = null;
-    if ( Component.walrus.equals( newComponent.getComponent( ) ) && NetworkUtil.testLocal( newComponent.getHostName( ) ) ) {
-      e = StartComponentEvent.getLocal( newComponent );
-    } else if ( Component.storage.equals( newComponent.getComponent( ) ) && ( NetworkUtil.testLocal( newComponent.getHostName( ) ) ) ) {
-        e = StartComponentEvent.getLocal( newComponent );
-    } else if ( Component.vmwarebroker.equals( newComponent.getComponent( ) ) && ( NetworkUtil.testLocal( newComponent.getHostName( ) ) ) ) {
-      e = StartComponentEvent.getLocal( newComponent );
-    } else {
-      e = StartComponentEvent.getRemote( newComponent );
-    }
-    try {
-      ListenerRegistry.getInstance( ).fireEvent( newComponent.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
-      throw new EucalyptusCloudException( e1.getMessage( ), e1 );
-    }
-  }
-  
+    
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
-    reply.set_return( true );
-    EntityWrapper<ComponentConfiguration> db = null;
-    ComponentConfiguration componentConfig = null;
+    reply.set_return( false );
+    ServiceBuilder builder = builders.get( request.getClass( ) );
     try {
-      db = Configuration.getEntityWrapper( );
-      ComponentConfiguration searchConfig = ConfigurationUtil.getConfigurationInstance( request );
-      searchConfig.setName( request.getName( ) );
-      componentConfig = db.getUnique( searchConfig );
-      db.delete( componentConfig );
-      db.commit( );
+      if( !builder.checkRemove( request.getName( ) ) ) {
+        return reply;
+      }
     } catch ( Exception e ) {
-      db.rollback( );
-      return reply;
-      //      throw new EucalyptusCloudException( "Failed to find configuration for " + request.getClass( ).getSimpleName( ) + " named " + request.getName( ) );
+      throw new ServiceRegistrationException( e.getMessage( ), e );
     }
-    if ( request instanceof DeregisterClusterType ) {
-      try {
-        ConfigurationUtil.removeClusterCredentials( request.getName( ) );
-      } catch ( Exception e ) {
-        LOG.error( "BUG: removed cluster but failed to remove the credentials." );
-      }
-      try {
-        db = Configuration.getEntityWrapper( );
-        StorageControllerConfiguration searchConfig = new StorageControllerConfiguration( );
-        searchConfig.setName( request.getName( ) );
-        ComponentConfiguration scComponentConfig = db.getUnique( searchConfig );
-        db.delete( scComponentConfig );
-        db.commit( );
-      } catch ( Exception e ) {
-        db.rollback( );
-      }
+    ServiceConfiguration conf;
+    try {
+      conf = builder.lookupByName( request.getName( ) );
+      builder.remove( conf );
+      builder.getComponent( ).removeService( conf );
+      builder.fireStop( conf );
+      reply.set_return( true );
+    } catch( EucalyptusCloudException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
     }
-    fireStopComponent( componentConfig );
     return reply;
   }
   
-  public static void fireStopComponent( ComponentConfiguration componentConfig ) throws EucalyptusCloudException {
-    StopComponentEvent e = null;
-    if ( Component.walrus.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
-      e = StopComponentEvent.getLocal( componentConfig );
-    } else if ( Component.storage.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
-      e = StopComponentEvent.getLocal( componentConfig );
-    } else if ( Component.vmwarebroker.equals( componentConfig.getComponent( ) ) && NetworkUtil.testLocal( componentConfig.getHostName( ) ) ) {
-        e = StopComponentEvent.getLocal( componentConfig );
-    } else {
-      e = StopComponentEvent.getRemote( componentConfig );
-    }
-    try {
-      ListenerRegistry.getInstance( ).fireEvent( componentConfig.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
-      throw new EucalyptusCloudException( e1.getMessage( ), e1 );
-    }
-  }
   public DescribeNodesResponseType listComponents( DescribeNodesType request ) throws EucalyptusCloudException {
     DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
     reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
     return reply;
   }
+
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
-    ComponentConfiguration searchConfig;
-    try {
-      searchConfig = ConfigurationUtil.getConfigurationInstance( request );
-    } catch ( Exception e1 ) {
-      LOG.error( "Failed to find configuration type for request of type: " + request.getClass( ).getSimpleName( ) );
-      throw new EucalyptusCloudException( "Failed to find configuration type for request of type: " + request.getClass( ).getSimpleName( ) );
-    }
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
-    EntityWrapper<ComponentConfiguration> db = Configuration.getEntityWrapper( );
-    try {
-      List<ComponentConfiguration> componentList = db.query( searchConfig );
-      for ( ComponentConfiguration c : componentList ) {
-        listConfigs.add( new ComponentInfoType( c.getName( ), c.getHostName( ) ) );
-      }
-      db.commit( );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      db.commit( );
-      throw new EucalyptusCloudException( e );
-    } catch ( Throwable t ) {
-      db.commit( );
+    for( ComponentConfiguration conf : builders.get( request.getClass( ) ).list( ) ) {
+      listConfigs.add( new ComponentInfoType( conf.getName( ), conf.getHostName( ) ) );
     }
     return reply;
   }
   
   public static List<ClusterConfiguration> getClusterConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<ClusterConfiguration> db = Configuration.getEntityWrapper( );
+    EntityWrapper<ClusterConfiguration> db = ServiceConfigurations.getEntityWrapper( );
     try {
       List<ClusterConfiguration> componentList = db.query( new ClusterConfiguration( ) );
       for ( ClusterConfiguration cc : componentList ) {
@@ -285,7 +174,7 @@ public class Configuration {
   }
   
   public static List<StorageControllerConfiguration> getStorageControllerConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<StorageControllerConfiguration> db = Configuration.getEntityWrapper( );
+    EntityWrapper<StorageControllerConfiguration> db = ServiceConfigurations.getEntityWrapper( );
     try {
       List<StorageControllerConfiguration> componentList = db.query( new StorageControllerConfiguration( ) );
       db.commit( );
@@ -298,7 +187,7 @@ public class Configuration {
   }
   
   public static List<WalrusConfiguration> getWalrusConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<WalrusConfiguration> db = Configuration.getEntityWrapper( );
+    EntityWrapper<WalrusConfiguration> db = ServiceConfigurations.getEntityWrapper( );
     try {
       List<WalrusConfiguration> componentList = db.query( new WalrusConfiguration( ) );
       db.commit( );
@@ -310,19 +199,19 @@ public class Configuration {
     }
   }
 
-  public static List<VMwareBrokerConfiguration> getVMwareBrokerConfigurations( ) throws EucalyptusCloudException {
-	EntityWrapper<VMwareBrokerConfiguration> db = Configuration.getEntityWrapper( );
-	try {
-	  List<VMwareBrokerConfiguration> componentList = db.query( new VMwareBrokerConfiguration( ) );
-	  db.commit( );
-	  return componentList;
-	} catch ( Exception e ) {
-	  db.rollback( );
-	  LOG.error( e, e );
-	  throw new EucalyptusCloudException( e );
-	}
-  }
-
+    public static List<VMwareBrokerConfiguration> getVMwareBrokerConfigurations( ) throws EucalyptusCloudException {
+        EntityWrapper<VMwareBrokerConfiguration> db = ServiceConfigurations.getEntityWrapper( );
+        try {
+	    List<VMwareBrokerConfiguration> componentList = db.query( new VMwareBrokerConfiguration( ) );
+	    db.commit( );
+	    return componentList;
+        } catch ( Exception e ) {
+	    db.rollback( );
+	    LOG.error( e, e );
+	    throw new EucalyptusCloudException( e );
+        }
+    }
+  
   public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException {
     List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
     for ( StorageControllerConfiguration sc : scs ) {

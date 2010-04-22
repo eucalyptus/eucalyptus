@@ -73,7 +73,7 @@ import edu.ucsb.eucalyptus.util.ReplyCoordinator;
 import org.apache.log4j.Logger;
 import org.mule.message.ExceptionMessage;
 
-import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.binding.BindingManager;
 
 public class DNSReplyQueue {
 

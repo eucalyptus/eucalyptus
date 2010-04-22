@@ -47,6 +47,7 @@ const char *eucalyptus_opts_full_help[] = {
   "      --exhaustive-db           Individually enable exhaustive connection \n                                  information for database connections.  \n                                  (default=off)",
   "      --exhaustive-user         Individually enable exhaustive connection \n                                  information for client connections.  \n                                  (default=off)",
   "      --exhaustive-cc           Individually enable exhaustive connection \n                                  information for client connections.  \n                                  (default=off)",
+  "      --exhaustive-external     Individually enable exhaustive logging for \n                                  external libraries.  (default=off)",
   "  -L, --log-appender=log4j-appender-name\n                                Control the destination for console output.  \n                                  (default=`console-log')",
   "  -o, --out=filename            Redirect standard out to file.  (default=`&1')",
   "  -e, --err=filename            Redirect standard error to file.  \n                                  (default=`&2')",
@@ -126,11 +127,11 @@ init_help_array(void)
   eucalyptus_opts_help[41] = eucalyptus_opts_full_help[41];
   eucalyptus_opts_help[42] = eucalyptus_opts_full_help[42];
   eucalyptus_opts_help[43] = eucalyptus_opts_full_help[43];
-  eucalyptus_opts_help[44] = 0; 
-  
+  eucalyptus_opts_help[44] = eucalyptus_opts_full_help[44];
+  eucalyptus_opts_help[45] = 0;
 }
 
-const char *eucalyptus_opts_help[45];
+const char *eucalyptus_opts_help[46];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -170,6 +171,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->exhaustive_db_given = 0 ;
   args_info->exhaustive_user_given = 0 ;
   args_info->exhaustive_cc_given = 0 ;
+  args_info->exhaustive_external_given = 0 ;
   args_info->log_appender_given = 0 ;
   args_info->out_given = 0 ;
   args_info->err_given = 0 ;
@@ -218,6 +220,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->exhaustive_db_flag = 0;
   args_info->exhaustive_user_flag = 0;
   args_info->exhaustive_cc_flag = 0;
+  args_info->exhaustive_external_flag = 0;
   args_info->log_appender_arg = gengetopt_strdup ("console-log");
   args_info->log_appender_orig = NULL;
   args_info->out_arg = gengetopt_strdup ("&1");
@@ -276,33 +279,34 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->exhaustive_db_help = eucalyptus_opts_full_help[12] ;
   args_info->exhaustive_user_help = eucalyptus_opts_full_help[13] ;
   args_info->exhaustive_cc_help = eucalyptus_opts_full_help[14] ;
-  args_info->log_appender_help = eucalyptus_opts_full_help[15] ;
-  args_info->out_help = eucalyptus_opts_full_help[16] ;
-  args_info->err_help = eucalyptus_opts_full_help[17] ;
-  args_info->remote_cloud_help = eucalyptus_opts_full_help[19] ;
-  args_info->remote_walrus_help = eucalyptus_opts_full_help[20] ;
-  args_info->remote_dns_help = eucalyptus_opts_full_help[21] ;
-  args_info->remote_storage_help = eucalyptus_opts_full_help[22] ;
-  args_info->disable_cloud_help = eucalyptus_opts_full_help[24] ;
-  args_info->disable_walrus_help = eucalyptus_opts_full_help[25] ;
-  args_info->disable_dns_help = eucalyptus_opts_full_help[26] ;
-  args_info->disable_storage_help = eucalyptus_opts_full_help[27] ;
-  args_info->disable_vmwarebroker_help = eucalyptus_opts_full_help[28] ;
-  args_info->disable_iscsi_help = eucalyptus_opts_full_help[29] ;
-  args_info->check_help = eucalyptus_opts_full_help[31] ;
-  args_info->stop_help = eucalyptus_opts_full_help[32] ;
-  args_info->fork_help = eucalyptus_opts_full_help[33] ;
-  args_info->pidfile_help = eucalyptus_opts_full_help[34] ;
-  args_info->java_home_help = eucalyptus_opts_full_help[36] ;
-  args_info->jvm_name_help = eucalyptus_opts_full_help[37] ;
-  args_info->jvm_args_help = eucalyptus_opts_full_help[38] ;
+  args_info->exhaustive_external_help = eucalyptus_opts_full_help[15] ;
+  args_info->log_appender_help = eucalyptus_opts_full_help[16] ;
+  args_info->out_help = eucalyptus_opts_full_help[17] ;
+  args_info->err_help = eucalyptus_opts_full_help[18] ;
+  args_info->remote_cloud_help = eucalyptus_opts_full_help[20] ;
+  args_info->remote_walrus_help = eucalyptus_opts_full_help[21] ;
+  args_info->remote_dns_help = eucalyptus_opts_full_help[22] ;
+  args_info->remote_storage_help = eucalyptus_opts_full_help[23] ;
+  args_info->disable_cloud_help = eucalyptus_opts_full_help[25] ;
+  args_info->disable_walrus_help = eucalyptus_opts_full_help[26] ;
+  args_info->disable_dns_help = eucalyptus_opts_full_help[27] ;
+  args_info->disable_storage_help = eucalyptus_opts_full_help[28] ;
+  args_info->disable_vmwarebroker_help = eucalyptus_opts_full_help[29] ;
+  args_info->disable_iscsi_help = eucalyptus_opts_full_help[30] ;
+  args_info->check_help = eucalyptus_opts_full_help[32] ;
+  args_info->stop_help = eucalyptus_opts_full_help[33] ;
+  args_info->fork_help = eucalyptus_opts_full_help[34] ;
+  args_info->pidfile_help = eucalyptus_opts_full_help[35] ;
+  args_info->java_home_help = eucalyptus_opts_full_help[37] ;
+  args_info->jvm_name_help = eucalyptus_opts_full_help[38] ;
+  args_info->jvm_args_help = eucalyptus_opts_full_help[39] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_full_help[39] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[40] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[41] ;
-  args_info->profile_help = eucalyptus_opts_full_help[42] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[43] ;
+  args_info->debug_help = eucalyptus_opts_full_help[40] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[41] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[42] ;
+  args_info->profile_help = eucalyptus_opts_full_help[43] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[44] ;
 }
 
 void
@@ -528,6 +532,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "exhaustive-user", 0, 0 );
   if (args_info->exhaustive_cc_given)
     write_into_file(outfile, "exhaustive-cc", 0, 0 );
+  if (args_info->exhaustive_external_given)
+    write_into_file(outfile, "exhaustive-external", 0, 0 );
   if (args_info->log_appender_given)
     write_into_file(outfile, "log-appender", args_info->log_appender_orig, 0);
   if (args_info->out_given)
@@ -1153,6 +1159,7 @@ arguments_internal (
         { "exhaustive-db",	0, NULL, 0 },
         { "exhaustive-user",	0, NULL, 0 },
         { "exhaustive-cc",	0, NULL, 0 },
+        { "exhaustive-external",	0, NULL, 0 },
         { "log-appender",	1, NULL, 'L' },
         { "out",	1, NULL, 'o' },
         { "err",	1, NULL, 'e' },
@@ -1458,6 +1465,18 @@ arguments_internal (
             if (update_arg((void *)&(args_info->exhaustive_cc_flag), 0, &(args_info->exhaustive_cc_given),
                 &(local_args_info.exhaustive_cc_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "exhaustive-cc", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Individually enable exhaustive logging for external libraries..  */
+          else if (strcmp (long_options[option_index].name, "exhaustive-external") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->exhaustive_external_flag), 0, &(args_info->exhaustive_external_given),
+                &(local_args_info.exhaustive_external_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "exhaustive-external", '-',
                 additional_error))
               goto failure;
           

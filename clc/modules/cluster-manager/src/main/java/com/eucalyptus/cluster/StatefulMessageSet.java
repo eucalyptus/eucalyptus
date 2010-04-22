@@ -1,23 +1,20 @@
 package com.eucalyptus.cluster;
 
-import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.callback.BroadcastCallback;
 import com.eucalyptus.cluster.callback.QueuedEventCallback;
+import com.eucalyptus.records.EventType;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class StatefulMessageSet<E extends Enum<E>> {
-  private static Logger                              LOG              = Logger.getLogger( StatefulMessageSet.class );
-  private Multimap<E, QueuedEventCallback>           messages         = Multimaps.newHashMultimap( );
-  private AtomicBoolean                              rollback         = new AtomicBoolean( false );
-  private List<QueuedEventCallback>                  rollbackMessages = Lists.newArrayList( );
-  private ConcurrentLinkedQueue<QueuedEventCallback> pendingEvents    = new ConcurrentLinkedQueue<QueuedEventCallback>( );
+  private static Logger                              LOG           = Logger.getLogger( StatefulMessageSet.class );
+  private Multimap<E, QueuedEventCallback>           messages      = Multimaps.newHashMultimap( );
+  private ConcurrentLinkedQueue<QueuedEventCallback> pendingEvents = new ConcurrentLinkedQueue<QueuedEventCallback>( );
   private E[]                                        states;
   private E                                          state;
   private E                                          endState;
@@ -47,8 +44,8 @@ public class StatefulMessageSet<E extends Enum<E>> {
     this.startTime = System.currentTimeMillis( );
   }
   
-  public void rollback( ) {
-    this.rollback.lazySet( true );
+  private E rollback( ) {
+    return ( this.state = failState );
   }
   
   public void addRequest( E state, QueuedEventCallback callback ) {
@@ -56,58 +53,57 @@ public class StatefulMessageSet<E extends Enum<E>> {
     this.messages.put( state, callback );
   }
   
-  public void addRollbackRequest( QueuedEventCallback callback ) {
-    LOG.debug( EventRecord.caller( StatefulMessageSet.class, EventType.VM_PREPARE, this.failState.name( ), callback.getClass( ).getSimpleName( ) ) );
-    this.rollbackMessages.add( callback );
-  }
-  
   @SuppressWarnings( "unchecked" )
-  private void queueEvents( E state ) {
-    for ( QueuedEventCallback event : this.messages.get( state ) ) {
+  private void queueEvents( final E state ) {
+    for ( final QueuedEventCallback event : this.messages.get( state ) ) {
       if ( event instanceof BroadcastCallback ) {
-        BroadcastCallback callback = ( BroadcastCallback ) event;
-        for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-          QueuedEventCallback subEvent = callback.newInstance( ).regardingUserRequest( callback.getRequest( ) );
-          this.pendingEvents.add( subEvent );
-          LOG.info( EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), c.getName( ), event.getClass( ).getSimpleName( ) ) );
-          subEvent.dispatch( c );
-        }
+        final BroadcastCallback callback = ( BroadcastCallback ) event;
+        this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, QueuedEventCallback>( ) {
+          public QueuedEventCallback apply( Cluster c ) {
+            LOG.info( EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), c.getName( ), event.getClass( ).getSimpleName( ) ) );
+            return callback.newInstance( ).regardingUserRequest( callback.getRequest( ) ).dispatch( c );
+          }
+        } ) );
       } else {
-        LOG.info( EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), this.cluster.getName( ), event.getClass( ).getSimpleName( ) ) );
-        this.pendingEvents.add( event );
-        event.dispatch( cluster );
+        this.pendingEvents.add( event.dispatch( cluster ) );
+        LOG.info( EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), cluster.getName( ), event.getClass( ).getSimpleName( ) ) );
       }
     }
   }
   
-  public void transition( ) {
+  private E transition( final E currentState ) {
     QueuedEventCallback event = null;
+    E nextState = this.states[currentState.ordinal( ) + 1];
     while ( ( event = this.pendingEvents.poll( ) ) != null ) {
-      Object o = null;
+      while ( !event.pollForResponse( 1000l ) );
       try {
-        o = event.getResponse( );
-        LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), this.cluster.getName( ), o.getClass( ).getSimpleName( ) ) );
+        Object o = event.pollResponse( 1000l );
+        LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ) );
       } catch ( Throwable t ) {
-        LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), this.cluster.getName( ), t.getClass( ).getSimpleName( ) ) );
+        LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ) );
         LOG.debug( t, t );
-        this.rollback.lazySet( true );
-        this.state = failState;
-        return;
+        nextState = this.rollback( );
       }
     }
-    LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), EventType.TRANSITION.name( ), this.states[this.state.ordinal( ) + 1].name( ) ) );
-    this.state = this.states[this.state.ordinal( ) + 1];
+    LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), EventType.TRANSITION.name( ), nextState.name( ) ) );
+    return nextState;
+  }
+  
+  private boolean isSuccessful( ) {
+    return this.state.equals( endState );
+  }
+  
+  private boolean isFinished( ) {
+    return this.state.equals( this.failState ) || this.state.equals( endState );
   }
   
   public void run( ) {
     do {
-      if ( this.state.equals( failState ) ) {
-        this.pendingEvents.addAll( this.rollbackMessages );
-      } else {
-        this.queueEvents( this.state );
-        this.transition( );
-      }
-    } while ( !this.state.equals( endState ) || !this.state.equals( failState ) );
-    LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTED, ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" ) );
+      this.queueEvents( this.state );
+      this.state = this.transition( this.state );
+    } while ( !this.isFinished( ) );
+    LOG.info( EventRecord.here( StatefulMessageSet.class, 
+                                this.isSuccessful( )?EventType.VM_START_COMPLETED:EventType.VM_START_ABORTED, 
+                                                    ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" ) );
   }
 }

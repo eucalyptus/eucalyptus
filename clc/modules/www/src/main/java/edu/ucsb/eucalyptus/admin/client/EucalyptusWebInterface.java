@@ -484,7 +484,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	        }
 		} else {
 			newUser = false;
-			oldPassword = userToEdit.getBCryptedPassword();
+			oldPassword = userToEdit.getPassword();
             isAdminChecked = userToEdit.isAdministrator();
             showSkipConfirmed = !userToEdit.isConfirmed();
             skipConfirmationChecked = userToEdit.isConfirmed();
@@ -545,7 +545,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         g1.setWidget( i, 0, new Label( "Password:" ) );
         g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
         final PasswordTextBox cleartextPassword1_box = new PasswordTextBox();
-		cleartextPassword1_box.setText (userToEdit.getBCryptedPassword());
+		cleartextPassword1_box.setText (userToEdit.getPassword());
         cleartextPassword1_box.setWidth ("180");
 		if ( (! admin && ! newUser ) || userToEdit.isAdministrator().booleanValue()) {
 			cleartextPassword1_box.setEnabled (false);
@@ -556,7 +556,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         g1.setWidget( i, 0, new Label( "Password, again:" ) );
         g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
         final PasswordTextBox cleartextPassword2_box = new PasswordTextBox();
-		cleartextPassword2_box.setText (userToEdit.getBCryptedPassword());
+		cleartextPassword2_box.setText (userToEdit.getPassword());
         cleartextPassword2_box.setWidth("180");
 		if ( ( ! admin && ! newUser ) || userToEdit.isAdministrator().booleanValue()) {
 			cleartextPassword2_box.setEnabled (false);
@@ -738,10 +738,10 @@ public class EucalyptusWebInterface implements EntryPoint {
                             emailAddress_box.getText(),
                             encryptedPassword);
                     if ( admin ) {
-                        userToSave.setIsAdministrator( userIsAdmin.isChecked());
+                        userToSave.setAdministrator( userIsAdmin.isChecked());
                         if ( showSkipConfirmed ) {
                             previousSkipConfirmation = skipConfirmation.isChecked(); // remember value for the future
-                            userToSave.setIsConfirmed(previousSkipConfirmation);
+                            userToSave.setConfirmed(previousSkipConfirmation);
                         }
                     }
                     if ( telephoneNumber_box.getText().length() > 0 )
@@ -793,7 +793,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                                 if (loggedInUser.getUserName().equals(userToSave.getUserName())) {
                                     loggedInUser.setRealName(userToSave.getRealName());
                                     loggedInUser.setEmail(userToSave.getEmail());
-                                    loggedInUser.setBCryptedPassword(userToSave.getBCryptedPassword());
+                                    loggedInUser.setPassword(userToSave.getPassword());
                                     loggedInUser.setTelephoneNumber(userToSave.getTelephoneNumber());
                                     loggedInUser.setAffiliation(userToSave.getAffiliation());
                                     loggedInUser.setProjectDescription(userToSave.getProjectDescription());
@@ -1537,7 +1537,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 					Window.open(GWT.getModuleBaseURL() +
 						"getX509?user=" + loggedInUser.getUserName() +
 						"&keyValue=" + loggedInUser.getUserName() +
-						"&code=" + loggedInUser.getCertificateCode(),
+						"&code=" + loggedInUser.getToken(),
 						"_self", "");
 				}
 		});
@@ -2120,7 +2120,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         parent.add(vpanel);
         int nusers = usersList.size();
         if (nusers>0) {
-            Hyperlink sort_button = new Hyperlink( sortSymbol, true, null );
+            Anchor sort_button = new Anchor( sortSymbol, true);
 			sort_button.setStyleName ("euca-small-text");
 			sort_button.addClickListener( new ClickListener() {
 				public void onClick(Widget sender) {
@@ -2195,7 +2195,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	                }
 	                ops.add(act_button);
 
-					Hyperlink del_button = new Hyperlink( "Delete", null );
+					Anchor del_button = new Anchor ( "Delete" );
 					del_button.setStyleName ("euca-action-link");
 					del_button.addClickListener( new ClickListener() {
 						public void onClick(Widget sender) {
@@ -2486,7 +2486,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     			label_box.setStyleName("euca-greeting-pending");
 
     			loggedInUser.setEmail( emailAddress_box.getText() );
-    			loggedInUser.setBCryptedPassword(GWTUtils.md5(newCleartextPassword1_box.getText()));
+    			loggedInUser.setPassword(GWTUtils.md5(newCleartextPassword1_box.getText()));
 
     			EucalyptusWebBackend.App.getInstance().updateUserRecord(
     					sessionId,

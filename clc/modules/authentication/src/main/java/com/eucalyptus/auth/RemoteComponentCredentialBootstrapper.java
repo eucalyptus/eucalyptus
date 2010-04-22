@@ -64,23 +64,24 @@
 package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
-
+import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.EucaKeyStore;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Depends;
+import com.eucalyptus.bootstrap.DependsRemote;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 
-@Provides( resource = Resource.SystemCredentials )
-@Depends( remote = Component.eucalyptus )
+@Provides(Component.bootstrap)
+@RunDuring(Bootstrap.Stage.RemoteServicesInit)
+@DependsRemote(Component.eucalyptus)
 public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteComponentCredentialBootstrapper.class );
 
   @Override
-  public boolean load( Resource current ) throws Exception {
-    Credentials.init( );
+  public boolean load( Stage current ) throws Exception {
     while ( !this.checkAllKeys( ) ) {
       LOG.fatal( "Waiting for system credentials before proceeding with startup..." );
       try {
@@ -91,9 +92,8 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
     for ( Component c : Component.values( ) ) {
       LOG.info( "Initializing system credentials for " + c.name( ) );
       SystemCredentialProvider.init( c );
-      c.markHasKeys( );
     }
-    System.setProperty( "euca.db.password", Hashes.getHexSignature( ) );
+    System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
     return true;
   }
 

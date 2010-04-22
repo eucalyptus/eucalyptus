@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
   ~
   ~ This program is free software: you can redistribute it and/or modify
@@ -65,110 +64,122 @@
 
 <binding force-classes="true">
 
-    <mapping name="RegisterImageResponse" class="edu.ucsb.eucalyptus.msgs.RegisterImageResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="imageId" field="imageId"/>
-    </mapping>
+  <mapping name="RegisterImageResponse" class="edu.ucsb.eucalyptus.msgs.RegisterImageResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="imageId" field="imageId" />
+  </mapping>
 
-    <mapping name="RegisterImage" class="edu.ucsb.eucalyptus.msgs.RegisterImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="imageLocation" field="imageLocation"/>
-    </mapping>
+  <mapping name="RegisterImage" class="edu.ucsb.eucalyptus.msgs.RegisterImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="imageLocation" field="imageLocation" />
+    <value name="name" field="name" usage="optional" />
+    <value name="rootDeviceName" field="rootDeviceName" usage="optional" />
+    <structure name="blockDeviceMapping" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="blockDeviceMappings">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
+      </collection>
+    </structure>
+  </mapping>
 
-    <mapping name="DeregisterImageResponse" class="edu.ucsb.eucalyptus.msgs.DeregisterImageResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
-    </mapping>
+  <mapping name="DeregisterImageResponse" class="edu.ucsb.eucalyptus.msgs.DeregisterImageResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" field="_return" />
+  </mapping>
 
-    <mapping name="DeregisterImage" class="edu.ucsb.eucalyptus.msgs.DeregisterImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="imageId" field="imageId"/>
-    </mapping>
+  <mapping name="DeregisterImage" class="edu.ucsb.eucalyptus.msgs.DeregisterImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="imageId" field="imageId" />
+  </mapping>
 
-    <mapping name="DescribeImagesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure name="imagesSet" usage="optional">
-            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="imagesSet">
-                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ImageDetails"/>
-            </collection>
-        </structure>
-    </mapping>
+  <mapping name="DescribeImagesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="imagesSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="imagesSet">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ImageDetails" />
+      </collection>
+    </structure>
+  </mapping>
 
-    <mapping class="edu.ucsb.eucalyptus.msgs.ImageDetails" abstract="true">
-        <value name="imageId" field="imageId"/>
-        <value name="imageLocation" field="imageLocation"/>
-        <value name="imageState" field="imageState"/>
-        <value name="imageOwnerId" field="imageOwnerId"/>
-        <value name="isPublic" field="isPublic"/>
-        <!--2007-03-01-->
-        <structure usage="optional">
-            <collection name="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory" field="productCodes" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="productCode"/>
-                </structure>
-            </collection>
+  <mapping class="edu.ucsb.eucalyptus.msgs.ImageDetails" abstract="true">
+    <value name="imageId" field="imageId" />
+    <value name="imageLocation" field="imageLocation" />
+    <value name="imageState" field="imageState" />
+    <value name="imageOwnerId" field="imageOwnerId" />
+    <value name="isPublic" field="isPublic" />
+    <!--2007-03-01-->
+    <structure usage="optional">
+      <collection name="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory" field="productCodes"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="productCode" />
         </structure>
-        <!--2008-02-01-->
-        <value name="architecture" field="architecture" usage="optional"/>
-        <value name="imageType" field="imageType" usage="optional"/>
-        <value name="kernelId" field="kernelId" usage="optional"/>
-        <value name="ramdiskId" field="ramdiskId" usage="optional"/>
-        <!--2008-08-08-->
-        <value name="platform" field="platform" usage="optional"/>
-        <!--2009-10-31--><!--
-        <structure name="stateReason" usage="optional">
-            <value name="code" field="stateCode" usage="optional"/>
-            <value name="message" field="stateMessage" usage="optional"/>
-        </structure>
-        -->
-        <value name="imageOwnerAlias" field="imageOwnerAlias" usage="optional"/>
-        <value name="name" field="name" usage="optional" />
-        <value name="description" field="description"  usage="optional"/>
-        <value name='rootDeviceType' field="rootDeviceType" usage="optional" />
-        <value name="rootDeviceName" field="rootDeviceName" usage="optional" />
-        <structure name="blockDeviceMapping" usage="optional">
-            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="blockDeviceMappings">
-                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType"/>
-            </collection>
-        </structure>
-    </mapping>
+      </collection>
+    </structure>
+    <!--2008-02-01-->
+    <value name="architecture" field="architecture" usage="optional" />
+    <value name="imageType" field="imageType" usage="optional" />
+    <value name="kernelId" field="kernelId" usage="optional" />
+    <value name="ramdiskId" field="ramdiskId" usage="optional" />
+    <!--2008-08-08-->
+    <value name="platform" field="platform" usage="optional" />
+    <!--2009-10-31-->
+    <!--
+      <structure name="stateReason" usage="optional"> <value name="code" field="stateCode" usage="optional"/> <value
+      name="message" field="stateMessage" usage="optional"/> </structure>
+    -->
+    <value name="imageOwnerAlias" field="imageOwnerAlias" usage="optional" />
+    <value name="name" field="name" usage="optional" />
+    <value name="description" field="description" usage="optional" />
+    <value name='rootDeviceType' field="rootDeviceType" usage="optional" />
+    <value name="rootDeviceName" field="rootDeviceName" usage="optional" />
+    <structure name="blockDeviceMapping" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="blockDeviceMappings">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
+      </collection>
+    </structure>
+  </mapping>
 
-    <mapping name="DescribeImages" class="edu.ucsb.eucalyptus.msgs.DescribeImagesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure usage="optional">
-            <collection name="executableBySet" factory="org.jibx.runtime.Utility.arrayListFactory" field="executableBySet" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="user"/>
-                </structure>
-            </collection>
+  <mapping name="DescribeImages" class="edu.ucsb.eucalyptus.msgs.DescribeImagesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure usage="optional">
+      <collection name="executableBySet" factory="org.jibx.runtime.Utility.arrayListFactory" field="executableBySet"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="user" />
         </structure>
-        <structure usage="optional">
-            <collection name="imagesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="imagesSet" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="imageId"/>
-                </structure>
-            </collection>
+      </collection>
+    </structure>
+    <structure usage="optional">
+      <collection name="imagesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="imagesSet"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="imageId" />
         </structure>
-        <structure usage="optional">
-            <collection name="ownersSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="ownersSet" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="owner"/>
-                </structure>
-            </collection>
+      </collection>
+    </structure>
+    <structure usage="optional">
+      <collection name="ownersSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="ownersSet"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="owner" />
         </structure>
-    </mapping>
-    <mapping name="DescribeBundleTasks" class="edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure usage="optional">
-            <collection name="bundlesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="bundleIds" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="bundleId"/>
-                </structure>
-            </collection>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeBundleTasks" class="edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure usage="optional">
+      <collection name="bundlesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="bundleIds"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="bundleId" />
         </structure>
-    </mapping>
-    <mapping name="DescribeBundleTasksResponse" class="edu.ucsb.eucalyptus.msgs.DescribeBundleTasksResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-    </mapping>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeBundleTasksResponse" class="edu.ucsb.eucalyptus.msgs.DescribeBundleTasksResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
 
 </binding>
