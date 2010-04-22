@@ -71,7 +71,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
@@ -142,7 +142,7 @@ public class VolumeManager {
     String newId = null;
     Volume newVol = null;
     while ( true ) {
-      newId = Hashes.generateId( request.getUserId(), ID_PREFIX );
+      newId = Crypto.generateId( request.getUserId(), ID_PREFIX );
       try {
         db.getUnique( Volume.named( null, newId ) );
       } catch ( EucalyptusCloudException e ) {
@@ -163,7 +163,7 @@ public class VolumeManager {
       CreateStorageVolumeType req = new CreateStorageVolumeType( newId, request.getSize( ), request.getSnapshotId( ) );
       req.setUserId( request.getUserId( ) );
       req.setEffectiveUserId( request.getEffectiveUserId( ) );
-      StorageUtil.lookup( sc.getHostName( ) ).send( req, CreateStorageVolumeResponseType.class );
+      StorageUtil.send( sc.getName( ), req );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       try {

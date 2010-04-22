@@ -63,8 +63,8 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
 
 public class VmControlMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
@@ -227,9 +227,10 @@ public class RunningInstancesItemType extends EucalyptusData {
   boolean monitoring = false;
 }
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
-  String virtualName;
+  String virtualName; // ephemeralN, root, ami, swap
   String deviceName;
-
+//  Integer deviceSize; // in megabytes
+//  String format; // optional, defaults to none (none, ext3, ntfs, swap)
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
     this.virtualName = virtualName;
     this.deviceName = deviceName;

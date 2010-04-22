@@ -64,10 +64,6 @@
 package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import com.eucalyptus.ws.binding.Binding;
-import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.handlers.BindingHandler;
 
 public class BindingStage implements UnrollableStage {

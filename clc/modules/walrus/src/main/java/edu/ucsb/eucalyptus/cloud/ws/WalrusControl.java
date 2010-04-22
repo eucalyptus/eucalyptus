@@ -70,7 +70,6 @@ import java.util.ArrayList;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -79,8 +78,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
-import edu.ucsb.eucalyptus.cloud.NotImplementedException;
-import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.AddObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.AddObjectType;
@@ -158,7 +155,6 @@ import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 
-@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusControl {
 
 	private static Logger LOG = Logger.getLogger( WalrusControl.class );
@@ -169,11 +165,12 @@ public class WalrusControl {
 	private static WalrusBlockStorageManager walrusBlockStorageManager;
 	private static WalrusImageManager walrusImageManager;
 
-	public static void deferredInitializer() {
-		configure();
-		storageManager = new FileSystemStorageManager(WalrusInfo.getWalrusInfo().getStorageDir());
+	public static void configure() {
+		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
+		storageManager = new FileSystemStorageManager(walrusInfo.getStorageDir());
 		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
 		walrusManager = new WalrusManager(storageManager, walrusImageManager);
+		WalrusManager.configure();
 		walrusBlockStorageManager = new WalrusBlockStorageManager(storageManager, walrusManager);
 		String limits = System.getProperty(WalrusProperties.USAGE_LIMITS_PROPERTY);
 		if(limits != null) {
@@ -197,16 +194,6 @@ public class WalrusControl {
 		return new EntityWrapper<T>( WalrusProperties.DB_NAME );
 	}
 
-	private static void configure() {
-		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
-		WalrusProperties.NAME = walrusInfo.getName();
-		WalrusProperties.MAX_BUCKETS_PER_USER = walrusInfo.getStorageMaxBucketsPerUser();
-		WalrusProperties.MAX_BUCKET_SIZE = walrusInfo.getStorageMaxBucketSizeInMB() * WalrusProperties.M;
-		WalrusProperties.bucketRootDirectory = walrusInfo.getStorageDir();
-		WalrusProperties.IMAGE_CACHE_SIZE = walrusInfo.getStorageMaxCacheSizeInMB() * WalrusProperties.M;
-		WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = walrusInfo.getStorageMaxTotalSnapshotSizeInGb();
-	}
-
 	public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {
 		UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
@@ -220,12 +207,10 @@ public class WalrusControl {
 					entry.setValue(prop.getValue());
 				} catch (IllegalAccessException e) {
 					LOG.error(e, e);
-				}				
+				}                               
 			}
 		}
 		String name = request.getName();
-		if(name != null)
-			WalrusProperties.NAME = name;
 		walrusManager.check();
 		return reply;
 	}

@@ -188,6 +188,23 @@ sub do_exit() {
     if ($tmpfile ne "") {
 	system("$RMDIR $tmpfile");
     }
+
+    if (-f "$img") {
+	# be conservative about deleting loopback devices
+	open(RFH, "losetup -a|");
+	while(<RFH>) {
+	    chomp;
+	    my $line = $_;
+	    
+	    if ($line =~ /$img/) {
+		if ($line =~ /(\/dev\/loop\d+).*/) {
+		    system("$LOSETUP -d $1");
+		}
+	    }
+	}
+	close(RFH);
+    }
+
     exit($e);
 }
 

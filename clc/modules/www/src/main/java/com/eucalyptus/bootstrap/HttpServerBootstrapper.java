@@ -61,23 +61,22 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.URL;
-import java.util.concurrent.Executor;
-
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.apache.log4j.Logger;
 import org.mortbay.jetty.Server;
 import org.mortbay.xml.XmlConfiguration;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-@Provides( component = Component.jetty )
-@Depends( local=Component.eucalyptus )
+@Provides(Component.jetty)
+@RunDuring(Bootstrap.Stage.CloudServiceInit)
+@DependsLocal(Component.eucalyptus)
 public class HttpServerBootstrapper extends Bootstrapper {
   private static Logger                   LOG = Logger.getLogger( HttpServerBootstrapper.class );
   private static Server jettyServer;
   private ExecutorService exec;
   @Override
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     jettyServer = new org.mortbay.jetty.Server( );
     URL defaultConfig = ClassLoader.getSystemResource( "eucalyptus-jetty.xml" );
     XmlConfiguration jettyConfig = new XmlConfiguration( defaultConfig );

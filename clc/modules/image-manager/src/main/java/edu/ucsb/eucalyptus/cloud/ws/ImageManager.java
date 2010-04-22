@@ -75,10 +75,13 @@ import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-import com.eucalyptus.accounts.UserGroupInfo;
-import com.eucalyptus.accounts.UserInfo;
+import com.eucalyptus.auth.GroupEntity;
+import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.images.Image;
+import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.images.util.ImageUtil;
 import com.eucalyptus.images.util.WalrusUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -89,8 +92,6 @@ import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.cloud.entities.ImageInfo;
-import edu.ucsb.eucalyptus.cloud.entities.ProductCode;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
@@ -127,7 +128,7 @@ public class ImageManager {
 
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
-      diskInfo = db.getUnique( ImageInfo.named( vmInfo.getImageId( ) ) );
+      diskInfo = db.getUnique( new ImageInfo( vmInfo.getImageId( ) ) );
       for ( ProductCode p : diskInfo.getProductCodes( ) ) {
         productCodes.add( p.getValue( ) );
       }
@@ -353,9 +354,10 @@ public class ImageManager {
     try {
       db.add( imageInfo );
       UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) );
-      UserGroupInfo group = db.recast( UserGroupInfo.class ).getUnique( new UserGroupInfo( "all" ) );
+//      UserGroupEntity group = db.recast( UserGroupEntity.class ).getUnique( new UserGroupEntity( "all" ) );
       imageInfo.getPermissions( ).add( user );
-      imageInfo.getUserGroups( ).add( group );
+// TODO: RELEASE: restore
+//      imageInfo.getUserGroups( ).add( group );
       db.commit( );
       LOG.info( "Registering image pk=" + imageInfo.getId( ) + " ownerId=" + user.getUserName( ) );
     } catch ( EucalyptusCloudException e ) {
@@ -449,8 +451,9 @@ public class ImageManager {
         }
       } else if ( request.getLaunchPermission( ) != null ) {
         reply.setRealResponse( reply.getLaunchPermission( ) );
-        for ( UserGroupInfo userGroup : imgInfo.getUserGroups( ) )
-          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( userGroup.getName( ) ) );
+// TODO: RELEASE: restore
+//        for ( UserGroupEntity userGroup : imgInfo.getUserGroups( ) )
+//          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( userGroup.getName( ) ) );
         for ( UserInfo user : imgInfo.getPermissions( ) )
           reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( user.getUserName( ) ) );
       } else if ( request.getProductCodes( ) != null ) {
@@ -511,9 +514,10 @@ public class ImageManager {
 
       if ( !request.getUserId( ).equals( imgInfo.getImageOwnerId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Not allowed to modify image: " + imgInfo.getImageId( ) );
       imgInfo.getPermissions( ).clear( );
-      imgInfo.getPermissions( ).add( db.recast( UserInfo.class ).getUnique( UserInfo.named( imgInfo.getImageOwnerId( ) ) ) );
-      imgInfo.getUserGroups( ).clear( );
-      imgInfo.getUserGroups( ).add( db.recast( UserGroupInfo.class ).getUnique( UserGroupInfo.named( "all" ) ) );
+      imgInfo.getPermissions( ).add( db.recast( UserInfo.class ).getUnique( new UserInfo( imgInfo.getImageOwnerId( ) ) ) );
+// TODO: RELEASE: restore
+//      imgInfo.getUserGroups( ).clear( );
+//      imgInfo.getUserGroups( ).add( db.recast( UserGroupEntity.class ).getUnique( UserGroupEntity.named( "all" ) ) );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );

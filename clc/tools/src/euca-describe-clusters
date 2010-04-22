@@ -5,8 +5,6 @@ from euca_admin.clusters import Cluster
 
 def main():
   c = Cluster()
-  parser = c.get_describe_parser()
-  (options, args) = parser.parse_args()
   c.describe()
   sys.exit()
 

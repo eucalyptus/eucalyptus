@@ -69,16 +69,19 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.util.EucaKeyStore;
-import com.eucalyptus.auth.util.KeyTool;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Depends;
+import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 
-@Provides( resource = Resource.SystemCredentials )
-@Depends( local = Component.eucalyptus )
+@Provides( Component.any )
+@RunDuring( Bootstrap.Stage.SystemCredentialsInit )
+@DependsLocal( Component.eucalyptus )
 public class SystemCredentialProvider extends Bootstrapper {
   private static Logger                                    LOG      = Logger.getLogger( SystemCredentialProvider.class );
   private static ConcurrentMap<Component, X509Certificate> certs    = new ConcurrentHashMap<Component, X509Certificate>( );
@@ -150,10 +153,9 @@ public class SystemCredentialProvider extends Bootstrapper {
   }
 
   private void createSystemCredentialProviderKey( Component name ) throws Exception {
-    KeyTool keyTool = new KeyTool( );
     try {
-      KeyPair sysKp = keyTool.getKeyPair( );
-      X509Certificate sysX509 = keyTool.getCertificate( sysKp, CredentialProvider.getDName( name.name( ) ) );
+      KeyPair sysKp = Certs.generateKeyPair( );
+      X509Certificate sysX509 = Certs.generateServiceCertificate( sysKp, name.name( ) );
       SystemCredentialProvider.certs.put( name, sysX509 );
       SystemCredentialProvider.keypairs.put( name, sysKp );
       // TODO: might need separate keystore for euca/hsqldb/ssl/jetty/etc.
@@ -168,9 +170,8 @@ public class SystemCredentialProvider extends Bootstrapper {
   }
 
   @Override
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     try {
-      Credentials.init( );
       for ( Component c : Component.values( ) ) {
         try {
           if ( !SystemCredentialProvider.check( c ) ) SystemCredentialProvider.init( c );

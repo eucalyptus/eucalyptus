@@ -98,26 +98,28 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.User;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.util.HoldMe;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
-import com.eucalyptus.ws.BindingException;
 import com.eucalyptus.ws.InvalidOperationException;
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.MappingHttpResponse;
-import com.eucalyptus.ws.binding.Binding;
-import com.eucalyptus.ws.binding.BindingManager;
 import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler.SecurityParameter;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
@@ -328,7 +330,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		List<String> failedMappings = populateObject( eucaMsg, fieldMap, params);
 		populateObjectFromBindingMap(eucaMsg, fieldMap, httpRequest, bindingArguments);
 
-		User user = httpRequest.getUser();
+		User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser();
 		setRequiredParams (eucaMsg, user);
 
 		if ( !failedMappings.isEmpty() || !params.isEmpty() )

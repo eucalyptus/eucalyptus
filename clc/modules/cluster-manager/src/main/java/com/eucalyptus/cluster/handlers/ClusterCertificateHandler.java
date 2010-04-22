@@ -6,15 +6,15 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.GenericEvent;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.BindingException;
-import com.eucalyptus.ws.MappingHttpResponse;
 
 import edu.ucsb.eucalyptus.msgs.GetKeysResponseType;
 import edu.ucsb.eucalyptus.msgs.GetKeysType;

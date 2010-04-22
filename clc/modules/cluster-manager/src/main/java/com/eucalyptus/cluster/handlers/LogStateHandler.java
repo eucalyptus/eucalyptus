@@ -4,9 +4,9 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 
+import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.ws.BindingException;
 
 public class LogStateHandler extends AbstractClusterMessageDispatcher {
   private static Logger LOG = Logger.getLogger( NetworkStateHandler.class );

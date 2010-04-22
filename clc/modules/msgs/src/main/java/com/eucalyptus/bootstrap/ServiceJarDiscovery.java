@@ -8,9 +8,12 @@ import java.util.SortedSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
   private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
@@ -30,7 +33,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         try {
           Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
           classList.put( candidate, f.getAbsolutePath( ) );
-          if ( ServiceJarDiscovery.class.isAssignableFrom( candidate ) && !ServiceJarDiscovery.class.equals( candidate )) {
+          if ( ServiceJarDiscovery.class.isAssignableFrom( candidate ) && !ServiceJarDiscovery.class.equals( candidate ) ) {
             try {
               ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
               discovery.add( discover );
@@ -48,6 +51,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   public static void checkUniqueness( Class c ) {
     if ( classList.get( c ).size( ) > 1 ) {
+      
       LOG.fatal( "Duplicate bootstrap class registration: " + c.getName( ) );
       for ( String fileName : classList.get( c ) ) {
         LOG.fatal( "\n==> Defined in: " + fileName );
@@ -58,8 +62,8 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   public static void runDiscovery( ) {
     for ( ServiceJarDiscovery s : discovery ) {
-      LOG.info( "-> Starting discovery: " + s.getClass( ).getName( ) );
-      for( Class c : classList.keySet( ) ) {
+      EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_STARTED, s.getClass( ).getSimpleName( ) ).info( );
+      for ( Class c : classList.keySet( ) ) {
         try {
           s.checkClass( c );
         } catch ( Throwable t ) {
@@ -67,17 +71,22 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         }
       }
     }
+    for ( ServiceJarDiscovery s : discovery ) {
+      EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_FINISHED, s.getClass( ).getSimpleName( ) ).info( );
+    }
   }
   
   public void checkClass( Class candidate ) {
     try {
       if ( this.processsClass( candidate ) ) {
         ServiceJarDiscovery.checkUniqueness( candidate );
+        EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_LOADED_ENTRY, this.getClass( ).getSimpleName( ), candidate.getName( ) ).info( );
       }
     } catch ( Throwable e ) {
       LOG.trace( e, e );
     }
   }
+  
   /**
    * Process the potential bootstrap-related class. Return false or throw an exception if the class is rejected.
    * 
@@ -87,11 +96,15 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
    */
   public abstract boolean processsClass( Class candidate ) throws Throwable;
   
+  public Double getDistinctPriority( ) {
+    return this.getPriority( ) + ( .1d / this.getClass( ).hashCode( ) );
+  }
+  
   public abstract Double getPriority( );
   
   @Override
   public int compareTo( ServiceJarDiscovery that ) {
-    return this.getPriority( ).compareTo( that.getPriority( ) );
+    return this.getDistinctPriority( ).compareTo( that.getDistinctPriority( ) );
   }
   
 }

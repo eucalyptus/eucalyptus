@@ -71,7 +71,7 @@ import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.util.BaseDirectory;
+import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;

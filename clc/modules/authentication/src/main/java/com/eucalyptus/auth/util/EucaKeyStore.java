@@ -66,13 +66,9 @@ package com.eucalyptus.auth.util;
 import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.SubDirectory;
+import com.eucalyptus.system.SubDirectory;
 
 public class EucaKeyStore extends AbstractKeyStore {
   public static String            FORMAT         = "pkcs12";

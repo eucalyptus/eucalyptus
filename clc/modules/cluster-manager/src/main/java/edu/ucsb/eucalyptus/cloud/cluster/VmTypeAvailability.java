@@ -63,7 +63,7 @@
  */
 package edu.ucsb.eucalyptus.cloud.cluster;
 
-import edu.ucsb.eucalyptus.cloud.entities.VmType;
+import com.eucalyptus.entities.VmType;
 
 public class VmTypeAvailability implements Comparable {
   private VmType type;

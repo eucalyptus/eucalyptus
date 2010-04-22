@@ -82,8 +82,8 @@ import javax.persistence.EntityNotFoundException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
+import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.Credentials;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -787,7 +787,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 		}
 
 		private String encryptTargetPassword(String password) throws EucalyptusCloudException {
-			EntityWrapper<ClusterCredentials> credDb = Credentials.getEntityWrapper( );
+			EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
 			try {
 				ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
 				PublicKey ncPublicKey = X509Cert.toCertificate(credentials.getNodeCertificate()).getPublicKey();

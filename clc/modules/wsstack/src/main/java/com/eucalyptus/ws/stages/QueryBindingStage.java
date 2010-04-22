@@ -64,9 +64,7 @@
 package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
-
 import com.eucalyptus.ws.handlers.EucalyptusQueryBinding;
-import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 
 public class QueryBindingStage implements UnrollableStage {
 
@@ -81,3 +79,5 @@ public class QueryBindingStage implements UnrollableStage {
   }
 
 }
+
+

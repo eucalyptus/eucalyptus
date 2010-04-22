@@ -27,7 +27,7 @@ import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 
-import com.eucalyptus.util.GroovyUtil;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.NioBootstrap;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;

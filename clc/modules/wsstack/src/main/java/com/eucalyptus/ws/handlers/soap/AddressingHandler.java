@@ -73,8 +73,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
-import com.eucalyptus.util.HoldMe;
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 @ChannelPipelineCoverage("one")
