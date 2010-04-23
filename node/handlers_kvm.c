@@ -309,10 +309,11 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 
   char *console_output=NULL, *console_append=NULL, *console_main=NULL;
   char console_file[MAX_PATH];
-  int rc, fd, ret;
+  int rc, fd, ret, readsize;
   struct stat statbuf;
 
   *consoleOutput = NULL;
+  readsize = 64 * 1024;
 
   snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), meta->userId, instanceId);
   rc = stat(console_file, &statbuf);
@@ -334,10 +335,19 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   if (rc >= 0) {
     fd = open(console_file, O_RDONLY);
     if (fd >= 0) {
-      console_main = malloc(64 * 1024);
+      rc = lseek(fd, (off_t)(-1 * readsize), SEEK_END);
+      if (rc < 0) {
+	rc = lseek(fd, (off_t)0, SEEK_SET);
+	if (rc < 0) {
+	  logprintfl(EUCAERROR, "cannot seek to beginning of file\n");
+	  if (console_output) free(console_output);
+	  return(1);
+	}
+      }
+      console_main = malloc(readsize);
       if (console_main) {
-	bzero(console_main, 64*1024);
-	rc = read(fd, console_main, (64*1024)-1);
+	bzero(console_main, readsize);
+	rc = read(fd, console_main, (readsize)-1);
 	close(fd);
       }
     } else {
@@ -348,14 +358,14 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   }
   
   ret = 1;
-  console_output = malloc( (64*1024) + 4096 );
+  console_output = malloc( (readsize) + 4096 );
   if (console_output) {
-    bzero(console_output, (64*1024) + 4096 );
+    bzero(console_output, (readsize) + 4096 );
     if (console_append) {
       strncat(console_output, console_append, 4096);
     }
     if (console_main) {
-      strncat(console_output, console_main, 1024*64);
+      strncat(console_output, console_main, readsize);
     }
     *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
     ret = 0;
