@@ -82,6 +82,7 @@ public enum Component {
   jetty( true ),
   configuration( true ),
   cluster( false ),
+  vmwarebroker( false ),
   any( true );
   private static Logger LOG = Logger.getLogger( Component.class );
   private final Boolean singleton;

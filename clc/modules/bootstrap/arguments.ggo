@@ -30,6 +30,7 @@ option "disable-walrus"       -   "Disable loading walrus services altogether." 
 option "disable-dns"       -   "Disable loading DNS services altogether."   flag   off
 option "disable-storage"       -   "Disable loading storage services altogether."   flag   off
 option "disable-iscsi"       -   "Disable ISCSI support for dynamic block storage."   flag   off
+option "disable-vmwarebroker"	-  "Disable VMware broker."   flag   off
 
 section "Eucalyptus Runtime Options"
 option "check"       C   "Check on Eucalyptus."   flag   off

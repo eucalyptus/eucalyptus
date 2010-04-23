@@ -73,6 +73,10 @@ permission notice:
 #include <fcntl.h>
 #include <stdarg.h>
 #include <ifaddrs.h>
+#include <math.h> /* log2 */
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 #include <sys/ioctl.h>
 #include <net/if.h>  

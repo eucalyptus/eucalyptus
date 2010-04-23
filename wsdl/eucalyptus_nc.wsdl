@@ -14,9 +14,10 @@
     
     <xs:complexType abstract="true" name="eucalyptusMessage">
       <xs:sequence>
-	<xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
+	<xs:element nillable="true" minOccurs="0" name="correlationId" type="xs:string"/>
 	<xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
 	<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
+	<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
 	<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:int"/>
       </xs:sequence>
     </xs:complexType>
@@ -65,8 +66,8 @@
 	  <xs:complexContent>
 	    <xs:extension base="tns:eucalyptusMessage">
 	      <xs:sequence>
-	        <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="localDev" type="xs:string"/>
 	      </xs:sequence>

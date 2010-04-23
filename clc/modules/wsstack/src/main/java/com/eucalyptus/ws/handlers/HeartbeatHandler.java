@@ -171,6 +171,9 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       if ( !initializedComponents.contains( Components.delegate.walrus.name( ) ) ) {
         Components.lookup( Components.delegate.walrus ).markDisabled( );
       }
+      if ( !initializedComponents.contains( Components.delegate.vmwarebroker.name( ) ) ) {
+        Components.lookup( Components.delegate.vmwarebroker ).markDisabled( );
+      }
       System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
       System.setProperty( "euca.db.url", Components.lookup( Components.delegate.db ).getBuilder( ).list( ).get( 0 ).getUri( ) );
       try {

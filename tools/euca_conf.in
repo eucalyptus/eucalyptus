@@ -76,10 +76,11 @@ DHCP_USER=""
 BRIDGE=""
 NEWNODES=""
 NODEMODE=""
-WALRUS_MODE=""
 SYNC=""
 WALRUS=""
 WALRUS_MODE=""
+VMWAREBROKER=""
+VMWAREBROKER_MODE=""
 CLUSNAME=""
 NEWCLUS=""
 CLUSMODE=""
@@ -98,7 +99,7 @@ LIST=""
 ENABLED=""
 DISABLED=""
 TO_START=""
-
+VMWARE=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -114,10 +115,13 @@ usage () {
 	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
 	echo "   --register-cluster <clustername> <host> add new cluster to EUCALYPTUS"
 	echo "   --deregister-cluster <clustername>      remove cluster from EUCALYPTUS"
+	echo "   --configure-vmware                add new vmware to EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
 	echo "   --deregister-walrus <host>       remove walrus from EUCALYPTUS"
-	echo "   --register-sc <clustername> <host>      add storage controller"
-	echo "   --deregister-sc <clustername>           remove storage controller from EUCALYPTUS"
+        echo "   --register-sc <clustername> <host>      add storage controller"
+        echo "   --deregister-sc <clustername>           remove storage controller from EUCALYPTUS"
+	echo "   --register-vmwarebroker <host>         add vmware broker to EUCALYPTUS"
+	echo "   --deregister-vmwarebroker <host>       remove vmware broker from EUCALYPTUS"
 	echo "   --list-walruses                  list registered walrus(es)"
 	echo "   --list-clusters                  list registered CCs"
 	echo "   --list-nodes                     list registered NCs"
@@ -134,9 +138,9 @@ usage () {
 	echo "   --name <var>                     returns the value or <name>"
 	echo "   --import-conf <file>             import variables from <file> into eucalyptus.conf"
 	echo "   --setup                          perform initial setup"
-	echo "   --enable {cloud|walrus|sc}       enable service at next start"
-	echo "   --disable {cloud|walrus|sc}      disable service at next start"
-	echo "   --check {nc|cc|cloud|sc|walrus}  pre-flight checks"
+	echo "   --enable {cloud|walrus|sc|vmwarebroker}       enable service at next start"
+	echo "   --disable {cloud|walrus|sc|vmwarebroker}      disable service at next start"
+	echo "   --check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}  pre-flight checks"
 #	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
 	echo "   --version                        eucalyptus version"
 	echo
@@ -264,6 +268,8 @@ component_sync_keys() {
 	echo "syncing sc($NAME)"
     elif [ "$COMPONENT" = "nc" ]; then
 	echo "syncing nc"
+    elif [ "$COMPONENT" = "vmwarebroker" ]; then
+	echo "syncing vmware broker"
     fi
 
 
@@ -409,6 +415,11 @@ while [ $# -gt 0 ]; do
 	    VERBOSE="Y"
 	    shift
 	    continue
+	fi
+	if [ "$1" = "--configure-vmware" ]; then
+		VMWARE="Y"
+		shift;
+		continue
 	fi
 	if [ "$1" = "-noscp" -o "$1" = "--no-scp" ]; then 
 	    SCP=""
@@ -586,6 +597,18 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
+	if [ "$1" = "--register-vmwarebroker" ]; then
+		VMWAREBROKER_MODE="ADD"
+		VMWAREBROKER="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--deregister-vmwarebroker" ]; then
+		VMWAREBROKER_MODE="DEL"
+		VMWAREBROKER="$2"
+		shift; shift
+		continue
+	fi
 	if [ "$1" = "--register-sc" ]; then
 		if [ $# -lt 3 ]; then
 			echo "--register-sc requires a CC and a hostname"
@@ -615,8 +638,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "-check" -o "$1" = "--check" ]; then 
-		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "-check requires cc, nc, sc, walrus or cloud"
+		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" -a "$2" != "vmware" -a "$2" != "vmwarebroker" ]; then
+			echo "-check requires cc, nc, sc, walrus, vmwarebroker or cloud"
 			exit 1
 		fi
 		CHECK="$2"
@@ -624,8 +647,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--enable" ]; then 
-		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "--enable requires cloud, sc or walrus"
+		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" -a "$2" != "vmwarebroker" ]; then
+			echo "--enable requires cloud, sc, vmwarebroker or walrus"
 			exit 1
 		fi
 		ENABLED="$ENABLED $2"
@@ -633,8 +656,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--disable" ]; then 
-		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "--disable requires cloud, sc or walrus"
+		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" -a "$2" != "vmwarebroker" ]; then
+			echo "--disable requires cloud, sc, vmwarebroker or walrus"
 			exit 1
 		fi
 		DISABLED="$DISABLED $2"
@@ -642,8 +665,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "-sync" -o "$1" = "--sync" ]; then 
-		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "-sync requires cc, nc, sc, walrus or cloud"
+		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" -a "$2" != "vmwarebroker" ]; then
+			echo "-sync requires cc, nc, sc, walrus, vmwarebroker, cloud"
 			exit 1
 		fi
 		TOSYNC="$2"
@@ -857,6 +880,8 @@ if [ -n "$SETUP" ]; then
 	let $((ret += $?))
 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus
+	let $((ret += $?))
 
 	# let's create more needed directory with the right permissions
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
@@ -974,6 +999,13 @@ if [ -n "$CHECK" ]; then
 		exit 1
 	    fi
 	fi
+
+	if [ "$CHECK" = "vmware" ]; then
+		if ! $EUCALYPTUS/usr/share/eucalyptus/euca_vmware --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml ; then
+			exit 1
+		fi
+	fi
+
 	# good to go
 	exit 0
 fi
@@ -1319,6 +1351,68 @@ if [ -n "$SCNAME" ]; then
 	fi
 	echo
 	echo "SUCCESS: Storage controller for cluster '${SCNAME}' successfully deregistered."
+    fi
+fi
+
+if [ -n "$VMWARE" ]; then
+	change_var_value $FILE ENABLE_WS_SECURITY "N"
+	change_var_value $FILE NC_SERVICE "/services/VMwareBroker"
+	if ! $EUCALYPTUS/usr/share/eucalyptus/euca_vmware --prompt --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml ; then
+		exit 1
+	fi
+fi
+
+# vmware broker 
+if [ -n "$VMWAREBROKER" -o -n "$VMWAREBROKER_MODE" ]; then
+    if ! checkLocalService "CLC" ; then
+	exit 1
+    fi
+    
+    if [ "$VMWAREBROKER_MODE" = "ADD" ]; then
+	echo "Adding VMware Broker host $VMWAREBROKER"
+	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
+	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	else
+	    echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
+	    exit 1
+	fi
+	
+	URL=""
+	if ! createCloudURL "Action" "RegisterVMwareBroker" "Host" "${VMWAREBROKER}" "Name" "vmwarebroker" "Port" "8773"; then
+	    exit 1
+	fi
+
+	if ! check_ws "$URL" ; then
+	    echo "ERROR: failed to register VMware Broker, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi
+	
+	# check that vmware broker is at least running on the remote host
+	sleep 3
+	if ! check_heartbeat ${VMWAREBROKER} vmwarebroker ; then
+		echo "VMware Broker is not up on host ${VMWAREBROKER}: check the logs"
+	fi
+	
+	# sync the keys
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${VMWAREBROKER} euca.p12 ; then
+	    echo "ERROR: failed to sync keys with ${VMWAREBROKER}."
+            exit 1
+	fi
+	echo
+	echo "SUCCESS: new vmware broker on host '${VMWAREBROKER}' successfully registered."
+	
+    elif [ "$VMWAREBROKER_MODE" = "DEL" ]; then
+	URL=""
+	if ! createCloudURL "Action" "DeregisterVMwareBroker" "Name" "vmwarebroker"; then
+	    exit 1
+	fi
+	if ! check_ws "$URL" ; then
+	    echo "ERROR: failed to deregister VMware Broker, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi
+        echo
+        echo "SUCCESS: VMware Broker successfully deregistered."
     fi
 fi
 

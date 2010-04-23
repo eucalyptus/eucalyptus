@@ -61,6 +61,7 @@ const char *eucalyptus_opts_full_help[] = {
   "      --disable-walrus          Disable loading walrus services altogether.  \n                                  (default=off)",
   "      --disable-dns             Disable loading DNS services altogether.  \n                                  (default=off)",
   "      --disable-storage         Disable loading storage services altogether.  \n                                  (default=off)",
+  "      --disable-vmwarebroker	   Disable loading VMware broker services altogether.  \n                                  (default=off)",
   "      --disable-iscsi           Disable ISCSI support for dynamic block \n                                  storage.  (default=off)",
   "\nEucalyptus Runtime Options:",
   "  -C, --check                   Check on Eucalyptus.  (default=off)",
@@ -124,11 +125,13 @@ init_help_array(void)
   eucalyptus_opts_help[39] = eucalyptus_opts_full_help[39];
   eucalyptus_opts_help[40] = eucalyptus_opts_full_help[40];
   eucalyptus_opts_help[41] = eucalyptus_opts_full_help[41];
-  eucalyptus_opts_help[42] = 0; 
-  
+  eucalyptus_opts_help[42] = eucalyptus_opts_full_help[42];
+  eucalyptus_opts_help[43] = eucalyptus_opts_full_help[43];
+  eucalyptus_opts_help[44] = eucalyptus_opts_full_help[44];
+  eucalyptus_opts_help[45] = 0;
 }
 
-const char *eucalyptus_opts_help[43];
+const char *eucalyptus_opts_help[46];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -180,6 +183,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->disable_walrus_given = 0 ;
   args_info->disable_dns_given = 0 ;
   args_info->disable_storage_given = 0 ;
+  args_info->disable_vmwarebroker_given = 0 ;
   args_info->disable_iscsi_given = 0 ;
   args_info->check_given = 0 ;
   args_info->stop_given = 0 ;
@@ -231,6 +235,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->disable_walrus_flag = 0;
   args_info->disable_dns_flag = 0;
   args_info->disable_storage_flag = 0;
+  args_info->disable_vmwarebroker_flag = 0;
   args_info->disable_iscsi_flag = 0;
   args_info->check_flag = 0;
   args_info->stop_flag = 0;
@@ -286,22 +291,22 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->disable_walrus_help = eucalyptus_opts_full_help[26] ;
   args_info->disable_dns_help = eucalyptus_opts_full_help[27] ;
   args_info->disable_storage_help = eucalyptus_opts_full_help[28] ;
-  args_info->disable_iscsi_help = eucalyptus_opts_full_help[29] ;
-  args_info->check_help = eucalyptus_opts_full_help[31] ;
-  args_info->stop_help = eucalyptus_opts_full_help[32] ;
-  args_info->fork_help = eucalyptus_opts_full_help[33] ;
-  args_info->pidfile_help = eucalyptus_opts_full_help[34] ;
-  args_info->java_home_help = eucalyptus_opts_full_help[36] ;
-  args_info->jvm_name_help = eucalyptus_opts_full_help[37] ;
-  args_info->jvm_args_help = eucalyptus_opts_full_help[38] ;
+  args_info->disable_vmwarebroker_help = eucalyptus_opts_full_help[29] ;
+  args_info->disable_iscsi_help = eucalyptus_opts_full_help[30] ;
+  args_info->check_help = eucalyptus_opts_full_help[32] ;
+  args_info->stop_help = eucalyptus_opts_full_help[33] ;
+  args_info->fork_help = eucalyptus_opts_full_help[34] ;
+  args_info->pidfile_help = eucalyptus_opts_full_help[35] ;
+  args_info->java_home_help = eucalyptus_opts_full_help[37] ;
+  args_info->jvm_name_help = eucalyptus_opts_full_help[38] ;
+  args_info->jvm_args_help = eucalyptus_opts_full_help[39] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_full_help[39] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[40] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[41] ;
-  args_info->profile_help = eucalyptus_opts_full_help[42] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[43] ;
-  
+  args_info->debug_help = eucalyptus_opts_full_help[40] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[41] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[42] ;
+  args_info->profile_help = eucalyptus_opts_full_help[43] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[44] ;
 }
 
 void
@@ -551,6 +556,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "disable-dns", 0, 0 );
   if (args_info->disable_storage_given)
     write_into_file(outfile, "disable-storage", 0, 0 );
+  if (args_info->disable_vmwarebroker_given)
+    write_into_file(outfile, "disable-vmwarebroker", 0, 0 );
   if (args_info->disable_iscsi_given)
     write_into_file(outfile, "disable-iscsi", 0, 0 );
   if (args_info->check_given)
@@ -1164,6 +1171,7 @@ arguments_internal (
         { "disable-walrus",	0, NULL, 0 },
         { "disable-dns",	0, NULL, 0 },
         { "disable-storage",	0, NULL, 0 },
+        { "disable-vmwarebroker",    0, NULL, 0 },
         { "disable-iscsi",	0, NULL, 0 },
         { "check",	0, NULL, 'C' },
         { "stop",	0, NULL, 'S' },
@@ -1565,6 +1573,18 @@ arguments_internal (
             if (update_arg((void *)&(args_info->disable_storage_flag), 0, &(args_info->disable_storage_given),
                 &(local_args_info.disable_storage_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "disable-storage", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Disable VMware broker services altogether..  */
+          else if (strcmp (long_options[option_index].name, "disable-vmwarebroker") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->disable_vmwarebroker_flag), 0, &(args_info->disable_vmwarebroker_given),
+                &(local_args_info.disable_vmwarebroker_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "disable-vmwarebroker", '-',
                 additional_error))
               goto failure;
           

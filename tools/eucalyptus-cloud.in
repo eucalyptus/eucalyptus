@@ -145,6 +145,7 @@ pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 read_ws_list() {
 	STORAGE_WS="N"
 	WALRUS_WS="N"
+	VMWAREBROKER_WS="N"
 	CLOUD_WS="N"	
 	NAME=""
 
@@ -157,6 +158,10 @@ read_ws_list() {
 		sc) 
 			STORAGE_WS="Y"
 			NAME="sc $NAME"
+			;;
+		vmwarebroker)
+			VMWAREBROKER_WS="Y"
+			NAME="vmwarebroker $NAME"
 			;;
 		cloud)
 			CLOUD_WS="Y"
@@ -250,6 +255,12 @@ do_start() {
 			exit 1
 		fi
 	fi
+	if [ "$VMWAREBROKER_WS" != "Y" ]; then
+		OPTS="$OPTS --disable-vmwarebroker"
+		if ! $EUCALYPTUS/usr/sbin/euca_conf --check vmwarebroker ; then
+			exit 1
+		fi
+	fi
 	if [ "$CLOUD_WS" != "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-cloud"
 	else
@@ -258,7 +269,7 @@ do_start() {
 		fi
 	fi
 
-	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}" = "NNN" ]; then
+	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}${VMWAREBROKER_WS}" = "NNNN" ]; then
 		# nothing to start
 		NAME="none"
 		return 0

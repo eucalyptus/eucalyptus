@@ -61,7 +61,8 @@ permission notice:
 #include <unistd.h> /* getopt */
 #include "data.h"
 #include "client-marshal.h"
-#include <misc.h>
+#include "misc.h"
+#include "euca_axis.h"
 
 #define NC_ENDPOINT "/axis2/services/EucalyptusNC"
 #define WALRUS_ENDPOINT "/services/Walrus"

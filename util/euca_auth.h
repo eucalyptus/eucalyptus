@@ -60,21 +60,6 @@ permission notice:
 #ifndef INCLUDE_EUCA_AUTH_H
 #define INCLUDE_EUCA_AUTH_H
 
-#ifndef NO_AXIS /* for compiling on systems without Axis */
-#include "oxs_axiom.h"
-#include "oxs_x509_cert.h"
-#include "oxs_key_mgr.h"
-#include "rampart_handler_util.h"
-#include "rampart_sec_processed_result.h"
-#include "rampart_error.h"
-#include "axis2_op_ctx.h"
-#include "rampart_context.h"
-
-axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_msg_ctx, axis2_op_ctx_t *op_ctx);
-
-#define euca_authenticate(a,b,c) do{ if( __euca_authenticate(a,b,c) == AXIS2_FAILURE ) return NULL; }while(0)
-#endif /* NO_AXIS */
-
 /* 
  * functions for Walrus clients
  */

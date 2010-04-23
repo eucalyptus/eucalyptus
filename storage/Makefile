@@ -4,14 +4,18 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = ${LIBS} -lcurl
+STORAGE_LIBS = -lcurl
+IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o walrus.o img.o cache.o ami2vmx.o do_convert.o http.o
 
-all: storage.o storage-windows.o walrus.o Wclient
+all: storage.o storage-windows.o walrus.o Wclient euca_imager
 
 build: all
 
-Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o
-	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o $(STORAGE_LIBS)
+euca_imager: Makefile euca_imager.c $(IMAGER_LIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) euca_imager.c -o euca_imager $(IMAGER_LIBS) -lcurl -lrt
+
+Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
+	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o http.o $(STORAGE_LIBS)
 
 walrus.o: walrus.c walrus.h
 	$(CC) $(CFLAGS) $(INCLUDES) -c walrus.c 
@@ -38,13 +42,14 @@ test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o
 	make -C ../util
 
 clean:
-	rm -rf *~ *.o Wclient
+	rm -rf *~ *.o Wclient euca_imager
 
 distclean:
 
 install:
-
+	@$(INSTALL) -m 0755 euca_imager $(DESTDIR)$(usrdir)/lib/eucalyptus
 deploy:
 
 uninstall:
+	@$(RM) -f $(usrdir)/lib/eucalyptus/euca_imager
 

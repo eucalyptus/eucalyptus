@@ -118,7 +118,10 @@
   <target name="build-www">
     <ant dir="modules/www" inheritall="false" target="builder"/>
   </target>
-  <target name="build-nogwt" depends="build-eucalyptus,build-walrus,build-ebs,build-dns"/>
+  <target name="build-vmware-broker">
+    <ant dir="modules/vmware-broker" inheritall="false" target="builder"/>
+  </target>
+  <target name="build-nogwt" depends="build-eucalyptus,build-walrus,build-ebs,build-dns,build-vmware-broker"/>
   <target name="build" depends="deps,build-nogwt,build-www"/>
   <!--================================== clean targets ==================================-->
   <target name="clean-msgs">
@@ -155,7 +158,10 @@
   <target name="clean-www">
     <ant dir="modules/www" inheritall="false" target="clean" />
   </target>
-  <target name="clean-nogwt" depends="clean-eucalyptus,clean-walrus,clean-ebs,clean-dns"/>
+  <target name="clean-vmware-broker" depends="clean-core">
+    <ant dir="modules/vmware-broker" inheritall="false" target="clean"/>
+  </target>
+  <target name="clean-nogwt" depends="clean-eucalyptus,clean-walrus,clean-ebs,clean-dns,clean-vmware-broker"/>
   <target name="clean" depends="clean-nogwt,clean-www">
     <delete dir="${target.dir}"/>
   </target>
@@ -218,6 +224,7 @@
     <ant dir="modules/storage-controller" inheritall="false" target="install"/>
     <ant dir="modules/dns" inheritall="false" target="install"/>
     <ant dir="modules/www" inheritall="false" target="install"/>
+    <ant dir="modules/vmware-broker" inheritall="false" target="install"/>
   </target>
   <!--================================== unzipping target ==================================-->
   <target name="deps">

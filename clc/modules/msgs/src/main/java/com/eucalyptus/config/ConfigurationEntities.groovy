@@ -313,3 +313,19 @@ public class System implements Serializable {
   String registrationId
 }
 
+@Entity
+@PersistenceContext(name="eucalyptus_config")
+@Table( name = "config_vmwarebroker" )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+public class VMwareBrokerConfiguration extends ComponentConfiguration implements Serializable {
+  @Transient
+  private static String DEFAULT_SERVICE_PATH = "/services/VMwareBroker";
+  public VMwareBrokerConfiguration( ) {
+  }
+  public VMwareBrokerConfiguration( String name, String hostName, Integer port ) {
+    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  }
+  public Component getComponent() {
+    return Component.vmwarebroker;
+  }
+}

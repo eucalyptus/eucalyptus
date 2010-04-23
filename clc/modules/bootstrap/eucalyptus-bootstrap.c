@@ -490,7 +490,7 @@ char* java_library_path(euca_opts *args) {
     DIR* lib_dir_p = opendir(lib_dir);
     struct direct *dir_ent;
     while ((dir_ent = readdir(lib_dir_p))!=0)  {
-            if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL && strstr(dir_ent->d_name,"eucalyptus-") != NULL )  {
+            if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL && ( strstr(dir_ent->d_name,"eucalyptus-") != NULL || strstr(dir_ent->d_name, "vijava") != NULL))  {
                             char jar[256];
                             snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
                             if( (CHECK_ISREG(jar) || CHECK_ISLNK(jar)) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
@@ -499,7 +499,7 @@ char* java_library_path(euca_opts *args) {
     closedir(lib_dir_p);
     lib_dir_p = opendir(lib_dir);
     while ((dir_ent = readdir(lib_dir_p))!=0)  {
-            if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL && strstr(dir_ent->d_name,"eucalyptus-") == NULL)  {
+            if (strcmp(dir_ent->d_name,".") != 0 && strcmp(dir_ent->d_name,"..") != 0 && strcmp(dir_ent->d_name,"openjdk-crypto.jar") != 0 && strstr(dir_ent->d_name,"disabled") == NULL && ( strstr(dir_ent->d_name,"eucalyptus-") == NULL && strstr(dir_ent->d_name, "vijava") == NULL))  {
                             char jar[256];
                             snprintf(jar,255,"%s/%s",lib_dir,dir_ent->d_name);
                             if( (CHECK_ISREG(jar) || CHECK_ISLNK(jar)) ) wb += snprintf(jar_list+wb,JAVA_PATH_LEN-wb,":%s",jar);
@@ -577,6 +577,9 @@ int java_init(euca_opts *args, java_home_t *data) {
     if(args->disable_walrus_flag) {
      	JVM_ARG(opt[++x],"-Deuca.disable.walrus=true");
     }
+    if(args->disable_vmwarebroker_flag) {
+       	JVM_ARG(opt[++x],"-Deuca.disable.vmwarebroker=true");
+    }
     if(args->remote_dns_flag) {
     	JVM_ARG(opt[++x],"-Deuca.remote.dns=true");
     }
@@ -590,7 +593,7 @@ int java_init(euca_opts *args, java_home_t *data) {
      	JVM_ARG(opt[++x],"-Deuca.remote.walrus=true");
     }
     if(args->disable_iscsi_flag) {
-         	JVM_ARG(opt[++x],"-Deuca.disable.iscsi=true");
+       	JVM_ARG(opt[++x],"-Deuca.disable.iscsi=true");
     }
     if(args->debug_flag) {
     	JVM_ARG(opt[++x],"-Xdebug");
