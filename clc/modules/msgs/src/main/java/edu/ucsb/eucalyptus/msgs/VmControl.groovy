@@ -192,6 +192,15 @@ public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = "InstanceId.1")
   String instanceId;
 }
+public class GetPasswordDataType extends VmControlMessage {
+  String instanceId;
+}
+public class GetPasswordDataResponseType extends VmControlMessage {
+  
+  String instanceId;
+  Date timestamp;
+  String output;
+}
 /** *******************************************************************************/
 public class ReservationInfoType extends EucalyptusData {
   String reservationId;
@@ -225,6 +234,7 @@ public class RunningInstancesItemType extends EucalyptusData {
   String kernel;
   String ramdisk;
   boolean monitoring = false;
+  String platform;
 }
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
   String virtualName; // ephemeralN, root, ami, swap

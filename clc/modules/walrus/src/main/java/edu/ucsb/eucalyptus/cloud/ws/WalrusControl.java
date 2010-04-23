@@ -148,6 +148,8 @@ import edu.ucsb.eucalyptus.msgs.StoreSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.StoreSnapshotType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
+import edu.ucsb.eucalyptus.msgs.ValidateImageResponseType;
+import edu.ucsb.eucalyptus.msgs.ValidateImageType;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -350,6 +352,10 @@ public class WalrusControl {
 		return walrusImageManager.flushCachedImage(request);
 	}
 
+	public ValidateImageResponseType ValidateImage(ValidateImageType request) throws EucalyptusCloudException {
+		return walrusImageManager.validateImage(request);
+	}
+	
 	public StoreSnapshotResponseType StoreSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
 		return walrusBlockStorageManager.storeSnapshot(request);
 	}

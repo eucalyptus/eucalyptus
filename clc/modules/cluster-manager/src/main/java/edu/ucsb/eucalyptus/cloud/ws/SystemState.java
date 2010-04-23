@@ -84,8 +84,8 @@ import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -103,7 +103,6 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
-import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
@@ -247,6 +246,8 @@ public class SystemState {
     try {
       vm = VmInstances.getInstance( ).lookup( runVm.getInstanceId( ) );
       vm.setServiceTag( runVm.getServiceTag( ) );
+      vm.setPlatform( runVm.getPlatform( ) );
+      vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
       if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
         long splitTime = vm.getSplitTime( );
         if ( splitTime > SHUT_DOWN_TIME ) {
@@ -334,7 +335,7 @@ public class SystemState {
       try {
         imgInfo = ( VmImageInfo ) Messaging.send( "vm://ImageResolve", runVm );
       } catch ( EucalyptusCloudException e ) {
-        imgInfo = new VmImageInfo( runVm.getImageId( ), runVm.getKernelId( ), runVm.getRamdiskId( ), null, null, null, null );
+        imgInfo = new VmImageInfo( runVm.getImageId( ), runVm.getKernelId( ), runVm.getRamdiskId( ), null, null, null, null, runVm.getPlatform( ) );
       }
       VmKeyInfo keyInfo = null;
       try {

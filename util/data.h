@@ -104,15 +104,19 @@ typedef struct ncInstance_t {
     
     /* state as reported to CC & CLC */
     char stateName[CHAR_BUFFER_SIZE];  /* as string */
+    char bundleTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
     int stateCode; /* as int */
+
     /* state as NC thinks of it */
-    int state;
-    
+    instance_states state;
+	bundling_progress bundleTaskState;
+
     char keyName[CHAR_BUFFER_SIZE*4];
     char privateDnsName[CHAR_BUFFER_SIZE];
     char dnsName[CHAR_BUFFER_SIZE];
     int launchTime; // timestamp of RunInstances request arrival
     int bootTime; // timestamp of STAGING->BOOTING transition
+	int bundlingTime; // timestamp of ->BUNDLING transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
     virtualMachine params;
@@ -122,6 +126,7 @@ typedef struct ncInstance_t {
     /* passed into NC via runInstances for safekeeping */
     char userData[CHAR_BUFFER_SIZE*10];
     char launchIndex[CHAR_BUFFER_SIZE];
+    char platform[CHAR_BUFFER_SIZE];
     char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE];
     int groupNamesSize;
 
@@ -171,7 +176,7 @@ ncInstance * allocate_instance(char *instanceId, char *reservationId,
                                char *ramdiskId, char *ramdiskURL, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,
-                               char *userData, char *launchIndex, char **groupNames, int groupNamesSize);
+                               char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 

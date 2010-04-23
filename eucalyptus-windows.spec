@@ -34,15 +34,15 @@
 BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 %endif
 Summary:       Elastic Utility Computing Architecture
-Name:          eucalyptus
-Version:       main
-Release:       1
+Name:          eucalyptus-windows
+Version:       1.0
+Release:       0.1202
 License:       GPLv3
 Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Requires:      %{euca_build_req}
 
-Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-%{version}-src.tar.gz
+Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-windows-%{version}.tar.gz
 URL:           http://open.eucalyptus.com
 
 %description
@@ -57,7 +57,7 @@ eucalyptus-nc (or all of them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus = main, %{euca_java}, lvm2
+Requires:     eucalyptus-windows = 1.0, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description common-java
@@ -70,7 +70,7 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2
+Requires:     eucalyptus-windows-common-java = 1.0, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description walrus
@@ -85,7 +85,7 @@ cloud controller.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2, vblade
+Requires:     eucalyptus-windows-common-java = 1.0, %{euca_java}, lvm2, vblade
 Group:        Applications/System
 
 %description sc
@@ -100,7 +100,7 @@ alongside the cluster-controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2
+Requires:     eucalyptus-windows-common-java = 1.0, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -115,7 +115,7 @@ the cloud clients.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus = main, eucalyptus-gl = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
+Requires:     eucalyptus-windows = 1.0, eucalyptus-windows-gl = 1.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
 Group:        Applications/System
 
 %description cc
@@ -129,7 +129,7 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus = main, eucalyptus-gl = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
+Requires:     eucalyptus-windows = 1.0, eucalyptus-windows-gl = 1.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
 Group:        Applications/System
 
 %description nc
@@ -143,7 +143,7 @@ components that handles the instances.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Requires:     eucalyptus-windows = 1.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Group:        Applications/System
 
 %description gl
@@ -155,7 +155,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the internal log service of eucalyptus.
 
 %prep
-%setup -n eucalyptus-%{version}-src
+%setup -n eucalyptus-windows-%{version}
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
@@ -234,6 +234,7 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/sbin/euca_test_nc
 /opt/euca-axis2c/services/EucalyptusNC
 /etc/init.d/eucalyptus-nc
+/usr/share/eucalyptus/floppy
 
 %files gl
 /opt/euca-axis2c/services/EucalyptusGL
@@ -293,7 +294,7 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	adduser -M eucalyptus
 %endif
 %if %is_fedora
-	adduser -U --system eucalyptus 
+	adduser -U -G kvm --system eucalyptus 
 %endif
 fi
 
@@ -398,9 +399,6 @@ fi
 
 %post nc
 chkconfig --add eucalyptus-nc
-%if %is_fedora
-	usermod -G kvm eucalyptus
-%endif
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then

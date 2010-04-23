@@ -67,6 +67,7 @@ import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.binding.HttpParameterMapping;
 
 //TODO: Remove me
 //public class INTERNAL extends EucalyptusMessage {
@@ -497,10 +498,64 @@ public class HeartbeatMessage extends EucalyptusMessage implements Cloneable, Se
 public class VmBundleMessage extends EucalyptusMessage {
 }
 
+public class BundleInstanceType extends VmBundleMessage {
+  String instanceId;
+  @HttpParameterMapping(parameter="Storage.S3.Bucket")
+  String bucket;
+  @HttpParameterMapping(parameter="Storage.S3.Prefix")
+  String prefix;
+  @HttpParameterMapping(parameter="Storage.S3.AWSAccessKeyId")
+  String awsAccessKeyId;
+  @HttpParameterMapping(parameter="Storage.S3.UploadPolicy")
+  String uploadPolicy;  
+  @HttpParameterMapping(parameter="Storage.S3.UploadPolicySignature")
+  String uploadPolicySignature;  
+  String url;
+  String userKey;
+}
+public class BundleInstanceResponseType extends VmBundleMessage {
+  BundleTask task;
+}
+public class CancelBundleTaskType extends VmBundleMessage {
+  String bundleId;
+  String instanceId;
+}
+public class CancelBundleTaskResponseType extends VmBundleMessage {
+  BundleTask task;
+}
+public class BundleTaskState extends EucalyptusData {
+  String instanceId;
+  String state;
+}
+public class BundleTask extends EucalyptusData {
+  String instanceId;
+  String bundleId;
+  String state;
+  Date startTime;
+  Date updateTime;
+  String progress;
+  String bucket;
+  String prefix;
+  String errorMessage;
+  String errorCode;
+  public BundleTask() {}
+  public BundleTask( String bundleId, String instanceId, String bucket, String prefix ) {
+    this.bundleId = bundleId;
+    this.instanceId = instanceId;
+    this.bucket = bucket;
+    this.prefix = prefix;
+    this.state = "pending";
+    this.startTime = new Date();
+    this.updateTime = new Date();
+    this.progress = "0%";
+  }
+}
 public class DescribeBundleTasksType extends VmBundleMessage {
   ArrayList<String> bundleIds = new ArrayList<String>();
 }
 public class DescribeBundleTasksResponseType extends VmBundleMessage {
+  ArrayList<BundleTask> bundleTasks = new ArrayList<BundleTask>();
+  ArrayList<BundleTaskState> bundleTaskStates = new ArrayList<BundleTaskState>();
 }
 
 public class StatEventRecord extends EucalyptusMessage {

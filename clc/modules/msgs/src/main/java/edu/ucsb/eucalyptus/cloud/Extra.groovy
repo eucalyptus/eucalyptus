@@ -161,9 +161,10 @@ public class VmInfo extends EucalyptusData {
   String launchIndex;
   ArrayList<String> groupNames = new ArrayList<String>();
   ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
-  
   String placement;
-  
+  String platform;
+  String bundleTaskStateName;  
+    
   ArrayList<String> productCodes = new ArrayList<String>();
   
   @Override
@@ -195,7 +196,6 @@ public class VmRunType extends EucalyptusMessage {
   List<String> networkNames = new ArrayList<String>();
   ArrayList<String> networkIndexList = new ArrayList<String>();
   
-  
   def VmRunType() {
   }
   
@@ -215,6 +215,7 @@ public class VmRunType extends EucalyptusMessage {
     this.macAddresses = macAddresses;
     this.networkNames = networkNames;
     this.networkIndexList = networkIndexList;
+    this.platform = imageInfo.getPlatform();
   }
   
   def VmRunType(RunInstancesType request) {
@@ -242,6 +243,7 @@ public class VmRunType extends EucalyptusMessage {
     this.macAddresses = macAddresses;
     this.networkNames = networkNames;
     this.networkIndexList = networkIndexList;
+    this.platform = imageInfo.getPlatform();
   }
   
   @Override
@@ -264,11 +266,12 @@ public class VmImageInfo {
   String imageLocation;
   String kernelLocation;
   String ramdiskLocation;
+  String platform;
   ArrayList<String> productCodes = new ArrayList<String>();
   ArrayList<String> ancestorIds = new ArrayList<String>();
   Long size = 0l;
   
-  def VmImageInfo(final imageId, final kernelId, final ramdiskId, final imageLocation, final kernelLocation, final ramdiskLocation, final productCodes) {
+  def VmImageInfo(final imageId, final kernelId, final ramdiskId, final imageLocation, final kernelLocation, final ramdiskLocation, final productCodes, final platform) {
     this.imageId = imageId;
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
@@ -276,6 +279,7 @@ public class VmImageInfo {
     this.kernelLocation = kernelLocation;
     this.ramdiskLocation = ramdiskLocation;
     this.productCodes = productCodes;
+    this.platform = platform;
   }
   
   def VmImageInfo() {

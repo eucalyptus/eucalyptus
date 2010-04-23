@@ -32,6 +32,9 @@
 	  <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
 	  <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	  <xs:element minOccurs="0" name="platform" type="xs:string"/>
+	  <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string"/>
+	  
 	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
 	  <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="volumes" type="tns:volumeType"/>
@@ -181,6 +184,75 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="bundleInstanceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="bucketName" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="walrusURL" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="bundleInstanceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="cancelBundleTaskType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="cancelBundleTaskResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="describeBundleTasksType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="instanceIds" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="bundleTaskType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="instanceId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="state" type="xs:string"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="describeBundleTasksResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="bundleTasks" type="tns:bundleTaskType"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -417,6 +489,7 @@
 	      <xs:element name="vlan" type="xs:int"/>
 	      <xs:element name="userData" type="xs:string"/>
 	      <xs:element name="launchIndex" type="xs:string"/>
+	      <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -447,6 +520,15 @@
 
       <xs:element name="DetachVolume" nillable="true" type="tns:detachVolumeType"/>
       <xs:element name="DetachVolumeResponse" nillable="true" type="tns:detachVolumeResponseType"/>
+
+      <xs:element name="BundleInstance" nillable="true" type="tns:bundleInstanceType"/>
+      <xs:element name="BundleInstanceResponse" nillable="true" type="tns:bundleInstanceResponseType"/>
+
+      <xs:element name="CancelBundleTask" nillable="true" type="tns:cancelBundleTaskType"/>
+      <xs:element name="CancelBundleTaskResponse" nillable="true" type="tns:cancelBundleTaskResponseType"/>
+
+      <xs:element name="DescribeBundleTasks" nillable="true" type="tns:describeBundleTasksType"/>
+      <xs:element name="DescribeBundleTasksResponse" nillable="true" type="tns:describeBundleTasksResponseType"/>
 
       <xs:element name="GetConsoleOutput" nillable="true" type="tns:getConsoleOutputType"/>
       <xs:element name="GetConsoleOutputResponse" nillable="true" type="tns:getConsoleOutputResponseType"/>
@@ -497,6 +579,21 @@
 
   <wsdl:message name="DetachVolumeResponse">
     <wsdl:part element="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BundleInstanceResponse">
+    <wsdl:part element="tns:BundleInstanceResponse" name="BundleInstanceResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CancelBundleTaskResponse">
+    <wsdl:part element="tns:CancelBundleTaskResponse" name="CancelBundleTaskResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeBundleTasksResponse">
+    <wsdl:part element="tns:DescribeBundleTasksResponse" name="DescribeBundleTasksResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -572,6 +669,21 @@
 
   <wsdl:message name="DetachVolume">
     <wsdl:part element="tns:DetachVolume" name="DetachVolume">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BundleInstance">
+    <wsdl:part element="tns:BundleInstance" name="BundleInstance">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CancelBundleTask">
+    <wsdl:part element="tns:CancelBundleTask" name="CancelBundleTask">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeBundleTasks">
+    <wsdl:part element="tns:DescribeBundleTasks" name="DescribeBundleTasks">
     </wsdl:part>
   </wsdl:message>
 
@@ -660,6 +772,27 @@
       <wsdl:input message="tns:DetachVolume" name="DetachVolume">
       </wsdl:input>
       <wsdl:output message="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BundleInstance">
+      <wsdl:input message="tns:BundleInstance" name="BundleInstance">
+      </wsdl:input>
+      <wsdl:output message="tns:BundleInstanceResponse" name="BundleInstanceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CancelBundleTask">
+      <wsdl:input message="tns:CancelBundleTask" name="CancelBundleTask">
+      </wsdl:input>
+      <wsdl:output message="tns:CancelBundleTaskResponse" name="CancelBundleTaskResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeBundleTasks">
+      <wsdl:input message="tns:DescribeBundleTasks" name="DescribeBundleTasks">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeBundleTasksResponse" name="DescribeBundleTasksResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -783,6 +916,36 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="DetachVolumeResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BundleInstance">
+      <soap:operation soapAction="EucalyptusCC#BundleInstance" style="document"/>
+      <wsdl:input name="BundleInstance">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="BundleInstanceResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CancelBundleTask">
+      <soap:operation soapAction="EucalyptusCC#CancelBundleTask" style="document"/>
+      <wsdl:input name="CancelBundleTask">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="CancelBundleTaskResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeBundleTasks">
+      <soap:operation soapAction="EucalyptusCC#DescribeBundleTasks" style="document"/>
+      <wsdl:input name="DescribeBundleTasks">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeBundleTasksResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

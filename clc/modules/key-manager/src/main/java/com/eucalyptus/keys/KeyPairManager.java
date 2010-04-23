@@ -15,6 +15,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
+import edu.ucsb.eucalyptus.cloud.ws.ImageManager;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType;
@@ -42,8 +43,12 @@ public class KeyPairManager {
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest().getKeyName() ) || vmAllocInfo.getRequest().getKeyName() == null ) {
-      vmAllocInfo.setKeyInfo( new VmKeyInfo() );
-      return vmAllocInfo;
+      if( "windows".equals( vmAllocInfo.getImageInfo( ).getPlatform( ) ) ) {
+        throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + vmAllocInfo.getRequest().getImageId() );
+      } else {
+        vmAllocInfo.setKeyInfo( new VmKeyInfo() );
+        return vmAllocInfo;
+      }
     }
     SshKeyPair keypair = KeyPairUtil.getUserKeyPair( vmAllocInfo.getRequest( ).getUserId( ), vmAllocInfo.getRequest( ).getKeyName( ) );
     if ( keypair == null ) {

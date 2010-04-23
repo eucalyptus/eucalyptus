@@ -264,7 +264,7 @@ public class ImageUtil {
     VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo.getImageId( ),
       ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl, ramdiskInfo == null ? null
                                                                                                      : ramdiskUrl,
-      productCodes );
+      productCodes, diskInfo.getPlatform( ) );
     return vmImgInfo;
   }
   public static Image getImageInfobyId( String searchId ) throws EucalyptusCloudException {

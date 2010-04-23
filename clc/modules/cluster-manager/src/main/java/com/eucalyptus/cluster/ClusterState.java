@@ -99,7 +99,7 @@ public class ClusterState {
   private ConcurrentNavigableMap<ClusterAddressInfo, Integer> orphans               = new ConcurrentSkipListMap<ClusterAddressInfo, Integer>( );
   
   public void clearOrphan( ClusterAddressInfo address ) {
-    Integer delay = orphans.remove( address.getAddress( ) );
+    Integer delay = orphans.remove( address );
     delay = ( delay == null ? 0 : delay );
     if ( delay > 2 ) {
       LOG.warn( "Forgetting stale orphan address mapping from cluster " + clusterName + " for " + address.toString( ) );
@@ -126,7 +126,7 @@ public class ClusterState {
         } ).dispatch( this.clusterName );
       } catch ( NoSuchElementException e ) {
       }
-      orphans.remove( address.getAddress( ) );
+      orphans.remove( address );
     }
   }
   

@@ -105,6 +105,77 @@
 	    </xs:extension>
 	  </xs:complexContent>
     </xs:complexType>
+
+    <xs:complexType name="ncBundleInstanceType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="bucketName" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="walrusURL" type="xs:string"/>
+		<xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
+		<xs:element minOccurs="0" maxOccurs="1" name="cloudPublicKey" type="xs:string"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncBundleInstanceResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ncCancelBundleTaskType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncCancelBundleTaskResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ncDescribeBundleTasksType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+	    <xs:element name="instanceIds" minOccurs="0" maxOccurs="unbounded" type="xs:string" />
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="bundleTaskType">
+      <xs:sequence>
+	<xs:element minOccurs="0" name="instanceId" type="xs:string"/>
+	<xs:element minOccurs="0" name="state" type="xs:string"/>
+	<xs:element minOccurs="0" name="manifest" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+    
+    <xs:complexType name="ncDescribeBundleTasksResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+		<xs:element minOccurs="0" maxOccurs="unbounded" name="bundleTasks" type="tns:bundleTaskType"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
     
     <xs:complexType name="ncGetConsoleOutputType">
       <xs:complexContent>
@@ -197,6 +268,7 @@
 -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	  </xs:sequence>
 	</xs:extension>
@@ -228,11 +300,13 @@
 
         <!-- reported by NC -->
 	    <xs:element minOccurs="1" name="stateName" type="xs:string"/>
+	    <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string" />
 	    <xs:element minOccurs="0" name="launchTime" type="xs:dateTime" />
 
         <!-- passed into RunInstances for safekeeping by NC -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 
         <!-- updated by NC upon Attach/DetachVolume -->
@@ -323,6 +397,15 @@
     <xs:element name="ncDetachVolume" nillable="true" type="tns:ncDetachVolumeType"/>
     <xs:element name="ncDetachVolumeResponse" nillable="true" type="tns:ncDetachVolumeResponseType"/>
 
+    <xs:element name="ncBundleInstance" nillable="true" type="tns:ncBundleInstanceType"/>
+    <xs:element name="ncBundleInstanceResponse" nillable="true" type="tns:ncBundleInstanceResponseType"/>
+
+    <xs:element name="ncCancelBundleTask" nillable="true" type="tns:ncCancelBundleTaskType"/>
+    <xs:element name="ncCancelBundleTaskResponse" nillable="true" type="tns:ncCancelBundleTaskResponseType"/>
+
+    <xs:element name="ncDescribeBundleTasks" nillable="true" type="tns:ncDescribeBundleTasksType"/>
+    <xs:element name="ncDescribeBundleTasksResponse" nillable="true" type="tns:ncDescribeBundleTasksResponseType"/>
+
     <xs:element name="ncGetConsoleOutput" nillable="true" type="tns:ncGetConsoleOutputType"/>
     <xs:element name="ncGetConsoleOutputResponse" nillable="true" type="tns:ncGetConsoleOutputResponseType"/>
     
@@ -375,6 +458,21 @@
   </wsdl:part>
 </wsdl:message>
 
+<wsdl:message name="ncBundleInstanceResponse">
+  <wsdl:part element="tns:ncBundleInstanceResponse" name="ncBundleInstanceResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncCancelBundleTaskResponse">
+  <wsdl:part element="tns:ncCancelBundleTaskResponse" name="ncCancelBundleTaskResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncDescribeBundleTasksResponse">
+  <wsdl:part element="tns:ncDescribeBundleTasksResponse" name="ncDescribeBundleTasksResponse">
+  </wsdl:part>
+</wsdl:message>
+
 <wsdl:message name="ncGetConsoleOutputResponse">
   <wsdl:part element="tns:ncGetConsoleOutputResponse" name="ncGetConsoleOutputResponse">
   </wsdl:part>
@@ -422,6 +520,21 @@
 
 <wsdl:message name="ncDetachVolume">
   <wsdl:part element="tns:ncDetachVolume" name="ncDetachVolume">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncBundleInstance">
+  <wsdl:part element="tns:ncBundleInstance" name="ncBundleInstance">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncCancelBundleTask">
+  <wsdl:part element="tns:ncCancelBundleTask" name="ncCancelBundleTask">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncDescribeBundleTasks">
+  <wsdl:part element="tns:ncDescribeBundleTasks" name="ncDescribeBundleTasks">
   </wsdl:part>
 </wsdl:message>
 
@@ -490,6 +603,27 @@
     <wsdl:input message="tns:ncDetachVolume" name="ncDetachVolume">
     </wsdl:input>
     <wsdl:output message="tns:ncDetachVolumeResponse" name="ncDetachVolumeResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncBundleInstance">
+    <wsdl:input message="tns:ncBundleInstance" name="ncBundleInstance">
+    </wsdl:input>
+    <wsdl:output message="tns:ncBundleInstanceResponse" name="ncBundleInstanceResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncCancelBundleTask">
+    <wsdl:input message="tns:ncCancelBundleTask" name="ncCancelBundleTask">
+    </wsdl:input>
+    <wsdl:output message="tns:ncCancelBundleTaskResponse" name="ncCancelBundleTaskResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncDescribeBundleTasks">
+    <wsdl:input message="tns:ncDescribeBundleTasks" name="ncDescribeBundleTasks">
+    </wsdl:input>
+    <wsdl:output message="tns:ncDescribeBundleTasksResponse" name="ncDescribeBundleTasksResponse">
     </wsdl:output>
   </wsdl:operation>
 
@@ -588,6 +722,36 @@
       <soap:body use="literal"/>
     </wsdl:input>
     <wsdl:output name="ncDetachVolumeResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncBundleInstance">
+    <soap:operation soapAction="EucalyptusNC#ncBundleInstance" style="document"/>
+    <wsdl:input name="ncBundleInstance">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncBundleInstanceResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncCancelBundleTask">
+    <soap:operation soapAction="EucalyptusNC#ncCancelBundleTask" style="document"/>
+    <wsdl:input name="ncCancelBundleTask">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncCancelBundleTaskResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncDescribeBundleTasks">
+    <soap:operation soapAction="EucalyptusNC#ncDescribeBundleTasks" style="document"/>
+    <wsdl:input name="ncDescribeBundleTasks">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncDescribeBundleTasksResponse">
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>

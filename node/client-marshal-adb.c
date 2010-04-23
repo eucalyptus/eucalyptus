@@ -167,7 +167,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     adb_netConfigType_t * netconf = adb_instanceType_get_netParams(instance, env);
     if (netconf != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
-	ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
+		ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
         strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
         strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
         strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
@@ -196,9 +196,12 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         (char *)adb_instanceType_get_keyName(instance, env),
         (char *)adb_instanceType_get_userData(instance, env),
         (char *)adb_instanceType_get_launchIndex(instance, env),
+		(char *)adb_instanceType_get_platform(instance, env),
         groupNames, groupNamesSize
         );
-    
+
+	strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+
     axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);
     if (dt!=NULL) {
         outInst->launchTime = datetime_to_unix (dt, env);
@@ -212,14 +215,14 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
             strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
-	    strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
+			strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
         }
     }
 
     return outInst;
 }
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
     axutil_env_t * env = st->env;
     axis2_stub_t * stub = st->stub;
@@ -261,6 +264,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     //    adb_ncRunInstanceType_set_vlan(request, env, vlan);
     adb_ncRunInstanceType_set_userData(request, env, userData);
     adb_ncRunInstanceType_set_launchIndex(request, env, launchIndex);
+    adb_ncRunInstanceType_set_platform(request, env, platform);
     int i;
     for (i=0; i<groupNamesSize; i++) {
         adb_ncRunInstanceType_add_groupNames(request, env, groupNames[i]);
@@ -426,7 +430,7 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
     }
     int i;
     for (i=0; i<instIdsLen; i++) {
-        adb_ncDescribeInstancesType_set_instanceIds_at(request, env, i, instIds[i]);
+        adb_ncDescribeInstancesType_add_instanceIds(request, env, instIds[i]);
     }
     adb_ncDescribeInstances_set_ncDescribeInstances(input, env, request);
     
@@ -680,12 +684,138 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     return status;
 }
 
+int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey)
+{
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
+    adb_ncBundleInstance_t     * input   = adb_ncBundleInstance_create (env); 
+    adb_ncBundleInstanceType_t * request = adb_ncBundleInstanceType_create (env);
+    
+    // set standard input fields
+    if (meta) {
+        adb_ncBundleInstanceType_set_correlationId (request, env, meta->correlationId);
+        adb_ncBundleInstanceType_set_userId (request, env, meta->userId);
+    }
+    
+    // set op-specific input fields
+    adb_ncBundleInstanceType_set_instanceId(request, env, instanceId);
+    adb_ncBundleInstanceType_set_bucketName(request, env, bucketName);
+    adb_ncBundleInstanceType_set_filePrefix(request, env, filePrefix);
+    adb_ncBundleInstanceType_set_walrusURL(request, env, walrusURL);
+    adb_ncBundleInstanceType_set_userPublicKey(request, env, userPublicKey);
+    adb_ncBundleInstance_set_ncBundleInstance(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncBundleInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncBundleInstance (stub, env, input);
+        
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: BundleInstance" NULL_ERROR_MSG);
+            status = -1;
+
+        } else {
+            adb_ncBundleInstanceResponseType_t * response = adb_ncBundleInstanceResponse_get_ncBundleInstanceResponse (output, env);
+            if ( adb_ncBundleInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: BundleInstance returned an error\n");
+                status = 1;
+            }
+        }
+    }
+    
+    return status;
+}
+
+int ncCancelBundleTaskStub (ncStub *st, ncMetadata *meta, char *instanceId)
+{
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
+    adb_ncCancelBundleTask_t     * input   = adb_ncCancelBundleTask_create (env); 
+    adb_ncCancelBundleTaskType_t * request = adb_ncCancelBundleTaskType_create (env);
+    
+    // set standard input fields
+    if (meta) {
+        adb_ncCancelBundleTaskType_set_correlationId (request, env, meta->correlationId);
+        adb_ncCancelBundleTaskType_set_userId (request, env, meta->userId);
+    }
+    
+    // set op-specific input fields
+    adb_ncCancelBundleTaskType_set_instanceId(request, env, instanceId);
+    adb_ncCancelBundleTask_set_ncCancelBundleTask(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncCancelBundleTaskResponse_t * output = axis2_stub_op_EucalyptusNC_ncCancelBundleTask (stub, env, input);
+        
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: CancelBundleTask" NULL_ERROR_MSG);
+            status = -1;
+
+        } else {
+            adb_ncCancelBundleTaskResponseType_t * response = adb_ncCancelBundleTaskResponse_get_ncCancelBundleTaskResponse (output, env);
+            if ( adb_ncCancelBundleTaskResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: CancelBundleTask returned an error\n");
+                status = 1;
+            }
+        }
+    }
+    
+    return status;
+}
+
+int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen) {
+    int i;
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
+    adb_ncDescribeBundleTasks_t     * input   = adb_ncDescribeBundleTasks_create (env); 
+    adb_ncDescribeBundleTasksType_t * request = adb_ncDescribeBundleTasksType_create (env);
+    // set standard input fields
+    if (meta) {
+        adb_ncDescribeBundleTasksType_set_correlationId (request, env, meta->correlationId);
+	adb_ncDescribeBundleTasksType_set_userId (request, env, meta->userId);
+    }
+    
+    // set op-specific input fields
+    for (i=0; i<instIdsLen; i++) {
+      adb_ncDescribeBundleTasksType_add_instanceIds(request, env, instIds[i]);
+    }
+
+    adb_ncDescribeBundleTasks_set_ncDescribeBundleTasks(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncDescribeBundleTasksResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeBundleTasks (stub, env, input);
+
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: DescribeBundleTasks" NULL_ERROR_MSG);
+            status = -1;
+
+        } else {
+            adb_ncDescribeBundleTasksResponseType_t * response = adb_ncDescribeBundleTasksResponse_get_ncDescribeBundleTasksResponse (output, env);
+            if ( adb_ncDescribeBundleTasksResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: DescribeBundleTasks returned an error\n");
+                status = 1;
+	    }		
+	    *outBundleTasksLen = adb_ncDescribeBundleTasksResponseType_sizeof_bundleTasks(response, env);
+	    *outBundleTasks = malloc(sizeof(bundleTask *) * *outBundleTasksLen);
+	    for (i=0; i<*outBundleTasksLen; i++) {
+	      adb_bundleTaskType_t *bundle;
+	      bundle = adb_ncDescribeBundleTasksResponseType_get_bundleTasks_at(response, env, i);
+	      (*outBundleTasks)[i] = malloc(sizeof(bundleTask));
+	      snprintf( (*outBundleTasks)[i]->instanceId, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_instanceId(bundle, env));
+	      snprintf( (*outBundleTasks)[i]->state, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_state(bundle, env));
+	    }
+        }
+    }
+    
+    return status;
+}
+
 /*************************
  a template for future ops
  *************************
 
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
+    axutil_env_t * env  = stub->env;
+    axis2_stub_t * stub = stub->stub;
     adb_ncOPERATION_t     * input   = adb_ncOPERATION_create (env); 
     adb_ncOPERATIONType_t * request = adb_ncOPERATIONType_create (env);
     

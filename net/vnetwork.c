@@ -126,7 +126,15 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     vnetconfig->enabled=1;
     vnetconfig->initialized = 1;
     vnetconfig->max_vlan = NUMBER_OF_VLANS;
-    if (numberofaddrs) vnetconfig->numaddrs = atoi(numberofaddrs);
+    if (numberofaddrs) {
+      if (atoi(numberofaddrs) > NUMBER_OF_HOSTS_PER_VLAN) {
+	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET exceeds maximum addresses per network (%d), setting to max\n", NUMBER_OF_HOSTS_PER_VLAN);
+	vnetconfig->numaddrs = NUMBER_OF_HOSTS_PER_VLAN;
+      } else {
+	vnetconfig->numaddrs = atoi(numberofaddrs);
+      }
+    }
+    
     if (network) vnetconfig->nw = dot2hex(network);
     if (netmask) vnetconfig->nm = dot2hex(netmask);
 
