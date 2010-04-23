@@ -70,6 +70,7 @@ import java.util.NavigableSet;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.util.NetworkUtil;
 
 @Deprecated
 public enum Component {
@@ -132,7 +133,11 @@ public enum Component {
   }
 
   public String getRegistryKey( String hostName ) {
-    return this.name( ) + "@" + hostName;
+    if( NetworkUtil.testLocal( hostName ) ) {
+      return this.name( ) + "@localhost";
+    } else {
+      return this.name( ) + "@" + hostName;
+    }
   }
   
 }
