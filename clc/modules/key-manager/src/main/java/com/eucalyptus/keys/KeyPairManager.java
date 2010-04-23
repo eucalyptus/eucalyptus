@@ -8,7 +8,7 @@ import java.security.PrivateKey;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -86,7 +86,7 @@ public class KeyPairManager {
       KeyPairUtil.getUserKeyPair( request.getUserId( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {
       PrivateKey pk = KeyPairUtil.createUserKeyPair( request.getUserId( ), request.getKeyName( ) );
-      reply.setKeyFingerprint( Hashes.getFingerPrint( pk ) );
+      reply.setKeyFingerprint( Certs.getFingerPrint( pk ) );
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
       PEMWriter privOut = new PEMWriter( new OutputStreamWriter( byteOut ) );
       try {

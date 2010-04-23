@@ -882,6 +882,11 @@ static int init (void)
 		logprintfl (EUCAFATAL, "failed to spawn a monitoring thread\n");
 		return ERROR_FATAL;
 	}
+        if (pthread_detach(tcb)) {
+          logprintfl(EUCAFATAL, "failed to detach the monitoring thread\n");
+          return ERROR_FATAL;
+        }
+
 
 	initialized = 1;
 

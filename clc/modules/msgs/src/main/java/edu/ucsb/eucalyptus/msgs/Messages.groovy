@@ -67,7 +67,7 @@ import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 import com.eucalyptus.bootstrap.Component;
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
+import com.eucalyptus.binding.HttpParameterMapping;
 
 //TODO: Remove me
 //public class INTERNAL extends EucalyptusMessage {
@@ -155,23 +155,12 @@ public class StorageStateType extends EucalyptusMessage{
 
 public class WalrusStateType extends EucalyptusMessage{
   private String name;
-  private String bucketsRootDirectory;
-  private Integer maxBucketsPerUser;
-  private Integer maxBucketSizeInMB;
-  private Integer maxCacheSizeInMB;
-  private Integer snapshotsTotalInGB;
   
   def WalrusStateType() {
   }
   
-  def StorageStateType(final name, final bucketsRootDirectory, final maxBucketsPerUser,
-  final maxBucketSizeInMB, final maxCacheSizeInMB, final snapshotsTotalInGB) {
+  def WalrusStateType(final name) {
     this.name = name;
-    this.bucketsRootDirectory = bucketsRootDirectory;
-    this.maxBucketsPerUser = maxBucketsPerUser;
-    this.maxBucketSizeInMB = maxBucketSizeInMB;
-    this.maxCacheSizeInMB = maxCacheSizeInMB;
-    this.snapshotsTotalInGB = snapshotsTotalInGB;
   }
 }
 
@@ -215,7 +204,7 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
     this.message = message;
   }
   
-  public EucalyptusErrorMessageType(String source, EucalyptusMessage msg, String message) {
+  public EucalyptusErrorMessageType(String source, BaseMessage msg, String message) {
     this(source, message);
     this.correlationId = msg.getCorrelationId();
     this.userId = msg.getUserId();

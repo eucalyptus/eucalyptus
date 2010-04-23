@@ -85,11 +85,9 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
-
-import com.eucalyptus.bootstrap.SystemBootstrapper;
-import com.eucalyptus.util.DebugUtil;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.ServiceNotReadyException;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.PipelineRegistry;
@@ -101,7 +99,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
 
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    if ( !SystemBootstrapper.isFinished( ) ) {
+    if ( !Bootstrap.isFinished( ) ) {
       throw new ServiceNotReadyException( "System has not yet completed booting." );
     } else if ( this.first ) {
       lookupPipeline( ctx, e );
@@ -127,10 +125,31 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
-      if( DebugUtil.TRACE ) {
+      if( LogLevels.TRACE ) {
         LOG.trace( request.getContent( ).toString( "UTF-8" ) );
       }
       final ChannelPipeline pipeline = ctx.getPipeline( );
+//      pipeline.addLast( "context-cleanup-handler", new SimpleChannelHandler() {
+//        @Override
+//        public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+//          try {
+//            Contexts.lookup( ctx.getChannel( ) ).clear( );
+//          } catch ( Exception e1 ) {
+//            LOG.debug( e1, e1 );
+//          }
+//          super.channelClosed( ctx, e );
+//        }
+//
+//        @Override
+//        public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
+//          try {
+//            Context.lookup( ctx.getChannel( ) ).clear( );
+//          } catch ( Exception e1 ) {
+//            LOG.debug( e1, e1 );
+//          }
+//          super.writeComplete( ctx, e );
+//        }        
+//      } );
       FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
       filteredPipeline.unroll( pipeline );
       this.first = false;

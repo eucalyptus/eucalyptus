@@ -87,7 +87,9 @@ import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.network.NetworkGroupUtil;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -98,8 +100,6 @@ import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.constants.VmState;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
@@ -226,7 +226,7 @@ public class SystemState {
               LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
             }
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ),
+              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getName( ), net.getNetworkName( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
                 stopNet.newInstance( ).dispatch( cluster );
@@ -450,7 +450,7 @@ public class SystemState {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
   }
-  
+
   public static RebootInstancesResponseType handle( RebootInstancesType request ) throws Exception {
     RebootInstancesResponseType reply = ( RebootInstancesResponseType ) request.getReply( );
     reply.set_return( true );

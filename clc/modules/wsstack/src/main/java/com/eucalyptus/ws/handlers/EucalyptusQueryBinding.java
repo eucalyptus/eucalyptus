@@ -73,15 +73,16 @@ import java.util.Map;
 
 import org.apache.axiom.om.OMElement;
 
-import com.eucalyptus.ws.BindingException;
-import com.eucalyptus.ws.MappingHttpRequest;
-import com.eucalyptus.ws.binding.Binding;
-import com.eucalyptus.ws.binding.BindingManager;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.annotation.HttpEmbedded;
-import edu.ucsb.eucalyptus.annotation.HttpParameterMapping;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import groovy.lang.GroovyObject;
@@ -98,13 +99,13 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
     int paramSize = params.size( );
 
     OMElement msg = null;
-    EucalyptusMessage eucaMsg = null;
+    BaseMessage eucaMsg = null;
     Map<String, String> fieldMap = null;
     Class targetType = null;
     try {
       targetType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs.".concat( operationName ).concat( "Type" ) );
       fieldMap = this.buildFieldMap( targetType );
-      eucaMsg = ( EucalyptusMessage ) targetType.newInstance( );
+      eucaMsg = ( BaseMessage ) targetType.newInstance( );
     } catch ( Exception e ) {
       throw new BindingException( "Failed to construct message of type " + operationName );
     }
@@ -135,7 +136,7 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
   private static Field getRecursiveField( Class clazz, String fieldName ) throws Exception {
     Field ret = null;
     Exception e = null;
-    while ( !EucalyptusMessage.class.equals( clazz ) || !Object.class.equals( clazz ) ) {
+    while ( !BaseMessage.class.equals( clazz ) || !Object.class.equals( clazz ) ) {
       try {
         ret = clazz.getDeclaredField( fieldName );
         return ret;
@@ -243,7 +244,7 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
 
   private Map<String, String> buildFieldMap( Class targetType ) {
     Map<String, String> fieldMap = new HashMap<String, String>( );
-    while ( !EucalyptusMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType ) ) {
+    while ( !BaseMessage.class.equals( targetType ) && !EucalyptusMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType ) ) {
       Field[] fields = targetType.getDeclaredFields( );
       for ( Field f : fields ) {
         if ( Modifier.isStatic( f.getModifiers( ) ) ) continue;

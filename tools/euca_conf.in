@@ -1018,21 +1018,21 @@ getSecretKey() {
 	exit 1
     fi
 
-    FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
+    FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
     if [ "$FIELD" = "" ]; then
 	echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
 	export SKEY=""
 	return 1
     fi
-    SKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1))
+    SKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1 | sed 's/[()]//g'))
 
-   FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Qq][Uu][Ee][Rr][Yy]_[Ii][Dd]/ {print NR}'`
+   FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Qq][Uu][Ee][Rr][Yy]_[Ii][Dd]/ {print NR}'`
    if [ "$FIELD" = "" ]; then
      echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
      export AKEY=""
      return 1
    fi
-   AKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1))
+   AKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1 | sed 's/[()]//g'))
 
     return 0
 }
@@ -1090,12 +1090,12 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
 	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
         exit 1
     fi
-    FIELD=`grep -i "CREATE .*TABLE USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Uu][Ss][Ee][Rr]_[Cc][Ee][Rr][Tt][Ii][Ff][Ii][Cc][Aa][Tt][Ee]_[Cc][Oo][Dd][Ee]/ {print NR}'`
+    FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Tt][Oo][Kk][Ee][Nn]/ {print NR}'`
     if [ -z "$FIELD" ]; then
 	echo "cannot find code field in database, please go to the Eucalyptus web UI to obtain credentials."
 	exit 1
     fi
-    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1))
+    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1 | sed 's/[()]//g'))
     if [ -z "$KEY" ]; then
 	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
 	exit 1

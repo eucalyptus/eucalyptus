@@ -76,8 +76,8 @@ import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.ws.AuthenticationException;
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.http.MappingHttpRequest;
 
 public class UploadPolicyChecker {
 	private static Logger LOG = Logger.getLogger( UploadPolicyChecker.class );

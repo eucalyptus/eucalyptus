@@ -77,7 +77,6 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -92,6 +91,7 @@ import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
@@ -120,7 +120,6 @@ import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
-@NeedsDeferredInitialization(component = Component.storage)
 public class BlockStorage {
 
 	private static Logger LOG = Logger.getLogger(BlockStorage.class);
@@ -131,15 +130,16 @@ public class BlockStorage {
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 
-	public static void deferredInitializer() {
-		if( !Component.storage.isEnabled( ) ) return;//temporary workaround for remote-component boot issue.
+	public static void configure() {
+		StorageProperties.updateWalrusUrl();
+		StorageProperties.updateName();
+		StorageProperties.updateStorageHost();
 		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
 		checker = new BlockStorageChecker(blockManager);
 		if(StorageProperties.trackUsageStatistics) 
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
-		configure();
 		blockManager.configure();
 		blockManager.initialize();
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
@@ -148,13 +148,6 @@ public class BlockStorage {
 		} catch(EucalyptusCloudException ex) {
 			LOG.error("Startup checks failed ", ex);
 		}
-	}
-
-	private static void configure() {
-		StorageProperties.updateWalrusUrl();
-		StorageProperties.updateName();
-		StorageProperties.updateStorageHost();
-		blockManager.configure();
 	}
 
 	public BlockStorage() {}
@@ -302,7 +295,7 @@ public class BlockStorage {
 					for (SnapshotInfo sInfo : snapInfos) {
 						totalSnapshotSize += blockManager.getSnapshotSize(sInfo.getSnapshotId());
 					}
-					if((totalSnapshotSize + volSize) > WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE) {
+					if((totalSnapshotSize + volSize) > WalrusInfo.getWalrusInfo().getStorageMaxTotalSnapshotSizeInGb()) {
 						db.rollback();
 						throw new EntityTooLargeException(snapshotId);
 					}

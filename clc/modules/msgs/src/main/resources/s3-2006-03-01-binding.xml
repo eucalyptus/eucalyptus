@@ -704,43 +704,4 @@
 		class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotResponseType">
 	</mapping>
 
-	<mapping name="UpdateWalrusConfiguration"
-		class="edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType"
-		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
-		<value name="Name" field="name" />
-		<value name="BucketRootDirectory" field="bucketRootDirectory"
-			usage="optional" />
-		<value name="MaxBucketsPerUser" field="maxBucketsPerUser" usage="optional" />
-		<value name="MaxBucketSize" field="maxBucketSize" usage="optional" />
-		<value name="ImageCacheSize" field="imageCacheSize" usage="optional" />
-		<value name="TotalSnapshotSize" field="totalSnapshotSize" usage="optional" />
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
-			usage="optional" />
-	</mapping>
-
-	<mapping name="UpdateWalrusConfigurationResponse"
-		class="edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationResponseType">
-	</mapping>
-
-	<mapping name="GetWalrusConfiguration"
-		class="edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType" extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
-			usage="optional" />
-		<value name="Name" field="name" />
-	</mapping>
-
-	<mapping name="GetWalrusConfigurationResponse"
-		class="edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType"
-		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
-			usage="optional" />
-		<value name="Name" field="name" />
-		<value name="BucketRootDirectory" field="bucketRootDirectory"
-			usage="optional" />
-		<value name="MaxBucketsPerUser" field="maxBucketsPerUser" usage="optional" />
-		<value name="MaxBucketSize" field="maxBucketSize" usage="optional" />
-		<value name="ImageCacheSize" field="imageCacheSize" usage="optional" />
-		<value name="TotalSnapshotSize" field="totalSnapshotSize" usage="optional" />
-	</mapping>
-
 </binding>

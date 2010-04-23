@@ -72,8 +72,8 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.WalrusUtil;
-import com.eucalyptus.ws.MappingHttpResponse;
 
 import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;

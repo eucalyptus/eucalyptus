@@ -65,13 +65,10 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import java.util.Date;
 import java.util.NoSuchElementException;
+import java.util.Date;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
-import com.eucalyptus.auth.CredentialProvider;
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.User;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.BundleCallback;
@@ -79,12 +76,15 @@ import com.eucalyptus.cluster.callback.CancelBundleCallback;
 import com.eucalyptus.cluster.callback.PasswordDataCallback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.util.Messaging;
+import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.NoSuchUserException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.constants.EventType;
-import edu.ucsb.eucalyptus.constants.VmState;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceType;
 import edu.ucsb.eucalyptus.msgs.BundleTask;
@@ -215,7 +215,7 @@ public class VmControl {
     String instanceId = request.getInstanceId( );
     User user = null;
     try {
-      user = CredentialProvider.getUser( request.getUserId( ) );
+      user = Users.lookupUser( request.getUserId( ) );
     } catch ( NoSuchUserException e1 ) {
       throw new EucalyptusCloudException( "Failed to lookup the specified user's information: " + request.getUserId( ) );
     }

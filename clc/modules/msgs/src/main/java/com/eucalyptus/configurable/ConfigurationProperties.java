@@ -6,15 +6,11 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import javassist.Modifier;
-import javax.persistence.Entity;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import com.eucalyptus.util.SubDirectory;
+import com.eucalyptus.system.SubDirectory;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -38,9 +34,9 @@ public class ConfigurationProperties {
     try {
       props.load( new FileReader( propsFile ) );
     } catch ( FileNotFoundException e ) {
-      LOG.debug( e, e );
+      LOG.trace( e, e );
     } catch ( IOException e ) {
-      LOG.debug( e, e );
+      LOG.trace( e, e );
     }
     List<ConfigurableProperty> prefixProps = PropertyDirectory.getPropertyEntrySet( entrySetName );
     Map<String,String> properties = Maps.fromProperties( props );

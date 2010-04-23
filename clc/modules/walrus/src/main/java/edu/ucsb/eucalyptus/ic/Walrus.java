@@ -65,8 +65,8 @@
 
 package edu.ucsb.eucalyptus.ic;
 
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;

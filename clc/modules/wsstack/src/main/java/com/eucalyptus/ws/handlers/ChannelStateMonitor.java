@@ -1,7 +1,6 @@
 package com.eucalyptus.ws.handlers;
 
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -9,12 +8,8 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.ws.MappingHttpMessage;
-import com.eucalyptus.ws.server.NioServer;
-
-import edu.ucsb.eucalyptus.constants.EventType;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 

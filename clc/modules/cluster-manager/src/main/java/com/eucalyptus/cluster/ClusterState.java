@@ -76,6 +76,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
@@ -84,7 +85,6 @@ import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
-import edu.ucsb.eucalyptus.constants.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 

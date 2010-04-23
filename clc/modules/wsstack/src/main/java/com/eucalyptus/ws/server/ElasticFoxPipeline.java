@@ -67,7 +67,7 @@ import java.util.List;
 
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.ElasticFoxMangleStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 

@@ -5,7 +5,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.constants.EventType;
+import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CancelBundleTaskResponseType;
 import edu.ucsb.eucalyptus.msgs.CancelBundleTaskType;

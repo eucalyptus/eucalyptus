@@ -74,7 +74,7 @@
   </uptodate>
   <target name="build-binding">
     <delete file="${msgs.binding}" />
-    <java classname="com.eucalyptus.util.GenerateJiBXBinding" fork="true">
+    <java classname="com.eucalyptus.binding.GenerateJiBXBinding" fork="true">
       <classpath refid="classpath" />
       <classpath path="build" />
       <syspropertyset refid="euca-props" />

@@ -27,12 +27,10 @@ class Cluster():
       self.cluster_name = value
     else:
       setattr(self, name, value)
-          
-  def get_describe_parser(self):
-    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    return parser
   
   def describe(self):
+    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
+    (options, args) = parser.parse_args()
     try:
       list = self.euca.connection.get_list('DescribeClusters', {}, [('euca:item', Cluster)])
       for i in list:

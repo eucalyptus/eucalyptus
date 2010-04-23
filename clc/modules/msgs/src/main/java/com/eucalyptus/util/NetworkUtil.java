@@ -69,12 +69,17 @@ import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class NetworkUtil {
@@ -102,42 +107,83 @@ public class NetworkUtil {
   }
 
   public static boolean testReachability( String addr ) throws Exception {
+    Exceptions.ifNullArgument( addr );
     InetAddress inetAddr = Inet4Address.getByName( addr );
-    return inetAddr.isReachable( 1000 );
+    return inetAddr.isReachable( 10000 );
+  }
+
+  public static InetAddress toAddress( URI uri ) {
+    Exceptions.ifNullArgument( uri );
+    try {
+      return InetAddress.getByName( uri.getHost( ) );
+    } catch ( UnknownHostException e ) {
+      throw Exceptions.illegalArgument( "Failed to resolve address for host: " + uri.getHost( ), e );
+    }
+  }
+
+  public static InetAddress toAddress( String maybeUrlMaybeHostname ) {
+    Exceptions.ifNullArgument( maybeUrlMaybeHostname );
+    if( maybeUrlMaybeHostname.startsWith( "vm:" ) ) {
+      maybeUrlMaybeHostname = "localhost";
+    }
+    URI uri = null;
+    String hostAddress = null;
+    try {
+      uri = new URI( maybeUrlMaybeHostname );
+      hostAddress = uri.getHost( );
+    } catch ( URISyntaxException e ) {
+      hostAddress = maybeUrlMaybeHostname;
+    }
+    InetAddress ret = null;
+    try {
+      ret = InetAddress.getByName( hostAddress );
+    } catch ( UnknownHostException e1 ) {
+      throw Exceptions.fatal( "Failed to resolve address for host: " + maybeUrlMaybeHostname, e1 );
+    }
+    return ret;
+  }
+  
+  public static boolean testLocal( final InetAddress addr ) {
+    Exceptions.ifNullArgument( addr );
+    try {
+      Boolean result = addr.isAnyLocalAddress( ); 
+      result |= Iterables.any( Collections.list( NetworkInterface.getNetworkInterfaces( ) ), new Predicate<NetworkInterface>() {
+        @Override public boolean apply( NetworkInterface arg0 ) {
+          return Iterables.any( arg0.getInterfaceAddresses( ), new Predicate<InterfaceAddress>() {
+            @Override public boolean apply( InterfaceAddress arg0 ) {
+              return arg0.getAddress( ).equals( addr );
+            }} );
+        }} );
+      return result;
+//      List<String> addrs = Lists.transform( Lists.newArrayList( Collections.list( NetworkInterface.getNetworkInterfaces( ) ) ), new Function<>)
+//      Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
+//      
+//      while( ifaces.hasMoreElements( ) ) {
+//        NetworkInterface iface = ifaces.nextElement( );
+//        for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
+//          InetAddress ifaceAddr = iaddr.getAddress( );
+//          if( ifaceAddr.equals( addr ) ) {
+//            return true;
+//          }
+//        }
+//      }
+//      return addr.isAnyLocalAddress( );
+    } catch ( Exception e ) {
+      return Exceptions.eat( e.getMessage( ), e );
+    }    
   }
 
   public static boolean testLocal( String address ) {
+    Exceptions.ifNullArgument( address );
     InetAddress addr;
-    try {
-      addr = InetAddress.getByName( address );
-      List<String> addrs = Lists.newArrayList( );
-      Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
-      while( ifaces.hasMoreElements( ) ) {
-        NetworkInterface iface = ifaces.nextElement( );
-        for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
-          InetAddress ifaceAddr = iaddr.getAddress( );
-          if( ifaceAddr.equals( addr ) ) {
-            return true;
-          }
-        }
+      try {
+        addr = InetAddress.getByName( address );
+        return testLocal( addr );
+      } catch ( UnknownHostException e ) {
+        return Exceptions.eat( e.getMessage( ), e );
       }
-      return addr.isAnyLocalAddress( );
-    } catch ( Exception e ) {
-      LOG.fatal( "Error getting address or network interface information.", e );
-      return false;
-    }
   }
   
-  public static String tryToResolve( String address ) {
-    InetAddress addr;
-    try {
-      addr = InetAddress.getByName( address );
-      return addr.getHostAddress( );
-    } catch ( UnknownHostException e ) {
-      return address;
-    }
-  }
-
   public static boolean testGoodAddress( String address ) throws Exception {
     InetAddress addr = InetAddress.getByName( address );
     LOG.debug( addr + " site=" + addr.isSiteLocalAddress( ) );

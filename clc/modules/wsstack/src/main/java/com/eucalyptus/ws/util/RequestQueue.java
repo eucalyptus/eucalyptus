@@ -65,63 +65,27 @@
 
 package com.eucalyptus.ws.util;
 
+import org.apache.log4j.Logger;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.NotReadyException;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.WalrusConfiguration;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.StartComponentEvent;
-import com.eucalyptus.event.StopComponentEvent;
-import com.eucalyptus.util.EucalyptusCloudException;
-
-public class RequestQueue implements EventListener
-{
-	private static boolean acceptable;
-
-	public EucalyptusMessage handle( EucalyptusMessage msg ) throws EucalyptusCloudException
-	{
-		if(msg instanceof WalrusRequestType) {
-			if(!acceptable)
-				throw new NotReadyException("walrus");
-		}
-		return msg;
-	}
-
-	public static void register() {
-		ListenerRegistry.getInstance( ).register( Component.walrus, new RequestQueue() );	
-	}
-
-	@Override
-	public void advertiseEvent(Event event) {
-	}
-
-	@Override
-	public void fireEvent(Event event) {
-		if(event instanceof StartComponentEvent) {
-			EntityWrapper<WalrusConfiguration> db = Configuration.getEntityWrapper( );
-			try {
-				db.getUnique(new WalrusConfiguration());
-				db.commit();
-				acceptable = true;
-			} catch(EucalyptusCloudException ex) {
-				db.rollback();
-			}
-		} else if(event instanceof StopComponentEvent) {
-			EntityWrapper<WalrusConfiguration> db = Configuration.getEntityWrapper( );
-			try {
-				db.getUnique(new WalrusConfiguration());
-				db.commit();
-			} catch(EucalyptusCloudException ex) {
-				acceptable = false;
-				db.rollback();
-			}
-		}
-	}
+public class RequestQueue {
+  private static Logger  LOG = Logger.getLogger( RequestQueue.class );
+  private static boolean acceptable;
+  
+  public BaseMessage handle( BaseMessage msg ) throws EucalyptusCloudException {
+    if ( msg instanceof WalrusRequestType ) {
+      if ( !Components.lookup( Components.delegate.walrus ).isInitialized( ) ) {
+        throw new NotReadyException( "walrus" );
+      }
+    }
+    LOG.debug( EventRecord.here( RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), msg.getClass( ).getSimpleName( ) ) );
+    return msg;
+  }
+  
 }

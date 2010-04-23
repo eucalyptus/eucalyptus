@@ -64,13 +64,9 @@
 package com.eucalyptus.ws.server;
 
 import java.util.List;
-import java.util.Set;
-
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.BindingStage;
+import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class EucalyptusSoapPipeline extends FilteredPipeline {

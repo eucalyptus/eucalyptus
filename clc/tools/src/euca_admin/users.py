@@ -8,9 +8,11 @@ SERVICE_PATH = '/services/Accounts'
 class User():
   
   
-  def __init__(self, userName=None, email="N/A", certificateCode=None, confirmationCode=None, accessKey=None, secretKey=None, confirmed=False, admin=False, enabled=False):
+  def __init__(self, userName=None, email="N/A", certificateCode=None, confirmationCode=None, accessKey=None, secretKey=None, confirmed=False, admin=False, enabled=False, distinguishedName=None, certificateSerial=None):
     self.user_userName = userName
     self.user_email = email
+    self.user_distinguishedName = distinguishedName
+    self.user_certificateSerial = certificateSerial
     self.user_certificateCode = certificateCode
     self.user_confirmationCode = confirmationCode
     self.user_accessKey = accessKey
@@ -19,21 +21,31 @@ class User():
     self.user_admin = admin
     self.user_enabled = enabled
     self.user_groups = []
-    self.user_certs = []
+    self.user_revoked = []
+    self.user_list = self.user_groups
     self.euca = EucaAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
-    r = 'USER\t%s\t%s%s\t%s' % (self.user_userName,self.user_email,'\tADMIN' if self.user_admin == 'true' else ' ', 'ENABLED' if self.user_enabled == 'true' else 'DISABLED' )
-    r = '%s\nQUERY\t%s\t%s\t%s' % (r,self.user_userName,self.user_accessKey,self.user_secretKey)
-    r = '%s\nCERTS\t%s\t%s' % (r,self.user_userName,self.user_certificateCode)
-    if not self.user_confirmed == 'true':
-      r = '%s\nCONFIRM\t%s\t%s' % (r,self.user_userName,self.user_confirmationCode)
+    r = 'USER\t\t%s\t%s%s\t%s' % (self.user_userName,self.user_email,'\tADMIN' if self.user_admin == 'true' else ' ', 'ENABLED' if self.user_enabled == 'true' else 'DISABLED' )
+    for s in self.user_groups:
+      r = '%s\nUSER-GROUP\t%s\t%s' % (r,self.user_userName,s)
+    r = '%s\nUSER-CERT\t%s\t%s\t%s' % (r,self.user_userName,self.user_distinguishedName,self.user_certificateSerial)
+    for s in self.user_revoked:
+      r = '%s\nUSER-REVOKED\t%s\t%s' % (r,self.user_userName,s)
+    r = '%s\nUSER-KEYS\t%s\t%s\t%s' % (r,self.user_userName,self.user_accessKey,self.user_secretKey)
+    r = '%s\nUSER-CODE\t%s\t%s' % (r,self.user_userName,self.user_certificateCode)
+    r = '%s\nUSER-WEB \t%s\t%s' % (r,self.user_userName,self.user_confirmationCode)
     return r
       
   def startElement(self, name, attrs, connection):
-      return None
+#    if name == 'euca:groups':
+#      self.user_list = self.user_groups
+#    elif name == 'euca:revoked':
+#      self.user_list = self.user_revoked
+    return None    
 
   def endElement(self, name, value, connection):
+    print 'ELEM %s\t%s' % ( name.split(':',1)[1], value ) 
     if name == 'euca:userName':
       self.user_userName = value
     elif name == 'euca:email':
@@ -44,6 +56,10 @@ class User():
       self.user_confirmed = value
     elif name == 'euca:enabled':
       self.user_enabled = value
+    elif name == 'euca:distinguishedName':
+      self.user_distinguishedName = value
+    elif name == 'euca:certificateSerial':
+      self.user_certificateSerial = value
     elif name == 'euca:certificateCode':
       self.user_certificateCode = value
     elif name == 'euca:confirmationCode':
@@ -52,6 +68,8 @@ class User():
       self.user_accessKey = value
     elif name == 'euca:secretKey':
       self.user_secretKey = value
+    elif name == 'euca:entry':
+      self.user_list.append(value)
     else:
       setattr(self, name, value)
           

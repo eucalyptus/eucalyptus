@@ -64,15 +64,8 @@
 package com.eucalyptus.ws.client;
 
 import java.security.GeneralSecurityException;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
@@ -88,23 +81,24 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
-
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Depends;
+import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.Resource;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.event.LifecycleEvent;
+import com.eucalyptus.component.event.StartComponentEvent;
+import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.ComponentEvent;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.StartComponentEvent;
-import com.eucalyptus.event.StopComponentEvent;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.binding.BindingManager;
-import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
@@ -114,17 +108,13 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
-import edu.emory.mathcs.backport.java.util.NavigableMap;
-import edu.emory.mathcs.backport.java.util.NavigableSet;
-import edu.emory.mathcs.backport.java.util.concurrent.ConcurrentSkipListMap;
-import edu.ucsb.eucalyptus.StartupChecks;
-
-@Provides( resource = Resource.RemoteConfiguration )
-@Depends( resources = Resource.Database, local = Component.eucalyptus )
+@Provides(Component.eucalyptus)
+@RunDuring(Bootstrap.Stage.RemoteConfiguration)
+@DependsLocal(Component.eucalyptus)
 public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPipelineFactory, EventListener {
   private static Logger                            LOG    = Logger.getLogger( RemoteBootstrapperClient.class );
   private ConcurrentMap<String, HeartbeatClient>   heartbeatMap;
-  private Multimap<String, ComponentConfiguration> componentMap;
+  private Multimap<String, ServiceConfiguration> componentMap;
   private NioBootstrap                             clientBootstrap;
   private ChannelFactory                           channelFactory;
   private static RemoteBootstrapperClient          client = new RemoteBootstrapperClient( );
@@ -185,7 +175,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   }
 
   @Override
-  public boolean load( Resource current ) throws Exception {
+  public boolean load( Stage current ) throws Exception {
     return true;
   }
 
@@ -199,14 +189,14 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
 
   @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof ComponentEvent ) {
-      ComponentEvent e = ( ComponentEvent ) event;
-      if ( !Component.walrus.equals( e.getComponent( ) ) && !Component.storage.equals( e.getComponent( ) ) ) {
+    if ( event instanceof LifecycleEvent ) {
+      LifecycleEvent e = ( LifecycleEvent ) event;
+      if ( !Component.walrus.equals( e.getPeer( ) ) && !Component.storage.equals( e.getPeer( ) ) ) {
         return;
       } else if ( e.getConfiguration( ).getPort( ) < 0 ) {
         return;
       } else {
-        ComponentConfiguration config = e.getConfiguration( );
+        ServiceConfiguration config = e.getConfiguration( );
         if ( event instanceof StartComponentEvent ) {
           if( !NetworkUtil.testLocal( e.getConfiguration( ).getHostName( ) ) ) {
             this.addRemoteComponent( config );
@@ -228,7 +218,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
     }
   }
 
-  private void fireRemoteStartEvent( ComponentConfiguration config ) {
+  private void fireRemoteStartEvent( ServiceConfiguration config ) {
     for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
       if ( hb.getHostName( ).equals( config.getHostName( ) ) ) {
         LOG.info( "--> Firing start event on target remote component: " + LogUtil.dumpObject( hb ) );
@@ -240,7 +230,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
     }
   }
 
-  private void fireRemoteStopEvent( ComponentConfiguration config ) {
+  private void fireRemoteStopEvent( ServiceConfiguration config ) {
     for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
       if ( hb.getHostName( ).equals( config.getHostName( ) ) ) {
         LOG.info( "--> Firing stop event on target remote component: " + LogUtil.dumpObject( hb ) );
@@ -252,7 +242,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
     }
   }
 
-  public void addRemoteComponent( ComponentConfiguration config ) {
+  public void addRemoteComponent( ServiceConfiguration config ) {
     if ( !this.heartbeatMap.containsKey( config.getHostName( ) ) ) {
       LOG.debug( LogUtil.subheader( "-> Adding remote bootstrapper for host: " + config.getHostName( ) ) );
       this.heartbeatMap.put( config.getHostName( ), new HeartbeatClient( this.clientBootstrap, config.getHostName( ), config.getPort( ) ) );
@@ -263,7 +253,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
     }
   }
 
-  public void removeRemoteComponent( ComponentConfiguration config ) {
+  public void removeRemoteComponent( ServiceConfiguration config ) {
     if ( this.componentMap.containsEntry( config.getHostName( ), config ) ) {
       LOG.debug( "-> Removing remote component bootstrapper: " + LogUtil.dumpObject( config ) );
       this.componentMap.remove( config.getHostName( ), config );

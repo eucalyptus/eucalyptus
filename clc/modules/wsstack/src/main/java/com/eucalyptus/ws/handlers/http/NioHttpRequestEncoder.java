@@ -63,7 +63,7 @@
  */
 package com.eucalyptus.ws.handlers.http;
 
-import com.eucalyptus.ws.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.util.HttpUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMessage;
