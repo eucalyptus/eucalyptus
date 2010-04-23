@@ -59,7 +59,6 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- *
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 

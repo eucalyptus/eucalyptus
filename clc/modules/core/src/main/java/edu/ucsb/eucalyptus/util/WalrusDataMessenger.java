@@ -110,7 +110,6 @@ public class WalrusDataMessenger {
 			if(queues.containsKey(key2)) {
 				queues.remove(key2);
 			}
-			queueMap.remove(key1);
 		}
 	}
 
