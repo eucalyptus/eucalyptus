@@ -1592,6 +1592,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	     exit(0);
             } else {
 	      rc = timewait(clientpid, &status, 15);
+	      rc = WEXITSTATUS(status);
 	    }
 
             clientpid = fork();
@@ -1605,6 +1606,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	      exit(0);
 	    } else {
 	      rc = timewait(clientpid, &status, 15);
+	      rc = WEXITSTATUS(status);
 	    }
 	    if (rc) {
 	      sleep(1);
