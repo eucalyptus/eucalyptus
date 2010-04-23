@@ -102,13 +102,13 @@ public class ISCSIManager implements StorageExportManager {
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
 		String returnValue;
-		returnValue = SystemUtil.run(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "tgtadm", "--help"});
+		returnValue = SystemUtil.run(new String[]{LVM2Manager.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "tgtadm", "--help"});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
 		} else {
 			LOG.info(returnValue);
 		}
-		if(SystemUtil.runAndGetCode(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{LVM2Manager.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
 			throw new EucalyptusCloudException("Unable to connect to tgt daemon. Is tgtd loaded?");
 		}
 	}
@@ -238,7 +238,7 @@ public class ISCSIManager implements StorageExportManager {
 			//check if account actually exists, if not create it.			
 			if(!checkUser("eucalyptus")) {
 				try {
-					addUser("eucalyptus", userInfo.getPassword());
+					addUser("eucalyptus", userInfo.getEncryptedPassword());
 				} catch (ExecutionException e1) {
 					LOG.error(e1);					
 					return;
@@ -334,7 +334,7 @@ public class ISCSIManager implements StorageExportManager {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo("eucalyptus"));
 			String encryptedPassword;
 			try {
-				encryptedPassword = encryptTargetPassword(userInfo.getPassword());
+				encryptedPassword = encryptTargetPassword(userInfo.getEncryptedPassword());
 				return encryptedPassword;
 			} catch (EucalyptusCloudException e) {
 				LOG.error("Unable to encrypt target password. Please check credentials. Have you configured a cluster?", e);

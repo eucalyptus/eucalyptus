@@ -105,7 +105,6 @@ import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
 public class RemoteInfoHandler {
-  
   private static Logger LOG = Logger.getLogger( RemoteInfoHandler.class );
   
   public static synchronized void setClusterList( List<ClusterInfoWeb> newClusterList ) throws EucalyptusCloudException {
@@ -336,5 +335,4 @@ public class RemoteInfoHandler {
     }
     return props;
   }
-
 }

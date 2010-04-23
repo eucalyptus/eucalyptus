@@ -81,7 +81,7 @@ public class PropertyDirectory {
 	  List<ComponentProperty> componentProps = Lists.newArrayList();
 	  List<ConfigurableProperty> props = getPropertyEntrySet( prefix );
 	  for (ConfigurableProperty prop : props) {
-		  componentProps.add(new ComponentProperty(prop.getWidgetType(), prop.getDisplayName(), prop.getValue(), prop.getQualifiedName()));
+		  componentProps.add(new ComponentProperty(prop.getWidgetType().toString(), prop.getDisplayName(), prop.getValue(), prop.getQualifiedName()));
 	  }
 	  return componentProps;
   }

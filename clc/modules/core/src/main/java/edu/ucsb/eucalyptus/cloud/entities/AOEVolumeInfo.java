@@ -62,7 +62,6 @@
  *
  * Author: Neil Soman neil@eucalyptus.com
  */
-
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.hibernate.annotations.Cache;

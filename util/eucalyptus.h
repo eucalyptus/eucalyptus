@@ -77,9 +77,10 @@ permission notice:
 #define EUCALYPTUS_ROOTWRAP           "%s/usr/lib/eucalyptus/euca_rootwrap"
 #define EUCALYPTUS_DETACH           "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/detach.pl"
 #define EUCALYPTUS_XM           "sudo xm"
-#define EUCALYPTUS_CONNECT_ISCSI    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/connect_iscsitarget.pl"
-#define EUCALYPTUS_DISCONNECT_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
-#define EUCALYPTUS_GET_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_iscsitarget.pl"
+
+#define EUCALYPTUS_CONNECT_ISCSI    "sudo %s/usr/share/eucalyptus/connect_iscsitarget.pl"
+#define EUCALYPTUS_DISCONNECT_ISCSI "sudo %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
+#define EUCALYPTUS_GET_ISCSI "sudo %s/usr/share/eucalyptus/get_iscsitarget.pl"
 #define EUCALYPTUS_NC_BUNDLE_UPLOAD "/usr/local/bin/euca-nc-bundle-upload" // can be overriden from eucalyptus.conf
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"

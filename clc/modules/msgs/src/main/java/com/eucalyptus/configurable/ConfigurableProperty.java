@@ -17,7 +17,7 @@ public interface ConfigurableProperty {
   
   public abstract String getDisplayName( );
   
-  public abstract String getWidgetType( );
+  public abstract ConfigurableFieldType getWidgetType( );
   
   public abstract PropertyTypeParser getTypeParser( );
   

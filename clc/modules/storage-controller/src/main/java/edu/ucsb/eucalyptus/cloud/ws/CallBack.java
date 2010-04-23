@@ -2,7 +2,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 public interface CallBack {
 	void run();
-	int getUpdateThreshold();
+	long getUpdateThreshold();
 	void finish();
 	void failed();
 }

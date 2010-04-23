@@ -67,8 +67,8 @@ public class ChannelUtil {
   static class NioServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline( ) throws Exception {
       final ChannelPipeline pipeline = Channels.pipeline( );
-      pipeline.addLast("ssl", new NioSslHandler());
-      ChannelUtil.addPipelineMonitors( pipeline );
+      //pipeline.addLast("ssl", new NioSslHandler());
+      //ChannelUtil.addPipelineMonitors( pipeline );
       pipeline.addLast( "decoder", new NioHttpDecoder( ) );
       pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
       pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );

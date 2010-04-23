@@ -71,9 +71,7 @@ public class StorageInfoWeb implements IsSerializable {
 	private Integer port;
 	private Boolean committed;	
 	private ArrayList<String> storageParams = new ArrayList<String>();
-
 	public StorageInfoWeb() { }
-
 	public StorageInfoWeb( final String name, final String host, final Integer port ) {
 		this.name = name;
 		this.host = host;
@@ -111,7 +109,6 @@ public class StorageInfoWeb implements IsSerializable {
 	public final void setName(final String name) {
 		this.name = name;
 	}
-
 
 	public final String getHost() {
 		return host;

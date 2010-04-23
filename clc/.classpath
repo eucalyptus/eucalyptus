@@ -94,6 +94,7 @@
 	<classpathentry kind="lib" path="lib/jibx-bind-1.1.6a.jar"/>
 	<classpathentry kind="lib" path="lib/jibx-extras-1.1.6a.jar"/>
 	<classpathentry kind="lib" path="lib/jibx-run-1.1.6a.jar"/>
+	<classpathentry kind="lib" path="lib/jsch-20091212.jar"/>
 	<classpathentry kind="lib" path="lib/json-lib-2.2.2.jar"/>
 	<classpathentry kind="lib" path="lib/jug-asl-2.0.0.jar"/>
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.2.jar"/>

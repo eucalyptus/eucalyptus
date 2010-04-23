@@ -119,6 +119,8 @@ import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotSizeResponseType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotSizeType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
@@ -368,4 +370,7 @@ public class WalrusControl {
 		return walrusBlockStorageManager.deleteWalrusSnapshot(request);
 	}
 
+	public GetWalrusSnapshotSizeResponseType GetWalrusSnapshotSize(GetWalrusSnapshotSizeType request) throws EucalyptusCloudException {
+		return walrusBlockStorageManager.getWalrusSnapshotSize(request);
+	}
 }

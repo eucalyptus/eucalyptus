@@ -343,7 +343,6 @@ public class EucalyptusManagement {
 				sysConf.getMaxUserPublicAddresses(),
 				sysConf.isDoDynamicPublicAddresses(),
 				sysConf.getSystemReservedPublicAddresses(),
-				sysConf.getZeroFillVolumes(),
 				sysConf.getDnsDomain(),
 				sysConf.getNameserver(),
 				sysConf.getNameserverAddress(),
@@ -367,7 +366,6 @@ public class EucalyptusManagement {
 			sysConf.setMaxUserPublicAddresses( systemConfig.getMaxUserPublicAddresses() );
 			sysConf.setDoDynamicPublicAddresses( systemConfig.isDoDynamicPublicAddresses() );
 			sysConf.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
-			sysConf.setZeroFillVolumes(systemConfig.getZeroFillVolumes());
 			db.commit();
 			DNSProperties.update();
 		}
@@ -379,7 +377,6 @@ public class EucalyptusManagement {
 					systemConfig.getMaxUserPublicAddresses(),
 					systemConfig.isDoDynamicPublicAddresses(),
 					systemConfig.getSystemReservedPublicAddresses(),
-					systemConfig.getZeroFillVolumes(),
 					systemConfig.getDnsDomain(),
 					systemConfig.getNameserver(),
 					systemConfig.getNameserverAddress(),

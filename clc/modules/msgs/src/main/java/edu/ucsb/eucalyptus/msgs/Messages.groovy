@@ -63,6 +63,8 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import java.util.List;
+
 import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
@@ -144,7 +146,6 @@ public class ComponentProperty extends EucalyptusData {
 }
 public class StorageStateType extends EucalyptusMessage{
   private String name;
-  
   def StorageStateType() {
   }
   

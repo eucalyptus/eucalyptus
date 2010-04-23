@@ -792,6 +792,12 @@ public class GetWalrusSnapshotType extends WalrusDataGetRequestType {
 public class GetWalrusSnapshotResponseType extends WalrusDataGetResponseType {
 }
 
+public class GetWalrusSnapshotSizeType extends WalrusDataGetRequestType {
+}
+
+public class GetWalrusSnapshotSizeResponseType extends WalrusDataGetResponseType {
+}
+
 public class WalrusUsageStatsRecord extends StatEventRecord {
 	Long bytesIn;
 	Long bytesOut;

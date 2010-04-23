@@ -131,6 +131,7 @@ import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
+import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.TargetGrants;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
@@ -211,7 +212,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
 			EucalyptusMessage msg = (EucalyptusMessage) httpResponse.getMessage( );
 			Binding binding;
+
 			if(!(msg instanceof EucalyptusErrorMessageType)) {
+				if(msg instanceof PutObjectResponseType) {
+					if(putQueue != null) {
+						putQueue = null;
+					}
+				}
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
 				if(msg instanceof PutObjectResponseType) {
 					if(putQueue != null) {
