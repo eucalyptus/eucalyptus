@@ -60,7 +60,7 @@ permission notice:
 #include <stdio.h>
 #include <time.h>
 #include <misc.h>
-
+#include <data.h>
 #include <cc-client-marshal.h>
 
 #ifndef MODE
@@ -165,7 +165,12 @@ int main(int argc, char **argv) {
       if (argv[10]) ramdiskId = argv[10];
       if (argv[11]) ramdiskURL = argv[11];
 
-      rc = cc_runInstances(amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, atoi(argv[7]), atoi(argv[8]), argv[9], env, stub);
+      virtualMachine params = { 64, 1, 64, "m1.small", 
+				{ { "sda1", "root", 100, "none" }, 
+				  { "sda2", "ephemeral1", 1000, "ext3" },
+				  { "sda3", "swap", 50, "swap" } } };
+
+      rc = cc_runInstances(amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, atoi(argv[7]), atoi(argv[8]), argv[9], &params, env, stub);
       if (rc != 0) {
 	printf("cc_runInstances() failed: in:%s out:%d\n", argv[4], rc);
 	exit(1);

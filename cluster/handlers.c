@@ -1531,9 +1531,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       logprintfl(EUCAERROR,"RunInstances(): could not find/initialize any free network address, failing doRunInstances()\n");
     } else {
       // "run" the instance
-      ncvm.mem = ccvm->mem;
-      ncvm.disk = ccvm->disk;
-      ncvm.cores = ccvm->cores;
+      memcpy (&ncvm, ccvm, sizeof(virtualMachine));
       
       ncnet.vlan = vlan;
       if (thenidx >= 0) {
@@ -3062,7 +3060,7 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
     //    if (networkIndex) out->networkIndex = networkIndex;
 
     if (ccnet) allocate_netConfig(&(out->ccnet), ccnet->privateMac, ccnet->privateIp, ccnet->publicIp, ccnet->vlan, ccnet->networkIndex);
-    if (ccvm) allocate_virtualMachine(&(out->ccvm), ccvm->mem, ccvm->disk, ccvm->cores, ccvm->name);    
+    if (ccvm) allocate_virtualMachine(&(out->ccvm), ccvm);
   }
   return(0);
 }

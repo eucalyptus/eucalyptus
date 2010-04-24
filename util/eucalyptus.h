@@ -115,6 +115,7 @@ permission notice:
 #define MAXLOGFILESIZE 32768000
 #define EUCA_MAX_GROUPS 64
 #define EUCA_MAX_VOLUMES 256
+#define EUCA_MAX_DEVMAPS 64
 #define DEFAULT_NC_CACHE_SIZE 99999 /* in MB */
 #define DEFAULT_SWAP_SIZE 512 /* in MB */
 

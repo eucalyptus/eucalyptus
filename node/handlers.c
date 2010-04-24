@@ -975,6 +975,13 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
 		logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
 	logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
 
+	int i;
+	for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
+	  deviceMapping * dm = &(params->deviceMapping[i]);
+	  if (strlen(dm->deviceName)>0) {
+	    logprintfl (EUCAINFO, "                         device mapping: %s=%s size=%d format=%s\n", dm->deviceName, dm->virtualName, dm->size, dm->format);
+	  }
+	}
 
 	if (nc_state.H->doRunInstance)
  	  ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);

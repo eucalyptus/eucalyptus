@@ -66,6 +66,7 @@ permission notice:
 #include "axis2_stub_EucalyptusNC.h"
 #include "client-marshal.h"
 #include "misc.h"
+#include "adb-helpers.h"
 
 #define NULL_ERROR_MSG "() could not be invoked (check NC host, port, and credentials)\n"
 
@@ -151,17 +152,10 @@ static int datetime_to_unix (axutil_date_time_t *dt, axutil_env_t *env)
 
 static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axutil_env_t * env)
 {
-    adb_virtualMachineType_t * vm_type;
+    int i;
+    adb_virtualMachineType_t * vm_type = adb_instanceType_get_instanceType(instance, env);
     virtualMachine params;
-    bzero(&params, sizeof(virtualMachine));
-    vm_type = adb_instanceType_get_instanceType(instance, env);
-    if (vm_type != NULL) {
-        // TODO: Type Name?
-        params.mem = adb_virtualMachineType_get_memory(vm_type, env);
-        params.disk = adb_virtualMachineType_get_disk(vm_type, env);
-        params.cores = adb_virtualMachineType_get_cores(vm_type, env);
-    }
-    
+    copy_vm_type_from_adb (&params, vm_type, env);
     netConfig ncnet;
     bzero(&ncnet, sizeof(netConfig));
     adb_netConfigType_t * netconf = adb_instanceType_get_netParams(instance, env);
@@ -173,7 +167,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
     }
 
-    int i, groupNamesSize = adb_instanceType_sizeof_groupNames (instance, env);
+    int groupNamesSize = adb_instanceType_sizeof_groupNames (instance, env);
     char * groupNames [EUCA_MAX_GROUPS];
     for (i = 0; i<EUCA_MAX_GROUPS && i<groupNamesSize; i++) {
         groupNames[i] = adb_instanceType_get_groupNames_at (instance, env, i);
@@ -221,6 +215,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
 
 int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
+    int i;
     axutil_env_t * env = st->env;
     axis2_stub_t * stub = st->stub;
     adb_ncRunInstance_t     * input   = adb_ncRunInstance_create(env); 
@@ -235,12 +230,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     // set op-specific input fields
     adb_ncRunInstanceType_set_instanceId(request, env, instanceId);
     adb_ncRunInstanceType_set_reservationId(request, env, reservationId);
-
-    adb_virtualMachineType_t * vm_type = adb_virtualMachineType_create(env);
-    adb_virtualMachineType_set_memory(vm_type, env, params->mem);
-    adb_virtualMachineType_set_cores(vm_type, env, params->cores);
-    adb_virtualMachineType_set_disk(vm_type, env, params->disk);
-    adb_ncRunInstanceType_set_instanceType(request, env, vm_type);
+    adb_ncRunInstanceType_set_instanceType(request, env, copy_vm_type_to_adb(env, params));
 
     adb_ncRunInstanceType_set_imageId(request, env, imageId);
     adb_ncRunInstanceType_set_imageURL(request, env, imageURL);
@@ -261,7 +251,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     //    adb_ncRunInstanceType_set_vlan(request, env, vlan);
     adb_ncRunInstanceType_set_userData(request, env, userData);
     adb_ncRunInstanceType_set_launchIndex(request, env, launchIndex);
-    int i;
+
     for (i=0; i<groupNamesSize; i++) {
         adb_ncRunInstanceType_add_groupNames(request, env, groupNames[i]);
     }
