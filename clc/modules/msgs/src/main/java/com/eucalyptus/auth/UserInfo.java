@@ -114,7 +114,7 @@ public class UserInfo {
   public UserInfo( ) {}
   
   public UserInfo( String userName, String confirmationCode ) {
-    this( userName, BOGUS_ENTRY, confirmationCode );
+    this( userName, "", confirmationCode );
     this.approved = true;
     this.confirmed = true;
   }

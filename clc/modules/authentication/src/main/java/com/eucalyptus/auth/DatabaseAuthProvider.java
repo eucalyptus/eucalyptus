@@ -78,7 +78,6 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.entities.DatabaseUtil;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
@@ -176,7 +175,6 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     List<User> users = Lists.newArrayList( );
     EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     UserEntity searchUser = new UserEntity( );
-    searchUser.setEnabled( true );
     UserEntity user = null;
     try {
       for( UserEntity u : db.query( searchUser ) ) {
@@ -215,7 +213,8 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     X509Cert searchCert = new X509Cert( );
     searchCert.setPemCertificate( certPem );
     searchCert.setRevoked( null );
-    Session session = DatabaseUtil.getEntityManagerFactory( Authentication.DB_NAME ).getSessionFactory( ).openSession( );
+    EntityWrapper<UserEntity> db = EntityWrapper.get( searchUser );
+    Session session = db.getSession( );
     try {
       Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
       Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
@@ -231,9 +230,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     } catch ( Throwable t ) {
       throw new NoSuchUserException( t );
     } finally {
-      try {
-        session.close( );
-      } catch ( Throwable t ) {}
+      db.rollback( );
     }
   }
   
@@ -245,22 +242,20 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     X509Cert searchCert = new X509Cert( );
     searchCert.setPemCertificate( certPem );
     searchCert.setRevoked( true );
-    Session session = DatabaseUtil.getEntityManagerFactory( Authentication.DB_NAME ).getSessionFactory( ).openSession( );
+    EntityWrapper<UserEntity> db = EntityWrapper.get( searchUser );
+    Session session = db.getSession( );
     try {
       Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
       Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
       List<User> users = ( List<User> ) session.createCriteria( User.class ).setCacheable( true ).add( qbeUser ).createCriteria( "certificates" )
                                                .setCacheable( true ).add( qbeCert ).list( );
       if( users.isEmpty( ) || users.size( ) > 1 ) {
-        session.close( );
         throw new NoSuchCertificateException( "Failed to identify user (found " + users.size() + ") from certificate information: " + cert.getSubjectX500Principal( ).toString( ) );
       } else {
         return true;
       }
     } finally {
-      try {
-        session.close( );
-      } catch ( Throwable t ) {}
+      db.rollback( );
     }
   }
   

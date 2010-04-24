@@ -92,6 +92,7 @@ import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.AddObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.AddObjectType;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
@@ -133,7 +134,7 @@ public class WalrusBucketLogger {
 							//check if bucket exists, if not create it.
 							try {
 								String logFileName = "logentry-" + uuid;
-								FileChannel channel = new FileOutputStream(new File(WalrusProperties.bucketRootDirectory + 
+								FileChannel channel = new FileOutputStream(new File(WalrusInfo.getWalrusInfo().getStorageDir() + 
 										"/" + bucket + "/" + logFileName)).getChannel();
 								logFileMap.put(bucket, new LogFileEntry(logFileName, channel));
 							} catch (FileNotFoundException e) {

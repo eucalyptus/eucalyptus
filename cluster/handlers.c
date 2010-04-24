@@ -1591,15 +1591,26 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	     rc = ncStartNetworkStub(ncs, ccMeta, NULL, 0, 0, vlan, NULL);
 	     exit(0);
             } else {
-	      rc = timewait(clientpid, &status, 30);
+	      rc = timewait(clientpid, &status, 15);
+	      rc = WEXITSTATUS(status);
 	    }
 
-            // call RunInstances client
-            ncs = ncStubCreate(res->ncURL, NULL, NULL);
-	    if (config->use_wssec) {
-	      rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
+            clientpid = fork();
+	    if (!clientpid) {
+	      // call RunInstances client
+	      ncs = ncStubCreate(res->ncURL, NULL, NULL);
+	      if (config->use_wssec) {
+		rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
+	      }
+	      rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, &ncnet, userData, launchIndex, netNames, netNamesLen, &outInst);
+	      exit(0);
+	    } else {
+	      rc = timewait(clientpid, &status, 15);
+	      rc = WEXITSTATUS(status);
 	    }
-	    rc = ncRunInstanceStub(ncs, ccMeta, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, &ncnet, userData, launchIndex, netNames, netNamesLen, &outInst);
+	    if (rc) {
+	      sleep(1);
+	    }
 	  }
 	  if (!rc) {
 	    ret = 0;

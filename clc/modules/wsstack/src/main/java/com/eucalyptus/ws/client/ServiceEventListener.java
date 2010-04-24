@@ -35,10 +35,10 @@ public class ServiceEventListener implements EventListener {
   public void fireEvent( Event event ) {
     if ( event instanceof StartComponentEvent ) {
       StartComponentEvent e = ( StartComponentEvent ) event;
-      if ( Component.db.equals( e.getComponent( ) ) ) {
-        LOG.info( LogUtil.header( "Got information for the " + e.getComponent( ) + " " + LogUtil.dumpObject( e.getConfiguration( ) ) ) );
+      if ( Component.db.equals( e.getPeer( ) ) ) {
+        LOG.info( LogUtil.header( "Got information for the " + e.getPeer( ) + " " + LogUtil.dumpObject( e.getConfiguration( ) ) ) );
       }
-      NavigableSet<Service> services = Components.lookup( e.getComponent( ) ).getServices( );
+      NavigableSet<Service> services = Components.lookup( e.getPeer( ) ).getServices( );
       for( Service s : services ) {
         LOG.info( "Registered service dispatchers: " + s.getName( ) + " " + s.getUri( ).toASCIIString( ) + " " + LogUtil.dumpObject( e.getConfiguration( ) ) );
       }

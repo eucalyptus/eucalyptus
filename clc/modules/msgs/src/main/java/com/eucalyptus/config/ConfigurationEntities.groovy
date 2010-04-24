@@ -140,7 +140,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   
   public Boolean isLocal() {
     try {
-      return NetworkUtil.testLocal( w.getHostName( ) );
+      return NetworkUtil.testLocal( this.getHostName( ) );
     } catch ( Exception e ) {
       return false;
     }
@@ -255,6 +255,10 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   }
   public Component getComponent() {
     return Component.cluster;
+  }
+  @Override
+  public Boolean isLocal() {
+    return false;
   }
 }
 
