@@ -735,7 +735,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     vm = adb_describeResourcesType_get_instanceTypes_at(drt, env, i);
     name = adb_virtualMachineType_get_name(vm, env);
     strncpy(vms[i].name, name, 64);
-    copy_vm_type_from_adb (vms, vm, env);
+    copy_vm_type_from_adb (&(vms[i]), vm, env);
   }
 
   // do it
