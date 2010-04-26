@@ -208,7 +208,6 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
   // encrypt password and write to console log for later retrieval
   char tmpstr[512], enckey[2048];
   sscanf(keyName, "%s %s %s", tmp, enckey, tmp);
-  fprintf(stderr, "ENC KEY: |%s|\n", enckey);
   rc = encryptWindowsPassword(password, enckey, &encpassword, &encsize);
   if (rc) {
     return(1);
