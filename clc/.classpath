@@ -50,7 +50,6 @@
 	<classpathentry kind="lib" path="lib/commons-pool-1.4.jar"/>
 	<classpathentry kind="lib" path="lib/dnsjava-2.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/dom4j-1.6.1.jar"/>
-	<classpathentry kind="lib" path="lib/ecj.jar"/>
 	<classpathentry kind="lib" path="lib/ehcache-core-1.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/el-api-2.1.jar"/>
 	<classpathentry kind="lib" path="lib/excalibur-logkit.jar"/>
@@ -66,9 +65,6 @@
 	<classpathentry kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/google-collect-20080808.jar"/>
 	<classpathentry kind="lib" path="lib/groovy-1.6.3.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-dev-linux-1.6.4.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-servlet-1.6.4.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-user-1.6.4.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-3.3.2.GA.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-annotations-3.4.0.GA.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-commons-annotations-3.4.0.GA.jar"/>
