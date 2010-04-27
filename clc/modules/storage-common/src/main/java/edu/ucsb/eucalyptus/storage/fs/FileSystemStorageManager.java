@@ -66,6 +66,7 @@
 package edu.ucsb.eucalyptus.storage.fs;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
@@ -76,6 +77,7 @@ import com.eucalyptus.ws.util.WalrusBucketLogger;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.cloud.ws.CompressedChunkedFile;
 import edu.ucsb.eucalyptus.cloud.ws.ChunkedDataFile;
+import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -267,8 +269,9 @@ public class FileSystemStorageManager implements StorageManager {
 		return -1;
 	}
 
-	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, final BucketLogData logData) {
+	public void sendObject(final WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, String bucketName, String objectName, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, final BucketLogData logData) {
 		try {
+			Channel channel = request.getChannel();
 			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
 			if(etag != null)
@@ -292,28 +295,24 @@ public class FileSystemStorageManager implements StorageManager {
 				httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
 			}
 			channel.write(httpResponse);
-			if(logData != null) {
-				channel.write(file).addListener(new ChannelFutureListener( ) {
-					@Override public void operationComplete( ChannelFuture future ) throws Exception {
+			channel.write(file).addListener(new ChannelFutureListener( ) {
+				@Override public void operationComplete( ChannelFuture future ) throws Exception {
+					Contexts.clear(request.getCorrelationId());
+					file.close();
+					if(logData != null) {
 						logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
-						WalrusBucketLogger.getInstance().addLogEntry(logData);				
-						file.close( );
+						WalrusBucketLogger.getInstance().addLogEntry(logData);	
 					}
-				});
-			} else {
-				channel.write(file).addListener(new ChannelFutureListener( ) {
-          @Override public void operationComplete( ChannelFuture future ) throws Exception {
-            file.close( );
-          }
-        });
-			}
+				}
+			});
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}	
 	}
 
-	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, final BucketLogData logData) {
+	public void sendObject(final WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, String bucketName, String objectName, long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, final BucketLogData logData) {
 		try {
+			Channel channel = request.getChannel();
 			RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
 			httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
 			if(etag != null)
@@ -338,49 +337,46 @@ public class FileSystemStorageManager implements StorageManager {
 				httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
 			}
 			channel.write(httpResponse);
-			if(logData != null) {
-				channel.write(file).addListener(new ChannelFutureListener( ) {
-					@Override public void operationComplete( ChannelFuture future ) throws Exception {
+			channel.write(file).addListener(new ChannelFutureListener( ) {
+				@Override public void operationComplete( ChannelFuture future ) throws Exception {
+					Contexts.clear(request.getCorrelationId());
+					file.close();
+					if(logData != null) {
 						logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
-						WalrusBucketLogger.getInstance().addLogEntry(logData);					
-            file.close( );
+						WalrusBucketLogger.getInstance().addLogEntry(logData);
 					}
-				});
-			} else {
-				channel.write(file).addListener(new ChannelFutureListener( ) {
-          @Override public void operationComplete( ChannelFuture future ) throws Exception {
-            file.close( );
-          }
-        });
-			}
+				}
+			});
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
 		}	
 	}
 
-	public void sendHeaders(Channel channel, DefaultHttpResponse httpResponse, Long size, String etag,
+	public void sendHeaders(final WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, Long size, String etag,
 			String lastModified, String contentType, String contentDisposition, String versionId, final BucketLogData logData) {
+		Channel channel = request.getChannel();
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream" );
 		if(etag != null)
 			httpResponse.addHeader(HttpHeaders.Names.ETAG, etag);
 		httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
-		if(contentDisposition != null)
+		if(contentDisposition != null) 
 			httpResponse.addHeader("Content-Disposition", contentDisposition);
 		if(versionId != null) {
 			httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
 		}
 		if(logData != null) {
-			logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
-			channel.write(httpResponse).addListener(new ChannelFutureListener( ) {
-				@Override public void operationComplete( ChannelFuture future ) throws Exception {
-					logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
-					WalrusBucketLogger.getInstance().addLogEntry(logData);					
-				}
-			});
-		} else {
-			channel.write(httpResponse);
+		    logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
 		}
+		channel.write(httpResponse).addListener(new ChannelFutureListener( ) {
+			@Override public void operationComplete( ChannelFuture future ) throws Exception {
+				Contexts.clear(request.getCorrelationId());
+				if(logData != null) {
+					logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
+					WalrusBucketLogger.getInstance().addLogEntry(logData);	
+				}
+			}
+		});
 	}
 
 	private String removeLoopback(String loDevName) throws ExecutionException {

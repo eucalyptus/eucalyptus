@@ -1947,7 +1947,7 @@ public class WalrusManager {
 										}
 										storageManager
 										.sendObject(
-												request.getChannel(),
+												request,
 												httpResponse,
 												bucketName,
 												torrentFile,
@@ -2031,7 +2031,7 @@ public class WalrusManager {
 										walrusStatistics.updateBytesOut(objectInfo
 												.getSize());
 									}
-									storageManager.sendObject(request.getChannel(),
+									storageManager.sendObject(request,
 											httpResponse, bucketName, objectName, size,
 											etag, DateUtils.format(lastModified
 													.getTime(),
@@ -2043,7 +2043,7 @@ public class WalrusManager {
 									return null;
 								}
 							} else {
-								storageManager.sendHeaders(request.getChannel(),
+								storageManager.sendHeaders(request,
 										httpResponse, size, etag, DateUtils.format(
 												lastModified.getTime(),
 												DateUtils.ISO8601_DATETIME_PATTERN)
@@ -2201,7 +2201,7 @@ public class WalrusManager {
 								if (WalrusProperties.trackUsageStatistics) {
 									walrusStatistics.updateBytesOut(size);
 								}
-								storageManager.sendObject(request.getChannel(),
+								storageManager.sendObject(request,
 										httpResponse, bucketName, objectName,
 										byteRangeStart, byteRangeEnd, size, etag,
 										DateUtils.format(lastModified.getTime(),
@@ -2211,7 +2211,7 @@ public class WalrusManager {
 												versionId, logData);
 								return null;
 							} else {
-								storageManager.sendHeaders(request.getChannel(),
+								storageManager.sendHeaders(request,
 										httpResponse, size, etag, DateUtils.format(
 												lastModified.getTime(),
 												DateUtils.ISO8601_DATETIME_PATTERN

@@ -306,13 +306,14 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			char **consoleOutput) {
   char *console_output;
   char console_file[MAX_PATH];
-  int rc, fd;
+  int rc, fd, readsize;
   struct stat statbuf;
 
   *consoleOutput = NULL;
+  readsize = 64 * 1024;
 
   // for KVM, read the console output from a file, encode it, and return
-  console_output = malloc(64 * 1024);
+  console_output = malloc(readsize);
   if (console_output == NULL) {
     return(1);
   }
@@ -332,9 +333,19 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     if (console_output) free(console_output);
     return(1);
   }
+
+  rc = lseek(fd, (off_t)(-1 * readsize), SEEK_END);
+  if (rc < 0) {
+    rc = lseek(fd, (off_t)0, SEEK_SET);
+    if (rc < 0) {
+      logprintfl(EUCAERROR, "cannot seek to beginning of file\n");
+      if (console_output) free(console_output);
+      return(1);
+    }
+  }
   
-  bzero(console_output, 64*1024);
-  rc = read(fd, console_output, (64*1024)-1);
+  bzero(console_output, readsize);
+  rc = read(fd, console_output, (readsize)-1);
   close(fd);
   
   *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
