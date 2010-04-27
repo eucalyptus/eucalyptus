@@ -65,9 +65,14 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import java.util.ArrayList;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -80,6 +85,7 @@ import edu.ucsb.eucalyptus.msgs.CacheImageResponseType;
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
 import edu.ucsb.eucalyptus.msgs.CheckImageResponseType;
 import edu.ucsb.eucalyptus.msgs.CheckImageType;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.CopyObjectType;
 import edu.ucsb.eucalyptus.msgs.CreateBucketResponseType;
@@ -158,14 +164,8 @@ public class WalrusControl {
 	private static WalrusImageManager walrusImageManager;
 
 	public static void configure() {
-		WalrusInfo walrusInfo = getConfig();
-		WalrusProperties.NAME = walrusInfo.getName();
-		WalrusProperties.MAX_BUCKETS_PER_USER = walrusInfo.getStorageMaxBucketsPerUser();
-		WalrusProperties.MAX_BUCKET_SIZE = walrusInfo.getStorageMaxBucketSizeInMB() * WalrusProperties.M;
-		WalrusProperties.bucketRootDirectory = walrusInfo.getStorageDir();
-		WalrusProperties.IMAGE_CACHE_SIZE = walrusInfo.getStorageMaxCacheSizeInMB() * WalrusProperties.M;
-		WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = walrusInfo.getStorageMaxTotalSnapshotSizeInGb();
-		storageManager = new FileSystemStorageManager(WalrusProperties.bucketRootDirectory);
+		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
+		storageManager = new FileSystemStorageManager(walrusInfo.getStorageDir());
 		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
 		walrusManager = new WalrusManager(storageManager, walrusImageManager);
 		WalrusManager.configure();
@@ -191,77 +191,25 @@ public class WalrusControl {
 	public static <T> EntityWrapper<T> getEntityWrapper( ) {
 		return new EntityWrapper<T>( WalrusProperties.DB_NAME );
 	}
-	
-	private static WalrusInfo getConfig() {
-		EntityWrapper<WalrusInfo> db = WalrusControl.getEntityWrapper();
-		WalrusInfo walrusInfo;
-		try {
-			walrusInfo = db.getUnique(new WalrusInfo());
-      db.commit();
-		} catch(EucalyptusCloudException ex) {
-			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
-					WalrusProperties.bucketRootDirectory, 
-					WalrusProperties.MAX_BUCKETS_PER_USER, 
-					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
-					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
-					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
-			db.add(walrusInfo);
-      db.commit();
-		}
-		return walrusInfo;
-	}
-
-	private static void updateConfig() {
-		EntityWrapper<WalrusInfo> db = WalrusControl.getEntityWrapper();
-		WalrusInfo walrusInfo;
-		try {
-			walrusInfo = db.getUnique(new WalrusInfo());
-			walrusInfo.setName(WalrusProperties.NAME);
-			walrusInfo.setStorageDir(WalrusProperties.bucketRootDirectory);
-			walrusInfo.setStorageMaxBucketsPerUser(WalrusProperties.MAX_BUCKETS_PER_USER);
-			walrusInfo.setStorageMaxBucketSizeInMB((int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M));
-			walrusInfo.setStorageMaxCacheSizeInMB((int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M));
-			walrusInfo.setStorageMaxTotalSnapshotSizeInGb(WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
-      db.commit();
-		} catch(EucalyptusCloudException ex) {
-			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
-					WalrusProperties.bucketRootDirectory, 
-					WalrusProperties.MAX_BUCKETS_PER_USER, 
-					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
-					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
-					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
-			db.add(walrusInfo);
-      db.commit();
-		} 
-	}
-
 
 	public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {
 		UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
-		String name = request.getName();
-		if(name != null)
-			WalrusProperties.NAME = name;
-		String rootDir = request.getBucketRootDirectory();
-		if(rootDir != null) {
-			WalrusProperties.bucketRootDirectory = rootDir;
-			storageManager.setRootDirectory(rootDir);
+		if(request.getProperties() != null) {
+			for(ComponentProperty prop : request.getProperties()) {
+				LOG.info("Walrus property: " + prop.getDisplayName() + " Qname: " + prop.getQualifiedName() + " Value: " + prop.getValue());
+				try {
+					ConfigurableProperty entry = PropertyDirectory.getPropertyEntry(prop.getQualifiedName());
+					//type parser will correctly covert the value
+					entry.setValue(prop.getValue());
+				} catch (IllegalAccessException e) {
+					LOG.error(e, e);
+				}                               
+			}
 		}
-		Integer maxBucketsPerUser = request.getMaxBucketsPerUser();
-		if(maxBucketsPerUser != null)
-			WalrusProperties.MAX_BUCKETS_PER_USER = maxBucketsPerUser;
-		Long maxBucketSize = request.getMaxBucketSize();
-		if(maxBucketSize != null)
-			WalrusProperties.MAX_BUCKET_SIZE = maxBucketSize * WalrusProperties.M;    	
-		Long imageCacheSize = request.getImageCacheSize();
-		if(imageCacheSize != null)
-			WalrusProperties.IMAGE_CACHE_SIZE = imageCacheSize * WalrusProperties.M;
-		Integer totalSnapshotSize = request.getTotalSnapshotSize();
-		if(totalSnapshotSize != null)
-			WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE = totalSnapshotSize;
+		String name = request.getName();
 		walrusManager.check();
-		updateConfig();
 		return reply;
 	}
 
@@ -271,11 +219,11 @@ public class WalrusControl {
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		String name = request.getName();
 		if(WalrusProperties.NAME.equals(name)) {
-			reply.setBucketRootDirectory(WalrusProperties.bucketRootDirectory);
-			reply.setMaxBucketsPerUser(WalrusProperties.MAX_BUCKETS_PER_USER);
-			reply.setMaxBucketSize(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M);
-			reply.setImageCacheSize(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties. M);
-			reply.setTotalSnapshotSize(WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
+			ConfigurableClass configurableClass = WalrusInfo.class.getAnnotation(ConfigurableClass.class);
+			if(configurableClass != null) {
+				String prefix = configurableClass.alias();
+				reply.setProperties((ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix));
+			}
 		}
 		return reply;
 	}
@@ -377,11 +325,11 @@ public class WalrusControl {
 	public SetBucketVersioningStatusResponseType SetBucketVersioningStatus(SetBucketVersioningStatusType request) throws EucalyptusCloudException {
 		return walrusManager.setBucketVersioningStatus(request);
 	}
-	
+
 	public ListVersionsResponseType ListVersions(ListVersionsType request) throws EucalyptusCloudException {
 		return walrusManager.listVersions(request);
 	}
-	
+
 	public DeleteVersionResponseType DeleteVersion(DeleteVersionType request) throws EucalyptusCloudException {
 		return walrusManager.deleteVersion(request);
 	}

@@ -276,7 +276,7 @@ public class FileSystemStorageManager implements StorageManager {
 			httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
 			if(contentDisposition != null)
 				httpResponse.addHeader("Content-Disposition", contentDisposition);
-			ChunkedInput file;
+			final ChunkedInput file;
 			isCompressed = isCompressed == null ? false : isCompressed;
 			if(isCompressed) {
 				file = new CompressedChunkedFile(raf, size);
@@ -296,11 +296,16 @@ public class FileSystemStorageManager implements StorageManager {
 				channel.write(file).addListener(new ChannelFutureListener( ) {
 					@Override public void operationComplete( ChannelFuture future ) throws Exception {
 						logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
-						WalrusBucketLogger.getInstance().addLogEntry(logData);					
+						WalrusBucketLogger.getInstance().addLogEntry(logData);				
+						file.close( );
 					}
 				});
 			} else {
-				channel.write(file);
+				channel.write(file).addListener(new ChannelFutureListener( ) {
+          @Override public void operationComplete( ChannelFuture future ) throws Exception {
+            file.close( );
+          }
+        });
 			}
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
@@ -316,7 +321,7 @@ public class FileSystemStorageManager implements StorageManager {
 			httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, lastModified);
 			if(contentDisposition != null)
 				httpResponse.addHeader("Content-Disposition", contentDisposition);
-			ChunkedInput file;
+			final ChunkedInput file;
 			isCompressed = isCompressed == null ? false : isCompressed;
 			if(isCompressed) {
 				file = new CompressedChunkedFile(raf, start, end, (int)Math.min((end - start), 8192));
@@ -338,10 +343,15 @@ public class FileSystemStorageManager implements StorageManager {
 					@Override public void operationComplete( ChannelFuture future ) throws Exception {
 						logData.setTotalTime(System.currentTimeMillis() - logData.getTotalTime());
 						WalrusBucketLogger.getInstance().addLogEntry(logData);					
+            file.close( );
 					}
 				});
 			} else {
-				channel.write(file);
+				channel.write(file).addListener(new ChannelFutureListener( ) {
+          @Override public void operationComplete( ChannelFuture future ) throws Exception {
+            file.close( );
+          }
+        });
 			}
 		} catch(Exception ex) {
 			LOG.error(ex, ex);

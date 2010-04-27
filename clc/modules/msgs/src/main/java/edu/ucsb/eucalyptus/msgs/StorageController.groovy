@@ -106,11 +106,6 @@ public class UpdateStorageConfigurationType extends StorageRequestType {
 	ArrayList<ComponentProperty> storageParams;
 
 	def UpdateStorageConfigurationType() {}
-
-	def UpdateStorageConfigurationType(StorageStateType storageState) {
-		this.name = storageState.getName();
-		this.storageParams = storageState.getStorageParams();
-	}
 }
 
 public class UpdateStorageConfigurationResponseType extends StorageResponseType {
