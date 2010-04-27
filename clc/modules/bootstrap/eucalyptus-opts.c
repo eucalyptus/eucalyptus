@@ -75,7 +75,8 @@ const char *eucalyptus_opts_full_help[] = {
   "      --debug-port=INT          Set the port to use for the debugger.  \n                                  (default=`5005')",
   "      --debug-suspend           Set the port to use for the debugger.  \n                                  (default=off)",
   "  -p, --profile                 Launch with jprofiler enabled.  (default=off)",
-  "  -P, --profiler-home=jprofiler directory\n                                Set the home for jprofiler.  \n                                  (default=`/opt/jprofiler5')",
+  "  -a, --agentlib=agentlib       Launch with agentlib enabled.",
+  "  -P, --profiler-home=jprofiler directory\n                                Set the home for jprofiler.  \n                                  (default=`/opt/jprofiler6')",
     0
 };
 
@@ -192,6 +193,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->debug_port_given = 0 ;
   args_info->debug_suspend_given = 0 ;
   args_info->profile_given = 0 ;
+  args_info->agentlib_given = 0 ;
   args_info->profiler_home_given = 0 ;
 }
 
@@ -248,7 +250,9 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->debug_port_orig = NULL;
   args_info->debug_suspend_flag = 0;
   args_info->profile_flag = 0;
-  args_info->profiler_home_arg = gengetopt_strdup ("/opt/jprofiler5");
+  args_info->agentlib_arg = NULL;
+  args_info->agentlib_orig = NULL;
+  args_info->profiler_home_arg = gengetopt_strdup ("/opt/jprofiler6");
   args_info->profiler_home_orig = NULL;
   
 }
@@ -300,7 +304,8 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->debug_port_help = eucalyptus_opts_full_help[40] ;
   args_info->debug_suspend_help = eucalyptus_opts_full_help[41] ;
   args_info->profile_help = eucalyptus_opts_full_help[42] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[43] ;
+  args_info->agentlib_help = eucalyptus_opts_full_help[43] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[44] ;
   
 }
 
@@ -460,6 +465,8 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_string_field (&(args_info->jvm_name_orig));
   free_multiple_string_field (args_info->jvm_args_given, &(args_info->jvm_args_arg), &(args_info->jvm_args_orig));
   free_string_field (&(args_info->debug_port_orig));
+  free_string_field (&(args_info->agentlib_arg));
+  free_string_field (&(args_info->agentlib_orig));
   free_string_field (&(args_info->profiler_home_arg));
   free_string_field (&(args_info->profiler_home_orig));
   
@@ -574,6 +581,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "debug-suspend", 0, 0 );
   if (args_info->profile_given)
     write_into_file(outfile, "profile", 0, 0 );
+  if (args_info->agentlib_given)
+    write_into_file(outfile, "agentlib", args_info->agentlib_orig, 0);
   if (args_info->profiler_home_given)
     write_into_file(outfile, "profiler-home", args_info->profiler_home_orig, 0);
   
@@ -842,6 +851,11 @@ arguments_required2 (struct eucalyptus_opts *args_info, const char *prog_name, c
   if (args_info->debug_suspend_given && ! args_info->debug_given)
     {
       fprintf (stderr, "%s: '--debug-suspend' option depends on option 'debug'%s\n", prog_name, (additional_error ? additional_error : ""));
+      error = 1;
+    }
+  if (args_info->agentlib_given && ! args_info->profile_given)
+    {
+      fprintf (stderr, "%s: '--agentlib' ('-a') option depends on option 'profile'%s\n", prog_name, (additional_error ? additional_error : ""));
       error = 1;
     }
   if (args_info->profiler_home_given && ! args_info->profile_given)
@@ -1176,11 +1190,12 @@ arguments_internal (
         { "debug-port",	1, NULL, 0 },
         { "debug-suspend",	0, NULL, 0 },
         { "profile",	0, NULL, 'p' },
+        { "agentlib",	1, NULL, 'a' },
         { "profiler-home",	1, NULL, 'P' },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:c:w:D:vl:xL:o:e:CSfj:J:X:dpP:", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:c:w:D:vl:xL:o:e:CSfj:J:X:dpa:P:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -1399,12 +1414,24 @@ arguments_internal (
             goto failure;
         
           break;
+        case 'a':	/* Launch with agentlib enabled..  */
+        
+        
+          if (update_arg( (void *)&(args_info->agentlib_arg), 
+               &(args_info->agentlib_orig), &(args_info->agentlib_given),
+              &(local_args_info.agentlib_given), optarg, 0, 0, ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "agentlib", 'a',
+              additional_error))
+            goto failure;
+        
+          break;
         case 'P':	/* Set the home for jprofiler..  */
         
         
           if (update_arg( (void *)&(args_info->profiler_home_arg), 
                &(args_info->profiler_home_orig), &(args_info->profiler_home_given),
-              &(local_args_info.profiler_home_given), optarg, 0, "/opt/jprofiler5", ARG_STRING,
+              &(local_args_info.profiler_home_given), optarg, 0, "/opt/jprofiler6", ARG_STRING,
               check_ambiguity, override, 0, 0,
               "profiler-home", 'P',
               additional_error))
