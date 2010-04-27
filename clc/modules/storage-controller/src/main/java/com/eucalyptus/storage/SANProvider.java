@@ -63,7 +63,7 @@
  * Author: Neil Soman neil@eucalyptus.com
  */
 
-package edu.ucsb.eucalyptus.storage;
+package com.eucalyptus.storage;
 
 import com.eucalyptus.util.EucalyptusCloudException;
 

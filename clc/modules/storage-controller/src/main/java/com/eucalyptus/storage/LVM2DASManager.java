@@ -63,7 +63,7 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.storage;
+package com.eucalyptus.storage;
 
 import java.io.File;
 import java.io.FileInputStream;

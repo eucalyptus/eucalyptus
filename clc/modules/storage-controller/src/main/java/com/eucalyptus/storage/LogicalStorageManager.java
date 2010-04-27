@@ -63,26 +63,66 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.storage;
+package com.eucalyptus.storage;
 
-import org.apache.log4j.Logger;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-public class BlockStorageManagerFactory {
-	private static Logger LOG = Logger.getLogger(BlockStorageManagerFactory.class);
-	public static LogicalStorageManager getBlockStorageManager() {
-		String ebsManager = "edu.ucsb.eucalyptus.storage.LVM2DASManager";
-		if(System.getProperty("ebs.storage.manager") != null) {
-			ebsManager = System.getProperty("ebs.storage.manager");
-		}
-		try {
-			return (LogicalStorageManager) Class.forName(ebsManager).newInstance();
-		} catch (InstantiationException e) {
-			LOG.error(e, e); 
-		} catch (IllegalAccessException e) {
-			LOG.error(e, e); 
-		} catch (ClassNotFoundException e) {
-			LOG.error(e, e); 
-		}
-		return null;
-	}
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+public interface LogicalStorageManager {
+	public void initialize();
+
+	public void configure();
+
+	public void checkPreconditions() throws EucalyptusCloudException;
+
+	public void reload();
+
+	public void startupChecks();
+
+	public void cleanVolume(String volumeId);
+
+	public void cleanSnapshot(String volumeId);
+
+	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
+
+	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
+
+	public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
+
+	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException;
+
+	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
+
+	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
+
+	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
+
+	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
+
+	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
+
+	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
+
+	public void finishVolume(String snapshotId) throws EucalyptusCloudException;
+
+	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException;
+
+	public ArrayList<ComponentProperty> getStorageProps();
+
+	public void setStorageProps(ArrayList<ComponentProperty> storageParams);
+
+	public String getStorageRootDirectory();
+	
+	public String getVolumePath(String volumeId) throws EucalyptusCloudException;
+
+	public void importVolume(String volumeId, String volumePath, int size) throws EucalyptusCloudException;
+
+	public String getSnapshotPath(String snapshotId) throws EucalyptusCloudException;
+
+	public void importSnapshot(String snapshotId, String snapPath, String volumeId, int size) throws EucalyptusCloudException;
 }
