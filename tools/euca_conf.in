@@ -980,7 +980,9 @@ fi
 
 createCloudURL () {
   ## FIXME: URGENTLY: only works on deb
-  aptitude install mysql-client-5.1 
+  if ! which mysql; then
+    aptitude install mysql-client-5.1
+  fi 
   openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
   -name eucalyptus -name "eucalyptus" \
   -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus \
