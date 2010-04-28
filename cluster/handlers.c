@@ -103,16 +103,429 @@ vnetConfig *vnetconfig=NULL;
 sem_t *locks[ENDLOCK] = {NULL, NULL, NULL, NULL, NULL, NULL};
 int mylocks[ENDLOCK] = {0,0,0,0,0,0};
 
+
+int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *ncOp, ...) {
+  va_list al;
+  int pid, rc=0, ret=0, status=0, opFail=0, len, rbytes, i;
+  int filedes[2];
+
+  logprintfl(EUCADEBUG, "ncClientCall(%s): called ncURL=%s timeout=%d\n", ncOp, ncURL, timeout);
+  
+  va_start(al, ncOp);
+
+  rc = pipe(filedes);
+  if (rc) {
+    logprintfl(EUCAERROR, "ncClientCall(%s): cannot create pipe\n", ncOp);
+    return(1);
+  }
+  
+  pid = fork();
+  if (!pid) {
+    ncStub *ncs;
+
+    close(filedes[0]);
+    ncs = ncStubCreate(ncURL, NULL, NULL);
+    if (config->use_wssec) {
+      rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
+    }
+              
+    logprintfl(EUCADEBUG, "ncClientCall(%s): ppid=%d client calling '%s'\n", ncOp, getppid(), ncOp);
+    if (!strcmp(ncOp, "ncGetConsoleOutput")) {
+      // args: char *instId
+      char *instId = va_arg(al, char *);
+      char **consoleOutput=va_arg(al, char **);
+
+      sem_mywait(ncLock);
+      rc = ncGetConsoleOutputStub(ncs, meta, instId, consoleOutput);
+      sem_mypost(ncLock);
+      if (timeout && consoleOutput) {
+	if (!rc && *consoleOutput) {
+	  len = strlen(*consoleOutput) + 1;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = write(filedes[1], *consoleOutput, sizeof(char) * len);
+	  rc = 0;
+	} else {
+	  len = 0;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = 1;
+	}
+      }
+    } else if (!strcmp(ncOp, "ncAttachVolume")) {
+      char *instanceId = va_arg(al, char *);
+      char *volumeId = va_arg(al, char *);      
+      char *remoteDev = va_arg(al, char *);      
+      char *localDev = va_arg(al, char *);      
+
+      sem_mywait(ncLock);
+      rc = ncAttachVolumeStub(ncs, meta, instanceId, volumeId, remoteDev, localDev);
+      sem_mypost(ncLock);
+    } else if (!strcmp(ncOp, "ncDetachVolume")) {
+      char *instanceId = va_arg(al, char *);
+      char *volumeId = va_arg(al, char *);      
+      char *remoteDev = va_arg(al, char *);      
+      char *localDev = va_arg(al, char *);      
+      int force = va_arg(al, int);
+
+      sem_mywait(ncLock);
+      rc = ncDetachVolumeStub(ncs, meta, instanceId, volumeId, remoteDev, localDev, force);
+      sem_mypost(ncLock);
+    } else if (!strcmp(ncOp, "ncPowerDown")) {
+      sem_mywait(ncLock);
+      rc = ncPowerDownStub(ncs, meta);
+      sem_mypost(ncLock);
+    } else if (!strcmp(ncOp, "ncRebootInstance")) {
+      char *instId = va_arg(al, char *);
+
+      sem_mywait(ncLock);
+      rc = ncRebootInstanceStub(ncs, meta, instId);
+      sem_mypost(ncLock);
+    } else if (!strcmp(ncOp, "ncTerminateInstance")) {
+      char *instId = va_arg(al, char *);
+      int *shutdownState = va_arg(al, int *);
+      int *previousState = va_arg(al, int *);
+      
+      sem_mywait(ncLock);
+      rc = ncTerminateInstanceStub(ncs, meta, instId, shutdownState, previousState);
+      sem_mypost(ncLock);
+      if (timeout) {
+	if (!rc) {
+	  len = 2;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = write(filedes[1], shutdownState, sizeof(int));
+	  rc = write(filedes[1], previousState, sizeof(int));
+	  rc = 0;
+	} else {
+	  len = 0;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = 1;
+	}
+      }
+    } else if (!strcmp(ncOp, "ncStartNetwork")) {
+      char **peers = va_arg(al, char **);
+      int peersLen = va_arg(al, int);
+      int port = va_arg(al, int);
+      int vlan = va_arg(al, int);
+      char **outStatus = va_arg(al, char **);
+      
+      sem_mywait(ncLock);
+      rc = ncStartNetworkStub(ncs, meta, peers, peersLen, port, vlan, outStatus);
+      sem_mypost(ncLock);
+      if (timeout && outStatus) {
+	if (!rc && *outStatus) {
+	  len = strlen(*outStatus) + 1;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = write(filedes[1], *outStatus, sizeof(char) * len);
+	  rc = 0;
+	} else {
+	  len = 0;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = 1;
+	}      
+      }
+    } else if (!strcmp(ncOp, "ncRunInstance")) {
+      char *instId = va_arg(al, char *);
+      char *reservationId = va_arg(al, char *);
+      virtualMachine *ncvm = va_arg(al, virtualMachine *);
+      char *imageId = va_arg(al, char *);
+      char *imageURL = va_arg(al, char *);
+      char *kernelId = va_arg(al, char *);
+      char *kernelURL = va_arg(al, char *);
+      char *ramdiskId = va_arg(al, char *);
+      char *ramdiskURL = va_arg(al, char *);
+      char *keyName = va_arg(al, char *);
+      netConfig *ncnet = va_arg(al, netConfig *);
+      char *userData = va_arg(al, char *);
+      char *launchIndex = va_arg(al, char *);
+      char **netNames = va_arg(al, char **);
+      int netNamesLen = va_arg(al, int);
+      ncInstance **outInst = va_arg(al, ncInstance **);
+      
+      sem_mywait(ncLock);
+      rc = ncRunInstanceStub(ncs, meta, instId, reservationId, ncvm, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, ncnet, userData, launchIndex, netNames, netNamesLen, outInst);
+      sem_mypost(ncLock);
+      if (timeout && outInst) {
+	if (!rc && *outInst) {
+	  len = sizeof(ncInstance);
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = write(filedes[1], *outInst, sizeof(ncInstance));
+	  rc = 0;
+	} else {
+	  len = 0;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = 1;
+	}
+      }
+    } else if (!strcmp(ncOp, "ncDescribeInstances")) {
+      char **instIds = va_arg(al, char **);
+      int instIdsLen = va_arg(al, int);
+      ncInstance ***ncOutInsts=va_arg(al, ncInstance ***);
+      int *ncOutInstsLen= va_arg(al, int *);
+
+      sem_mywait(ncLock);
+      rc = ncDescribeInstancesStub(ncs, meta, instIds, instIdsLen, ncOutInsts, ncOutInstsLen);
+      sem_mypost(ncLock);
+      if (timeout && ncOutInsts && ncOutInstsLen) {
+	if (!rc) {
+	  len = *ncOutInstsLen;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  for (i=0; i<len; i++) {
+	    ncInstance *inst;
+	    inst = (*ncOutInsts)[i];
+	    rc = write(filedes[1], inst, sizeof(ncInstance));
+	  }
+	  rc = 0;
+	} else {
+	  len = 0;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = 1;
+	}      
+      }
+    } else if (!strcmp(ncOp, "ncDescribeResource")) {
+      char *resourceType = va_arg(al, char *);
+      ncResource **outRes=va_arg(al, ncResource **);
+
+      sem_mywait(ncLock);
+      rc = ncDescribeResourceStub(ncs, meta, resourceType, outRes);
+      sem_mypost(ncLock);
+      if (timeout && outRes) {
+	if (!rc && *outRes) {
+	  len = sizeof(ncResource);
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = write(filedes[1], *outRes, sizeof(ncResource));
+	  rc = 0;
+	} else {
+	  len = 0;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = 1;
+	}      
+      }
+    } else {
+      logprintfl(EUCAWARN, "ncClientCall(%s): operation '%s' not found\n", ncOp, ncOp);
+      rc = 1;
+    }
+    logprintfl(EUCADEBUG, "ncClientCall(%s): ppid=%d done calling '%s' with exit code '%d'\n", ncOp, getppid(), ncOp, rc);
+    if (rc) {
+      ret = 1;
+    } else {
+      ret = 0;
+    }
+    close(filedes[1]);
+    exit(ret);
+  } else {
+    // returns for each client call
+    close(filedes[1]);
+
+    if (!strcmp(ncOp, "ncGetConsoleOutput")) {
+      char *instId = va_arg(al, char *);
+      char **outConsoleOutput = va_arg(al, char **);
+      *outConsoleOutput = NULL;
+      if (timeout && outConsoleOutput) {
+	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
+	if (rbytes <= 0) {
+	  kill(pid, SIGKILL);
+	  opFail=1;
+	} else {
+	  *outConsoleOutput = malloc(sizeof(char) * len);
+	  if (!*outConsoleOutput) {
+	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    unlock_exit(1);
+	  }
+	  rbytes = timeread(filedes[0], *outConsoleOutput, len, timeout);
+	  if (rbytes <= 0) {
+	    kill(pid, SIGKILL);
+	    opFail=1;
+	  }
+	}
+      }
+    } else if (!strcmp(ncOp, "ncTerminateInstance")) {
+      char *instId = va_arg(al, char *);
+      int *shutdownState = va_arg(al, int *);
+      int *previousState = va_arg(al, int *);
+      *shutdownState = *previousState = 0;
+      if (timeout && shutdownState && previousState) {
+	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
+	if (rbytes <= 0) {
+	  kill(pid, SIGKILL);
+	  opFail=1;
+	} else {
+	  rbytes = timeread(filedes[0], shutdownState, sizeof(int), timeout);
+	  if (rbytes <= 0) {
+	    kill(pid, SIGKILL);
+	    opFail=1;
+	  }
+	  rbytes = timeread(filedes[0], previousState, sizeof(int), timeout);
+	  if (rbytes <= 0) {
+	    kill(pid, SIGKILL);
+	    opFail=1;
+	  }
+	}
+      }
+    } else if (!strcmp(ncOp, "ncStartNetwork")) {
+      char **peers = va_arg(al, char **);
+      int peersLen = va_arg(al, int);
+      int port = va_arg(al, int);
+      int vlan = va_arg(al, int);
+      char **outStatus = va_arg(al, char **);
+      if (timeout && outStatus) {
+	*outStatus = NULL;
+	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
+	if (rbytes <= 0) {
+	  kill(pid, SIGKILL);
+	  opFail=1;
+	} else {
+	  *outStatus = malloc(sizeof(char) * len);
+	  if (!*outStatus) {
+	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    unlock_exit(1);
+	  }
+	  rbytes = timeread(filedes[0], *outStatus, len, timeout);
+	  if (rbytes <= 0) {
+	    kill(pid, SIGKILL);
+	    opFail=1;
+	  }
+	}
+      }
+    } else if (!strcmp(ncOp, "ncRunInstance")) {
+      char *instId = va_arg(al, char *);
+      char *reservationId = va_arg(al, char *);
+      virtualMachine *ncvm = va_arg(al, virtualMachine *);
+      char *imageId = va_arg(al, char *);
+      char *imageURL = va_arg(al, char *);
+      char *kernelId = va_arg(al, char *);
+      char *kernelURL = va_arg(al, char *);
+      char *ramdiskId = va_arg(al, char *);
+      char *ramdiskURL = va_arg(al, char *);
+      char *keyName = va_arg(al, char *);
+      netConfig *ncnet = va_arg(al, netConfig *);
+      char *userData = va_arg(al, char *);
+      char *launchIndex = va_arg(al, char *);
+      char **netNames = va_arg(al, char **);
+      int netNamesLen = va_arg(al, int);
+      ncInstance **outInst = va_arg(al, ncInstance **);
+      if (timeout && outInst) {
+	*outInst = NULL;
+      
+	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
+	if (rbytes <= 0) {
+	  kill(pid, SIGKILL);
+	  opFail=1;
+	} else {
+	  *outInst = malloc(sizeof(ncInstance));
+	  if (!outInst) {
+	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    unlock_exit(1);
+	  }
+	  rbytes = timeread(filedes[0], *outInst, sizeof(ncInstance), timeout);
+	  if (rbytes <= 0) {
+	    kill(pid, SIGKILL);
+	    opFail=1;
+	  }
+	}
+      }
+    } else if (!strcmp(ncOp, "ncDescribeInstances")) {
+      char **instIds = va_arg(al, char **);
+      int instIdsLen = va_arg(al, int);
+      ncInstance ***ncOutInsts=va_arg(al, ncInstance ***);
+      int *ncOutInstsLen=va_arg(al, int *);
+      *ncOutInstsLen = 0;
+      *ncOutInsts = NULL;
+      if (timeout && ncOutInsts && ncOutInstsLen) {
+	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
+	if (rbytes <= 0) {
+	  kill(pid, SIGKILL);
+	  opFail=1;
+	} else {
+	  *ncOutInsts = malloc(sizeof(ncInstance *) * len);
+	  if (!ncOutInsts) {
+	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    unlock_exit(1);
+	  }
+	  *ncOutInstsLen = len;
+	  for (i=0; i<len; i++) {
+	    ncInstance *inst;
+	    inst = malloc(sizeof(ncInstance));
+	    if (!inst) {
+	      logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	      unlock_exit(1);
+	    }
+	    rbytes = timeread(filedes[0], inst, sizeof(ncInstance), timeout);
+	    (*ncOutInsts)[i] = inst;
+	  }
+	}
+      }
+    } else if (!strcmp(ncOp, "ncDescribeResource")) {
+      char *resourceType = va_arg(al, char *);
+      ncResource **outRes=va_arg(al, ncResource **);
+      *outRes = NULL;
+      if (timeout && outRes) {
+	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
+	if (rbytes <= 0) {
+	  kill(pid, SIGKILL);
+	  opFail=1;
+	} else {
+	  *outRes = malloc(sizeof(ncResource));
+	  if (!outRes) {
+	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    unlock_exit(1);
+	  }
+	  rbytes = timeread(filedes[0], *outRes, sizeof(ncResource), timeout);
+	  if (rbytes <= 0) {
+	    kill(pid, SIGKILL);
+	    opFail=1;
+	  }
+	}
+      }
+    } else {
+      // nothing to do in default case (succ/fail encoded in exit code)
+    }
+    
+    close(filedes[0]);
+    if (timeout) {
+      rc = timewait(pid, &status, timeout);
+      rc = WEXITSTATUS(status);
+    } else {
+      rc = 0;
+    }
+  }
+
+  va_end(al);
+
+  logprintfl(EUCADEBUG, "ncClientCall(%s): done clientrc=%d opFail=%d\n", ncOp, rc, opFail);
+  if (rc || opFail) {
+    ret = 1;
+  } else {
+    ret = 0;
+  }
+
+  return(ret);
+}
+
+// calculate nc call timeout, based on when operation was started (op_start), the total number of calls to make (numCalls), and the current progress (idx)
+int ncGetTimeout(time_t op_start, time_t op_max, int numCalls, int idx) {
+  time_t op_timer, op_pernode;
+  int numLeft;
+
+  numLeft = numCalls - idx;
+  if ( numLeft <= 0 ) {
+    numLeft = 1;
+  }
+ 
+  op_timer = op_max - (time(NULL) - op_start);
+  op_pernode = op_timer / numLeft;
+
+  return(maxint(minint(op_pernode, OP_TIMEOUT_PERNODE), OP_TIMEOUT_MIN));
+}
+
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
-  int i, j, rc, start = 0, stop = 0, ret=0;
+  int i, j, rc, start = 0, stop = 0, ret=0, done=0, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
-  time_t op_start, op_timer;
+  time_t op_start;
+  ccResourceCache resourceCacheLocal;
   
   i = j = 0;
   myInstance = NULL;
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
   
   rc = initialize();
   if (rc) {
@@ -125,10 +538,11 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     logprintfl(EUCAERROR, "AttachVolume(): bad input params\n");
     return(1);
   }
-
-  sem_mywait(NCCALL);
+  
   sem_mywait(RESCACHE);
-
+  memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
+  
   rc = find_instanceCacheId(instanceId, &myInstance);
   if (!rc) {
     // found the instance in the cache
@@ -139,47 +553,20 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     }
   } else {
     start = 0;
-    stop = resourceCache->numResources;
+    stop = resourceCacheLocal.numResources;
   }
   
-  for (j=start; j<stop; j++) {
-    // read the instance ids
-    logprintfl(EUCAINFO,"AttachVolume(): calling attach volume (%s/%s) on (%s)\n", instanceId, volumeId, resourceCache->resources[j].hostname);
-    if (1) {
-      int pid, status;
-      pid = fork();
-      if (pid == 0) {
-	ret = 0;
-	ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
-	if (config->use_wssec) {
-	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	}
-	logprintfl(EUCADEBUG, "\tcalling AttachVol on NC: %s\n",  resourceCache->resources[j].hostname);
-	rc = ncAttachVolumeStub(ncs, ccMeta, instanceId, volumeId, remoteDev, localDev);
-	if (!rc) {
-	  ret = 0;
-	} else {
-	  ret = 1;
-	}
-	exit(ret);
-      } else {
-	rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
-	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	rc = WEXITSTATUS(status);
-	logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
-      }
-    }
-    
-    if (!rc) {
-      ret = 0;
-    } else {
-      logprintfl(EUCAERROR, "AttachVolume(): call to NC failed: instanceId=%s\n", instanceId);
+  done=0;
+  for (j=start; j<stop && !done; j++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
+    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncAttachVolume", instanceId, volumeId, remoteDev, localDev);
+    if (rc) {
       ret = 1;
+    } else {
+      ret = 0;
+      done++;
     }
   }
-  
-  sem_mypost(RESCACHE);
-  sem_mypost(NCCALL);
   
   logprintfl(EUCADEBUG,"AttachVolume(): done.\n");
   
@@ -188,15 +575,14 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 }
 
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force) {
-  int i, j, rc, start = 0, stop = 0, ret=0;
+  int i, j, rc, start = 0, stop = 0, ret=0, done=0, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
-  time_t op_start, op_timer;
-  
+  time_t op_start;
+  ccResourceCache resourceCacheLocal;
   i = j = 0;
   myInstance = NULL;
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
   
   rc = initialize();
   if (rc) {
@@ -209,8 +595,9 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     return(1);
   }
 
-  sem_mywait(NCCALL);
   sem_mywait(RESCACHE);
+  memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
   
   rc = find_instanceCacheId(instanceId, &myInstance);
   if (!rc) {
@@ -222,50 +609,20 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     }
   } else {
     start = 0;
-    stop = resourceCache->numResources;
+    stop = resourceCacheLocal.numResources;
   }
   
-
   for (j=start; j<stop; j++) {
-    // read the instance ids
-    logprintfl(EUCAINFO,"DetachVolume(): calling detach volume (%s/%s) on (%s)\n", instanceId, volumeId, resourceCache->resources[j].hostname);
-    if (1) {
-      int pid, status;
-      pid = fork();
-      if (pid == 0) {
-	ret=0;
-	ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
-	if (config->use_wssec) {
-	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	}
-	logprintfl(EUCADEBUG, "calling detachVol on NC: %s\n",  resourceCache->resources[j].hostname);
-	rc = 0;
-	rc = ncDetachVolumeStub(ncs, ccMeta, instanceId, volumeId, remoteDev, localDev, force);
-	if (!rc) {
-	  ret = 0;
-	} else {
-	  ret = 1;
-	}
-	exit(ret);
-      } else {
-	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
-	rc = WEXITSTATUS(status);
-	logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
-      }
-    }
-    
-    if (!rc) {
-      ret = 0;
-    } else {
-      logprintfl(EUCAERROR, "DetachVolume(): call to NC failed: instanceId=%s\n", instanceId);
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
+    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncDetachVolume", instanceId, volumeId, remoteDev, localDev);
+    if (rc) {
       ret = 1;
+    } else {
+      ret = 0;
+      done++;
     }
   }
 
-  sem_mypost(RESCACHE);
-  sem_mypost(NCCALL);
-  
   logprintfl(EUCADEBUG,"DetachVolume(): done.\n");
   
   shawn();
@@ -557,11 +914,10 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
 
 int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen) {
   int rc, ret;
-  time_t op_start, op_timer;
+  time_t op_start;
   char *brname;
   
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
 
   rc = initialize();
   if (rc) {
@@ -609,13 +965,12 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   int rc, diskpool, mempool, corepool;
   int j;
   ccResource *res;
-  time_t op_start, op_timer;
+  time_t op_start;
 
   logprintfl(EUCAINFO,"DescribeResources(): called\n");
   logprintfl(EUCADEBUG,"DescribeResources(): params: userId=%s, vmLen=%d\n", SP(ccMeta->userId), vmLen);
 
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
 
   rc = initialize();
   if (rc) {
@@ -728,18 +1083,17 @@ int changeState(ccResource *in, int newstate) {
 }
 
 int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
-  int i, rc;
-  int pid, status, ret=0;
+  int i, rc, nctimeout;
+  int status, ret=0;
   int filedes[2];  
-  time_t op_start, op_timer, op_pernode;
+  time_t op_start;
   ncStub *ncs;
-  ncResource *ncResDst=NULL, *ncResSrc=NULL;
+  ncResource *ncResDst=NULL;
   ccResourceCache resourceCacheLocal;
 
   if (timeout <= 0) timeout = 1;
   
   op_start = time(NULL);
-  op_timer = timeout;
   logprintfl(EUCAINFO,"refresh_resources(): called\n");
 
   rc = update_config();
@@ -748,67 +1102,22 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
   }
   
   // critical NC call section
-  sem_mywait(NCCALL);
-  
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);
   
   for (i=0; i<resourceCacheLocal.numResources; i++) {
-    ncResDst = malloc(sizeof(ncResource));
-    if (!ncResDst) {
-      logprintfl(EUCAERROR, "refresh_resources(): out of memory\n");
-      unlock_exit(1);    
-    }
-      
     if (resourceCacheLocal.resources[i].state != RESASLEEP) {
-      rc = pipe(filedes);
-      logprintfl(EUCADEBUG, "refresh_resources(): calling %s\n", resourceCacheLocal.resources[i].ncURL);
-      pid = fork();
-      if (pid == 0) {
-	
-	ret=0;
-	close(filedes[0]);
-	ncs = ncStubCreate(resourceCacheLocal.resources[i].ncURL, NULL, NULL);
-	if (config->use_wssec) {
-	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	}
-	rc = ncDescribeResourceStub(ncs, ccMeta, NULL, &ncResSrc);
-	if (!rc) {
-	  rc = write(filedes[1], ncResSrc, sizeof(ncResource));
-	  ret = 0;
-	} else {
-	  ret = 1;
-	}
-	close(filedes[1]);
-	exit(ret);
-      } else {
-	close(filedes[1]);
-
-	bzero(ncResDst, sizeof(ncResource));
-	op_timer = timeout - (time(NULL) - op_start);
-	op_pernode = (op_timer/(resourceCacheLocal.numResources-i)) > OP_TIMEOUT_PERNODE ? (op_timer/(resourceCacheLocal.numResources-i)) : OP_TIMEOUT_PERNODE;
-	logprintfl(EUCADEBUG, "refresh_resources(): time left for next op: %d\n", op_pernode);
-	rc = timeread(filedes[0], ncResDst, sizeof(ncResource), op_pernode);
-	close(filedes[0]);
-	if (rc <= 0) {
-	  // timeout or read went badly
-	  kill(pid, SIGKILL);
-	  wait(&status);
-	  rc = 1;
-	} else {
-	  wait(&status);
-	  rc = WEXITSTATUS(status);
-	}
-      }
-      
+      ncResDst=NULL;
+      nctimeout = ncGetTimeout(op_start, timeout, resourceCacheLocal.numResources, i);
+      rc = ncClientCall(ccMeta, nctimeout, NCCALL, resourceCacheLocal.resources[i].ncURL, "ncDescribeResource", NULL, &ncResDst);
       if (rc != 0) {
 	powerUp(&(resourceCacheLocal.resources[i]));
 	
 	if (resourceCacheLocal.resources[i].state == RESWAKING && ((time(NULL) - resourceCacheLocal.resources[i].stateChange) < config->wakeThresh)) {
 	  logprintfl(EUCADEBUG, "refresh_resources(): resource still waking up (%d more seconds until marked as down)\n", config->wakeThresh - (time(NULL) - resourceCacheLocal.resources[i].stateChange));
 	} else{
-	  logprintfl(EUCAERROR,"refresh_resources(): bad return from ncDescribeResource(%s) (%d/%d)\n", resourceCacheLocal.resources[i].hostname, pid, rc);
+	  logprintfl(EUCAERROR,"refresh_resources(): bad return from ncDescribeResource(%s) (%d)\n", resourceCacheLocal.resources[i].hostname, rc);
 	  resourceCacheLocal.resources[i].maxMemory = 0;
 	  resourceCacheLocal.resources[i].availMemory = 0;
 	  resourceCacheLocal.resources[i].maxDisk = 0;
@@ -848,16 +1157,14 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
   memcpy(resourceCache, &resourceCacheLocal, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);  
 
-  sem_mypost(NCCALL);
-
   logprintfl(EUCADEBUG,"refresh_resources(): done\n");
   return(0);
 }
 
 int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
   ccInstance *myInstance=NULL;
-  int i, k, numInsts = 0, found, ncOutInstsLen, rc, pid;
-  time_t op_start, op_timer, op_pernode;
+  int i, k, numInsts = 0, found, ncOutInstsLen, rc, pid, nctimeout;
+  time_t op_start;
 
   ncInstance **ncOutInsts=NULL;
   ncStub *ncs;
@@ -865,12 +1172,10 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
   ccResourceCache resourceCacheLocal;
 
   op_start = time(NULL);
-  op_timer = timeout;
+
   logprintfl(EUCAINFO,"refresh_instances(): called\n");
 
   // critical NC call section
-  sem_mywait(NCCALL);  
-
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);
@@ -878,6 +1183,12 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
   invalidate_instanceCache();
 
   for (i=0; i<resourceCacheLocal.numResources; i++) {
+    if (resourceCacheLocal.resources[i].state == RESUP) {
+      int j;
+      
+      nctimeout = ncGetTimeout(op_start, timeout, resourceCacheLocal.numResources, i);
+      rc = ncClientCall(ccMeta, nctimeout, NCCALL, resourceCacheLocal.resources[i].ncURL, "ncDescribeInstances", NULL, 0, &ncOutInsts, &ncOutInstsLen);
+    /*
     if (resourceCacheLocal.resources[i].state == RESUP) {
       int status, ret=0;
       int filedes[2];
@@ -974,9 +1285,9 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	}
 	close(filedes[0]);
       }
-      
+    */      
       if (rc != 0) {
-	logprintfl(EUCAERROR,"refresh_instances(): ncDescribeInstancesStub(%s): returned fail: (%d/%d)\n", resourceCacheLocal.resources[i].ncURL, pid, rc);
+	logprintfl(EUCAERROR,"refresh_instances(): ncDescribeInstancesStub(%s): returned fail: (%d)\n", resourceCacheLocal.resources[i].ncURL, rc);
       } else {
 	for (j=0; j<ncOutInstsLen; j++) {
 	  found=1;
@@ -1045,8 +1356,6 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
   memcpy(resourceCache, &resourceCacheLocal, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);
 
-  sem_mypost(NCCALL);
-
   logprintfl(EUCADEBUG,"refresh_instances(): done\n");  
   return(0);
 }
@@ -1055,7 +1364,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   ccInstance *myInstance=NULL, *out=NULL, *cacheInstance=NULL;
   int i, k, numInsts, found, ncOutInstsLen, rc, pid, count;
   virtualMachine ccvm;
-  time_t op_start, op_timer;
+  time_t op_start;
 
   ncInstance **ncOutInsts=NULL;
   ncStub *ncs;
@@ -1064,7 +1373,6 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   logprintfl(EUCADEBUG,"DescribeInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta->userId), instIdsLen);
   
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
 
   rc = initialize();
   if (rc) {
@@ -1175,9 +1483,9 @@ int powerUp(ccResource *res) {
 }
 
 int powerDown(ncMetadata *ccMeta, ccResource *node) {
-  int pid, rc, status;
+  int pid, rc, status, timeout;
   ncStub *ncs=NULL;
-  time_t op_start, op_timer;
+  time_t op_start;
   
   if (config->schedPolicy != SCHEDPOWERSAVE) {
     node->idleStart = 0;
@@ -1185,11 +1493,13 @@ int powerDown(ncMetadata *ccMeta, ccResource *node) {
   }
 
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
   
   logprintfl(EUCAINFO, "powerDown(): sending powerdown to node: %s, %s\n", node->hostname, node->ncURL);
   
-  pid = fork();
+  timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, 1);
+  rc = ncClientCall(ccMeta, timeout, NCCALL, node->ncURL, "ncPowerDown");
+  
+  /*  pid = fork();
   if (pid == 0) {
     ncs = ncStubCreate(node->ncURL, NULL, NULL);
     if (config->use_wssec) {
@@ -1201,6 +1511,7 @@ int powerDown(ncMetadata *ccMeta, ccResource *node) {
   op_timer = OP_TIMEOUT - (time(NULL) - op_start);
   rc = timewait(pid, &status, minint(op_timer, OP_TIMEOUT_PERNODE));
   rc = WEXITSTATUS(status);
+  */
   if (rc == 0) {
     changeState(node, RESASLEEP);
   }
@@ -1428,7 +1739,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
   char instId[16];
-  time_t op_start=0, op_timer=0;
+  time_t op_start=0;
   ccResource *res=NULL;
   char mac[32], privip[32], pubip[32];
   
@@ -1438,7 +1749,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   ncStub *ncs=NULL;
   
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
   
   rc = initialize();
   if (rc) {
@@ -1545,7 +1855,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       snprintf(ncnet.privateIp, 24, "%s", privip);
       snprintf(ncnet.publicIp, 24, "%s", pubip);
       
-      sem_mywait(NCCALL);
       sem_mywait(RESCACHE);
 
       resid = 0;
@@ -1582,6 +1891,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
             int clientpid;
 
             // call StartNetwork client
+	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, NCCALL, res->ncURL, "ncStartNetwork", NULL, 0, 0, vlan, NULL);
+	    /*
             clientpid = fork();
 	    if (!clientpid) {
 	     ncs = ncStubCreate(res->ncURL, NULL, NULL);
@@ -1594,7 +1905,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	      rc = timewait(clientpid, &status, 15);
 	      rc = WEXITSTATUS(status);
 	    }
-
+	    */
+	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, NCCALL, res->ncURL, "ncRunInstance", instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, &ncnet, userData, launchIndex, netNames, netNamesLen, &outInst);
+	    /*
             clientpid = fork();
 	    if (!clientpid) {
 	      // call RunInstances client
@@ -1608,6 +1921,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	      rc = timewait(clientpid, &status, 15);
 	      rc = WEXITSTATUS(status);
 	    }
+	    */
 	    if (rc) {
 	      sleep(1);
 	    }
@@ -1690,7 +2004,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 
       sem_mypost(RESCACHE);
 
-      sem_mypost(NCCALL);
     }
     
   }
@@ -1707,15 +2020,15 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 }
 
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) {
-  int i, j, rc, numInsts, start, stop, done, ret, rbytes;
+  int i, j, rc, numInsts, start, stop, done, ret, rbytes, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
   char *consoleOutput;
-  time_t op_start, op_timer;
+  time_t op_start;
+  ccResourceCache resourceCacheLocal;
 
   i = j = numInsts = 0;
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
 
   consoleOutput = NULL;
   myInstance = NULL;
@@ -1730,8 +2043,9 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
   logprintfl(EUCAINFO,"GetConsoleOutput(): called\n");
   logprintfl(EUCADEBUG,"GetConsoleOutput(): params: userId=%s, instId=%s\n", SP(meta->userId), SP(instId));
   
-  sem_mywait(NCCALL);
   sem_mywait(RESCACHE);
+  memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
 
   rc = find_instanceCacheId(instId, &myInstance);
   if (!rc) {
@@ -1741,116 +2055,41 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
     free(myInstance);
   } else {
     start = 0;
-    stop = resourceCache->numResources;
+    stop = resourceCacheLocal.numResources;
   }
-  
 
   done=0;
   for (j=start; j<stop && !done; j++) {
-    // read the instance ids
-    logprintfl(EUCAINFO,"GetConsoleOutput(): calling GetConsoleOutput for instance (%s) on (%s)\n", instId, resourceCache->resources[j].hostname);
-    if (1) {
-      int pid, status, ret, len;
-      int filedes[2];
-      rc = pipe(filedes);
-      pid = fork();
-      if (pid == 0) {
-	ret=0;
-	close(filedes[0]);
-	ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
-	if (config->use_wssec) {
-	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	}
-
-	rc = ncGetConsoleOutputStub(ncs, meta, instId, &consoleOutput);
-	if (!rc && consoleOutput) {
-	  len = strlen(consoleOutput) + 1;
-	  rc = write(filedes[1], &len, sizeof(int));
-	  rc = write(filedes[1], consoleOutput, sizeof(char) * len);
-	  ret = 0;
-	} else {
-	  len = 0;
-	  rc = write(filedes[1], &len, sizeof(int));
-	  ret = 1;
-	}
-	close(filedes[1]);	  
-	exit(ret);
-      } else {
-	close(filedes[1]);
-	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	rbytes = timeread(filedes[0], &len, sizeof(int), minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
-	if (rbytes <= 0) {
-	  // read went badly
-	  kill(pid, SIGKILL);
-	  wait(&status);
-	  rc = -1;
-	} else {
-	  consoleOutput = malloc(sizeof(char) * len);
-	  if (!consoleOutput) {
-	    logprintfl(EUCAFATAL, "GetConsoleOutput(): out of memory!\n");
-	    unlock_exit(1);
-	  }
-
-	  op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	  rbytes = timeread(filedes[0], consoleOutput, len, minint(op_timer / ((stop-start) - (j-start)), OP_TIMEOUT_PERNODE));
-	  if (rbytes <= 0) {
-	    // read went badly
-	    kill(pid, SIGKILL);
-	    wait(&status);
-	    rc = -1;
-	  } else {
-	    wait(&status);
-	    rc = WEXITSTATUS(status);
-	  }
-	}
-	close(filedes[0]);
-	
-	logprintfl(EUCADEBUG,"GetConsoleOutput(): call complete (pid/rc): %d/%d\n", pid, rc);
-	if (!rc) {
-	  done++;
-	} else {
-	  if (consoleOutput) {
-	    free(consoleOutput);
-	    consoleOutput = NULL;
-	  }
-	}
-      }
+    if (*outConsoleOutput) free(*outConsoleOutput);
+    timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
+    rc = ncClientCall(meta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
+    if (rc) {
+      ret = 1;
+    } else {
+      ret = 0;
+      done++;
     }
   }
-  sem_mypost(RESCACHE);
-  sem_mypost(NCCALL);
+
   
   logprintfl(EUCADEBUG,"GetConsoleOutput(): done.\n");
   
   shawn();
-  
-  if (consoleOutput) {
-    *outConsoleOutput = strdup(consoleOutput);
-    if (!*outConsoleOutput) {
-      logprintfl(EUCAFATAL, "GetConsoleOutput(): out of memory!\n");
-      unlock_exit(1);
-    }
-    ret = 0;
-  } else {
-    *outConsoleOutput = NULL;
-    ret = 1;
-  }
-  if (consoleOutput) free(consoleOutput);
   return(ret);
 }
 
 int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
-  int i, j, rc, numInsts, start, stop, done;
+  int i, j, rc, numInsts, start, stop, done, timeout=0, ret=0;
   char *instId;
   ccInstance *myInstance;
   ncStub *ncs;
-  time_t op_start, op_timer;
+  time_t op_start;
+  ccResourceCache resourceCacheLocal;
 
   i = j = numInsts = 0;
   instId = NULL;
   myInstance = NULL;
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
 
   rc = initialize();
   if (rc) {
@@ -1859,8 +2098,9 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
   logprintfl(EUCAINFO,"RebootInstances(): called\n");
   logprintfl(EUCADEBUG,"RebootInstances(): params: userId=%s, instIdsLen=%d\n", SP(meta->userId), instIdsLen);
   
-  sem_mywait(NCCALL);
   sem_mywait(RESCACHE);
+  memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
 
   for (i=0; i<instIdsLen; i++) {
     instId = instIds[i];
@@ -1872,49 +2112,22 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
       free(myInstance);
     } else {
       start = 0;
-      stop = resourceCache->numResources;
+      stop = resourceCacheLocal.numResources;
     }
     
     done=0;
     for (j=start; j<stop && !done; j++) {
-      // read the instance ids
-      logprintfl(EUCAINFO,"RebootInstances(): calling reboot instance (%s) on (%s)\n", instId, resourceCache->resources[j].hostname);
-      if (1) {
-	int pid, status, ret;
-	pid = fork();
-	if (pid == 0) {
-	  ret=0;
-	  ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
-	  if (config->use_wssec) {
-	    rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	  }
-	  
-	  rc = 0;
-	  rc = ncRebootInstanceStub(ncs, meta, instId);
-	  
-	  if (!rc) {
-	    ret = 0;
-	  } else {
-	    ret = 1;
-	  }
-	  exit(ret);
-	} else {
-	  op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	  rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j-start)), OP_TIMEOUT_PERNODE));
-	  rc = WEXITSTATUS(status);
-	  logprintfl(EUCADEBUG,"RebootInstances(): call complete (pid/rc): %d/%d\n", pid, rc);
-	}
-      }
-      
-      if (!rc) {
+      timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
+      rc = ncClientCall(meta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncRebootInstance", instId);
+      if (rc) {
+	ret = 1;
+      } else {
+	ret = 0;
 	done++;
-      }
+      }      
     }
   }
   
-  sem_mypost(RESCACHE);
-  sem_mypost(NCCALL);
-
   logprintfl(EUCADEBUG,"RebootInstances(): done.\n");
 
   shawn();
@@ -1923,17 +2136,17 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
 }
 
 int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int **outStatus) {
-  int i, j, shutdownState, previousState, rc, start, stop;
+  int i, j, shutdownState, previousState, rc, start, stop, done=0, timeout, ret=0;
   char *instId;
   ccInstance *myInstance=NULL;
   ncStub *ncs;
-  time_t op_start, op_timer;
-  
+  time_t op_start;
+  ccResourceCache resourceCacheLocal;
+
   i = j = 0;
   instId = NULL;
   myInstance = NULL;
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
   
   rc = initialize();
   if (rc) {
@@ -1942,8 +2155,9 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   logprintfl(EUCAINFO,"TerminateInstances(): called\n");
   logprintfl(EUCADEBUG,"TerminateInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta->userId), instIdsLen);
   
-  sem_mywait(NCCALL);
   sem_mywait(RESCACHE);
+  memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
   
   for (i=0; i<instIdsLen; i++) {
     instId = instIds[i];
@@ -1968,52 +2182,26 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       start = 0;
       stop = 0;
       (*outStatus)[i] = 0;      
-      //      stop = resourceCache->numResources;
     }
     
     
-    for (j=start; j<stop; j++) {
-      // read the instance ids
-      logprintfl(EUCAINFO,"TerminateInstances(): calling terminate instance (%s) on (%s)\n", instId, resourceCache->resources[j].hostname);
-      if (resourceCache->resources[j].state == RESUP) {
-	int pid, status, ret;
-	pid = fork();
-	if (pid == 0) {
-	  ret=0;
-	  ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
-	  if (config->use_wssec) {
-	    rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	  }
-	  rc = ncTerminateInstanceStub(ncs, ccMeta, instId, &shutdownState, &previousState);
-	  
-	  if (!rc) {
-	    ret = 0;
-	  } else {
-	    ret = 1;
-	  }
-	  exit(ret);
-	} else {
-
-	  op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	  //rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
-	  //rc = WEXITSTATUS(status);
-	  rc = 0;
-	  logprintfl(EUCADEBUG,"TerminateInstances(): call complete (pid/rc): %d/%d\n", pid, rc);
-	}
-
+    done=0;
+    for (j=start; j<stop && !done; j++) {
+      if (resourceCacheLocal.resources[j].state == RESUP) {
+	rc = ncClientCall(ccMeta, 0, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncTerminateInstance", instId, &shutdownState, &previousState);
 	if (rc) {
 	  (*outStatus)[i] = 1;
 	  logprintfl(EUCAWARN, "TerminateInstances(): failed to terminate '%s': instance may not exist any longer\n", instId);
+	  ret = 1;
 	} else {
 	  (*outStatus)[i] = 0;
+	  ret = 0;
+	  done++;
 	}
       }
     }
   }
   
-  sem_mypost(RESCACHE);
-  sem_mypost(NCCALL);
-
   logprintfl(EUCADEBUG,"TerminateInstances(): done.\n");
   
   shawn();
@@ -2266,7 +2454,7 @@ int init_thread(void) {
     locks[INIT] = sem_open("/eucalyptusCCinitLock", O_CREAT, 0644, 1);
     sem_mywait(INIT);
 
-    locks[NCCALL] = sem_open("/eucalyptusCCncCallLock", O_CREAT, 0644, 1);
+    locks[NCCALL] = sem_open("/eucalyptusCCncCallLock", O_CREAT, 0644, 4);
     
     if (config == NULL) {
       rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &(locks[CONFIG]), "/eucalyptusCCConfigLock", SHARED_FILE);
