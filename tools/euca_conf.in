@@ -979,35 +979,49 @@ if [ -n "$CHECK" ]; then
 fi
 
 createCloudURL () {
-    if ! getSecretKey; then
-	echo "ERROR: cannot get credentials"
-	return 1
-    fi
-    ARGS="AWSAccessKeyId=$AKEY"
-    KEY=$1
+  ## FIXME: URGENTLY: only works on deb
+  aptitude install mysql-client-5.1 
+  openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
+  -name eucalyptus -name "eucalyptus" \
+  -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus \
+  -nodes | \
+  grep -A30 "friendlyName: eucalyptus" | \
+  grep -A26 "BEGIN RSA" >  ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
+  
+  
+  DB_PASS=$(echo -n eucalyptus | \
+  openssl dgst -sha256 \
+  -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
+  -hex)
+  AKEY=$(echo "select auth_user_query_id from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} | tail -n1)
+  SKEY=$(echo "select auth_user_secretkey from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} | tail -n1)
+  
+  if [[ -z "${AKEY}" && -z "${SKEY}" ]]; then 
+    echo "ERROR: Failed to get admin credentials"
+    export URL=""
+    return 1
+  fi 
+  
+  ARGS="AWSAccessKeyId=$AKEY"
+  KEY=$1
+  shift
+  VAL=$1
+  shift
+  while ( test -n "$KEY" -a -n "$VAL")
+  do
+    ARGS="${ARGS}&${KEY}=${VAL}"
+	  KEY=$1
     shift
     VAL=$1
     shift
-    while ( test -n "$KEY" -a -n "$VAL")
-    do
-	ARGS="${ARGS}&${KEY}=${VAL}"
-	KEY=$1
-	shift
-	VAL=$1
-	shift
-    done
-    if [ -z "$SKEY" ]; then
-	echo "ERROR: SKEY parameter is not set."
-	export URL=""
-	return 1
-    fi
-    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date -u '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
-    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
-    export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
+  done  
+  ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date -u '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
+  SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
+  export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
 	if [ "$VERBOSE" = "Y" ]; then
 		echo $URL
 	fi
-    return 0
+  return 0
 }
 
 getSecretKey() {
