@@ -77,7 +77,7 @@ import java.util.Date;
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "Snapshots" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class SnapshotInfo {
     @Id
     @GeneratedValue
