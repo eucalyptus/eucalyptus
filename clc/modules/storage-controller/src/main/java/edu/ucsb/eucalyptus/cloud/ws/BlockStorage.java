@@ -73,8 +73,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.persistence.EntityNotFoundException;
-
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 
@@ -85,7 +83,6 @@ import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
@@ -814,7 +811,7 @@ public class BlockStorage {
 		public void run() {
 			//This is a heavy weight operation. It must execute atomically.
 			//All other volume operations are forbidden when a conversion is in progress.
-			synchronized (this) {
+			synchronized (blockManager) {
 				StorageProperties.enableStorage = StorageProperties.enableSnapshots = false;
 				EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
 				VolumeInfo volumeInfo = new VolumeInfo();

@@ -1,3 +1,7 @@
+import edu.ucsb.eucalyptus.msgs.StorageStateType.WalrusStateType.ComponentMessageResponseType;
+
+import edu.ucsb.eucalyptus.msgs.StorageStateType.WalrusStateType.ComponentMessageType;
+
 /*******************************************************************************
  *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
@@ -257,6 +261,12 @@ public class DescribeStorageSnapshotsType extends StorageRequestType {
 }
 public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
 	ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
+}
+
+public class StorageComponentMessageType extends ComponentMessageType {	
+}
+
+public class StorageComponentMessageResponseType extends ComponentMessageResponseType {
 }
 
 public class ConvertVolumesType extends StorageRequestType {

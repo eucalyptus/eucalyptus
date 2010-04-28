@@ -577,3 +577,18 @@ public class StatEventRecord extends EucalyptusMessage {
   }
 }
 
+public class ComponentMessageType extends EucalyptusMessage {
+  String component;
+  
+  def ComponentMessageType() {
+  }
+
+  def ComponentMessageType(String component) {
+    this.component = component;
+  }
+}
+
+public class ComponentMessageResponseType extends EucalyptusMessage {
+  def ComponentMessageResponseType() {
+  }
+}
