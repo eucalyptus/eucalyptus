@@ -993,8 +993,8 @@ createCloudURL () {
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
-  AKEY=$(echo "select auth_user_query_id from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} | tail -n1)
-  SKEY=$(echo "select auth_user_secretkey from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} | tail -n1)
+  AKEY=$(echo "select auth_user_query_id from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
+  SKEY=$(echo "select auth_user_secretkey from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth  | tail -n1)
   
   if [[ -z "${AKEY}" && -z "${SKEY}" ]]; then 
     echo "ERROR: Failed to get admin credentials"
