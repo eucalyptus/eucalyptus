@@ -981,7 +981,7 @@ fi
 createCloudURL () {
   ## FIXME: URGENTLY: only works on deb
   if ! which mysql; then
-    apt-get -y install mysql-client-5.1
+    apt-get --force-yes -y install mysql-client-5.1
   fi 
   openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
   -name eucalyptus -name "eucalyptus" \
