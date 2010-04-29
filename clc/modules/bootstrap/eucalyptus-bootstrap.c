@@ -596,7 +596,14 @@ int java_init(euca_opts *args, java_home_t *data) {
     	JVM_ARG(opt[++x],"-Xdebug");
     	JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d",GETARG(args,debug_port),(args->debug_suspend_flag?"y":"n"));
     }
-    if(args->profile_flag) {
+    if(args->debug_flag||args->profile_flag) {
+    	JVM_ARG(opt[++x],"-Dcom.sun.management.jmxremote");
+    	JVM_ARG(opt[++x],"-XX:+HeapDumpOnOutOfMemoryError");
+    	JVM_ARG(opt[++x],"-XX:HeapDumpPath=%s/var/log/eucalyptus/",GETARG(args,home));
+    }
+    if(args->profile_flag && args->agentlib_given ) {
+    	JVM_ARG(opt[++x],"-agentlib:%s",GETARG(args,agentlib));
+    } else if(args->profile_flag) {
     	JVM_ARG(opt[++x],"-agentlib:jprofilerti=port=8849");
     	JVM_ARG(opt[++x],"-Xbootclasspath/a:%1$s/bin/agent.jar",GETARG(args,profiler_home));
     }

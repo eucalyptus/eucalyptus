@@ -46,5 +46,6 @@ option "debug"       d   "Launch with debugger enabled."   flag   off
 option "debug-port"       -   "Set the port to use for the debugger." int dependon="debug" default="5005" no
 option "debug-suspend"       -   "Set the port to use for the debugger." flag dependon="debug" off
 option "profile"       p   "Launch with jprofiler enabled."   flag   off hidden
-option "profiler-home"       P   "Set the home for jprofiler." string  typestr="jprofiler directory" dependon="profile" default="/opt/jprofiler5" no hidden
+option "agentlib"       a   "Launch with agentlib enabled."   string  typestr="agentlib" dependon="profile" optional hidden
+option "profiler-home"       P   "Set the home for jprofiler." string  typestr="jprofiler directory" dependon="profile" default="/opt/jprofiler6" no hidden
 

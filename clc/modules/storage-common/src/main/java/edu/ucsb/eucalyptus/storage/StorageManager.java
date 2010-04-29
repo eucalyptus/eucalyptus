@@ -74,6 +74,7 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
+import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.storage.fs.FileIO;
 
 public interface StorageManager {
@@ -114,13 +115,13 @@ public interface StorageManager {
 
     public long getObjectSize(String bucket, String object);
 
-	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, 
+    public void sendObject(WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, String bucketName, String objectName, 
 			long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, BucketLogData logData);
 
-	public void sendObject(Channel channel, DefaultHttpResponse httpResponse, String bucketName, String objectName, 
+    public void sendObject(WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, String bucketName, String objectName, 
 			long start, long end, long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId, BucketLogData logData);
 
-	public void sendHeaders(Channel channel, DefaultHttpResponse httpResponse, Long size, String etag,
+    public void sendHeaders(WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, Long size, String etag,
 			String lastModified, String contentType, String contentDisposition, String versionId, BucketLogData logData);
 	
     public void setRootDirectory(String rootDirectory);

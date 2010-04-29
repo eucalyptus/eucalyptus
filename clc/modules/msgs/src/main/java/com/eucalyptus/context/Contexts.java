@@ -79,5 +79,11 @@ public class Contexts {
     ctx.clear( );
   }
 
-  
+  public static void clear( String correlationId ) {
+    try {
+      clear( lookup( correlationId ) );
+    } catch ( NoSuchContextException e ) {
+      LOG.error( e, e );
+    }
+  }   
 }
