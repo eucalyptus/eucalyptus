@@ -316,7 +316,7 @@ public class System implements Serializable {
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_vmwarebroker" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VMwareBrokerConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/VMwareBroker";
