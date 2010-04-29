@@ -78,7 +78,7 @@ import java.util.List;
 @Entity
 @PersistenceContext(name="eucalyptus_auth")
 @Table( name = "user_groups" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class GroupEntity extends AbstractPersistent {
   @Column( name = "user_group_name", unique=true )
   private String name;
@@ -88,7 +88,7 @@ public class GroupEntity extends AbstractPersistent {
       joinColumns = { @JoinColumn( name = "auth_group_id" ) },
       inverseJoinColumns = @JoinColumn( name = "auth_user_id" )
   )
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<UserEntity> users = new ArrayList<UserEntity>();
 
   public static GroupEntity named( String name ) throws EucalyptusCloudException {
