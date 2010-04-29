@@ -983,14 +983,14 @@ createCloudURL () {
   if ! which mysql; then
     apt-get --force-yes -y install mysql-client-5.1
   fi 
-  openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
-  -name eucalyptus -name "eucalyptus" \
-  -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus \
-  -nodes | \
-  grep -A30 "friendlyName: eucalyptus" | \
-  grep -A26 "BEGIN RSA" >  ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
-  
-  
+  if [ ! -e ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem ]; then
+    openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
+    -name eucalyptus -name "eucalyptus" \
+    -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus \
+    -nodes | \
+    grep -A30 "friendlyName: eucalyptus" | \
+    grep -A26 "BEGIN RSA" >  ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
+  fi  
   DB_PASS=$(echo -n eucalyptus | \
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
@@ -1092,35 +1092,27 @@ checkLocalService() {
 }
 
 if [ -n "$CREDENTIALZIPFILE" ]; then
-    if [ -f "$CREDENTIALZIPFILE" ]; then
-	echo "file '$CREDENTIALZIPFILE' already exists, please remove and try again"
-	exit 1
-    fi
-    if ! checkLocalService "CLC" ; then
-	exit 1
-    fi
-
-    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
-	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-    else
-	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
-        exit 1
-    fi
-    FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Tt][Oo][Kk][Ee][Nn]/ {print NR}'`
-    if [ -z "$FIELD" ]; then
-	echo "cannot find code field in database, please go to the Eucalyptus web UI to obtain credentials."
-	exit 1
-    fi
-    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1 | sed 's/[()]//g'))
-    if [ -z "$KEY" ]; then
-	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
-	exit 1
-    fi
-    CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?user=admin&code=$KEY\" -O $CREDENTIALZIPFILE"
-    if ! eval $CMD ; then
-	echo "failed to obtain credentals, please try again or go to the Eucalyptus web UI."
-	exit 1
-    fi
+  if [ -f "$CREDENTIALZIPFILE" ]; then
+    echo "file '$CREDENTIALZIPFILE' already exists, please remove and try again"
+  	exit 1
+  fi
+  if ! checkLocalService "CLC" ; then
+  	exit 1
+  fi
+  DB_PASS=$(echo -n eucalyptus | \
+  openssl dgst -sha256 \
+  -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
+  -hex)
+  KEY=$(echo "select auth_user_token from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
+  if [ -z "$KEY" ]; then
+  	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
+  	exit 1
+  fi
+  CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?user=admin&code=$KEY\" -O $CREDENTIALZIPFILE"
+  if ! eval $CMD ; then
+    echo "failed to obtain credentals, please try again or go to the Eucalyptus web UI."
+    exit 1
+  fi
 fi
 
 # adding a new cluster
