@@ -70,7 +70,7 @@ import org.apache.log4j.Logger;
 public class BlockStorageManagerFactory {
 	private static Logger LOG = Logger.getLogger(BlockStorageManagerFactory.class);
 	public static LogicalStorageManager getBlockStorageManager() {
-		String ebsManager = "com.storage.SANManager";
+		String ebsManager = "com.eucalyptus.storage.SANManager";
 		if(System.getProperty("ebs.storage.manager") != null) {
 			ebsManager = System.getProperty("ebs.storage.manager");
 		}
