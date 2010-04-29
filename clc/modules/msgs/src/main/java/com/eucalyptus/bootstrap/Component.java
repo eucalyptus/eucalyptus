@@ -75,6 +75,7 @@ import com.eucalyptus.util.NetworkUtil;
 @Deprecated
 public enum Component {
   bootstrap( true ),
+  component( true ),
   eucalyptus( true ),
   walrus( true ),
   dns( true ),

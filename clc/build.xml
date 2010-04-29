@@ -91,6 +91,7 @@
     <ant dir="modules/authentication" inheritall="false" target="builder"/>
     <ant dir="modules/cloud" inheritall="false" target="builder"/>
     <ant dir="modules/configuration" inheritall="false" target="builder"/>
+    <ant dir="modules/component" inheritall="false" target="builder"/>
   </target>
   <target name="build-core" depends="build-msgs">
     <ant dir="modules/core" inheritall="false" target="builder"/>
@@ -131,6 +132,7 @@
     <ant dir="modules/cloud" inheritall="false" target="clean"/>
     <ant dir="modules/authentication" inheritall="false" target="clean"/>
     <ant dir="modules/configuration" inheritall="false" target="clean"/>
+    <ant dir="modules/component" inheritall="false" target="clean"/>
   </target>
   <target name="clean-core" depends="clean-msgs">
     <ant dir="modules/core" inheritall="false" target="clean"/>
@@ -212,6 +214,7 @@
     <ant dir="modules/cloud" inheritall="false" target="install"/>
     <ant dir="modules/authentication" inheritall="false" target="install"/>
     <ant dir="modules/configuration" inheritall="false" target="install"/>
+    <ant dir="modules/component" inheritall="false" target="install"/>
     <ant dir="modules/core" inheritall="false" target="install"/>
     <ant dir="modules/wsstack" inheritall="false" target="install"/>
     <ant dir="modules/storage-common" inheritall="false" target="install"/>

@@ -174,8 +174,8 @@
     <appender-ref ref="exhaustive" />
   </category>
   <category name="org.mule" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="exhaustive" />
+    <priority value="INFO" />
+    <appender-ref ref="console-log" />
   </category>
   <category name="org.hibernate" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />

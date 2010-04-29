@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/main/java"/>
+	<classpathentry kind="src" path="modules/component/src/main/java"/>
 	<classpathentry kind="src" path="modules/database/conf/scripts"/>
 	<classpathentry kind="src" output="modules/database/build" path="modules/database/src/main/java"/>
 	<classpathentry kind="src" output="modules/core/build" path="modules/core/src/main/java"/>
@@ -15,6 +16,7 @@
 	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
 	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
 	<classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/main/java"/>
+	<classpathentry kind="src" output="modules/component/build" path="modules/component/src/main/java"/>
 	<classpathentry kind="src" output="modules/configuration/build" path="modules/configuration/src/main/java"/>
 	<classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/main/java"/>
 	<classpathentry kind="src" output="modules/storage-common/build" path="modules/storage-common/src/main/java"/>

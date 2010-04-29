@@ -259,6 +259,12 @@ public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
 	ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
 }
 
+public class StorageComponentMessageType extends ComponentMessageType {	
+}
+
+public class StorageComponentMessageResponseType extends ComponentMessageResponseType {
+}
+
 public class ConvertVolumesType extends StorageRequestType {
 	String originalProvider;
 	

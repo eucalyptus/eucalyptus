@@ -82,11 +82,11 @@
     <vm:queueProfile persistent="false" maxOutstandingMessages="8192"/>
   </vm:connector> 
   <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <!--endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false"/-->
   <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" connector-ref="internal-async"/>
   <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" connector-ref="internal-async"/>
   <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" connector-ref="internal-async"/>
   <endpoint name="VMwareBrokerRequestQueueEndpoint" address="vm://VMwareBrokerRequestQueue" synchronous="false" connector-ref="internal-async"/>
+  <endpoint name="ComponentRequestQueueEndpoint" address="vm://ComponentRequestQueue" synchronous="false" connector-ref="internal-async"/>
   <!--
   <exception-strategy className="com.eucalyptus.ws.ExceptionTrap"/>
   -->
@@ -122,6 +122,10 @@
         <filtering-router>
           <outbound-endpoint ref="VMwareBrokerRequestQueueEndpoint" synchronous="false" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VMwareBrokerRequestType" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="ComponentRequestQueueEndpoint" synchronous="false" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ComponentMessageType" />
         </filtering-router>
       </outbound>
     </service>
