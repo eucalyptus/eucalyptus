@@ -64,6 +64,7 @@
 package com.eucalyptus.sla;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -212,8 +213,8 @@ public class ClusterAllocator extends Thread {
       }
     } else {
       vlan = -1;
-      networkNames = Lists.newArrayList( "default" );
-      networkIndexes = Lists.newArrayList( "-1" );
+      networkNames = Lists.newArrayList( Collections.nCopies( token.getAmount( ), "default" ) );
+      networkIndexes = Lists.newArrayList( Collections.nCopies( token.getAmount( ), "-1" ) );
     }
     
     final List<String> addresses = Lists.newArrayList( token.getAddresses( ) );

@@ -102,7 +102,6 @@ public class ReplyQueue {
       Context context = Contexts.lookup( corrId );
       Channel channel = context.getChannel( );
       Contexts.clear(context);
-      //context.clear( );
       Channels.write( channel, reply );
     } catch ( NoSuchContextException e ) {
       LOG.debug( e, e );
@@ -118,7 +117,6 @@ public class ReplyQueue {
       Channel channel = context.getChannel( );
       Channels.write( channel, responseMessage );
       Contexts.clear(context);
-      //context.clear( );
     } catch ( NoSuchContextException e ) {
       LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
       LOG.debug( responseMessage );

@@ -81,7 +81,7 @@ public class Contexts {
 
   public static void clear( String correlationId ) {
     try {
-      clear(lookup(correlationId));
+      clear( lookup( correlationId ) );
     } catch ( NoSuchContextException e ) {
       LOG.error( e, e );
     }

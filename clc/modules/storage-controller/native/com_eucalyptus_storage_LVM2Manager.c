@@ -2,7 +2,7 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-#include <edu_ucsb_eucalyptus_storage_LVM2Manager.h>
+#include <com_eucalyptus_storage_LVM2Manager.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>

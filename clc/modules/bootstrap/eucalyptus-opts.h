@@ -97,10 +97,10 @@ struct eucalyptus_opts
   const char *disable_dns_help; /**< @brief Disable loading DNS services altogether. help description.  */
   int disable_storage_flag;	/**< @brief Disable loading storage services altogether. (default=off).  */
   const char *disable_storage_help; /**< @brief Disable loading storage services altogether. help description.  */
-  int disable_vmwarebroker_flag;	/**< @brief Disable loading VMware broker services altogether. (default=off).  */
-  const char *disable_vmwarebroker_help; /**< @brief Disable loading VMware broker services altogether. help description.  */
   int disable_iscsi_flag;	/**< @brief Disable ISCSI support for dynamic block storage. (default=off).  */
   const char *disable_iscsi_help; /**< @brief Disable ISCSI support for dynamic block storage. help description.  */
+  int disable_vmwarebroker_flag;	/**< @brief Disable VMware broker. (default=off).  */
+  const char *disable_vmwarebroker_help; /**< @brief Disable VMware broker. help description.  */
   int check_flag;	/**< @brief Check on Eucalyptus. (default=off).  */
   const char *check_help; /**< @brief Check on Eucalyptus. help description.  */
   int stop_flag;	/**< @brief Stop Eucalyptus. (default=off).  */
@@ -130,7 +130,10 @@ struct eucalyptus_opts
   const char *debug_suspend_help; /**< @brief Set the port to use for the debugger. help description.  */
   int profile_flag;	/**< @brief Launch with jprofiler enabled. (default=off).  */
   const char *profile_help; /**< @brief Launch with jprofiler enabled. help description.  */
-  char * profiler_home_arg;	/**< @brief Set the home for jprofiler. (default='/opt/jprofiler5').  */
+  char * agentlib_arg;	/**< @brief Launch with agentlib enabled..  */
+  char * agentlib_orig;	/**< @brief Launch with agentlib enabled. original value given at command line.  */
+  const char *agentlib_help; /**< @brief Launch with agentlib enabled. help description.  */
+  char * profiler_home_arg;	/**< @brief Set the home for jprofiler. (default='/opt/jprofiler6').  */
   char * profiler_home_orig;	/**< @brief Set the home for jprofiler. original value given at command line.  */
   const char *profiler_home_help; /**< @brief Set the home for jprofiler. help description.  */
   
@@ -160,8 +163,8 @@ struct eucalyptus_opts
   unsigned int disable_walrus_given ;	/**< @brief Whether disable-walrus was given.  */
   unsigned int disable_dns_given ;	/**< @brief Whether disable-dns was given.  */
   unsigned int disable_storage_given ;	/**< @brief Whether disable-storage was given.  */
-  unsigned int disable_vmwarebroker_given ;   /**< @brief Whether disable-walrus was given.  */
   unsigned int disable_iscsi_given ;	/**< @brief Whether disable-iscsi was given.  */
+  unsigned int disable_vmwarebroker_given ;	/**< @brief Whether disable-vmwarebroker was given.  */
   unsigned int check_given ;	/**< @brief Whether check was given.  */
   unsigned int stop_given ;	/**< @brief Whether stop was given.  */
   unsigned int fork_given ;	/**< @brief Whether fork was given.  */
@@ -173,6 +176,7 @@ struct eucalyptus_opts
   unsigned int debug_port_given ;	/**< @brief Whether debug-port was given.  */
   unsigned int debug_suspend_given ;	/**< @brief Whether debug-suspend was given.  */
   unsigned int profile_given ;	/**< @brief Whether profile was given.  */
+  unsigned int agentlib_given ;	/**< @brief Whether agentlib was given.  */
   unsigned int profiler_home_given ;	/**< @brief Whether profiler-home was given.  */
 
 } ;
