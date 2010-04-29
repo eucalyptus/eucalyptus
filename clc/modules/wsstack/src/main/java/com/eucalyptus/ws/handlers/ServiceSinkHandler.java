@@ -224,6 +224,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         } else if ( ( user == null ) || ( ( user != null ) && user.isAdministrator( ) ) ) {
           this.dispatchRequest( ctx, request, msg );
         } else {
+          Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
       } else if ( e instanceof IdleStateEvent ) {

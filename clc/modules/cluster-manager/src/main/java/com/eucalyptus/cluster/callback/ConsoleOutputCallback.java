@@ -98,6 +98,7 @@ public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputT
 //for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
       if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
     } catch ( ArrayIndexOutOfBoundsException e1 ) {}
+    reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
     reply.setTimestamp( new Date( ) );
     reply.setOutput( new String( Base64.encode( vm.getConsoleOutput( ).toString( ).getBytes( ) ) ) );

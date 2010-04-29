@@ -130,7 +130,10 @@ struct eucalyptus_opts
   const char *debug_suspend_help; /**< @brief Set the port to use for the debugger. help description.  */
   int profile_flag;	/**< @brief Launch with jprofiler enabled. (default=off).  */
   const char *profile_help; /**< @brief Launch with jprofiler enabled. help description.  */
-  char * profiler_home_arg;	/**< @brief Set the home for jprofiler. (default='/opt/jprofiler5').  */
+  char * agentlib_arg;	/**< @brief Launch with agentlib enabled..  */
+  char * agentlib_orig;	/**< @brief Launch with agentlib enabled. original value given at command line.  */
+  const char *agentlib_help; /**< @brief Launch with agentlib enabled. help description.  */
+  char * profiler_home_arg;	/**< @brief Set the home for jprofiler. (default='/opt/jprofiler6').  */
   char * profiler_home_orig;	/**< @brief Set the home for jprofiler. original value given at command line.  */
   const char *profiler_home_help; /**< @brief Set the home for jprofiler. help description.  */
   
@@ -173,6 +176,7 @@ struct eucalyptus_opts
   unsigned int debug_port_given ;	/**< @brief Whether debug-port was given.  */
   unsigned int debug_suspend_given ;	/**< @brief Whether debug-suspend was given.  */
   unsigned int profile_given ;	/**< @brief Whether profile was given.  */
+  unsigned int agentlib_given ;	/**< @brief Whether agentlib was given.  */
   unsigned int profiler_home_given ;	/**< @brief Whether profiler-home was given.  */
 
 } ;

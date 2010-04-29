@@ -74,7 +74,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "walrus_info" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(alias = "walrus", description = "Walrus configuration.")
 public class WalrusInfo {
 	@Id

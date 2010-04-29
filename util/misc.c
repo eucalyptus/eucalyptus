@@ -129,7 +129,7 @@ pid_t timewait(pid_t pid, int *status, int timeout) {
   time_t timer=0;
   int rc;
 
-  if (timeout <= 0) timeout = 1;
+  if (timeout < 0) timeout = 1;
 
   *status = 1;
   rc = waitpid(pid, status, WNOHANG);

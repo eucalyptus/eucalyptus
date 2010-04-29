@@ -73,6 +73,7 @@ permission notice:
 
 #define OP_TIMEOUT 60
 #define OP_TIMEOUT_PERNODE 20
+#define OP_TIMEOUT_MIN 5
 
 enum {SHARED_MEM, SHARED_FILE};
 enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, BUNDLECACHE, ENDLOCK};
@@ -225,6 +226,8 @@ int init_pthreads(void);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname, int mode);
 void unlock_exit(int);
 void shawn(void);
+int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *ncOp, ...);
+int ncGetTimeout(time_t op_start, time_t op_max, int numCalls, int idx);
 
 int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock);
 int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock);

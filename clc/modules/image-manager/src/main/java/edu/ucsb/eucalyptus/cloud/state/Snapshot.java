@@ -74,7 +74,7 @@ import javax.persistence.PersistenceContext;
 
 @Entity
 @PersistenceContext(name="eucalyptus_images")
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Snapshot extends AbstractIsomorph {
   private String parentVolume;
   private String cluster;

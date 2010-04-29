@@ -105,7 +105,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext(name="eucalyptus_auth")
 @Table( name = "auth_users" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class UserEntity extends AbstractPersistent implements Serializable, User {
   @Transient
   private static Logger LOG = Logger.getLogger( UserEntity.class );
@@ -125,7 +125,7 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   String  token;
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<X509Cert> certificates = []
   
   public UserEntity(){
@@ -208,7 +208,7 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
 @Entity
 @PersistenceContext(name="eucalyptus_auth")
 @Table(name="auth_x509")
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class X509Cert extends AbstractPersistent implements Serializable {
   @Column( name = "auth_x509_alias", unique=true )
   String alias
@@ -258,17 +258,17 @@ public class X509Cert extends AbstractPersistent implements Serializable {
 @Entity
 @PersistenceContext(name="eucalyptus_auth")
 @Table( name = "auth_clusters" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ClusterCredentials extends AbstractPersistent implements Serializable {
   @Column( name = "auth_cluster_name", unique=true )
   String clusterName
   @OneToOne(cascade = CascadeType.ALL)
   @JoinColumn(name="auth_cluster_x509_certificate")
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   X509Cert clusterCertificate
   @OneToOne(cascade = CascadeType.ALL)
   @JoinColumn(name="auth_cluster_node_x509_certificate")
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   X509Cert nodeCertificate  
   public ClusterCredentials( ) {
   }
