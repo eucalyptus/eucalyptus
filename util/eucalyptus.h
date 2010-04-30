@@ -180,14 +180,16 @@ typedef enum bundling_progress_t {
     NOT_BUNDLING = 0,
 	BUNDLING_IN_PROGRESS,
 	BUNDLING_SUCCESS,
-	BUNDLING_FAILED
+        BUNDLING_FAILED,
+        BUNDLING_CANCELLED
 } bundling_progress; 
 
 static char * bundling_progress_names[] = {
 	"none",
 	"bundling",
 	"succeeded",
-	"failed"
+	"failed",
+        "cancelled"
 };
 
 #endif

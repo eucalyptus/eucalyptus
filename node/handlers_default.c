@@ -444,6 +444,7 @@ static void * bundling_thread (void *arg)
 		logprintfl(EUCAERROR, "bundling_thread: could not rename '%s' to specified filePrefix '%s'\n", params->diskPath, dstDiskPath);
 	} else {
 		// USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
+	        int pid, status;
 		char cmd[MAX_PATH];
 		snprintf(cmd, MAX_PATH, 
 				 "EC2_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem "
@@ -464,12 +465,55 @@ static void * bundling_thread (void *arg)
 				 params->eucalyptusHomePath, 
 				 params->ncBundleUploadCmd, dstDiskPath, params->workPath, params->bucketName);
 		logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s'\n", cmd);
-		rc = system(cmd);
-		rc = rc>>8;
+		pid = fork();
+		if (!pid) {
+		  char buf[1024];
+
+		  snprintf(buf, 1024, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		  setenv("EC2_CERT", buf, 1);
+
+		  snprintf(buf, 1024, "IGNORED");
+		  setenv("EC2_SECRET_KEY", buf, 1);
+
+		  snprintf(buf, 1024, "%s/var/lib/eucalyptus/keys/cloud-cert.pem", params->eucalyptusHomePath);
+		  setenv("EUCALYPTUS_CERT", buf, 1);
+
+		  snprintf(buf, 1024, "%s", params->walrusURL);
+		  setenv("S3_URL", buf, 1);
+		  
+		  snprintf(buf, 1024, "%s", params->userPublicKey);
+		  setenv("EC2_ACCESS_KEY", buf, 1);
+
+		  snprintf(buf, 1024, "123456789012");
+		  setenv("EC2_USER_ID", buf, 1);
+
+		  snprintf(buf, 1024, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		  setenv("EUCA_CERT", buf, 1);
+
+		  snprintf(buf, 1024, "%s/var/lib/eucalyptus/keys/node-pk.pem", params->eucalyptusHomePath);
+		  setenv("EUCA_PRIVATE_KEY", buf, 1);
+
+		  exit(execl(params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", dstDiskPath, "-d", params->workPath, "-b", params->bucketName, NULL));
+		  //		  rc = system(cmd);
+		  //		  rc = rc>>8;
+		  //		  exit (rc);
+		} else {
+		  instance->bundlePid = pid;
+		  rc = waitpid(pid, &status, 0);
+		  if (WIFEXITED(status)) {
+		    rc = WEXITSTATUS(status);
+		  } else {
+		    rc = -1;
+		  }
+		}
 
 		if (rc==0) {
 			cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_SUCCESS);
 			logprintfl (EUCAINFO, "bundling_thread: finished bundling instance %s\n", instance->instanceId);
+		} else if (rc == -1) {
+		        // bundler child was cancelled (killed)
+		        cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_CANCELLED);
+			logprintfl (EUCAINFO, "bundling_thread: cancelled while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
 		} else {
 			cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);
 			logprintfl (EUCAINFO, "bundling_thread: failed while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
@@ -563,6 +607,16 @@ doCancelBundleTask(
 	ncMetadata *meta,
 	char *instanceId)
 {
+  ncInstance * instance = find_instance(&global_instances, instanceId);
+  if (instance==NULL) {
+    logprintfl (EUCAERROR, "doCancelBundleTask: instance %s not found\n", instanceId);
+    return ERROR;
+  } 
+  //  logprintfl(EUCADEBUG, "WTF: pid=%d check=%d\n", instance->bundlePid, check_process(instance->bundlePid, "euca-nc-bundle-upload"));
+  if (instance->bundlePid > 0 && !check_process(instance->bundlePid, "euca-nc-bundle-upload")) {
+    logprintfl(EUCADEBUG, "doCancelBundleTask: found bundlePid '%d', sending kill signal...\n", instance->bundlePid);
+    kill(instance->bundlePid, 9);
+  }
   return(OK);
 }
 

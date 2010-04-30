@@ -76,7 +76,7 @@ permission notice:
 #define NUMBER_OF_CCS 8
 
 typedef struct netEntry_t {
-  char mac[24];
+  unsigned char mac[6];
   char active;
   uint32_t ip;
 } netEntry;
@@ -205,6 +205,9 @@ int mac2ip(vnetConfig *vnetconfig, char *mac, char **ip);
 int ip2mac(vnetConfig *vnetconfig, char *ip, char **mac);
 void mac2hex(char *in, unsigned char out[6]);
 void hex2mac(unsigned char in[6], char **out);
+int maczero(unsigned char in[6]);
+int machexcmp(char *ina, unsigned char inb[6]);
+
 int instId2mac(char *instId, char *outmac);
 int zeromac(unsigned char in[6]);
 int maccmp(char *ina, unsigned char inb[6]);

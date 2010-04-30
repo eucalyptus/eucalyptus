@@ -108,15 +108,15 @@ int mylocks[ENDLOCK] = {0,0,0,0,0,0};
 //ccBundleCache *bundleCache=NULL;
 
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey) {
-  int i, j, rc, start = 0, stop = 0, ret=0;
+  int i, j, rc, start = 0, stop = 0, ret=0, timeout, done;
   ccInstance *myInstance;
   ncStub *ncs;
-  time_t op_start, op_timer;
-  
+  time_t op_start;
+  ccResourceCache resourceCacheLocal;
+
   i = j = 0;
   myInstance = NULL;
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
   
   rc = initialize();
   if (rc) {
@@ -129,8 +129,9 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
     return(1);
   }
 
-  sem_mywait(NCCALL);
   sem_mywait(RESCACHE);
+  memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
   
   rc = find_instanceCacheId(instanceId, &myInstance);
   if (!rc) {
@@ -142,49 +143,21 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
     }
   } else {
     start = 0;
-    stop = resourceCache->numResources;
+    stop = resourceCacheLocal.numResources;
   }
   
-
-  for (j=start; j<stop; j++) {
-    // read the instance ids
-    logprintfl(EUCAINFO,"BundleInstance(): calling bundle instance (%s) on (%s)\n", instanceId, resourceCache->resources[j].hostname);
-    if (1) {
-      int pid, status;
-      pid = fork();
-      if (pid == 0) {
-	ret=0;
-	ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
-	if (config->use_wssec) {
-	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	}
-	rc = 0;
-	rc = ncBundleInstanceStub(ncs, ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
-	if (!rc) {
-	  ret = 0;
-	} else {
-	  ret = 1;
-	}
-	exit(ret);
-      } else {
-	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
-	rc = WEXITSTATUS(status);
-	logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
-      }
-    }
-    
-    if (!rc) {
-      ret = 0;
-    } else {
-      logprintfl(EUCAERROR, "BundleInstance(): call to NC failed: instanceId=%s\n", instanceId);
+  done=0;
+  for (j=start; j<stop && !done; j++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
+    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncBundleInstance", instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
+    if (rc) {
       ret = 1;
+    } else {
+      ret = 0;
+      done++;
     }
   }
 
-  sem_mypost(RESCACHE);
-  sem_mypost(NCCALL);
-  
   logprintfl(EUCADEBUG,"BundleInstance(): done.\n");
   
   shawn();
@@ -193,15 +166,15 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
 }
 
 int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
-  int i, j, rc, start = 0, stop = 0, ret=0;
+  int i, j, rc, start = 0, stop = 0, ret=0, done, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
-  time_t op_start, op_timer;
-  
+  time_t op_start;
+  ccResourceCache resourceCacheLocal;
+
   i = j = 0;
   myInstance = NULL;
   op_start = time(NULL);
-  op_timer = OP_TIMEOUT;
   
   rc = initialize();
   if (rc) {
@@ -214,9 +187,10 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
     return(1);
   }
   
-  sem_mywait(NCCALL);
   sem_mywait(RESCACHE);
-  
+  memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
+    
   rc = find_instanceCacheId(instanceId, &myInstance);
   if (!rc) {
     // found the instance in the cache
@@ -230,46 +204,18 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
     stop = resourceCache->numResources;
   }
   
-
-  for (j=start; j<stop; j++) {
-    // read the instance ids
-    logprintfl(EUCAINFO,"CancelBundleTask(): calling bundle instance (%s) on (%s)\n", instanceId, resourceCache->resources[j].hostname);
-    if (1) {
-      int pid, status;
-      pid = fork();
-      if (pid == 0) {
-	ret=0;
-	ncs = ncStubCreate(resourceCache->resources[j].ncURL, NULL, NULL);
-	if (config->use_wssec) {
-	  rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
-	}
-	rc = 0;
-	rc = ncCancelBundleTaskStub(ncs, ccMeta, instanceId);
-	if (!rc) {
-	  ret = 0;
-	} else {
-	  ret = 1;
-	}
-	exit(ret);
-      } else {
-	op_timer = OP_TIMEOUT - (time(NULL) - op_start);
-	rc = timewait(pid, &status, minint(op_timer / ((stop-start) - (j - start)), OP_TIMEOUT_PERNODE));
-	rc = WEXITSTATUS(status);
-	logprintfl(EUCADEBUG,"\tcall complete (pid/rc): %d/%d\n", pid, rc);
-      }
-    }
-    
-    if (!rc) {
-      ret = 0;
-    } else {
-      logprintfl(EUCAERROR, "CancelBundleTask(): call to NC failed: instanceId=%s\n", instanceId);
+  done=0;
+  for (j=start; j<stop && !done; j++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
+    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncCancelBundleTask", instanceId);
+    if (rc) {
       ret = 1;
+    } else {
+      ret = 0;
+      done++;
     }
   }
 
-  sem_mypost(RESCACHE);
-  sem_mypost(NCCALL);
-  
   logprintfl(EUCADEBUG,"CancelBundleTask(): done.\n");
   
   shawn();
@@ -322,30 +268,6 @@ int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bu
   }
   sem_mypost(INSTCACHE);
 
-  /*
-  sem_mywait(BUNDLECACHE);
-  count=0;
-  if (bundleCache->numBundles) {
-    *outBundleTasks = malloc(sizeof(bundleTask) * bundleCache->numBundles);
-    if (!*outBundleTasks) {
-      logprintfl(EUCAFATAL, "doDescribeBundleTasks(): out of memory!\n");
-      unlock_exit(1);
-    }
-
-    for (i=0; i<MAXBUNDLES; i++) {
-      if (bundleCache->cacheState[i] == BUNDLEVALID) {
-	memcpy( &((*outBundleTasks)[count]), &(bundleCache->bundles[i]), sizeof(bundleTask));
-	count++;
-	if (count > bundleCache->numBundles) {
-	  logprintfl(EUCAWARN, "doDescribeBundleTasks(): found more bundles than reported by numBundles, will only report a subset of bundles\n");
-	  count=0;
-	}
-      }
-    }
-    *outBundleTasksLen = bundleCache->numBundles;
-  }
-  sem_mypost(BUNDLECACHE);
-  */
   for (i=0; i< (*outBundleTasksLen) ; i++) {
     logprintfl(EUCADEBUG, "DescribeBundleTasks(): returning: instanceId=%s, state=%s\n", (*outBundleTasks)[i].instanceId, (*outBundleTasks)[i].state);
   }
@@ -553,6 +475,22 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	  rc = 1;
 	}      
       }
+    } else if (!strcmp(ncOp, "ncBundleInstance")) {
+      char *instanceId = va_arg(al, char *);
+      char *bucketName = va_arg(al, char *);      
+      char *filePrefix = va_arg(al, char *);      
+      char *walrusURL = va_arg(al, char *);
+      char *userPublicKey = va_arg(al, char *);      
+
+      sem_mywait(ncLock);
+      rc = ncBundleInstanceStub(ncs, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
+      sem_mypost(ncLock);
+    } else if (!strcmp(ncOp, "ncCancelBundleTask")) {
+      char *instanceId = va_arg(al, char *);
+
+      sem_mywait(ncLock);
+      rc = ncCancelBundleTaskStub(ncs, meta, instanceId);
+      sem_mypost(ncLock);
     } else {
       logprintfl(EUCAWARN, "ncClientCall(%s): operation '%s' not found\n", ncOp, ncOp);
       rc = 1;
@@ -826,6 +764,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   logprintfl(EUCADEBUG,"AttachVolume(): done.\n");
   
   shawn(); 
+
   return(ret);
 }
 
@@ -930,6 +869,8 @@ int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **source
   
   logprintfl(EUCADEBUG,"ConfigureNetwork(): done\n");
   
+  shawn();
+
   if (fail) {
     return(1);
   }
@@ -1017,6 +958,9 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   }
   
   logprintfl(EUCADEBUG,"AssignAddress(): done\n");  
+
+  shawn();
+
   return(ret);
 }
 
@@ -1042,6 +986,9 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
   }
   
   logprintfl(EUCADEBUG, "DescribePublicAddresses(): done\n");
+
+  shawn();
+
   return(ret);
 }
 
@@ -1105,6 +1052,9 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   }
   
   logprintfl(EUCADEBUG,"UnassignAddress(): done\n");  
+
+  shawn();
+
   return(ret);
 }
 
@@ -1135,7 +1085,9 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   }
   
   logprintfl(EUCADEBUG,"StopNetwork(): done\n");
-  
+
+  shawn();
+
   return(ret);
 }
 
@@ -1164,6 +1116,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   logprintfl(EUCADEBUG, "DescribeNetworks(): done\n");
   
   shawn();
+
   return(0);
 }
 
@@ -1210,8 +1163,8 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver
   
   logprintfl(EUCADEBUG,"StartNetwork(): done\n");
   
-  shawn();
-  
+  shawn();  
+
   return(ret);
 }
 
@@ -1325,6 +1278,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   logprintfl(EUCADEBUG,"DescribeResources(): done\n");
   
   shawn();
+
   return(0);
 }
 
@@ -2114,6 +2068,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   logprintfl(EUCADEBUG,"RunInstances(): done\n");
   
   shawn();
+
   if (error) {
     return(1);
   }
@@ -2176,6 +2131,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
   logprintfl(EUCADEBUG,"GetConsoleOutput(): done.\n");
   
   shawn();
+
   return(ret);
 }
 
@@ -2452,13 +2408,6 @@ void *monitor_thread(void *in) {
       logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
     }
 
-    /*
-    rc = refresh_bundleTasks(&ccMeta, 60, 1);
-    if (rc) {
-      logprintfl(EUCAWARN, "monitor_thread(): call to refresh_bundleTasks() failed in monitor thread\n");
-    }
-    */
-    
     sem_mywait(CONFIG);
     if (config->kick_dhcp) {
       rc = vnetKickDHCP(vnetconfig);
@@ -2469,6 +2418,8 @@ void *monitor_thread(void *in) {
       }
     }
     sem_mypost(CONFIG);
+
+    shawn();
     
     logprintfl(EUCADEBUG, "monitor_thread(): done\n");
     sleep(config->ncPollingFrequency);
