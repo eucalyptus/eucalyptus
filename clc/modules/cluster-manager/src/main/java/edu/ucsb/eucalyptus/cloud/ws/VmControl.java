@@ -65,12 +65,21 @@
 
 package edu.ucsb.eucalyptus.cloud.ws;
 
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.vm.VmState;
+import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
+import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
@@ -122,14 +131,25 @@ public class VmControl {
   }
 
   public void GetConsoleOutput( GetConsoleOutputType request ) throws EucalyptusCloudException {
+    VmInstance v = null;
     try {
-      SystemState.handle( request );
-      RequestContext.getEventContext().setStopFurtherProcessing( true );
+      v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
+    } catch ( NoSuchElementException e2 ) {
+      throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );      
     }
-    catch ( Exception e ) {
-      LOG.error( e );
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( e.getMessage() );
+    if ( !request.isAdministrator( ) && !v.getOwnerId( ).equals( request.getUserId( ) ) ) {
+      throw new EucalyptusCloudException( "Permission denied for vm: " + request.getInstanceId( ) );            
+    } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
+      throw new EucalyptusCloudException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
+    } else {
+      Cluster cluster = null;
+      try {
+        cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
+      } catch ( NoSuchElementException e1 ) {
+        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPlacement( ) + "' related to vm: " + request.getInstanceId( ) );
+      }      
+      RequestContext.getEventContext().setStopFurtherProcessing( true );
+      new ConsoleOutputCallback( request ).dispatch( cluster );
     }
   }
 
