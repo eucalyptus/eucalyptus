@@ -174,11 +174,6 @@ public class BlockStorage {
 		}
 	}
 
-	public StorageComponentMessageResponseType handle(StorageComponentMessageType request) {
-		StorageComponentMessageResponseType reply = request.getReply();
-		return reply;
-	}
-	
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))

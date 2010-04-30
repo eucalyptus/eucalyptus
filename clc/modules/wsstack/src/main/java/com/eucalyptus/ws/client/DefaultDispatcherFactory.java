@@ -4,7 +4,6 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.DispatcherFactory;
 import com.eucalyptus.component.Service;
-import com.eucalyptus.util.NetworkUtil;
 
 public class DefaultDispatcherFactory extends DispatcherFactory {
   static {
@@ -16,7 +15,7 @@ public class DefaultDispatcherFactory extends DispatcherFactory {
     Dispatcher d = null;
     if( parent.isSingleton( ) ) {
       d = new LocalDispatcher( parent.getPeer( ), service.getName( ), service.getUri( ) );
-    } else if( NetworkUtil.testLocal( service.getHost( ) ) ) {
+    } else if( service.getEndpoint( ).isLocal( ) ) {
       d = new LocalDispatcher( parent.getPeer( ), service.getName( ), service.getUri( ) );
     } else {
       d = new RemoteDispatcher( parent.getPeer( ), service.getName( ), service.getUri( ) );

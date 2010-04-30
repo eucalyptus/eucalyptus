@@ -155,19 +155,6 @@ public class NetworkUtil {
             }} );
         }} );
       return result;
-//      List<String> addrs = Lists.transform( Lists.newArrayList( Collections.list( NetworkInterface.getNetworkInterfaces( ) ) ), new Function<>)
-//      Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
-//      
-//      while( ifaces.hasMoreElements( ) ) {
-//        NetworkInterface iface = ifaces.nextElement( );
-//        for( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
-//          InetAddress ifaceAddr = iaddr.getAddress( );
-//          if( ifaceAddr.equals( addr ) ) {
-//            return true;
-//          }
-//        }
-//      }
-//      return addr.isAnyLocalAddress( );
     } catch ( Exception e ) {
       return Exceptions.eat( e.getMessage( ), e );
     }    

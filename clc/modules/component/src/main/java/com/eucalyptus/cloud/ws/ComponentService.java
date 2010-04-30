@@ -56,7 +56,7 @@ public class ComponentService {
 		
 		LOG.info("Component: " + component + "@" + host);
 	    Dispatcher sc = ServiceDispatcher.lookup( Component.valueOf(component), host );
-		if(NetworkUtil.testLocal(host)) {//sc.isLocal()) {
+		if(sc.isLocal()) {
 			return request;
  		} else {
  			BaseMessage reply;
