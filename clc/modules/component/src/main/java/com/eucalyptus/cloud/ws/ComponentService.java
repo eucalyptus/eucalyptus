@@ -38,6 +38,8 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -48,20 +50,23 @@ public class ComponentService {
 
 	private static Logger LOG = Logger.getLogger( ComponentService.class );
 
-	public BaseMessage handle(ComponentMessageType request) {
-		ComponentMessageResponseType reply = request.getReply();
+	public BaseMessage handle(ComponentMessageType request) throws EucalyptusCloudException {
 		String component = request.getComponent();
 		String host = request.getHost();
 		
 		LOG.info("Component: " + component + "@" + host);
-	    Dispatcher sc = ServiceDispatcher.lookup( Component.storage, host );
-		//lookup dispatcher
-		/*if(true) {
-			//local			
-		} else {*/
-			//RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-		      //Messaging.dispatch( "vm://ReplyQueue", reply );
-		//}
-		return request;
+	    Dispatcher sc = ServiceDispatcher.lookup( Component.valueOf(component), host );
+		if(NetworkUtil.testLocal(host)) {//sc.isLocal()) {
+			return request;
+ 		} else {
+ 			BaseMessage reply;
+			try {
+				reply = sc.send(request);
+			} catch (Exception e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException("Unable to dispatch message to: " + sc.getName());
+			}
+ 			return reply;
+ 		}
 	}
 }

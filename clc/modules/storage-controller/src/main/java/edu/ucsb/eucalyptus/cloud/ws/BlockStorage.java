@@ -176,9 +176,6 @@ public class BlockStorage {
 
 	public StorageComponentMessageResponseType handle(StorageComponentMessageType request) {
 		StorageComponentMessageResponseType reply = request.getReply();
-		RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-	    Messaging.dispatch( "vm://ReplyQueue", reply );
-
 		return reply;
 	}
 	
