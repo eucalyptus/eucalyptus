@@ -78,14 +78,17 @@ public class GenerateJiBXBinding {
   private static int    indent      = 0;
 
   public static void main( String[] args ) throws Exception {
-    List<String> pathList = Lists.newArrayList( new File( "build/edu/ucsb/eucalyptus/msgs/" ).list( ) );
-    List<Class> classList = Lists.newArrayList( );
-    for ( String className : pathList ) {
-      if ( className.startsWith( "JiBX_" ) || className.endsWith( "Category" ) ) continue;
-      classList.add( ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs." + className.replaceAll( ".class", "" ) ) );
+    List<String> moduleList = Lists.newArrayList( new File( "modules" ).list( ) );
+    for( String module : moduleList ) {
+      List<String> pathList = Lists.newArrayList( new File( module + "/build/edu/ucsb/eucalyptus/msgs/" ).list( ) );
+      List<Class> classList = Lists.newArrayList( );
+      for ( String className : pathList ) {
+        if ( className.startsWith( "JiBX_" ) || className.endsWith( "Category" ) ) continue;
+        classList.add( ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs." + className.replaceAll( ".class", "" ) ) );
+      }
+      GenerateJiBXBinding.binding( "http://msgs.eucalyptus.com", classList );
     }
-    GenerateJiBXBinding.binding( "http://msgs.eucalyptus.ucsb.edu", classList );
-    File out = new File( "src/main/resources/msgs-binding.xml" );
+    File out = new File( "modules/msgs/src/main/resources/msgs-binding.xml" );
     out.delete( );
     PrintWriter os = new PrintWriter( out );
     os.write( bindingFile );

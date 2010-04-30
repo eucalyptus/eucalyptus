@@ -100,7 +100,7 @@ public class WalrusReplyQueue {
 		{
 			Object requestMsg = muleMsg.getPayload();
 			String requestString = requestMsg.toString();
-			EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( requestString );
+			EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
 			Throwable ex = muleMsg.getException().getCause();
 			EucalyptusMessage errMsg;
 

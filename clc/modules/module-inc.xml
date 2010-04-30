@@ -131,13 +131,14 @@
     <condition property="builder.target" value="build-${builder.suffix}" else="build-java"><isset property="builder.suffix"/></condition>
     <echo message="[COMPILE] ${builder.target} for ${ant.project.name}"/>
   	<antcall target="${builder.target}" inheritall="true" inheritrefs="true"/>
-    <uptodate property="jar.notRequired" targetfile="${jar.file}">
-      <srcfiles dir="${build.dir}" includes="**/*" />
-      <srcfiles dir="${rsrc.dir}" includes="**/*" />
-    </uptodate>
-    <antcall target="jar"/>
   </target>
   <target name="build-java">
+    <uptodate property="build.notRequired" targetfile="${jar.file}">
+      <srcfiles dir="${src.dir}" includes="**/*" />
+    </uptodate>
+  	<antcall target="do-build-java"/>
+	</target>
+	<target name="do-build-java" unless="build.notRequired">
       <javac srcdir="src/main/java/"
              classpathref="classpath"
              destdir="${build.dir}"
@@ -149,20 +150,27 @@
              listfiles="true"/>
   </target>
   <target name="build-groovy">
+    <uptodate property="build.notRequired" targetfile="${jar.file}">
+      <srcfiles dir="${src.dir}" includes="**/*" />
+    </uptodate>
+    <antcall target="do-build-groovy"/>
+  </target>
+  <target name="do-build-groovy" unless="build.notRequired">
     <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath"/>
     <groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
         <javac target="1.5" debug="true"/>
     </groovyc>
   </target>
-  <target name="install" depends="copy-conf"/>
-  <!--================================== clean target ==================================-->
-  <target name="clean">
-    <delete dir="${build.dir}" />
-    <delete file="${jar.file}" />
-  </target>
   <!--================================== jar target ==================================-->
-  <target name="jar" unless="jar.notRequired">
-  	<echo message="[JARFILE] target/${ant.project.name}-${euca.version}.jar"/>
+  <target name="jar">
+    <uptodate property="jar.notRequired" targetfile="${jar.file}">
+      <srcfiles dir="${build.dir}" includes="**/*" />
+      <srcfiles dir="${rsrc.dir}" includes="**/*" />
+    </uptodate>  
+    <antcall target="do-jar"/>
+  </target>
+  <target name="do-jar" unless="jar.notRequired">
+    <echo message="[JARFILE] target/${ant.project.name}-${euca.version}.jar"/>
     <delete file="${jar.file}"/>
     <jar destfile="${jar.file}">
       <fileset dir="${build.dir}">
@@ -173,4 +181,11 @@
       </fileset>
     </jar>
   </target>
+  <target name="install" depends="copy-conf"/>
+  <!--================================== clean target ==================================-->
+  <target name="clean">
+    <delete dir="${build.dir}" />
+    <delete file="${jar.file}" />
+  </target>
+
 </project>

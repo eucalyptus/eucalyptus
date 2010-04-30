@@ -177,7 +177,7 @@ public class ReplyQueue {
     } else if ( !( payload instanceof String ) ) {
       return new EucalyptusErrorMessageType( "ReplyQueue", LogUtil.dumpObject( payload ) );
     } else {
-      return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) payload );
+      return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
     }
   }
 

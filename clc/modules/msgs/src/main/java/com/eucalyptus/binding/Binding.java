@@ -69,18 +69,20 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-
+import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
-
 import org.apache.axiom.om.OMDataSource;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.om.OMOutputFormat;
+import org.apache.axiom.om.ds.InputStreamDataSource;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFactory;
@@ -100,17 +102,16 @@ import org.jibx.runtime.JiBXException;
 import org.jibx.runtime.impl.StAXReaderWrapper;
 import org.jibx.runtime.impl.StAXWriter;
 import org.jibx.runtime.impl.UnmarshallingContext;
-
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.collect.Maps;
 
 public class Binding {
-
-  private static Logger   LOG = Logger.getLogger( Binding.class );
-  private final String    name;
-  private IBindingFactory bindingFactory;
-  private Map<String,Class> elementToClassMap = Maps.newHashMap( );
-
+  
+  private static Logger      LOG               = Logger.getLogger( Binding.class );
+  private final String       name;
+  private IBindingFactory    bindingFactory;
+  private Map<String, Class> elementToClassMap = Maps.newHashMap( );
+  
   protected Binding( final String name ) throws BindingException {
     this.name = name;
   }
@@ -119,8 +120,8 @@ public class Binding {
     try {
       this.bindingFactory = BindingDirectory.getFactory( this.name, seed );
       String[] mappedClasses = bindingFactory.getMappedClasses( );
-      for( int i = 0; i < mappedClasses.length; i ++ ) {
-        if( bindingFactory.getElementNames( )[i] != null ) {
+      for ( int i = 0; i < mappedClasses.length; i++ ) {
+        if ( bindingFactory.getElementNames( )[i] != null ) {
           try {
             elementToClassMap.put( bindingFactory.getElementNames( )[i], Class.forName( mappedClasses[i] ) );
             LOG.trace( "Caching binding for " + this.name + " on element " + bindingFactory.getElementNames( )[i] + " to class " + mappedClasses[i] );
@@ -137,35 +138,43 @@ public class Binding {
   }
   
   private IBindingFactory getBindingFactory( Class c ) throws BindingException {
-    if( this.bindingFactory == null ) {
+    if ( this.bindingFactory == null ) {
       return this.seed( c );
     } else {
       return this.bindingFactory;
     }
   }
-
+  
   public OMElement toOM( final Object param ) throws BindingException {
     return this.toOM( param, null );
   }
-
+  
   public OMElement toOM( final Object param, final String altNs ) throws BindingException {
-    final OMFactory factory = HoldMe.getOMFactory( );
     if ( param == null ) {
       throw new BindingException( "Cannot bind null value" );
     } else if ( !( param instanceof IMarshallable ) ) {
       throw new BindingException( "No JiBX <mapping> defined for class " + param.getClass( ) );
     }
-
+    
+    final OMFactory factory = HoldMe.getOMFactory( );
     final IMarshallable mrshable = ( IMarshallable ) param;
-    final OMDataSource src = new JiBXDataSource( mrshable, this.bindingFactory );
     final int index = mrshable.JiBX_getIndex( );
-    final OMNamespace appns = factory.createOMNamespace( this.bindingFactory.getElementNamespaces( )[index], "" );
-    OMElement retVal = factory.createOMElement( src, this.bindingFactory.getElementNames( )[index], appns );
-    final String origNs = retVal.getNamespace( ).getNamespaceURI( );
-    if ( ( altNs != null ) && !altNs.equals( origNs ) ) {
-      try {
-        final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
-        retVal.serialize( bos );
+    final String origNs = this.bindingFactory.getElementNamespaces( )[index];
+    final String useNs = altNs != null ? altNs : origNs;
+    final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
+    final OMElement retVal;
+    HoldMe.canHas.lock( );
+    try {
+      final IMarshallingContext mctx = this.bindingFactory.createMarshallingContext( );
+      final XMLStreamWriter wrtr = HoldMe.getXMLOutputFactory( ).createXMLStreamWriter( bos, null );
+      mctx.setXmlWriter( new StAXWriter( this.bindingFactory.getNamespaces( ), wrtr ) );
+      mctx.marshalDocument( param );
+      mctx.getXmlWriter( ).flush( );
+      final OMNamespace appns = factory.createOMNamespace( origNs, "" );
+      final OMDataSource inds = new InputStreamDataSource( new ByteArrayInputStream( bos.toByteArray( ) ), altNs );
+      if( origNs.equals( altNs ) || altNs == null ) {
+        retVal = factory.createOMElement( inds, this.bindingFactory.getElementNames( )[index], appns );
+      } else {
         String retString = bos.toString( );
         retString = retString.replaceAll( origNs, altNs );
         HoldMe.canHas.lock( );
@@ -175,14 +184,24 @@ public class Binding {
         } finally {
           HoldMe.canHas.unlock( );
         }
-      } catch ( final XMLStreamException e ) {
-        LOG.error( e, e );
       }
-    }
 
+    } catch ( XMLStreamException e ) {
+      LOG.error( e, e );
+      throw new BindingException( this.name +  " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: " + e.getMessage( ), e );
+    } catch ( JiBXException e ) {
+      LOG.error( e, e );
+      throw new BindingException( this.name +  " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: " + e.getMessage( ), e );
+    } catch ( IOException e ) {
+      LOG.error( e, e );
+      throw new BindingException( this.name +  " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: " + e.getMessage( ), e );
+    } finally {
+      HoldMe.canHas.unlock( );
+    }
+    
     return retVal;
   }
-
+  
   public UnmarshallingContext getNewUnmarshalContext( final OMElement param ) throws JiBXException {
     if ( this.bindingFactory == null ) {
       throw new RuntimeException( "Binding bootstrap failed to construct the binding factory for " + this.name );
@@ -193,7 +212,7 @@ public class Binding {
     ctx.toTag( );
     return ctx;
   }
-
+  
   public Object fromOM( final String text ) throws Exception {
     HoldMe.canHas.lock( );
     try {
@@ -203,7 +222,11 @@ public class Binding {
       HoldMe.canHas.unlock( );
     }
   }
-
+  
+  public static <T> List<T> listFactory() {
+    return (List<T>) new ArrayList();
+  }
+  
   public Object fromOM( final OMElement param, final Class type ) throws WebServicesException {
     try {
       final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
@@ -213,7 +236,7 @@ public class Binding {
       throw new WebServicesException( e.getMessage( ) );
     }
   }
-
+  
   public Object fromOM( final OMElement param ) throws WebServicesException {
     try {
       final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
@@ -223,24 +246,28 @@ public class Binding {
       throw new WebServicesException( e.getMessage( ) );
     }
   }
+  
   public static String createRestFault( String faultCode, String faultReason, String faultDetails ) {
-    return new StringBuffer().append("<?xml version=\"1.0\"?><Response><Errors><Error><Code>")
-      .append(faultCode.replaceAll("<","&lt;").replaceAll(">","&gt;")).append("</Code><Message>")
-      .append(faultReason.replaceAll("<","&lt;").replaceAll(">","&gt;")).append("</Message></Error></Errors><RequestID>")
-      .append(faultDetails.replaceAll("<","&lt;").replaceAll(">","&gt;")).append("</RequestID></Response>").toString( );
+    return new StringBuffer( ).append( "<?xml version=\"1.0\"?><Response><Errors><Error><Code>" ).append(
+                                                                                                          faultCode.replaceAll( "<", "&lt;" )
+                                                                                                                   .replaceAll( ">", "&gt;" ) )
+                              .append( "</Code><Message>" ).append( faultReason.replaceAll( "<", "&lt;" ).replaceAll( ">", "&gt;" ) )
+                              .append( "</Message></Error></Errors><RequestID>" ).append( faultDetails.replaceAll( "<", "&lt;" ).replaceAll( ">", "&gt;" ) )
+                              .append( "</RequestID></Response>" ).toString( );
   }
+  
   public static SOAPEnvelope createFault( String faultCode, String faultReason, String faultDetails ) {
     SOAPFactory soapFactory = HoldMe.getOMSOAP11Factory( );
-
+    
     SOAPFaultCode soapFaultCode = soapFactory.createSOAPFaultCode( );
     soapFaultCode.setText( faultCode );
-
+    
     SOAPFaultReason soapFaultReason = soapFactory.createSOAPFaultReason( );
     soapFaultReason.setText( faultReason );
-
+    
     SOAPFaultDetail soapFaultDetail = soapFactory.createSOAPFaultDetail( );
     soapFaultDetail.setText( faultDetails );
-
+    
     SOAPEnvelope soapEnv = soapFactory.getDefaultEnvelope( );
     SOAPFault soapFault = soapFactory.createSOAPFault( );
     soapFault.setCode( soapFaultCode );
@@ -249,114 +276,5 @@ public class Binding {
     soapEnv.getBody( ).addFault( soapFault );
     return soapEnv;
   }
-
-  private static class JiBXDataSource implements OMDataSource {
-    private final int             marshallerIndex;
-    private final String          elementName;
-    private final String          elementNamespace;
-    private final String          elementNamespacePrefix;
-    private final int             elementNamespaceIndex;
-    private final int[]           openNamespaceIndexes;
-    private final String[]        openNamespacePrefixes;
-    private final Object          dataObject;
-    private final IBindingFactory bindingFactory;
-    private static Logger         LOG = Logger.getLogger( JiBXDataSource.class );
-
-    public JiBXDataSource( final IMarshallable obj, final IBindingFactory factory ) {
-      this.marshallerIndex = -1;
-      this.dataObject = obj;
-      this.bindingFactory = factory;
-      this.elementName = this.elementNamespace = this.elementNamespacePrefix = null;
-      this.elementNamespaceIndex = -1;
-      this.openNamespaceIndexes = null;
-      this.openNamespacePrefixes = null;
-    }
-
-    private void marshal( final boolean full, final IMarshallingContext ctx ) throws JiBXException {
-      try {
-        if ( this.marshallerIndex < 0 ) {
-          if ( this.dataObject instanceof IMarshallable ) {
-            ( ( IMarshallable ) this.dataObject ).marshal( ctx );
-          } else {
-            throw new IllegalStateException( "Object of class " + this.dataObject.getClass( ).getName( ) + " needs a JiBX <mapping> to be marshalled" );
-          }
-        } else {
-          final IXMLWriter wrtr = ctx.getXmlWriter( );
-          String name = this.elementName;
-          int nsidx = 0;
-          if ( full ) {
-            nsidx = this.elementNamespaceIndex;
-            wrtr.startTagNamespaces( nsidx, name, this.openNamespaceIndexes, this.openNamespacePrefixes );
-          } else {
-            wrtr.openNamespaces( this.openNamespaceIndexes, this.openNamespacePrefixes );
-            if ( !"".equals( this.elementNamespacePrefix ) ) {
-              name = this.elementNamespacePrefix + ':' + name;
-            }
-            wrtr.startTagOpen( 0, name );
-          }
-          final IMarshaller mrsh = ctx.getMarshaller( this.marshallerIndex, this.bindingFactory.getMappedClasses( )[this.marshallerIndex] );
-          mrsh.marshal( this.dataObject, ctx );
-          wrtr.endTag( nsidx, name );
-        }
-        ctx.getXmlWriter( ).flush( );
-
-      } catch ( final IOException e ) {
-        throw new JiBXException( "Error marshalling XML representation: " + e.getMessage( ), e );
-      }
-    }
-
-    public void serialize( final OutputStream output, final OMOutputFormat format ) throws XMLStreamException {
-      try {
-        final IMarshallingContext ctx = this.bindingFactory.createMarshallingContext( );
-        ctx.setOutput( output, format == null ? null : format.getCharSetEncoding( ) );
-        this.marshal( true, ctx );
-      } catch ( final JiBXException e ) {
-        throw new XMLStreamException( "Error in JiBX marshalling: " + e.getMessage( ), e );
-      }
-    }
-
-    public void serialize( final Writer writer, final OMOutputFormat format ) throws XMLStreamException {
-      try {
-        final IMarshallingContext ctx = this.bindingFactory.createMarshallingContext( );
-        ctx.setOutput( writer );
-        this.marshal( true, ctx );
-      } catch ( final JiBXException e ) {
-        throw new XMLStreamException( "Error in JiBX marshalling: " + e.getMessage( ), e );
-      }
-    }
-
-    public void serialize( final XMLStreamWriter xmlWriter ) throws XMLStreamException {
-      try {
-        boolean full = true;
-        final String[] nss = this.bindingFactory.getNamespaces( );
-        if ( this.marshallerIndex >= 0 ) {
-          String prefix = xmlWriter.getPrefix( this.elementNamespace );
-          if ( this.elementNamespacePrefix.equals( prefix ) ) {
-            full = false;
-            for ( int i = 0; i < this.openNamespaceIndexes.length; i++ ) {
-              final String uri = nss[i];
-              prefix = xmlWriter.getPrefix( uri );
-              if ( !this.openNamespacePrefixes[i].equals( prefix ) ) {
-                full = true;
-                break;
-              }
-            }
-          }
-        }
-        final IXMLWriter writer = new StAXWriter( nss, xmlWriter );
-        final IMarshallingContext ctx = this.bindingFactory.createMarshallingContext( );
-        ctx.setXmlWriter( writer );
-        this.marshal( full, ctx );
-      } catch ( final JiBXException e ) {
-        throw new XMLStreamException( "Error in JiBX marshalling: " + e.getMessage( ), e );
-      }
-    }
-
-    public XMLStreamReader getReader( ) throws XMLStreamException {
-      final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
-      this.serialize( bos, null );
-      return HoldMe.getXMLStreamReader( new ByteArrayInputStream( bos.toByteArray( ) ) );
-    }
-  }
-
+    
 }

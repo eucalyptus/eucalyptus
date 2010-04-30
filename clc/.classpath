@@ -128,5 +128,6 @@
 	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
+	<classpathentry kind="lib" path="/usr/share/ant/lib/ant-nodeps.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

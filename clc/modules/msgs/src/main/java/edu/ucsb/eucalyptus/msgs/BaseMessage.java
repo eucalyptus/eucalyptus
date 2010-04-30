@@ -92,7 +92,7 @@ public class BaseMessage {
   }
   
   public String toString( ) {
-    String str = this.toString( "msgs_eucalyptus_ucsb_edu" );
+    String str = this.toString( "msgs_eucalyptus_com" );
     str = ( str != null ) ? str : this.toString( "eucalyptus_ucsb_edu" );
     str = ( str != null ) ? str : "Failed to bind message of type: " + this.getClass( ).getName( ) + " at "
                                   + Thread.currentThread( ).getStackTrace( )[1].toString( );

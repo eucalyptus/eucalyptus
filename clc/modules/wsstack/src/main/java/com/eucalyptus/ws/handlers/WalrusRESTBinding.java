@@ -219,7 +219,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					}
 				}
 			} else {
-				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );
+				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.com" ) );
 				if(putQueue != null) {
 					putQueue = null;
 				}
@@ -339,7 +339,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		LOG.info(eucaMsg.toString());
 		try
 		{
-			Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );
+			Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.com" ) );
 			msg = binding.toOM( eucaMsg );
 		}
 		catch ( RuntimeException e )

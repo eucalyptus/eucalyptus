@@ -61,37 +61,7 @@
   ~ Author: chris grzegorczyk <grze@eucalyptus.com>
   --> 
 <project name="eucalyptus-msgs" basedir=".">
-  <property name="msgs.binding" value="${rsrc.dir}/msgs-binding.xml" />
-  <uptodate property="groovyc.notRequired" targetfile="${jar.file}">
-    <srcfiles dir="${src.dir}" includes="**/*" />
-    <srcfiles dir="${rsrc.dir}" includes="**/*-binding.xml" excludes="${msgs.binding}"/>
-  </uptodate>
-  <property name="builder.suffix" value="jibx" />
+  <property name="builder.suffix" value="groovy" />
   <import file="../module-inc.xml"/>
   <!--================================== BUILD TARGETS ==================================-->
-  <uptodate property="binding.notRequired" targetfile="${msgs.binding}">
-    <srcfiles dir="${src.dir}" includes="**/*" />
-  </uptodate>
-  <target name="build-binding">
-    <delete file="${msgs.binding}" />
-    <java classname="com.eucalyptus.binding.GenerateJiBXBinding" fork="true">
-      <classpath refid="classpath" />
-      <classpath path="build" />
-      <syspropertyset refid="euca-props" />
-    </java>
-  </target>
-  <target name="build-jibx" unless="groovyc.notRequired">
-    <antcall target="build-groovy"/>
-    <antcall target="build-binding"/>
-    <taskdef name="bind" classname="org.jibx.binding.ant.CompileTask" classpathref="classpath" />
-    <delete>
-      <fileset dir="${build.dir}">
-        <include name="**/JiBX*.class" />
-      </fileset>
-    </delete>
-    <bind verbose="false" load="true">
-      <classpathset dir="${build.dir}" />
-      <bindingfileset dir="${rsrc.dir}" includes="**/*-binding.xml" />
-    </bind>
-  </target>
 </project>
