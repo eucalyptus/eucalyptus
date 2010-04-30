@@ -9,7 +9,6 @@ import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
 
 public class BaseMessage {
-  private static Logger LOG = Logger.getLogger( BaseMessage.class );
   String                correlationId;
   String                userId;
   String                effectiveUserId;
@@ -117,7 +116,7 @@ public class BaseMessage {
       mctx.setIndent( 2 );
       mctx.marshalDocument( this, "UTF-8", null, temp );
     } catch ( JiBXException e ) {
-      LOG.debug( e, e );
+      Logger.getLogger(BaseMessage.class).debug( e, e );
       return null;
     }
     return temp.toString( );
@@ -134,7 +133,7 @@ public class BaseMessage {
       Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( replyType );
       reply = ( TYPE ) responseClass.newInstance( );
     } catch ( Exception e ) {
-      LOG.debug( e, e );
+      Logger.getLogger(BaseMessage.class).debug( e, e );
       throw new TypeNotPresentException( correlationId, e );
     }
     reply.setCorrelationId( this.getCorrelationId( ) );
