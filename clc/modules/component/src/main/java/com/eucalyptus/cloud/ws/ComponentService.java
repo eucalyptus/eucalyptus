@@ -29,19 +29,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Dmitrii Zagorodnov dmitrii@eucalyptus.com
+ * Author: Neil Soman neil@eucalyptus.com
  */
 
 package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
-import org.mule.RequestContext;
-
-import com.eucalyptus.bootstrap.Component;
 
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
-import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
 public class ComponentService {
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
   ~
   ~ This program is free software: you can redistribute it and/or modify
@@ -60,7 +60,7 @@
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ~ Author: Sunil Soman sunils@cs.ucsb.edu
+  ~ Author: Neil Soman neil@eucalyptus.com
   -->
 
 <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
