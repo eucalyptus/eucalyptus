@@ -55,9 +55,6 @@ public class ComponentService {
 		
 		LOG.info("Component: " + component + "@" + host);
 	    Dispatcher sc = ServiceDispatcher.lookup( Component.storage, host );
-	    if(true) {
-	    	return reply;
-	    }
 		//lookup dispatcher
 		/*if(true) {
 			//local			
