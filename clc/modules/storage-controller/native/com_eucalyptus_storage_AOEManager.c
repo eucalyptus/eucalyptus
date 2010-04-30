@@ -11,7 +11,7 @@
 
 extern int run_command_and_get_pid(char *cmd, char **args); 
 
-JNIEXPORT jint JNICALL Java_edu_ucsb_eucalyptus_storage_AOEManager_exportVolume
+JNIEXPORT jint JNICALL Java_com_eucalyptus_storage_AOEManager_exportVolume
 (JNIEnv *env, jobject obj, jstring iface, jstring lvName, jint major, jint minor) {
     const jbyte* lv_name = (*env)->GetStringUTFChars(env, lvName, NULL);
     const jbyte* if_name = (*env)->GetStringUTFChars(env, iface, NULL);
