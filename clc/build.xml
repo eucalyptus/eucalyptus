@@ -103,24 +103,7 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="builder"/>
 		<ant dir="modules/dns" inheritall="false" target="builder"/>
 		<ant dir="modules/www" inheritall="false" target="builder"/>
-		<ant dir="modules/msgs" inheritall="false" target="bind"/>
-		<ant dir="modules/database" inheritall="false" target="bind"/>
-		<ant dir="modules/hsqldb" inheritall="false" target="bind"/>
-		<ant dir="modules/authentication" inheritall="false" target="bind"/>
-		<ant dir="modules/cloud" inheritall="false" target="bind"/>
-		<ant dir="modules/configuration" inheritall="false" target="bind"/>
-		<ant dir="modules/core" inheritall="false" target="bind"/>
-		<ant dir="modules/wsstack" inheritall="false" target="bind"/>
-		<ant dir="modules/interface" inheritall="false" target="bind"/>
-		<ant dir="modules/group-manager" inheritall="false" target="bind"/>
-		<ant dir="modules/cluster-manager" inheritall="false" target="bind"/>
-		<ant dir="modules/image-manager" inheritall="false" target="bind"/>
-		<ant dir="modules/key-manager" inheritall="false" target="bind"/>
-		<ant dir="modules/storage-common" inheritall="false" target="bind"/>
-		<ant dir="modules/walrus" inheritall="false" target="bind"/>
-		<ant dir="modules/storage-controller" inheritall="false" target="bind"/>
-		<ant dir="modules/dns" inheritall="false" target="bind"/>
-		<ant dir="modules/www" inheritall="false" target="bind"/>
+	  <ant dir="." inheritall="false" target="bind"/>
 		<ant dir="modules/msgs" inheritall="false" target="jar"/>
 		<ant dir="modules/database" inheritall="false" target="jar"/>
 		<ant dir="modules/hsqldb" inheritall="false" target="jar"/>
@@ -144,52 +127,31 @@
 	<uptodate property="binding.notRequired" targetfile="${msgs.binding}">
 		<srcfiles dir="target/" includes="**/*" />
 	</uptodate>
-	<target name="build-binding">
-		<delete file="${msgs.binding}" />
-		<java classname="com.eucalyptus.binding.GenerateJiBXBinding" fork="true">
-			<classpath refid="classpath" />
-			<classpath path="build" />
-			<syspropertyset refid="euca-props" />
-		</java>
-	</target>
-	<target name="build-jibx" unless="groovyc.notRequired">
-		<antcall target="build-binding"/>
-		<taskdef name="bind" classname="org.jibx.binding.ant.CompileTask" classpathref="bindingclasspath" />
-		<delete>
-			<fileset dir="${build.dir}">
-				<include name="**/JiBX*.class" />
-			</fileset>
-		</delete>
-		<bind verbose="false" load="true">
-			<classpathset dir="${build.dir}" />
-			<bindingfileset dir="${rsrc.dir}" includes="**/*-binding.xml" />
-		</bind>
-	</target>
-  <path id="bindingclasspath">
-    <pathelement path="modules/msgs/build"/>
-  	<pathelement path="modules/authentication/build"/>
-  	<pathelement path="modules/cloud/build"/>
-  	<pathelement path="modules/cluster-manager/build"/>
-  	<pathelement path="modules/configuration/build"/>
-  	<pathelement path="modules/core/build"/>
-  	<pathelement path="modules/database/build"/>
-  	<pathelement path="modules/dns/build"/>
-  	<pathelement path="modules/group-manager/build"/>
-  	<pathelement path="modules/hsqldb/build"/>
-  	<pathelement path="modules/image-manager/build"/>
-  	<pathelement path="modules/interface/build"/>
-  	<pathelement path="modules/key-manager/build"/>
-  	<pathelement path="modules/storage-common/build"/>
-  	<pathelement path="modules/storage-controller/build"/>
-  	<pathelement path="modules/walrus/build"/>
-  	<pathelement path="modules/wsstack/build"/>
-  	<pathelement path="modules/www/build"/>
-    <fileset dir="lib">
-      <include name="**/*.jar"/>
-    </fileset>
-  </path>
-	<taskdef name="bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
 	<target name="bind">
+	  <path id="bindingclasspath">
+	    <pathelement path="modules/msgs/build"/>
+	    <pathelement path="modules/authentication/build"/>
+	    <pathelement path="modules/cloud/build"/>
+	    <pathelement path="modules/cluster-manager/build"/>
+	    <pathelement path="modules/configuration/build"/>
+	    <pathelement path="modules/core/build"/>
+	    <pathelement path="modules/database/build"/>
+	    <pathelement path="modules/dns/build"/>
+	    <pathelement path="modules/group-manager/build"/>
+	    <pathelement path="modules/hsqldb/build"/>
+	    <pathelement path="modules/image-manager/build"/>
+	    <pathelement path="modules/interface/build"/>
+	    <pathelement path="modules/key-manager/build"/>
+	    <pathelement path="modules/storage-common/build"/>
+	    <pathelement path="modules/storage-controller/build"/>
+	    <pathelement path="modules/walrus/build"/>
+	    <pathelement path="modules/wsstack/build"/>
+	    <pathelement path="modules/www/build"/>
+	    <fileset dir="lib">
+	      <include name="**/*.jar"/>
+	    </fileset>
+	  </path>
+	  <taskdef name="bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
 		<bindings>
       <classfileset dir="${project.basedir}/modules" includes="*/build/**"/>
       <bindingfileset dir="${project.basedir}/modules" includes="*/src/main/resources/*-binding.xml"/>
