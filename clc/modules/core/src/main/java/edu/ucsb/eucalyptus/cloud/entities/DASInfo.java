@@ -79,7 +79,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "das_info" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(alias = "storage.das", description = "Basic storage controller configuration for DAS.")
 public class
 DASInfo {

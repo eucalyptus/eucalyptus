@@ -1011,35 +1011,51 @@ if [ -n "$CHECK" ]; then
 fi
 
 createCloudURL () {
-    if ! getSecretKey; then
-	echo "ERROR: cannot get credentials"
-	return 1
-    fi
-    ARGS="AWSAccessKeyId=$AKEY"
-    KEY=$1
+  ## FIXME: URGENTLY: only works on deb
+  if ! which mysql; then
+    apt-get --force-yes -y install mysql-client-5.1
+  fi 
+  if [ ! -e ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem ]; then
+    openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
+    -name eucalyptus -name "eucalyptus" \
+    -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus \
+    -nodes | \
+    grep -A30 "friendlyName: eucalyptus" | \
+    grep -A26 "BEGIN RSA" >  ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
+  fi  
+  DB_PASS=$(echo -n eucalyptus | \
+  openssl dgst -sha256 \
+  -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
+  -hex)
+  AKEY=$(echo "select auth_user_query_id from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
+  SKEY=$(echo "select auth_user_secretkey from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth  | tail -n1)
+  
+  if [[ -z "${AKEY}" && -z "${SKEY}" ]]; then 
+    echo "ERROR: Failed to get admin credentials"
+    export URL=""
+    return 1
+  fi 
+  
+  ARGS="AWSAccessKeyId=$AKEY"
+  KEY=$1
+  shift
+  VAL=$1
+  shift
+  while ( test -n "$KEY" -a -n "$VAL")
+  do
+    ARGS="${ARGS}&${KEY}=${VAL}"
+	  KEY=$1
     shift
     VAL=$1
     shift
-    while ( test -n "$KEY" -a -n "$VAL")
-    do
-	ARGS="${ARGS}&${KEY}=${VAL}"
-	KEY=$1
-	shift
-	VAL=$1
-	shift
-    done
-    if [ -z "$SKEY" ]; then
-	echo "ERROR: SKEY parameter is not set."
-	export URL=""
-	return 1
-    fi
-    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date -u '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
-    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
-    export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
+  done  
+  ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date -u '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
+  SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
+  export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
 	if [ "$VERBOSE" = "Y" ]; then
 		echo $URL
 	fi
-    return 0
+  return 0
 }
 
 getSecretKey() {
@@ -1108,35 +1124,27 @@ checkLocalService() {
 }
 
 if [ -n "$CREDENTIALZIPFILE" ]; then
-    if [ -f "$CREDENTIALZIPFILE" ]; then
-	echo "file '$CREDENTIALZIPFILE' already exists, please remove and try again"
-	exit 1
-    fi
-    if ! checkLocalService "CLC" ; then
-	exit 1
-    fi
-
-    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
-	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-    else
-	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
-        exit 1
-    fi
-    FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Tt][Oo][Kk][Ee][Nn]/ {print NR}'`
-    if [ -z "$FIELD" ]; then
-	echo "cannot find code field in database, please go to the Eucalyptus web UI to obtain credentials."
-	exit 1
-    fi
-    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1 | sed 's/[()]//g'))
-    if [ -z "$KEY" ]; then
-	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
-	exit 1
-    fi
-    CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?user=admin&code=$KEY\" -O $CREDENTIALZIPFILE"
-    if ! eval $CMD ; then
-	echo "failed to obtain credentals, please try again or go to the Eucalyptus web UI."
-	exit 1
-    fi
+  if [ -f "$CREDENTIALZIPFILE" ]; then
+    echo "file '$CREDENTIALZIPFILE' already exists, please remove and try again"
+  	exit 1
+  fi
+  if ! checkLocalService "CLC" ; then
+  	exit 1
+  fi
+  DB_PASS=$(echo -n eucalyptus | \
+  openssl dgst -sha256 \
+  -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
+  -hex)
+  KEY=$(echo "select auth_user_token from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
+  if [ -z "$KEY" ]; then
+  	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
+  	exit 1
+  fi
+  CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?user=admin&code=$KEY\" -O $CREDENTIALZIPFILE"
+  if ! eval $CMD ; then
+    echo "failed to obtain credentals, please try again or go to the Eucalyptus web UI."
+    exit 1
+  fi
 fi
 
 # adding a new cluster

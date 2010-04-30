@@ -79,7 +79,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "direct_storage_info" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(alias = "storage.direct", description = "Basic storage controller configuration.")
 public class
 DirectStorageInfo {

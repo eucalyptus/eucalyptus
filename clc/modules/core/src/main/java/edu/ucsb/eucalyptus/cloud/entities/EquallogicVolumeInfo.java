@@ -74,7 +74,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "EquallogicVolumeInfo" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class EquallogicVolumeInfo {
     @Id
     @GeneratedValue
