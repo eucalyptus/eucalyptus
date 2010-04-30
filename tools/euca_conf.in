@@ -1108,7 +1108,7 @@ checkLocalService() {
 	    done
 	fi
 	
-	CMD="$WGET -T 10 -t 1 -O - -q --no-check-certificate https://127.0.0.1:8443/register | grep CloudVersion >/dev/null"
+	CMD="$WGET -T 10 -t 10 -O - -q --no-check-certificate --retry-connrefused https://127.0.0.1:8443/register | grep CloudVersion >/dev/null"
     elif [ "$SERVICE" = "CC" ]; then
 	CMD="$WGET -T 10 -t 1 -O - -q http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC >/dev/null"
     fi
