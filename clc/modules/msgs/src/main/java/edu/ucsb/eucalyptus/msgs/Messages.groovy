@@ -577,7 +577,7 @@ public class StatEventRecord extends EucalyptusMessage {
   }
 }
 
-public class ComponentMessageType extends EucalyptusMessage {
+public class ComponentMessageType extends BaseMessage {
   String component;
   String host;
   
@@ -589,7 +589,7 @@ public class ComponentMessageType extends EucalyptusMessage {
   }
 }
 
-public class ComponentMessageResponseType extends EucalyptusMessage {
+public class ComponentMessageResponseType extends BaseMessage {
   def ComponentMessageResponseType() {
   }
 }

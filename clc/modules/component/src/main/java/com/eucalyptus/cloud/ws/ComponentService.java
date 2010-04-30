@@ -36,17 +36,28 @@ package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.ws.client.ServiceDispatcher;
+
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
+import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType;
 
 public class ComponentService {
 
 	private static Logger LOG = Logger.getLogger( ComponentService.class );
 
-	public ComponentMessageType handle(ComponentMessageType request) {
+	public BaseMessage handle(ComponentMessageType request) {
+		ComponentMessageResponseType reply = request.getReply();
 		String component = request.getComponent();
 		String host = request.getHost();
 		
 		LOG.info("Component: " + component + "@" + host);
+	    Dispatcher sc = ServiceDispatcher.lookup( Component.storage, host );
+	    if(true) {
+	    	return reply;
+	    }
 		//lookup dispatcher
 		/*if(true) {
 			//local			

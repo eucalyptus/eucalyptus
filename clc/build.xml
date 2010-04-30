@@ -90,11 +90,11 @@
     <ant dir="modules/authentication" inheritall="false" target="builder"/>
     <ant dir="modules/cloud" inheritall="false" target="builder"/>
     <ant dir="modules/configuration" inheritall="false" target="builder"/>
-    <ant dir="modules/component" inheritall="false" target="builder"/>
   </target>
   <target name="build-core" depends="build-msgs">
     <ant dir="modules/core" inheritall="false" target="builder"/>
     <ant dir="modules/wsstack" inheritall="false" target="builder"/>
+    <ant dir="modules/component" inheritall="false" target="builder"/>
   </target>
    <target name="build-storage-common" depends="build-core">
     <ant dir="modules/storage-common" inheritall="false" target="builder"/>
