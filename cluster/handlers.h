@@ -207,7 +207,7 @@ int privIpCmp(ccInstance *inst, void *ip);
 int privIpSet(ccInstance *inst, void *ip);
 int pubIpCmp(ccInstance *inst, void *ip);
 int pubIpSet(ccInstance *inst, void *ip);
-int free_instanceNetwork(char *mac, int vlan);
+int free_instanceNetwork(char *mac, int vlan, int dolock);
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src);
 
 int add_resourceCache(char *host, ccResource *in);
