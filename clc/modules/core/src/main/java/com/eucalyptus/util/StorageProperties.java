@@ -74,6 +74,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
 
@@ -170,5 +171,9 @@ public class StorageProperties {
 
 	public enum StorageParameters {
 		EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
+	}
+	
+	public static <T> EntityWrapper<T> getEntityWrapper( ) {
+		return new EntityWrapper<T>( StorageProperties.DB_NAME );
 	}
 }

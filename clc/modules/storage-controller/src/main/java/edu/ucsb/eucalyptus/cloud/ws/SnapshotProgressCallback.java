@@ -6,7 +6,6 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
-import edu.ucsb.eucalyptus.ic.StorageController;
 
 public class SnapshotProgressCallback implements CallBack {
 	private String snapshotId;
@@ -21,7 +20,7 @@ public class SnapshotProgressCallback implements CallBack {
 	}
 
 	public void run() {
-		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		try {
 			SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
@@ -39,7 +38,7 @@ public class SnapshotProgressCallback implements CallBack {
 	}
 
 	public void finish() {
-		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		try {
 			SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);
@@ -54,7 +53,7 @@ public class SnapshotProgressCallback implements CallBack {
 	}
 
 	public void failed() {
-		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		try {
 			SnapshotInfo foundSnapshotInfo = db.getUnique(snapshotInfo);

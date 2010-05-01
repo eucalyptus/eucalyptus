@@ -63,13 +63,6 @@
 			<outbound-endpoint ref="StorageReplyQueueWS" />
 		</default-service-exception-strategy>
 
-		<service name="StorageController">
-			<inbound>
-				<inbound-endpoint ref="StorageControllerWS" />
-			</inbound>
-			<component class="edu.ucsb.eucalyptus.ic.StorageController" />
-		</service>
-
 		<service name="StorageRequestQueue">
 			<inbound>
 				<vm:inbound-endpoint ref="StorageRequestQueueEndpoint" />

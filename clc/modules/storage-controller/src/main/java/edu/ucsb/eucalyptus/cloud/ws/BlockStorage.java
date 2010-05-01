@@ -92,7 +92,6 @@ import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
-import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
@@ -213,7 +212,7 @@ public class BlockStorage {
 
 		String volumeId = request.getVolumeId();
 
-		EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		VolumeInfo volumeInfo = new VolumeInfo();
 		volumeInfo.setVolumeId(volumeId);
 		List <VolumeInfo> volumeInfos = db.query(volumeInfo);
@@ -245,7 +244,7 @@ public class BlockStorage {
 
 		String volumeId = request.getVolumeId();
 
-		EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		VolumeInfo volumeInfo = new VolumeInfo();
 		volumeInfo.setVolumeId(volumeId);
 		List<VolumeInfo> volumeList = db.query(volumeInfo);
@@ -276,7 +275,7 @@ public class BlockStorage {
 
 		String volumeId = request.getVolumeId();
 		String snapshotId = request.getSnapshotId();
-		EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		VolumeInfo volumeInfo = new VolumeInfo(volumeId);
 		List<VolumeInfo> volumeInfos = db.query(volumeInfo);
 
@@ -300,7 +299,7 @@ public class BlockStorage {
 						throw new EntityTooLargeException(snapshotId);
 					}
 				}
-				EntityWrapper<SnapshotInfo> db2 = StorageController.getEntityWrapper();
+				EntityWrapper<SnapshotInfo> db2 = StorageProperties.getEntityWrapper();
 				edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo snapshotInfo = new edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo(snapshotId);
 				snapshotInfo.setUserName(foundVolumeInfo.getUserName());
 				snapshotInfo.setVolumeId(volumeId);
@@ -338,7 +337,7 @@ public class BlockStorage {
 		checker.transferPendingSnapshots();
 		List<String> snapshotSet = request.getSnapshotSet();
 		ArrayList<SnapshotInfo> snapshotInfos = new ArrayList<SnapshotInfo>();
-		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 		if((snapshotSet != null) && !snapshotSet.isEmpty()) {
 			for(String snapshotSetEntry: snapshotSet) {
 				SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotSetEntry);
@@ -377,7 +376,7 @@ public class BlockStorage {
 
 		String snapshotId = request.getSnapshotId();
 
-		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
 
@@ -434,7 +433,7 @@ public class BlockStorage {
 					throw new EntityTooLargeException(volumeId);
 			}
 		}
-		EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 
 		VolumeInfo volumeInfo = new VolumeInfo(volumeId);
 		List<VolumeInfo> volumeInfos = db.query(volumeInfo);
@@ -476,7 +475,7 @@ public class BlockStorage {
 		File file = new File(absoluteSnapshotPath);
 		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, blockManager.getStorageRootDirectory());
 		snapshotGetter.run();
-		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		snapshotInfo.setProgress("100");
 		snapshotInfo.setStartTime(new Date());
@@ -501,7 +500,7 @@ public class BlockStorage {
 
 		List<String> volumeSet = request.getVolumeSet();
 		ArrayList<VolumeInfo> volumeInfos = new ArrayList<VolumeInfo>();
-		EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 
 		if((volumeSet != null) && !volumeSet.isEmpty()) {
 			for(String volumeSetEntry: volumeSet) {
@@ -634,7 +633,7 @@ public class BlockStorage {
 				return;
 			}
 			SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
-			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+			EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 			SnapshotInfo foundSnapshotInfo;
 			try {
 				foundSnapshotInfo = db.getUnique(snapInfo);
@@ -669,7 +668,7 @@ public class BlockStorage {
 		public void run() {
 			boolean success = true;
 			if(snapshotId != null) {
-				EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 				try {
 					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
@@ -704,7 +703,7 @@ public class BlockStorage {
 					LOG.error(ex);
 				}
 			}
-			EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 			VolumeInfo volumeInfo = new VolumeInfo(volumeId);
 			try {
 				VolumeInfo foundVolumeInfo = db.getUnique(volumeInfo);
@@ -758,7 +757,7 @@ public class BlockStorage {
 				LOG.error(e1);
 				return;
 			}
-			EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 			VolumeInfo foundVolume;
 			try {
 				foundVolume = db.getUnique(new VolumeInfo(volumeId));
