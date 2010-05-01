@@ -570,7 +570,8 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   
   logprintfl(EUCADEBUG,"AttachVolume(): done.\n");
   
-  shawn(); 
+  shawn();
+
   return(ret);
 }
 
@@ -675,6 +676,8 @@ int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **source
   
   logprintfl(EUCADEBUG,"ConfigureNetwork(): done\n");
   
+  shawn();
+  
   if (fail) {
     return(1);
   }
@@ -762,6 +765,9 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   }
   
   logprintfl(EUCADEBUG,"AssignAddress(): done\n");  
+  
+  shawn();
+
   return(ret);
 }
 
@@ -787,6 +793,9 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
   }
   
   logprintfl(EUCADEBUG, "DescribePublicAddresses(): done\n");
+  
+  shawn();
+
   return(ret);
 }
 
@@ -850,6 +859,9 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   }
   
   logprintfl(EUCADEBUG,"UnassignAddress(): done\n");  
+  
+  shawn();
+
   return(ret);
 }
 
@@ -880,6 +892,8 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   }
   
   logprintfl(EUCADEBUG,"StopNetwork(): done\n");
+
+  shawn();
   
   return(ret);
 }
@@ -909,6 +923,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   logprintfl(EUCADEBUG, "DescribeNetworks(): done\n");
   
   shawn();
+
   return(0);
 }
 
@@ -1070,6 +1085,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   logprintfl(EUCADEBUG,"DescribeResources(): done\n");
   
   shawn();
+
   return(0);
 }
 
@@ -1857,6 +1873,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   logprintfl(EUCADEBUG,"RunInstances(): done\n");
   
   shawn();
+
   if (error) {
     return(1);
   }
@@ -1919,6 +1936,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
   logprintfl(EUCADEBUG,"GetConsoleOutput(): done.\n");
   
   shawn();
+
   return(ret);
 }
 
@@ -2206,6 +2224,8 @@ void *monitor_thread(void *in) {
       }
     }
     sem_mypost(CONFIG);
+
+    shawn();
     
     logprintfl(EUCADEBUG, "monitor_thread(): done\n");
     sleep(config->ncPollingFrequency);
@@ -3068,7 +3088,7 @@ int free_instanceNetwork(char *mac, int vlan, int dolock) {
   }
 
   if (!inuse) {
-    // remove private network info from system                                                                                                                                                                
+    // remove private network info from system
     sem_mywait(VNET);
     vnetDisableHost(vnetconfig, mac, NULL, 0);
     if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
@@ -3234,6 +3254,7 @@ void invalidate_instanceCache(void) {
   
   sem_mywait(INSTCACHE);
   for (i=0; i<MAXINSTANCES; i++) {
+    // if instance is in teardown, free up network information
     if ( !strcmp(instanceCache->instances[i].state, "Teardown") ) {
       free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0);
     }
