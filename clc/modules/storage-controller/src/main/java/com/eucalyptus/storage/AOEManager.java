@@ -71,7 +71,6 @@ import java.util.List;
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
-import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -137,7 +136,7 @@ public class AOEManager implements StorageExportManager {
 
 	@Override
 	public void configure() {
-		EntityWrapper<AOEMetaInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<AOEMetaInfo> db = StorageProperties.getEntityWrapper();
 		AOEMetaInfo metaInfo = new AOEMetaInfo();
 		try {
 			List<AOEMetaInfo> metaInfoList = db.query(metaInfo);
@@ -161,7 +160,7 @@ public class AOEManager implements StorageExportManager {
 			int majorNumber = -1;
 			int minorNumber = -1;
 			AOEMetaInfo metaInfo = new AOEMetaInfo();
-			EntityWrapper<AOEMetaInfo> db = StorageController.getEntityWrapper();
+			EntityWrapper<AOEMetaInfo> db = StorageProperties.getEntityWrapper();
 			List<AOEMetaInfo> metaInfoList = db.query(metaInfo);
 			if(metaInfoList.size() > 0) {
 				AOEMetaInfo foundMetaInfo = metaInfoList.get(0);

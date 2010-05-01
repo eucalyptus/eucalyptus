@@ -70,7 +70,6 @@ import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.cloud.ws.HttpWriter;
 import edu.ucsb.eucalyptus.cloud.ws.SnapshotProgressCallback;
-import edu.ucsb.eucalyptus.ic.StorageController;
 
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -129,7 +128,7 @@ public class BlockStorageChecker {
 	}
 
 	public void cleanStuckVolumes() {
-		EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		VolumeInfo volumeInfo = new VolumeInfo();
 		volumeInfo.setStatus(StorageProperties.Status.creating.toString());
 		List<VolumeInfo> volumeInfos = db.query(volumeInfo);
@@ -143,7 +142,7 @@ public class BlockStorageChecker {
 	}
 
 	public void cleanFailedVolumes() {
-		EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		VolumeInfo volumeInfo = new VolumeInfo();
 		volumeInfo.setStatus(StorageProperties.Status.failed.toString());
 		List<VolumeInfo> volumeInfos = db.query(volumeInfo);
@@ -157,7 +156,7 @@ public class BlockStorageChecker {
 	}
 
 	public void cleanFailedVolume(String volumeId) {
-		EntityWrapper<VolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		VolumeInfo volumeInfo = new VolumeInfo(volumeId);
 		List<VolumeInfo> volumeInfos = db.query(volumeInfo);
 		if(volumeInfos.size() > 0) {
@@ -170,7 +169,7 @@ public class BlockStorageChecker {
 	}
 
 	public void cleanStuckSnapshots() {
-		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo();
 		snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
 		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
@@ -184,7 +183,7 @@ public class BlockStorageChecker {
 	}
 
 	public void cleanFailedSnapshots() {
-		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo();
 		snapshotInfo.setStatus(StorageProperties.Status.failed.toString());
 		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
@@ -198,7 +197,7 @@ public class BlockStorageChecker {
 	}
 
 	public void cleanFailedSnapshot(String snapshotId) {
-		EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 		List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);
 		if(snapshotInfos.size() > 0) {
@@ -245,7 +244,7 @@ public class BlockStorageChecker {
 		}
 
 		public void run() {
-			EntityWrapper<SnapshotInfo> db = StorageController.getEntityWrapper();
+			EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 			SnapshotInfo snapshotInfo = new SnapshotInfo();
 			snapshotInfo.setShouldTransfer(true);
 			List<SnapshotInfo> snapshotInfos = db.query(snapshotInfo);

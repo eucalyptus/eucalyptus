@@ -259,7 +259,7 @@ public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
 	ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
 }
 
-public class StorageComponentMessageType extends ComponentMessageType {	
+public class StorageComponentMessageType extends ComponentMessageType {       
 }
 
 public class StorageComponentMessageResponseType extends ComponentMessageResponseType {
@@ -274,6 +274,15 @@ public class ConvertVolumesType extends StorageComponentMessageType {
 
 public class ConvertVolumesResponseType extends StorageComponentMessageResponseType {
 	def ConvertVolumesResponseType() {		
+        }
+}
+
+public class StorageControllerHeartbeatMessage extends HeartbeatMessage {
+
+	def StorageControllerHeartbeatMessage() {}
+
+	def StorageControllerHeartbeatMessage(final String heartbeatId) {
+		super(heartbeatId);
 	}
 }
 

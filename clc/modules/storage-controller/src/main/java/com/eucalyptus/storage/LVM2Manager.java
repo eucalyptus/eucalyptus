@@ -101,7 +101,6 @@ import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.ws.VolumeManager;
-import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -811,7 +810,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		private EntityWrapper entityWrapper;
 
 		private VolumeEntityWrapperManager() {
-			entityWrapper = StorageController.getEntityWrapper();
+			entityWrapper = StorageProperties.getEntityWrapper();
 		}
 
 		public List<String> getSnapshotValues(String snapshotId) {

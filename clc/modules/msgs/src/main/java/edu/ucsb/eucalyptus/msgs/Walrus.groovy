@@ -795,7 +795,13 @@ public class GetWalrusSnapshotResponseType extends WalrusDataGetResponseType {
 public class GetWalrusSnapshotSizeType extends WalrusDataGetRequestType {
 }
 
+public class WalrusComponentMessageType extends ComponentMessageType {	
+}
+
 public class GetWalrusSnapshotSizeResponseType extends WalrusDataGetResponseType {
+}
+
+public class WalrusComponentMessageResponseType extends ComponentMessageResponseType {	
 }
 
 public class WalrusUsageStatsRecord extends StatEventRecord {

@@ -89,6 +89,11 @@
 						expectedType="edu.ucsb.eucalyptus.msgs.StorageComponentMessageType" />
 				</filtering-router>
 				<filtering-router>
+					<outbound-endpoint ref="WalrusRequestQueueEndpoint" />
+					<payload-type-filter
+						expectedType="edu.ucsb.eucalyptus.msgs.WalrusComponentMessageType" />
+				</filtering-router>
+				<filtering-router>
 					<outbound-endpoint ref="ReplyQueueEndpoint" />
 					<payload-type-filter
 						expectedType="edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType" />

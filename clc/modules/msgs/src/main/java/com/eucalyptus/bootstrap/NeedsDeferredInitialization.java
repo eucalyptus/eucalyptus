@@ -59,66 +59,17 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman <neil@eucalyptus.com>
  */
+package com.eucalyptus.bootstrap;
 
-package edu.ucsb.eucalyptus.ic;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Collections;
-import java.util.List;
-
-import org.apache.log4j.Logger;
-import org.mule.message.ExceptionMessage;
-
-import com.eucalyptus.binding.BindingManager;
-
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.util.ReplyCoordinator;
-import edu.ucsb.eucalyptus.msgs.*;
-
-public class WalrusReplyQueue {
-
-	private static Logger LOG = Logger.getLogger( WalrusReplyQueue.class );
-
-	private static ReplyCoordinator replies = new ReplyCoordinator( 3600000 );
-
-	private static int SC_DECRYPTION_FAILED = 566;
-	public void handle( EucalyptusMessage msg )
-	{
-		replies.putMessage( msg );
-	}
-
-	public void handle( ExceptionMessage muleMsg )
-	{
-		try
-		{
-			Object requestMsg = muleMsg.getPayload();
-			String requestString = requestMsg.toString();
-			EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( requestString );
-			Throwable ex = muleMsg.getException().getCause();
-			EucalyptusMessage errMsg;
-
-
-			errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());
-			replies.putMessage( errMsg );
-		}
-		catch ( Exception e )
-		{
-			LOG.error( e, e );
-		}
-	}
-
-	public static EucalyptusMessage getReply( String msgId )
-	{
-		EucalyptusMessage msg = null;
-		msg = replies.getMessage( msgId );
-		LOG.info( "walrus got reply to: " + msgId);
-		return msg;
-	}
+@Target({ ElementType.TYPE, ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface NeedsDeferredInitialization {
+     public Component component() default Component.any;
 }

@@ -69,7 +69,7 @@
     <!--================================== BUILD TARGETS ==================================-->
     <target name="build-jni">
         <mkdir dir="include"/>
-        <javah classpathref="classpath" destdir="include" force="yes">
+        <javah classpath="${build.dir}" destdir="include" force="yes">
             <class name="com.eucalyptus.storage.LVM2Manager"/>
             <class name="com.eucalyptus.storage.AOEManager"/>
         </javah>

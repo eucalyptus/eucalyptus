@@ -81,7 +81,6 @@ import com.eucalyptus.util.StorageProperties;
 import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
-import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class EquallogicProvider implements SANProvider {
@@ -171,7 +170,7 @@ public class EquallogicProvider implements SANProvider {
 	}
 
 	public String connectTarget(String iqn) throws EucalyptusCloudException {
-		EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(TARGET_USERNAME));
 			String encryptedPassword = userInfo.getEncryptedPassword();
@@ -193,7 +192,7 @@ public class EquallogicProvider implements SANProvider {
 	}
 
 	public String getVolumeProperty(String volumeId) {
-		EntityWrapper<EquallogicVolumeInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<EquallogicVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			EquallogicVolumeInfo searchVolumeInfo = new EquallogicVolumeInfo(volumeId);
 			EquallogicVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
@@ -351,7 +350,7 @@ public class EquallogicProvider implements SANProvider {
 				throw new EucalyptusCloudException("Not enabled. Will not run command.");
 			}
 		}
-		EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(userName));
 			String returnValue = execCommand("stty hardwrap off\rchapuser delete " + userName + "\r");
@@ -367,7 +366,7 @@ public class EquallogicProvider implements SANProvider {
 	}
 
 	public void addUser(String userName){
-		EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(userName));
 			db.commit();
@@ -378,7 +377,7 @@ public class EquallogicProvider implements SANProvider {
 				String returnValue = execCommand("stty hardwrap off\rchapuser create " + userName + "\r");
 				String password = matchPattern(returnValue, USER_CREATE_PATTERN);
 				if(password != null) {
-					db = StorageController.getEntityWrapper();
+					db = StorageProperties.getEntityWrapper();
 					CHAPUserInfo userInfo = new CHAPUserInfo(userName, BlockStorageUtil.encryptSCTargetPassword(password));
 					db.add(userInfo);
 					db.commit();
@@ -387,7 +386,7 @@ public class EquallogicProvider implements SANProvider {
 					returnValue = execCommand("stty hardwrap off\rchapuser show " + userName + "\r");
 					password = matchPattern(returnValue, USER_SHOW_PATTERN);
 					if(password != null) {
-						db = StorageController.getEntityWrapper();
+						db = StorageProperties.getEntityWrapper();
 						CHAPUserInfo userInfo = new CHAPUserInfo(userName, BlockStorageUtil.encryptSCTargetPassword(password));
 						db.add(userInfo);
 						db.commit();
@@ -401,7 +400,7 @@ public class EquallogicProvider implements SANProvider {
 	}
 
 	public void disconnectTarget(String iqn) throws EucalyptusCloudException {
-		EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(TARGET_USERNAME));
 			String encryptedPassword = userInfo.getEncryptedPassword();

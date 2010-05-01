@@ -77,13 +77,6 @@
             <outbound-endpoint ref="DNSReplyQueueWS"/>
         </default-service-exception-strategy>
 
-        <service name="DNS">
-            <inbound>
-                <inbound-endpoint ref="DNSWS"/>
-            </inbound>
-            <component class="com.eucalyptus.ic.DNS"/>
-        </service>
-
         <service name="DNSRequestQueue">
             <inbound>
                 <vm:inbound-endpoint address="vm://DNSRequestQueue"/>

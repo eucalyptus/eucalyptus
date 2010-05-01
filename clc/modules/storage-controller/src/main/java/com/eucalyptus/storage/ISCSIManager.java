@@ -89,7 +89,6 @@ import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
-import edu.ucsb.eucalyptus.ic.StorageController;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -216,7 +215,7 @@ public class ISCSIManager implements StorageExportManager {
 
 	@Override
 	public void configure() {
-		EntityWrapper<ISCSIMetaInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<ISCSIMetaInfo> db = StorageProperties.getEntityWrapper();
 		ISCSIMetaInfo metaInfo = new ISCSIMetaInfo();
 		try {
 			List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
@@ -232,7 +231,7 @@ public class ISCSIManager implements StorageExportManager {
 			db.rollback();
 			LOG.error(e);
 		}
-		EntityWrapper<CHAPUserInfo> dbUser = StorageController.getEntityWrapper();
+		EntityWrapper<CHAPUserInfo> dbUser = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
 			//check if account actually exists, if not create it.			
@@ -265,7 +264,7 @@ public class ISCSIManager implements StorageExportManager {
 		if(volumeInfo instanceof ISCSIVolumeInfo) {
 			ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;		
 			ISCSIMetaInfo metaInfo = new ISCSIMetaInfo();
-			EntityWrapper<ISCSIMetaInfo> db = StorageController.getEntityWrapper();
+			EntityWrapper<ISCSIMetaInfo> db = StorageProperties.getEntityWrapper();
 			List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
 			if(metaInfoList.size() > 0) {
 				ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
@@ -329,7 +328,7 @@ public class ISCSIManager implements StorageExportManager {
 	}
 
 	public String getEncryptedPassword() throws EucalyptusCloudException {
-		EntityWrapper<CHAPUserInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo("eucalyptus"));
 			String encryptedPassword;
