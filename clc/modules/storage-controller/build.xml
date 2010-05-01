@@ -70,8 +70,8 @@
     <target name="build-jni">
         <mkdir dir="include"/>
         <javah classpath="${build.dir}" destdir="include" force="yes">
-            <class name="edu.ucsb.eucalyptus.storage.LVM2Manager"/>
-            <class name="edu.ucsb.eucalyptus.storage.AOEManager"/>
+            <class name="com.eucalyptus.storage.LVM2Manager"/>
+            <class name="com.eucalyptus.storage.AOEManager"/>
         </javah>
     </target>
 

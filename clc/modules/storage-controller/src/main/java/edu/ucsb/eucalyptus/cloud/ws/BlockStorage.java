@@ -78,6 +78,9 @@ import org.apache.tools.ant.util.DateUtils;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.storage.BlockStorageChecker;
+import com.eucalyptus.storage.BlockStorageManagerFactory;
+import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.ws.util.Messaging;
@@ -113,9 +116,6 @@ import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
-import edu.ucsb.eucalyptus.storage.BlockStorageChecker;
-import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
-import edu.ucsb.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
