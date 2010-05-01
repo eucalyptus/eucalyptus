@@ -77,13 +77,6 @@
             <outbound-endpoint ref="WalrusReplyQueueWS"/>
         </default-service-exception-strategy>
 
-        <!--  <service name="Walrus">
-            <inbound>
-                <inbound-endpoint ref="WalrusWS"/>
-            </inbound>
-            <component class="edu.ucsb.eucalyptus.ic.Walrus"/>
-        </service>-->
-
         <service name="WalrusRequestQueue">
             <inbound>
                 <inbound-endpoint ref="WalrusRequestQueueEndpoint"/>

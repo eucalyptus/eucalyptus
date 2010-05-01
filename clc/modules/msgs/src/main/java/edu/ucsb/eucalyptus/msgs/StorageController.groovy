@@ -258,6 +258,12 @@ public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
 	ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
 }
 
+public class StorageComponentMessageType extends ComponentMessageType {       
+}
+ 
+public class StorageComponentMessageResponseType extends ComponentMessageResponseType {
+}
+
 public class StorageControllerHeartbeatMessage extends HeartbeatMessage {
 
 	def StorageControllerHeartbeatMessage() {}

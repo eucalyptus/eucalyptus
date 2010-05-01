@@ -80,7 +80,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.ws.util.Messaging;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
