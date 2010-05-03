@@ -95,6 +95,8 @@ import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.auth.login.WalrusInternalWrappedCredentials;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
@@ -149,6 +151,13 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			if( httpRequest.containsHeader( StorageProperties.StorageParameters.EucaCert.toString( ) ) ) {
 				certString= httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaCert.toString());
 			}
+//      try {
+//        SecurityContext.getLoginContext( new WalrusInternalWrappedCredentials( httpRequest.getCorrelationId( ), verb, addr, date, signature, certString ) ).login( );
+//      } catch ( Exception e1 ) {
+//        LOG.debug( e1, e1 );
+//      }
+
+			
 			String data = verb + "\n" + date + "\n" + addr + "\n";
 
 			Signature sig;

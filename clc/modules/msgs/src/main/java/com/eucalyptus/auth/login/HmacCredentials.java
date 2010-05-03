@@ -3,9 +3,8 @@ package com.eucalyptus.auth.login;
 import java.util.Map;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.util.SecurityParameter;
-import com.eucalyptus.http.MappingHttpRequest;
 
-public class HmacCredentials extends WrappedCredentials<MappingHttpRequest> {
+public class HmacCredentials extends WrappedCredentials<String> {
   private Hmac    signatureMethod;
   private Integer signatureVersion;
   private String  queryId;
@@ -15,16 +14,16 @@ public class HmacCredentials extends WrappedCredentials<MappingHttpRequest> {
   private String  headerHost;
   private String  headerPort;
   private final Map<String,String> parameters;
-  public HmacCredentials( String correlationId, MappingHttpRequest loginData, String signature, Integer signatureVersion, Hmac hmacType ) {
-    super( correlationId, loginData );
-    this.parameters = loginData.getParameters( );
+  public HmacCredentials( String correlationId, String signature, Map<String,String> parameters, String verb, String servicePath, String headerHost, Integer signatureVersion, Hmac hmacType ) {
+    super( correlationId, signature );
+    this.parameters = parameters;
     this.queryId = this.parameters.get( SecurityParameter.AWSAccessKeyId.toString( ) );
     this.signature = signature;
     this.signatureVersion = signatureVersion;
     this.signatureMethod = hmacType;
-    this.verb = this.getLoginData( ).getMethod( ).getName( );
-    this.servicePath = this.getLoginData( ).getServicePath( );
-    this.headerHost = this.getLoginData( ).getHeader( "Host" );
+    this.verb = verb;
+    this.servicePath = servicePath;
+    this.headerHost = headerHost;
     this.headerPort = "8773";
     if ( headerHost != null && headerHost.contains( ":" ) ) {
       String[] hostTokens = this.headerHost.split( ":" );
