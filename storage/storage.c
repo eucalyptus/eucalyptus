@@ -1147,11 +1147,11 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
       if (e) {
 	logprintfl(EUCAERROR, "could not create windows bootup script floppy\n");
       }
-    }
-    
-    /* embed the key, which is contained in keyName */
-    char *key_template = NULL;
-    if (keyName && strlen(keyName)) {
+    } else {
+      
+      /* embed the key, which is contained in keyName */
+      char *key_template = NULL;
+      if (keyName && strlen(keyName)) {
         int key_len = strlen(keyName);
         int fd = -1;
         int ret;
@@ -1159,35 +1159,36 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
         key_template = strdup("/tmp/sckey.XXXXXX");
         
         if (((fd = mkstemp(key_template)) < 0)) {
-            logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
+	  logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
         } else if ((ret = write (fd, keyName, key_len))<key_len) {
-            logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
+	  logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
         } else {
-            close (fd);
-            logprintfl (EUCAINFO, "adding key%s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
+	  close (fd);
+	  logprintfl (EUCAINFO, "adding key%s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
         }
-    } else { /* if no key was given, add_key just does tune2fs to up the filesystem mount date */
+      } else { /* if no key was given, add_key just does tune2fs to up the filesystem mount date */
         key_template = "";
         logprintfl (EUCAINFO, "running tune2fs on the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
-    }
-
-    /* do the key injection and/or tune2fs */
-    sem_p (s);
-    if (vrun("%s %d %s %s", add_key_command_path, mount_offset, image_path, key_template)!=0) {
+      }
+      
+      /* do the key injection and/or tune2fs */
+      sem_p (s);
+      if (vrun("%s %d %s %s", add_key_command_path, mount_offset, image_path, key_template)!=0) {
         logprintfl (EUCAERROR, "ERROR: key injection / tune2fs command failed\n");
         /* we proceed despite the failure since maybe user embedded the key
          * into the image; also tune2fs may fail on uncrecognized but valid
          * filesystems */
-    }
-    sem_v (s);
-    
-    if (strlen(key_template)) {
+      }
+      sem_v (s);
+      
+      if (strlen(key_template)) {
         if (unlink(key_template) != 0) {
-            logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
+	  logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
         }
         free (key_template);
+      }
     }
-    
+
     /* if the image is a root partition... */
     if (!convert_to_disk) {
         /* create swap partition */

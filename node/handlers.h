@@ -106,6 +106,8 @@ struct nc_state_t {
 	char disconnect_storage_cmd_path[MAX_PATH];
 	char get_storage_cmd_path[MAX_PATH];
 	char ncBundleUploadCmd[MAX_PATH];
+  	char ncCheckBucketCmd[MAX_PATH];
+  	char ncDeleteBundleCmd[MAX_PATH];
 };
 
 
@@ -243,5 +245,22 @@ void parse_target(char *dev_string);
 char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 char* get_iscsi_target(const char *storage_cmd_path, char *dev_string);
+
+// bundling structure
+struct bundling_params_t {
+	ncInstance * instance;
+	char * bucketName;
+	char * filePrefix;
+	char * walrusURL;
+	char * userPublicKey;
+	char * workPath; // work directory path
+	char * diskPath; // disk file path
+	char * eucalyptusHomePath; 
+	long long sizeMb; // diskPath size
+	char * ncBundleUploadCmd;
+  	char * ncCheckBucketCmd;
+  	char * ncDeleteBundleCmd;
+};
+
 #endif /* INCLUDE */
 

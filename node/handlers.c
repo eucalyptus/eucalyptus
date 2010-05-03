@@ -535,16 +535,6 @@ void *startup_thread (void * arg)
         return NULL;
     }
     
-    // TODO: check for 'platform' here when sent by CLC
-    /*
-      if (strstr(instance->ramdiskId, "windows") || strstr(instance->kernelId, "windows") || strstr(instance->ramdiskURL, "windows") || strstr(instance->kernelURL, "windows")) {
-	ramdisk = strdup("");
-	kernel = strdup("");
-      } else {
-	ramdisk = strdup(instance->ramdiskId);
-	kernel = strdup(instance->kernelId);
-      }
-    */
     error = get_instance_xml (nc_state.gen_libvirt_cmd_path,
 		              instance->userId, instance->instanceId, 
 			      instance->platform,
@@ -873,8 +863,27 @@ static int init (void)
 	tmp = getConfString(configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
 	if (tmp) {
 	  snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, "%s", tmp);
+	  free(tmp);
 	} else {
 	  snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, "%s", EUCALYPTUS_NC_BUNDLE_UPLOAD); // default value
+	}
+
+	// set NC helper path
+	tmp = getConfString(configFiles, 2, CONFIG_NC_CHECK_BUCKET);
+	if (tmp) {
+	  snprintf (nc_state.ncCheckBucketCmd, MAX_PATH, "%s", tmp);
+	  free(tmp);
+	} else {
+	  snprintf (nc_state.ncCheckBucketCmd, MAX_PATH, "%s", EUCALYPTUS_NC_CHECK_BUCKET); // default value
+	}
+
+	// set NC helper path
+	tmp = getConfString(configFiles, 2, CONFIG_NC_DELETE_BUNDLE);
+	if (tmp) {
+	  snprintf (nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", tmp);
+	  free(tmp);
+	} else {
+	  snprintf (nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", EUCALYPTUS_NC_DELETE_BUNDLE); // default value
 	}
 
 	/* start the monitoring thread */

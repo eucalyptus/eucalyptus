@@ -381,19 +381,6 @@ doDetachVolume(	struct nc_state_t *nc,
 	return ERROR_FATAL;
 }
 
-struct bundling_params_t {
-	ncInstance * instance;
-	char * bucketName;
-	char * filePrefix;
-	char * walrusURL;
-	char * userPublicKey;
-	char * workPath; // work directory path
-	char * diskPath; // disk file path
-	char * eucalyptusHomePath; 
-	long long sizeMb; // diskPath size
-	char * ncBundleUploadCmd;
-};
-
 // helper for changing bundling task state and stateName together
 static void change_bundling_state (ncInstance * instance, bundling_progress state)
 {
@@ -401,9 +388,53 @@ static void change_bundling_state (ncInstance * instance, bundling_progress stat
 	strncpy (instance->bundleTaskStateName, bundling_progress_names [state], CHAR_BUFFER_SIZE);
 }
 
+static void set_bundling_env(struct bundling_params_t *params) {
+  char buf[MAX_PATH];
+
+  // set up environment for euca2ools
+  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+  setenv("EC2_CERT", buf, 1);
+  
+  snprintf(buf, MAX_PATH, "IGNORED");
+  setenv("EC2_SECRET_KEY", buf, 1);
+  
+  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/cloud-cert.pem", params->eucalyptusHomePath);
+  setenv("EUCALYPTUS_CERT", buf, 1);
+  
+  snprintf(buf, MAX_PATH, "%s", params->walrusURL);
+  setenv("S3_URL", buf, 1);
+  
+  snprintf(buf, MAX_PATH, "%s", params->userPublicKey);
+  setenv("EC2_ACCESS_KEY", buf, 1);
+  
+  snprintf(buf, MAX_PATH, "123456789012");
+  setenv("EC2_USER_ID", buf, 1);
+  
+  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+  setenv("EUCA_CERT", buf, 1);
+  
+  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-pk.pem", params->eucalyptusHomePath);
+  setenv("EUCA_PRIVATE_KEY", buf, 1);
+}
+
+static void unset_bundling_env(void) {
+  // unset up environment for euca2ools
+  unsetenv("EC2_CERT");
+  unsetenv("EC2_SECRET_KEY");
+  unsetenv("EUCALYPTUS_CERT");
+  unsetenv("S3_URL");
+  unsetenv("EC2_ACCESS_KEY");
+  unsetenv("EC2_USER_ID");
+  unsetenv("EUCA_CERT");  
+  unsetenv("EUCA_PRIVATE_KEY");
+}
+
 // helper for cleaning up 
 static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_t * params, instance_states state, bundling_progress result)
 {
+        char cmd[MAX_PATH];
+	char buf[MAX_PATH];
+	int rc;
 	logprintfl (EUCAINFO, "cleanup_bundling_task: instance %s bundling task result=%s\n", instance->instanceId, bundling_progress_names [result]);
 	sem_p (inst_sem);
 	change_bundling_state (instance, result);
@@ -412,6 +443,44 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 	sem_v (inst_sem);
 
 	if (params) {
+	        // if the result was failed or cancelled, clean up walrus state
+	        if (result == BUNDLING_FAILED || result == BUNDLING_CANCELLED) {
+		  if (!instance->bundleBucketExists) {
+		    snprintf(cmd, MAX_PATH, "%s -b %s --euca-auth --clear", params->ncDeleteBundleCmd, params->bucketName);
+		  } else {
+		    snprintf(cmd, MAX_PATH, "%s -b %s -p %s --euca-auth ", params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
+		  }
+		  // set up environment for euca2ools
+		  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		  setenv("EC2_CERT", buf, 1);
+		  
+		  snprintf(buf, MAX_PATH, "IGNORED");
+		  setenv("EC2_SECRET_KEY", buf, 1);
+		  
+		  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/cloud-cert.pem", params->eucalyptusHomePath);
+		  setenv("EUCALYPTUS_CERT", buf, 1);
+		  
+		  snprintf(buf, MAX_PATH, "%s", params->walrusURL);
+		  setenv("S3_URL", buf, 1);
+		  
+		  snprintf(buf, MAX_PATH, "%s", params->userPublicKey);
+		  setenv("EC2_ACCESS_KEY", buf, 1);
+		  
+		  snprintf(buf, MAX_PATH, "123456789012");
+		  setenv("EC2_USER_ID", buf, 1);
+		  
+		  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		  setenv("EUCA_CERT", buf, 1);
+		  
+		  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-pk.pem", params->eucalyptusHomePath);
+		  setenv("EUCA_PRIVATE_KEY", buf, 1);
+		  logprintfl(EUCADEBUG, "cleanup_bundling_task: running cmd '%s'\n", cmd);
+		  rc = system(cmd);
+		  rc = rc>>8;
+		  if (rc) {
+		    logprintfl(EUCAWARN, "cleanup_bundling_task: bucket cleanup cmd '%s' failed with rc '%d'\n", cmd, rc);
+		  }
+		}
 		if (params->workPath) {
 			free_work_path (instance->instanceId, instance->userId, params->sizeMb);
 			free (params->workPath);
@@ -423,6 +492,8 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 		if (params->diskPath) free (params->diskPath);
 		if (params->eucalyptusHomePath) free (params->eucalyptusHomePath);
 		if (params->ncBundleUploadCmd) free (params->ncBundleUploadCmd);
+		if (params->ncCheckBucketCmd) free (params->ncCheckBucketCmd);
+		if (params->ncDeleteBundleCmd) free (params->ncDeleteBundleCmd);
 		free (params);
 	}
 
@@ -433,6 +504,8 @@ static void * bundling_thread (void *arg)
 {
 	struct bundling_params_t * params = (struct bundling_params_t *)arg;
 	ncInstance * instance = params->instance;
+	char cmd[MAX_PATH];
+	char buf[MAX_PATH];
 
 	logprintfl (EUCAINFO, "bundling_thread: started bundling instance %s\n", instance->instanceId);
 
@@ -445,58 +518,43 @@ static void * bundling_thread (void *arg)
 	} else {
 		// USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
 	        int pid, status;
-		char cmd[MAX_PATH];
-		snprintf(cmd, MAX_PATH, 
-				 "EC2_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem "
-				 "EC2_SECRET_KEY=HALOTHAR "
-				 "EUCALYPTUS_CERT=%s/var/lib/eucalyptus/keys/cloud-cert.pem "
-				 "S3_URL=%s "
-				 "EC2_ACCESS_KEY=%s "
-				 "EC2_USER_ID=%s "
-				 "EUCA_CERT=%s/var/lib/eucalyptus/keys/node-cert.pem "
-				 "EUCA_PRIVATE_KEY=%s/var/lib/eucalyptus/keys/node-pk.pem "
-				 "%s -i %s -d %s -b %s", 
-				 params->eucalyptusHomePath, 
-				 params->eucalyptusHomePath, 
-				 params->walrusURL, 
-				 params->userPublicKey, 
-				 "123456789012", 
-				 params->eucalyptusHomePath, 
-				 params->eucalyptusHomePath, 
-				 params->ncBundleUploadCmd, dstDiskPath, params->workPath, params->bucketName);
+		
+		// set up environment for euca2ools
+		snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		setenv("EC2_CERT", buf, 1);
+		
+		snprintf(buf, MAX_PATH, "IGNORED");
+		setenv("EC2_SECRET_KEY", buf, 1);
+		
+		snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/cloud-cert.pem", params->eucalyptusHomePath);
+		setenv("EUCALYPTUS_CERT", buf, 1);
+		
+		snprintf(buf, MAX_PATH, "%s", params->walrusURL);
+		setenv("S3_URL", buf, 1);
+		
+		snprintf(buf, MAX_PATH, "%s", params->userPublicKey);
+		setenv("EC2_ACCESS_KEY", buf, 1);
+		
+		snprintf(buf, MAX_PATH, "123456789012");
+		setenv("EC2_USER_ID", buf, 1);
+		
+		snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		setenv("EUCA_CERT", buf, 1);
+		
+		snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-pk.pem", params->eucalyptusHomePath);
+		setenv("EUCA_PRIVATE_KEY", buf, 1);
+
+		// check to see if the bucket exists in advance
+		snprintf(cmd, MAX_PATH, "%s -b %s --euca-auth", params->ncCheckBucketCmd, params->bucketName);
 		logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s'\n", cmd);
+		rc = system(cmd);
+		rc = rc>>8;
+		instance->bundleBucketExists = rc;
+		
 		pid = fork();
 		if (!pid) {
-		  char buf[1024];
-
-		  snprintf(buf, 1024, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
-		  setenv("EC2_CERT", buf, 1);
-
-		  snprintf(buf, 1024, "IGNORED");
-		  setenv("EC2_SECRET_KEY", buf, 1);
-
-		  snprintf(buf, 1024, "%s/var/lib/eucalyptus/keys/cloud-cert.pem", params->eucalyptusHomePath);
-		  setenv("EUCALYPTUS_CERT", buf, 1);
-
-		  snprintf(buf, 1024, "%s", params->walrusURL);
-		  setenv("S3_URL", buf, 1);
-		  
-		  snprintf(buf, 1024, "%s", params->userPublicKey);
-		  setenv("EC2_ACCESS_KEY", buf, 1);
-
-		  snprintf(buf, 1024, "123456789012");
-		  setenv("EC2_USER_ID", buf, 1);
-
-		  snprintf(buf, 1024, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
-		  setenv("EUCA_CERT", buf, 1);
-
-		  snprintf(buf, 1024, "%s/var/lib/eucalyptus/keys/node-pk.pem", params->eucalyptusHomePath);
-		  setenv("EUCA_PRIVATE_KEY", buf, 1);
-
-		  exit(execl(params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", dstDiskPath, "-d", params->workPath, "-b", params->bucketName, NULL));
-		  //		  rc = system(cmd);
-		  //		  rc = rc>>8;
-		  //		  exit (rc);
+		  logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s -i %s -d %s -b %s --euca-auth'\n", params->ncBundleUploadCmd, dstDiskPath, params->workPath, params->bucketName);
+		  exit(execl(params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", dstDiskPath, "-d", params->workPath, "-b", params->bucketName, "--euca-auth", NULL));
 		} else {
 		  instance->bundlePid = pid;
 		  rc = waitpid(pid, &status, 0);
@@ -563,6 +621,8 @@ doBundleInstance(
 	params->userPublicKey = strdup (userPublicKey);
 	params->eucalyptusHomePath = strdup (nc->home);
 	params->ncBundleUploadCmd = strdup (nc->ncBundleUploadCmd);
+	params->ncCheckBucketCmd = strdup (nc->ncCheckBucketCmd);
+	params->ncDeleteBundleCmd = strdup (nc->ncDeleteBundleCmd);
 
 	params->sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
 	if (params->sizeMb<1)
@@ -612,8 +672,7 @@ doCancelBundleTask(
     logprintfl (EUCAERROR, "doCancelBundleTask: instance %s not found\n", instanceId);
     return ERROR;
   } 
-  //  logprintfl(EUCADEBUG, "WTF: pid=%d check=%d\n", instance->bundlePid, check_process(instance->bundlePid, "euca-nc-bundle-upload"));
-  if (instance->bundlePid > 0 && !check_process(instance->bundlePid, "euca-nc-bundle-upload")) {
+  if (instance->bundlePid > 0 && !check_process(instance->bundlePid, "euca-bundle-upload")) {
     logprintfl(EUCADEBUG, "doCancelBundleTask: found bundlePid '%d', sending kill signal...\n", instance->bundlePid);
     kill(instance->bundlePid, 9);
   }
