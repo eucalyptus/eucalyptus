@@ -763,7 +763,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   
   logprintfl(EUCADEBUG,"AttachVolume(): done.\n");
   
-  shawn(); 
+  shawn();
 
   return(ret);
 }
@@ -870,7 +870,7 @@ int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **source
   logprintfl(EUCADEBUG,"ConfigureNetwork(): done\n");
   
   shawn();
-
+  
   if (fail) {
     return(1);
   }
@@ -958,7 +958,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   }
   
   logprintfl(EUCADEBUG,"AssignAddress(): done\n");  
-
+  
   shawn();
 
   return(ret);
@@ -1052,7 +1052,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   }
   
   logprintfl(EUCADEBUG,"UnassignAddress(): done\n");  
-
+  
   shawn();
 
   return(ret);
@@ -1087,7 +1087,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   logprintfl(EUCADEBUG,"StopNetwork(): done\n");
 
   shawn();
-
+  
   return(ret);
 }
 
