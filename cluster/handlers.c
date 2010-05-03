@@ -2550,17 +2550,6 @@ int init_thread(void) {
       }
     }
 
-    /*
-    if (bundleCache == NULL) {
-      rc = setup_shared_buffer((void **)&bundleCache, "/eucalyptusCCBundleCache", sizeof(ccBundleCache), &(locks[BUNDLECACHE]), "/eucalyptusCCBundleCacheLock", SHARED_FILE);
-      if (rc != 0) {
-	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccBundleCache, exiting...\n");
-	sem_mypost(INIT);
-	exit(1);
-      }
-    }
-    */
-
     sem_mypost(INIT);
     thread_init=1;
   }
