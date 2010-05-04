@@ -150,4 +150,37 @@ public interface EucalyptusWebBackendAsync {
 
 	void getDownloads(String sessionId, String downloadsUrl, final AsyncCallback<List<DownloadsWeb>> async)
 	;
+	
+	void getGroups(String sessionId, String name, final AsyncCallback<List<GroupInfoWeb>> async)
+	;
+	
+	void getUsersByGroups(String sessionId, List<String> groupNames, final AsyncCallback<List<UserInfoWeb>> async)
+	;
+	
+	void addGroup(String sessionId, GroupInfoWeb group, final AsyncCallback<Void> async)
+	;
+	
+	void updateGroup(String sessionId, GroupInfoWeb group, final AsyncCallback<Void> async)
+	;
+	
+	void getGroupsByUser(String sessionId, String userName, final AsyncCallback<List<String>> async)
+	;
+	
+	void deleteGroups(String sessionId, List<String> groupNames, final AsyncCallback<Void> async)
+	;
+	
+	void addUser(String sessionId, UserInfoWeb user, List<String> groupNames, final AsyncCallback<Void> async)
+	;
+	
+	void updateUser(String sessionId, UserInfoWeb user, List<String> groupNames, final AsyncCallback<Void> async)
+	;
+	
+	void deleteUsers(String sessionId, List<String> userNames, final AsyncCallback<Void> async)
+	;
+	
+	void addUsersToGroups(String sessionId, List<String> userNames, List<String> groupNames, final AsyncCallback<Void> async)
+	;
+	
+	void removeUsersFromGroups(String sessionId, List<String> userNames, List<String> groupNames, final AsyncCallback<Void> async)
+	;
 }

@@ -68,6 +68,7 @@ package edu.ucsb.eucalyptus.admin.server;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
@@ -78,6 +79,7 @@ import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.DownloadsWeb;
 import edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackend;
+import edu.ucsb.eucalyptus.admin.client.GroupInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
@@ -94,26 +96,130 @@ import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements EucalyptusWebBackend {
 
 	static UserInfoWeb adminUser = new UserInfoWeb();
-	static Set<UserInfoWeb> users = new HashSet<UserInfoWeb>();
+	static Map<String, UserInfoWeb> users = new HashMap<String, UserInfoWeb>();
+	static Map<String, GroupInfoWeb> groups = new HashMap<String, GroupInfoWeb>();
+	static Map<String, Set<String>> groupUsers = new HashMap<String, Set<String>>();
 	
 	static {
-		adminUser.setUserName("admin");
-		adminUser.setIsAdministrator(true); // so we see all tabs
-		adminUser.setIsApproved(true);
-		adminUser.setIsConfirmed(true);
-		adminUser.setIsEnabled(true);
-		adminUser.setEmail("foo@bar"); // so we skip first-time login screen
-		users.add(adminUser);
+		GroupInfoWeb group;
+		group = new GroupInfoWeb();
+		group.name = "research";
+		group.zone = "cluster1";
+		addMockGroup(group);
+		group = new GroupInfoWeb();
+		group.name = "product";
+		group.zone = "cluster2";
+		addMockGroup(group);
 		
-		for (int i=0; i<9; i++) {
-			UserInfoWeb newUser = new UserInfoWeb();
-			newUser.setUserName("user" + i);
-			newUser.setEmail("foo" + i + "@bar");
-			newUser.setIsAdministrator(false);
-			newUser.setIsApproved((i%2==0)?false:true);
-			newUser.setIsConfirmed((i%3==0)?false:true);
-			newUser.setIsEnabled((i%4==0)?false:true);
-			users.add(newUser);
+		List<String> groupNames = new ArrayList<String>();
+		
+		adminUser.setUserName("admin");
+		adminUser.setRealName("Jack Bauer");
+		adminUser.setAdministrator(true); // so we see all tabs
+		adminUser.setAffiliation("IT");
+		adminUser.setApproved(true);
+		adminUser.setConfirmed(true);
+		adminUser.setEnabled(true);
+		adminUser.setEmail("admin@foobar.com"); // so we skip first-time login screen
+		groupNames.clear();
+		groupNames.add("research");
+		groupNames.add("product");
+		addMockUser(adminUser, groupNames);
+		
+		UserInfoWeb newUser = new UserInfoWeb();
+		newUser.setUserName("tomh");
+		newUser.setRealName("Tom Hanks");
+		newUser.setEmail("thanks@foobar.com");
+		newUser.setAdministrator(false);
+		newUser.setAffiliation("lab");
+		newUser.setApproved(true);
+		newUser.setConfirmed(true);
+		newUser.setEnabled(true);
+		groupNames.clear();
+		groupNames.add("research");
+		addMockUser(newUser, groupNames);
+		
+		newUser = new UserInfoWeb();
+		newUser.setUserName("hford");
+		newUser.setRealName("Harrison Ford");
+		newUser.setEmail("hford@foobar.com");
+		newUser.setAdministrator(false);
+		newUser.setAffiliation("incubation");
+		newUser.setApproved(true);
+		newUser.setConfirmed(true);
+		newUser.setEnabled(true);
+		groupNames.clear();
+		groupNames.add("research");
+		addMockUser(newUser, groupNames);
+		
+		newUser = new UserInfoWeb();
+		newUser.setUserName("cfisher");
+		newUser.setRealName("Carrie Fisher");
+		newUser.setEmail("cfisher@foobar.com");
+		newUser.setAdministrator(false);
+		newUser.setAffiliation("sales");
+		newUser.setApproved(true);
+		newUser.setConfirmed(true);
+		newUser.setEnabled(true);
+		groupNames.clear();
+		groupNames.add("product");
+		addMockUser(newUser, groupNames);
+		
+		newUser = new UserInfoWeb();
+		newUser.setUserName("mhamill");
+		newUser.setRealName("Mark Hamill");
+		newUser.setEmail("mhamill@foobar.com");
+		newUser.setAdministrator(false);
+		newUser.setAffiliation("support");
+		newUser.setApproved(true);
+		newUser.setConfirmed(true);
+		newUser.setEnabled(true);
+		groupNames.clear();
+		groupNames.add("product");
+		addMockUser(newUser, groupNames);
+	}
+	
+	private static void addMockGroup(GroupInfoWeb group) {
+		groups.put(group.name, group);
+		groupUsers.put(group.name, new HashSet<String>());
+	}
+	
+	private static void updateMockGroup(GroupInfoWeb group) {
+		groups.put(group.name, group);
+	}
+	
+	private static void addMockUser(UserInfoWeb user, List<String> groupNames) {
+		users.put(user.getUserName(), user);
+		for (String groupName : groupNames) {
+			groupUsers.get(groupName).add(user.getUserName());
+		}
+	}
+	
+	private static void updateMockUser(UserInfoWeb user, List<String> groupNames) {
+		users.put(user.getUserName(), user);
+		Set<String> groupSet = new HashSet<String>(groupNames);
+		for (String groupName : groups.keySet()) {
+			if (groupSet.contains(groupName)) {
+				groupUsers.get(groupName).add(user.getUserName());
+			} else {
+				groupUsers.get(groupName).remove(user.getUserName());
+			}
+		}
+	}
+	
+	private static void deleteMockGroups(List<String> groupNames) {
+		for (String groupName : groupNames) {
+			groups.remove(groupName);
+			groupUsers.remove(groupName);
+		}
+	}
+	
+	private static void deleteMockUsers(List<String> userNames) {
+		for (String userName : userNames) {
+			users.remove(userName);
+			for (Set<String> userSet : groupUsers.values()) {
+				userSet.remove(userName);
+			}
 		}
 	}
 	
@@ -126,7 +232,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public String addUserRecord(String sessionId, UserInfoWeb user)
 	throws SerializableException
 	{
-		users.add(user);
+		users.put(user.getUserName(), user);
 		return "OK";
 	}
 
@@ -154,15 +260,15 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 	}
 
-	public List getUserRecord (String sessionId, String userId)
+	public List<UserInfoWeb> getUserRecord (String sessionId, String userId)
 	throws SerializableException
 	{
 		if (userId==null) {
-			List l = new ArrayList();
+			List<UserInfoWeb> l = new ArrayList<UserInfoWeb>();
 			l.add(adminUser);
 			return l;
 		} else {
-			return new ArrayList(users);
+			return new ArrayList<UserInfoWeb>(users.values());
 		}
 	}
 
@@ -231,7 +337,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public List<StorageInfoWeb> getStorageList(String sessionId) throws SerializableException
 	{
 		ArrayList<StorageInfoWeb> a = new ArrayList<StorageInfoWeb>();
-		StorageInfoWeb s = new StorageInfoWeb("CLUSTER", "hostname", 54321, 55, 555, new ArrayList<String>());
+		StorageInfoWeb s = new StorageInfoWeb("CLUSTER", "hostname", 54321, new ArrayList<String>());
 		a.add(s);
 		return a;
 	}
@@ -284,5 +390,75 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 	public List<DownloadsWeb> getDownloads(final String sessionId, final String downloadsUrl) throws SerializableException {
 		return new ArrayList<DownloadsWeb>();
+	}
+	
+	public List<GroupInfoWeb> getGroups(final String sessionId, final String name) throws Exception {
+		if ("".equals(name) || name == null) {
+			return new ArrayList<GroupInfoWeb>(groups.values());
+		}
+		List<GroupInfoWeb> result = new ArrayList<GroupInfoWeb>();
+		result.add(groups.get(name));
+		return result;
+	}
+	
+	public List<UserInfoWeb> getUsersByGroups(final String sessionId, final List<String> groupNames) throws Exception {
+		List<UserInfoWeb> result = new ArrayList<UserInfoWeb>();
+		Set<UserInfoWeb> resultSet = new HashSet<UserInfoWeb>();
+		for (String group : groupNames) {
+			Set<String> usersForGroup = groupUsers.get(group);
+			if (usersForGroup != null) {
+				for (String userName : usersForGroup.toArray(new String[0])) {
+					resultSet.add(users.get(userName));
+				}
+			}
+		}
+		result.addAll(resultSet);
+		return result;
+	}
+	
+	public void addGroup(final String sessionId, final GroupInfoWeb group) throws Exception {
+		addMockGroup(group);
+	}
+	
+	public void updateGroup(final String sessionId, final GroupInfoWeb group) throws Exception {
+		updateMockGroup(group);
+	}
+	
+	public List<String> getGroupsByUser(final String sessionId, final String userName) throws Exception {
+		List<String> groupNames = new ArrayList<String>();
+		for (String groupName : groupUsers.keySet()) {
+			if (groupUsers.get(groupName).contains(userName)) {
+				groupNames.add(groupName);
+			}
+		}
+		return groupNames;
+	}
+	
+	public void deleteGroups(final String sessionId, final List<String> groupNames) throws Exception {
+		deleteMockGroups(groupNames);
+	}
+	
+	public void addUser(final String sessionId, final UserInfoWeb user, final List<String> groupNames) throws Exception {
+		addMockUser(user, groupNames);
+	}
+	
+	public void updateUser(final String sessionId, final UserInfoWeb user, final List<String> groupNames) throws Exception {
+		updateMockUser(user, groupNames);
+	}
+	
+	public void deleteUsers(final String sessionId, final List<String> userNames) throws Exception {
+		deleteMockUsers(userNames);
+	}
+	
+	public void addUsersToGroups(final String sessionId, final List<String> userNames, final List<String> groupNames) throws Exception {
+		for (String groupName : groupNames) {
+			groupUsers.get(groupName).addAll(userNames);
+		}
+	}
+	
+	public void removeUsersFromGroups(final String sessionId, final List<String> userNames, final List<String> groupNames) throws Exception {
+		for (String groupName : groupNames) {
+			groupUsers.get(groupName).removeAll(userNames);
+		}
 	}
 }

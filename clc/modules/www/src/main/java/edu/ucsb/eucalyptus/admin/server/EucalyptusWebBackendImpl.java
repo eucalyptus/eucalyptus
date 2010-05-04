@@ -74,6 +74,7 @@ import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.DownloadsWeb;
 import edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackend;
+import edu.ucsb.eucalyptus.admin.client.GroupInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
@@ -895,5 +896,60 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		{
 			throw (RuntimeException)caught;
 		}
+	}
+
+	@Override
+	public void addGroup(String sessionId, GroupInfoWeb group) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void addUser(String sessionId, UserInfoWeb user,
+			List<String> groupNames) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void deleteGroups(String sessionId, List<String> groupNames)
+			throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public List<GroupInfoWeb> getGroups(String sessionId, String name)
+			throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<String> getGroupsByUser(String sessionId, String userName)
+			throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<UserInfoWeb> getUsersByGroups(String sessionId,
+			List<String> groupNames) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void updateGroup(String sessionId, GroupInfoWeb group)
+			throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void updateUser(String sessionId, UserInfoWeb user,
+			List<String> groupNames) throws Exception {
+		// TODO Auto-generated method stub
+		
 	}
 }
