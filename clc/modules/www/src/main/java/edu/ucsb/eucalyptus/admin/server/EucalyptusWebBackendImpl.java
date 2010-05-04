@@ -952,4 +952,22 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		// TODO Auto-generated method stub
 		
 	}
+	
+	@Override
+	public void deleteUsers(final String sessionId, 
+			final List<String> userNames) throws Exception {
+		// TODO
+	}
+	
+	@Override
+	public void addUsersToGroups(final String sessionId, 
+			final List<String> userNames, final List<String> groupNames) throws Exception {
+		// TODO
+	}
+	
+	@Override
+	public void removeUsersFromGroups(final String sessionId, 
+			final List<String> userNames, final List<String> groupNames) throws Exception {
+		// TODO
+	}
 }
