@@ -43,6 +43,7 @@ public class UserInfoType extends EucalyptusData {
 public class GroupInfoType extends EucalyptusData {
   String groupName;
   ArrayList<String> users = new ArrayList<String>();
+  ArrayList<String> authorizations = new ArrayList<String>();
   public GroupInfoType( String name ) {
     this.groupName = name;
   }
@@ -94,6 +95,11 @@ public class DeleteGroupMemberType extends EucalyptusMessage {
   String groupName;
   String userName;
 }
+public class GrantGroupAuthorizationType extends GroupManagementMessage {
+  String groupName;
+  String zoneName;
+}
+public class GrantGroupAuthorizationResponseType extends GroupManagementMessage {}
 public class DeleteGroupMemberResponseType extends GroupManagementMessage {}
 public class GrantGroupAdminType extends EucalyptusMessage {
   String groupName;

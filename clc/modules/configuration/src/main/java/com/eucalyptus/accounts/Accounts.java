@@ -10,12 +10,16 @@ import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.AddGroupMemberResponseType;
+import edu.ucsb.eucalyptus.msgs.AddGroupMemberType;
 import edu.ucsb.eucalyptus.msgs.AddGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.AddGroupType;
 import edu.ucsb.eucalyptus.msgs.AddUserResponseType;
@@ -28,6 +32,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeGroupsType;
 import edu.ucsb.eucalyptus.msgs.DescribeUsersResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeUsersType;
+import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationResponseType;
+import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationType;
 import edu.ucsb.eucalyptus.msgs.GroupInfoType;
 import edu.ucsb.eucalyptus.msgs.UserInfoType;
 
@@ -102,6 +108,7 @@ public class Accounts {
     reply.set_return( true );
     return reply;
   }
+  
   public DeleteGroupResponseType deleteUser( DeleteGroupType request ) throws EucalyptusCloudException {
     DeleteGroupResponseType reply = request.getReply( );
     reply.set_return( false );
@@ -121,8 +128,11 @@ public class Accounts {
     List<Group> groups = Groups.listAllGroups( );
     for ( Group g : groups ) {
       GroupInfoType groupinfo = new GroupInfoType( g.getName( ) );
-      for ( User u : ( List<User> ) EnumerationUtils.toList( g.members( ) ) ) {
+      for ( User u : g.getUsers( ) ) {
         groupinfo.getUsers( ).add( u.getName( ) );
+      }
+      for ( Authorization a : g.getAuthorizations( ) ) {
+        groupinfo.getAuthorizations( ).add( a.getName( ) + ":" + a.getValue( ) );
       }
       reply.getGroups( ).add( groupinfo );
     }
@@ -132,11 +142,35 @@ public class Accounts {
   public AddGroupResponseType addGroup( AddGroupType request ) throws EucalyptusCloudException {
     AddGroupResponseType reply = request.getReply( );
     try {
-      Groups.addGroup( request.getGroupName( ) );
+      Groups.addGroup( request.getGroupName( ) ).addAuthorization( new AvailabilityZonePermission( "testing" ) );
       reply.set_return( true );
     } catch ( GroupExistsException e ) {
       throw new EucalyptusCloudException( "Group already exists: " + request.getGroupName( ), e );
     }
     return reply;
+  }
+  
+  public AddGroupMemberResponseType addMember( AddGroupMemberType request ) throws EucalyptusCloudException {
+    AddGroupMemberResponseType reply = request.getReply( );
+    try {
+      Groups.lookupGroup( request.getGroupName( ) ).addMember( Users.lookupUser( request.getUserName( ) ) );
+      reply.set_return( true );
+    } catch ( NoSuchGroupException e ) {
+      throw new EucalyptusCloudException( "Failed to add user to group: " + request.getUserName( ) + " to group " + request.getGroupName( ), e );
+    } catch ( NoSuchUserException e ) {
+      throw new EucalyptusCloudException( "Failed to add user to group: " + request.getUserName( ) + " to group " + request.getGroupName( ), e );
+    }
+    return reply;    
+  }
+
+  public GrantGroupAuthorizationResponseType authorize( GrantGroupAuthorizationType request ) throws EucalyptusCloudException {
+    GrantGroupAuthorizationResponseType reply = request.getReply( );
+    try {
+      Groups.lookupGroup( request.getGroupName( ) ).addAuthorization( new AvailabilityZonePermission( request.getZoneName( ) ) );
+      reply.set_return( true );
+    } catch ( NoSuchGroupException e ) {
+      throw new EucalyptusCloudException( "Failed to add group authorization: " + request.getZoneName( ) + " to group " + request.getGroupName( ), e );
+    }
+    return reply;    
   }
 }
