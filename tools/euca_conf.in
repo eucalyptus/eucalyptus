@@ -1058,32 +1058,6 @@ createCloudURL () {
   return 0
 }
 
-getSecretKey() {
-    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
-	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-    else
-	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
-	exit 1
-    fi
-
-    FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
-    if [ "$FIELD" = "" ]; then
-	echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
-	export SKEY=""
-	return 1
-    fi
-    SKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1 | sed 's/[()]//g'))
-
-   FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Qq][Uu][Ee][Rr][Yy]_[Ii][Dd]/ {print NR}'`
-   if [ "$FIELD" = "" ]; then
-     echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
-     export AKEY=""
-     return 1
-   fi
-   AKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1 | sed 's/[()]//g'))
-
-    return 0
-}
 
 checkLocalService() {
     local SERVICE=""
@@ -1131,6 +1105,14 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
   if ! checkLocalService "CLC" ; then
   	exit 1
   fi
+  if [ ! -e ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem ]; then
+    openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
+    -name eucalyptus -name "eucalyptus" \
+    -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus \
+    -nodes | \
+    grep -A30 "friendlyName: eucalyptus" | \
+    grep -A26 "BEGIN RSA" >  ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
+  fi  
   DB_PASS=$(echo -n eucalyptus | \
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
