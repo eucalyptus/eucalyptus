@@ -62,63 +62,90 @@
  *
  * Author: Neil Soman neil@eucalyptus.com
  */
+package com.eucalyptus.auth.login;
 
-package com.eucalyptus.ws.handlers;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.cert.X509Certificate;
 
-import java.net.InetSocketAddress;
-import java.util.Calendar;
+import org.apache.log4j.Logger;
+import org.apache.xml.security.utils.Base64;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.bootstrap.Component;
 
-import edu.ucsb.eucalyptus.cloud.BucketLogData;
-import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
+public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedComponentCredentials> {
+	private static Logger LOG = Logger.getLogger( WalrusComponentLoginModule.class );
+	public WalrusComponentLoginModule() {}
 
-@ChannelPipelineCoverage("one")
-public class WalrusRESTLoggerInbound extends MessageStackHandler {
 	@Override
-	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage();
-			if(httpRequest.getMessage() instanceof WalrusRequestType) {
-				WalrusRequestType request = (WalrusRequestType) httpRequest.getMessage();
-				BucketLogData logData = request.getLogData();
-				if(logData != null) {
-					long currentTime = System.currentTimeMillis();
-					logData.setTotalTime(currentTime);
-					logData.setTurnAroundTime(currentTime);
-					logData.setUri(httpRequest.getUri());
-					String referrer = httpRequest.getHeader(HttpHeaders.Names.REFERER);
-					if(referrer != null)
-						logData.setReferrer(referrer);
-					String userAgent = httpRequest.getHeader(HttpHeaders.Names.USER_AGENT);
-					if(userAgent != null)
-						logData.setUserAgent(userAgent);
-					logData.setTimestamp(String.format("[%1$td/%1$tb/%1$tY:%1$tH:%1$tM:%1$tS %1$tz]", Calendar.getInstance()));
-					User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser();
-					if(user != null)
-						logData.setAccessorId(user.getName());
-					if(request.getBucket() != null)
-						logData.setBucketName(request.getBucket());
-					if(request.getKey() != null) 
-						logData.setKey(request.getKey());
-					if(ctx.getChannel().getRemoteAddress() instanceof InetSocketAddress) {
-						InetSocketAddress sockAddress = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
-						logData.setSourceAddress(sockAddress.getAddress().getHostAddress());
-					}
+	public boolean accepts( ) {
+		return super.getCallbackHandler( ) instanceof WalrusWrappedComponentCredentials;
+	}
+
+	@Override
+	public boolean authenticate( WalrusWrappedComponentCredentials credentials ) throws Exception {
+		Signature sig;
+		boolean valid = false;
+		String data = credentials.getLoginData();
+		String signature = credentials.getSignature();
+		try {
+			try {
+				PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getCertificate().getPublicKey();
+				sig = Signature.getInstance("SHA1withRSA");
+				sig.initVerify(publicKey);
+				sig.update(data.getBytes());
+				valid = sig.verify(Base64.decode(signature));
+			} catch ( Exception e ) {
+				LOG.warn ("Authentication: certificate not found in keystore");
+			} finally {
+				if( !valid && credentials.getCertString() != null ) {
+					try {
+						X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( credentials.getCertString() ) );
+						PublicKey publicKey = nodeCert.getPublicKey( );
+						sig = Signature.getInstance( "SHA1withRSA" );
+						sig.initVerify( publicKey );
+						sig.update( data.getBytes( ) );
+						valid = sig.verify( Base64.decode( signature ) );
+					} catch ( Exception e2 ) {
+						LOG.error ("Authentication error: " + e2.getMessage());
+						return false;
+					}            
 				}
-			}			
+			}
+		} catch (Exception ex) {
+			LOG.error ("Authentication error: " + ex.getMessage());
+			return false;
 		}
+
+		if(valid) {					
+			try {
+				User user;
+				String queryId = credentials.getQueryId();
+				if(queryId != null) {
+					user = Users.lookupQueryId(queryId);  
+				} else {
+					user = Users.lookupUser( "admin" );			
+					user.setAdministrator(true);
+				}
+				super.setCredential(queryId);
+				super.setPrincipal(user);
+				super.getGroups().addAll(Groups.lookupGroups( super.getPrincipal()));
+				return true;	
+			} catch (NoSuchUserException e) {
+				LOG.error(e);
+				return false;
+			}
+		}
+		return false;	
 	}
 
 	@Override
-	public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event)
-			throws Exception {
-	}
+	public void reset( ) {}
 }

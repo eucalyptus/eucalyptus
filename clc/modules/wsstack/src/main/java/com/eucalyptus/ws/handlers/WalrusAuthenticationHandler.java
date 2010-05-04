@@ -58,6 +58,10 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
+/*
+ *
+ * Author: Neil Soman neil@eucalyptus.com
+ */
 package com.eucalyptus.ws.handlers;
 
 import java.security.PublicKey;
@@ -95,6 +99,9 @@ import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.auth.login.WalrusWrappedComponentCredentials;
+import com.eucalyptus.auth.login.WalrusWrappedCredentials;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.AbstractKeyStore;
 import com.eucalyptus.auth.util.EucaKeyStore;
@@ -150,51 +157,12 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				certString= httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaCert.toString());
 			}
 			String data = verb + "\n" + date + "\n" + addr + "\n";
-
-			Signature sig;
-			boolean valid = false;
+			String effectiveUserID = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaEffectiveUserId.toString());
 			try {
-				try {
-					PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getCertificate().getPublicKey();
-					sig = Signature.getInstance("SHA1withRSA");
-					sig.initVerify(publicKey);
-					sig.update(data.getBytes());
-					valid = sig.verify(Base64.decode(signature));
-				} catch ( Exception e ) {
-					LOG.warn ("Authentication: certificate not found in keystore");
-				} finally {
-					if( !valid && certString != null ) {
-						try {
-							X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( certString ) );
-							PublicKey publicKey = nodeCert.getPublicKey( );
-							sig = Signature.getInstance( "SHA1withRSA" );
-							sig.initVerify( publicKey );
-							sig.update( data.getBytes( ) );
-							valid = sig.verify( Base64.decode( signature ) );
-						} catch ( Exception e2 ) {
-							LOG.warn ("Authentication exception: " + e2.getMessage());
-						}            
-					}
-				}
-			} catch (Exception ex) {
-				LOG.warn ("Authentication exception: " + ex.getMessage());
-				ex.printStackTrace();
-			}
-
-			if(!valid) {
-				throw new AuthenticationException( "User authentication failed." );
-			}
-			String effectiveUserID = httpRequest.getAndRemoveHeader(SecurityParameter.AWSAccessKeyId.toString());
-			try {
-				User user = Users.lookupUser( "admin" );
-				user.setAdministrator(true);
-	      try {
-          Contexts.lookup( httpRequest.getCorrelationId( ) ).setUser( user );
-        } catch ( NoSuchContextException e ) {
-          LOG.debug( e, e );
-        }
-			} catch (NoSuchUserException e) {
-				throw new AuthenticationException( "User authentication failed." );
+				SecurityContext.getLoginContext(new WalrusWrappedComponentCredentials(httpRequest.getCorrelationId(), data, effectiveUserID, signature, certString)).login();
+			} catch(Exception ex) {
+				LOG.error(ex);
+				throw new AuthenticationException(ex);
 			}
 		}  else {
 			//external user request
@@ -242,11 +210,20 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					throw new AuthenticationException("Unable to parse date.");
 				}
 				String data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" +  getCanonicalizedAmzHeaders(httpRequest) + addrString;
-
-				String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
-				String sigString[] = getSigInfo(auth_part);
+				String authPart = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
+				String sigString[] = getSigInfo(authPart);
+				if(sigString.length < 2) {
+					throw new AuthenticationException("Invalid authentication header");
+				}
+				String accessKeyId = sigString[0];
 				String signature = sigString[1];
-				authenticate(httpRequest, sigString[0], signature, data);
+
+				try {
+					SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature)).login();
+				} catch(Exception ex) {
+					LOG.error(ex);
+					throw new AuthenticationException(ex);
+				}
 			} else if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())) {
 				//query string authentication
 				String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
@@ -261,7 +238,12 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					}
 					if(checkExpires(expires)) {
 						String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + getCanonicalizedAmzHeaders(httpRequest) + addrString;
-						authenticate(httpRequest, accesskeyid, signature, stringToSign);
+						try {
+							SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature)).login();
+						} catch(Exception ex) {
+							LOG.error(ex);
+							throw new AuthenticationException(ex);
+						}
 					} else {
 						throw new AuthenticationException("Cannot process request. Expired.");
 					}
@@ -280,22 +262,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		if(currentTime > expireTime)
 			return false;
 		return true;
-	}
-
-	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
-		signature = signature.replaceAll("=", "");
-		try {
-      User user = Users.lookupQueryId( accessKeyID );  
-			String queryKey = user.getSecretKey( );
-			String authSig = checkSignature( queryKey, data );
-			if (!authSig.equals(signature))
-				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
-			Contexts.lookup( httpRequest.getCorrelationId( ) ).setUser( user );
-		} catch(AuthenticationException e) {
-			throw e;
-		} catch(Exception ex) {
-			throw new AuthenticationException( "User authentication failed. Unable to obtain query key" );
-		}
 	}
 
 	private String[] getSigInfo (String auth_part) {
@@ -339,23 +305,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		return result;
 	}
 
-	protected String checkSignature( final String queryKey, final String subject ) throws AuthenticationException
-	{
-		SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hmac.HmacSHA1.toString() );
-		try
-		{
-			Mac mac = Mac.getInstance( Hmac.HmacSHA1.toString() );
-			mac.init( signingKey );
-			byte[] rawHmac = mac.doFinal( subject.getBytes() );
-			return new String(Base64.encode( rawHmac )).replaceAll( "=", "" );
-		}
-		catch ( Exception e )
-		{
-			LOG.error( e, e );
-			throw new AuthenticationException( "Failed to compute signature" );
-		}
-	}
-
 	private void checkUploadPolicy(MappingHttpRequest httpRequest) throws AuthenticationException {
 		Map<String, String> fields = new HashMap<String, String>();
 		String policy = httpRequest.getAndRemoveHeader(WalrusProperties.Headers.S3UploadPolicy.toString());
@@ -384,8 +333,17 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
 		if(auth_part != null) {
 			String sigString[] = getSigInfo(auth_part);
-			String signature = sigString[1];				
-			authenticate(httpRequest, sigString[0], signature, data);
+		        if(sigString.length < 2) {
+			    throw new AuthenticationException("Invalid authentication header");
+			}
+			String accessKeyId = sigString[0];
+			String signature = sigString[1];
+			try {
+			    SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature)).login();
+			} catch(Exception ex) {
+			    LOG.error(ex);
+			    throw new AuthenticationException(ex);
+			}
 		} else {
 			throw new AuthenticationException("User authentication failed. Invalid policy signature.");
 		}
