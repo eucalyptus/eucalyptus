@@ -68,6 +68,7 @@ permission notice:
 #include <handlers.h>
 #include <misc.h>
 #include <data.h>
+#include <adb-helpers.h>
 
 #include <windows-bundle.h>
 
@@ -244,12 +245,7 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     adb_instanceType_set_ramdiskId(instance, env, outInst->ramdiskId);
     adb_instanceType_set_userId(instance, env, outInst->userId);
     adb_instanceType_set_keyName(instance, env, outInst->keyName);
-    
-    adb_virtualMachineType_t * vm_type = adb_virtualMachineType_create(env);            
-    adb_virtualMachineType_set_memory(vm_type, env, outInst->params.mem);
-    adb_virtualMachineType_set_cores(vm_type, env, outInst->params.cores);
-    adb_virtualMachineType_set_disk(vm_type, env, outInst->params.disk);
-    adb_instanceType_set_instanceType(instance, env, vm_type);
+    adb_instanceType_set_instanceType(instance, env, copy_vm_type_to_adb (env, &(outInst->params)));
     
     adb_netConfigType_t * netconf = adb_netConfigType_create(env);            
     adb_netConfigType_set_privateMacAddress(netconf, env, outInst->ncnet.privateMac);
@@ -301,11 +297,8 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     // get operation-specific fields from input
     axis2_char_t * instanceId = adb_ncRunInstanceType_get_instanceId(input, env);
     axis2_char_t * reservationId = adb_ncRunInstanceType_get_reservationId(input, env);
-    adb_virtualMachineType_t * vm_type = adb_ncRunInstanceType_get_instanceType(input, env);
     virtualMachine params;
-    params.mem = adb_virtualMachineType_get_memory(vm_type, env);
-    params.cores = adb_virtualMachineType_get_cores(vm_type, env);
-    params.disk = adb_virtualMachineType_get_disk(vm_type, env);
+    copy_vm_type_from_adb (&params, adb_ncRunInstanceType_get_instanceType(input, env), env);
     axis2_char_t * imageId = adb_ncRunInstanceType_get_imageId(input, env);
     axis2_char_t * imageURL = adb_ncRunInstanceType_get_imageURL(input, env);
     axis2_char_t * kernelId = adb_ncRunInstanceType_get_kernelId(input, env);
