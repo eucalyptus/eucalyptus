@@ -95,18 +95,26 @@ public class DeleteGroupMemberType extends EucalyptusMessage {
   String groupName;
   String userName;
 }
+public class DeleteGroupMemberResponseType extends GroupManagementMessage {}
+
 public class GrantGroupAuthorizationType extends GroupManagementMessage {
   String groupName;
   String zoneName;
 }
 public class GrantGroupAuthorizationResponseType extends GroupManagementMessage {}
-public class DeleteGroupMemberResponseType extends GroupManagementMessage {}
+
+public class RevokeGroupAuthorizationType extends GroupManagementMessage {
+  String groupName;
+  String zoneName;
+}
+public class RevokeGroupAuthorizationResponseType extends GroupManagementMessage {}
+
 public class GrantGroupAdminType extends EucalyptusMessage {
   String groupName;
   String userName;
 }
 public class GrantGroupAdminResponseType extends GroupManagementMessage {}
-public class RevokeGroupAdminType extends EucalyptusMessage {
+public class RevokeGroupAdminType extends GroupManagementMessage {
   String groupName;
   String userName;
 }

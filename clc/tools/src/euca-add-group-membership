@@ -2,14 +2,10 @@
 import sys, os, boto
 from boto.ec2.regioninfo import RegionInfo
 from euca_admin import EucaAdmin
-from optparse import OptionParser
 from euca_admin.groups import Group
 
 def main():
-  c = Group()
-  parser = c.get_add_membership_parser()
-  (options, args) = parser.parse_args()
-  c.add_membership(options.groupName,options.userName)
+  Group().add_membership()
   sys.exit()
 
 if __name__ == "__main__":

@@ -35,6 +35,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeUsersType;
 import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationResponseType;
 import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationType;
 import edu.ucsb.eucalyptus.msgs.GroupInfoType;
+import edu.ucsb.eucalyptus.msgs.RevokeGroupAuthorizationResponseType;
+import edu.ucsb.eucalyptus.msgs.RevokeGroupAuthorizationType;
 import edu.ucsb.eucalyptus.msgs.UserInfoType;
 
 public class Accounts {
@@ -83,7 +85,7 @@ public class Accounts {
     boolean admin = request.getAdmin( );
     try {
       User u = null;
-      if ( email == null ) {
+      if ( email == null || "N/A".equals( email ) ) {
         u = Users.addUser( userName, admin, true );
       } else {
         u = Users.addUser( userName, admin, false );
@@ -125,7 +127,19 @@ public class Accounts {
   
   public DescribeGroupsResponseType describeGroups( DescribeGroupsType request ) {
     DescribeGroupsResponseType reply = request.getReply( );
-    List<Group> groups = Groups.listAllGroups( );
+    List<Group> groups = null;
+    if( request.getGroupNames( ).isEmpty( ) ) {
+      groups = Groups.listAllGroups( );
+    } else {
+      for( String name : request.getGroupNames( ) ) {
+        groups = Lists.newArrayList( );
+        try {
+          groups.add( Groups.lookupGroup( name ) );
+        } catch ( NoSuchGroupException e ) {
+          LOG.debug( e );
+        }
+      }
+    }
     for ( Group g : groups ) {
       GroupInfoType groupinfo = new GroupInfoType( g.getName( ) );
       for ( User u : g.getUsers( ) ) {
@@ -173,4 +187,21 @@ public class Accounts {
     }
     return reply;    
   }
+
+  public RevokeGroupAuthorizationResponseType authorize( RevokeGroupAuthorizationType request ) throws EucalyptusCloudException {
+    RevokeGroupAuthorizationResponseType reply = request.getReply( );
+    try {
+      Group g = Groups.lookupGroup( request.getGroupName( ) );
+      for( Authorization a : g.getAuthorizations( ) ) {
+        if( a instanceof AvailabilityZonePermission && ((AvailabilityZonePermission)a).getValue( ).equals( request.getZoneName( ) ) ) {
+          g.removeAuthorization( a );
+        }
+      }
+      reply.set_return( true );
+    } catch ( NoSuchGroupException e ) {
+      throw new EucalyptusCloudException( "Failed to add group authorization: " + request.getZoneName( ) + " to group " + request.getGroupName( ), e );
+    }
+    return reply;    
+  }
+
 }

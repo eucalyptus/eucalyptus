@@ -29,7 +29,7 @@ class StringList(list):
   def __repr__(self):
     r = ""
     for i in self:
-      r = "%s [%s]" % (r,i)
+      r = "%s %s" % (r,i)
     return r
     
   def startElement(self, name, attrs, connection):

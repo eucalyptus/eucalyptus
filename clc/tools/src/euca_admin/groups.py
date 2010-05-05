@@ -18,8 +18,8 @@ class Group():
           
   def __repr__(self):
     r = 'GROUP      \t%s\t' % (self.group_groupName)
-    r = '%s\nGROUP-USERS\t%s\t%s' % (r,self.group_groupName,self.group_users)
-    r = '%s\nGROUP-AUTH\t%s\t%s' % (r,self.group_groupName,self.group_auths)
+    r = '%s\nUSERS\t%s\t%s' % (r,self.group_groupName,self.group_users)
+    r = '%s\nAUTH\t%s\t%s' % (r,self.group_groupName,self.group_auths)
     return r
       
   def startElement(self, name, attrs, connection):
@@ -40,9 +40,17 @@ class Group():
     parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
     return parser
   
-  def describe(self):
+  def cli_describe(self):
+    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
+    (options, args) = parser.parse_args()
+    self.describe(args)
+    
+  def describe(self,groups=None):
+    params = {}
+    if groups:
+      self.euca.connection.build_list_params(params,groups,'GroupNames')
     try:
-      list = self.euca.connection.get_list('DescribeGroups', {}, [('euca:item', Group)])
+      list = self.euca.connection.get_list('DescribeGroups', params, [('euca:item', Group)])
       for i in list:
         print i
     except EC2ResponseError, ex:
@@ -74,31 +82,56 @@ class Group():
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
-  def get_grant_authorize_parser(self):
-    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-n","--name",dest="groupName",help="Name of the Group.")
-    parser.add_option("-z","--zone",dest="zoneName",help="Name of the availability zone.")
-    return parser
-            
-  def grant_authorize(self, groupName, zoneName):
-    try:
-      reply = self.euca.connection.get_object('GrantGroupAuthorization', {'GroupName':groupName,'ZoneName':zoneName},BooleanResponse)
-      print reply
-    except EC2ResponseError, ex:
-      self.euca.handle_error(ex)
-
-  def get_add_membership_parser(self):
+  def get_membership_parser(self):
     parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
     parser.add_option("-n","--name",dest="groupName",help="Name of the Group.")
     parser.add_option("-u","--user",dest="userName",help="Name of the User.")
-    return parser
+    (options, args) = parser.parse_args()
+    return options
 
-  def add_membership(self, groupName, userName):
+  def add_membership(self):
+    options = self.get_membership_parser()
     try:
-      reply = self.euca.connection.get_object('AddGroupMember', {'GroupName':groupName,'UserName':userName},BooleanResponse)
+      reply = self.euca.connection.get_object('AddGroupMember', {'GroupName':options.groupName,'UserName':options.userName},BooleanResponse)
+      print reply
+    except EC2ResponseError, ex:
+      self.euca.handle_error(ex)
+
+  def remove_membership(self):
+    try:
+      reply = self.euca.connection.get_object('AddGroupMember', {'GroupName':options.groupName,'UserName':options.userName},BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
 
+  def get_grant_authorize_parser(self):
+    parser = OptionParser("usage: %prog [options] GROUP",version="Eucalyptus %prog VERSION")
+    parser.add_option("-n","--name",dest="groupName",help="Name of the Group.")
+    parser.add_option("-z","--zone",dest="zoneName",help="Name of the availability zone.")
+    (options, args) = parser.parse_args()
+    return options
+            
+  def grant_authorize(self):
+    options = self.get_grant_authorize_parser()
+    try:
+      reply = self.euca.connection.get_object('GrantGroupAuthorization', {'GroupName':options.groupName,'ZoneName':options.zoneName},BooleanResponse)
+      print reply
+    except EC2ResponseError, ex:
+      self.euca.handle_error(ex)
+
+  def get_revoke_authorize_parser(self):
+    parser = OptionParser("usage: %prog [options] GROUP",version="Eucalyptus %prog VERSION")
+    parser.add_option("-n","--name",dest="groupName",help="Name of the Group.")
+    parser.add_option("-z","--zone",dest="zoneName",help="Name of the availability zone.")
+    (options, args) = parser.parse_args()
+    return options
+            
+  def revoke_authorize(self):
+    options = self.get_revoke_authorize_parser()
+    try:
+      reply = self.euca.connection.get_object('RevokeGroupAuthorization', {'GroupName':options.groupName,'ZoneName':options.zoneName},BooleanResponse)
+      print reply
+    except EC2ResponseError, ex:
+      self.euca.handle_error(ex)
   

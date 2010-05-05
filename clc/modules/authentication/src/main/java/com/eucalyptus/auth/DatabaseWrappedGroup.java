@@ -170,7 +170,18 @@ public class DatabaseWrappedGroup implements Group {
   
   @Override
   public List<User> getUsers( ) {
-    return new ArrayList<User>( this.group.getUsers( ) );
+    final List<User> users = Lists.newArrayList( );
+    try {
+      Transactions.one( this.searchGroup, new Tx<GroupEntity>( ) {
+        @Override
+        public void fire( GroupEntity t ) throws Throwable {
+          users.addAll( t.getUsers( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      LOG.debug( e, e );
+    }
+    return users;
   }
   
   @Override
