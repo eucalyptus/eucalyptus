@@ -116,7 +116,7 @@ public class X509Download extends HttpServlet {
       hasError( "User does not exist", response );
       return;
     }
-    if ( !user.checkToken( ).equals( code ) ) {
+    if ( !user.checkToken( code ) ) {
       hasError( "Confirmation code is invalid", response );
       return;
     }
