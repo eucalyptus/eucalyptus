@@ -192,7 +192,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
     count++;
   }
   
-  fd = open(dest_path, O_CREAT | O_TRUNC | O_RDWR);
+  fd = open(dest_path, O_CREAT | O_TRUNC | O_RDWR, 0700);
   if (fd < 0) {
     if (buf) free(buf);
     return(1);

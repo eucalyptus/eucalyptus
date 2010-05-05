@@ -83,7 +83,8 @@ permission notice:
 #include "data.h"
 #include "client-marshal.h"
 
-//#include <windows-cc.h>
+#include <storage-windows.h>
+#include <euca_auth.h>
 
 #define SUPERUSER "eucalyptus"
 
@@ -2006,9 +2007,29 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  while(rc && ((time(NULL) - startRun) < config->wakeThresh)){
             int clientpid;
 
+	    // if we're running windows, and are a VMware broker, create the pw/floppy locally
+	    if (strstr(platform, "windows") && strstr(res->ncURL, "VMwareBroker")) {
+	      //if (strstr(platform, "windows")) {
+	      char cdir[MAX_PATH];
+	      
+	      snprintf(cdir, MAX_PATH, "%s/var/lib/eucalyptus/windows/", config->eucahome);
+	      if (check_directory(cdir)) mkdir(cdir, 0700);
+	      snprintf(cdir, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/", config->eucahome, instId);
+	      if (check_directory(cdir)) mkdir(cdir, 0700);
+	      if (check_directory(cdir)) {
+		logprintfl(EUCAERROR, "RunInstances(): could not create console/floppy cache directory '%s'\n", cdir);
+	      } else {
+		// drop encrypted windows password and floppy on filesystem
+		rc = makeWindowsFloppy(config->eucahome, cdir, keyName);
+		if (rc) {
+		  logprintfl(EUCAERROR, "RunInstances(): could not create console/floppy cache\n");
+		}
+	      }
+	    }
+	    
             // call StartNetwork client
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, NCCALL, res->ncURL, "ncStartNetwork", NULL, 0, 0, vlan, NULL);
-	    
+
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, NCCALL, res->ncURL, "ncRunInstance", instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, &ncnet, userData, launchIndex, platform, netNames, netNamesLen, &outInst);
 
 	    if (rc) {
@@ -2098,7 +2119,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
 
   logprintfl(EUCAINFO,"GetConsoleOutput(): called\n");
   logprintfl(EUCADEBUG,"GetConsoleOutput(): params: userId=%s, instId=%s\n", SP(meta->userId), SP(instId));
-  
+
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);
@@ -2117,8 +2138,28 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
   done=0;
   for (j=start; j<stop && !done; j++) {
     if (*outConsoleOutput) free(*outConsoleOutput);
-    timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
-    rc = ncClientCall(meta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
+
+    if (strstr(resourceCacheLocal.resources[j].ncURL, "VMwareBroker")) {
+      //if (1) {
+      char pwfile[MAX_PATH];
+      char *rawconsole=NULL;
+      *outConsoleOutput = NULL;
+      snprintf(pwfile, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/console.append.log", config->eucahome, instId);
+      if (!check_file(pwfile)) {
+	rawconsole = file2str(pwfile);
+	if (rawconsole) {
+	  *outConsoleOutput = base64_enc((unsigned char *)rawconsole, strlen(rawconsole));
+	}
+      }
+      if (!*outConsoleOutput) {
+	rc = 1;
+      } else {
+	rc = 0;
+      }
+    } else {
+      timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
+      rc = ncClientCall(meta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
+    }
     if (rc) {
       ret = 1;
     } else {
@@ -2127,7 +2168,6 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
     }
   }
 
-  
   logprintfl(EUCADEBUG,"GetConsoleOutput(): done.\n");
   
   shawn();
@@ -2216,6 +2256,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);
   
+
   for (i=0; i<instIdsLen; i++) {
     instId = instIds[i];
     rc = find_instanceCacheId(instId, &myInstance);
@@ -2245,6 +2286,20 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     done=0;
     for (j=start; j<stop && !done; j++) {
       if (resourceCacheLocal.resources[j].state == RESUP) {
+
+	if (strstr(resourceCacheLocal.resources[j].ncURL, "VMwareBroker")) {
+	  char cdir[MAX_PATH];
+	  char cfile[MAX_PATH];
+	  snprintf(cdir, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/", config->eucahome, instId);
+	  if (!check_directory(cdir)) {
+	    snprintf(cfile, MAX_PATH, "%s/floppy", cdir);
+	    if (!check_file(cfile)) unlink(cfile);
+	    snprintf(cfile, MAX_PATH, "%s/console.append.log", cdir);
+	    if (!check_file(cfile)) unlink(cfile);
+	    rmdir(cdir);
+	  }
+	}
+
 	rc = ncClientCall(ccMeta, 0, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncTerminateInstance", instId, &shutdownState, &previousState);
 	if (rc) {
 	  (*outStatus)[i] = 1;
