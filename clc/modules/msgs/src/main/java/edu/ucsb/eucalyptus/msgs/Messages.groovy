@@ -248,7 +248,7 @@ public class VmTypeInfo extends EucalyptusData {
   Integer memory;
   Integer disk;
   Integer cores;
-  
+  ArrayList<BlockDeviceMappingItemType> deviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   def VmTypeInfo(){
   }
   
