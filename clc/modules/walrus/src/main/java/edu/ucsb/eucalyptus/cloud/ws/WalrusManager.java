@@ -91,7 +91,6 @@ import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.NeedsDeferredInitialization;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -120,6 +119,7 @@ import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.TorrentInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
@@ -196,7 +196,6 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 
-@NeedsDeferredInitialization(component = Component.walrus)
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger(WalrusManager.class);
 
@@ -204,7 +203,7 @@ public class WalrusManager {
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = null;
 
-	public static void deferredInitializer() {
+	public static void configure() {
 		walrusStatistics = new WalrusStatistics();
 	}
 
@@ -219,17 +218,17 @@ public class WalrusManager {
 	}
 
 	public void check() throws EucalyptusCloudException {
-		File bukkitDir = new File(WalrusProperties.bucketRootDirectory);
+		File bukkitDir = new File(WalrusInfo.getWalrusInfo().getStorageDir());
 		if (!bukkitDir.exists()) {
 			if (!bukkitDir.mkdirs()) {
 				LOG.fatal("Unable to make bucket root directory: "
-						+ WalrusProperties.bucketRootDirectory);
+						+ WalrusInfo.getWalrusInfo().getStorageDir());
 				throw new EucalyptusCloudException(
 				"Invalid bucket root directory");
 			}
 		} else if (!bukkitDir.canWrite()) {
 			LOG.fatal("Cannot write to bucket root directory: "
-					+ WalrusProperties.bucketRootDirectory);
+					+ WalrusInfo.getWalrusInfo().getStorageDir());
 			throw new EucalyptusCloudException("Invalid bucket root directory");
 		}
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
@@ -323,7 +322,7 @@ public class WalrusManager {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(userId);
 			List<BucketInfo> bucketList = db.query(searchBucket);
-			if (bucketList.size() >= WalrusProperties.MAX_BUCKETS_PER_USER) {
+			if (bucketList.size() >= WalrusInfo.getWalrusInfo().getStorageMaxBucketsPerUser()) {
 				db.rollback();
 				throw new TooManyBucketsException(bucketName);
 			}
@@ -496,6 +495,7 @@ public class WalrusManager {
 									walrusUri = new URI(SystemConfiguration.getWalrusUrl());
 									address = walrusUri.getHost();
 								} catch (URISyntaxException e) {
+									db.rollback();
 									throw new EucalyptusCloudException("Could not get Walrus URL");
 								}
 								removeARecordType.setAddress(address);
@@ -809,7 +809,7 @@ public class WalrusManager {
 											foundObject.setGrants(grantInfos);
 										}
 										if (WalrusProperties.enableTorrents) {
-											EntityWrapper<TorrentInfo> dbTorrent = db
+											EntityWrapper<TorrentInfo> dbTorrent = dbObject
 											.recast(TorrentInfo.class);
 											TorrentInfo torrentInfo = new TorrentInfo(bucketName,
 													objectKey);
@@ -854,7 +854,7 @@ public class WalrusManager {
 										Long bucketSize = bucket.getBucketSize();
 										long newSize = bucketSize + oldBucketSize
 										+ size;
-										if (newSize > WalrusProperties.MAX_BUCKET_SIZE) {
+										if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
 											messenger.removeQueue(key, randomKey);
 											dbObject.rollback();
 											throw new EntityTooLargeException(
@@ -885,6 +885,7 @@ public class WalrusManager {
 										monitor.setMd5(md5);
 										monitor.notifyAll();
 									}
+									messenger.removeMonitor(key);
 									messenger.removeQueue(key, randomKey);
 									LOG.info("Transfer complete: " + key);
 									break;
@@ -1097,7 +1098,7 @@ public class WalrusManager {
 									&& !request.isAdministrator()) {
 								Long bucketSize = bucket.getBucketSize();
 								long newSize = bucketSize + oldBucketSize + size;
-								if (newSize > WalrusProperties.MAX_BUCKET_SIZE) {
+								if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
 									db.rollback();
 									throw new EntityTooLargeException("Key", objectKey,
 											logData);
@@ -1946,7 +1947,7 @@ public class WalrusManager {
 										}
 										storageManager
 										.sendObject(
-												request.getChannel(),
+												request,
 												httpResponse,
 												bucketName,
 												torrentFile,
@@ -2011,10 +2012,12 @@ public class WalrusManager {
 												bucketName, objectName);
 										while ((bytesRead = fileIO.read(offset)) > 0) {
 											ByteBuffer buffer = fileIO.getBuffer();
-											buffer.get(bytes, 0, bytesRead);
-											base64Data += new String(bytes, 0,
+											if(buffer != null) {
+											    buffer.get(bytes, 0, bytesRead);
+											    base64Data += new String(bytes, 0,
 													bytesRead);
-											offset += bytesRead;
+											    offset += bytesRead;
+											}
 										}
 										fileIO.finish();
 									} catch (Exception e) {
@@ -2030,7 +2033,7 @@ public class WalrusManager {
 										walrusStatistics.updateBytesOut(objectInfo
 												.getSize());
 									}
-									storageManager.sendObject(request.getChannel(),
+									storageManager.sendObject(request,
 											httpResponse, bucketName, objectName, size,
 											etag, DateUtils.format(lastModified
 													.getTime(),
@@ -2042,7 +2045,7 @@ public class WalrusManager {
 									return null;
 								}
 							} else {
-								storageManager.sendHeaders(request.getChannel(),
+								storageManager.sendHeaders(request,
 										httpResponse, size, etag, DateUtils.format(
 												lastModified.getTime(),
 												DateUtils.ISO8601_DATETIME_PATTERN)
@@ -2200,7 +2203,7 @@ public class WalrusManager {
 								if (WalrusProperties.trackUsageStatistics) {
 									walrusStatistics.updateBytesOut(size);
 								}
-								storageManager.sendObject(request.getChannel(),
+								storageManager.sendObject(request,
 										httpResponse, bucketName, objectName,
 										byteRangeStart, byteRangeEnd, size, etag,
 										DateUtils.format(lastModified.getTime(),
@@ -2210,7 +2213,7 @@ public class WalrusManager {
 												versionId, logData);
 								return null;
 							} else {
-								storageManager.sendHeaders(request.getChannel(),
+								storageManager.sendHeaders(request,
 										httpResponse, size, etag, DateUtils.format(
 												lastModified.getTime(),
 												DateUtils.ISO8601_DATETIME_PATTERN

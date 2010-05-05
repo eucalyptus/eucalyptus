@@ -71,7 +71,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "CHAPUserInfo" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class CHAPUserInfo {
     @Id
     @GeneratedValue
@@ -79,7 +79,7 @@ public class CHAPUserInfo {
     private Long id = -1l;
 
     private String user;
-    private String password;
+    private String encryptedPassword;
     
     public CHAPUserInfo() {}
     
@@ -89,7 +89,7 @@ public class CHAPUserInfo {
     
     public CHAPUserInfo(String userName, String password) {
     	this(userName);
-    	this.password = password;
+    	this.encryptedPassword = password;
 	}
 
 	public String getUser() {
@@ -100,12 +100,12 @@ public class CHAPUserInfo {
 		this.user = user;
 	}
 
-	public String getPassword() {
-		return password;
+	public String getEncryptedPassword() {
+		return encryptedPassword;
 	}
 
-	public void setPassword(String encryptedPassword) {
-		this.password = encryptedPassword;
+	public void setEncryptedPassword(String encryptedPassword) {
+		this.encryptedPassword = encryptedPassword;
 	}
 
 	@Override

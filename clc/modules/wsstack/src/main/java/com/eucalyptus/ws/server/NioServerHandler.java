@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.server;
 
+import javax.security.auth.login.LoginException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -176,6 +177,8 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST );
     } else if ( cause instanceof IllegalArgumentException ) {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST);
+    } else if ( cause instanceof LoginException ) {
+      this.sendError( ctx, HttpResponseStatus.FORBIDDEN);
     } else {
       LOG.debug( "Internal Error.", cause );
       if ( ch.isConnected( ) ) {

@@ -49,7 +49,6 @@ import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMMetaInfo;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
-import edu.ucsb.eucalyptus.ic.StorageController;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.ClusterConfiguration;
@@ -387,7 +386,7 @@ db.rows('SELECT * FROM IMAGECACHE').each{
 db.rows('SELECT * FROM VOLUMES').each{ 
   println "Adding VOLUME: ${it.VOLUME_NAME}"
 
-  EntityWrapper<VolumeInfo> dbVol = StorageController.getEntityWrapper(); 
+  EntityWrapper<VolumeInfo> dbVol = StorageProperties.getEntityWrapper(); 
   try {
 	VolumeInfo v = new VolumeInfo(it.VOLUME_NAME);
 	v.setScName(StorageProperties.SC_LOCAL_NAME);
@@ -408,7 +407,7 @@ db.rows('SELECT * FROM VOLUMES').each{
 db.rows('SELECT * FROM SNAPSHOTS').each{ 
 	  println "Adding snapshot: ${it.SNAPSHOT_NAME}"
 
-	  EntityWrapper<VolumeInfo> dbSnap = StorageController.getEntityWrapper(); 
+	  EntityWrapper<VolumeInfo> dbSnap = StorageProperties.getEntityWrapper(); 
 	  try {
 		SnapshotInfo s = new SnapshotInfo(it.SNAPSHOT_NAME);
 		s.setShouldTransfer(true);
@@ -430,7 +429,7 @@ db.rows('SELECT * FROM SNAPSHOTS').each{
 db.rows('SELECT * FROM LVMVOLUMES').each{
 
   println "Adding LVMVOLUME: ${it.VOLUME_NAME}"
-  EntityWrapper<LVMVolumeInfo> dbVol = StorageController.getEntityWrapper();
+  EntityWrapper<LVMVolumeInfo> dbVol = StorageProperties.getEntityWrapper();
   try {
 	LVMVolumeInfo l = new LVMVolumeInfo(it.VOLUME_NAME);
 	l.setScName(StorageProperties.SC_LOCAL_NAME);
@@ -455,7 +454,7 @@ db.rows('SELECT * FROM LVMVOLUMES').each{
 
 db.rows('SELECT * FROM LVMMETADATA').each{
   println "Adding LVMMETADATA: ${it.HOSTNAME}"
-  EntityWrapper<LVMMetaInfo> dbVol = StorageController.getEntityWrapper(); 
+  EntityWrapper<LVMMetaInfo> dbVol = StorageProperties.getEntityWrapper(); 
   try {
 	  LVMMetaInfo lvmmeta = new LVMMetaInfo(it.HOSTNAME);
 	  lvmmeta.setMajorNumber(it.MAJOR_NUMBER);
@@ -557,7 +556,7 @@ db.rows('SELECT * FROM SYSTEM_INFO').each{
 	}
 	println "Adding SC: name=StorageController-local host=${uri.getHost()} port=${uri.getPort()}"
 	EntityWrapper<StorageControllerConfiguration> dbSCConfig = Configuration.getEntityWrapper();
-	EntityWrapper<StorageInfo> dbSC = StorageController.getEntityWrapper();		
+	EntityWrapper<StorageInfo> dbSC = StorageProperties.getEntityWrapper();		
 	try {
 	  StorageControllerConfiguration storageConfig = new StorageControllerConfiguration(clusterName, uri.getHost(), uri.getPort());
 	  dbSCConfig.add(storageConfig);

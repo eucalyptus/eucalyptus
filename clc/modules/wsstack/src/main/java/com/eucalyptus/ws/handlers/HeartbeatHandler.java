@@ -162,7 +162,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       for ( HeartbeatComponentType component : msg.getComponents( ) ) {
         LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
-        Components.lookup( component.getName( ) ).buildLocalService( );
+        Components.lookup( component.getName( ) ).buildService( );
         initializedComponents.add( component.getComponent( ) );
       }
       if ( !initializedComponents.contains( Components.delegate.storage.name( ) ) ) {
@@ -171,11 +171,13 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       if ( !initializedComponents.contains( Components.delegate.walrus.name( ) ) ) {
         Components.lookup( Components.delegate.walrus ).markDisabled( );
       }
+      if ( !initializedComponents.contains( Components.delegate.vmwarebroker.name( ) ) ) {
+        Components.lookup( Components.delegate.vmwarebroker ).markDisabled( );
+      }
       System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
       System.setProperty( "euca.db.url", Components.lookup( Components.delegate.db ).getBuilder( ).list( ).get( 0 ).getUri( ) );
       try {
         GroovyUtil.evaluateScript( "after_database.groovy" );
-        GroovyUtil.evaluateScript( "after_persistence.groovy" );
       } catch ( ScriptExecutionFailedException e1 ) {
         LOG.debug( e1, e1 );
         System.exit( 123 );

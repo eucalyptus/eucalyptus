@@ -112,7 +112,7 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
                                 char *ramdiskId, char *ramdiskURL,
                                 char *stateName, int stateCode, char *userId, 
                                 netConfig *ncnet, char *keyName,
-                                char *userData, char *launchIndex, char **groupNames, int groupNamesSize)
+                                char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize)
 {
     ncInstance * inst;
 
@@ -127,6 +127,10 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
 
     if (launchIndex) {
         strncpy(inst->launchIndex, launchIndex, CHAR_BUFFER_SIZE);
+    }
+
+    if (platform) {
+        strncpy(inst->platform, platform, CHAR_BUFFER_SIZE);
     }
 
     inst->groupNamesSize = groupNamesSize;
@@ -188,7 +192,7 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
       */
     }
     inst->stateCode = stateCode;
-    
+    strncpy (inst->bundleTaskStateName, bundling_progress_names [NOT_BUNDLING], CHAR_BUFFER_SIZE);
     return inst;
 }
 

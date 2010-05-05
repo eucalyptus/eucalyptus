@@ -65,13 +65,13 @@
 <project name="eucalyptus-storagecontroller" basedir=".">
 
   <import file="../module-inc.xml"/>
-  <target name="builder" depends="init,build-java,build-jni,jar"/>
+  <target name="builder" depends="init,build-java,jar,build-jni"/>
     <!--================================== BUILD TARGETS ==================================-->
     <target name="build-jni">
         <mkdir dir="include"/>
         <javah classpath="${build.dir}" destdir="include" force="yes">
-            <class name="edu.ucsb.eucalyptus.storage.LVM2Manager"/>
-            <class name="edu.ucsb.eucalyptus.storage.AOEManager"/>
+            <class name="com.eucalyptus.storage.LVM2Manager"/>
+            <class name="com.eucalyptus.storage.AOEManager"/>
         </javah>
     </target>
 
@@ -79,5 +79,16 @@
         <delete dir="h"/>
         <delete dir="include"/>
     </target>
+  <!--================================== install target ==================================-->
+  <property name="euca.udev.dir" value="${euca.home}/usr/share/eucalyptus/udev"/>
+  <target name="install" depends="copy-conf">
+    <!-- copy udev config over -->
+    <mkdir dir="${DESTDIR}${euca.udev.dir}"/>
+    <copy todir="${DESTDIR}${euca.udev.dir}">
+      <fileset dir="${basedir}/udev">
+        <include name="**/*"/>
+      </fileset>
+    </copy>
+  </target>
 </project>
 

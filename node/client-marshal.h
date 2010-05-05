@@ -63,17 +63,20 @@ permission notice:
 #include "axis2_stub_EucalyptusNC.h" /* for axis2_ and axutil_ defs */
 #include "data.h" /* for eucalyptus defs */
 
+#include <windows-bundle.h>
+
 typedef struct ncStub_t {
   axutil_env_t * env;
   axis2_char_t * client_home;
   axis2_char_t * endpoint_uri;
+  axis2_char_t * node_name;
   axis2_stub_t * stub;
 } ncStub;
 
 ncStub * ncStubCreate  (char *endpoint, char *logfile, char *homedir);
 int      ncStubDestroy (ncStub * stub);
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInstPtr);
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInstPtr);
 int ncGetConsoleOutputStub (ncStub *stub, ncMetadata *meta, char *instanceId, char **consoleOutput);
 int ncRebootInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId);
 int ncTerminateInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
@@ -83,5 +86,8 @@ int ncStartNetworkStub  (ncStub *stub, ncMetadata *meta, char **peers, int peers
 int ncPowerDownStub  (ncStub *st, ncMetadata *meta);
 int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey);
+int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId);
+int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 
 #endif

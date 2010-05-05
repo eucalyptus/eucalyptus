@@ -254,7 +254,7 @@ public class Bootstrap {
       @Override
       public void commit( Component comp ) throws Exception {
         if( comp.isSingleton( ) && comp.isLocal( ) ) {
-          comp.buildLocalService( );
+          comp.buildService( );
         }
       }
     } ).transition( Components.list( ) );

@@ -42,16 +42,13 @@ public abstract class ServiceDispatcher implements Dispatcher {
   public static Dispatcher lookup( Component c, String hostName ) {
     return proxies.get( c.getRegistryKey( hostName ) );
   }
-  public static Dispatcher lookup( String registryKey ) {
-    return proxies.get( registryKey );
-  }
   public static Dispatcher register( String registryKey, Dispatcher proxy ) {
     LOG.info( "Registering "+ registryKey + " as "  + proxy );
     return proxies.put( registryKey, proxy );
   }
-  public static Dispatcher deregister( String registryKey ) {
-    LOG.info( "Deregistering "+ registryKey );
-    return proxies.remove( registryKey );
+  public static Dispatcher deregister( Component c, String hostName ) {
+    LOG.info( "Deregistering "+ c.getRegistryKey( hostName ) );
+    return proxies.remove( c.getRegistryKey( hostName ) );
   }
   public static Set<Map.Entry<String,Dispatcher>> getEntries() {
     return proxies.entrySet( );

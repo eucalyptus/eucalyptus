@@ -78,7 +78,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "Users" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class UserInfo {
   
   @Id
@@ -114,7 +114,7 @@ public class UserInfo {
   public UserInfo( ) {}
   
   public UserInfo( String userName, String confirmationCode ) {
-    this( userName, BOGUS_ENTRY, confirmationCode );
+    this( userName, "", confirmationCode );
     this.approved = true;
     this.confirmed = true;
   }

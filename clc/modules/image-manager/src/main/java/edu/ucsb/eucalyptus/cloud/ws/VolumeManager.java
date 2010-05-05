@@ -163,7 +163,7 @@ public class VolumeManager {
       CreateStorageVolumeType req = new CreateStorageVolumeType( newId, request.getSize( ), request.getSnapshotId( ) );
       req.setUserId( request.getUserId( ) );
       req.setEffectiveUserId( request.getEffectiveUserId( ) );
-      StorageUtil.lookup( sc.getHostName( ) ).send( req, CreateStorageVolumeResponseType.class );
+      StorageUtil.send( sc.getName( ), req );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       try {

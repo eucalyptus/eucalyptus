@@ -23,3 +23,19 @@ class BooleanResponse:
     else:
       setattr(self, name, value)
 
+
+class StringList(list):
+
+  def __repr__(self):
+    r = ""
+    for i in self:
+      r = "%s %s" % (r,i)
+    return r
+    
+  def startElement(self, name, attrs, connection):
+    pass
+
+  def endElement(self, name, value, connection):
+    if name == 'euca:entry':
+      self.append(value)
+      

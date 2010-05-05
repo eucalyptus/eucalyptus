@@ -86,6 +86,8 @@ permission notice:
 #include <storage.h>
 #include <eucalyptus.h>
 
+#include <windows-bundle.h>
+
 #define MONITORING_PERIOD (5)
 
 /* used by lower level handlers */
@@ -102,7 +104,8 @@ extern struct handlers default_libvirt_handlers;
 
 const int staging_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any STAGING domains will be cleaned up */
 const int booting_cleanup_threshold = 60; /* after this many seconds any BOOTING domains will be cleaned up */
-const int teardown_state_duration = 120; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
+const int bundling_cleanup_threshold = 60 * 60; /* after this many seconds any BUNDLING domains will be cleaned up */
+const int teardown_state_duration = 180; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
 
 // a NULL-terminated array of available handlers
 static struct handlers * available_handlers [] = {
@@ -212,6 +215,7 @@ void change_state(	ncInstance *instance,
     case SHUTDOWN:
     case SHUTOFF:
     case CRASHED:
+	case BUNDLING:
         instance->stateCode = EXTANT;
 	instance->retries = LIBVIRT_QUERY_RETRIES;
         break;
@@ -236,7 +240,7 @@ refresh_instance_info(	struct nc_state_t *nc,
 	    return;
 
     /* no need to bug for domains without state on Hypervisor */
-    if (now==TEARDOWN || now==STAGING)
+    if (now==TEARDOWN || now==STAGING || now==BUNDLING)
         return;
     
     sem_p(hyp_sem);
@@ -340,7 +344,9 @@ int
 get_instance_xml(	const char *gen_libvirt_cmd_path,
 			char *userId,
 			char *instanceId,
-			int ramdisk,
+			char *platform,
+			char *ramdiskId,
+			char *kernelId,
 			char *disk_path,
 			virtualMachine *params,
 			char *privMac,
@@ -350,11 +356,21 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
 {
     char buf [MAX_PATH];
 
-    if (ramdisk) {
-        snprintf (buf, MAX_PATH, "%s --ramdisk", gen_libvirt_cmd_path);
-    } else {
-        snprintf (buf, MAX_PATH, "%s", gen_libvirt_cmd_path);
+    snprintf(buf, MAX_PATH, "%s", gen_libvirt_cmd_path);
+    
+    if (!strstr(platform, "windows")) {
+      if (strnlen(ramdiskId, CHAR_BUFFER_SIZE) && strnlen(kernelId, CHAR_BUFFER_SIZE)) {
+	strcat(buf, " --ramdisk --kernel");
+	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --ramdisk --kernel", gen_libvirt_cmd_path);
+      } else if (strnlen(ramdiskId, CHAR_BUFFER_SIZE)) {
+	strcat(buf, " --ramdisk");
+	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --ramdisk", gen_libvirt_cmd_path);
+      } else if (strnlen(kernelId, CHAR_BUFFER_SIZE)) {
+	strcat(buf, " --kernel");
+	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --kernel", gen_libvirt_cmd_path);
+      }
     }
+
     if (params->disk > 0) { /* TODO: get this info from scMakeImage */
         strncat (buf, " --ephemeral", MAX_PATH);
     }
@@ -410,6 +426,7 @@ monitoring_thread (void *arg)
             if (instance->state!=STAGING && instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
                 instance->state!=SHUTDOWN &&
+				instance->state!=BUNDLING &&
                 instance->state!=TEARDOWN) continue;
 
             if (instance->state==TEARDOWN) {
@@ -423,9 +440,10 @@ monitoring_thread (void *arg)
                 continue;
             }
 
-			// time out logic for STAGING or BOOTING instances
-            if (instance->state==STAGING && (now - instance->launchTime) < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
-            if (instance->state==BOOTING && (now - instance->bootTime)   < booting_cleanup_threshold) continue;
+			// time out logic for STAGING or BOOTING or BUNDLING instances
+            if (instance->state==STAGING  && (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
+            if (instance->state==BOOTING  && (now - instance->bootTime)     < booting_cleanup_threshold) continue;
+            if (instance->state==BUNDLING && (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
             
             /* ok, it's been condemned => destroy the files */
             if (!nc_state.save_instance_files) {
@@ -491,12 +509,14 @@ void *startup_thread (void * arg)
     }
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
     
-    error = scMakeInstanceImage (instance->userId, 
+    error = scMakeInstanceImage (nc_state.home, 
+				 instance->userId, 
                                  instance->imageId, instance->imageURL, 
                                  instance->kernelId, instance->kernelURL, 
                                  instance->ramdiskId, instance->ramdiskURL, 
                                  instance->instanceId, instance->keyName, 
-                                 &disk_path, addkey_sem, nc_state.convert_to_disk,
+				 instance->platform, &disk_path, 
+				 addkey_sem, nc_state.convert_to_disk,
 				 instance->params.disk*1024);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
@@ -517,11 +537,14 @@ void *startup_thread (void * arg)
     
     error = get_instance_xml (nc_state.gen_libvirt_cmd_path,
 		              instance->userId, instance->instanceId, 
-                              strnlen (instance->ramdiskId, CHAR_BUFFER_SIZE), /* 0 if no ramdisk */
+			      instance->platform,
+			      instance->ramdiskId,
+			      instance->kernelId,
                               disk_path, 
                               &(instance->params), 
                               instance->ncnet.privateMac, 
                               brname, &xml);
+
     if (brname) free(brname);
     if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
     if (error) {
@@ -836,11 +859,43 @@ static int init (void)
 		logprintfl (EUCAINFO, "Maximum disk available: %lld (under %s)\n", nc_state.disk_max, log);
 	}
 
+	// set NC helper path
+	tmp = getConfString(configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
+	if (tmp) {
+	  snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, "%s", tmp);
+	  free(tmp);
+	} else {
+	  snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, "%s", EUCALYPTUS_NC_BUNDLE_UPLOAD); // default value
+	}
+
+	// set NC helper path
+	tmp = getConfString(configFiles, 2, CONFIG_NC_CHECK_BUCKET);
+	if (tmp) {
+	  snprintf (nc_state.ncCheckBucketCmd, MAX_PATH, "%s", tmp);
+	  free(tmp);
+	} else {
+	  snprintf (nc_state.ncCheckBucketCmd, MAX_PATH, "%s", EUCALYPTUS_NC_CHECK_BUCKET); // default value
+	}
+
+	// set NC helper path
+	tmp = getConfString(configFiles, 2, CONFIG_NC_DELETE_BUNDLE);
+	if (tmp) {
+	  snprintf (nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", tmp);
+	  free(tmp);
+	} else {
+	  snprintf (nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", EUCALYPTUS_NC_DELETE_BUNDLE); // default value
+	}
+
 	/* start the monitoring thread */
 	if (pthread_create(&tcb, NULL, monitoring_thread, &nc_state)) {
 		logprintfl (EUCAFATAL, "failed to spawn a monitoring thread\n");
 		return ERROR_FATAL;
 	}
+        if (pthread_detach(tcb)) {
+          logprintfl(EUCAFATAL, "failed to detach the monitoring thread\n");
+          return ERROR_FATAL;
+        }
+
 
 	initialized = 1;
 
@@ -872,7 +927,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 
 	for (i=0; i < (*outInstsLen); i++) {
 	  ncInstance *instance = (*outInsts)[i];
-	  logprintfl(EUCADEBUG, "doDescribeInstances(): instanceId=%s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d\n", instance->instanceId, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex);
+	  logprintfl(EUCADEBUG, "doDescribeInstances(): instanceId=%s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d platform=%s\n", instance->instanceId, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex, instance->platform);
 	}
 
 	/* allocate enough memory */
@@ -956,7 +1011,7 @@ int doPowerDown(ncMetadata *meta) {
 	return ret;
 }
 
-int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
 	int ret;
 
@@ -972,9 +1027,9 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
 
 
 	if (nc_state.H->doRunInstance)
- 	  ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+ 	  ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
 	else
-	  ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+	  ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
 
 	return ret;
 }
@@ -1099,6 +1154,57 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force);
 	else 
 		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force);
+
+	return ret;
+}
+
+int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey)
+{
+	int ret;
+
+	if (init())
+		return 1;
+
+	logprintfl (EUCAINFO, "doBundleInstance() invoked (id=%s bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s)\n", instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
+
+	if (nc_state.H->doBundleInstance)
+	  ret = nc_state.H->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
+	else 
+	  ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
+
+	return ret;
+}
+
+int doCancelBundleTask (ncMetadata *meta, char *instanceId)
+{
+	int ret;
+
+	if (init())
+		return 1;
+
+	logprintfl (EUCAINFO, "doCancelBundleTask() invoked (id=%s)\n", instanceId);
+
+	if (nc_state.H->doCancelBundleTask)
+	  ret = nc_state.H->doCancelBundleTask (&nc_state, meta, instanceId);
+	else 
+	  ret = nc_state.D->doCancelBundleTask (&nc_state, meta, instanceId);
+
+	return ret;
+}
+
+int doDescribeBundleTasks (ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen)
+{
+	int ret;
+
+	if (init())
+		return 1;
+	
+	logprintfl (EUCAINFO, "doDescribeBundleTasks() invoked (for %d instances)\n", instIdsLen);
+
+	if (nc_state.H->doDescribeBundleTasks)
+	  ret = nc_state.H->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
+	else 
+	  ret = nc_state.D->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
 
 	return ret;
 }

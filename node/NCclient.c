@@ -61,7 +61,8 @@ permission notice:
 #include <unistd.h> /* getopt */
 #include "data.h"
 #include "client-marshal.h"
-#include <misc.h>
+#include "misc.h"
+#include "euca_axis.h"
 
 #define NC_ENDPOINT "/axis2/services/EucalyptusNC"
 #define WALRUS_ENDPOINT "/services/Walrus"
@@ -81,6 +82,7 @@ void usage (void)
              "\t\tdescribeResource\n"
              "\t\tattachVolume\t\t[-i -V -R -L]\n"
              "\t\tdetachVolume\t\t[-i -V -R -L]\n"
+			 "\t\bundleInstance\t\t[-i]\n"
         "\toptions:\n"
              "\t\t-d \t\t- print debug output\n"
              "\t\t-h \t\t- this help information\n"
@@ -308,6 +310,7 @@ int main (int argc, char **argv)
         CHECK_PARAM(kernel_id, "kernel ID and manifest path");
 
         char *privMac, *pubMac, *privIp;
+	char *platform=NULL;
         int vlan = 3;
         privMac = strdup (mac_addr);
         mac_addr [0] = 'b';
@@ -349,9 +352,9 @@ int main (int argc, char **argv)
                                        kernel_id, kernel_url, 
                                        ramdisk_id, ramdisk_url, 
                                        "", /* key */
-				       &netparams,
-				       //                                       privMac, privIp, vlan, 
-                                       user_data, launch_index, group_names, group_names_size, /* CC stuff */
+									   &netparams,
+									   //                                       privMac, privIp, vlan, 
+                                       user_data, launch_index, platform, group_names, group_names_size, /* CC stuff */
                                        &outInst);
             if (rc != 0) {
                 printf("ncRunInstance() failed: instanceId=%s error=%d\n", instance_id, rc);
@@ -362,8 +365,32 @@ int main (int argc, char **argv)
         }
     
         /***********************************************************/
+	} else if (!strcmp(command, "bundleInstance")) {
+        CHECK_PARAM(instance_id, "instance id");
+		int rc = ncBundleInstanceStub (stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo");
+		printf ("ncBundleInstanceStub = %d\n", rc);
+
     } else if (!strcmp(command, "powerDown")) {
       int rc = ncPowerDownStub(stub, &meta);
+    } else if (!strcmp(command, "describeBundleTasks")) {
+      char *instIds[4];
+      int instIdsLen;
+      instIds[0] = malloc(sizeof(char) * 32);
+      instIds[1] = malloc(sizeof(char) * 32);
+      instIds[2] = malloc(sizeof(char) * 32);
+      instIds[3] = malloc(sizeof(char) * 32);
+      snprintf(instIds[0], 32, "i-12345675");
+      snprintf(instIds[1], 32, "i-12345674");
+      snprintf(instIds[2], 32, "i-12345673");
+      snprintf(instIds[3], 32, "i-12345672");
+      instIdsLen=4;
+      bundleTask **outBundleTasks=NULL;
+      int outBundleTasksLen=0;
+      int i, rc;
+      rc = ncDescribeBundleTasksStub(stub, &meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);
+      for (i=0; i<outBundleTasksLen; i++) {
+	printf("BUNDLE %d: %s %s\n", i, outBundleTasks[i]->instanceId, outBundleTasks[i]->state);
+      }
     } else if (!strcmp(command, "terminateInstance")) {
         CHECK_PARAM(instance_id, "instance ID");
         

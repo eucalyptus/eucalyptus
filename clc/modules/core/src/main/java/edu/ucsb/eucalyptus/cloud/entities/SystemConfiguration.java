@@ -94,7 +94,7 @@ import com.eucalyptus.util.StorageProperties;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "system_info" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( alias = "config", description = "Basic system configuration." )
 public class SystemConfiguration {
   private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
@@ -120,8 +120,6 @@ public class SystemConfiguration {
   private Boolean doDynamicPublicAddresses;
   @Column( name = "system_reserved_public_addresses" )
   private Integer systemReservedPublicAddresses;
-  @Column( name = "zero_fill_volumes" )
-  private Boolean zeroFillVolumes;
   @ConfigurableField( description = "Domain name to use for DNS." )
   @Column( name = "dns_domain" )
   private String  dnsDomain;
@@ -130,11 +128,12 @@ public class SystemConfiguration {
   private String  nameserver;
   @Column( name = "ns_address" )
   private String  nameserverAddress;
-  
-  public SystemConfiguration( ) {}
-  
+
+  public SystemConfiguration( ) {
+  }
+
   public SystemConfiguration( final String defaultKernel, final String defaultRamdisk, final Integer maxUserPublicAddresses,
-                              final Boolean doDynamicPublicAddresses, final Integer systemReservedPublicAddresses, final Boolean zeroFillVolumes,
+                              final Boolean doDynamicPublicAddresses, final Integer systemReservedPublicAddresses,
                               final String dnsDomain, final String nameserver, final String nameserverAddress, final String cloudHost ) {
     this.defaultKernel = defaultKernel;
     this.defaultRamdisk = defaultRamdisk;
@@ -142,7 +141,6 @@ public class SystemConfiguration {
     this.doDynamicPublicAddresses = doDynamicPublicAddresses;
     this.systemReservedPublicAddresses = systemReservedPublicAddresses;
     this.dnsDomain = dnsDomain;
-    this.zeroFillVolumes = zeroFillVolumes;
     this.nameserver = nameserver;
     this.nameserverAddress = nameserverAddress;
     this.cloudHost = cloudHost;
@@ -222,14 +220,6 @@ public class SystemConfiguration {
   
   public void setNameserverAddress( String nameserverAddress ) {
     this.nameserverAddress = nameserverAddress;
-  }
-  
-  public Boolean getZeroFillVolumes( ) {
-    return zeroFillVolumes;
-  }
-  
-  public void setZeroFillVolumes( Boolean zeroFillVolumes ) {
-    this.zeroFillVolumes = zeroFillVolumes;
   }
   
   public String getCloudHost( ) {
@@ -402,9 +392,6 @@ public class SystemConfiguration {
     }
     if( sysConf.getSystemReservedPublicAddresses() == null ) {
       sysConf.setSystemReservedPublicAddresses( 10 );
-    }
-    if(sysConf.getZeroFillVolumes() == null) {
-      sysConf.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
     }
     return sysConf;
   }

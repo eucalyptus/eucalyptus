@@ -42,7 +42,7 @@ class Walrus():
   def get_register_parser(self):
     parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
     parser.add_option("-H","--host",dest="walrus_host",help="Hostname of the walrus.")
-    parser.add_option("-p","--port",dest="walrus_port",type="int",default=8774,help="Port for the walrus.")
+    parser.add_option("-p","--port",dest="walrus_port",type="int",default=8773,help="Port for the walrus.")
     return parser
 
 

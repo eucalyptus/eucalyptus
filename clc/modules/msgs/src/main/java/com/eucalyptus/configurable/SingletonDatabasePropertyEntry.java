@@ -18,7 +18,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
   private Class[]       setArgs;
   
   public SingletonDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser,
-                                Boolean readOnly, String displayName, String widgetType ) {
+                                Boolean readOnly, String displayName, ConfigurableFieldType widgetType ) {
     super( definingClass, entrySetName, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType );
     this.baseMethodName = field.getName( ).substring( 0, 1 ).toUpperCase( ) + field.getName( ).substring( 1 );
     this.persistenceContext = ( ( PersistenceContext ) definingClass.getAnnotation( PersistenceContext.class ) ).name( );
@@ -120,7 +120,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
         PropertyTypeParser p = PropertyTypeParser.get( f.getType( ) );
         try {
           if ( !Modifier.isStatic( f.getModifiers( ) ) && !f.isAnnotationPresent( Transient.class ) ) {
-            ConfigurableProperty prop = new SingletonDatabasePropertyEntry( c, fqPrefix, f, description, defaultValue, p, annote.readonly( ), annote.displayName(), annote.type().toString() );
+            ConfigurableProperty prop = new SingletonDatabasePropertyEntry( c, fqPrefix, f, description, defaultValue, p, annote.readonly( ), annote.displayName(), annote.type() );
             return prop;
           }
         } catch ( Throwable e ) {

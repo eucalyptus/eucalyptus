@@ -86,8 +86,7 @@
   <!--================================== build targets ==================================-->
   <target name="build-msgs">
     <ant dir="modules/msgs" inheritall="false" target="builder"/>
-    <ant dir="modules/database" inheritall="false" target="builder"/>
-    <ant dir="modules/hsqldb" inheritall="false" target="builder"/>
+    <ant dir="modules/mysql" inheritall="false" target="builder"/>
     <ant dir="modules/authentication" inheritall="false" target="builder"/>
     <ant dir="modules/cloud" inheritall="false" target="builder"/>
     <ant dir="modules/configuration" inheritall="false" target="builder"/>
@@ -95,6 +94,7 @@
   <target name="build-core" depends="build-msgs">
     <ant dir="modules/core" inheritall="false" target="builder"/>
     <ant dir="modules/wsstack" inheritall="false" target="builder"/>
+    <ant dir="modules/component" inheritall="false" target="builder"/>
   </target>
    <target name="build-storage-common" depends="build-core">
     <ant dir="modules/storage-common" inheritall="false" target="builder"/>
@@ -118,16 +118,19 @@
   <target name="build-www">
     <ant dir="modules/www" inheritall="false" target="builder"/>
   </target>
-  <target name="build-nogwt" depends="build-eucalyptus,build-walrus,build-ebs,build-dns"/>
+  <target name="build-vmware-broker">
+    <ant dir="modules/vmware-broker" inheritall="false" target="builder"/>
+  </target>
+  <target name="build-nogwt" depends="build-eucalyptus,build-walrus,build-ebs,build-dns,build-vmware-broker"/>
   <target name="build" depends="deps,build-nogwt,build-www"/>
   <!--================================== clean targets ==================================-->
   <target name="clean-msgs">
     <ant dir="modules/msgs" inheritall="false" target="clean"/>
-    <ant dir="modules/database" inheritall="false" target="clean"/>
-    <ant dir="modules/hsqldb" inheritall="false" target="clean"/>
+    <ant dir="modules/mysql" inheritall="false" target="clean"/>
     <ant dir="modules/cloud" inheritall="false" target="clean"/>
     <ant dir="modules/authentication" inheritall="false" target="clean"/>
     <ant dir="modules/configuration" inheritall="false" target="clean"/>
+    <ant dir="modules/component" inheritall="false" target="clean"/>
   </target>
   <target name="clean-core" depends="clean-msgs">
     <ant dir="modules/core" inheritall="false" target="clean"/>
@@ -155,7 +158,10 @@
   <target name="clean-www">
     <ant dir="modules/www" inheritall="false" target="clean" />
   </target>
-  <target name="clean-nogwt" depends="clean-eucalyptus,clean-walrus,clean-ebs,clean-dns"/>
+  <target name="clean-vmware-broker" depends="clean-core">
+    <ant dir="modules/vmware-broker" inheritall="false" target="clean"/>
+  </target>
+  <target name="clean-nogwt" depends="clean-eucalyptus,clean-walrus,clean-ebs,clean-dns,clean-vmware-broker"/>
   <target name="clean" depends="clean-nogwt,clean-www">
     <delete dir="${target.dir}"/>
   </target>
@@ -175,19 +181,19 @@
     <copy todir="${DESTDIR}${euca.lib.dir}">
       <fileset dir="${basedir}/target">
         <include name="**/*.jar"/>
-		<exclude name="**/gwt-api-checker.jar"/>
-		<exclude name="**/gwt-dev.jar"/>
-		<exclude name="**/gwt-soyc-vis.jar"/>
-		<exclude name="**/gwt-user.jar"/>
+		<exclude name="**/gwt-api-checker-*.jar"/>
+		<exclude name="**/gwt-dev-*.jar"/>
+		<exclude name="**/gwt-soyc-vis-*.jar"/>
+		<exclude name="**/gwt-user-*.jar"/>
       </fileset>
     </copy>
     <copy todir="${DESTDIR}${euca.lib.dir}">
       <fileset dir="${deps.lib.dir}">
         <include name="**/*"/>
-		<exclude name="**/gwt-api-checker.jar"/>
-		<exclude name="**/gwt-dev.jar"/>
-		<exclude name="**/gwt-soyc-vis.jar"/>
-		<exclude name="**/gwt-user.jar"/>
+		<exclude name="**/gwt-api-checker-*.jar"/>
+		<exclude name="**/gwt-dev-*.jar"/>
+		<exclude name="**/gwt-soyc-vis-*.jar"/>
+		<exclude name="**/gwt-user-*.jar"/>
       </fileset>
     </copy>
     <mkdir dir="${DESTDIR}${euca.conf.dir}"/>
@@ -201,11 +207,11 @@
     <mkdir dir="${DESTDIR}${euca.var.dir}/webapps"/>
     <mkdir dir="${DESTDIR}${euca.var.dir}/modules"/>
     <ant dir="modules/msgs" inheritall="false" target="install"/>
-    <ant dir="modules/database" inheritall="false" target="install"/>
-    <ant dir="modules/hsqldb" inheritall="false" target="install"/>
+    <ant dir="modules/mysql" inheritall="false" target="install"/>
     <ant dir="modules/cloud" inheritall="false" target="install"/>
     <ant dir="modules/authentication" inheritall="false" target="install"/>
     <ant dir="modules/configuration" inheritall="false" target="install"/>
+    <ant dir="modules/component" inheritall="false" target="install"/>
     <ant dir="modules/core" inheritall="false" target="install"/>
     <ant dir="modules/wsstack" inheritall="false" target="install"/>
     <ant dir="modules/storage-common" inheritall="false" target="install"/>
@@ -218,6 +224,7 @@
     <ant dir="modules/storage-controller" inheritall="false" target="install"/>
     <ant dir="modules/dns" inheritall="false" target="install"/>
     <ant dir="modules/www" inheritall="false" target="install"/>
+    <ant dir="modules/vmware-broker" inheritall="false" target="install"/>
   </target>
   <!--================================== unzipping target ==================================-->
   <target name="deps">

@@ -73,6 +73,10 @@ permission notice:
 #include <fcntl.h>
 #include <stdarg.h>
 #include <ifaddrs.h>
+#include <math.h> /* log2 */
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 #include <sys/ioctl.h>
 #include <net/if.h>  
@@ -126,7 +130,15 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
     vnetconfig->enabled=1;
     vnetconfig->initialized = 1;
     vnetconfig->max_vlan = NUMBER_OF_VLANS;
-    if (numberofaddrs) vnetconfig->numaddrs = atoi(numberofaddrs);
+    if (numberofaddrs) {
+      if (atoi(numberofaddrs) > NUMBER_OF_HOSTS_PER_VLAN) {
+	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET exceeds maximum addresses per network (%d), setting to max\n", NUMBER_OF_HOSTS_PER_VLAN);
+	vnetconfig->numaddrs = NUMBER_OF_HOSTS_PER_VLAN;
+      } else {
+	vnetconfig->numaddrs = atoi(numberofaddrs);
+      }
+    }
+    
     if (network) vnetconfig->nw = dot2hex(network);
     if (netmask) vnetconfig->nm = dot2hex(netmask);
 
@@ -344,10 +356,11 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
   //  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
   for (i=start; i<=stop && !done; i++) {
-    if (vnetconfig->networks[vlan].addrs[i].mac[0] == '\0') {
-      //if (maczero(vnetconfig->networks[vlan].addrs[i].mac)) {
+    //    if (vnetconfig->networks[vlan].addrs[i].mac[0] == '\0') {
+    if (!maczero(vnetconfig->networks[vlan].addrs[i].mac)) {
       if (!found) found=i;
-    } else if (!strcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) {
+      //    } else if (!strcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) {
+    } else if (!machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) {
       done++;
     }
   }
@@ -356,7 +369,8 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
     // duplicate IP found
     logprintfl(EUCAWARN,"vnetAddHost(): attempting to add duplicate macmap entry, ignoring\n");
   } else if (found) {
-    strncpy(vnetconfig->networks[vlan].addrs[found].mac, mac, 24);
+    //    strncpy(vnetconfig->networks[vlan].addrs[found].mac, mac, 24);
+    mac2hex(mac, vnetconfig->networks[vlan].addrs[found].mac);
     if (ip) {
       vnetconfig->networks[vlan].addrs[found].ip = dot2hex(ip);
     } else {
@@ -389,7 +403,8 @@ int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
   for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
-    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
+    //    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
+    if ( (!mac || !machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       bzero(&(vnetconfig->networks[vlan].addrs[i]), sizeof(netEntry));
       vnetconfig->networks[vlan].numhosts--;
       done++;
@@ -414,7 +429,8 @@ int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
   for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
-    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
+    //    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
+    if ( (!mac || !machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       vnetconfig->networks[vlan].addrs[i].active=1;
       done++;
     }
@@ -436,7 +452,8 @@ int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
   for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
-    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
+    //    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
+    if ( (!mac || !machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       vnetconfig->networks[vlan].addrs[i].active=0;
       done++;
     }
@@ -828,7 +845,7 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
 }
 int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) {
   int i, done, start, stop;
-  char *newip;
+  char *newip, *newmac;
   
   if (param_check("vnetGetNextHost", vnetconfig, mac, ip, vlan)) return(1);
 
@@ -850,8 +867,12 @@ int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int i
   
   done=0;
   for (i=start; i<=stop && !done; i++) {
-    if (vnetconfig->networks[vlan].addrs[i].mac[0] != '\0' && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
-      strncpy(mac, vnetconfig->networks[vlan].addrs[i].mac, 24);
+    //    if (vnetconfig->networks[vlan].addrs[i].mac[0] != '\0' && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
+    if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
+      //      strncpy(mac, vnetconfig->networks[vlan].addrs[i].mac, 24);
+      hex2mac(vnetconfig->networks[vlan].addrs[i].mac, &newmac);
+      strncpy(mac, newmac, strlen(newmac));
+      free(newmac);
       newip = hex2dot(vnetconfig->networks[vlan].addrs[i].ip);
       strncpy(ip, newip, 16);
       free(newip);
@@ -1022,9 +1043,11 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
       for (j=2; j<=vnetconfig->numaddrs-2; j++) {
 	if (vnetconfig->networks[i].addrs[j].active == 1) {
 	  newip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
-	  mac = vnetconfig->networks[i].addrs[j].mac;
+	  //mac = vnetconfig->networks[i].addrs[j].mac;
+	  hex2mac(vnetconfig->networks[i].addrs[j].mac, &mac);
 	  fprintf(fp, "\nhost node-%s {\n  hardware ethernet %s;\n  fixed-address %s;\n}\n", newip, mac, newip);
 	  (*numHosts)++;
+	  if (mac) free(mac);
 	  if (newip) free(newip);
 	}
       }
@@ -2193,11 +2216,11 @@ void mac2hex(char *in, unsigned char out[6]) {
 
 int maczero(unsigned char in[6]) {
   unsigned char zeromac[6];
-  bzero(zeromac, sizeof(char)*6);
-  return(!memcmp(in, zeromac, sizeof(char)*6));
+  bzero(zeromac, sizeof(unsigned char)*6);
+  return(memcmp(in, zeromac, sizeof(unsigned char)*6));
 }
 
-int maccmp(char *ina, unsigned char inb[6]) {
+int machexcmp(char *ina, unsigned char inb[6]) {
   unsigned char mconv[6];
   mac2hex(ina, mconv);
   return(memcmp(mconv, inb, sizeof(unsigned char) * 6));

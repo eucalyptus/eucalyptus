@@ -44,11 +44,11 @@ public class ChannelUtil {
   public static final boolean CHANNEL_REUSE_ADDRESS             = true;
   public static final boolean CHANNEL_KEEP_ALIVE                = true;
   public static final boolean CHANNEL_NODELAY                   = true;
-  public static int           SERVER_POOL_MAX_THREADS           = 40;
+  public static int           SERVER_POOL_MAX_THREADS           = Runtime.getRuntime( ).availableProcessors( ) * 2 + 1;
   public static long          SERVER_POOL_MAX_MEM_PER_CONN      = 1048576;
   public static long          SERVER_POOL_TOTAL_MEM             = 100 * 1024 * 1024;
   public static long          SERVER_POOL_TIMEOUT_MILLIS        = 500;
-  public static int           SERVER_BOSS_POOL_MAX_THREADS      = 40;
+  public static int           SERVER_BOSS_POOL_MAX_THREADS      = Runtime.getRuntime( ).availableProcessors( ) + 1;
   public static long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 1048576;
   public static long          SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024;
   public static long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500;
@@ -67,8 +67,8 @@ public class ChannelUtil {
   static class NioServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline( ) throws Exception {
       final ChannelPipeline pipeline = Channels.pipeline( );
-      pipeline.addLast("ssl", new NioSslHandler());
-      ChannelUtil.addPipelineMonitors( pipeline );
+      //pipeline.addLast("ssl", new NioSslHandler());
+      //ChannelUtil.addPipelineMonitors( pipeline );
       pipeline.addLast( "decoder", new NioHttpDecoder( ) );
       pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
       pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );

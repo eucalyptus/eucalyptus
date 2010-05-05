@@ -174,7 +174,7 @@ public class AddressManager {
       }
     };
     if ( address.isAssigned( ) ) {
-      address.unassign( ).getCallback( ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
+        address.unassign( ).getCallback( ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
     } else {
       unassignBystander.apply();
     }

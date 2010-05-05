@@ -108,6 +108,7 @@ public class StreamConsumer extends Thread {
         } finally {
             if (outStream != null) {
                 try {
+            		is.close();
 					outStream.close();
 	                fileOutputStream.close();
 				} catch (IOException e) {

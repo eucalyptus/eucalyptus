@@ -91,7 +91,7 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
 @Entity
 @PersistenceContext(name="eucalyptus_general")
 @Table( name = "Images" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ImageInfo implements Image {
   @Transient
   public static ImageInfo ALL = new ImageInfo();
@@ -120,13 +120,22 @@ public class ImageInfo implements Image {
   @Lob
   @Column( name = "image_signature" )
   private String signature;
+  @Column( name = "image_platform" )
+  private String platform;
+  public String getPlatform( ) {
+    return this.platform;
+  }
+
+  public void setPlatform( String platform ) {
+    this.platform = platform;
+  }
 //  @ManyToMany( cascade = CascadeType.PERSIST )
 //  @JoinTable(
 //      name = "image_has_groups",
 //      joinColumns = { @JoinColumn( name = "image_id" ) },
 //      inverseJoinColumns = @JoinColumn( name = "user_group_id" )
 //  )
-//  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+//  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //  private List<Group> userGroups = new ArrayList<Group>();
   @ManyToMany()
   @JoinTable(
@@ -134,7 +143,7 @@ public class ImageInfo implements Image {
       joinColumns = { @JoinColumn( name = "image_id" ) },
       inverseJoinColumns = @JoinColumn( name = "user_id" )
   )
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<UserInfo> permissions = new ArrayList<UserInfo>();
   @ManyToMany( cascade = CascadeType.PERSIST )
   @JoinTable(
@@ -142,7 +151,7 @@ public class ImageInfo implements Image {
       joinColumns = { @JoinColumn( name = "image_id" ) },
       inverseJoinColumns = @JoinColumn( name = "image_product_code_id" )
   )
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<ProductCode> productCodes = new ArrayList<ProductCode>();
 
   public static ImageInfo deregistered() {
@@ -377,6 +386,7 @@ public class ImageInfo implements Image {
     i.setIsPublic( this.getImagePublic() );
     i.setKernelId( this.getKernelId() );
     i.setRamdiskId( this.getRamdiskId() );
+    i.setPlatform( this.getPlatform( ) );
     return i;
   }
 

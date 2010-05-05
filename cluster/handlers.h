@@ -73,9 +73,10 @@ permission notice:
 
 #define OP_TIMEOUT 60
 #define OP_TIMEOUT_PERNODE 20
+#define OP_TIMEOUT_MIN 5
 
 enum {SHARED_MEM, SHARED_FILE};
-enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, ENDLOCK};
+enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, BUNDLECACHE, ENDLOCK};
 
 typedef struct instance_t {
   char instanceId[16];
@@ -103,13 +104,15 @@ typedef struct instance_t {
 
   char userData[4096];
   char launchIndex[64];
+  char platform[64];
+  char bundleTaskStateName[64];
   char groupNames[64][32];
 
   ncVolume volumes[EUCA_MAX_VOLUMES];
   int volumesSize;
 } ccInstance;
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char groupNames[][32], ncVolume *volumes, int volumesSize);
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize);
 void print_ccInstance(char *tag, ccInstance *in);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
@@ -168,13 +171,17 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan);
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev);
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
 
+int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey);
+int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId);
+int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bundleTask **outBundleTasks, int *outBundleTasksLen);
+
 int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst);
 int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst);
 int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *outAddressesLen);
 int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccsLen, vnetConfig *outvnetConfig);
 
 int doDescribeInstances(ncMetadata *meta, char **instIds, int instIdsLen, ccInstance **outInsts, int *outInstsLen);
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen);
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, char *targetNode, ccInstance **outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **consoleOutput);
 int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata *meta, char **instIds, int instIdsLen, int **outStatus);
@@ -200,7 +207,7 @@ int privIpCmp(ccInstance *inst, void *ip);
 int privIpSet(ccInstance *inst, void *ip);
 int pubIpCmp(ccInstance *inst, void *ip);
 int pubIpSet(ccInstance *inst, void *ip);
-int free_instanceNetwork(char *mac, int vlan);
+int free_instanceNetwork(char *mac, int vlan, int dolock);
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src);
 
 int add_resourceCache(char *host, ccResource *in);
@@ -219,6 +226,8 @@ int init_pthreads(void);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname, int mode);
 void unlock_exit(int);
 void shawn(void);
+int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *ncOp, ...);
+int ncGetTimeout(time_t op_start, time_t op_max, int numCalls, int idx);
 
 int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock);
 int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock);

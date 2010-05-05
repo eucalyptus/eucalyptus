@@ -115,12 +115,13 @@ static char *jvm_default_opts[] = {
 	    "-Djava.net.preferIPv4Stack=true",
 	    "-Djava.security.policy=%1$s/etc/eucalyptus/cloud.d/security.policy",
 	    "-Djava.library.path=%1$s/usr/lib/eucalyptus",
+	    "-Dsun.java.command=Eucalyptus",
 	    "-Deuca.home=%1$s/",
 	    "-Deuca.var.dir=%1$s/var/lib/eucalyptus",
 	    "-Deuca.lib.dir=%1$s/usr/share/eucalyptus",
 	    "-Deuca.conf.dir=%1$s/etc/eucalyptus/cloud.d",
 	    "-Deuca.log.dir=%1$s/var/log/eucalyptus",
-	    "-Deuca.version=main",
+	    "-Deuca.version=main-vmware-broker",
 	    NULL,
 };
 static char *libjvm_paths[ ] = {

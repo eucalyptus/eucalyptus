@@ -77,7 +77,6 @@ import com.eucalyptus.ws.server.NoAcceptingPipelineException;
 
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
-
 public class PipelineRegistry {
   private static PipelineRegistry registry;
   private static Logger           LOG = Logger.getLogger( PipelineRegistry.class );

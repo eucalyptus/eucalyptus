@@ -66,6 +66,8 @@ permission notice:
 #include "vnetwork.h"
 #include "data.h"
 
+#include <windows-bundle.h>
+
 #define LIBVIRT_QUERY_RETRIES 5
 #define MAXDOMS 1024
 #define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
@@ -103,6 +105,9 @@ struct nc_state_t {
 	char connect_storage_cmd_path[MAX_PATH];
 	char disconnect_storage_cmd_path[MAX_PATH];
 	char get_storage_cmd_path[MAX_PATH];
+	char ncBundleUploadCmd[MAX_PATH];
+  	char ncCheckBucketCmd[MAX_PATH];
+  	char ncDeleteBundleCmd[MAX_PATH];
 };
 
 
@@ -132,6 +137,7 @@ struct handlers {
 				netConfig *netparams,
 				char *userData,
 				char *launchIndex,
+				char *platform,
 				char **groupNames,
 				int groupNamesSize,
 				ncInstance **outInst);
@@ -170,12 +176,28 @@ struct handlers {
 				char *remoteDev,
 				char *localDev,
 				int force);
+    int (*doBundleInstance)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char *bucketName,
+				char *filePrefix,
+				char *walrusURL,
+				char *userPublicKey);
+    int (*doCancelBundleTask)   (struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId);
+    int (*doDescribeBundleTasks)	(struct nc_state_t *nc,
+					 ncMetadata *meta,
+					 char **instIds,
+					 int instIdsLen,
+					 bundleTask ***outBundleTasks,
+					 int *outBundleTasksLen);
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
 int doPowerDown			(ncMetadata *meta);
 int doDescribeInstances		(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-int doRunInstance		(ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst);
+int doRunInstance		(ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst);
 int doTerminateInstance		(ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
 int doRebootInstance		(ncMetadata *meta, char *instanceId);
 int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutput);
@@ -183,9 +205,12 @@ int doDescribeResource		(ncMetadata *meta, char *resourceType, ncResource **outR
 int doStartNetwork		(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey);
+int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
+int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 #endif /* HANDLERS_FANOUT */
 
-
+int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey);
 /* helper functions used by the low level handlers */
 int get_value(			char *s,
 				const char *name,
@@ -203,7 +228,9 @@ void adopt_instances();
 int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *userId,
 				char *instanceId,
-				int ramdisk,
+				char *platform,
+				char *ramdiskId,
+				char *kernelId,
 				char *disk_path,
 				virtualMachine *params,
 				char *privMac,
@@ -218,5 +245,22 @@ void parse_target(char *dev_string);
 char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 char* get_iscsi_target(const char *storage_cmd_path, char *dev_string);
+
+// bundling structure
+struct bundling_params_t {
+	ncInstance * instance;
+	char * bucketName;
+	char * filePrefix;
+	char * walrusURL;
+	char * userPublicKey;
+	char * workPath; // work directory path
+	char * diskPath; // disk file path
+	char * eucalyptusHomePath; 
+	long long sizeMb; // diskPath size
+	char * ncBundleUploadCmd;
+  	char * ncCheckBucketCmd;
+  	char * ncDeleteBundleCmd;
+};
+
 #endif /* INCLUDE */
 

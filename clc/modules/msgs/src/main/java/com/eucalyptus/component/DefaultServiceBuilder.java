@@ -40,12 +40,12 @@ public class DefaultServiceBuilder extends AbstractServiceBuilder<ServiceConfigu
   @Override
   public ServiceConfiguration add( URI uri ) throws ServiceRegistrationException {
     try {
-      if( uri.getScheme( ).matches( ".*vm.*" ) || NetworkUtil.testLocal( uri.getHost( ) ) ) {
+      if( uri.getScheme( ).matches( ".*vm.*" ) || ( uri.getHost( ) != null && NetworkUtil.testLocal( uri.getHost( ) ) ) ) {
         return new LocalConfiguration( this.component.getPeer( ), uri );      
       } else {
         return new RemoteConfiguration( this.component.getPeer( ), uri );      
       }
-    } catch ( Exception e ) {
+    } catch ( Throwable t ) {
       return new LocalConfiguration( this.component.getPeer( ), uri );      
     }
   }

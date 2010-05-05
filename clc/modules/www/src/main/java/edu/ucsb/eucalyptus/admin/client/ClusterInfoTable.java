@@ -207,7 +207,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		g.setWidget ( i, 1, hb );
 
 		i++; // next row
-/*		g.setWidget( i, 0, new Label( "Port:" ) );
+		/*		g.setWidget( i, 0, new Label( "Port:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 		final TextBox pb = new TextBox();
 		pb.addChangeListener (new ChangeCallback (this, row));
@@ -301,7 +301,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 				propTextBox.setText(storageParams.get(4*paramidx + 2));
 				propTextBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 				g.setWidget( i, 1, propTextBox );
-			} else if ("PASSWORD".equals(storageParams.get(4 * paramidx))) {
+			} else if ("KEYVALUEHIDDEN".equals(storageParams.get(4 * paramidx))) {
 				g.setWidget( i, 0, new Label(storageParams.get(4*paramidx + 1) + ": ") );
 				g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				final TextBox propTextBox = new PasswordTextBox();
@@ -311,7 +311,6 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 				propTextBox.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 				g.setWidget( i, 1, propTextBox );
 			}	else if("BOOLEAN".equals(storageParams.get(4 * paramidx))) {
-
 				final int index = paramidx;
 				final CheckBox propCheckbox = new CheckBox ();
 				g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);

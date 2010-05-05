@@ -70,10 +70,12 @@ import java.util.NavigableSet;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.util.NetworkUtil;
 
 @Deprecated
 public enum Component {
   bootstrap( true ),
+  component( true ),
   eucalyptus( true ),
   walrus( true ),
   dns( true ),
@@ -82,6 +84,7 @@ public enum Component {
   jetty( true ),
   configuration( true ),
   cluster( false ),
+  vmwarebroker( false ),
   any( true );
   private static Logger LOG = Logger.getLogger( Component.class );
   private final Boolean singleton;
@@ -132,7 +135,11 @@ public enum Component {
   }
 
   public String getRegistryKey( String hostName ) {
-    return this.name( ) + "@" + hostName;
+    if( NetworkUtil.testLocal( hostName ) ) {
+      return this.name( ) + "@localhost";
+    } else {
+      return this.name( ) + "@" + hostName;
+    }
   }
   
 }

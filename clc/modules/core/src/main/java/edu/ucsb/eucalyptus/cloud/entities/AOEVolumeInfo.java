@@ -62,7 +62,6 @@
  *
  * Author: Neil Soman neil@eucalyptus.com
  */
-
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.hibernate.annotations.Cache;
@@ -73,7 +72,7 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "AOEVolumeInfo" )
 @Entity
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AOEVolumeInfo extends LVMVolumeInfo {
     private Integer vbladePid;
     private Integer majorNumber;

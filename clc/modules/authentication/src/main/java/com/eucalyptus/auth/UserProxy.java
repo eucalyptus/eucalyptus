@@ -5,7 +5,6 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities._anon;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
@@ -26,12 +25,6 @@ public class UserProxy implements User {
   public UserProxy( UserEntity user ) {
     this.searchUser = new UserEntity( user.getName( ) );
     this.user = user;
-  }
-  
-  class _this extends _anon<UserEntity> {
-    private _this( ) {
-      super( UserProxy.this.searchUser );
-    }
   }
   
   @Override

@@ -14,9 +14,9 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   private Class definingClass;
   private Boolean readOnly;
   private String displayName;
-  private String widgetType;
+  private ConfigurableFieldType widgetType;
   
-  public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, String widgetType ) {
+  public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType ) {
     this.definingClass = definingClass;
     this.entrySetName = entrySetName.toLowerCase( );
     this.fieldName = propertyName.toLowerCase( );
@@ -69,7 +69,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
 	  return this.displayName;
   }
   
-  public String getWidgetType( ) {
+  public ConfigurableFieldType getWidgetType( ) {
 	  return this.widgetType;
   }
 }

@@ -69,6 +69,8 @@ permission notice:
 #include <misc.h>
 #include <data.h>
 
+#include <windows-bundle.h>
+
 pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
 adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, const axutil_env_t *env) 
@@ -259,12 +261,14 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     
     // reported by NC
     adb_instanceType_set_stateName(instance, env, outInst->stateName);
+	adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
     axutil_date_time_t * dt = axutil_date_time_create_with_offset(env, outInst->launchTime - time(NULL));
     adb_instanceType_set_launchTime(instance, env, dt);
     
     // passed into RunInstances for safekeeping by NC
     adb_instanceType_set_userData(instance, env, outInst->userData);
     adb_instanceType_set_launchIndex(instance, env, outInst->launchIndex);
+    adb_instanceType_set_platform(instance, env, outInst->platform);
     int i;
     for (i=0; i<outInst->groupNamesSize; i++) {
         adb_instanceType_add_groupNames(instance, env, outInst->groupNames[i]);
@@ -318,6 +322,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     snprintf(netparams.publicIp, 24, "%s", adb_netConfigType_get_publicIp(net_type, env));
     axis2_char_t * userData = adb_ncRunInstanceType_get_userData(input, env);
     axis2_char_t * launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
+    axis2_char_t * platform = adb_ncRunInstanceType_get_platform(input, env);
     int groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
     char ** groupNames = calloc (groupNamesSize, sizeof(char *));
     if (groupNames==NULL) {
@@ -346,7 +351,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
                                        ramdiskId, ramdiskURL, 
                                        keyName, 
                                        &netparams, 
-                                       userData, launchIndex, groupNames, groupNamesSize,
+                                       userData, launchIndex, platform, groupNames, groupNamesSize,
                                        &outInst);
             
             if (error) {
@@ -666,6 +671,156 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
     pthread_mutex_unlock(&ncHandlerLock);
     
     eventlog("NC", userId, correlationId, "DetachVolume", "end");
+    return response;
+}
+
+adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t* ncBundleInstance, const axutil_env_t *env)
+{
+    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncBundleInstanceType_t * input          = adb_ncBundleInstance_get_ncBundleInstance(ncBundleInstance, env);
+    adb_ncBundleInstanceResponse_t * response   = adb_ncBundleInstanceResponse_create(env);
+    adb_ncBundleInstanceResponseType_t * output = adb_ncBundleInstanceResponseType_create(env);
+
+    // get standard fields from input
+    axis2_char_t * correlationId = adb_ncBundleInstanceType_get_correlationId(input, env);
+    axis2_char_t * userId = adb_ncBundleInstanceType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    axis2_char_t * instanceId = adb_ncBundleInstanceType_get_instanceId(input, env);
+    axis2_char_t * bucketName = adb_ncBundleInstanceType_get_bucketName(input, env);
+    axis2_char_t * filePrefix = adb_ncBundleInstanceType_get_filePrefix(input, env);
+    axis2_char_t * walrusURL = adb_ncBundleInstanceType_get_walrusURL(input, env);
+    axis2_char_t * userPublicKey = adb_ncBundleInstanceType_get_userPublicKey(input, env);
+
+
+    eventlog("NC", userId, correlationId, "BundleInstance", "begin");
+    { // do it
+        ncMetadata meta = { correlationId, userId };
+
+        int error = doBundleInstance (&meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
+    
+        if (error) {
+            logprintfl (EUCAERROR, "ERROR: doBundleInstance() failed error=%d\n", error);
+            adb_ncBundleInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_ncBundleInstanceResponseType_set_correlationId(output, env, correlationId);
+            adb_ncBundleInstanceResponseType_set_userId(output, env, userId);
+        } else {
+            // set standard fields in output
+            adb_ncBundleInstanceResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncBundleInstanceResponseType_set_correlationId(output, env, correlationId);
+            adb_ncBundleInstanceResponseType_set_userId(output, env, userId);
+            // no operation-specific fields in output
+        }
+    }
+    // set response to output
+    adb_ncBundleInstanceResponse_set_ncBundleInstanceResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    eventlog("NC", userId, correlationId, "BundleInstance", "end");
+    return response;
+}
+
+adb_ncCancelBundleTaskResponse_t* ncCancelBundleTaskMarshal (adb_ncCancelBundleTask_t* ncCancelBundleTask, const axutil_env_t *env) {
+    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncCancelBundleTaskType_t * input          = adb_ncCancelBundleTask_get_ncCancelBundleTask(ncCancelBundleTask, env);
+    adb_ncCancelBundleTaskResponse_t * response   = adb_ncCancelBundleTaskResponse_create(env);
+    adb_ncCancelBundleTaskResponseType_t * output = adb_ncCancelBundleTaskResponseType_create(env);
+
+    // get standard fields from input
+    axis2_char_t * correlationId = adb_ncCancelBundleTaskType_get_correlationId(input, env);
+    axis2_char_t * userId = adb_ncCancelBundleTaskType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    axis2_char_t * instanceId = adb_ncCancelBundleTaskType_get_instanceId(input, env);
+
+    eventlog("NC", userId, correlationId, "CancelBundleTask", "begin");
+    { // do it
+        ncMetadata meta = { correlationId, userId };
+
+        int error = doCancelBundleTask (&meta, instanceId);
+    
+        if (error) {
+            logprintfl (EUCAERROR, "ERROR: doCancelBundleTask() failed error=%d\n", error);
+            adb_ncCancelBundleTaskResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_ncCancelBundleTaskResponseType_set_correlationId(output, env, correlationId);
+            adb_ncCancelBundleTaskResponseType_set_userId(output, env, userId);
+        } else {
+            // set standard fields in output
+            adb_ncCancelBundleTaskResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncCancelBundleTaskResponseType_set_correlationId(output, env, correlationId);
+            adb_ncCancelBundleTaskResponseType_set_userId(output, env, userId);
+            // no operation-specific fields in output
+        }
+    }
+    // set response to output
+    adb_ncCancelBundleTaskResponse_set_ncCancelBundleTaskResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    eventlog("NC", userId, correlationId, "CancelBundleTask", "end");
+    return response;
+}
+
+adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescribeBundleTasks_t* ncDescribeBundleTasks, const axutil_env_t *env)
+{
+    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncDescribeBundleTasksType_t * input          = adb_ncDescribeBundleTasks_get_ncDescribeBundleTasks(ncDescribeBundleTasks, env);
+    adb_ncDescribeBundleTasksResponse_t * response   = adb_ncDescribeBundleTasksResponse_create(env);
+    adb_ncDescribeBundleTasksResponseType_t * output = adb_ncDescribeBundleTasksResponseType_create(env);
+
+    // get standard fields from input
+    axis2_char_t * correlationId = adb_ncDescribeBundleTasksType_get_correlationId(input, env);
+    axis2_char_t * userId = adb_ncDescribeBundleTasksType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    int instIdsLen = adb_ncDescribeBundleTasksType_sizeof_instanceIds(input, env);
+    char ** instIds = malloc(sizeof(char *) * instIdsLen);
+    
+    bundleTask **outBundleTasks=NULL;
+    int outBundleTasksLen=0;
+
+    if (instIds==NULL) {
+        logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeBundleTasksMarshal()\n");
+        adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
+
+    } else {
+        int i;
+        for (i=0; i<instIdsLen; i++) {
+            instIds[i] = adb_ncDescribeBundleTasksType_get_instanceIds_at(input, env, i);
+        }
+
+        eventlog("NC", userId, correlationId, "DescribeBundleTasks", "begin");
+        { // do it
+            ncMetadata meta = { correlationId, userId };
+
+            int error = doDescribeBundleTasks (&meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);                                             
+            if (error) {
+                logprintfl (EUCAERROR, "ERROR: doDescribeBundleTasks() failed error=%d\n", error);
+                adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
+                
+            } else {
+                // set standard fields in output
+                adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_TRUE);
+                adb_ncDescribeBundleTasksResponseType_set_correlationId(output, env, correlationId);
+                adb_ncDescribeBundleTasksResponseType_set_userId(output, env, userId);
+				// set operation specific values
+				for (i=0; i<outBundleTasksLen; i++) {
+					adb_bundleTaskType_t *btt;
+					btt = adb_bundleTaskType_create(env);
+					adb_bundleTaskType_set_instanceId(btt, env, outBundleTasks[i]->instanceId);
+					adb_bundleTaskType_set_state(btt, env, outBundleTasks[i]->state);
+					adb_ncDescribeBundleTasksResponseType_add_bundleTasks(output, env, btt);
+					free(outBundleTasks[i]);
+				}
+				free(outBundleTasks);
+            }
+        }
+    }
+	
+    // set response to output
+    adb_ncDescribeBundleTasksResponse_set_ncDescribeBundleTasksResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    eventlog("NC", userId, correlationId, "DescribeBundleTasks", "end");
     return response;
 }
 

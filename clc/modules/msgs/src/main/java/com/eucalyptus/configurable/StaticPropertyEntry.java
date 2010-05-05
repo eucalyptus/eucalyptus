@@ -7,7 +7,7 @@ import org.apache.log4j.Logger;
 public class StaticPropertyEntry extends AbstractConfigurableProperty {
   static Logger LOG = Logger.getLogger( StaticPropertyEntry.class );
   private Field         field;
-  public StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser, Boolean readOnly, String displayName, String widgetType ) {
+  public StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType ) {
     super( definingClass, entrySetName, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType );
     this.field = field;
   }
@@ -55,7 +55,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         ConfigurableProperty entry = null;
         int modifiers = field.getModifiers( );
         if ( Modifier.isPublic( modifiers ) && Modifier.isStatic( modifiers ) ) {
-          entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName(), annote.type().toString() );
+          entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName(), annote.type() );
           entry.setValue( defaultValue );
           return entry;
         } 

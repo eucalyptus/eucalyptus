@@ -1,14 +1,15 @@
 package com.eucalyptus.config;
 
-import java.net.URI;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.DatabaseServiceBuilder;
+
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.util.LogUtil;
+
 import edu.ucsb.eucalyptus.msgs.DeregisterStorageControllerType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageControllersType;
 import edu.ucsb.eucalyptus.msgs.RegisterStorageControllerType;

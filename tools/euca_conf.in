@@ -76,10 +76,11 @@ DHCP_USER=""
 BRIDGE=""
 NEWNODES=""
 NODEMODE=""
-WALRUS_MODE=""
 SYNC=""
 WALRUS=""
 WALRUS_MODE=""
+VMWAREBROKER=""
+VMWAREBROKER_MODE=""
 CLUSNAME=""
 NEWCLUS=""
 CLUSMODE=""
@@ -98,7 +99,7 @@ LIST=""
 ENABLED=""
 DISABLED=""
 TO_START=""
-
+VMWARE=""
 
 usage () {
 	echo "$0 [options] [<file>]"
@@ -114,10 +115,13 @@ usage () {
 	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
 	echo "   --register-cluster <clustername> <host> add new cluster to EUCALYPTUS"
 	echo "   --deregister-cluster <clustername>      remove cluster from EUCALYPTUS"
+	echo "   --configure-vmware                add new vmware to EUCALYPTUS"
 	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
 	echo "   --deregister-walrus <host>       remove walrus from EUCALYPTUS"
-	echo "   --register-sc <clustername> <host>      add storage controller"
-	echo "   --deregister-sc <clustername>           remove storage controller from EUCALYPTUS"
+        echo "   --register-sc <clustername> <host>      add storage controller"
+        echo "   --deregister-sc <clustername>           remove storage controller from EUCALYPTUS"
+	echo "   --register-vmwarebroker <host>         add vmware broker to EUCALYPTUS"
+	echo "   --deregister-vmwarebroker <host>       remove vmware broker from EUCALYPTUS"
 	echo "   --list-walruses                  list registered walrus(es)"
 	echo "   --list-clusters                  list registered CCs"
 	echo "   --list-nodes                     list registered NCs"
@@ -134,9 +138,9 @@ usage () {
 	echo "   --name <var>                     returns the value or <name>"
 	echo "   --import-conf <file>             import variables from <file> into eucalyptus.conf"
 	echo "   --setup                          perform initial setup"
-	echo "   --enable {cloud|walrus|sc}       enable service at next start"
-	echo "   --disable {cloud|walrus|sc}      disable service at next start"
-	echo "   --check {nc|cc|cloud|sc|walrus}  pre-flight checks"
+	echo "   --enable {cloud|walrus|sc|vmwarebroker}       enable service at next start"
+	echo "   --disable {cloud|walrus|sc|vmwarebroker}      disable service at next start"
+	echo "   --check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}  pre-flight checks"
 #	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
 	echo "   --version                        eucalyptus version"
 	echo
@@ -264,6 +268,8 @@ component_sync_keys() {
 	echo "syncing sc($NAME)"
     elif [ "$COMPONENT" = "nc" ]; then
 	echo "syncing nc"
+    elif [ "$COMPONENT" = "vmwarebroker" ]; then
+	echo "syncing vmware broker"
     fi
 
 
@@ -409,6 +415,11 @@ while [ $# -gt 0 ]; do
 	    VERBOSE="Y"
 	    shift
 	    continue
+	fi
+	if [ "$1" = "--configure-vmware" ]; then
+		VMWARE="Y"
+		shift;
+		continue
 	fi
 	if [ "$1" = "-noscp" -o "$1" = "--no-scp" ]; then 
 	    SCP=""
@@ -586,6 +597,18 @@ while [ $# -gt 0 ]; do
 		shift; shift
 		continue
 	fi
+	if [ "$1" = "--register-vmwarebroker" ]; then
+		VMWAREBROKER_MODE="ADD"
+		VMWAREBROKER="$2"
+		shift; shift
+		continue
+	fi
+	if [ "$1" = "--deregister-vmwarebroker" ]; then
+		VMWAREBROKER_MODE="DEL"
+		VMWAREBROKER="$2"
+		shift; shift
+		continue
+	fi
 	if [ "$1" = "--register-sc" ]; then
 		if [ $# -lt 3 ]; then
 			echo "--register-sc requires a CC and a hostname"
@@ -615,8 +638,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "-check" -o "$1" = "--check" ]; then 
-		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "-check requires cc, nc, sc, walrus or cloud"
+		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" -a "$2" != "vmware" -a "$2" != "vmwarebroker" ]; then
+			echo "-check requires cc, nc, sc, walrus, vmwarebroker or cloud"
 			exit 1
 		fi
 		CHECK="$2"
@@ -624,8 +647,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--enable" ]; then 
-		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "--enable requires cloud, sc or walrus"
+		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" -a "$2" != "vmwarebroker" ]; then
+			echo "--enable requires cloud, sc, vmwarebroker or walrus"
 			exit 1
 		fi
 		ENABLED="$ENABLED $2"
@@ -633,8 +656,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--disable" ]; then 
-		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "--disable requires cloud, sc or walrus"
+		if [ "$2" != "cloud" -a "$2" != "sc" -a "$2" != "walrus" -a "$2" != "vmwarebroker" ]; then
+			echo "--disable requires cloud, sc, vmwarebroker or walrus"
 			exit 1
 		fi
 		DISABLED="$DISABLED $2"
@@ -642,8 +665,8 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "-sync" -o "$1" = "--sync" ]; then 
-		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" ]; then
-			echo "-sync requires cc, nc, sc, walrus or cloud"
+		if [ "$2" != "cc" -a "$2" != "cloud" -a "$2" != "nc" -a "$2" != "sc" -a "$2" != "walrus" -a "$2" != "vmwarebroker" ]; then
+			echo "-sync requires cc, nc, sc, walrus, vmwarebroker, cloud"
 			exit 1
 		fi
 		TOSYNC="$2"
@@ -857,6 +880,8 @@ if [ -n "$SETUP" ]; then
 	let $((ret += $?))
 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 	let $((ret += $?))
+	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus
+	let $((ret += $?))
 
 	# let's create more needed directory with the right permissions
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
@@ -974,68 +999,65 @@ if [ -n "$CHECK" ]; then
 		exit 1
 	    fi
 	fi
+
+	if [ "$CHECK" = "vmware" ]; then
+		if ! $EUCALYPTUS/usr/share/eucalyptus/euca_vmware --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml ; then
+			exit 1
+		fi
+	fi
+
 	# good to go
 	exit 0
 fi
 
 createCloudURL () {
-    if ! getSecretKey; then
-	echo "ERROR: cannot get credentials"
-	return 1
-    fi
-    ARGS="AWSAccessKeyId=$AKEY"
-    KEY=$1
+  ## FIXME: URGENTLY: only works on deb
+  if ! which mysql; then
+    apt-get --force-yes -y install mysql-client-5.1
+  fi 
+  if [ ! -e ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem ]; then
+    openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
+    -name eucalyptus -name "eucalyptus" \
+    -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus \
+    -nodes | \
+    grep -A30 "friendlyName: eucalyptus" | \
+    grep -A26 "BEGIN RSA" >  ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
+  fi  
+  DB_PASS=$(echo -n eucalyptus | \
+  openssl dgst -sha256 \
+  -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
+  -hex)
+  AKEY=$(echo "select auth_user_query_id from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
+  SKEY=$(echo "select auth_user_secretkey from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth  | tail -n1)
+  
+  if [[ -z "${AKEY}" && -z "${SKEY}" ]]; then 
+    echo "ERROR: Failed to get admin credentials"
+    export URL=""
+    return 1
+  fi 
+  
+  ARGS="AWSAccessKeyId=$AKEY"
+  KEY=$1
+  shift
+  VAL=$1
+  shift
+  while ( test -n "$KEY" -a -n "$VAL")
+  do
+    ARGS="${ARGS}&${KEY}=${VAL}"
+	  KEY=$1
     shift
     VAL=$1
     shift
-    while ( test -n "$KEY" -a -n "$VAL")
-    do
-	ARGS="${ARGS}&${KEY}=${VAL}"
-	KEY=$1
-	shift
-	VAL=$1
-	shift
-    done
-    if [ -z "$SKEY" ]; then
-	echo "ERROR: SKEY parameter is not set."
-	export URL=""
-	return 1
-    fi
-    ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date -u '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
-    SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
-    export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
+  done  
+  ARGS="${ARGS}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=$(date -u '+%Y-%m-%dT%H%%3A%M%%3A%S.000Z')&Version=eucalyptus"
+  SIGNATURE=$(echo -en "GET\n127.0.0.1\n/services/Configuration\n${ARGS}" | openssl dgst -sha256 -hmac ${SKEY} -binary | openssl base64)
+  export URL="http://127.0.0.1:8773/services/Configuration?${ARGS}&Signature=${SIGNATURE}"
 	if [ "$VERBOSE" = "Y" ]; then
 		echo $URL
 	fi
-    return 0
+  return 0
 }
 
-getSecretKey() {
-    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
-	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-    else
-	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
-	exit 1
-    fi
-
-    FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Ss][Ee][Cc][Rr][Ee][Tt][Kk][Ee][Yy]/ {print NR}'`
-    if [ "$FIELD" = "" ]; then
-	echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
-	export SKEY=""
-	return 1
-    fi
-    SKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1 | sed 's/[()]//g'))
-
-   FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/*auth* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Qq][Uu][Ee][Rr][Yy]_[Ii][Dd]/ {print NR}'`
-   if [ "$FIELD" = "" ]; then
-     echo "ERROR: cannot locate entry in eucalyptus database, try logging in through the admin web interface"
-     export AKEY=""
-     return 1
-   fi
-   AKEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/*auth* | head -n 1 | sed 's/[()]//g'))
-
-    return 0
-}
 
 checkLocalService() {
     local SERVICE=""
@@ -1060,7 +1082,7 @@ checkLocalService() {
 	    done
 	fi
 	
-	CMD="$WGET -T 10 -t 1 -O - -q --no-check-certificate https://127.0.0.1:8443/register | grep CloudVersion >/dev/null"
+	CMD="$WGET -T 10 -t 10 -O - -q --no-check-certificate --retry-connrefused https://127.0.0.1:8443/register | grep CloudVersion >/dev/null"
     elif [ "$SERVICE" = "CC" ]; then
 	CMD="$WGET -T 10 -t 1 -O - -q http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC >/dev/null"
     fi
@@ -1076,35 +1098,35 @@ checkLocalService() {
 }
 
 if [ -n "$CREDENTIALZIPFILE" ]; then
-    if [ -f "$CREDENTIALZIPFILE" ]; then
-	echo "file '$CREDENTIALZIPFILE' already exists, please remove and try again"
-	exit 1
-    fi
-    if ! checkLocalService "CLC" ; then
-	exit 1
-    fi
-
-    if [ -d "$EUCALYPTUS/var/lib/eucalyptus/db/" ]; then
-	DBDIR="$EUCALYPTUS/var/lib/eucalyptus/db/"
-    else
-	echo "ERROR: cannot locate eucalyptus database, try logging in through the admin web interface."
-        exit 1
-    fi
-    FIELD=`grep -i "CREATE .*TABLE AUTH_USERS" ${DBDIR}/* | sed 's/,/\n/g' | awk '/[Aa][Uu][Tt][Hh]_[Uu][Ss][Ee][Rr]_[Tt][Oo][Kk][Ee][Nn]/ {print NR}'`
-    if [ -z "$FIELD" ]; then
-	echo "cannot find code field in database, please go to the Eucalyptus web UI to obtain credentials."
-	exit 1
-    fi
-    KEY=$(eval echo $(awk -v field=${FIELD} -F, '/INSERT INTO AUTH_USERS.*admin/ {print $field}' ${DBDIR}/* | head -n 1 | sed 's/[()]//g'))
-    if [ -z "$KEY" ]; then
-	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
-	exit 1
-    fi
-    CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?user=admin&code=$KEY\" -O $CREDENTIALZIPFILE"
-    if ! eval $CMD ; then
-	echo "failed to obtain credentals, please try again or go to the Eucalyptus web UI."
-	exit 1
-    fi
+  if [ -f "$CREDENTIALZIPFILE" ]; then
+    echo "file '$CREDENTIALZIPFILE' already exists, please remove and try again"
+  	exit 1
+  fi
+  if ! checkLocalService "CLC" ; then
+  	exit 1
+  fi
+  if [ ! -e ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem ]; then
+    openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
+    -name eucalyptus -name "eucalyptus" \
+    -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus \
+    -nodes | \
+    grep -A30 "friendlyName: eucalyptus" | \
+    grep -A26 "BEGIN RSA" >  ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
+  fi  
+  DB_PASS=$(echo -n eucalyptus | \
+  openssl dgst -sha256 \
+  -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
+  -hex)
+  KEY=$(echo "select auth_user_token from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
+  if [ -z "$KEY" ]; then
+  	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
+  	exit 1
+  fi
+  CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?user=admin&code=$KEY\" -O $CREDENTIALZIPFILE"
+  if ! eval $CMD ; then
+    echo "failed to obtain credentals, please try again or go to the Eucalyptus web UI."
+    exit 1
+  fi
 fi
 
 # adding a new cluster
@@ -1319,6 +1341,68 @@ if [ -n "$SCNAME" ]; then
 	fi
 	echo
 	echo "SUCCESS: Storage controller for cluster '${SCNAME}' successfully deregistered."
+    fi
+fi
+
+if [ -n "$VMWARE" ]; then
+	change_var_value $FILE ENABLE_WS_SECURITY "N"
+	change_var_value $FILE NC_SERVICE "/services/VMwareBroker"
+	if ! $EUCALYPTUS/usr/share/eucalyptus/euca_vmware --prompt --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml ; then
+		exit 1
+	fi
+fi
+
+# vmware broker 
+if [ -n "$VMWAREBROKER" -o -n "$VMWAREBROKER_MODE" ]; then
+    if ! checkLocalService "CLC" ; then
+	exit 1
+    fi
+    
+    if [ "$VMWAREBROKER_MODE" = "ADD" ]; then
+	echo "Adding VMware Broker host $VMWAREBROKER"
+	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
+	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
+	else
+	    echo "ERROR: cannot find key directory ($EUCALYPTUS/var/lib/eucalyptus/keys), check that your installation was successful!"
+	    exit 1
+	fi
+	
+	URL=""
+	if ! createCloudURL "Action" "RegisterVMwareBroker" "Host" "${VMWAREBROKER}" "Name" "vmwarebroker" "Port" "8773"; then
+	    exit 1
+	fi
+
+	if ! check_ws "$URL" ; then
+	    echo "ERROR: failed to register VMware Broker, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi
+	
+	# check that vmware broker is at least running on the remote host
+	sleep 3
+	if ! check_heartbeat ${VMWAREBROKER} vmwarebroker ; then
+		echo "VMware Broker is not up on host ${VMWAREBROKER}: check the logs"
+	fi
+	
+	# sync the keys
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${VMWAREBROKER} euca.p12 ; then
+	    echo "ERROR: failed to sync keys with ${VMWAREBROKER}."
+            exit 1
+	fi
+	echo
+	echo "SUCCESS: new vmware broker on host '${VMWAREBROKER}' successfully registered."
+	
+    elif [ "$VMWAREBROKER_MODE" = "DEL" ]; then
+	URL=""
+	if ! createCloudURL "Action" "DeregisterVMwareBroker" "Name" "vmwarebroker"; then
+	    exit 1
+	fi
+	if ! check_ws "$URL" ; then
+	    echo "ERROR: failed to deregister VMware Broker, please log in to the admin interface and check cloud status."
+	    exit 1
+	fi
+        echo
+        echo "SUCCESS: VMware Broker successfully deregistered."
     fi
 fi
 

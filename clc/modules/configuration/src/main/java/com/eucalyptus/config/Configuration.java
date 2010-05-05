@@ -101,14 +101,15 @@ public class Configuration {
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     reply.set_return( false );
-    String name = request.getName( ), host = request.getHost( );
+    String name = request.getName( );
+    String hostName = request.getHost();
     Integer port = request.getPort( );
     ServiceBuilder builder = builders.get( request.getClass( ) );
-    if( !builder.checkAdd( name, host, port ) ) {
+    if( !builder.checkAdd( name, hostName, port ) ) {
       return reply;
     }
-    host = NetworkUtil.tryToResolve( host );
-    ServiceConfiguration newComponent = builder.add( name, host, port );
+    ServiceConfiguration newComponent = builder.add( name, hostName, port );
+    builder.getComponent( ).buildService( newComponent );
     builder.fireStart( newComponent );
     reply.set_return( true );
     return reply;
@@ -129,6 +130,7 @@ public class Configuration {
     try {
       conf = builder.lookupByName( request.getName( ) );
       builder.remove( conf );
+      builder.getComponent( ).removeService( conf );
       builder.fireStop( conf );
       reply.set_return( true );
     } catch( EucalyptusCloudException e ) {
@@ -196,6 +198,19 @@ public class Configuration {
       throw new EucalyptusCloudException( e );
     }
   }
+
+    public static List<VMwareBrokerConfiguration> getVMwareBrokerConfigurations( ) throws EucalyptusCloudException {
+        EntityWrapper<VMwareBrokerConfiguration> db = ServiceConfigurations.getEntityWrapper( );
+        try {
+	    List<VMwareBrokerConfiguration> componentList = db.query( new VMwareBrokerConfiguration( ) );
+	    db.commit( );
+	    return componentList;
+        } catch ( Exception e ) {
+	    db.rollback( );
+	    LOG.error( e, e );
+	    throw new EucalyptusCloudException( e );
+        }
+    }
   
   public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException {
     List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );

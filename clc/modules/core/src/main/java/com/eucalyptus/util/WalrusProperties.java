@@ -151,7 +151,7 @@ public class WalrusProperties {
 	}
 	
 	public enum Headers {
-		Bucket, Key, RandomKey, VolumeId
+		Bucket, Key, RandomKey, VolumeId, S3UploadPolicy, S3UploadPolicySignature
 	}
 
 	public enum ExtendedGetHeaders {
@@ -176,7 +176,7 @@ public class WalrusProperties {
 	}
 
 	public enum WalrusInternalOperations {
-		GetDecryptedImage
+		GetDecryptedImage, ValidateImage
 	}
 
 	public enum GetOptionalParameters {
@@ -184,7 +184,7 @@ public class WalrusProperties {
 	}
 
 	public enum StorageOperations {
-		StoreSnapshot, DeleteWalrusSnapshot, GetWalrusSnapshot
+		StoreSnapshot, DeleteWalrusSnapshot, GetWalrusSnapshot, GetWalrusSnapshotSize
 	}
 
 	public enum InfoOperations {

@@ -1,4 +1,4 @@
-/*******************************************************************************
+ /*
 *Copyright (c) 2009  Eucalyptus Systems, Inc.
 * 
 *  This program is free software: you can redistribute it and/or modify
@@ -62,7 +62,6 @@
  *
  * Author: Neil Soman neil@eucalyptus.com
  */
-
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.hibernate.annotations.Cache;
@@ -73,7 +72,7 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "AOEMetaInfo" )
 @Entity
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AOEMetaInfo extends LVMMetaInfo {
     @Column(name = "major_number")
     private Integer majorNumber;

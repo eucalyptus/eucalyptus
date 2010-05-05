@@ -447,6 +447,100 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
   return(0);
 }
 
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t *env, axis2_stub_t *stub) {
+  int i;
+  //  char meh[32];
+  adb_BundleInstance_t *input;
+  adb_BundleInstanceResponse_t *output;
+  adb_bundleInstanceType_t *sn;
+  adb_bundleInstanceResponseType_t *snrt;
+
+  sn = adb_bundleInstanceType_create(env);
+  input = adb_BundleInstance_create(env);
+  
+  adb_bundleInstanceType_set_userId(sn, env, "eucalyptus");
+  {
+    char cidstr[9];
+    bzero(cidstr, 9);
+    srand(time(NULL)+getpid());
+    for (i=0; i<8; i++) {
+      cidstr[i] = rand()%26+'a';
+    }
+    adb_bundleInstanceType_set_correlationId(sn, env, cidstr);
+  }
+  adb_bundleInstanceType_set_instanceId(sn, env, instanceId);
+  adb_bundleInstanceType_set_bucketName(sn, env, bucketName);
+  adb_bundleInstanceType_set_filePrefix(sn, env, filePrefix);
+  adb_bundleInstanceType_set_walrusURL(sn, env, walrusURL);
+  adb_bundleInstanceType_set_userPublicKey(sn, env, userPublicKey);
+  
+  adb_BundleInstance_set_BundleInstance(input, env, sn);
+
+  output = axis2_stub_op_EucalyptusCC_BundleInstance(stub, env, input);
+  if (!output) {
+    printf("ERROR: bundleInstance returned NULL\n");
+    return(1);
+  }
+  snrt = adb_BundleInstanceResponse_get_BundleInstanceResponse(output, env);
+  printf("bundleInstance returned status %d\n", adb_bundleInstanceResponseType_get_return(snrt, env));
+  return(0);
+}
+
+int cc_describeBundleTasks(char **instIds, int instIdsLen, axutil_env_t *env, axis2_stub_t *stub) {
+  int i;
+  adb_DescribeBundleTasks_t *diIn;
+  adb_describeBundleTasksType_t *dit;
+
+  adb_DescribeBundleTasksResponse_t *diOut;
+  adb_describeBundleTasksResponseType_t *dirt;
+
+  dit = adb_describeBundleTasksType_create(env);
+  if (instIds == NULL || instIdsLen == 0) {
+  } else {
+    for (i=0; i<instIdsLen; i++) {
+      adb_describeBundleTasksType_add_instanceIds(dit, env, instIds[i]);
+    }
+  }
+  adb_describeBundleTasksType_set_userId(dit, env, "eucalyptus");
+  {
+    char cidstr[9];
+    bzero(cidstr, 9);
+    srand(time(NULL)+getpid());
+    for (i=0; i<8; i++) {
+      cidstr[i] = rand()%26+'a';
+    }
+    adb_describeBundleTasksType_set_correlationId(dit, env, cidstr);
+  }
+
+  diIn = adb_DescribeBundleTasks_create(env);
+  adb_DescribeBundleTasks_set_DescribeBundleTasks(diIn, env, dit);
+  
+  diOut = axis2_stub_op_EucalyptusCC_DescribeBundleTasks(stub, env, diIn);
+  if (!diOut) {
+    printf("ERROR: DI failed NULL\n");
+    return(1);
+  } else {
+    //    adb_reservationInfoType_t *resit;
+    axis2_char_t *instId=NULL;
+    int i;
+    axis2_bool_t status;
+
+    dirt = adb_DescribeBundleTasksResponse_get_DescribeBundleTasksResponse(diOut, env);
+    status = adb_describeBundleTasksResponseType_get_return(dirt, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_describeBundleTasksResponseType_get_statusMessage(dirt, env));
+    } else {
+      adb_bundleTaskType_t *bundle;
+      printf("operation success\n");
+      for (i=0; i<adb_describeBundleTasksResponseType_sizeof_bundleTasks(dirt, env); i++) {
+	bundle = adb_describeBundleTasksResponseType_get_bundleTasks_at(dirt, env, i);
+	printf("BUNDLE %d: %s %s\n", i, adb_bundleTaskType_get_instanceId(bundle, env), adb_bundleTaskType_get_state(bundle, env));
+      }
+    }
+  }
+  return 0;
+}
+
 int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   //  char meh[32];

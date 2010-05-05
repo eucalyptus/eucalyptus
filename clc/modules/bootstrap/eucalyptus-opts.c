@@ -62,6 +62,7 @@ const char *eucalyptus_opts_full_help[] = {
   "      --disable-dns             Disable loading DNS services altogether.  \n                                  (default=off)",
   "      --disable-storage         Disable loading storage services altogether.  \n                                  (default=off)",
   "      --disable-iscsi           Disable ISCSI support for dynamic block \n                                  storage.  (default=off)",
+  "      --disable-vmwarebroker    Disable VMware broker.  (default=off)",
   "\nEucalyptus Runtime Options:",
   "  -C, --check                   Check on Eucalyptus.  (default=off)",
   "  -S, --stop                    Stop Eucalyptus.  (default=off)",
@@ -75,7 +76,8 @@ const char *eucalyptus_opts_full_help[] = {
   "      --debug-port=INT          Set the port to use for the debugger.  \n                                  (default=`5005')",
   "      --debug-suspend           Set the port to use for the debugger.  \n                                  (default=off)",
   "  -p, --profile                 Launch with jprofiler enabled.  (default=off)",
-  "  -P, --profiler-home=jprofiler directory\n                                Set the home for jprofiler.  \n                                  (default=`/opt/jprofiler5')",
+  "  -a, --agentlib=agentlib       Launch with agentlib enabled.",
+  "  -P, --profiler-home=jprofiler directory\n                                Set the home for jprofiler.  \n                                  (default=`/opt/jprofiler6')",
     0
 };
 
@@ -124,11 +126,12 @@ init_help_array(void)
   eucalyptus_opts_help[39] = eucalyptus_opts_full_help[39];
   eucalyptus_opts_help[40] = eucalyptus_opts_full_help[40];
   eucalyptus_opts_help[41] = eucalyptus_opts_full_help[41];
-  eucalyptus_opts_help[42] = 0; 
+  eucalyptus_opts_help[42] = eucalyptus_opts_full_help[42];
+  eucalyptus_opts_help[43] = 0; 
   
 }
 
-const char *eucalyptus_opts_help[43];
+const char *eucalyptus_opts_help[44];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -181,6 +184,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->disable_dns_given = 0 ;
   args_info->disable_storage_given = 0 ;
   args_info->disable_iscsi_given = 0 ;
+  args_info->disable_vmwarebroker_given = 0 ;
   args_info->check_given = 0 ;
   args_info->stop_given = 0 ;
   args_info->fork_given = 0 ;
@@ -192,6 +196,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->debug_port_given = 0 ;
   args_info->debug_suspend_given = 0 ;
   args_info->profile_given = 0 ;
+  args_info->agentlib_given = 0 ;
   args_info->profiler_home_given = 0 ;
 }
 
@@ -232,6 +237,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->disable_dns_flag = 0;
   args_info->disable_storage_flag = 0;
   args_info->disable_iscsi_flag = 0;
+  args_info->disable_vmwarebroker_flag = 0;
   args_info->check_flag = 0;
   args_info->stop_flag = 0;
   args_info->fork_flag = 0;
@@ -248,7 +254,9 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->debug_port_orig = NULL;
   args_info->debug_suspend_flag = 0;
   args_info->profile_flag = 0;
-  args_info->profiler_home_arg = gengetopt_strdup ("/opt/jprofiler5");
+  args_info->agentlib_arg = NULL;
+  args_info->agentlib_orig = NULL;
+  args_info->profiler_home_arg = gengetopt_strdup ("/opt/jprofiler6");
   args_info->profiler_home_orig = NULL;
   
 }
@@ -287,20 +295,22 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->disable_dns_help = eucalyptus_opts_full_help[27] ;
   args_info->disable_storage_help = eucalyptus_opts_full_help[28] ;
   args_info->disable_iscsi_help = eucalyptus_opts_full_help[29] ;
-  args_info->check_help = eucalyptus_opts_full_help[31] ;
-  args_info->stop_help = eucalyptus_opts_full_help[32] ;
-  args_info->fork_help = eucalyptus_opts_full_help[33] ;
-  args_info->pidfile_help = eucalyptus_opts_full_help[34] ;
-  args_info->java_home_help = eucalyptus_opts_full_help[36] ;
-  args_info->jvm_name_help = eucalyptus_opts_full_help[37] ;
-  args_info->jvm_args_help = eucalyptus_opts_full_help[38] ;
+  args_info->disable_vmwarebroker_help = eucalyptus_opts_full_help[30] ;
+  args_info->check_help = eucalyptus_opts_full_help[32] ;
+  args_info->stop_help = eucalyptus_opts_full_help[33] ;
+  args_info->fork_help = eucalyptus_opts_full_help[34] ;
+  args_info->pidfile_help = eucalyptus_opts_full_help[35] ;
+  args_info->java_home_help = eucalyptus_opts_full_help[37] ;
+  args_info->jvm_name_help = eucalyptus_opts_full_help[38] ;
+  args_info->jvm_args_help = eucalyptus_opts_full_help[39] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_full_help[39] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[40] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[41] ;
-  args_info->profile_help = eucalyptus_opts_full_help[42] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[43] ;
+  args_info->debug_help = eucalyptus_opts_full_help[40] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[41] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[42] ;
+  args_info->profile_help = eucalyptus_opts_full_help[43] ;
+  args_info->agentlib_help = eucalyptus_opts_full_help[44] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[45] ;
   
 }
 
@@ -460,6 +470,8 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_string_field (&(args_info->jvm_name_orig));
   free_multiple_string_field (args_info->jvm_args_given, &(args_info->jvm_args_arg), &(args_info->jvm_args_orig));
   free_string_field (&(args_info->debug_port_orig));
+  free_string_field (&(args_info->agentlib_arg));
+  free_string_field (&(args_info->agentlib_orig));
   free_string_field (&(args_info->profiler_home_arg));
   free_string_field (&(args_info->profiler_home_orig));
   
@@ -553,6 +565,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "disable-storage", 0, 0 );
   if (args_info->disable_iscsi_given)
     write_into_file(outfile, "disable-iscsi", 0, 0 );
+  if (args_info->disable_vmwarebroker_given)
+    write_into_file(outfile, "disable-vmwarebroker", 0, 0 );
   if (args_info->check_given)
     write_into_file(outfile, "check", 0, 0 );
   if (args_info->stop_given)
@@ -574,6 +588,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "debug-suspend", 0, 0 );
   if (args_info->profile_given)
     write_into_file(outfile, "profile", 0, 0 );
+  if (args_info->agentlib_given)
+    write_into_file(outfile, "agentlib", args_info->agentlib_orig, 0);
   if (args_info->profiler_home_given)
     write_into_file(outfile, "profiler-home", args_info->profiler_home_orig, 0);
   
@@ -842,6 +858,11 @@ arguments_required2 (struct eucalyptus_opts *args_info, const char *prog_name, c
   if (args_info->debug_suspend_given && ! args_info->debug_given)
     {
       fprintf (stderr, "%s: '--debug-suspend' option depends on option 'debug'%s\n", prog_name, (additional_error ? additional_error : ""));
+      error = 1;
+    }
+  if (args_info->agentlib_given && ! args_info->profile_given)
+    {
+      fprintf (stderr, "%s: '--agentlib' ('-a') option depends on option 'profile'%s\n", prog_name, (additional_error ? additional_error : ""));
       error = 1;
     }
   if (args_info->profiler_home_given && ! args_info->profile_given)
@@ -1165,6 +1186,7 @@ arguments_internal (
         { "disable-dns",	0, NULL, 0 },
         { "disable-storage",	0, NULL, 0 },
         { "disable-iscsi",	0, NULL, 0 },
+        { "disable-vmwarebroker",	0, NULL, 0 },
         { "check",	0, NULL, 'C' },
         { "stop",	0, NULL, 'S' },
         { "fork",	0, NULL, 'f' },
@@ -1176,11 +1198,12 @@ arguments_internal (
         { "debug-port",	1, NULL, 0 },
         { "debug-suspend",	0, NULL, 0 },
         { "profile",	0, NULL, 'p' },
+        { "agentlib",	1, NULL, 'a' },
         { "profiler-home",	1, NULL, 'P' },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:c:w:D:vl:xL:o:e:CSfj:J:X:dpP:", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:c:w:D:vl:xL:o:e:CSfj:J:X:dpa:P:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -1399,12 +1422,24 @@ arguments_internal (
             goto failure;
         
           break;
+        case 'a':	/* Launch with agentlib enabled..  */
+        
+        
+          if (update_arg( (void *)&(args_info->agentlib_arg), 
+               &(args_info->agentlib_orig), &(args_info->agentlib_given),
+              &(local_args_info.agentlib_given), optarg, 0, 0, ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "agentlib", 'a',
+              additional_error))
+            goto failure;
+        
+          break;
         case 'P':	/* Set the home for jprofiler..  */
         
         
           if (update_arg( (void *)&(args_info->profiler_home_arg), 
                &(args_info->profiler_home_orig), &(args_info->profiler_home_given),
-              &(local_args_info.profiler_home_given), optarg, 0, "/opt/jprofiler5", ARG_STRING,
+              &(local_args_info.profiler_home_given), optarg, 0, "/opt/jprofiler6", ARG_STRING,
               check_ambiguity, override, 0, 0,
               "profiler-home", 'P',
               additional_error))
@@ -1577,6 +1612,18 @@ arguments_internal (
             if (update_arg((void *)&(args_info->disable_iscsi_flag), 0, &(args_info->disable_iscsi_given),
                 &(local_args_info.disable_iscsi_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "disable-iscsi", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Disable VMware broker..  */
+          else if (strcmp (long_options[option_index].name, "disable-vmwarebroker") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->disable_vmwarebroker_flag), 0, &(args_info->disable_vmwarebroker_given),
+                &(local_args_info.disable_vmwarebroker_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "disable-vmwarebroker", '-',
                 additional_error))
               goto failure;
           

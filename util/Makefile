@@ -4,14 +4,14 @@
 
 include ../Makedefs
 
-all: misc.o data.o euca_auth.o ipc.o euca_rootwrap euca_mountwrap
+all: misc.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
 
 build: all 
 
-euca_rootwrap:
+euca_rootwrap: euca_rootwrap.c
 	$(CC) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c
 
-euca_mountwrap:
+euca_mountwrap: euca_mountwrap.c
 	$(CC) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c
 
 test: test.c ipc.o misc.o

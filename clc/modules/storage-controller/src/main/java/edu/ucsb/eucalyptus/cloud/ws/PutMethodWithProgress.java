@@ -54,7 +54,7 @@ public class PutMethodWithProgress extends PutMethod {
 					numberProcessed = 0;
 				}
 			}
-			if(totalBytesProcessed == outFile.length()) {
+			if(totalBytesProcessed > 0) {
 				callback.finish();
 			} else {
 				callback.failed();

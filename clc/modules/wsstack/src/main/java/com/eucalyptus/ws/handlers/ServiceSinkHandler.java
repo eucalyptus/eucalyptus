@@ -145,8 +145,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked messaging
         ctx.sendDownstream( e );
-      } else if ( msge.getMessage( ) instanceof EucalyptusMessage ) {// Handle single request-response MEP
-        EucalyptusMessage reply = ( EucalyptusMessage ) ( ( MessageEvent ) e ).getMessage( );
+      } else if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
+        BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
         if ( reply instanceof WalrusDataGetResponseType
              && !( reply instanceof GetObjectResponseType && ( ( GetObjectResponseType ) reply ).getBase64Data( ) != null ) ) {
           e.getFuture( ).cancel( );
@@ -201,7 +201,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
       if ( event.getMessage( ) instanceof MappingHttpMessage ) {
         final MappingHttpMessage request = ( MappingHttpMessage ) event.getMessage( );
         final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-        final EucalyptusMessage msg = ( EucalyptusMessage ) request.getMessage( );
+        final BaseMessage msg = ( BaseMessage ) request.getMessage( );
         final String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
         if ( msg.getCorrelationId( ) == null ) {
           String corrId = null;
@@ -224,6 +224,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         } else if ( ( user == null ) || ( ( user != null ) && user.isAdministrator( ) ) ) {
           this.dispatchRequest( ctx, request, msg );
         } else {
+          Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
         }
       } else if ( e instanceof IdleStateEvent ) {
@@ -235,7 +236,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     }
   }
   
-  private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final EucalyptusMessage msg ) throws NoSuchContextException {
+  private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final BaseMessage msg ) throws NoSuchContextException {
     try {
       final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), false );
       if ( reply != null ) {
@@ -254,7 +255,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     }
   }
   
-  private static void dispatchRequest( final EucalyptusMessage msg ) throws MuleException, DispatchException {
+  private static void dispatchRequest( final BaseMessage msg ) throws MuleException, DispatchException {
     OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
     if ( !endpoint.getConnector( ).isStarted( ) ) {
       endpoint.getConnector( ).start( );

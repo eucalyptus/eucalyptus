@@ -105,7 +105,6 @@ import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
 public class RemoteInfoHandler {
-  
   private static Logger LOG = Logger.getLogger( RemoteInfoHandler.class );
   
   public static synchronized void setClusterList( List<ClusterInfoWeb> newClusterList ) throws EucalyptusCloudException {
@@ -148,7 +147,7 @@ public class RemoteInfoHandler {
     for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
       UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
       updateStorageConfiguration.setName( storageControllerWeb.getName( ) );
-      updateStorageConfiguration.setStorageParams( convertStorageProps( storageControllerWeb.getStorageParams( ) ) );
+      updateStorageConfiguration.setStorageParams( convertProps( storageControllerWeb.getStorageParams( ) ) );
       Dispatcher scDispatch = ServiceDispatcher.lookup( Component.storage, storageControllerWeb.getHost( ) );
       if ( Component.eucalyptus.isLocal( ) ) {
         updateStorageConfiguration.setName( StorageProperties.SC_LOCAL_NAME );
@@ -181,7 +180,7 @@ public class RemoteInfoHandler {
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
           if ( c.getName( ).equals( getStorageConfigResponse.getName( ) ) ) {
-            scInfo.setStorageParams( convertStorageParams( getStorageConfigResponse.getStorageParams( ) ) );
+            scInfo.setStorageParams( convertParams( getStorageConfigResponse.getStorageParams( ) ) );
           } else {
             LOG.debug( "Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception( ) );
             LOG.debug( "Expected configuration for SC related to CC: " + LogUtil.dumpObject( c ) );
@@ -215,11 +214,7 @@ public class RemoteInfoHandler {
     for ( WalrusInfoWeb walrusInfoWeb : newWalrusList ) {
       UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
       updateWalrusConfiguration.setName( WalrusProperties.NAME );
-      updateWalrusConfiguration.setBucketRootDirectory( walrusInfoWeb.getBucketsRootDirectory( ) );
-      updateWalrusConfiguration.setMaxBucketsPerUser( walrusInfoWeb.getMaxBucketsPerUser( ) );
-      updateWalrusConfiguration.setMaxBucketSize( walrusInfoWeb.getMaxBucketSizeInMB( ) );
-      updateWalrusConfiguration.setImageCacheSize( walrusInfoWeb.getMaxCacheSizeInMB( ) );
-      updateWalrusConfiguration.setTotalSnapshotSize( walrusInfoWeb.getSnapshotsTotalInGB( ) );
+      updateWalrusConfiguration.setProperties(convertProps(walrusInfoWeb.getProperties()));
       Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Component.walrus );
       scDispatch.send( updateWalrusConfiguration );
     }
@@ -231,9 +226,10 @@ public class RemoteInfoHandler {
       GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
       Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Component.walrus );
       GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration, GetWalrusConfigurationResponseType.class );
-      walrusList.add( new WalrusInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), getWalrusConfigResponse.getBucketRootDirectory( ),
-                                         getWalrusConfigResponse.getMaxBucketsPerUser( ), getWalrusConfigResponse.getMaxBucketSize( ),
-                                         getWalrusConfigResponse.getImageCacheSize( ), getWalrusConfigResponse.getTotalSnapshotSize( ) ) );
+      walrusList.add( new WalrusInfoWeb( c.getName( ), 
+    		  c.getHostName( ), 
+    		  c.getPort( ),
+    		  convertParams(getWalrusConfigResponse.getProperties())));
     }
     return walrusList;
   }
@@ -321,7 +317,7 @@ public class RemoteInfoHandler {
     }
     
   }
-  private static ArrayList<String> convertStorageParams( ArrayList<ComponentProperty> properties ) {
+  private static ArrayList<String> convertParams( ArrayList<ComponentProperty> properties ) {
     ArrayList<String> params = new ArrayList<String>( );
     for ( ComponentProperty property : properties ) {
       params.add( property.getType( ) );
@@ -332,12 +328,11 @@ public class RemoteInfoHandler {
     return params;
   }
   
-  private static ArrayList<ComponentProperty> convertStorageProps( ArrayList<String> params ) {
+  private static ArrayList<ComponentProperty> convertProps( ArrayList<String> params ) {
     ArrayList<ComponentProperty> props = new ArrayList<ComponentProperty>( );
     for ( int i = 0; i < ( params.size( ) / 4 ); ++i ) {
       props.add( new ComponentProperty( params.get( 4 * i ), params.get( 4 * i + 1 ), params.get( 4 * i + 2 ), params.get( 4 * i + 3 ) ) );
     }
     return props;
   }
-
 }

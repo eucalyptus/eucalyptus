@@ -63,9 +63,9 @@ package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.storage.BlockStorageManagerFactory;
 
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
 
 @Provides(Component.storage)
 @RunDuring(Bootstrap.Stage.PrivilegedConfiguration)

@@ -60,7 +60,7 @@ permission notice:
 #include <stdio.h>
 #include <time.h>
 #include <misc.h>
-
+#include <euca_axis.h>
 #include <cc-client-marshal.h>
 
 #ifndef MODE
@@ -176,6 +176,15 @@ int main(int argc, char **argv) {
 	printf("cc_describeInstances() failed\n");
 	exit(1);
       }
+    } else if (!strcmp(argv[2], "describeBundleTasks")) {
+      char **meh;
+      meh = argv;
+      meh++; meh++; meh++;
+      rc = cc_describeBundleTasks(meh, 1, env, stub);
+      if (rc != 0) {
+	printf("cc_describeBundleTasks() failed\n");
+	exit(1);
+      }
     } else if (!strcmp(argv[2], "getConsoleOutput")) {
       rc = cc_getConsoleOutput(argv[3], env, stub);
       if (rc != 0) {
@@ -282,6 +291,12 @@ int main(int argc, char **argv) {
       rc = cc_detachVolume(argv[3], argv[4], argv[5], argv[6], atoi(argv[7]), env, stub);
       if (rc != 0) {
 	printf("cc_unassignNetwork() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "bundleInstance")) {
+      rc = cc_bundleInstance(argv[3], argv[4], argv[5], argv[6], argv[7], env, stub);
+      if (rc != 0) {
+	printf("cc_bundleInstance() failed\n");
 	exit(1);
       }
     } else if (!strcmp(argv[2], "describePublicAddresses")) {

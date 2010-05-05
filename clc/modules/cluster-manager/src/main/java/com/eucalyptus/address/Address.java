@@ -89,7 +89,7 @@ import edu.ucsb.eucalyptus.msgs.EventRecord;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "addresses" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Address implements HasName {
   public enum State {
     broken, unallocated, allocated, assigned, impending;

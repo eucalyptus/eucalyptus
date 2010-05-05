@@ -123,6 +123,7 @@
         </structure>
         <value name="kernelId" field="kernel" usage="optional"/>
         <value name="ramdiskId" field="ramdisk" usage="optional"/>
+        <value name="platform" field="platform" usage="optional"/>
         <structure name="monitoring" usage="optional">
             <value name="state" field="monitoring"/>
         </structure>
@@ -235,6 +236,16 @@
     </mapping>
     <!--2007-01-03-->
     <mapping name="GetConsoleOutput" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="instanceId" field="instanceId"/>
+    </mapping>
+    <mapping name="GetPasswordDataResponse" class="edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="instanceId" field="instanceId" usage="optional"/>
+        <value name="timestamp" field="timestamp" usage="optional"/>
+        <value name="passwordData" field="output" usage="optional"/>
+    </mapping>
+    <mapping name="GetPasswordData" class="edu.ucsb.eucalyptus.msgs.GetPasswordDataType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="instanceId" field="instanceId"/>
     </mapping>
