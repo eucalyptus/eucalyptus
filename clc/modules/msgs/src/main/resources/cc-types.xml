@@ -127,6 +127,14 @@
         <value name="memory" field="memory" usage="required"/>
         <value name="cores" field="cores" usage="required"/>
         <value name="disk" field="disk" usage="required"/>
+        <structure name="deviceMapping" field="deviceMapping" usage="optional" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
+    </mapping>
+
+    <mapping class="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" abstract="true">
+        <value name="deviceName" field="deviceName" usage="optional"/>
+        <value name="virtualName" field="virtualName" usage="optional"/>
+        <value name="size" field="size" usage="optional"/>
+        <value name="format" field="format" usage="optional"/>
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.ResourceType" abstract="true">
