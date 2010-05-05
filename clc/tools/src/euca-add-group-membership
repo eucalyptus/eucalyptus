@@ -1,12 +1,13 @@
 #!/usr/bin/env python
-import getopt, sys, os, boto
+import sys, os, boto
 from boto.ec2.regioninfo import RegionInfo
+from euca_admin import EucaAdmin
 from euca_admin.groups import Group
 
 def main():
-  Group().cli_describe()
+  Group().add_membership()
   sys.exit()
 
 if __name__ == "__main__":
-  main()
+    main()
  

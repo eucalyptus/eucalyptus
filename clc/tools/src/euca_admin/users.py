@@ -1,4 +1,5 @@
 import boto,sys,euca_admin
+from euca_admin.generic import StringList
 from boto.exception import EC2ResponseError
 from euca_admin.generic import BooleanResponse
 from euca_admin import EucaAdmin
@@ -20,32 +21,31 @@ class User():
     self.user_confirmed = confirmed
     self.user_admin = admin
     self.user_enabled = enabled
-    self.user_groups = []
-    self.user_revoked = []
+    self.user_groups = StringList()
+    self.user_revoked = StringList()
     self.user_list = self.user_groups
     self.euca = EucaAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
     r = 'USER\t\t%s\t%s%s\t%s' % (self.user_userName,self.user_email,'\tADMIN' if self.user_admin == 'true' else ' ', 'ENABLED' if self.user_enabled == 'true' else 'DISABLED' )
-    for s in self.user_groups:
-      r = '%s\nUSER-GROUP\t%s\t%s' % (r,self.user_userName,s)
+    r = '%s\nUSER-GROUP\t%s\t%s' % (r,self.user_userName,self.user_groups)
     r = '%s\nUSER-CERT\t%s\t%s\t%s' % (r,self.user_userName,self.user_distinguishedName,self.user_certificateSerial)
-    for s in self.user_revoked:
-      r = '%s\nUSER-REVOKED\t%s\t%s' % (r,self.user_userName,s)
+#    for s in self.user_revoked:
+#      r = '%s\nUSER-REVOKED\t%s\t%s' % (r,self.user_userName,s)
     r = '%s\nUSER-KEYS\t%s\t%s\t%s' % (r,self.user_userName,self.user_accessKey,self.user_secretKey)
     r = '%s\nUSER-CODE\t%s\t%s' % (r,self.user_userName,self.user_certificateCode)
     r = '%s\nUSER-WEB \t%s\t%s' % (r,self.user_userName,self.user_confirmationCode)
     return r
       
   def startElement(self, name, attrs, connection):
-#    if name == 'euca:groups':
-#      self.user_list = self.user_groups
-#    elif name == 'euca:revoked':
-#      self.user_list = self.user_revoked
-    return None    
+    if name == 'euca:groups':
+      return self.user_groups
+    elif name == 'euca:revoked':
+      return self.user_revoked
+    else:
+      return None    
 
   def endElement(self, name, value, connection):
-    print 'ELEM %s\t%s' % ( name.split(':',1)[1], value ) 
     if name == 'euca:userName':
       self.user_userName = value
     elif name == 'euca:email':

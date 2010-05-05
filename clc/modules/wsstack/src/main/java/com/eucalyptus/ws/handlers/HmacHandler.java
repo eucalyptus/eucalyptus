@@ -103,9 +103,12 @@ public class HmacHandler extends MessageStackHandler {
       String sig = parameters.remove( SecurityParameter.Signature.toString( ) );
       String sigVersion = parameters.get( RequiredQueryParams.SignatureVersion.toString( ) );
       String sigMethod = parameters.get( SecurityParameter.SignatureMethod.toString( ) );
+      String verb = httpRequest.getMethod( ).getName( );
       sigMethod = ( ( sigMethod == null ) ? "HMACSHA" : sigMethod );
       Hmac hmac = Hmac.valueOf( "HmacSHA" + sigMethod.substring( 7 ) );
-      SecurityContext.getLoginContext( new HmacCredentials( httpRequest.getCorrelationId( ), httpRequest, sig, Integer.valueOf( sigVersion ), hmac ) ).login( );
+      String headerHost = httpRequest.getHeader( "Host" );
+      String servicePath = httpRequest.getServicePath( );
+      SecurityContext.getLoginContext( new HmacCredentials( httpRequest.getCorrelationId( ), sig, parameters, verb, servicePath, headerHost, Integer.valueOf( sigVersion ), hmac ) ).login( );
       parameters.remove( RequiredQueryParams.SignatureVersion.toString( ) );
       parameters.remove( SecurityParameter.SignatureMethod.toString( ) );
       parameters.remove( SecurityParameter.AWSAccessKeyId.toString( ) );

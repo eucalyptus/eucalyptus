@@ -112,6 +112,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       dbU.commit( );
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      dbU.rollback( );
     }    
     return new UserProxy( newUser );
   }
@@ -126,10 +127,14 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       dbU.commit( );
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      dbU.rollback( );
     }    
     EntityWrapper<User> db = Authentication.getEntityWrapper( );
     try {
       User foundUser = db.getUnique( user );
+      for( Group g : Groups.lookupGroups( foundUser ) ) {
+        g.removeMember( foundUser );
+      }
       db.delete( foundUser );
       db.commit( );
     } catch ( Exception e ) {
