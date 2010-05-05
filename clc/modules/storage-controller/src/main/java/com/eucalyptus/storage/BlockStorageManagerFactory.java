@@ -75,7 +75,7 @@ public class BlockStorageManagerFactory {
 			ebsManager = System.getProperty("ebs.storage.manager");
 		}
 		try {
-			return (LogicalStorageManager) Class.forName(ebsManager).newInstance();
+			return (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(ebsManager).newInstance();
 		} catch (InstantiationException e) {
 			LOG.error(e, e); 
 		} catch (IllegalAccessException e) {
