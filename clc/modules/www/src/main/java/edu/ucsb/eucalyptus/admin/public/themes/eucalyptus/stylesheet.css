@@ -229,6 +229,16 @@ button{
 	text-align: center;
 }
 
+.euca-UserGroupEntityList-main-disabled {
+	text-align: center;
+	color: #666666;
+}
+
+.euca-UserGroupEntityList-main-admin {
+	text-align: center;
+	font-weight: bold;
+}
+
 .euca-UserGroupEntityList-other {
 	color: #888888;
 	font-size: smaller;
@@ -377,11 +387,16 @@ button{
 }
 
 .euca-UserGroupTabPanel {
-	width: 80%;
+	width: 90%;
 	font-size: smaller;
 }
 
 .euca-Tooltip {
-	background: #FFFF00;
+	color: #333333;
+	background: #FFFFDD;
 	font-size: small;
+	padding-left: 5px;
+	padding-right: 5px;
+	padding-top: 3px;
+	padding-bottom: 3px;
 }

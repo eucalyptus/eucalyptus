@@ -165,9 +165,17 @@ public interface EucalyptusWebBackend extends RemoteService {
 	
 	public void deleteUsers(String sessionId, List<String> userNames) throws Exception;
 	
+	public void enableUsers(String sessionId, List<String> userNames) throws Exception;
+	
+	public void disableUsers(String sessionId, List<String> userNames) throws Exception;
+
+	public void approveUsers(String sessionId, List<String> userNames) throws Exception;
+	
 	public void addUsersToGroups(String sessionId, List<String> userNames, List<String> groupNames) throws Exception;
 	
 	public void removeUsersFromGroups(String sessionId, List<String> userNames, List<String> groupNames) throws Exception;
+	
+	public List<String> getZones(String sessionId) throws Exception;
 	
 	/**
 	 * Utility/Convenience class.

@@ -183,4 +183,16 @@ public interface EucalyptusWebBackendAsync {
 	
 	void removeUsersFromGroups(String sessionId, List<String> userNames, List<String> groupNames, final AsyncCallback<Void> async)
 	;
+	
+	void enableUsers(String sessionId, List<String> userNames, final AsyncCallback<Void> async)
+	;
+	
+	void disableUsers(String sessionId, List<String> userNames, final AsyncCallback<Void> async)
+	;
+	
+	void approveUsers(String sessionId, List<String> userNames, final AsyncCallback<Void> async)
+	;
+	
+	void getZones(String sessionId, final AsyncCallback<List<String>> async)
+	;
 }

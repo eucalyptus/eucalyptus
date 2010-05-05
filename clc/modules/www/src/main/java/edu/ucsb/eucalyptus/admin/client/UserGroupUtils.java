@@ -49,4 +49,11 @@ public class UserGroupUtils {
 		}
 		return names;
 	}
+	
+	public static String getBooleanValue(String trueValue, String falseValue, boolean bool) {
+		if (bool) {
+			return trueValue;
+		}
+		return falseValue;
+	}
 }

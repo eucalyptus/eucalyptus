@@ -21,12 +21,21 @@ public class UserGroupControl {
 			case 0:
 				return group.name;
 			case 1:
-				return group.zone;
+				return UserGroupUtils.getListString(group.zones, 1);
 			}
 			return "";
 		}
+		public String getStyle(int col) {
+			if (col == 0) {
+				return UserGroupEntityList.CELL_MAIN_STYLE_NAME;
+			}
+			return UserGroupEntityList.CELL_OTHER_STYLE_NAME;
+		}
 		public String toTooltip() {
-			return group.name + "@" + group.zone;
+			StringBuffer sb = new StringBuffer();
+			sb.append("<b>" + group.name + "</b>");
+			sb.append("<br> Zones: " + UserGroupUtils.getListString(group.zones, 0));
+			return sb.toString();
 		}
 		public GroupInfoWeb getGroupInfo() {
 			return this.group;
@@ -49,8 +58,36 @@ public class UserGroupControl {
 			}
 			return "";
 		}
+		public String getStyle(int col) {
+			if (col == 0) {
+				if (user.isApproved() && user.isEnabled()) {
+					if (user.isAdministrator()) {
+						return UserGroupEntityList.CELL_MAIN_ADMIN_STYLE_NAME;
+					}
+					return UserGroupEntityList.CELL_MAIN_STYLE_NAME;
+				} else {
+					return UserGroupEntityList.CELL_MAIN_DISABLED_STYLE_NAME;
+				}
+			}
+			return UserGroupEntityList.CELL_OTHER_STYLE_NAME;
+		}
 		public String toTooltip() {
-			return user.getRealName();
+			StringBuffer sb = new StringBuffer();
+			sb.append("<b>" + user.getUserName() + "</b>");
+			sb.append("<br>Full Name: " + user.getRealName());
+			sb.append("<br>Email: " + user.getEmail());
+			sb.append("<br>Phone: " + user.getTelephoneNumber());
+			sb.append("<br>Affiliation: " + user.getAffiliation());
+			sb.append("<br>Status: ");
+			sb.append(UserGroupUtils.getBooleanValue(
+					"<i>admin</i> ", "", user.isAdministrator()));
+			sb.append(UserGroupUtils.getBooleanValue(
+					"<i>confirmed</i> ", "<i>unconfirmed</i> ", user.isConfirmed()));
+			sb.append(UserGroupUtils.getBooleanValue(
+					"<i>approved</i> ", "<i>unapproved</i> ", user.isApproved()));
+			sb.append(UserGroupUtils.getBooleanValue(
+					"<i>enabled</i>", "<i>disabled</i> ", user.isEnabled()));
+			return sb.toString();
 		}
 		public UserInfoWeb getUserInfo() {
 			return this.user;
@@ -298,11 +335,31 @@ public class UserGroupControl {
 	}
 	
 	public void displayAddGroupUI() {
-		rootPanel.getPropertyPanel().showAddGroup();
+		EucalyptusWebBackend.App.getInstance().getZones(sessionId,
+				new AsyncCallback<List<String>>() {
+					public void onSuccess(List<String> result) {
+						rootPanel.getPropertyPanel().showAddGroup(result);
+					}
+					public void onFailure(Throwable caught) {
+						rootPanel.getPropertyPanel().showStatus(
+								"Loading zone info failed! " + getFailureMessage(caught),
+								true);
+					}
+				});
 	}
 	
 	public void displayEditGroupUI() {
-		rootPanel.getPropertyPanel().showEditGroup(selectedGroups.get(0));
+		EucalyptusWebBackend.App.getInstance().getZones(sessionId,
+				new AsyncCallback<List<String>>() {
+					public void onSuccess(List<String> result) {
+						rootPanel.getPropertyPanel().showEditGroup(selectedGroups.get(0), result);
+					}
+					public void onFailure(Throwable caught) {
+						rootPanel.getPropertyPanel().showStatus(
+								"Loading zone info failed! " + getFailureMessage(caught),
+								true);
+					}
+				});
 	}
 	
 	public void displayDeleteGroupUI() {
@@ -326,7 +383,6 @@ public class UserGroupControl {
 								true);
 					}
 				});
-		
 	}
 	
 	public void displayDeleteUserUI() {
@@ -344,6 +400,18 @@ public class UserGroupControl {
 	public void displayRemoveUsersFromGroupsUI() {
 		rootPanel.getPropertyPanel().showRemoveUsersFromGroups(selectedUsers, getGroupNames(),
 				getSelectedGroupNames());
+	}
+	
+	public void displayEnableUsersUI() {
+		rootPanel.getPropertyPanel().showEnableUsers(selectedUsers);
+	}
+	
+	public void displayDisableUsersUI() {
+		rootPanel.getPropertyPanel().showDisableUsers(selectedUsers);
+	}
+	
+	public void displayApproveUsersUI() {
+		rootPanel.getPropertyPanel().showApproveUsers(selectedUsers);
 	}
 	
 	public void addGroup(GroupInfoWeb group) {
@@ -411,7 +479,7 @@ public class UserGroupControl {
 					public void onFailure(Throwable caught) {
 						displaySelectedUsers();
 						rootPanel.getPropertyPanel().showStatus(
-								"Editing user failed! " + getFailureMessage(caught), true);
+								"Updating user failed! " + getFailureMessage(caught), true);
 					}
 				});
 	}
@@ -425,7 +493,7 @@ public class UserGroupControl {
 					public void onFailure(Throwable caught) {
 						displaySelectedUsers();
 						rootPanel.getPropertyPanel().showStatus(
-								"Editing user failed! " + getFailureMessage(caught), true);
+								"Deleting user failed! " + getFailureMessage(caught), true);
 					}
 				});
 	}
@@ -439,13 +507,15 @@ public class UserGroupControl {
 					public void onFailure(Throwable caught) {
 						displaySelectedUsers();
 						rootPanel.getPropertyPanel().showStatus(
-								"Editing user failed! " + getFailureMessage(caught), true);
+								"Adding users to groups failed! " + getFailureMessage(caught),
+								true);
 					}
 				});
 	}
 	
 	public void removeUsersFromGroups(List<String> userNames, List<String> groupNames) {
-		EucalyptusWebBackend.App.getInstance().removeUsersFromGroups(sessionId, userNames, groupNames,
+		EucalyptusWebBackend.App.getInstance().removeUsersFromGroups(sessionId,
+				userNames, groupNames,
 				new AsyncCallback<Void>() {
 					public void onSuccess(Void result) {
 						displaySelectedGroups();
@@ -453,7 +523,50 @@ public class UserGroupControl {
 					public void onFailure(Throwable caught) {
 						displaySelectedUsers();
 						rootPanel.getPropertyPanel().showStatus(
-								"Editing user failed! " + getFailureMessage(caught), true);
+								"Removing users from groups failed! " + getFailureMessage(caught),
+								true);
+					}
+				});
+	}
+	
+	public void enableUsers(List<String> userNames) {
+		EucalyptusWebBackend.App.getInstance().enableUsers(sessionId, userNames,
+				new AsyncCallback<Void>() {
+					public void onSuccess(Void result) {
+						displaySelectedGroups();
+					}
+					public void onFailure(Throwable caught) {
+						displaySelectedUsers();
+						rootPanel.getPropertyPanel().showStatus(
+								"Enabling users failed! " + getFailureMessage(caught), true);
+					}
+				});
+	}
+	
+	public void disableUsers(List<String> userNames) {
+		EucalyptusWebBackend.App.getInstance().disableUsers(sessionId, userNames,
+				new AsyncCallback<Void>() {
+					public void onSuccess(Void result) {
+						displaySelectedGroups();
+					}
+					public void onFailure(Throwable caught) {
+						displaySelectedUsers();
+						rootPanel.getPropertyPanel().showStatus(
+								"Disabling users failed! " + getFailureMessage(caught), true);
+					}
+				});
+	}
+	
+	public void approveUsers(List<String> userNames) {
+		EucalyptusWebBackend.App.getInstance().approveUsers(sessionId, userNames,
+				new AsyncCallback<Void>() {
+					public void onSuccess(Void result) {
+						displaySelectedGroups();
+					}
+					public void onFailure(Throwable caught) {
+						displaySelectedUsers();
+						rootPanel.getPropertyPanel().showStatus(
+								"Approving users failed! " + getFailureMessage(caught), true);
 					}
 				});
 	}

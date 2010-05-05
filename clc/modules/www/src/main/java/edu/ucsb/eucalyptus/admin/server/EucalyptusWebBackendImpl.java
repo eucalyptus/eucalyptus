@@ -900,74 +900,214 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 	@Override
 	public void addGroup(String sessionId, GroupInfoWeb group) throws Exception {
-		// TODO Auto-generated method stub
-		
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		if (!user.isAdministrator()) {
+			throw new Exception("Only admin can add a group");
+		}
+		EucalyptusManagement.addGroup(group);
 	}
 
 	@Override
 	public void addUser(String sessionId, UserInfoWeb user,
 			List<String> groupNames) throws Exception {
-		// TODO Auto-generated method stub
-		
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		if (!reqUser.isAdministrator()) {
+			throw new Exception("Only admin can add a user");
+		}
+		addUserRecord(sessionId, user);
+		for (String groupName : groupNames) {
+			try {
+				EucalyptusManagement.addUserToGroup(user.getUserName(), groupName);
+			} catch (Exception e) {
+				// Ignore exception
+				LOG.debug(e, e);
+			}
+		}
 	}
 
 	@Override
 	public void deleteGroups(String sessionId, List<String> groupNames)
 			throws Exception {
-		// TODO Auto-generated method stub
-		
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		if (!user.isAdministrator()) {
+			throw new Exception("Only admin can add a group");
+		}
+		for (String groupName : groupNames) {
+			try {
+				EucalyptusManagement.deleteGroup(groupName);
+			} catch (Exception e) {
+				// Ignore exception
+				LOG.debug(e, e);
+			}
+		}
 	}
 
 	@Override
 	public List<GroupInfoWeb> getGroups(String sessionId, String name)
 			throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		if (!user.isAdministrator()) {
+			throw new Exception("Only admin can view group list");
+		}
+		if (name == null || "".equals(name)) {
+			return EucalyptusManagement.getAllGroups();
+		}
+		List<GroupInfoWeb> gis = new ArrayList<GroupInfoWeb>();
+		GroupInfoWeb gi = EucalyptusManagement.getGroup(name);
+		if (gi != null) {
+			gis.add(gi);
+		}
+		return gis;
 	}
 
 	@Override
 	public List<String> getGroupsByUser(String sessionId, String userName)
 			throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		if (!user.isAdministrator()) {
+			throw new Exception("Only admin can view group list");
+		}
+		if (userName == null || "".equals(userName)) {
+			return new ArrayList<String>();
+		}
+		return EucalyptusManagement.getUserGroups(userName);
 	}
 
 	@Override
 	public List<UserInfoWeb> getUsersByGroups(String sessionId,
 			List<String> groupNames) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		if (!user.isAdministrator()) {
+			throw new Exception("Only admin can view user list of a group");
+		}
+		List<UserInfoWeb> users = new ArrayList<UserInfoWeb>();
+		for (String groupName : groupNames) {
+			users.addAll(EucalyptusManagement.getGroupMembers(groupName));
+		}
+		return users;
 	}
 
 	@Override
 	public void updateGroup(String sessionId, GroupInfoWeb group)
 			throws Exception {
-		// TODO Auto-generated method stub
-		
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		if (!reqUser.isAdministrator()) {
+			throw new Exception("Only admin can update a group");
+		}
+		// TODO update group permission
 	}
 
 	@Override
 	public void updateUser(String sessionId, UserInfoWeb user,
 			List<String> groupNames) throws Exception {
-		// TODO Auto-generated method stub
-		
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		if (!reqUser.isAdministrator()) {
+			throw new Exception("Only admin can update a group");
+		}
+		updateUserRecord(sessionId, user);
+		EucalyptusManagement.updateUserGroups(user.getUserName(), groupNames);
 	}
 	
 	@Override
 	public void deleteUsers(final String sessionId, 
 			final List<String> userNames) throws Exception {
-		// TODO
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		if (!reqUser.isAdministrator()) {
+			throw new Exception("Only admin can delete users");
+		}
+		for (String userName : userNames) {
+			EucalyptusManagement.deleteUser(userName);
+		}
 	}
 	
 	@Override
 	public void addUsersToGroups(final String sessionId, 
 			final List<String> userNames, final List<String> groupNames) throws Exception {
-		// TODO
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		if (!reqUser.isAdministrator()) {
+			throw new Exception("Only admin can change user's group membership");
+		}
+		for (String groupName : groupNames) {
+			for (String userName : userNames) {
+				EucalyptusManagement.addUserToGroup(userName, groupName);
+			}
+		}
 	}
 	
 	@Override
 	public void removeUsersFromGroups(final String sessionId, 
 			final List<String> userNames, final List<String> groupNames) throws Exception {
-		// TODO
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		if (!reqUser.isAdministrator()) {
+			throw new Exception("Only admin can change user's group membership");
+		}
+		for (String groupName : groupNames) {
+			for (String userName : userNames) {
+				EucalyptusManagement.removeUserFromGroup(userName, groupName);
+			}
+		}
+	}
+	
+	@Override
+	public void enableUsers(final String sessionId, final List<String> userNames) throws Exception {
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		if (!reqUser.isAdministrator()) {
+			throw new Exception("Only admin can enable users");
+		}
+		for (String userName : userNames) {
+			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName);
+			updateUser.setEnabled(true);
+			EucalyptusManagement.commitWebUser(updateUser);
+		}
+	}
+	
+	@Override
+	public void disableUsers(final String sessionId, final List<String> userNames) throws Exception {
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		if (!reqUser.isAdministrator()) {
+			throw new Exception("Only admin can disable users");
+		}
+		for (String userName : userNames) {
+			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName);
+			updateUser.setEnabled(false);
+			EucalyptusManagement.commitWebUser(updateUser);
+		}
+	}
+	
+	@Override
+	public void approveUsers(final String sessionId, final List<String> userNames) throws Exception {
+		SessionInfo session = verifySession (sessionId);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		if (!reqUser.isAdministrator()) {
+			throw new Exception("Only admin can approve users");
+		}
+		for (String userName : userNames) {
+			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName);
+			updateUser.setEnabled(true);
+			updateUser.setApproved(true);
+			updateUser.setConfirmed(false);
+			EucalyptusManagement.commitWebUser(updateUser);
+		}
+	}
+	
+	@Override
+	public List<String> getZones(final String sessionId) throws Exception {
+		// TODO: get zone list when chris is ready
+		List<String> zones = new ArrayList<String>();
+		zones.add("default");
+		return zones;
 	}
 }

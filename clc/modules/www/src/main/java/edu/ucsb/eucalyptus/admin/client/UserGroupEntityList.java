@@ -47,15 +47,19 @@ public class UserGroupEntityList extends Grid {
 	 */
 	public interface DataRow {
 		public String get(int column);
+		public String getStyle(int column);
 		public String toTooltip();
 	}
 	
+	public static final String CELL_MAIN_STYLE_NAME = "euca-UserGroupEntityList-main";
+	public static final String CELL_OTHER_STYLE_NAME = "euca-UserGroupEntityList-other";
+	public static final String CELL_MAIN_DISABLED_STYLE_NAME = "euca-UserGroupEntityList-main-disabled";
+	public static final String CELL_MAIN_ADMIN_STYLE_NAME = "euca-UserGroupEntityList-main-admin";
+
 	// Style names
 	private static final String GLOBAL_STYLE_NAME = "euca-UserGroupEntityList";
 	private static final String ROW_ROLLOVER_STYLE_NAME = "euca-UserGroupEntityList-rollover";
 	private static final String ROW_SELECTED_STYLE_NAME = "euca-UserGroupEntityList-selected";
-	private static final String CELL_MAIN_STYLE_NAME = "euca-UserGroupEntityList-main";
-	private static final String CELL_OTHER_STYLE_NAME = "euca-UserGroupEntityList-other";
 	
 	// The names of the columns 
 	private List<String> columnNames;
@@ -252,7 +256,7 @@ public class UserGroupEntityList extends Grid {
 		DomEvent.fireNativeEvent(event, this, this.getElement());
 	}
 	
-	private void drawRow(final int row, DataRow text, String style_main, String style_other) {
+	private void drawRow(final int row, DataRow text) {
 		CheckBox checkbox = new CheckBox();
 		checkbox.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
 			public void onValueChange(ValueChangeEvent<Boolean> event) {
@@ -270,17 +274,13 @@ public class UserGroupEntityList extends Grid {
 		for (int i = 0; i < columnNames.size(); i++) {
 			int col = i + 1;
 			this.setText(row, col, text.get(i));
-			if (col == 1) {
-				formatter.addStyleName(row, col, style_main);
-			} else {
-				formatter.addStyleName(row, col, style_other);
-			}
+			formatter.addStyleName(row, col, text.getStyle(i));
 		}
 	}
 	
 	protected void drawData() {
 		for (int i = 0; i < data.size(); i++) {
-			drawRow(i, data.get(i), CELL_MAIN_STYLE_NAME, CELL_OTHER_STYLE_NAME);
+			drawRow(i, data.get(i));
 		}
 	}
 	

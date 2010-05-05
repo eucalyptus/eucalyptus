@@ -69,21 +69,29 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.security.GeneralSecurityException;
+import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Set;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
@@ -102,6 +110,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.GroupInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.ImageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
@@ -460,4 +469,133 @@ public class EucalyptusManagement {
 		return cloudInfo;
 	}
 
+	public static List<GroupInfoWeb> getAllGroups() {
+		List<GroupInfoWeb> result = new ArrayList<GroupInfoWeb>();
+		List<Group> groups = Groups.listAllGroups();
+		if (groups != null) {
+			for (Group group : Groups.listAllGroups()) {
+				GroupInfoWeb gi = new GroupInfoWeb();
+				gi.name = group.getName();
+				// TODO: fill in the zone name here based on permission
+				gi.zones = new ArrayList<String>();
+				gi.zones.add("default");
+				result.add(gi);
+			}
+		}
+		return result;
+	}
+	
+	public static GroupInfoWeb getGroup(String name) {
+		try {
+			Group group = Groups.lookupGroup(name);
+			GroupInfoWeb gi = new GroupInfoWeb();
+			gi.name = group.getName();
+			// TODO: fill in the zone name here based on permission
+			gi.zones = new ArrayList<String>();
+			gi.zones.add("default");
+			return gi;
+		} catch (NoSuchGroupException nge) {
+		}
+		return null;
+	}
+	
+	public static List<UserInfoWeb> getGroupMembers(String groupName) {
+		final List<UserInfoWeb> uis = new ArrayList<UserInfoWeb>();
+		Group group = null;
+		try {
+			group = Groups.lookupGroup(groupName);
+		} catch (NoSuchGroupException nge) {
+			LOG.debug(nge, nge);
+			return uis;
+		}
+		Enumeration<? extends Principal> users = group.members();
+		final EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get(UserInfo.class);
+		while (users.hasMoreElements()) {
+			User u = (User) users.nextElement();
+			try {
+				UserInfo userInfo = dbWrapper.getUnique(new UserInfo(u.getName()));
+				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, u.getDelegate()));
+			} catch ( Exception e ) {
+				LOG.debug( e, e );
+			}
+		}
+		dbWrapper.commit();
+		return uis;
+	}
+	
+	public static List<String> getUserGroups(String userName) throws Exception {
+		final List<String> groupNames = new ArrayList<String>();
+		List<Group> groups = Groups.lookupGroups(Users.lookupUser(userName));
+		for (Group group : groups) {
+			groupNames.add(group.getName());
+		}
+		return groupNames;
+	}
+	
+	public static void addGroup(GroupInfoWeb group) throws Exception {
+		Groups.addGroup(group.name);
+		// TODO: add zone permission
+	}
+	
+	public static void deleteGroup(String groupName) throws Exception {
+		try {
+			Groups.deleteGroup(groupName);
+		} catch (NoSuchGroupException nsge) {
+			throw new Exception("No such group");
+		}
+	}
+	
+	public static void addUserToGroup(String userName, String groupName) throws Exception {
+		User user = null;
+		try {
+			user = Users.lookupUser(userName);
+		} catch (NoSuchUserException nsue) {
+			throw new Exception("Can't find user " + userName);
+		}
+		Group group = null;
+		try {
+			group = Groups.lookupGroup(groupName);
+		} catch (NoSuchGroupException nsge) {
+			throw new Exception("Can't find group " + groupName);
+		}
+		if (!group.addMember(user)) {
+			throw new Exception("Failed to add user " + userName + " to " + groupName);
+		}
+	}
+	
+	public static void removeUserFromGroup(String userName, String groupName) throws Exception {
+		User user = null;
+		try {
+			user = Users.lookupUser(userName);
+		} catch (NoSuchUserException nsue) {
+			throw new Exception("Can't find user " + userName);
+		}
+		Group group = null;
+		try {
+			group = Groups.lookupGroup(groupName);
+		} catch (NoSuchGroupException nsge) {
+			throw new Exception("Can't find group " + groupName);
+		}
+		if (!group.removeMember(user)) {
+			throw new Exception("Failed to remove user " + userName + " from " + groupName);
+		}
+	}
+	
+	public static void updateUserGroups(String userName, List<String> updateGroups) throws Exception {
+		User user = null;
+		try {
+			user = Users.lookupUser(userName);
+		} catch (NoSuchUserException nsue) {
+			throw new Exception("Can't find user " + userName);
+		}
+		Set<String> updateGroupSet = new HashSet<String>();
+		updateGroupSet.addAll(updateGroups);
+		for (Group group : Groups.listAllGroups()) {
+			if (updateGroupSet.contains(group.getName())) {
+				group.addMember(user);
+			} else {
+				group.removeMember(user);
+			}
+		}
+	}
 }

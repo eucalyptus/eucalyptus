@@ -104,17 +104,21 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		GroupInfoWeb group;
 		group = new GroupInfoWeb();
 		group.name = "research";
-		group.zone = "cluster1";
+		group.zones = new ArrayList<String>();
+		group.zones.add("cluster1");
 		addMockGroup(group);
 		group = new GroupInfoWeb();
 		group.name = "product";
-		group.zone = "cluster2";
+		group.zones = new ArrayList<String>();
+		group.zones.add("cluster1");
+		group.zones.add("cluster2");
 		addMockGroup(group);
 		
 		List<String> groupNames = new ArrayList<String>();
 		
 		adminUser.setUserName("admin");
 		adminUser.setRealName("Jack Bauer");
+		adminUser.setPassword("12345");
 		adminUser.setAdministrator(true); // so we see all tabs
 		adminUser.setAffiliation("IT");
 		adminUser.setApproved(true);
@@ -129,6 +133,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		UserInfoWeb newUser = new UserInfoWeb();
 		newUser.setUserName("tomh");
 		newUser.setRealName("Tom Hanks");
+		newUser.setPassword("12345");
 		newUser.setEmail("thanks@foobar.com");
 		newUser.setAdministrator(false);
 		newUser.setAffiliation("lab");
@@ -142,6 +147,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		newUser = new UserInfoWeb();
 		newUser.setUserName("hford");
 		newUser.setRealName("Harrison Ford");
+		newUser.setPassword("12345");
 		newUser.setEmail("hford@foobar.com");
 		newUser.setAdministrator(false);
 		newUser.setAffiliation("incubation");
@@ -155,6 +161,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		newUser = new UserInfoWeb();
 		newUser.setUserName("cfisher");
 		newUser.setRealName("Carrie Fisher");
+		newUser.setPassword("12345");
 		newUser.setEmail("cfisher@foobar.com");
 		newUser.setAdministrator(false);
 		newUser.setAffiliation("sales");
@@ -168,6 +175,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		newUser = new UserInfoWeb();
 		newUser.setUserName("mhamill");
 		newUser.setRealName("Mark Hamill");
+		newUser.setPassword("12345");
 		newUser.setEmail("mhamill@foobar.com");
 		newUser.setAdministrator(false);
 		newUser.setAffiliation("support");
@@ -221,6 +229,14 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 				userSet.remove(userName);
 			}
 		}
+	}
+	
+	private static List<String> getMockZones() {
+		List<String> zones = new ArrayList<String>();
+		zones.add("cluster1");
+		zones.add("cluster2");
+		zones.add("cluster3");
+		return zones;
 	}
 	
 	public String addUserRecord ( UserInfoWeb user )
@@ -460,5 +476,27 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		for (String groupName : groupNames) {
 			groupUsers.get(groupName).removeAll(userNames);
 		}
+	}
+	
+	public void enableUsers(final String sessionId, final List<String> userNames) throws Exception {
+		for (String userName : userNames) {
+			users.get(userName).setEnabled(true);
+		}
+	}
+	
+	public void disableUsers(final String sessionId, final List<String> userNames) throws Exception {
+		for (String userName : userNames) {
+			users.get(userName).setEnabled(false);
+		}
+	}
+	
+	public void approveUsers(final String sessionId, final List<String> userNames) throws Exception {
+		for (String userName : userNames) {
+			users.get(userName).setApproved(true);
+		}
+	}
+	
+	public List<String> getZones(final String sessionId) throws Exception {
+		return getMockZones();
 	}
 }

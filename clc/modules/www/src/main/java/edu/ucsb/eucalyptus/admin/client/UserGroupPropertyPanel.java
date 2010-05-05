@@ -195,7 +195,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addSubtitle(" ");
 		addSeparator();		
 		Grid grid = addDataGrid(1);
-		addDataRow(grid, 0, "Availability Zone", group.zone);
+		addDataRow(grid, 0, "Availability Zones", UserGroupUtils.getListString(group.zones, 0));
 	}
 	
 	public void showGroups(List<GroupInfoWeb> groups) {
@@ -248,12 +248,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addDataRow(grid, i++, "Administrator", getBooleanString(user.isAdministrator()));
 		addDataRow(grid, i++, "Email", user.getEmail());
 		addDataRow(grid, i++, "Confirmed", getBooleanString(user.isConfirmed()));
+		addDataRow(grid, i++, "Approved", getBooleanString(user.isApproved()));
+		addDataRow(grid, i++, "Enabled", getBooleanString(user.isEnabled()));
 		addDataRow(grid, i++, "Phone", user.getTelephoneNumber());
 		addDataRow(grid, i++, "Affiliation", user.getAffiliation());
 		addDataRow(grid, i++, "Project PI", user.getProjectPIName());
 		addDataRow(grid, i++, "Project Description", user.getProjectDescription());
-		addDataRow(grid, i++, "Approved", getBooleanString(user.isApproved()));
-		addDataRow(grid, i++, "Enabled", getBooleanString(user.isEnabled()));
 		addDataRow(grid, i++, "Groups", "");
 		
 		return grid;
@@ -271,6 +271,21 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		action.add(new Button("Remove from", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayRemoveUsersFromGroupsUI();
+			}
+		}));
+		action.add(new Button("Approve", new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				control.displayApproveUsersUI();
+			}
+		}));
+		action.add(new Button("Enable", new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				control.displayEnableUsersUI();
+			}
+		}));
+		action.add(new Button("Disable", new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				control.displayDisableUsersUI();
 			}
 		}));
 		action.add(new Button("Delete", new ClickHandler() {
@@ -371,7 +386,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		return input;
 	}
 	
-	public void showAddGroup() {
+	public void showAddGroup(final List<String> zones) {
 		this.cleanup();
 		setHeaderText("Adding group");
 		HorizontalPanel action = addActionBar();
@@ -381,12 +396,13 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		Grid grid = addDataGrid(2);
 		int i = 0;
 		final TextBox nameBox = addTextBoxRow(grid, i++, "Name", "", true);
-		final TextBox zoneBox = addTextBoxRow(grid, i++, "Availability Zone", "", false);
+		final ListBox zonesBox = addListRow(grid, i++, "Availability Zones",
+				zones, null /* selected */, false /* required */);
 		action.add(new Button("Finish", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				GroupInfoWeb group = new GroupInfoWeb();
 				group.name = nameBox.getText();
-				group.zone = zoneBox.getText();
+				group.zones = getListSelectedItems(zonesBox);
 				control.addGroup(group);
 			}
 		}));
@@ -397,19 +413,20 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		}));
 	}
 	
-	public void showEditGroup(final GroupInfoWeb group) {
+	public void showEditGroup(final GroupInfoWeb group, final List<String> zones) {
 		this.cleanup();
 		setHeaderText("Editing " + group.name);
 		HorizontalPanel action = addActionBar();
 		addTitle("Edit <i>" + group.name + "</i> group");
 		addSeparator();
 		Grid grid = addDataGrid(1);
-		final TextBox zoneBox = addTextBoxRow(grid, 0, "Availability Zone", group.zone, false);
+		final ListBox zoneList = addListRow(grid, 0, "Availability Zones",
+				zones, group.zones, false /* required */);
 		action.add(new Button("Finish", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				GroupInfoWeb newGroup = new GroupInfoWeb();
 				newGroup.name = group.name;
-				newGroup.zone = zoneBox.getText();
+				newGroup.zones = getListSelectedItems(zoneList);
 				control.updateGroup(newGroup);
 			}
 		}));
@@ -477,7 +494,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addTitle("Add a new user");
 		addSubtitle("<em style='color:red;'>Red</em> fields are required");
 		addSeparator();
-		Grid grid = addDataGrid(12);
+		Grid grid = addDataGrid(14);
 		int i = 0;
 		final TextBox userName = addTextBoxRow(grid, i++, "User Name", "",
 				true /* required */);
@@ -493,6 +510,10 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				true /* required */);
 		final CheckBox skipConfirmation = addCheckBoxRow(grid, i++, "Skip Email Confirmation",
 				false, false /* required */);
+		final CheckBox approved = addCheckBoxRow(grid, i++, "Approved", true,
+				false /* required */);
+		final CheckBox enabled = addCheckBoxRow(grid, i++, "Enabled", true,
+				false /* required */);
 		final TextBox phone = addTextBoxRow(grid, i++, "Phone Number", "",
 				false /* required */);
 		final TextBox affiliation = addTextBoxRow(grid, i++, "Affiliation", "",
@@ -555,6 +576,8 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				user.setRealName(fullNameValue);
 				user.setEmail(emailValue);
 				user.setConfirmed(skipConfirmation.getValue());
+				user.setApproved(approved.getValue());
+				user.setEnabled(enabled.getValue());
 				user.setTelephoneNumber(phone.getText());
 				user.setAffiliation(affiliation.getText());
 				user.setProjectPIName(pi.getText());
@@ -576,7 +599,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		HorizontalPanel action = addActionBar();
 		addTitle("Edit user <i>" + user.getUserName() + "</i>");
 		addSeparator();
-		Grid grid = addDataGrid(11);
+		Grid grid = addDataGrid(13);
 		int i = 0;
 		final CheckBox admin = addCheckBoxRow(grid, i++, "Administrator", user.isAdministrator(),
 				false /* required */);
@@ -584,11 +607,6 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				false /* required */);
 		final PasswordTextBox password2 = addPasswordRow(grid, i++, "Retype Password",
 				user.getPassword(), false /* required */);
-		// admin can not change another admin's password
-		if (user.isAdministrator()) {
-			password.setEnabled(false);
-			password2.setEnabled(false);
-		}
 		final TextBox fullName = addTextBoxRow(grid, i++, "Full Name", user.getRealName(),
 				false /* required */);
 		final TextBox email = addTextBoxRow(grid, i++, "Email", user.getEmail(),
@@ -600,6 +618,10 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		} else {
 			skipConfirmation = null;
 		}
+		final CheckBox approved = addCheckBoxRow(grid, i++, "Approved", user.isApproved(),
+				false /* required */);
+		final CheckBox enabled = addCheckBoxRow(grid, i++, "Enabled", user.isEnabled(),
+				false /* required */);
 		final TextBox phone = addTextBoxRow(grid, i++, "Phone Number", user.getTelephoneNumber(),
 				false /* required */);
 		final TextBox affiliation = addTextBoxRow(grid, i++, "Affiliation", user.getAffiliation(),
@@ -610,24 +632,40 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				user.getProjectDescription(), false /* required */);
 		final ListBox groups = addListRow(grid, i++, "Groups", groupNames, selectedGroupNames,
 				false /* required */);
+		// admin can not change another admin's password, or approve/disapprove, or enable/disable
+		// another admin
+		if (user.isAdministrator()) {
+			password.setEnabled(false);
+			password2.setEnabled(false);
+			approved.setEnabled(false);
+			enabled.setEnabled(false);
+		}
 		action.add(new Button("Finish", new ClickHandler() {
 			public void onClick(ClickEvent event) {
-				// Verify validity of input
+				// Verify validity of input if value changed
+				UserInfoWeb updatedUser = new UserInfoWeb();
+
 				String passwordValue = password.getText();
 				String password2Value = password2.getText();
-				if (!passwordValue.equals(password2Value)) {
-					showStatus("Passwords do not match.", true /* isError */);
-					return;
-				}
-				if (passwordValue.toLowerCase().contains(user.getUserName().toLowerCase())) {
-					showStatus("Password can not contain user name", true /* isError */);
-					return;
-				}
-				if (passwordValue.length() < UserGroupControl.MIN_PASSWORD_LENGTH) {
-					showStatus("Password must have at least " +
-							UserGroupControl.MIN_PASSWORD_LENGTH + " characters.",
-							true /* isError */);
-					return;
+				if (!passwordValue.equals(user.getPassword())) {
+					// Password changed
+					if (!passwordValue.equals(password2Value)) {
+						showStatus("Passwords do not match.", true /* isError */);
+						return;
+					}
+					if (passwordValue.toLowerCase().contains(user.getUserName().toLowerCase())) {
+						showStatus("Password can not contain user name", true /* isError */);
+						return;
+					}
+					if (passwordValue.length() < UserGroupControl.MIN_PASSWORD_LENGTH) {
+						showStatus("Password must have at least " +
+								UserGroupControl.MIN_PASSWORD_LENGTH + " characters.",
+								true /* isError */);
+						return;
+					}
+					updatedUser.setPassword(GWTUtils.md5(passwordValue));
+				} else {
+					updatedUser.setPassword(user.getPassword());
 				}
 				String fullNameValue = fullName.getText();
 				if (fullNameValue.length() <= 0) {
@@ -640,10 +678,8 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 					return;
 				}
 				// Add user remotely
-				UserInfoWeb updatedUser = new UserInfoWeb();
 				updatedUser.setUserName(user.getUserName());
 				updatedUser.setAdministrator(admin.getValue());
-				updatedUser.setPassword(GWTUtils.md5(passwordValue));
 				updatedUser.setRealName(fullNameValue);
 				updatedUser.setEmail(emailValue);
 				if (skipConfirmation == null) {
@@ -651,6 +687,8 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				} else {
 					updatedUser.setConfirmed(skipConfirmation.getValue());
 				}
+				updatedUser.setApproved(approved.getValue());
+				updatedUser.setEnabled(enabled.getValue());
 				updatedUser.setTelephoneNumber(phone.getText());
 				updatedUser.setAffiliation(affiliation.getText());
 				updatedUser.setProjectPIName(pi.getText());
@@ -752,6 +790,66 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		action.add(new Button("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.removeUsersFromGroups(userNames, getListSelectedItems(groups));
+			}
+		}));
+		action.add(new Button("No", new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				control.displaySelectedUsers();
+			}
+		}));
+	}
+	
+	public void showEnableUsers(final List<UserInfoWeb> users) {
+		final List<String> userNames = UserGroupUtils.getUserNamesFromUsers(users);
+		this.cleanup();
+		setHeaderText("Enabling " + users.size() + " users");
+		HorizontalPanel action = addActionBar();
+		addSeparator();
+		addHtmlContent("Are you sure to enable users <b> " + 
+				UserGroupUtils.getListString(userNames, 0) + "</b>?");
+		action.add(new Button("Yes", new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				control.enableUsers(userNames);
+			}
+		}));
+		action.add(new Button("No", new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				control.displaySelectedUsers();
+			}
+		}));
+	}
+	
+	public void showDisableUsers(final List<UserInfoWeb> users) {
+		final List<String> userNames = UserGroupUtils.getUserNamesFromUsers(users);
+		this.cleanup();
+		setHeaderText("Disabling " + users.size() + " users");
+		HorizontalPanel action = addActionBar();
+		addSeparator();
+		addHtmlContent("Are you sure to disable users <b> " + 
+				UserGroupUtils.getListString(userNames, 0) + "</b>?");
+		action.add(new Button("Yes", new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				control.disableUsers(userNames);
+			}
+		}));
+		action.add(new Button("No", new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				control.displaySelectedUsers();
+			}
+		}));
+	}
+	
+	public void showApproveUsers(final List<UserInfoWeb> users) {
+		final List<String> userNames = UserGroupUtils.getUserNamesFromUsers(users);
+		this.cleanup();
+		setHeaderText("Approving " + users.size() + " users");
+		HorizontalPanel action = addActionBar();
+		addSeparator();
+		addHtmlContent("Are you sure to approve users <b> " + 
+				UserGroupUtils.getListString(userNames, 0) + "</b>?");
+		action.add(new Button("Yes", new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				control.approveUsers(userNames);
 			}
 		}));
 		action.add(new Button("No", new ClickHandler() {
