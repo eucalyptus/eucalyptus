@@ -95,10 +95,7 @@ public class Pair {
   }
   
 }
-public interface RequestTransactionScript extends Serializable {
-  public EucalyptusMessage getRequestMessage();
-}
-public class VmAllocationInfo implements RequestTransactionScript {
+public class VmAllocationInfo extends EucalyptusMessage {
   
   RunInstancesType request;
   RunInstancesResponseType reply;
@@ -121,6 +118,7 @@ public class VmAllocationInfo implements RequestTransactionScript {
   def VmAllocationInfo(final RunInstancesType request) {
     this.request = request;
     this.reply = request.getReply();
+    this.setCorrelationId( request.getCorrelationId() )
   }
   
   public EucalyptusMessage getRequestMessage() {

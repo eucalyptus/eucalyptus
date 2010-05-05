@@ -133,8 +133,8 @@ public class ReplyQueue {
       MessagingException ex = ( MessagingException ) exception;
       MuleMessage muleMsg = ex.getUmoMessage( );
 
-      if ( payload instanceof RequestTransactionScript ) {
-        msg = ( ( RequestTransactionScript ) payload ).getRequestMessage( );
+      if ( payload instanceof VmAllocationInfo ) {
+        msg = ( ( VmAllocationInfo ) payload ).getRequest( );
       } else {
         try {
           msg = parsePayload( muleMsg.getPayload( ) );

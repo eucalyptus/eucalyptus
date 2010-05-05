@@ -1,14 +1,55 @@
 #!/usr/bin/env python
-import sys, os, binascii, urllib2, MySQLdb, hashlib, psutil, re, zipfile
+import sys, os, binascii, urllib2, MySQLdb, hashlib, psutil, re, zipfile, paramiko
 from M2Crypto import RSA, SSL
+from contextlib import contextmanager
+from paramiko import SSHClient, SFTPAttributes, SFTPClient
+
+@contextmanager
+def ssh_session(host=None, username=None, password=None):
+  ssh = paramiko.SSHClient()
+  ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
+  try:
+     sys.stdout.write( "[Connect:%s]"%host )
+     ssh.connect(host, username=username, password=password)
+     sys.stdout.write( "[Connected]" )
+     yield ssh
+  finally:
+     ssh.close()
+
+def bbbb():
+  for i in range(1,10): 
+    sys.stdout.write('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b') 
+  return ''
+
+def put_file(host=None,username=None,password=None,srcFile=None,destFile=None):
+  with ssh_session(host,username,password) as ssh:
+    ftp = ssh.open_sftp()
+    try:
+      ftp.chdir(os.path.dirname(destFile))
+      ftp.put(srcFile,destFile,lambda x,y: 
+      sys.stdout.write( "%6.2f %sCopying %s => %s "%((100.0*x)/y,bbbb(),srcFile,destFile,) ))
+    except Exception, ex:
+      print ex
+      sys.exit()
+
+def get_remote_home(host=None,username=None,password=None):
+  with ssh_session(host,username,password) as ssh:
+    (i,o,e) = ssh.exec_command("ps auxww | awk '/eucalyptus-cloud/{print $2}' | head -n1 | xargs -L1 -I{} cat /proc/{}/cmdline")
+    print e.read()
+    home = get_home_cmdline( o.read().split('\0') )
+    print home
+
+def get_home_cmdline(cmd=None):
+  if cmd.__contains__('-h'): 
+    return cmd[cmd.index('-h')+1]
+  else:
+    home = filter(lambda x: x.startswith("--home="), cmd )
+    return home.split('=')[1]
 
 def get_home():
   for i in filter(lambda x: psutil.Process(x).name.startswith("eucalyptus-cl") , psutil.get_pid_list() ):
-    cmd = psutil.Process(i).cmdline
-    if cmd.__contains__('--home'): 
-      return cmd[cmd.index('--home')+1]
-    elif cmd.__contains__('-h'): 
-      return cmd[cmd.index('-h')+1]
+    home = get_home_cmdline( psutil.Process(i).cmdline )
+    if home: return home
   print "ERROR: No running eucalyptus-cloud process found." 
 
 def passphrase_callback():
