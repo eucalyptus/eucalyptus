@@ -6,13 +6,13 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import com.eucalyptus.util.HasName;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "AvailabilityZonePermission" )
-public class AvailabilityZonePermission extends BaseAuthorization<RunInstancesType,String> implements Serializable {
+public class AvailabilityZonePermission extends BaseAuthorization<HasName> implements Serializable {
   public AvailabilityZonePermission( ) {}
   public AvailabilityZonePermission( String value ) {
     super( value );
@@ -28,8 +28,8 @@ public class AvailabilityZonePermission extends BaseAuthorization<RunInstancesTy
   }
 
   @Override
-  public boolean permits( RunInstancesType context ) {
-    return this.getValue( ).equals( context.getAvailabilityZone( ) );
+  public boolean check( HasName t ) {
+    return this.getValue( ).equals( t.getName( ) ) && /* TODO: FIXME: */ "Cluster".equals( t.getClass( ).getSimpleName( ) );
   }
-  
+
 }

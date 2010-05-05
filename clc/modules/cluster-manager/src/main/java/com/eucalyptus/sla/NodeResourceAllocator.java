@@ -1,18 +1,18 @@
 package com.eucalyptus.sla;
 
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.SortedSet;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.NavigableMap;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import edu.ucsb.eucalyptus.cloud.cluster.VmTypeAvailability;
 
 public class NodeResourceAllocator implements ResourceAllocator {
   private static String ALLOCATOR = "euca.cluster.allocator";
@@ -20,33 +20,48 @@ public class NodeResourceAllocator implements ResourceAllocator {
   @Override
   public void allocate( VmAllocationInfo vmInfo ) throws Exception {
     String clusterName = vmInfo.getRequest( ).getAvailabilityZone( );
-    if ( clusterName != null && !"default".equals( clusterName ) ) {
-      singleCluster( vmInfo );
-    } else {
-      scriptedAllocator( vmInfo );
+    String vmTypeName = vmInfo.getRequest( ).getVmType( ).getName( );
+    Integer amount = vmInfo.getRequest( ).getMinCount( );
+    Cluster authorizedCluster = this.doPrivilegedLookup( clusterName, vmTypeName );
+    VmTypeAvailability vmAvailability = authorizedCluster.getNodeState( ).getAvailability( vmTypeName );
+    if ( vmAvailability.getAvailable( ) < amount ) {
+      throw new NotEnoughResourcesAvailable( "Not enough resources (" + vmAvailability.getAvailable( ) + " < " + amount + ": vm instances." );
     }
+    Context ctx = Contexts.lookup( );
+    ResourceToken token = authorizedCluster.getNodeState( ).getResourceAllocation( ctx.getCorrelationId( ), ctx.getUser( ).getName( ), vmTypeName, amount );
+    vmInfo.getAllocationTokens( ).add( token );
   }
   
-  private void scriptedAllocator( VmAllocationInfo vmInfo ) throws Exception {
-    ResourceAllocator blah = ( ResourceAllocator ) GroovyUtil.newInstance( System.getProperty( ALLOCATOR ) != null ? System.getProperty( ALLOCATOR ) : "LeastFullFirst" );
-    blah.allocate( vmInfo );
-  }
-  
-  private void singleCluster( VmAllocationInfo vmInfo ) throws NotEnoughResourcesAvailable {
-    RunInstancesType request = vmInfo.getRequest( );
-    String clusterName = request.getAvailabilityZone( );
-    try {
-      Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-      ClusterNodeState clusterState = cluster.getNodeState( );
-      int available = clusterState.getAvailability( request.getInstanceType( ) ).getAvailable( );
-      if ( available < request.getMinCount( ) ) {
-        throw new NotEnoughResourcesAvailable( "Not enough resources: vm resources in the requested cluster " + clusterName );
+  private Cluster doPrivilegedLookup( String clusterName, String vmTypeName ) throws NotEnoughResourcesAvailable {
+    if ( clusterName != null && !"default".equals( clusterName ) ) {
+      final Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+      if ( Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
+        @Override
+        public boolean apply( Authorization arg0 ) {
+          return arg0.check( cluster );
+        }
+      } ) ) {
+        return cluster;
+      } else {
+        throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName );
       }
-      int count = available > request.getMaxCount( ) ? request.getMaxCount( ) : available;
-      ResourceToken token = clusterState.getResourceAllocation( request.getCorrelationId( ), request.getUserId( ), request.getInstanceType( ), count );
-      vmInfo.getAllocationTokens( ).add( token );
-    } catch ( NoSuchElementException e ) {
-      throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName );
+    } else {
+      Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+        @Override
+        public boolean apply( final Cluster c ) {
+          return Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
+            @Override
+            public boolean apply( Authorization arg0 ) {
+              return arg0.check( c );
+            }
+          } );
+        }
+      } );
+      NavigableMap<VmTypeAvailability, Cluster> sorted = Maps.newTreeMap( );
+      for ( Cluster c : authorizedClusters ) {
+        sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
+      }
+      return sorted.firstEntry( ).getValue( );
     }
   }
   
