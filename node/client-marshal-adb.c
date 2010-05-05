@@ -287,7 +287,6 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     adb_ncRunInstanceType_set_userData(request, env, userData);
     adb_ncRunInstanceType_set_launchIndex(request, env, launchIndex);
     adb_ncRunInstanceType_set_platform(request, env, platform);
-    int i;
     for (i=0; i<groupNamesSize; i++) {
         adb_ncRunInstanceType_add_groupNames(request, env, groupNames[i]);
     }
