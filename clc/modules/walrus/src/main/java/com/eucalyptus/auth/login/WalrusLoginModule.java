@@ -62,63 +62,61 @@
  *
  * Author: Neil Soman neil@eucalyptus.com
  */
+package com.eucalyptus.auth.login;
 
-package com.eucalyptus.ws.handlers;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
-import java.net.InetSocketAddress;
-import java.util.Calendar;
+import org.apache.log4j.Logger;
+import org.apache.xml.security.utils.Base64;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.api.BaseLoginModule;
+import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.http.MappingHttpRequest;
 
-import edu.ucsb.eucalyptus.cloud.BucketLogData;
-import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
+public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials> {
+	private static Logger LOG = Logger.getLogger( WalrusLoginModule.class );
+	public WalrusLoginModule() {}
 
-@ChannelPipelineCoverage("one")
-public class WalrusRESTLoggerInbound extends MessageStackHandler {
 	@Override
-	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage();
-			if(httpRequest.getMessage() instanceof WalrusRequestType) {
-				WalrusRequestType request = (WalrusRequestType) httpRequest.getMessage();
-				BucketLogData logData = request.getLogData();
-				if(logData != null) {
-					long currentTime = System.currentTimeMillis();
-					logData.setTotalTime(currentTime);
-					logData.setTurnAroundTime(currentTime);
-					logData.setUri(httpRequest.getUri());
-					String referrer = httpRequest.getHeader(HttpHeaders.Names.REFERER);
-					if(referrer != null)
-						logData.setReferrer(referrer);
-					String userAgent = httpRequest.getHeader(HttpHeaders.Names.USER_AGENT);
-					if(userAgent != null)
-						logData.setUserAgent(userAgent);
-					logData.setTimestamp(String.format("[%1$td/%1$tb/%1$tY:%1$tH:%1$tM:%1$tS %1$tz]", Calendar.getInstance()));
-					User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser();
-					if(user != null)
-						logData.setAccessorId(user.getName());
-					if(request.getBucket() != null)
-						logData.setBucketName(request.getBucket());
-					if(request.getKey() != null) 
-						logData.setKey(request.getKey());
-					if(ctx.getChannel().getRemoteAddress() instanceof InetSocketAddress) {
-						InetSocketAddress sockAddress = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
-						logData.setSourceAddress(sockAddress.getAddress().getHostAddress());
-					}
-				}
-			}			
-		}
+	public boolean accepts( ) {
+		return super.getCallbackHandler( ) instanceof WalrusWrappedCredentials;
 	}
 
 	@Override
-	public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event)
-			throws Exception {
+	public boolean authenticate( WalrusWrappedCredentials credentials ) throws Exception {
+		String signature = credentials.getSignature().replaceAll("=", "");
+		User user = Users.lookupQueryId( credentials.getQueryId() );  
+		String queryKey = user.getSecretKey( );
+		String authSig = checkSignature( queryKey, credentials.getLoginData() );
+		if (authSig.equals(signature)) {
+			super.setCredential(credentials.getQueryId());
+			super.setPrincipal(user);
+			super.getGroups().addAll(Groups.lookupGroups( super.getPrincipal()));
+			return true;	
+		}
+		return false;
+	}
+
+	@Override
+	public void reset( ) {}
+
+	protected String checkSignature( final String queryKey, final String subject ) throws AuthenticationException
+	{
+		SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hmac.HmacSHA1.toString() );
+		try
+		{
+			Mac mac = Mac.getInstance( Hmac.HmacSHA1.toString() );
+			mac.init( signingKey );
+			byte[] rawHmac = mac.doFinal( subject.getBytes() );
+			return new String(Base64.encode( rawHmac )).replaceAll( "=", "" );
+		}
+		catch ( Exception e )
+		{
+			LOG.error( e, e );
+			throw new AuthenticationException( "Failed to compute signature" );
+		}
 	}
 }
