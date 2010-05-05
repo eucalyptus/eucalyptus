@@ -122,7 +122,7 @@ public class Binding {
       for( int i = 0; i < mappedClasses.length; i ++ ) {
         if( bindingFactory.getElementNames( )[i] != null ) {
           try {
-            elementToClassMap.put( bindingFactory.getElementNames( )[i], Class.forName( mappedClasses[i] ) );
+            elementToClassMap.put( bindingFactory.getElementNames( )[i], ClassLoader.getSystemClassLoader().loadClass( mappedClasses[i] ) );
             LOG.trace( "Caching binding for " + this.name + " on element " + bindingFactory.getElementNames( )[i] + " to class " + mappedClasses[i] );
           } catch ( ClassNotFoundException e ) {
             LOG.trace( e, e );
