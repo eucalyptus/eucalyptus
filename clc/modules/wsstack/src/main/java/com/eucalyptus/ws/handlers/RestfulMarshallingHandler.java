@@ -98,7 +98,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       if ( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
         this.namespace = "http://ec2.amazonaws.com/doc/" + bindingVersion + "/";
       } else {
-        this.namespace = "http://msgs.eucalyptus.ucsb.edu";
+        this.namespace = "http://msgs.eucalyptus.com";
       }
       String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getName( );
       try {

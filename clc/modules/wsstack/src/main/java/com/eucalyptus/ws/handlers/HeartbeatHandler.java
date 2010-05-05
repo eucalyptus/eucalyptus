@@ -229,7 +229,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
     pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
     try {
-      pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ) ) );
+      pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
     } catch ( BindingException e ) {
       LOG.error( e, e );
     }
