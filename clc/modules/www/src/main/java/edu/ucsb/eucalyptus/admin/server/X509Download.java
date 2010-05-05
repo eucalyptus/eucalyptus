@@ -77,15 +77,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.UserEntity;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.Transactions;
-import com.eucalyptus.util.Tx;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class X509Download extends HttpServlet {
@@ -120,7 +116,7 @@ public class X509Download extends HttpServlet {
       hasError( "User does not exist", response );
       return;
     }
-    if ( !user.getToken( ).equals( code ) ) {
+    if ( !user.checkToken( ).equals( code ) ) {
       hasError( "Confirmation code is invalid", response );
       return;
     }
