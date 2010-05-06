@@ -675,6 +675,7 @@ doCancelBundleTask(
   if (instance->bundlePid > 0 && !check_process(instance->bundlePid, "euca-bundle-upload")) {
     logprintfl(EUCADEBUG, "doCancelBundleTask: found bundlePid '%d', sending kill signal...\n", instance->bundlePid);
     kill(instance->bundlePid, 9);
+    instance->bundlePid = 0;
   }
   return(OK);
 }
