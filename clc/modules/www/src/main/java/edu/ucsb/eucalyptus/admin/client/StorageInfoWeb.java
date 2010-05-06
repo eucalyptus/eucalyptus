@@ -159,5 +159,5 @@ public class StorageInfoWeb implements IsSerializable {
 		return name.hashCode();
 	}
 
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773, new ArrayList<String>());
+	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773 /** FIXME: DRAMATICALLY: URGENTLY **/, new ArrayList<String>());
 }

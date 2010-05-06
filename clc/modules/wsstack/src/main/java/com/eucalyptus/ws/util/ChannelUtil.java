@@ -52,7 +52,7 @@ public class ChannelUtil {
   public static long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 1048576;
   public static long          SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024;
   public static long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500;
-  public static int           PORT                              = 8773;
+  public static int           PORT                              = Integer.parseInt( System.getProperty("euca.ws.port") );
   public static long          CLIENT_IDLE_TIMEOUT_SECS          = 4 * 60;
   public static long          CLUSTER_IDLE_TIMEOUT_SECS         = 4 * 60;
   public static long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000;

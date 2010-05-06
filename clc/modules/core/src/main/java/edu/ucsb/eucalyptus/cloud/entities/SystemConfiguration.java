@@ -288,7 +288,7 @@ public class SystemConfiguration {
           cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
         } catch ( SocketException e ) {}
       }
-      return String.format( "http://%s:8773/services/Eucalyptus", cloudHost );
+      return String.format( "http://%s:"+System.getProperty("euca.ws.port")+"/services/Eucalyptus", cloudHost );
     } catch ( EucalyptusCloudException e ) {
       return "http://127.0.0.1:8773/services/Eucalyptus";
     }

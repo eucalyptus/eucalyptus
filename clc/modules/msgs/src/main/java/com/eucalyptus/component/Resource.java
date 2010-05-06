@@ -15,7 +15,7 @@ import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class Resource implements ComponentInformation {
   enum Keys {
-    URL_PATTERN( "euca.url.pattern", "http://%s:%d/internal/%s" ), LOCAL_URL( "euca.url.local", "vm://EucalyptusRequestQueue" ), PORT( "euca.url.port", "8773" );
+    URL_PATTERN( "euca.url.pattern", "http://%s:%d/internal/%s" ), LOCAL_URL( "euca.url.local", "vm://EucalyptusRequestQueue" ), PORT( "euca.url.port", System.getProperty("euca.ws.port")+ );
     private String key;
     private String defaultValue;
     
