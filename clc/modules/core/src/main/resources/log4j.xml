@@ -126,7 +126,7 @@
     <appender-ref ref="extlogfile" />
   </category>
   <category name="org.mortbay" additivity="true">
-    <priority value="${euca.log.level}" />
+    <priority value="INFO" />
     <appender-ref ref="extlogfile" />
   </category>
   <!--
