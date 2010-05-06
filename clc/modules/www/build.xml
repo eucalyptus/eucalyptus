@@ -143,7 +143,17 @@
 	</target>
 
 	<property name="servlet.dir" value="${euca.var.dir}/webapps" />
-	<target name="install" depends="copy-conf">
+	<target name="install">
+    <copy todir="${DESTDIR}${euca.lib.dir}">
+      <fileset file="${jar.file}" />
+    </copy>
+    <!-- copy udev config over -->
+    <mkdir dir="${DESTDIR}${euca.udev.dir}" />
+    <copy todir="${DESTDIR}${euca.udev.dir}">
+      <fileset dir="${basedir}/udev">
+        <include name="**/*" />
+      </fileset>
+    </copy>
 		<copy file="${gwt.war}" todir="${DESTDIR}${servlet.dir}" />
 	</target>
 
