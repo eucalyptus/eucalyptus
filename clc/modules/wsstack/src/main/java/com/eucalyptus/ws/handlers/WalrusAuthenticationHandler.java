@@ -156,13 +156,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			if( httpRequest.containsHeader( StorageProperties.StorageParameters.EucaCert.toString( ) ) ) {
 				certString= httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaCert.toString());
 			}
-//      try {
-//        SecurityContext.getLoginContext( new WalrusInternalWrappedCredentials( httpRequest.getCorrelationId( ), verb, addr, date, signature, certString ) ).login( );
-//      } catch ( Exception e1 ) {
-//        LOG.debug( e1, e1 );
-//      }
-
-			
 			String data = verb + "\n" + date + "\n" + addr + "\n";
 			String effectiveUserID = httpRequest.getAndRemoveHeader(StorageProperties.StorageParameters.EucaEffectiveUserId.toString());
 			try {
