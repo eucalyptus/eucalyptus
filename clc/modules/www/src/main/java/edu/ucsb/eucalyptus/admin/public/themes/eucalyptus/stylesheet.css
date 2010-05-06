@@ -270,10 +270,15 @@ button{
 	background: #FFFFCC;
 	text-align: center;
 	vertical-align: middle;
+	padding: 0px 1px 0px 5px;
+	height: 32px;
 }
 
 .euca-UserGroupEntityPanel-filter {
 	width: 100%;
+	border: 1px solid #CCCCCC;
+	padding-top: 3px;
+	padding-bottom: 3px;
 }
 
 .euca-UserGroupEntityPanel-scroll {
@@ -341,6 +346,8 @@ button{
 .euca-UserGroupPropertyPanel-action {
 	width: 100%;
 	background: #FFFFCC;
+	height: 32px;
+	vertical-align: middle;
 }
 
 .euca-UserGroupPropertyPanel-data {
@@ -370,11 +377,14 @@ button{
 
 .euca-UserGroupPropertyPanel-data-text {
 	width: 100%;
+	border: 1px solid #CCCCCC;
 }
 
 .euca-UserGroupPropertyPanel-data-list {
 	width: 100%;
 	text-align: left;
+	border: 1px solid #CCCCCC;
+	background: #FFFFFF;
 }
 
 .euca-UserGroupPropertyPanel {
@@ -412,4 +422,22 @@ button{
 	padding-right: 5px;
 	padding-top: 3px;
 	padding-bottom: 3px;
+	border: 1px solid #CCCCCC;
+}
+
+.euca-Button {
+	border: 1px solid #CCCCCC;
+    -webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
+	background: #F6F6F6 none repeat scroll 0 0;
+	padding: 3px 5px 3px 5px;
+}
+
+.euca-Button-over {
+	border: 1px solid #AAAAAA;
+}
+
+.euca-Button-down {
+	background: #D4D4D4 none repeat scroll 0 0
 }
