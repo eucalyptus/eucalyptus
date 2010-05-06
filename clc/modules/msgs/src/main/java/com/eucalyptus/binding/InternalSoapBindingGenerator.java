@@ -43,7 +43,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
                                                     add( ".*HttpResponseStatus" );
                                                     add( ".*Closure" );
                                                     add( ".*Channel" );
-                                                    add( ".*\\.JiBX_" );
+                                                    add( ".*\\.JiBX_*" );
                                                   }
                                                 };
   private static List<String>      badFields    = new ArrayList<String>( ) {
