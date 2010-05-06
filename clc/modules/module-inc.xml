@@ -124,11 +124,7 @@
 		</copy>
 	</target>
 	<!--================================== init target ==================================-->
-	<target name="init">
-		<mkdir dir="${build.dir}" />
-		<mkdir dir="${target.dir}" />
-	</target>
-	<target name="builder" depends="init" description="--> build the jar file from source.">
+	<target name="builder" description="--> build the jar file from source.">
 		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
 			<isset property="builder.suffix" />
 		</condition>
@@ -143,6 +139,7 @@
 	</target>
 	<target name="do-build-java" unless="build.notRequired">
 		<antcall target="clean" />
+		<mkdir dir="${build.dir}" />
 		<javac srcdir="src/main/java/" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5" listfiles="true" />
 	</target>
 	<target name="build-groovy">
@@ -153,6 +150,7 @@
 	</target>
 	<target name="do-build-groovy" unless="build.notRequired">
 		<antcall target="clean" />
+		<mkdir dir="${build.dir}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
 		<groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
 			<javac target="1.5" debug="true" />
@@ -160,6 +158,7 @@
 	</target>
 	<!--================================== jar target ==================================-->
 	<target name="jar">
+		<mkdir dir="${target.dir}" />
 		<uptodate property="jar.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${build.dir}" includes="**/*" />
 			<srcfiles dir="${rsrc.dir}" includes="**/*" />
@@ -178,7 +177,16 @@
 			</fileset>
 		</jar>
 	</target>
-	<target name="install" depends="copy-conf" />
+	<target name="install">
+		<copy todir="${DESTDIR}${euca.conf.dir}">
+			<fileset dir="conf">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+		<copy todir="${DESTDIR}${euca.lib.dir}">
+			<fileset file="${jar.file}" />
+		</copy>
+	</target>
 	<!--================================== clean target ==================================-->
 	<target name="clean">
 		<delete dir="${build.dir}" />
