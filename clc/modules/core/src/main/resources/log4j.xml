@@ -125,6 +125,10 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="extlogfile" />
   </category>
+  <category name="org.mortbay" additivity="true">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="extlogfile" />
+  </category>
   <!--
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
     you are having unexplained failures.
@@ -194,10 +198,6 @@
     <appender-ref ref="exhaustive" />
   </category>
   <category name="org.springframework" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="exhaustive" />
-  </category>
-  <category name="org.mortbay" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="exhaustive" />
   </category>
