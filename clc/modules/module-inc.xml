@@ -128,7 +128,6 @@
 		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
 			<isset property="builder.suffix" />
 		</condition>
-		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
 	</target>
 	<target name="build-java">
@@ -138,6 +137,7 @@
 		<antcall target="do-build-java" />
 	</target>
 	<target name="do-build-java" unless="build.notRequired">
+    <echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<mkdir dir="${build.dir}" />
 		<javac srcdir="src/main/java/" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5" listfiles="true" />
@@ -149,6 +149,7 @@
 		<antcall target="do-build-groovy" />
 	</target>
 	<target name="do-build-groovy" unless="build.notRequired">
+    <echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<mkdir dir="${build.dir}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
