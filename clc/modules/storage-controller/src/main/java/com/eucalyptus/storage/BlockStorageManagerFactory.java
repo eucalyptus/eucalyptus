@@ -71,9 +71,11 @@ public class BlockStorageManagerFactory {
 	private static Logger LOG = Logger.getLogger(BlockStorageManagerFactory.class);
 	public static LogicalStorageManager getBlockStorageManager() {
 		String ebsManager = "com.eucalyptus.storage.LVM2Manager";
-		if(System.getProperty("ebs.storage.manager") != null) {
-			ebsManager = System.getProperty("ebs.storage.manager");
-		}
+                if(System.getProperty("euca.disable.san") == null) {
+		  if(System.getProperty("ebs.storage.manager") != null) {
+			  ebsManager = System.getProperty("ebs.storage.manager");
+		  }
+                }
 		try {
 			return (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(ebsManager).newInstance();
 		} catch (InstantiationException e) {
