@@ -114,7 +114,9 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       LOG.debug( e, e );
       dbU.rollback( );
     }    
-    return new UserProxy( newUser );
+    User proxy = new UserProxy( newUser );
+    Groups.DEFAULT.addMember( proxy );
+    return proxy;
   }
   
   @Override
@@ -132,7 +134,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     EntityWrapper<User> db = Authentication.getEntityWrapper( );
     try {
       User foundUser = db.getUnique( user );
-      for( Group g : Groups.lookupGroups( foundUser ) ) {
+      for( Group g : Groups.lookupUserGroups( foundUser ) ) {
         g.removeMember( foundUser );
       }
       db.delete( foundUser );
@@ -322,9 +324,9 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     }
     return ret;
   }
-
   @Override
   public void deleteGroup( String groupName ) throws NoSuchGroupException {
+    Groups.checkNotRestricted( groupName );
     EntityWrapper<GroupEntity> db = Groups.getEntityWrapper( );
     GroupEntity delGroup = new GroupEntity( groupName );
     try {

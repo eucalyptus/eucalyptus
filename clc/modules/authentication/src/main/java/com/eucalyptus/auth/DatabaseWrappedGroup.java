@@ -22,7 +22,7 @@ public class DatabaseWrappedGroup implements Group {
   private static Logger LOG = Logger.getLogger( DatabaseWrappedGroup.class );
 
   public static Group newInstance( Group g ) {
-    if( "all".equals( g.getName( ) ) ) {
+    if( Groups.NAME_ALL.equals( g.getName( ) ) ) {
       return new AllGroup( g );
     } else {
       return new DatabaseWrappedGroup( g );

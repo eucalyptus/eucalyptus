@@ -11,12 +11,14 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
+import com.google.common.collect.Lists;
 
-@Provides(Component.bootstrap)
-@RunDuring(Bootstrap.Stage.UserCredentialsInit)
-@DependsLocal(Component.eucalyptus)
+@Provides( Component.bootstrap )
+@RunDuring( Bootstrap.Stage.UserCredentialsInit )
+@DependsLocal( Component.eucalyptus )
 public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
+  
   public boolean load( Stage current ) throws Exception {
     DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
     Users.setUserProvider( dbAuth );
@@ -26,26 +28,26 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   
   public boolean start( ) throws Exception {
     this.checkUserEnabled( );
-    this.ensureAllGroupExists( );
+    this.ensureStandardGroupsExists( );
     this.ensureAdminExists( );
     this.ensureCountersExist( );
     this.ensureVmTypesExist( );
     return true;
   }
-
+  
   private void checkUserEnabled( ) {
     EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
-    for( UserEntity u : db.query( new UserEntity( ) ) ) {
-      if( u.isEnabled() != Boolean.FALSE ) {
+    for ( UserEntity u : db.query( new UserEntity( ) ) ) {
+      if ( u.isEnabled( ) != Boolean.FALSE ) {
         u.setEnabled( Boolean.TRUE );
       }
     }
   }
-
+  
   private void ensureVmTypesExist( ) {
     EntityWrapper<VmType> db = new EntityWrapper<VmType>( "eucalyptus_general" );
     try {
-      if( db.query( new VmType() ).size( ) == 0 ) { //TODO: make defaults configurable?
+      if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
         db.add( new VmType( "m1.small", 1, 2, 128 ) );
         db.add( new VmType( "c1.medium", 1, 5, 256 ) );
         db.add( new VmType( "m1.large", 2, 10, 512 ) );
@@ -57,21 +59,34 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       db.rollback( );
     }
   }
-
-  private void ensureAllGroupExists( ) {
+  
+  private void ensureStandardGroupsExists( ) {
     try {
-      Groups.lookupGroup( "all" );
+      Groups.ALL = Groups.lookupGroup( "all" );
     } catch ( NoSuchGroupException e ) {
       try {
-        Groups.addGroup( "all" );
+        Groups.ALL = Groups.addGroup( "all" );
       } catch ( GroupExistsException e1 ) {
         LOG.error( e1, e1 );
         LOG.error( "Failed to add the 'all' group.  The system may not be able to store group information." );
       }
     }
+    Groups.RESTRICTED_GROUPS.add( Groups.ALL );
+    
+    try {
+      Groups.DEFAULT = Groups.lookupGroup( "default" );
+    } catch ( NoSuchGroupException e ) {
+      try {
+        Groups.DEFAULT = Groups.addGroup( "default" );
+      } catch ( GroupExistsException e1 ) {
+        LOG.error( e1, e1 );
+        LOG.error( "Failed to add the 'all' group.  The system may not be able to store group information." );
+      }
+    }
+    Groups.RESTRICTED_GROUPS.add( Groups.DEFAULT );
   }
-
-  private void ensureCountersExist() {
+  
+  private void ensureCountersExist( ) {
     Counters.getNextId( );
   }
   
@@ -81,9 +96,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     } catch ( NoSuchUserException e ) {
       try {
         Users.addUser( "admin", true, true );
-      } catch ( UserExistsException e1 ) {
-      } catch ( UnsupportedOperationException e1 ) {
-      }
+      } catch ( UserExistsException e1 ) {} catch ( UnsupportedOperationException e1 ) {}
     }
   }
 }

@@ -1,7 +1,6 @@
 package com.eucalyptus.accounts;
 
 import java.util.List;
-import org.apache.commons.collections.EnumerationUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.GroupExistsException;
 import com.eucalyptus.auth.Groups;

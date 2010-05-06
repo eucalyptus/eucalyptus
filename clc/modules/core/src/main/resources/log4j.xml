@@ -63,6 +63,14 @@
       <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
     </layout>
   </appender>
+  <appender name="extlogfile" class="org.apache.log4j.RollingFileAppender">
+    <param name="File" value="${euca.log.dir}/cloud-debug-ext.log" />
+    <param name="MaxFileSize" value="10MB" />
+    <param name="MaxBackupIndex" value="10" />
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
+    </layout>
+  </appender>
   <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-error.log" />
     <param name="MaxFileSize" value="10MB" />
@@ -104,6 +112,18 @@
   <category name="edu.ucsb.eucalyptus" additivity="true">
     <priority value="${euca.log.level}" />
     <appender-ref ref="logfile" />
+  </category>
+  <category name="org.mule" additivity="true">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="extlogfile" />
+  </category>
+  <category name="org.hibernate" additivity="true">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="extlogfile" />
+  </category>
+  <category name="org.jboss" additivity="true">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="extlogfile" />
   </category>
   <!--
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
@@ -170,16 +190,6 @@
     <appender-ref ref="exhaustive" />
   </category>
   <category name="org.apache" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="exhaustive" />
-  </category>
-  <category name="org.mule" additivity="true">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="logfile" />
-  </category>
-<!--    <priority value="${euca.log.exhaustive.external}" />-->
-<!--    <appender-ref ref="exhaustive" />-->
-  <category name="org.hibernate" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="exhaustive" />
   </category>

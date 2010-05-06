@@ -30,7 +30,7 @@ public class UserInfoType extends EucalyptusData {
         this.revoked.add( x.getSerialNumber().toString() );
       }
     }
-    for( Group g : Groups.lookupGroups( u ) ) {
+    for( Group g : Groups.lookupUserGroups( u ) ) {
       this.groups.add( g.getName() );
     }
     this.enabled = u.isEnabled( );

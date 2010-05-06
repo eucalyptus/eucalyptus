@@ -77,7 +77,7 @@ public class Context {
   }
   
   public List<Group> getGroups( ) {
-    return Groups.lookupGroups( this.getUser( ) );
+    return Groups.lookupUserGroups( this.getUser( ) );
   }
 
   public List<Authorization> getAuthorizations( ) {
