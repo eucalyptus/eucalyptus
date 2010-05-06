@@ -1,11 +1,10 @@
 package com.eucalyptus.binding;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -16,7 +15,6 @@ import org.apache.tools.ant.Task;
 import org.apache.tools.ant.types.FileSet;
 import org.apache.tools.ant.types.Path;
 import org.jibx.binding.Compile;
-import org.jibx.runtime.JiBXException;
 
 public class BuildBindings extends Task {
   private List<FileSet> classFileSets   = null;
@@ -56,18 +54,44 @@ public class BuildBindings extends Task {
   
   private String[] bindings( ) {
     List<String> bindings = new ArrayList<String>( );
+    boolean addMsgs = true;
     for ( FileSet fs : this.bindingFileSets ) {
       final String dirName = fs.getDir( getProject( ) ).getAbsolutePath( );
       for ( String b : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
         final String bindingFilePath = dirName + File.separator + b;
         log( "Found binding: " + bindingFilePath );
+        if( bindingFilePath.endsWith( "msgs-binding.xml" ) ) {
+          addMsgs = false;
+        }
         bindings.add( bindingFilePath );
       }
+    }
+    if( addMsgs ) {
+      bindings.add( "modules/msgs/src/main/resources/msgs-binding.xml" );
     }
     return bindings.toArray( new String[] {} );
   }
   
+  PrintStream oldOut = System.out, oldErr = System.err;
+  public void error( Throwable e ) {
+    e.printStackTrace( System.err );
+    System.setOut( oldOut );
+    System.setErr( oldErr );
+    e.printStackTrace( System.err );
+    log( e.getMessage( ) );
+    System.exit( -1 );
+  }
+  
   public void execute( ) {
+    PrintStream buildLog;
+    try {
+      buildLog = new PrintStream( new FileOutputStream( "bind.log", false ) );
+      System.setOut( buildLog );
+      System.setErr( buildLog );
+    } catch ( FileNotFoundException e2 ) {
+      System.setOut( oldOut );
+      System.setErr( oldErr );      
+    }
     if ( this.classFileSets.isEmpty( ) ) {
       throw new BuildException( "No classes were provided to bind." );
     } else if ( this.bindingFileSets.isEmpty( ) ) {
@@ -103,34 +127,37 @@ public class BuildBindings extends Task {
             try {
               Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
               if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
-                System.out.println( "Preparing bindings for: " + c.getCanonicalName( ) );
                 for( BindingGenerator gen : generators ) {
-                  System.out.println( "MAPPING: " + gen.getClass( ).getSimpleName( ) +":"+ c.getCanonicalName( )  );
                   gen.processClass( c );
                 }
               }
             } catch ( ClassNotFoundException e ) {
-              e.printStackTrace( );
-              System.exit( -1 );
+              error( e );
             }
           }
         }
       } catch ( ClassNotFoundException e1 ) {
-        e1.printStackTrace( );
-        System.exit( -1 );
+        error( e1 );
       } finally {
-        for( BindingGenerator gen : generators ) {
-          gen.close( );
+        try {
+          for( BindingGenerator gen : generators ) {
+            gen.close( );
+          }
+        } catch ( Throwable e ) {
+          error( e );
         }
         Thread.currentThread( ).setContextClassLoader( old );
       }
-      Compile compiler = new Compile( true, true, false, false, true );
       try {
-        compiler.compile( paths( ), new String[] { "/bzr/grze_main/clc/modules/msgs/src/main/resources/msgs-binding.xml" } );
-      } catch ( JiBXException e ) {
-        e.printStackTrace( System.err );
-        log( e.getMessage( ) );
+        Compile compiler = new Compile( true, true, false, false, true );
+        compiler.compile( paths( ), bindings() );
+      } catch ( Throwable e ) {
+        error( e );
+      } finally {
+        System.setOut( oldOut );
+        System.setErr( oldErr );
       }
     }
   }
+  
 }

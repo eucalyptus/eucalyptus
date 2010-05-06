@@ -63,25 +63,13 @@
  */
 package com.eucalyptus.ws;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.RemoteConfiguration;
-import com.eucalyptus.config.StorageControllerConfiguration;
-import com.eucalyptus.config.WalrusConfiguration;
-import com.eucalyptus.event.EventVetoedException;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.component.event.StartComponentEvent;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.client.LocalDispatcher;
-import com.eucalyptus.ws.client.RemoteDispatcher; 
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
@@ -90,19 +78,20 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
-import com.eucalyptus.config.VMwareBrokerConfiguration;
 
 @Provides( com.eucalyptus.bootstrap.Component.any )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
+  private static List<com.eucalyptus.bootstrap.Component> ignored = Lists.newArrayList( com.eucalyptus.bootstrap.Component.any, com.eucalyptus.bootstrap.Component.vmwarebroker, com.eucalyptus.bootstrap.Component.component ); 
   
   @Override
   public boolean load( Stage current ) throws Exception {
     /** TODO: ultimately remove this: it is legacy and enforces a one-to-one relationship between component impls **/
     for ( com.eucalyptus.bootstrap.Component c : com.eucalyptus.bootstrap.Component.values( ) ) {
-      if ( com.eucalyptus.bootstrap.Component.any.equals( c ) ) continue;
+      if ( ignored.contains( c ) ) continue;
       try {
         Component comp = Components.lookup( c );
       } catch ( NoSuchElementException e ) {

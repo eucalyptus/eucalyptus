@@ -18,7 +18,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class InternalSoapBindingGenerator extends BindingGenerator {
-  private static Logger LOG = Logger.getLogger( InternalSoapBindingGenerator.class );
+  private static Logger            LOG          = Logger.getLogger( InternalSoapBindingGenerator.class );
   private final String             ns           = "http://msgs.eucalyptus.com";
   private static String            INDENT       = "";
   private final File               outFile;
@@ -31,7 +31,10 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
                                                     put( Boolean.class.getCanonicalName( ), new BooleanTypeBinding( ) );
                                                     put( String.class.getCanonicalName( ), new StringTypeBinding( ) );
                                                     put( Long.class.getCanonicalName( ), new LongTypeBinding( ) );
+                                                    put( "boolean", new BooleanTypeBinding( ) );
                                                     put( "int", new IntegerTypeBinding( ) );
+                                                    put( "long", new LongTypeBinding( ) );
+                                                    put( java.util.Date.class.getCanonicalName( ), new StringTypeBinding( ) );
                                                   }
                                                 };
   
@@ -75,9 +78,11 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
   
   @Override
   public void processClass( Class klass ) {
-    String mapping = new RootObjectTypeBinding( klass ).process( );
-    out.write( mapping );
-    out.flush( );
+    if ( BindingGenerator.DATA_TYPE.isAssignableFrom( klass ) || BindingGenerator.MSG_TYPE.isAssignableFrom( klass ) ) {
+      String mapping = new RootObjectTypeBinding( klass ).process( );
+      out.write( mapping );
+      out.flush( );
+    }
   }
   
   @Override
@@ -94,11 +99,15 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     } else if ( List.class.isAssignableFrom( itsType ) ) {
       Class listType = getTypeArgument( field );
       if ( listType == null ) {
+        System.err.printf( "IGNORE: %-70s [type=%s] NO GENERIC TYPE FOR LIST\n", field.getDeclaringClass( ).getCanonicalName( ) + "."+ field.getName( ), listType );
         return new NoopTypeBinding( field );        
       } else if ( typeBindings.containsKey( listType.getCanonicalName( ) ) ) {
         return new CollectionTypeBinding( field.getName( ), typeBindings.get( listType.getCanonicalName( ) ) );
-      } else {
+      } else if ( BindingGenerator.DATA_TYPE.isAssignableFrom( listType ) ) {
         return new CollectionTypeBinding( field.getName( ), new ObjectTypeBinding( field.getName( ), listType ) );
+      } else {
+        System.err.printf( "IGNORE: %-70s [type=%s] LIST'S GENERIC TYPE DOES NOT CONFORM TO EucalyptusData\n", field.getDeclaringClass( ).getCanonicalName( ) + "."+ field.getName( ), listType.getCanonicalName( ) );
+        return new NoopTypeBinding( field );        
       }
     } else if ( typeBindings.containsKey( itsType.getCanonicalName( ) ) ) {
       TypeBinding t = typeBindings.get( itsType.getCanonicalName( ) );
@@ -109,6 +118,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     } else if ( BindingGenerator.DATA_TYPE.isAssignableFrom( field.getType( ) ) ) {
       return new ObjectTypeBinding( field );
     } else {
+      System.err.printf( "IGNORE: %-70s [type=%s] TYPE DOES NOT CONFORM TO EucalyptusData\n", field.getDeclaringClass( ).getCanonicalName( ) + "."+ field.getName( ), field.getType( ).getCanonicalName( ) );
       return new NoopTypeBinding( field );
     }
   }
@@ -135,17 +145,28 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     }
     
     public String process( ) {
-      this.elem( Elem.mapping );
-      if ( this.abs ) {
-        this.attr( "abstract", "true" );
+      if( this.type.getCanonicalName( ) == null ) {
+        new RuntimeException( "" + this.type ).printStackTrace( );
       } else {
-        this.attr( "name", this.type.getSimpleName( ) ).attr( "extends", this.type.getSuperclass( ).getCanonicalName( ) );
+        this.elem( Elem.mapping );
+        if ( this.abs ) {
+          this.attr( "abstract", "true" );
+        } else {
+          this.attr( "name", this.type.getSimpleName( ) ).attr( "extends", this.type.getSuperclass( ).getCanonicalName( ) );
+        }
+        this.attr( "class", this.type.getCanonicalName( ) );
+        if( BindingGenerator.MSG_TYPE.isAssignableFrom( this.type.getSuperclass( ) ) || BindingGenerator.DATA_TYPE.isAssignableFrom( this.type.getSuperclass( ) ) ) {
+          this.elem( Elem.structure ).attr( "map-as", this.type.getSuperclass().getCanonicalName( ) ).end( );
+        }
+        for ( Field f : type.getDeclaredFields( ) ) {
+          TypeBinding tb = getTypeBinding( f );
+          if ( !( tb instanceof NoopTypeBinding ) ) {
+            System.out.printf( "BOUND:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) +"."+ f.getName( ), tb.getTypeName( ), f.getType( ).getCanonicalName( ) );          
+            this.append( tb.toString( ) );
+          }
+        }
+        this.end( );
       }
-      this.attr( "class", this.type.getCanonicalName( ) );
-      for ( Field f : type.getDeclaredFields( ) ) {
-        this.append( getTypeBinding( f ).toString( ) );
-      }
-      this.end( );
       return this.toString( );
     }
   }
@@ -187,7 +208,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     }
     
     protected TypeBinding append( Object o ) {
-      this.buf.append( o.toString( ) );
+      this.buf.append( ""+o );
       return this;
     }
     
@@ -270,17 +291,16 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     final String type = field.getType( ).getSimpleName( );
     if ( Modifier.isFinal( mods ) ) {
       LOG.debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type
-                          + " due to: final modifier" );
+                 + " due to: final modifier" );
     } else if ( Modifier.isStatic( mods ) ) {
       LOG.debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type
-                          + " due to: static modifier" );
+                 + " due to: static modifier" );
     }
     boolean ret = Iterables.any( badClasses, new Predicate<String>( ) {
       @Override
       public boolean apply( String arg0 ) {
         if ( type.matches( arg0 ) ) {
-          LOG.debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type + " due to: "
-                              + arg0 );
+          LOG.debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type + " due to: " + arg0 );
           return true;
         } else {
           return false;
@@ -291,14 +311,14 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
       @Override
       public boolean apply( String arg0 ) {
         if ( name.matches( arg0 ) ) {
-          LOG.debug( "Ignoring field with bad name: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type + " due to: "
-                              + arg0 );
+          LOG.debug( "Ignoring field with bad name: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type + " due to: " + arg0 );
           return true;
         } else {
           return false;
         }
       }
     } );
+    
     return ret;
   }
   
@@ -325,7 +345,12 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
   enum Elem {
     structure, collection, value, mapping, binding
   }
-  
+  class IgnoredTypeBinding extends NoopTypeBinding {
+
+    public IgnoredTypeBinding( Field field ) {
+      super( field );
+    }
+  }  
   class NoopTypeBinding extends TypeBinding {
     private String name;
     private Class  type;

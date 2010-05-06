@@ -77,7 +77,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.cloud.RequestTransactionScript;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;

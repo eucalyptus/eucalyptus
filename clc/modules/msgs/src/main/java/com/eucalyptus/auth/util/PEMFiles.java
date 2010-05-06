@@ -10,7 +10,6 @@ import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.openssl.PEMWriter;
-import com.eucalyptus.auth.crypto.DefaultCryptoProvider;
 import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
@@ -20,7 +19,7 @@ public class PEMFiles {
     PEMWriter privOut = null;
     try {
       privOut = new PEMWriter( new FileWriter( fileName ) );
-      EventRecord.caller( DefaultCryptoProvider.class, EventType.CERTIFICATE_WRITE, fileName ).info( );
+      EventRecord.caller( PEMFiles.class, EventType.CERTIFICATE_WRITE, fileName ).info( );
       privOut.writeObject( securityToken );
       privOut.close( );
     } catch ( final IOException e ) {

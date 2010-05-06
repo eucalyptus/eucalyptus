@@ -82,18 +82,18 @@
 			<include name="**/*.jar" />
 		</fileset>
 		<pathelement path="conf" />
-		<fileset dir="${target.dir}">
-			<include name="**/*.jar" />
-		</fileset>
+    <dirset dir="${modules.dir}">
+      <include name="**/build"/>
+    </dirset>
 	</path>
 	<path id="gwtcompilerclasspath">
 		<fileset dir="${lib.dir}">
 			<include name="**/gwt-dev.jar" />
 		</fileset>
 		<path refid="gwtclasspath" />
-		<fileset dir="${target.dir}">
-			<include name="**/*.jar" />
-		</fileset>
+    <dirset dir="${modules.dir}">
+      <include name="**/build"/>
+    </dirset>
 		<pathelement path="${src.dir}" />
 	</path>
 	<property name="gwt.build.dir" value="build" />

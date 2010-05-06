@@ -167,13 +167,16 @@ public class Binding {
     try {
       final IMarshallingContext mctx = this.bindingFactory.createMarshallingContext( );
       final XMLStreamWriter wrtr = HoldMe.getXMLOutputFactory( ).createXMLStreamWriter( bos, null );
-      mctx.setXmlWriter( new StAXWriter( this.bindingFactory.getNamespaces( ), wrtr ) );
+      final StAXWriter staxWriter = new StAXWriter( this.bindingFactory.getNamespaces( ), wrtr );
+      mctx.setXmlWriter( staxWriter );
       mctx.marshalDocument( param );
       mctx.getXmlWriter( ).flush( );
       final OMNamespace appns = factory.createOMNamespace( origNs, "" );
       final OMDataSource inds = new InputStreamDataSource( new ByteArrayInputStream( bos.toByteArray( ) ), altNs );
       if( origNs.equals( altNs ) || altNs == null ) {
-        retVal = factory.createOMElement( inds, this.bindingFactory.getElementNames( )[index], appns );
+//        retVal = factory.createOMElement( inds, this.bindingFactory.getElementNames( )[index], appns );
+        final StAXOMBuilder stAXOMBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( bos.toString( ) ) );
+        retVal = stAXOMBuilder.getDocumentElement( );
       } else {
         String retString = bos.toString( );
         retString = retString.replaceAll( origNs, altNs );

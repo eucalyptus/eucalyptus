@@ -173,10 +173,12 @@
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="exhaustive" />
   </category>
-  <category name="org.mule" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="exhaustive" />
+  <category name="org.mule" additivity="true">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="logfile" />
   </category>
+<!--    <priority value="${euca.log.exhaustive.external}" />-->
+<!--    <appender-ref ref="exhaustive" />-->
   <category name="org.hibernate" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="exhaustive" />

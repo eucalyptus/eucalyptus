@@ -1,7 +1,7 @@
 package com.eucalyptus.auth.principal;
 
-import java.util.List;
 import com.eucalyptus.auth.principal.domain.UserDomain;
+import com.google.common.collect.ImmutableList;
 
 /**
  * @author decker
@@ -18,24 +18,24 @@ public interface Group extends java.security.acl.Group, Cloneable, UserDomain {
    * TODO: DOCUMENT Group.java
    * @return
    */
-  public List<User> getUsers( );
+  public ImmutableList<User> getMembers( );
   
   /**
    * TODO: DOCUMENT Group.java
    * @return
    */
-  public List<Authorization> getAuthorizations( );
+  public ImmutableList<Authorization> getAuthorizations( );
   
   /**
    * TODO: DOCUMENT Group.java
    * @param auth
    */
-  public void addAuthorization( Authorization auth );
+  public boolean addAuthorization( Authorization auth );
   
   /**
    * TODO: DOCUMENT Group.java
    * @param auth
    */
-  public void removeAuthorization( Authorization auth );
+  public boolean removeAuthorization( Authorization auth );
   
 }

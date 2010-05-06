@@ -150,8 +150,8 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     try {
       UserEntity userInfo = db.recast( UserEntity.class ).getUnique( new UserEntity( user.getName( ) ) );
       for ( GroupEntity g : db.query( new GroupEntity( ) ) ) {
-        if ( g.belongs( userInfo ) ) {
-          userGroups.add( new DatabaseWrappedGroup( g ) );
+        if ( g.isMember( userInfo ) ) {
+          userGroups.add( DatabaseWrappedGroup.newInstance( g ) );
         }
       }
       db.commit( );
@@ -168,7 +168,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     try {
       GroupEntity group = db.getUnique( new GroupEntity( groupName ) );
       db.commit( );
-      return new DatabaseWrappedGroup( group );
+      return DatabaseWrappedGroup.newInstance( group );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw new NoSuchGroupException( e );
@@ -308,7 +308,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       db.rollback( );
       throw new GroupExistsException( t );
     }
-    return new DatabaseWrappedGroup( newGroup );
+    return DatabaseWrappedGroup.newInstance( newGroup );
   }
   
   @Override
@@ -318,7 +318,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     EntityWrapper<GroupEntity> db = EntityWrapper.get( search );
     List<GroupEntity> groupList = db.query( search );
     for ( GroupEntity g : groupList ) {
-      ret.add( new DatabaseWrappedGroup( g ) );
+      ret.add( DatabaseWrappedGroup.newInstance( g ) );
     }
     return ret;
   }
@@ -337,6 +337,5 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     }    
   }
 
-  
   
 }
