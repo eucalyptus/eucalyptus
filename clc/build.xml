@@ -82,7 +82,8 @@
 	<property name="deps.url" value="http://mirror.eucalyptus/dependencies/${euca.version}" />
 	<property name="deps.dir" value="deps" />
 	<property name="deps.lib.dir" value="lib" />
-	<property name="deps.lib" value="cloud-lib" />
+  <property name="deps.lib" value="cloud-lib" />
+  <property name="bind.timestamp" value="target/.bind-timestamp" />
 	<!--================================== build targets ==================================-->
 	<target name="build">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
@@ -104,8 +105,7 @@
 		<ant dir="modules/www" inheritall="false" target="builder" />
 		<ant dir="." inheritall="false" target="jar" />
 	</target>
-	<target name="jar">
-		<ant dir="." inheritall="false" target="bind" />
+	<target name="jar" depends="bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
 		<ant dir="modules/mysql" inheritall="false" target="jar" />
 		<ant dir="modules/authentication" inheritall="false" target="jar" />
@@ -124,7 +124,16 @@
 		<ant dir="modules/dns" inheritall="false" target="jar" />
 		<ant dir="modules/www" inheritall="false" target="jar" />
 	</target>
-	<target name="bind">
+	<target name="shouldBind">
+		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
+		  <srcfiles dir="modules">
+		    <include name="**/*.java"/>
+		  </srcfiles>
+		</uptodate>
+    <echo message="[BINDING] Up-to-date check shows bind.notRequred=${bind.notRequred}." />
+	</target>
+	<target name="bind" depends="shouldBind" unless="bind.notRequired">
+    <echo message="[BINDING] Running binding compiler." />
 		<path id="bindingclasspath">
 			<dirset dir="modules">
 				<include name="**/build" />
@@ -138,6 +147,7 @@
 			<classfileset dir="${project.basedir}/modules" includes="*/build/**" />
 			<bindingfileset dir="${project.basedir}/modules" includes="**/*-binding.xml" />
 		</bindings>
+		<touch file="${bind.timestamp}"/>
 	</target>
 
 	<!--================================== clean targets ==================================-->
