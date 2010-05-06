@@ -116,6 +116,7 @@
 	</target>
 
 	<target name="compile-src">
+		<mkdir dir="${build.dir}"/>
 		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="gwtclasspath" failonerror="true" debug="true" target="1.5" />
 	</target>
 
