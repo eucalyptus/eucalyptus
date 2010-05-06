@@ -102,6 +102,12 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="builder"/>
 		<ant dir="modules/dns" inheritall="false" target="builder"/>
 		<ant dir="modules/www" inheritall="false" target="builder"/>
+  </target>
+  <target name="jar">
+    <uptodate property="bind.notRequired" targetfile="${jar.file}">
+      <srcfiles dir="${src.dir}" includes="**/*" />
+    	<srcfiles dir="${rsrc.dir}" includes="**/*" />
+    </uptodate>
 	  <ant dir="." inheritall="false" target="bind"/>
 		<ant dir="modules/msgs" inheritall="false" target="jar"/>
 		<ant dir="modules/mysql" inheritall="false" target="jar"/>
@@ -121,7 +127,7 @@
 		<ant dir="modules/dns" inheritall="false" target="jar"/>
 		<ant dir="modules/www" inheritall="false" target="jar"/>
 	</target>
-	<target name="bind">
+	<target name="bind" unless="bind.notRequired">
 	  <path id="bindingclasspath">
 	    <dirset dir="modules">
 	      <include name="**/build"/>
