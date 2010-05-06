@@ -87,9 +87,10 @@ button{
 
 .euca-tab-contents {
     vertical-align: middle;
-    margin-left: auto;
-    margin-right: auto;
+    padding-left: 20px;
+    padding-right: 20px;
     margin-top: 15px;
+    width: 100%;
 }
 
 .euca-message-bar {
@@ -208,4 +209,207 @@ button{
 .euca-nonfirst-cluster-entry {
 	border-top:1px dashed grey;
 	padding:10px;
+}
+
+.euca-UserGroupEntityList {
+    cursor: pointer;
+    font-size: smaller;
+    width: 100%;
+}
+
+.euca-UserGroupEntityList-rollover {
+	background: #FFFF66;
+}
+
+.euca-UserGroupEntityList-selected {
+	background: #FFCC33;
+}
+
+.euca-UserGroupEntityList-main {
+	text-align: center;
+}
+
+.euca-UserGroupEntityList-main-disabled {
+	text-align: center;
+	color: #666666;
+}
+
+.euca-UserGroupEntityList-main-admin {
+	text-align: center;
+	font-weight: bold;
+}
+
+.euca-UserGroupEntityList-main-special {
+	color: #666666;
+	text-align: center;
+}
+
+.euca-UserGroupEntityList-other {
+	color: #888888;
+	font-size: smaller;
+	font-style: italic;
+	text-align: center;
+}
+
+.euca-UserGroupEntityPanel-list-header {
+	width: 100%;
+	background: #FFFFEE;
+	cursor: default;
+	font-size: smaller;
+	text-align: center;
+}
+
+.euca-UserGroupEntityPanel-anchor {
+	color: #555555;
+	font-family: serif;
+}
+
+.euca-UserGroupEntityPanel-action {
+	width: 100%;
+	font-size: smaller;
+	background: #FFFFCC;
+	text-align: center;
+	vertical-align: middle;
+}
+
+.euca-UserGroupEntityPanel-filter {
+	width: 100%;
+}
+
+.euca-UserGroupEntityPanel-scroll {
+	width: 100%;
+	height: 573px;
+}
+	
+.euca-UserGroupEntityPanel {
+	border: solid;
+	border-width: 2px;
+	border-color: #FFCC33;
+	width: 100%;
+	-webkit-border-top-left-radius: 5px;
+	-webkit-border-top-right-radius: 5px;
+	-moz-border-radius-topleft: 5px;
+	-moz-border-radius-topright: 5px;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+}
+
+.euca-UserGroupPropertyPanel-scroll {
+	width: 100%;
+	height: 626px;
+}
+
+.euca-UserGroupPropertyPanel-content {
+	width: 100%;
+	text-align: left;
+	vertical-align: top;
+}
+
+.euca-UserGroupPropertyPanel-content-title {
+	font-weight: bold;
+	margin-left: 20px;
+	margin-right: 20px;
+	margin-top: 15px;
+}
+
+.euca-UserGroupPropertyPanel-content-subtitle {
+	font-size: smaller;
+	font-style: italic;
+	margin-left: 20px;
+	margin-right: 20px;
+}
+
+.euca-UserGroupPropertyPanel-content-detail {
+	font-size: smaller;
+	margin-left: 20px;
+	margin-right: 20px;
+}
+
+.euca-UserGroupPropertyPanel-status {
+	width: 100%;
+	height: 20px;
+	background: #FFFFCC;
+	font-size: smaller;
+	text-align: center;
+	font-style: italic;
+}
+
+.euca-UserGroupPropertyPanel-status-error {
+	color: red;
+}
+
+.euca-UserGroupPropertyPanel-action {
+	width: 100%;
+	background: #FFFFCC;
+}
+
+.euca-UserGroupPropertyPanel-data {
+	width: 100%;
+	font-size: smaller;
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+.euca-UserGroupPropertyPanel-data-name {
+	font-weight: bold;
+	text-align: left;
+	vertical-align: top;
+}
+
+.euca-UserGroupPropertyPanel-data-required {
+	color: red;
+	font-weight: bold;
+	text-align: left;
+	vertical-align: top;
+}
+
+.euca-UserGroupPropertyPanel-data-value {
+	font-style: italic;
+	text-align: left;
+}
+
+.euca-UserGroupPropertyPanel-data-text {
+	width: 100%;
+}
+
+.euca-UserGroupPropertyPanel-data-list {
+	width: 100%;
+	text-align: left;
+}
+
+.euca-UserGroupPropertyPanel {
+	border: solid;
+	border-width: 2px;
+    border-color: #FFCC33;
+    width: 100%;
+    -webkit-border-top-left-radius: 5px;
+	-webkit-border-top-right-radius: 5px;
+	-moz-border-radius-topleft: 5px;
+	-moz-border-radius-topright: 5px;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+}
+
+.euca-UserGroupTabPanel-header {
+	width: 100%;
+	background: #FFCC33;
+	font-weight: bold;
+	font-size: smaller;
+	text-align: center;
+	height: 20px;
+}
+
+.euca-UserGroupTabPanel {
+	width: 90%;
+	font-size: smaller;
+}
+
+.euca-Tooltip {
+	color: #333333;
+	background: #FFFFDD;
+	font-size: small;
+	padding-left: 5px;
+	padding-right: 5px;
+	padding-top: 3px;
+	padding-bottom: 3px;
 }

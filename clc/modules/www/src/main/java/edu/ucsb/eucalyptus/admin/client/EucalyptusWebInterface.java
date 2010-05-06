@@ -152,6 +152,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 	private static int credsTabIndex = -1;
     private static int imgTabIndex = -1;
 	private static int usrTabIndex = -1;
+	private static int usrgrpTabIndex = -1;
 	private static int confTabIndex = -1;
     private static int downTabIndex = -1;
     private static int storeTabIndex = -1;
@@ -1325,7 +1326,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         final VerticalPanel wrapper = new VerticalPanel();
         wrapper.setStyleName("euca-tab-contents");
 //        wrapper.setSize("100%", "80%");
-//        wrapper.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+        wrapper.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
 //        wrapper.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
 
 		// set up tab layout so that *TabIndex variables are set in the beginning
@@ -1338,6 +1339,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         /////allTabs.addTab ("Instances"); instTabIndex = nTabs++;
         if (loggedInUser.isAdministrator().booleanValue()) {
 			allTabs.addTab ("Users"); usrTabIndex = nTabs++;
+			allTabs.addTab ("Users and Groups"); usrgrpTabIndex = nTabs++;
 			allTabs.addTab ("Configuration"); confTabIndex = nTabs++;
             allTabs.addTab ("Extras"); downTabIndex = nTabs++;
             if (extensions!=null && extensions.contains ("store") ) {
@@ -1357,6 +1359,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 if (tabIndex==credsTabIndex) { displayCredentialsTab(wrapper); }
                 else if (tabIndex==imgTabIndex) { displayImagesTab(wrapper); }
                 else if (tabIndex==usrTabIndex) { displayUsersTab(wrapper); }
+                else if (tabIndex==usrgrpTabIndex) { displayUserGroupTab(wrapper); }
 				else if (tabIndex==confTabIndex) { displayConfTab(wrapper); }
                 else if (tabIndex==downTabIndex) { displayDownloadsTab(wrapper); }
                 else if (tabIndex==storeTabIndex) { displayStoreTab(wrapper); }
@@ -1991,6 +1994,16 @@ public class EucalyptusWebInterface implements EntryPoint {
                 });
 
         parent.add(msg);
+    }
+    
+    public void displayUserGroupTab(final VerticalPanel parent)
+    {
+    	History.newItem("userngroup");
+    	parent.clear();
+    	//parent.add(new UserGroupPanel());
+    	UserGroupControl control = new UserGroupControl(sessionId);
+    	parent.add(control.getRootPanel());
+    	control.display();
     }
 
     public void displayImagesTab (final VerticalPanel parent)
