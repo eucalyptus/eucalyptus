@@ -66,7 +66,7 @@
 
 	<import file="../module-inc.xml" />
 	<!--================================== BUILD TARGETS ==================================-->
-  <property name="builder.suffix" value="groovy" />
+  <property name="builder.suffix" value="jni" />
 	<target name="build-jni">
 		<antcall target="build-java" />
     <antcall target="jar" />

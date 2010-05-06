@@ -74,7 +74,12 @@
 	</condition>
 
 	<!--================================== BUILD TARGET ==================================-->
-	<target name="builder" depends="init,compile-src,jar,compile-gwt" description="--> build the jar file from source." unless="gwtc.notRequired" />
+  <property name="builder.suffix" value="gwt" />
+  <target name="build-gwt">
+    <antcall target="compile-src" />
+    <antcall target="jar" />
+    <antcall target="compile-gwt" />
+	</target>
 	<!--================================== GWT-ONLY TARGET ==================================-->
 	<property environment="env" />
 	<path id="gwtclasspath">
