@@ -20,8 +20,10 @@ import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.api.CertificateProvider;
 import com.eucalyptus.auth.api.CryptoProvider;
 import com.eucalyptus.auth.api.HmacProvider;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.SubDirectory;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
@@ -66,7 +68,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateSecretKey( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA224, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" );
   }
   
   /**
@@ -74,7 +76,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateCertificateCode( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA512, false ).replaceAll( "\\p{Punct}", "" );
   }
   
   /**
@@ -82,7 +84,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateConfirmationCode( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA512, false ).replaceAll( "\\p{Punct}", "" );
   }
   
   /**
@@ -90,7 +92,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateSessionToken( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA512, false ).replaceAll( "\\p{Punct}", "" );
   }
 
   /**
@@ -134,7 +136,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey ) {
     signer = ( signingKey == null ? signer : subjectDn );
     signingKey = ( signingKey == null ? keys.getPrivate( ) : signingKey );
-    LOG.debug( EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ) );
+    EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ).info();
     X509V3CertificateGenerator certGen = new X509V3CertificateGenerator( );
     certGen.setSerialNumber( BigInteger.valueOf( System.nanoTime( ) ).shiftLeft( 4 ).add( BigInteger.valueOf( ( long ) Math.rint( Math.random( ) * 1000 ) ) ) );
     certGen.setIssuerDN( signer );

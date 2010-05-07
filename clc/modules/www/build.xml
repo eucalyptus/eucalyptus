@@ -74,7 +74,12 @@
 	</condition>
 
 	<!--================================== BUILD TARGET ==================================-->
-	<target name="builder" depends="init,compile-src,jar,compile-gwt" description="--> build the jar file from source." unless="gwtc.notRequired" />
+  <property name="builder.suffix" value="gwt" />
+  <target name="build-gwt">
+    <antcall target="compile-src" />
+    <antcall target="jar" />
+    <antcall target="compile-gwt" />
+	</target>
 	<!--================================== GWT-ONLY TARGET ==================================-->
 	<property environment="env" />
 	<path id="gwtclasspath">
@@ -82,18 +87,18 @@
 			<include name="**/*.jar" />
 		</fileset>
 		<pathelement path="conf" />
-		<fileset dir="${target.dir}">
-			<include name="**/*.jar" />
-		</fileset>
+    <dirset dir="${modules.dir}">
+      <include name="**/build"/>
+    </dirset>
 	</path>
 	<path id="gwtcompilerclasspath">
 		<fileset dir="${lib.dir}">
 			<include name="**/gwt-dev.jar" />
 		</fileset>
 		<path refid="gwtclasspath" />
-		<fileset dir="${target.dir}">
-			<include name="**/*.jar" />
-		</fileset>
+    <dirset dir="${modules.dir}">
+      <include name="**/build"/>
+    </dirset>
 		<pathelement path="${src.dir}" />
 	</path>
 	<property name="gwt.build.dir" value="build" />
@@ -111,6 +116,7 @@
 	</target>
 
 	<target name="compile-src">
+		<mkdir dir="${build.dir}"/>
 		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="gwtclasspath" failonerror="true" debug="true" target="1.5" />
 	</target>
 
@@ -137,7 +143,15 @@
 	</target>
 
 	<property name="servlet.dir" value="${euca.var.dir}/webapps" />
-	<target name="install" depends="copy-conf">
+	<target name="install">
+    <copy todir="${DESTDIR}${euca.conf.dir}">
+      <fileset dir="conf">
+        <include name="**/*" />
+      </fileset>
+    </copy>
+    <copy todir="${DESTDIR}${euca.lib.dir}">
+      <fileset file="${jar.file}" />
+    </copy>
 		<copy file="${gwt.war}" todir="${DESTDIR}${servlet.dir}" />
 	</target>
 

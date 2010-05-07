@@ -1,7 +1,6 @@
 package com.eucalyptus.accounts;
 
 import java.util.List;
-import org.apache.commons.collections.EnumerationUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.GroupExistsException;
 import com.eucalyptus.auth.Groups;
@@ -142,7 +141,7 @@ public class Accounts {
     }
     for ( Group g : groups ) {
       GroupInfoType groupinfo = new GroupInfoType( g.getName( ) );
-      for ( User u : g.getUsers( ) ) {
+      for ( User u : g.getMembers( ) ) {
         groupinfo.getUsers( ).add( u.getName( ) );
       }
       for ( Authorization a : g.getAuthorizations( ) ) {

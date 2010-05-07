@@ -34,21 +34,12 @@
 
 package edu.ucsb.eucalyptus.ic;
 
-import edu.ucsb.eucalyptus.cloud.*;
+import org.apache.log4j.Logger;
+import org.mule.message.ExceptionMessage;
+import com.eucalyptus.binding.BindingManager;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.util.ReplyCoordinator;
-import org.apache.log4j.Logger;
-import org.mule.message.ExceptionMessage;
-
-import com.eucalyptus.binding.BindingManager;
-
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Collections;
-import java.util.List;
 
 public class VMwareBrokerReplyQueue {
 
@@ -67,7 +58,7 @@ public class VMwareBrokerReplyQueue {
         {
             Object requestMsg = muleMsg.getPayload();
             String requestString = requestMsg.toString();
-            EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( requestString );
+            EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
             Throwable ex = muleMsg.getException().getCause();
             EucalyptusMessage errMsg;
             errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());

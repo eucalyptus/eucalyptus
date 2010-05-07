@@ -1,29 +1,38 @@
 package com.eucalyptus.auth;
 
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.BaseAuthorization;
 import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.BaseAuthorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FinalReturn;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
 public class DatabaseWrappedGroup implements Group {
   private static Logger LOG = Logger.getLogger( DatabaseWrappedGroup.class );
-  
+
+  public static Group newInstance( Group g ) {
+    if( Groups.NAME_ALL.equals( g.getName( ) ) ) {
+      return new AllGroup( g );
+    } else {
+      return new DatabaseWrappedGroup( g );
+    }
+  }
+
   private GroupEntity   searchGroup;
-  private GroupEntity   group;
+  private Group group;
   
-  public DatabaseWrappedGroup( GroupEntity group ) {
+  protected DatabaseWrappedGroup( Group group ) {
     this.searchGroup = new GroupEntity( group.getName( ) );
     this.group = group;
   }
@@ -33,9 +42,9 @@ public class DatabaseWrappedGroup implements Group {
     EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
       UserEntity user = db.getUnique( new UserEntity( principal.getName( ) ) );
-      GroupEntity g = db.recast( GroupEntity.class ).getUnique( this.group );
-      if ( !g.belongs( user ) ) {
-        g.getUsers( ).add( user );
+      GroupEntity g = db.recast( GroupEntity.class ).getUnique( this.searchGroup );
+      if ( !g.isMember( user ) ) {
+        g.addMember( user );
         db.commit( );
         return true;
       } else {
@@ -53,7 +62,7 @@ public class DatabaseWrappedGroup implements Group {
   public boolean isMember( Principal member ) {
     EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
-      boolean ret = this.group.belongs( db.getUnique( new UserEntity( member.getName( ) ) ) );
+      boolean ret = this.group.isMember( db.getUnique( new UserEntity( member.getName( ) ) ) );
       db.commit( );
       return ret;
     } catch ( EucalyptusCloudException e ) {
@@ -70,7 +79,7 @@ public class DatabaseWrappedGroup implements Group {
       Transactions.one( this.searchGroup, new Tx<GroupEntity>( ) {
         @Override
         public void fire( GroupEntity t ) throws Throwable {
-          for( UserEntity user : t.getUsers( ) ) {
+          for( User user : t.getMembers( ) ) {
             try {
               userList.add( Users.lookupUser( user.getName( ) ) );
             } catch ( NoSuchUserException e ) {
@@ -90,9 +99,9 @@ public class DatabaseWrappedGroup implements Group {
     EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
     try {
       UserEntity userInfo = db.getUnique( new UserEntity( user.getName( ) ) );
-      GroupEntity g = db.recast( GroupEntity.class ).getUnique( this.group );
-      if ( g.belongs( userInfo ) ) {
-        g.getUsers( ).remove( userInfo );
+      GroupEntity g = db.recast( GroupEntity.class ).getUnique( this.searchGroup );
+      if ( g.isMember( userInfo ) ) {
+        g.removeMember( userInfo );
         db.commit( );
         return true;
       } else {
@@ -116,48 +125,47 @@ public class DatabaseWrappedGroup implements Group {
     if ( this == o ) return true;
     if ( o instanceof GroupEntity ) {
       GroupEntity that = ( GroupEntity ) o;
-      return this.getWrappedGroup( ).equals( that );
+      return this.group.equals( that );
     } else if ( o instanceof DatabaseWrappedGroup ) {
       DatabaseWrappedGroup that = ( DatabaseWrappedGroup ) o;
-      return this.getWrappedGroup( ).equals( that.getWrappedGroup( ) );
+      return this.group.equals( that.group );
     } else {
       return false;
     }
   }
   
-  private GroupEntity getWrappedGroup( ) {
-    return this.group;
-  }
-  
   @Override
-  public void addAuthorization( final Authorization authorization ) {
+  public boolean addAuthorization( final Authorization authorization ) {
     if ( authorization instanceof BaseAuthorization ) {
       BaseAuthorization auth = ( BaseAuthorization ) authorization;
       EntityWrapper<BaseAuthorization> db = EntityWrapper.get( BaseAuthorization.class );
+      boolean ret = false;
       try {
         db.add( auth );
         GroupEntity g = db.recast( GroupEntity.class ).getUnique( searchGroup );
-        g.getAuthorizations( ).add( auth );
+        ret = g.addAuthorization( auth );
         db.recast( GroupEntity.class ).merge( g );
         this.group = g;
         db.commit( );
       } catch ( Throwable e ) {
+        ret = false;
         LOG.debug( e, e );
         db.rollback( );
       } 
+      return ret;
     } else {
       throw new RuntimeException( "Authorizations must extend from BaseAuthorization, passed: " + authorization.getClass( ).getCanonicalName( ) );
     }
   }
   
   @Override
-  public List<Authorization> getAuthorizations( ) {
+  public ImmutableList<Authorization> getAuthorizations( ) {
     final List<Authorization> auths = Lists.newArrayList( );
     try {
       Transactions.one( this.searchGroup, new Tx<GroupEntity>( ) {
         @Override
         public void fire( GroupEntity t ) throws Throwable {
-          for( BaseAuthorization a : t.getAuthorizations( ) ) {
+          for( Authorization a : t.getAuthorizations( ) ) {
             auths.add( a );
           }
         }
@@ -165,37 +173,39 @@ public class DatabaseWrappedGroup implements Group {
     } catch ( TransactionException e ) {
       LOG.debug( e, e );
     }
-    return auths;
+    return ImmutableList.copyOf( auths );
   }
   
   @Override
-  public List<User> getUsers( ) {
+  public ImmutableList<User> getMembers( ) {
     final List<User> users = Lists.newArrayList( );
     try {
       Transactions.one( this.searchGroup, new Tx<GroupEntity>( ) {
         @Override
         public void fire( GroupEntity t ) throws Throwable {
-          users.addAll( t.getUsers( ) );
+          users.addAll( t.getMembers( ) );
         }
       } );
     } catch ( TransactionException e ) {
       LOG.debug( e, e );
     }
-    return users;
+    return ImmutableList.copyOf( users );
   }
   
   @Override
-  public void removeAuthorization( final Authorization auth ) {
+  public boolean removeAuthorization( final Authorization auth ) {
+    final FinalReturn<Boolean> ret = FinalReturn.newInstance( );  
     try {
       Transactions.one( this.searchGroup, new Tx<GroupEntity>( ) {
         @Override
         public void fire( GroupEntity t ) throws Throwable {
-          t.getAuthorizations( ).remove( auth );
+           ret.set( t.removeAuthorization( auth ) );
         }
       } );
     } catch ( TransactionException e ) {
       LOG.debug( e, e );
     }
+    return ret.get( );
   }
   
 }

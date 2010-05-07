@@ -122,7 +122,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 	{
 		this.clusterList.add (new ClusterInfoWeb ("cluster-name", "cc-host", 8774, 10, 4096));
 		//these values are just defaults
-		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773, new ArrayList<String>()));
+		this.storageList.add (new StorageInfoWeb("sc-name", "sc-host", 8773 /** FIXME: DRAMATICALLY: URGENTLY **/, new ArrayList<String>()));
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");

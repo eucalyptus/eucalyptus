@@ -4,6 +4,7 @@ import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
@@ -214,6 +215,21 @@ public class UserProxy implements User {
   @Override
   public User getDelegate( ) {
     return this.user;
+  }
+
+  @Override
+  public boolean checkToken( String testToken ) {
+    boolean ret = this.user.getToken( ).equals( testToken );
+    try {
+      Transactions.one( this.searchUser, new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          t.setToken( Crypto.generateSessionToken( t.getName( ) ) );
+        }
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
+    }
+    return ret;
   }
   
 }

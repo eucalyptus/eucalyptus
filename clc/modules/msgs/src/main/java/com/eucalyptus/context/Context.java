@@ -1,14 +1,19 @@
 package com.eucalyptus.context;
 
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.api.MuleEvent;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventType;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EventRecord;
 
@@ -70,6 +75,19 @@ public class Context {
   public User getUser( ) {
     return check( this.user );
   }
+  
+  public List<Group> getGroups( ) {
+    return Groups.lookupUserGroups( this.getUser( ) );
+  }
+
+  public List<Authorization> getAuthorizations( ) {
+    List<Authorization> auths = Lists.newArrayList( );
+    for( Group g : this.getGroups( ) ) {
+      auths.addAll( g.getAuthorizations( ) );
+    }
+    return auths;
+  }
+
   
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {

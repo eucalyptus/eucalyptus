@@ -47,7 +47,7 @@
  *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
  *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. userList OF
  *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
  *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
@@ -63,7 +63,9 @@
  */
 package com.eucalyptus.auth;
 
+import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -75,26 +77,36 @@ import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.BaseAuthorization;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
+import edu.emory.mathcs.backport.java.util.Collections;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_groups" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class GroupEntity extends AbstractPersistent {
+public class GroupEntity extends AbstractPersistent implements Group {
+  @Transient
+  private static Logger LOG = Logger.getLogger( GroupEntity.class );
   @Column( name = "auth_group_name", unique = true )
   private String                  name;
-  @ManyToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "auth_group_has_users", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
+  @ManyToMany( cascade = CascadeType.PERSIST )
+  @JoinTable( name = "auth_group_has_userList", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<UserEntity>        users          = new ArrayList<UserEntity>( );
+  private List<UserEntity>        userList          = new ArrayList<UserEntity>( );
   @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "auth_group_has_authorization", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_authorization_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<BaseAuthorization> authorizations = new ArrayList<BaseAuthorization>( );
+  private List<BaseAuthorization> authList = new ArrayList<BaseAuthorization>( );
   
   public GroupEntity( ) {}
   
@@ -110,20 +122,20 @@ public class GroupEntity extends AbstractPersistent {
     this.name = name;
   }
   
-  public List<BaseAuthorization> getAuthorizations( ) {
-    return this.authorizations;
+  public List<BaseAuthorization> getAuthList( ) {
+    return this.authList;
   }
 
-  public void setAuthorizations( List<BaseAuthorization> authorizations ) {
-    this.authorizations = authorizations;
+  public void setAuthList( List<BaseAuthorization> authorizations ) {
+    this.authList = authorizations;
   }
 
-  public List<UserEntity> getUsers( ) {
-    return users;
+  public List<UserEntity> getUserList( ) {
+    return userList;
   }
   
-  public void setUsers( final List<UserEntity> users ) {
-    this.users = users;
+  public void setUserList( final List<UserEntity> userList ) {
+    this.userList = userList;
   }
   
   @Override
@@ -143,8 +155,67 @@ public class GroupEntity extends AbstractPersistent {
     return name.hashCode( );
   }
   
-  public boolean belongs( UserEntity user ) {
-    return this.users.contains( user ) || this.name.equals( "all" );
+  @Override
+  public boolean addAuthorization( Authorization auth ) {
+    if( auth instanceof BaseAuthorization ) {
+      return this.authList.add( (BaseAuthorization) auth );
+    } else {
+      throw new RuntimeException( "EID: Authorizations must extend BaseAuthorization." );
+    }
+  }
+
+  @Override
+  public boolean removeAuthorization( Authorization auth ) {
+    if( auth instanceof BaseAuthorization ) {
+      return this.authList.remove( (BaseAuthorization) auth );
+    } else {
+      throw new RuntimeException( "EID: Authorizations must extend BaseAuthorization." );
+    }
+  }
+
+  @Override
+  public boolean addMember( Principal user ) {
+    if( user instanceof UserEntity ) {
+      return this.userList.add( (UserEntity) user );
+    } else {
+      LOG.debug( "EID: GroupEntity only supports users of type UserEntity" );
+      return false;
+    }
+  }
+
+  @Override
+  public boolean isMember( Principal member ) {
+    if( member instanceof UserEntity ) {
+      return this.userList.contains( (UserEntity) member );
+    } else {
+      LOG.debug( "EID: GroupEntity only supports users of type UserEntity" );
+      return false;
+    }
+  }
+
+  @Override
+  public Enumeration<? extends Principal> members( ) {
+    return Iterators.asEnumeration( this.userList.iterator( ) );
+  }
+
+  @Override
+  public boolean removeMember( Principal user ) {
+    if( user instanceof UserEntity ) {
+      return this.userList.remove( (UserEntity) user );
+    } else {
+      LOG.debug( "EID: GroupEntity only supports users of type UserEntity" );
+      return false;
+    }
+  }
+
+  @Override
+  public ImmutableList<Authorization> getAuthorizations( ) {
+    return ImmutableList.copyOf( (List)this.authList );
+  }
+
+  @Override
+  public ImmutableList<User> getMembers( ) {
+    return ImmutableList.copyOf( (List)this.userList );
   }
   
 }

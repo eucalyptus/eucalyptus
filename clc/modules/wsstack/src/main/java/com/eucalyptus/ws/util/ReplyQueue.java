@@ -77,7 +77,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.cloud.RequestTransactionScript;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -133,8 +132,8 @@ public class ReplyQueue {
       MessagingException ex = ( MessagingException ) exception;
       MuleMessage muleMsg = ex.getUmoMessage( );
 
-      if ( payload instanceof RequestTransactionScript ) {
-        msg = ( ( RequestTransactionScript ) payload ).getRequestMessage( );
+      if ( payload instanceof VmAllocationInfo ) {
+        msg = ( ( VmAllocationInfo ) payload ).getRequest( );
       } else {
         try {
           msg = parsePayload( muleMsg.getPayload( ) );
@@ -177,7 +176,7 @@ public class ReplyQueue {
     } else if ( !( payload instanceof String ) ) {
       return new EucalyptusErrorMessageType( "ReplyQueue", LogUtil.dumpObject( payload ) );
     } else {
-      return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) payload );
+      return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
     }
   }
 

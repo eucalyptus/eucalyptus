@@ -22,7 +22,7 @@ import com.eucalyptus.entities.AbstractPersistent;
    name="auth_authorization_class",
    discriminatorType=DiscriminatorType.STRING
 )
-public class BaseAuthorization<M, T> extends AbstractPersistent implements Authorization<M>, Serializable{
+public class BaseAuthorization<T> extends AbstractPersistent implements Authorization<T>, Serializable{
   
   @Column( name = "auth_authorization_value" )
   private String value;
@@ -49,10 +49,14 @@ public class BaseAuthorization<M, T> extends AbstractPersistent implements Autho
   }
   
   @Override
-  public String getName( ) {
+  public String getDisplayName( ) {
     return "Abstract Authorization";
   }
-
+  @Deprecated
+  public String getName( ) {
+    return this.getDisplayName( );
+  }
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -72,10 +76,10 @@ public class BaseAuthorization<M, T> extends AbstractPersistent implements Autho
     } else if ( !this.value.equals( other.value ) ) return false;
     return true;
   }
-  
+
   @Override
-  public boolean permits( M context ) {
-    return true;
+  public boolean check( T t ) {
+    return false;
   }
   
 }

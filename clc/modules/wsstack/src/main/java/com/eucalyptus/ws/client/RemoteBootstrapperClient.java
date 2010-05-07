@@ -144,7 +144,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
     }
     pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
     pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ) ) );
+    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
     pipeline.addLast( "handler", new HeartbeatHandler( ) );
     return pipeline;
   }

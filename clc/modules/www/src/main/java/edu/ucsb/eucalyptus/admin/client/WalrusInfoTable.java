@@ -117,7 +117,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 
 	public void onClick( final Widget widget ) // Register walrus button
 	{
-		this.walrusList.add (new WalrusInfoWeb("Walrus", "host", 8773, new ArrayList<String>())); //these values are just defaults
+		this.walrusList.add (new WalrusInfoWeb("Walrus", "host", 8773 /** FIXME: DRAMATICALLY: URGENTLY **/, new ArrayList<String>())); //these values are just defaults
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");

@@ -136,7 +136,7 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 				}
 				super.setCredential(queryId);
 				super.setPrincipal(user);
-				super.getGroups().addAll(Groups.lookupGroups( super.getPrincipal()));
+				super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
 				return true;	
 			} catch (NoSuchUserException e) {
 				LOG.error(e);

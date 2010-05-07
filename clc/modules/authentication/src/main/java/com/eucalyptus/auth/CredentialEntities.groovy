@@ -172,6 +172,10 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
     return null;
   }
   
+  public boolean checkToken( String token ) {
+    return this.getToken( ).equals( token )
+  }
+  
   public void setX509Certificate( X509Certificate x509 ) {
     LOG.debug( "Setting new user certificate: " + x509.getSubjectX500Principal( ) + " " + x509.getSerialNumber( ) );
     this.getCertificates( ).add( X509Cert.fromCertificate( x509 ) );

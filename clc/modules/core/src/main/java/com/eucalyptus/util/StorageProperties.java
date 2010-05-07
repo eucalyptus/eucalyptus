@@ -92,7 +92,7 @@ public class StorageProperties {
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
 	public static final String EUCALYPTUS_HEADER = "EucaHeader";
 	public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
-	public static String WALRUS_URL = "http://localhost:8773/services/Walrus";
+	public static String WALRUS_URL = "http://localhost:"+System.getProperty("euca.ws.port")+"/services/Walrus";
 	public static int MAX_TOTAL_VOLUME_SIZE = 50;
 	public static int MAX_VOLUME_SIZE = 10;
 	public static final long GB = 1024*1024*1024;
