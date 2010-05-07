@@ -80,6 +80,7 @@ public class Volume extends AbstractIsomorph {
   private Integer size;
   private String cluster;
   private String parentSnapshot;
+  @Lob
   private String remoteDevice;
   private String localDevice;
 
