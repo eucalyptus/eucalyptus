@@ -33,19 +33,21 @@ public class UserGroupTabPanel extends DockPanel {
 		this.addStyleName(MAIN_STYLE_NAME);
 		
 		// Group panel
-		this.groupPanel = new UserGroupEntityPanel(control, groupColumns, new ClickHandler() {
-			public void onClick(ClickEvent event) {
-				UserGroupTabPanel.this.control.displayAddGroupUI();
-			}
-		});
+		this.groupPanel = new UserGroupEntityPanel("group", control, groupColumns,
+				new ClickHandler() {
+					public void onClick(ClickEvent event) {
+						UserGroupTabPanel.this.control.displayAddGroupUI();
+					}
+				});
 		this.add(groupPanel, DockPanel.WEST);
 		this.setCellWidth(groupPanel, "20%");
 		// User panel
-		this.userPanel = new UserGroupEntityPanel(control, userColumns, new ClickHandler() {
-			public void onClick(ClickEvent event) {
-				UserGroupTabPanel.this.control.displayAddUserUI();
-			}
-		});
+		this.userPanel = new UserGroupEntityPanel("user", control, userColumns,
+				new ClickHandler() {
+					public void onClick(ClickEvent event) {
+						UserGroupTabPanel.this.control.displayAddUserUI();
+					}
+				});
 		this.add(userPanel, DockPanel.WEST);
 		this.setCellWidth(userPanel, "30%");
 		// Property panel

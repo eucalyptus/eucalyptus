@@ -4,12 +4,13 @@ import edu.ucsb.eucalyptus.admin.client.UserGroupEntityList.DataRow;
 
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Widget;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class UserGroupControl {
+public class UserGroupControl implements ContentControl {
 	
 	private class GroupRow implements DataRow {
 		private GroupInfoWeb group;
@@ -146,7 +147,8 @@ public class UserGroupControl {
 		}
 	}
 	
-	public UserGroupTabPanel getRootPanel() {
+	@Override
+	public Widget getRootWidget() {
 		return this.rootPanel;
 	}
 	
@@ -164,6 +166,7 @@ public class UserGroupControl {
 		}
 	}
 	
+	@Override
 	public void display() {
 		groups.clear();
 		users.clear();

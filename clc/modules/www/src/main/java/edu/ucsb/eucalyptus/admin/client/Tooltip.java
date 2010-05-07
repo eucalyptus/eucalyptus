@@ -47,7 +47,11 @@ public class Tooltip extends PopupPanel {
 		this.timer.cancel();
 		this.setPopupPosition(x, y);
 		this.setWidget(new HTML(html));
-		timer.schedule(delayInMillis);
+		if (delayInMillis > 0) {
+			timer.schedule(delayInMillis);
+		} else {
+			Tooltip.this.show();
+		}
 	}
 	
 	public void hide() {
