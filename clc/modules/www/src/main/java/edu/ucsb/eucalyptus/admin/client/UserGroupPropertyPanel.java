@@ -317,12 +317,11 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 	
 	private void setNameColumn(Grid grid, int row, String name, boolean required) {
 		CellFormatter cellFormatter = grid.getCellFormatter();
-		grid.setText(row, 0, name);
 		if (required) {
-			cellFormatter.addStyleName(row, 0, DATA_REQUIRED_STYLE_NAME);
-		} else {
-			cellFormatter.addStyleName(row, 0, DATA_NAME_STYLE_NAME);
+			name = name + " (*)";
 		}
+		grid.setText(row, 0, name);
+		cellFormatter.addStyleName(row, 0, DATA_NAME_STYLE_NAME);
 	}
 	
 	private TextBox addTextBoxRow(Grid grid, int row, String name, String value, boolean required) {
@@ -398,7 +397,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		setHeaderText("Adding group");
 		HorizontalPanel action = addActionBar();
 		addTitle("Add a new group");
-		addSubtitle("<em style='color:red;'>Red</em> fields are required");
+		addSubtitle("<em>Starred (*)</em> fields are required");
 		addSeparator();
 		Grid grid = addDataGrid(2);
 		int i = 0;
@@ -499,7 +498,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		setHeaderText("Adding user");
 		HorizontalPanel action = addActionBar();
 		addTitle("Add a new user");
-		addSubtitle("<em style='color:red;'>Red</em> fields are required");
+		addSubtitle("<em>Starred (*)</em> fields are required");
 		addSeparator();
 		Grid grid = addDataGrid(14);
 		int i = 0;

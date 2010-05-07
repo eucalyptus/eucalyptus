@@ -7,7 +7,7 @@ a:focus {-moz-outline: none /* fx 1.07*/ outline:none /* fx 1.05, Safari, Mac IE
 body {
     background-color: white;
     color: black;
-    font-family: Arial, sans-serif;
+    font-family: 'lucida grande', lucida, 'helvetica nueue', helvetica, arial;
     font-size: medium;
     margin: 0px;
 }
@@ -360,7 +360,7 @@ button{
 }
 
 .euca-UserGroupPropertyPanel-data-name {
-	font-weight: bold;
+	font-weight: 500;
 	text-align: left;
 	vertical-align: top;
 }
@@ -373,6 +373,7 @@ button{
 }
 
 .euca-UserGroupPropertyPanel-data-value {
+	font-weight: 300;
 	font-style: italic;
 	text-align: left;
 }
