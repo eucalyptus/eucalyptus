@@ -6,6 +6,7 @@
     
     <xs:complexType name="virtualMachineType">
       <xs:sequence>
+	<xs:element minOccurs="0" name="name" type="xs:string"/>
 	<xs:element minOccurs="0" name="memory" type="xs:int"/>
 	<xs:element minOccurs="0" name="cores" type="xs:int"/>
 	<xs:element minOccurs="0" name="disk" type="xs:int"/>
