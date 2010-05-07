@@ -94,8 +94,10 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Created by IntelliJ IDEA.
@@ -987,8 +989,13 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			throw new Exception("Only admin can view user list of a group");
 		}
 		List<UserInfoWeb> users = new ArrayList<UserInfoWeb>();
+		Set<String> userSet = new HashSet<String>();
 		for (String groupName : groupNames) {
-			users.addAll(EucalyptusManagement.getGroupMembers(groupName));
+			for (UserInfoWeb ui : EucalyptusManagement.getGroupMembers(groupName)) {
+				if (userSet.add(ui.getUserName())) {
+					users.add(ui);
+				}
+			}
 		}
 		return users;
 	}
