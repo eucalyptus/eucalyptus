@@ -155,7 +155,7 @@ public class Accounts {
   public AddGroupResponseType addGroup( AddGroupType request ) throws EucalyptusCloudException {
     AddGroupResponseType reply = request.getReply( );
     try {
-      Groups.addGroup( request.getGroupName( ) ).addAuthorization( new AvailabilityZonePermission( "testing" ) );
+      Groups.addGroup( request.getGroupName( ) );
       reply.set_return( true );
     } catch ( GroupExistsException e ) {
       throw new EucalyptusCloudException( "Group already exists: " + request.getGroupName( ), e );
