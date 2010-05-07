@@ -88,6 +88,7 @@ import com.eucalyptus.ws.util.Messaging;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
+import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
 import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
 import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
@@ -291,11 +292,16 @@ public class BlockStorage {
 					int volSize = foundVolumeInfo.getSize();
 					int totalSnapshotSize = 0;
 					SnapshotInfo snapInfo = new SnapshotInfo();
+					snapInfo.setStatus(StorageProperties.Status.available.toString());
 					EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);
 
 					List<SnapshotInfo> snapInfos = dbSnap.query(snapInfo);
 					for (SnapshotInfo sInfo : snapInfos) {
-						totalSnapshotSize += blockManager.getSnapshotSize(sInfo.getSnapshotId());
+						try {
+							totalSnapshotSize += blockManager.getSnapshotSize(sInfo.getSnapshotId());
+						} catch(EucalyptusCloudException e) {
+							LOG.error(e);
+						}
 					}
 					if((totalSnapshotSize + volSize) > WalrusInfo.getWalrusInfo().getStorageMaxTotalSnapshotSizeInGb()) {
 						db.rollback();
@@ -303,7 +309,7 @@ public class BlockStorage {
 					}
 				}
 				EntityWrapper<SnapshotInfo> db2 = StorageProperties.getEntityWrapper();
-				edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo snapshotInfo = new edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo(snapshotId);
+				SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 				snapshotInfo.setUserName(foundVolumeInfo.getUserName());
 				snapshotInfo.setVolumeId(volumeId);
 				Date startTime = new Date();
@@ -444,15 +450,23 @@ public class BlockStorage {
 			db.rollback();
 			throw new VolumeAlreadyExistsException(volumeId);
 		}
+		if(snapshotId != null) {
+			SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+			snapInfo.setStatus(StorageProperties.Status.available.toString());
+			EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);			
+			List<SnapshotInfo> snapInfos = dbSnap.query(snapInfo);
+			if(snapInfos.size() != 1) {
+				db.rollback();
+				throw new NoSuchEntityException("Snapshot " + snapshotId + " does not exist or is unavailable");
+			}
+			volumeInfo.setSnapshotId(snapshotId);
+			reply.setSnapshotId(snapshotId);
+		}
 		volumeInfo.setUserName(userId);
 		volumeInfo.setSize(sizeAsInt);
 		volumeInfo.setStatus(StorageProperties.Status.creating.toString());
 		Date creationDate = new Date();
 		volumeInfo.setCreateTime(creationDate);
-		if(snapshotId != null) {
-			volumeInfo.setSnapshotId(snapshotId);
-			reply.setSnapshotId(snapshotId);
-		}
 		db.add(volumeInfo);
 		reply.setVolumeId(volumeId);
 		reply.setCreateTime(DateUtils.format(creationDate.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
@@ -605,8 +619,8 @@ public class BlockStorage {
 
 		@Override
 		public void run() {
+			EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
 			try {
-				EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
 				try {
 					semaphore.acquire();
 				} catch(InterruptedException ex) {
@@ -620,7 +634,28 @@ public class BlockStorage {
 				snapshotFileName = returnValues.get(0);
 				transferSnapshot(returnValues.get(1));
 				blockManager.finishVolume(snapshotId);
+				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
+				try {
+					SnapshotInfo snapshotInfo = db.getUnique(snapInfo);
+					snapshotInfo.setStatus(StorageProperties.Status.available.toString());
+				} catch(EucalyptusCloudException e) {
+					LOG.error(e);
+				} finally {
+					db.commit();
+				}
 			} catch(Exception ex) {
+				semaphore.release();
+				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
+				try {
+					SnapshotInfo snapshotInfo = db.getUnique(snapInfo);
+					snapshotInfo.setStatus(StorageProperties.Status.failed.toString());
+				} catch(EucalyptusCloudException e) {
+					LOG.error(e);
+				} finally {
+					db.commit();
+				}
 				LOG.error(ex);
 			}
 		}
