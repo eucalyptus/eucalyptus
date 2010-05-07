@@ -8,7 +8,7 @@ web_prop_dir	= ${TOP}/clc/modules/www/conf
 
 .PHONY: all build update_properties update_theme deps extras install
 
-all: build
+all: deps build
 
 deps:
 	@$(ANT) deps
