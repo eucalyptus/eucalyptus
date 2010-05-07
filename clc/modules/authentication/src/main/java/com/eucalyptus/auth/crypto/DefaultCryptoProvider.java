@@ -106,7 +106,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
     digest.update( inputBytes );
     if ( randomize ) {
       SecureRandom random = new SecureRandom( );
-      random.setSeed( System.currentTimeMillis( ) );
+//TODO: RELEASE:      random.setSeed( System.currentTimeMillis( ) );
       byte[] randomBytes = random.generateSeed( inputBytes.length );
       digest.update( randomBytes );
     }
