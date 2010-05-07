@@ -305,7 +305,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
     }
               
-    logprintfl(EUCADEBUG, "ncClientCall(%s): ppid=%d client calling '%s'\n", ncOp, getppid(), ncOp);
+    logprintfl(EUCADEBUG, "\tncClientCall(%s): ppid=%d client calling '%s'\n", ncOp, getppid(), ncOp);
     if (!strcmp(ncOp, "ncGetConsoleOutput")) {
       // args: char *instId
       char *instId = va_arg(al, char *);
@@ -493,10 +493,10 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       rc = ncCancelBundleTaskStub(ncs, meta, instanceId);
       sem_mypost(ncLock);
     } else {
-      logprintfl(EUCAWARN, "ncClientCall(%s): operation '%s' not found\n", ncOp, ncOp);
+      logprintfl(EUCAWARN, "\tncClientCall(%s): ppid=%d operation '%s' not found\n", ncOp, getppid(), ncOp);
       rc = 1;
     }
-    logprintfl(EUCADEBUG, "ncClientCall(%s): ppid=%d done calling '%s' with exit code '%d'\n", ncOp, getppid(), ncOp, rc);
+    logprintfl(EUCADEBUG, "\tncClientCall(%s): ppid=%d done calling '%s' with exit code '%d'\n", ncOp, getppid(), ncOp, rc);
     if (rc) {
       ret = 1;
     } else {
@@ -1176,6 +1176,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   ccResource *res;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
+  char strbuf[4096];
 
   logprintfl(EUCAINFO,"DescribeResources(): called\n");
   logprintfl(EUCADEBUG,"DescribeResources(): params: userId=%s, vmLen=%d\n", SP(ccMeta->userId), vmLen);
@@ -1272,10 +1273,10 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
       }
     }
   }
-
-
-  logprintfl(EUCAINFO,"DescribeResources(): resources %d/%d %d/%d %d/%d %d/%d %d/%d\n", (*outTypesAvail)[0], (*outTypesMax)[0], (*outTypesAvail)[1], (*outTypesMax)[1], (*outTypesAvail)[2], (*outTypesMax)[2], (*outTypesAvail)[3], (*outTypesMax)[3], (*outTypesAvail)[4], (*outTypesMax)[4]);
-
+  
+  if (vmLen >= 5) {
+    logprintfl(EUCAINFO,"DescribeResources(): resource response summary (name{avail/max}): %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d}\n", (*ccvms)[0].name, (*outTypesAvail)[0], (*outTypesMax)[0], (*ccvms)[1].name, (*outTypesAvail)[1], (*outTypesMax)[1], (*ccvms)[2].name, (*outTypesAvail)[2], (*outTypesMax)[2], (*ccvms)[3].name, (*outTypesAvail)[3], (*outTypesMax)[3], (*ccvms)[4].name, (*outTypesAvail)[4], (*outTypesMax)[4]);
+  }
   logprintfl(EUCADEBUG,"DescribeResources(): done\n");
   
   shawn();
@@ -1340,7 +1341,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 	  changeState(&(resourceCacheLocal.resources[i]), RESDOWN);
 	}
       } else {
-	logprintfl(EUCADEBUG,"refresh_resources(): node=%s mem=%d/%d disk=%d/%d cores=%d/%d\n", resourceCacheLocal.resources[i].hostname, ncResDst->memorySizeMax, ncResDst->memorySizeAvailable, ncResDst->diskSizeMax,  ncResDst->diskSizeAvailable, ncResDst->numberOfCoresMax, ncResDst->numberOfCoresAvailable);
+	logprintfl(EUCADEBUG,"refresh_resources(): received data from node=%s mem=%d/%d disk=%d/%d cores=%d/%d\n", resourceCacheLocal.resources[i].hostname, ncResDst->memorySizeMax, ncResDst->memorySizeAvailable, ncResDst->diskSizeMax,  ncResDst->diskSizeAvailable, ncResDst->numberOfCoresMax, ncResDst->numberOfCoresAvailable);
 	resourceCacheLocal.resources[i].maxMemory = ncResDst->memorySizeMax;
 	resourceCacheLocal.resources[i].availMemory = ncResDst->memorySizeAvailable;
 	resourceCacheLocal.resources[i].maxDisk = ncResDst->diskSizeMax;
@@ -1538,7 +1539,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   sem_mypost(INSTCACHE);
 
   for (i=0; i< (*outInstsLen) ; i++) {
-    logprintfl(EUCADEBUG, "DescribeInstances(): returning: instanceId=%s, state=%s, publicIp=%s, privateIp=%s, userData=%s\n", (*outInsts)[i].instanceId, (*outInsts)[i].state, (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp, (*outInsts)[i].userData);
+    logprintfl(EUCAINFO, "DescribeInstances(): instance response summary: instanceId=%s, state=%s, publicIp=%s, privateIp=%s\n", (*outInsts)[i].instanceId, (*outInsts)[i].state, (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp);
   }
 
   logprintfl(EUCADEBUG,"DescribeInstances(): done\n");
@@ -1999,7 +2000,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	if (pid == 0) {
 	  time_t startRun;
 	  ret=0;
-	  logprintfl(EUCAINFO,"RunInstances(): client (%s) running instance: instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%s mem=%d disk=%d cores=%d\n", res->ncURL, instId, amiId, ncnet.privateMac, ncnet.privateIp, ncnet.publicIp, ncnet.vlan, ncnet.networkIndex, keyName, ncvm.mem, ncvm.disk, ncvm.cores);
+	  logprintfl(EUCAINFO,"RunInstances(): sending run instance: node=%s instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%.32s... mem=%d disk=%d cores=%d\n", res->ncURL, SP(instId), SP(amiId), ncnet.privateMac, ncnet.privateIp, ncnet.publicIp, ncnet.vlan, ncnet.networkIndex, SP(keyName), ncvm.mem, ncvm.disk, ncvm.cores);
 	  rc = 1;
 	  startRun = time(NULL);
 	  while(rc && ((time(NULL) - startRun) < config->wakeThresh)){
