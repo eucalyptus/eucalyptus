@@ -111,13 +111,13 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 
   logprintfl(EUCADEBUG, "ncClientCall(%s): called ncURL=%s timeout=%d\n", ncOp, ncURL, timeout);
   
-  va_start(al, ncOp);
-
   rc = pipe(filedes);
   if (rc) {
     logprintfl(EUCAERROR, "ncClientCall(%s): cannot create pipe\n", ncOp);
     return(1);
   }
+
+  va_start(al, ncOp);
   
   pid = fork();
   if (!pid) {
@@ -533,7 +533,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   }
   
   logprintfl(EUCAINFO, "AttachVolume(): called\n");
-  logprintfl(EUCADEBUG, "AttachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta->userId), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
+  logprintfl(EUCADEBUG, "AttachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
   if (!volumeId || !instanceId || !remoteDev || !localDev) {
     logprintfl(EUCAERROR, "AttachVolume(): bad input params\n");
     return(1);
@@ -590,7 +590,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     return(1);
   }
   logprintfl(EUCAINFO, "DetachVolume(): called\n");
-  logprintfl(EUCADEBUG, "DetachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta->userId), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
+  logprintfl(EUCADEBUG, "DetachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
   if (!volumeId || !instanceId || !remoteDev || !localDev) {
     logprintfl(EUCAERROR, "DetachVolume(): bad input params\n");
     return(1);
@@ -780,7 +780,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
   }
   
   logprintfl(EUCAINFO, "DescribePublicAddresses(): called\n");
-  logprintfl(EUCADEBUG, "DescribePublicAddresses(): params: userId=%s\n", SP(ccMeta->userId));
+  logprintfl(EUCADEBUG, "DescribePublicAddresses(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   ret=0;
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
@@ -809,7 +809,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
     return(1);
   }
   logprintfl(EUCAINFO,"UnassignAddress(): called\n");
-  logprintfl(EUCADEBUG,"UnassignAddress(): params: userId=%s, src=%s, dst=%s\n", SP(ccMeta->userId), SP(src), SP(dst));  
+  logprintfl(EUCADEBUG,"UnassignAddress(): params: userId=%s, src=%s, dst=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(src), SP(dst));  
   
   if (!src || !dst || !strcmp(src, "0.0.0.0") || !strcmp(dst, "0.0.0.0")) {
     logprintfl(EUCADEBUG, "UnassignAddress(): bad input params\n");
@@ -874,7 +874,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   }
   
   logprintfl(EUCAINFO, "StopNetwork(): called\n");
-  logprintfl(EUCADEBUG, "StopNetwork(): params: userId=%s, netName=%s, vlan=%d\n", SP(ccMeta->userId), SP(netName), vlan);
+  logprintfl(EUCADEBUG, "StopNetwork(): params: userId=%s, netName=%s, vlan=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(netName), vlan);
   if (!ccMeta || !netName || vlan < 0) {
     logprintfl(EUCAERROR, "StopNetwork(): bad input params\n");
   }
@@ -907,7 +907,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   }
 
   logprintfl(EUCAINFO, "DescribeNetworks(): called\n");
-  logprintfl(EUCADEBUG, "DescribeNetworks(): params: userId=%s, nameserver=%s, ccsLen=%d\n", SP(ccMeta->userId), SP(nameserver), ccsLen);
+  logprintfl(EUCADEBUG, "DescribeNetworks(): params: userId=%s, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(nameserver), ccsLen);
   
   sem_mywait(VNET);
   if (nameserver) {
@@ -940,7 +940,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver
   }
   
   logprintfl(EUCAINFO, "StartNetwork(): called\n");
-  logprintfl(EUCADEBUG, "StartNetwork(): params: userId=%s, netName=%s, vlan=%d, nameserver=%s, ccsLen=%d\n", SP(ccMeta->userId), SP(netName), vlan, SP(nameserver), ccsLen);
+  logprintfl(EUCADEBUG, "StartNetwork(): params: userId=%s, netName=%s, vlan=%d, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(netName), vlan, SP(nameserver), ccsLen);
 
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
     ret = 0;
@@ -984,7 +984,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   ccResourceCache resourceCacheLocal;
 
   logprintfl(EUCAINFO,"DescribeResources(): called\n");
-  logprintfl(EUCADEBUG,"DescribeResources(): params: userId=%s, vmLen=%d\n", SP(ccMeta->userId), vmLen);
+  logprintfl(EUCADEBUG,"DescribeResources(): params: userId=%s, vmLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), vmLen);
 
   op_start = time(NULL);
 
@@ -1126,8 +1126,8 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
   sem_mypost(RESCACHE);
   
   for (i=0; i<resourceCacheLocal.numResources; i++) {
+    ncResDst=NULL;
     if (resourceCacheLocal.resources[i].state != RESASLEEP) {
-      ncResDst=NULL;
       nctimeout = ncGetTimeout(op_start, timeout, resourceCacheLocal.numResources, i);
       rc = ncClientCall(ccMeta, nctimeout, NCCALL, resourceCacheLocal.resources[i].ncURL, "ncDescribeResource", NULL, &ncResDst);
       if (rc != 0) {
@@ -1229,6 +1229,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	for (j=0; j<ncOutInstsLen; j++) {
 	  found=1;
 	  if (found) {
+	    myInstance=NULL;
 	    // add it
 	    logprintfl(EUCADEBUG,"refresh_instances(): describing instance %s, %s, %d\n", ncOutInsts[j]->instanceId, ncOutInsts[j]->stateName, j);
 	    numInsts++;
@@ -1251,23 +1252,27 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    myInstance->ncHostIdx = i;
 	    strncpy(myInstance->serviceTag, resourceCacheLocal.resources[i].ncURL, 64);
 	    {
-	      char *ip;
+	      char *ip=NULL;
 	      if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
 		if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
 		  rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
 		  if (!rc) {
 		    strncpy(myInstance->ccnet.publicIp, ip, 24);
 		  }
-		  if (ip) free(ip);
 		}
 	      }
+
+	      if (ip) free(ip);
+	      ip=NULL;
+
 	      if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
 		rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
 		if (!rc) {
 		  strncpy(myInstance->ccnet.privateIp, ip, 24);
 		}
-		if (ip) free(ip);
 	      }
+
+	      if (ip) free(ip);
 	    }
 
 	    refresh_instanceCache(myInstance->instanceId, myInstance);
@@ -1307,7 +1312,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   ncStub *ncs;
 
   logprintfl(EUCAINFO,"DescribeInstances(): called\n");
-  logprintfl(EUCADEBUG,"DescribeInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta->userId), instIdsLen);
+  logprintfl(EUCADEBUG,"DescribeInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen);
   
   op_start = time(NULL);
 
@@ -1679,7 +1684,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     return(1);
   }
   logprintfl(EUCAINFO,"RunInstances(): called\n");
-  logprintfl(EUCADEBUG,"RunInstances(): params: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, targetNode=%s\n", SP(ccMeta->userId), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(targetNode));
+  logprintfl(EUCADEBUG,"RunInstances(): params: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, targetNode=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(targetNode));
   
   *outInstsLen = 0;
   
@@ -1881,7 +1886,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 }
 
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) {
-  int i, j, rc, numInsts, start, stop, done, ret, rbytes, timeout;
+  int i, j, rc, numInsts, start, stop, done, ret, rbytes, timeout=0;
   ccInstance *myInstance;
   ncStub *ncs;
   char *consoleOutput;
@@ -1922,7 +1927,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
   done=0;
   for (j=start; j<stop && !done; j++) {
     if (*outConsoleOutput) free(*outConsoleOutput);
-    timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, (stop - start), j);
     rc = ncClientCall(meta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
     if (rc) {
       ret = 1;
@@ -1979,7 +1984,7 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
     
     done=0;
     for (j=start; j<stop && !done; j++) {
-      timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
+      timeout = ncGetTimeout(op_start, OP_TIMEOUT, (stop - start), j);
       rc = ncClientCall(meta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncRebootInstance", instId);
       if (rc) {
 	ret = 1;
@@ -2015,7 +2020,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     return(1);
   }
   logprintfl(EUCAINFO,"TerminateInstances(): called\n");
-  logprintfl(EUCADEBUG,"TerminateInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta->userId), instIdsLen);
+  logprintfl(EUCADEBUG,"TerminateInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen);
   
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
