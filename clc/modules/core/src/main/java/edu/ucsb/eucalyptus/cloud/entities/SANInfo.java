@@ -100,6 +100,7 @@ SANInfo {
 	private String sanUser;
 	@ConfigurableField( description = "Password for SAN device.", displayName = "SAN Password", type = ConfigurableFieldType.KEYVALUEHIDDEN )
 	@Column(name = "san_password")
+	@Lob
 	private String sanPassword;
 
 	public SANInfo(){

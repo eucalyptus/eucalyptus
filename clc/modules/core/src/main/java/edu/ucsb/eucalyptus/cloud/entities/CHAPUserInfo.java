@@ -79,6 +79,7 @@ public class CHAPUserInfo {
     private Long id = -1l;
 
     private String user;
+    @Lob
     private String encryptedPassword;
     
     public CHAPUserInfo() {}
