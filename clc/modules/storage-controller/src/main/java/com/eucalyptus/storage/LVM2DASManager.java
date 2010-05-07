@@ -257,9 +257,8 @@ public class LVM2DASManager implements LogicalStorageManager {
 
 	public void configure() {
 		exportManager.configure();
-		//TODO: initialize this correctly
+		//dummy init
 		LOG.info(StorageInfo.getStorageInfo().getName());
-		LOG.info(DirectStorageInfo.getStorageInfo().getName());
 		LOG.info(DASInfo.getStorageInfo().getName());
 	}
 

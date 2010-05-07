@@ -539,7 +539,7 @@ public class BlockStorage {
 		if(!blockManager.getClass().getName().equals(provider)) {
 			//different backend provider. Try upgrade
 			try {
-				LogicalStorageManager fromBlockManager = (LogicalStorageManager) Class.forName(provider).newInstance();
+				LogicalStorageManager fromBlockManager = (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(provider).newInstance();
 				fromBlockManager.checkPreconditions();
 				//initialize fromBlockManager
 				new VolumesConvertor(fromBlockManager).start();

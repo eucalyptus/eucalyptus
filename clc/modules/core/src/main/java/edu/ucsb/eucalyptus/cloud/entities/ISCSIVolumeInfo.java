@@ -79,6 +79,7 @@ public class ISCSIVolumeInfo extends LVMVolumeInfo {
     private Integer tid;
     private Integer lun;
     private String storeUser;
+	@Lob
     private String encryptedPassword;
 
     public ISCSIVolumeInfo() {}

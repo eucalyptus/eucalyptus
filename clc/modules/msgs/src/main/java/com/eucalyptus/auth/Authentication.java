@@ -85,7 +85,7 @@ public class Authentication {
   static {
     //TODO FIXME TODO BROKEN FAIL: discover this at bootstrap time.
     try {
-      Class.forName( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
+      ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
     } catch ( ClassNotFoundException e ) {
     }
   }

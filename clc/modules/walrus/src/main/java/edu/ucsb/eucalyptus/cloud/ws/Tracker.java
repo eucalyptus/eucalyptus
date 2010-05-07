@@ -64,9 +64,11 @@ package edu.ucsb.eucalyptus.cloud.ws;
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
+import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 import org.apache.log4j.Logger;
 
@@ -97,8 +99,17 @@ public class Tracker extends Thread {
 		}
 	}
 
-	public boolean exists() {
-		return (new File(WalrusProperties.TRACKER_BINARY)).exists();
+	public boolean exists() {		
+		try {
+			return (findTracker().length() > 0);
+		} catch (ExecutionException e) {
+			LOG.error(e);
+			return false;
+		}
+	}
+
+	private String findTracker() throws ExecutionException {
+		return SystemUtil.run(new String[]{WalrusProperties.TRACKER_BINARY});
 	}
 
 	public void run() {

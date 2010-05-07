@@ -166,6 +166,8 @@ public class InstanceType extends EucalyptusData {
 	ArrayList<String> groupNames = new ArrayList<String>();
 	ArrayList<VolumeType> volumes = new ArrayList<VolumeType>();
 	String serviceTag;
+
+	public InstanceType() {}
 }
 
 // DescribeResource

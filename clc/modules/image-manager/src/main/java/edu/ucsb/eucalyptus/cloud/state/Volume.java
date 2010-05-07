@@ -70,6 +70,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 
 @Entity
@@ -80,6 +81,7 @@ public class Volume extends AbstractIsomorph {
   private Integer size;
   private String cluster;
   private String parentSnapshot;
+  @Lob
   private String remoteDevice;
   private String localDevice;
 

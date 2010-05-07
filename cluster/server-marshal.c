@@ -888,8 +888,6 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   for (i=0; i<vmLen; i++) {
     char *name;
     vm = adb_describeResourcesType_get_instanceTypes_at(drt, env, i);
-    name = adb_virtualMachineType_get_name(vm, env);
-    strncpy(vms[i].name, name, 64);
     copy_vm_type_from_adb (&(vms[i]), vm, env);
   }
 
@@ -918,7 +916,6 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
       adb_ccResourceType_t *rt=NULL;
   
       vm = copy_vm_type_to_adb (env, &(vms[i]));
-      adb_virtualMachineType_set_name(vm, env, vms[i].name);
 
       rt = adb_ccResourceType_create(env);
       adb_ccResourceType_set_instanceType(rt, env, vm);
