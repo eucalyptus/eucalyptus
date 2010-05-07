@@ -72,7 +72,7 @@ public class SlapdResource {
   //  # file must exist prior to starting OpenLDAP
   //  touch /path/to/ldap/log/file
   //#  chown ldap:ldap /path/to/ldap/log/file
-  private static String initialConfig = "require authc" + "include    %1$s/etc/schema/core.schema\n" + "include   %1$s/etc/schema/cosine.schema\n"
+  private static String initialConfig = "require authc\n" + "include    %1$s/etc/schema/core.schema\n" + "include   %1$s/etc/schema/cosine.schema\n"
                                         + "include   %1$s/etc/schema/inetorgperson.schema\n" + "include   %1$s/etc/schema/nis.schema\n"
                                         + "include   %1$s/etc/schema/misc.schema\n" + "pidfile   %1$s/var/run/slapd.pid\n"
                                         + "argsfile  %1$s/var/run/slapd.args\n" + "database  bdb\n" + "suffix    \"dc=eucalyptus,dc=com\"\n"
