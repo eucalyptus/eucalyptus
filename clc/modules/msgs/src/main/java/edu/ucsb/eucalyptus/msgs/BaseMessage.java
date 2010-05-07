@@ -107,9 +107,9 @@ public class BaseMessage {
   public String toString( String namespace ) {
     ByteArrayOutputStream temp = new ByteArrayOutputStream( );
     Class targetClass = this.getClass( );
-    while ( !targetClass.getSimpleName( ).endsWith( "Type" ) ) {
-      targetClass = targetClass.getSuperclass( );
-    }
+//    while ( !targetClass.getSimpleName( ).endsWith( "Type" ) && BaseMessage.class.equals( targetClass ) ) {
+//      targetClass = targetClass.getSuperclass( );
+//    }
     try {
       IBindingFactory bindingFactory = BindingDirectory.getFactory( namespace, targetClass );
       IMarshallingContext mctx = bindingFactory.createMarshallingContext( );
