@@ -1229,7 +1229,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	for (j=0; j<ncOutInstsLen; j++) {
 	  found=1;
 	  if (found) {
-	    myInstance=NULL;
+	    myInstance = NULL;
 	    // add it
 	    logprintfl(EUCADEBUG,"refresh_instances(): describing instance %s, %s, %d\n", ncOutInsts[j]->instanceId, ncOutInsts[j]->stateName, j);
 	    numInsts++;
@@ -1280,7 +1280,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    logprintfl(EUCADEBUG, "refresh_instances(): storing instance state: %s/%s/%s/%s\n", myInstance->instanceId, myInstance->state, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
 	    print_ccInstance("refresh_instances(): ", myInstance);
 	    
-	    free(myInstance);
+	    if (myInstance) free(myInstance);
 	  }
 	}
       }
