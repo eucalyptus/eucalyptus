@@ -22,7 +22,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
   @Override
   public void allocate( VmAllocationInfo vmInfo ) throws Exception {
     String clusterName = vmInfo.getRequest( ).getAvailabilityZone( );
-    String vmTypeName = vmInfo.getRequest( ).getInstanceType( );
+    String vmTypeName = vmInfo.getRequest( ).getInstanceType( )
     Integer amount = vmInfo.getRequest( ).getMinCount( );
     Cluster authorizedCluster = this.doPrivilegedLookup( clusterName, vmTypeName );
     VmTypeAvailability vmAvailability = authorizedCluster.getNodeState( ).getAvailability( vmTypeName );

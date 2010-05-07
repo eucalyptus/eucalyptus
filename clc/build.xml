@@ -88,6 +88,7 @@
 	<target name="build">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder" />
+    <ant dir="modules/ldap" inheritall="false" target="builder" />
 		<ant dir="modules/authentication" inheritall="false" target="builder" />
 		<ant dir="modules/cloud" inheritall="false" target="builder" />
 		<ant dir="modules/configuration" inheritall="false" target="builder" />
@@ -107,7 +108,8 @@
 	</target>
 	<target name="jar" depends="bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
-		<ant dir="modules/mysql" inheritall="false" target="jar" />
+    <ant dir="modules/mysql" inheritall="false" target="jar" />
+    <ant dir="modules/ldap" inheritall="false" target="jar" />
 		<ant dir="modules/authentication" inheritall="false" target="jar" />
 		<ant dir="modules/cloud" inheritall="false" target="jar" />
 		<ant dir="modules/configuration" inheritall="false" target="jar" />
@@ -130,7 +132,7 @@
 		    <include name="**/*.java"/>
 		  </srcfiles>
 		</uptodate>
-    <echo message="[BINDING] Up-to-date check shows bind.notRequred=${bind.notRequred}." />
+    <echo message="[BINDING] Up-to-date check shows bind.notRequred=${bind.notRequired}." />
 	</target>
 	<target name="bind" depends="shouldBind" unless="bind.notRequired">
     <echo message="[BINDING] Running binding compiler." />
@@ -152,8 +154,10 @@
 
 	<!--================================== clean targets ==================================-->
 	<target name="clean">
+		<delete file="${bind.timestamp}"/>
 		<ant dir="modules/msgs" inheritall="false" target="clean" />
-		<ant dir="modules/mysql" inheritall="false" target="clean" />
+    <ant dir="modules/mysql" inheritall="false" target="clean" />
+    <ant dir="modules/ldap" inheritall="false" target="clean" />
 		<ant dir="modules/cloud" inheritall="false" target="clean" />
 		<ant dir="modules/authentication" inheritall="false" target="clean" />
 		<ant dir="modules/configuration" inheritall="false" target="clean" />
@@ -202,7 +206,8 @@
 		<mkdir dir="${DESTDIR}${euca.var.dir}/webapps" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/modules" />
 		<ant dir="modules/msgs" inheritall="false" target="install" />
-		<ant dir="modules/mysql" inheritall="false" target="install" />
+    <ant dir="modules/mysql" inheritall="false" target="install" />
+    <ant dir="modules/ldap" inheritall="false" target="install" />
 		<ant dir="modules/cloud" inheritall="false" target="install" />
 		<ant dir="modules/authentication" inheritall="false" target="install" />
 		<ant dir="modules/configuration" inheritall="false" target="install" />

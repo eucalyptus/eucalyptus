@@ -71,6 +71,7 @@ import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public enum SubDirectory {
   DB( BaseDirectory.VAR, "db" ),
+  LDAP( BaseDirectory.VAR, "ldap" ),
   MODULES( BaseDirectory.VAR, "modules" ),
 /* TODO: wtf is this? SERVICES( BaseDirectory.VAR, "services" ),*/  
   WWW( BaseDirectory.CONF, "www" ),
@@ -93,6 +94,10 @@ public enum SubDirectory {
     return this.parent.toString( ) + File.separator + this.dir;
   }
 
+  public File getFile() {
+    return new File( this.toString( ) );
+  }
+  
   public void check( ) {
     final File dir = new File( this.toString( ) );
     if ( dir.exists( ) ) { return; }
