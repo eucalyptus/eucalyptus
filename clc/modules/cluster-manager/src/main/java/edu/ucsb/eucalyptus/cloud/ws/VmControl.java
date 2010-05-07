@@ -237,6 +237,8 @@ public class VmControl {
       if ( v.isBundling( ) ) {
         reply.setTask( v.getBundleTask( ) );
         return reply;
+      } else if ( !"windows".equals( v.getPlatform( ) ) ) {
+        throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
       } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
       } else if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
