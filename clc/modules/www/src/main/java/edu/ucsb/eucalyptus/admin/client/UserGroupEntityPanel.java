@@ -67,6 +67,8 @@ public class UserGroupEntityPanel extends VerticalPanel {
 	private static final String ANCHOR_STYLE_NAME = "euca-UserGroupEntityPanel-anchor";
 	private static final String MAIN_STYLE_NAME = "euca-UserGroupEntityPanel";
 	
+	private String name;
+	
 	private UserGroupEntityList list;
 	private Label header;
 	private TextBox filter;
@@ -83,9 +85,11 @@ public class UserGroupEntityPanel extends VerticalPanel {
 	
 	private UserGroupControl control;
 	
-	UserGroupEntityPanel(UserGroupControl control, List<String> cols, ClickHandler addHandler) {
+	UserGroupEntityPanel(String name, UserGroupControl control, List<String> cols,
+			ClickHandler addHandler) {
 		super();
 		
+		this.name = name;
 		this.control = control;
 		this.columns = cols;
 		
@@ -177,8 +181,8 @@ public class UserGroupEntityPanel extends VerticalPanel {
 		});
 		filter.addStyleName(FILTER_STYLE_NAME);
 		
-		Button addButton = new Button("Add", handler);
-		Button filterButton = new Button("Filter", new ClickHandler() {
+		Button addButton = new EucaButton("Add", "Add new " + this.name, handler);
+		Button filterButton = new EucaButton("Filter", "Filter " + this.name, new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				filterBy(filter.getText());
 				showFiltered();

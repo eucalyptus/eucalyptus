@@ -88,8 +88,7 @@ public class SlapdResource {
     JarInputStream jis = new JarInputStream( is );
     try {
       JarEntry entry = null;
-      do {
-        entry = jis.getNextJarEntry( );
+      while ( ( entry = jis.getNextJarEntry( ) ) != null ) {
         File file = new File( outputDir, entry.getName( ) );
         if ( !file.exists( ) ) {
           if ( entry.isDirectory( ) ) {

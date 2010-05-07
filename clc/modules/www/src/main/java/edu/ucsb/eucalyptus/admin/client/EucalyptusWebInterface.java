@@ -151,8 +151,9 @@ public class EucalyptusWebInterface implements EntryPoint {
     private static int currentTabIndex = 0;
 	private static int credsTabIndex = -1;
     private static int imgTabIndex = -1;
-	private static int usrTabIndex = -1;
+	//private static int usrTabIndex = -1;
 	private static int usrgrpTabIndex = -1;
+	private static int accountingTabIndex = -1;
 	private static int confTabIndex = -1;
     private static int downTabIndex = -1;
     private static int storeTabIndex = -1;
@@ -1338,8 +1339,9 @@ public class EucalyptusWebInterface implements EntryPoint {
         allTabs.addTab ("Images"); imgTabIndex = nTabs++;
         /////allTabs.addTab ("Instances"); instTabIndex = nTabs++;
         if (loggedInUser.isAdministrator().booleanValue()) {
-			allTabs.addTab ("Users"); usrTabIndex = nTabs++;
+			//allTabs.addTab ("Users"); usrTabIndex = nTabs++;
 			allTabs.addTab ("Users and Groups"); usrgrpTabIndex = nTabs++;
+			allTabs.addTab ("Accounting"); accountingTabIndex = nTabs++;
 			allTabs.addTab ("Configuration"); confTabIndex = nTabs++;
             allTabs.addTab ("Extras"); downTabIndex = nTabs++;
             if (extensions!=null && extensions.contains ("store") ) {
@@ -1358,8 +1360,9 @@ public class EucalyptusWebInterface implements EntryPoint {
                 currentTabIndex = tabIndex;
                 if (tabIndex==credsTabIndex) { displayCredentialsTab(wrapper); }
                 else if (tabIndex==imgTabIndex) { displayImagesTab(wrapper); }
-                else if (tabIndex==usrTabIndex) { displayUsersTab(wrapper); }
+                //else if (tabIndex==usrTabIndex) { displayUsersTab(wrapper); }
                 else if (tabIndex==usrgrpTabIndex) { displayUserGroupTab(wrapper); }
+                else if (tabIndex==accountingTabIndex) { displayAccountingTab(wrapper); }
 				else if (tabIndex==confTabIndex) { displayConfTab(wrapper); }
                 else if (tabIndex==downTabIndex) { displayDownloadsTab(wrapper); }
                 else if (tabIndex==storeTabIndex) { displayStoreTab(wrapper); }
@@ -2000,12 +2003,19 @@ public class EucalyptusWebInterface implements EntryPoint {
     {
     	History.newItem("userngroup");
     	parent.clear();
-    	//parent.add(new UserGroupPanel());
     	UserGroupControl control = new UserGroupControl(sessionId);
-    	parent.add(control.getRootPanel());
+    	parent.add(control.getRootWidget());
     	control.display();
     }
 
+    public void displayAccountingTab(final VerticalPanel parent) {
+    	History.newItem("accounting");
+    	parent.clear();
+    	AccountingControl control = new AccountingControl(sessionId);
+    	parent.add(control.getRootWidget());
+    	control.display();
+    }
+    
     public void displayImagesTab (final VerticalPanel parent)
     {
         History.newItem("images");

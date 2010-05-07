@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>eucalyptus-gwt-test</name>
+	<name>eee-gwt</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -24,6 +24,5 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>com.google.gwt.eclipse.core.gwtNature</nature>
-		<nature>com.google.gdt.eclipse.core.webAppNature</nature>
 	</natures>
 </projectDescription>

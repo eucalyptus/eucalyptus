@@ -3,7 +3,6 @@ package edu.ucsb.eucalyptus.admin.client;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.Timer;
-import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.Grid;
 import com.google.gwt.user.client.ui.HTML;
@@ -146,6 +145,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 	private HorizontalPanel addActionBar() {
 		HorizontalPanel actionBar = new HorizontalPanel();
 		actionBar.setHorizontalAlignment(ALIGN_CENTER);
+		actionBar.setVerticalAlignment(ALIGN_MIDDLE);
 		actionBar.addStyleName(ACTION_BAR_STYLE_NAME);
 		this.content.add(actionBar);
 		return actionBar;
@@ -187,12 +187,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			addHtmlContent(UserGroupUtils.getSpecialGroupHelp(group.name));
 		} else {
 			HorizontalPanel action = addActionBar();
-			action.add(new Button("Edit", new ClickHandler() {
+			action.add(new EucaButton("Edit", new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					control.displayEditGroupUI();
 				}
 			}));
-			action.add(new Button("Delete", new ClickHandler() {
+			action.add(new EucaButton("Delete", new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					control.displayDeleteGroupUI();
 				}
@@ -209,7 +209,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.cleanup();
 		setHeaderText("Groups: " + groups.size());		
 		HorizontalPanel action = addActionBar();
-		action.add(new Button("Delete", new ClickHandler() {
+		action.add(new EucaButton("Delete", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayDeleteGroupsUI();
 			}
@@ -234,14 +234,14 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.cleanup();
 		setHeaderText("User: " + user.getRealName());		
 		HorizontalPanel action = addActionBar();
-		action.add(new Button("Edit", new ClickHandler() {
+		action.add(new EucaButton("Edit", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayEditUserUI();
 			}
 		}));
 		// admin can not delete another admin
 		if (!user.isAdministrator()) {
-			action.add(new Button("Delete", new ClickHandler() {
+			action.add(new EucaButton("Delete", new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					control.displayDeleteUserUI();
 				}
@@ -270,32 +270,32 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.cleanup();
 		setHeaderText("Users: " + users.size());		
 		HorizontalPanel action = addActionBar();
-		action.add(new Button("Add to", new ClickHandler() {
+		action.add(new EucaButton("Add to", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayAddUsersToGroupsUI();
 			}
 		}));
-		action.add(new Button("Remove from", new ClickHandler() {
+		action.add(new EucaButton("Remove from", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayRemoveUsersFromGroupsUI();
 			}
 		}));
-		action.add(new Button("Approve", new ClickHandler() {
+		action.add(new EucaButton("Approve", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayApproveUsersUI();
 			}
 		}));
-		action.add(new Button("Enable", new ClickHandler() {
+		action.add(new EucaButton("Enable", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayEnableUsersUI();
 			}
 		}));
-		action.add(new Button("Disable", new ClickHandler() {
+		action.add(new EucaButton("Disable", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayDisableUsersUI();
 			}
 		}));
-		action.add(new Button("Delete", new ClickHandler() {
+		action.add(new EucaButton("Delete", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayDeleteUsersUI();
 			}
@@ -317,12 +317,11 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 	
 	private void setNameColumn(Grid grid, int row, String name, boolean required) {
 		CellFormatter cellFormatter = grid.getCellFormatter();
-		grid.setText(row, 0, name);
 		if (required) {
-			cellFormatter.addStyleName(row, 0, DATA_REQUIRED_STYLE_NAME);
-		} else {
-			cellFormatter.addStyleName(row, 0, DATA_NAME_STYLE_NAME);
+			name = name + " (*)";
 		}
+		grid.setText(row, 0, name);
+		cellFormatter.addStyleName(row, 0, DATA_NAME_STYLE_NAME);
 	}
 	
 	private TextBox addTextBoxRow(Grid grid, int row, String name, String value, boolean required) {
@@ -398,14 +397,14 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		setHeaderText("Adding group");
 		HorizontalPanel action = addActionBar();
 		addTitle("Add a new group");
-		addSubtitle("<em style='color:red;'>Red</em> fields are required");
+		addSubtitle("<em>Starred (*)</em> fields are required");
 		addSeparator();
 		Grid grid = addDataGrid(2);
 		int i = 0;
 		final TextBox nameBox = addTextBoxRow(grid, i++, "Name", "", true);
 		final ListBox zonesBox = addListRow(grid, i++, "Availability Zones",
 				zones, null /* selected */, false /* required */);
-		action.add(new Button("Finish", new ClickHandler() {
+		action.add(new EucaButton("Finish", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				GroupInfoWeb group = new GroupInfoWeb();
 				group.name = nameBox.getText();
@@ -413,7 +412,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				control.addGroup(group);
 			}
 		}));
-		action.add(new Button("Cancel", new ClickHandler() {
+		action.add(new EucaButton("Cancel", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -429,7 +428,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		Grid grid = addDataGrid(1);
 		final ListBox zoneList = addListRow(grid, 0, "Availability Zones",
 				zones, group.zones, false /* required */);
-		action.add(new Button("Finish", new ClickHandler() {
+		action.add(new EucaButton("Finish", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				GroupInfoWeb newGroup = new GroupInfoWeb();
 				newGroup.name = group.name;
@@ -437,7 +436,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				control.updateGroup(newGroup);
 			}
 		}));
-		action.add(new Button("Cancel", new ClickHandler() {
+		action.add(new EucaButton("Cancel", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -450,14 +449,14 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		HorizontalPanel action = addActionBar();
 		addSeparator();
 		addHtmlContent("Are you sure to delete group <b> " + group.name + "</b>?");
-		action.add(new Button("Yes", new ClickHandler() {
+		action.add(new EucaButton("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				List<String> groupNames = new ArrayList<String>();
 				groupNames.add(group.name);
 				control.deleteGroups(groupNames);
 			}
 		}));
-		action.add(new Button("No", new ClickHandler() {
+		action.add(new EucaButton("No", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -472,12 +471,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addSeparator();
 		addHtmlContent("Are you sure to delete groups: <b> " + 
 				UserGroupUtils.getListString(groupNames, 0) + "</b>?");
-		action.add(new Button("Yes", new ClickHandler() {
+		action.add(new EucaButton("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.deleteGroups(groupNames);
 			}
 		}));
-		action.add(new Button("No", new ClickHandler() {
+		action.add(new EucaButton("No", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -499,7 +498,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		setHeaderText("Adding user");
 		HorizontalPanel action = addActionBar();
 		addTitle("Add a new user");
-		addSubtitle("<em style='color:red;'>Red</em> fields are required");
+		addSubtitle("<em>Starred (*)</em> fields are required");
 		addSeparator();
 		Grid grid = addDataGrid(14);
 		int i = 0;
@@ -532,7 +531,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		final ListBox groups = addListRow(grid, i++, "Groups",
 				UserGroupUtils.removeSpecialGroups(groupNames), selectedGroupNames,
 				false /* required */);
-		action.add(new Button("Finish", new ClickHandler() {
+		action.add(new EucaButton("Finish", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				// Verify validity of input
 				String userNameValue = userName.getText();
@@ -593,7 +592,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				control.addUser(user, getListSelectedItems(groups));
 			}
 		}));
-		action.add(new Button("Cancel", new ClickHandler() {
+		action.add(new EucaButton("Cancel", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -649,7 +648,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			approved.setEnabled(false);
 			enabled.setEnabled(false);
 		}
-		action.add(new Button("Finish", new ClickHandler() {
+		action.add(new EucaButton("Finish", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				// Verify validity of input if value changed
 				UserInfoWeb updatedUser = new UserInfoWeb();
@@ -712,7 +711,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				control.updateUser(updatedUser, addToGroups);
 			}
 		}));
-		action.add(new Button("Cancel", new ClickHandler() {
+		action.add(new EucaButton("Cancel", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -726,14 +725,14 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addSeparator();
 		addHtmlContent("Are you sure to delete user <b> " + user.getRealName() + "</b> (" +
 				user.getUserName() + ")");
-		action.add(new Button("Yes", new ClickHandler() {
+		action.add(new EucaButton("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				List<String> userNames = new ArrayList<String>();
 				userNames.add(user.getUserName());
 				control.deleteGroups(userNames);
 			}
 		}));
-		action.add(new Button("No", new ClickHandler() {
+		action.add(new EucaButton("No", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -748,12 +747,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addSeparator();
 		addHtmlContent("Are you sure to delete users <b> " + 
 				UserGroupUtils.getListString(userNames, 0) + "</b>?");
-		action.add(new Button("Yes", new ClickHandler() {
+		action.add(new EucaButton("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.deleteUsers(userNames);
 			}
 		}));
-		action.add(new Button("No", new ClickHandler() {
+		action.add(new EucaButton("No", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -773,12 +772,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		final ListBox groups = addListRow(grid, i++, "Groups",
 				UserGroupUtils.removeSpecialGroups(groupNames), null,
 				false /* required */);
-		action.add(new Button("Yes", new ClickHandler() {
+		action.add(new EucaButton("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.addUsersToGroups(userNames, getListSelectedItems(groups));
 			}
 		}));
-		action.add(new Button("No", new ClickHandler() {
+		action.add(new EucaButton("No", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -798,12 +797,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		final ListBox groups = addListRow(grid, i++, "Groups",
 				UserGroupUtils.removeSpecialGroups(groupNames), selectedGroupNames,
 				false /* required */);
-		action.add(new Button("Yes", new ClickHandler() {
+		action.add(new EucaButton("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.removeUsersFromGroups(userNames, getListSelectedItems(groups));
 			}
 		}));
-		action.add(new Button("No", new ClickHandler() {
+		action.add(new EucaButton("No", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -818,12 +817,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addSeparator();
 		addHtmlContent("Are you sure to enable users <b> " + 
 				UserGroupUtils.getListString(userNames, 0) + "</b>?");
-		action.add(new Button("Yes", new ClickHandler() {
+		action.add(new EucaButton("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.enableUsers(userNames);
 			}
 		}));
-		action.add(new Button("No", new ClickHandler() {
+		action.add(new EucaButton("No", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -838,12 +837,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addSeparator();
 		addHtmlContent("Are you sure to disable users <b> " + 
 				UserGroupUtils.getListString(userNames, 0) + "</b>?");
-		action.add(new Button("Yes", new ClickHandler() {
+		action.add(new EucaButton("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.disableUsers(userNames);
 			}
 		}));
-		action.add(new Button("No", new ClickHandler() {
+		action.add(new EucaButton("No", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
@@ -858,12 +857,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addSeparator();
 		addHtmlContent("Are you sure to approve users <b> " + 
 				UserGroupUtils.getListString(userNames, 0) + "</b>?");
-		action.add(new Button("Yes", new ClickHandler() {
+		action.add(new EucaButton("Yes", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.approveUsers(userNames);
 			}
 		}));
-		action.add(new Button("No", new ClickHandler() {
+		action.add(new EucaButton("No", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displaySelectedUsers();
 			}
