@@ -64,11 +64,9 @@
 package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
-
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.wssecurity.UserWsSecHandler;
+import com.eucalyptus.ws.handlers.wssecurity.VMwareWsSecHandler;
 
 public class VMwareBrokerAuthenticationStage implements UnrollableStage {
 
@@ -76,7 +74,7 @@ public class VMwareBrokerAuthenticationStage implements UnrollableStage {
   public void unrollStage( final ChannelPipeline pipeline ) {
     pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
     pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    //pipeline.addLast( "ws-security", new UserWsSecHandler( ) );
+    pipeline.addLast( "ws-security", new VMwareWsSecHandler( ) );
   }
 
   @Override

@@ -59,7 +59,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
 //          } );
 //        }
 //      } );
-      List<Cluster> authorizedClusters = Lists.newArrayList( );
+      List<Cluster> authorizedClusters = Lists.newArrayList( Clusters.getInstance( ).listValues( ) );
       NavigableMap<VmTypeAvailability, Cluster> sorted = Maps.newTreeMap( );
       for ( Cluster c : authorizedClusters ) {
         sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
