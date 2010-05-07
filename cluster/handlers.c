@@ -287,13 +287,13 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 
   logprintfl(EUCADEBUG, "ncClientCall(%s): called ncURL=%s timeout=%d\n", ncOp, ncURL, timeout);
   
-  va_start(al, ncOp);
-
   rc = pipe(filedes);
   if (rc) {
     logprintfl(EUCAERROR, "ncClientCall(%s): cannot create pipe\n", ncOp);
     return(1);
   }
+
+  va_start(al, ncOp);
   
   pid = fork();
   if (!pid) {
@@ -1321,8 +1321,8 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
   sem_mypost(RESCACHE);
   
   for (i=0; i<resourceCacheLocal.numResources; i++) {
+    ncResDst=NULL;
     if (resourceCacheLocal.resources[i].state != RESASLEEP) {
-      ncResDst=NULL;
       nctimeout = ncGetTimeout(op_start, timeout, resourceCacheLocal.numResources, i);
       rc = ncClientCall(ccMeta, nctimeout, NCCALL, resourceCacheLocal.resources[i].ncURL, "ncDescribeResource", NULL, &ncResDst);
       if (rc != 0) {
@@ -1424,6 +1424,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	for (j=0; j<ncOutInstsLen; j++) {
 	  found=1;
 	  if (found) {
+	    myInstance = NULL;
 	    // add it
 	    logprintfl(EUCADEBUG,"refresh_instances(): describing instance %s, %s, %d\n", ncOutInsts[j]->instanceId, ncOutInsts[j]->stateName, j);
 	    numInsts++;
@@ -1446,23 +1447,27 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    myInstance->ncHostIdx = i;
 	    strncpy(myInstance->serviceTag, resourceCacheLocal.resources[i].ncURL, 64);
 	    {
-	      char *ip;
+	      char *ip=NULL;
 	      if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
 		if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
 		  rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
 		  if (!rc) {
 		    strncpy(myInstance->ccnet.publicIp, ip, 24);
 		  }
-		  if (ip) free(ip);
 		}
 	      }
+
+	      if (ip) free(ip);
+	      ip=NULL;
+
 	      if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
 		rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
 		if (!rc) {
 		  strncpy(myInstance->ccnet.privateIp, ip, 24);
 		}
-		if (ip) free(ip);
 	      }
+
+	      if (ip) free(ip);
 	    }
 
 	    refresh_instanceCache(myInstance->instanceId, myInstance);
@@ -1470,7 +1475,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    logprintfl(EUCADEBUG, "refresh_instances(): storing instance state: %s/%s/%s/%s\n", myInstance->instanceId, myInstance->state, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
 	    print_ccInstance("refresh_instances(): ", myInstance);
 	    
-	    free(myInstance);
+	    if (myInstance) free(myInstance);
 	  }
 	}
       }
@@ -2096,7 +2101,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 }
 
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) {
-  int i, j, rc, numInsts, start, stop, done, ret, rbytes, timeout;
+  int i, j, rc, numInsts, start, stop, done, ret, rbytes, timeout=0;
   ccInstance *myInstance;
   ncStub *ncs;
   char *consoleOutput;
@@ -2213,7 +2218,7 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
     
     done=0;
     for (j=start; j<stop && !done; j++) {
-      timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
+      timeout = ncGetTimeout(op_start, OP_TIMEOUT, (stop - start), j);
       rc = ncClientCall(meta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncRebootInstance", instId);
       if (rc) {
 	ret = 1;
