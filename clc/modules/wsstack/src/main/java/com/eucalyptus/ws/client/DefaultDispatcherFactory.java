@@ -6,10 +6,6 @@ import com.eucalyptus.component.DispatcherFactory;
 import com.eucalyptus.component.Service;
 
 public class DefaultDispatcherFactory extends DispatcherFactory {
-  static {
-    DispatcherFactory.setFactory( new DefaultDispatcherFactory( ) );
-  }
-
   @Override
   public Dispatcher buildChild( Component parent, Service service ) {
     Dispatcher d = null;

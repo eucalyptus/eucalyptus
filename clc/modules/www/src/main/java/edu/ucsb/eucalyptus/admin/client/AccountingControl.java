@@ -18,6 +18,6 @@ public class AccountingControl implements ContentControl {
 	
 	@Override
 	public void display() {
-		root.setUrl("http://www.google.com");
+		root.setUrl("/reports");
 	}
 }
