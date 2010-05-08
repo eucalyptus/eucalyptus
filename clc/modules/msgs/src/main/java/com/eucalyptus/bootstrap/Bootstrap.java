@@ -17,7 +17,7 @@ import com.eucalyptus.util.Committor;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Transition;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class Bootstrap {
   private static Logger LOG = Logger.getLogger( Bootstrap.class );

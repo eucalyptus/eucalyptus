@@ -74,7 +74,7 @@ import com.eucalyptus.auth.api.HmacProvider;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class Authentication {
   static String         DB_NAME = "eucalyptus_auth";

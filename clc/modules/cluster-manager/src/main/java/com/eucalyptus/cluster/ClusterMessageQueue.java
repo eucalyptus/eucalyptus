@@ -77,7 +77,7 @@ import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class ClusterMessageQueue implements Runnable {
   

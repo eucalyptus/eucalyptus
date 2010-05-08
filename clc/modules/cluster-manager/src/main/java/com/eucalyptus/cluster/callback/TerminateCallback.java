@@ -67,7 +67,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 

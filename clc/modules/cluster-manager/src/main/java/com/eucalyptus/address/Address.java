@@ -84,7 +84,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )

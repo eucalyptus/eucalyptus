@@ -12,7 +12,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Nameable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 /**
  * @author decker

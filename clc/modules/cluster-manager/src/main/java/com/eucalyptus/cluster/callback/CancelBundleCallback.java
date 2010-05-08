@@ -9,7 +9,7 @@ import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CancelBundleTaskResponseType;
 import edu.ucsb.eucalyptus.msgs.CancelBundleTaskType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class CancelBundleCallback extends QueuedEventCallback<CancelBundleTaskType,CancelBundleTaskResponseType> {
 

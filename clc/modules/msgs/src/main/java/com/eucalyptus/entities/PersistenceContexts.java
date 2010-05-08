@@ -16,7 +16,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import edu.emory.mathcs.backport.java.util.Collections;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {

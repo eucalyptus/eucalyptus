@@ -11,7 +11,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @ChannelPipelineCoverage( "one" )
 public class ChannelStateMonitor extends SimpleChannelHandler {

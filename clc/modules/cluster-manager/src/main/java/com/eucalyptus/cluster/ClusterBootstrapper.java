@@ -96,7 +96,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.ServiceVerifyBootstrapper;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @Provides( Component.eucalyptus )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )

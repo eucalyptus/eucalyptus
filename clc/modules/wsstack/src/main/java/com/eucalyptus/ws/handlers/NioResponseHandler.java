@@ -90,7 +90,7 @@ import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.NotImplementedException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @ChannelPipelineCoverage( "one" )
 public class NioResponseHandler extends SimpleChannelHandler implements ResponseHandler {

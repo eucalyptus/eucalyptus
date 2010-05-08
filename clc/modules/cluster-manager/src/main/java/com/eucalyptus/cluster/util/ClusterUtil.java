@@ -15,7 +15,7 @@ import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetKeysResponseType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 

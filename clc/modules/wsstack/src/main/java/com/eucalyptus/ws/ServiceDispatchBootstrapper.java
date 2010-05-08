@@ -79,7 +79,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @Provides( com.eucalyptus.bootstrap.Component.any )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )

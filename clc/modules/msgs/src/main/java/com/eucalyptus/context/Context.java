@@ -15,7 +15,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventType;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class Context {
   private static Logger            LOG         = Logger.getLogger( Context.class );

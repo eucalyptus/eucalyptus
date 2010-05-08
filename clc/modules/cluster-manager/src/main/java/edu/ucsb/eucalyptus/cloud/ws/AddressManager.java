@@ -82,7 +82,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesType;
 import edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.DisassociateAddressType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressType;
 

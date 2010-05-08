@@ -66,7 +66,7 @@ package com.eucalyptus.system;
 import java.io.File;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 
 public enum SubDirectory {

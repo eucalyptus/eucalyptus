@@ -9,7 +9,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class StatefulMessageSet<E extends Enum<E>> {
   private static Logger                              LOG           = Logger.getLogger( StatefulMessageSet.class );

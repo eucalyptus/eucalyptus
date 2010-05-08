@@ -76,7 +76,7 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.handlers.ServiceSinkHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   private static Logger               LOG    = Logger.getLogger( FilteredPipeline.class );

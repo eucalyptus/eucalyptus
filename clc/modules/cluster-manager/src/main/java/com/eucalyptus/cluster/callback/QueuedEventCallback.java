@@ -102,7 +102,7 @@ import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @SuppressWarnings( "unchecked" )
 public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extends BaseMessage> extends SimpleChannelHandler implements ResponseHandler {

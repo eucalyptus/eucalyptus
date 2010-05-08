@@ -14,7 +14,7 @@ import com.eucalyptus.component.Lifecycles;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class LoadConfigs extends BootstrapTransition<Bootstrap.Stage> {
   private static Logger LOG = Logger.getLogger( LoadConfigs.class );

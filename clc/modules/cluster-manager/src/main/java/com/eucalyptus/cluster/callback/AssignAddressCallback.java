@@ -77,7 +77,7 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType,AssignAddressResponseType> {
   private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
