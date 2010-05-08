@@ -5,6 +5,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Record;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -77,11 +78,11 @@ public class ReentrantListenerRegistry<T> {
       }
     }
     for ( EventListener ce : listeners ) {
-      EventRecord record = EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getSimpleName( ), e.toString( ));
+      Record record = EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getSimpleName( ), e.toString( ));
       if ( e instanceof ClockTick ) {
-        LOG.trace( record );
+        record.trace( );
       } else {
-        LOG.debug( record );
+        record.debug( );
       }
       ce.fireEvent( e );
       if ( e.getFail( ) != null ) {
