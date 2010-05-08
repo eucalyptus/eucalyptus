@@ -625,8 +625,13 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		} else {
 			skipConfirmation = null;
 		}
-		final CheckBox approved = addCheckBoxRow(grid, i++, "Approved", user.isApproved(),
+		final CheckBox approved;
+		if (!user.isApproved()) {
+		  approved = addCheckBoxRow(grid, i++, "Approved", user.isApproved(),
 				false /* required */);
+		} else {
+		  approved = null;
+		}
 		final CheckBox enabled = addCheckBoxRow(grid, i++, "Enabled", user.isEnabled(),
 				false /* required */);
 		final TextBox phone = addTextBoxRow(grid, i++, "Phone Number", user.getTelephoneNumber(),
