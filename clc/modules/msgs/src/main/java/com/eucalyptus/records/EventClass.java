@@ -1,6 +1,6 @@
 package com.eucalyptus.records;
 
-enum EventClass {
+public enum EventClass {
   MESSAGE,
   QUEUE,
   VM,

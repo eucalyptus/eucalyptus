@@ -85,6 +85,7 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
@@ -229,12 +230,12 @@ public class Address implements HasName {
   
   private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, SplitTransition transition ) {
     this.transition = transition;
-    EventRecord.caller( this.getClass( ), this.state.getReference( ), this.toString( ) ).debug( );
+    EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, this.state.getReference( ), this.toString( ) ).debug( );
     if ( !this.state.compareAndSet( expectedState, newState, expectedMark, newMark ) ) {
       throw new IllegalStateException( String.format( "Cannot mark address as %s[%s.%s->%s.%s] when it is %s.%s: %s", transition.getName( ), expectedState,
                                                       expectedMark, newState, newMark, this.state.getReference( ), this.state.isMarked( ), this.toString( ) ) );
     }
-    EventRecord.caller( this.getClass( ), this.state.getReference( ), "TOP", this.transition.getName( ).name( ), this.toString( ) ).debug( );
+    EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, this.state.getReference( ), "TOP", this.transition.getName( ).name( ), this.toString( ) ).debug( );
     this.transition.top( );
     return true;
   }
@@ -341,7 +342,7 @@ public class Address implements HasName {
     if ( !this.state.isMarked( ) ) {
       throw new IllegalStateException( "Trying to clear an address which is not currently pending." );
     } else {
-      EventRecord.caller( this.getClass( ), this.state.getReference( ), "BOTTOM", this.transition.getName( ).name( ), this.toString( ) ).debug( );
+      EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, this.state.getReference( ), "BOTTOM", this.transition.getName( ).name( ), this.toString( ) ).debug( );
       try {
         this.transition.bottom( );
       } finally {

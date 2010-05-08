@@ -168,7 +168,7 @@ public class ClusterState {
         availableVlans.add( i );
       }
     }
-    EventRecord.here( ClusterState.class, "CONFIG_VLANS", Integer.toString( min ), Integer.toString( max ),
+    EventRecord.here( ClusterState.class, EventType.CONFIG_VLANS, Integer.toString( min ), Integer.toString( max ),
                                  availableVlans.toString( )
                                                .substring( 0, 50 > availableVlans.toString( ).length( ) ? availableVlans.toString( ).length( ) : 50 ) ).debug( );
   }

@@ -1,14 +1,8 @@
 package com.eucalyptus.records;
 
-import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.records.Recorder;
-import com.eucalyptus.system.LogLevels;
-import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class EventRecord extends EucalyptusMessage {
@@ -18,12 +12,12 @@ public class EventRecord extends EucalyptusMessage {
     return new LogFileRecord( component, eventUserId, eventCorrelationId, eventName.toString( ), getMessageString( other ), 3 + dist );
   }
 
-  public static Record here( final Class component, final Object eventName, final String... other ) {
+  public static Record here( final Class component, final EventType eventName, final String... other ) {
     EucalyptusMessage msg = tryForMessage( );
     return create( component.getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 1 );
   }
     
-  public static Record caller( final Class component, final Object eventName, final Object... other ) {
+  public static Record caller( final Class component, final EventType eventName, final Object... other ) {
     EucalyptusMessage msg = tryForMessage( );
     return create( component.getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 2 );
   }

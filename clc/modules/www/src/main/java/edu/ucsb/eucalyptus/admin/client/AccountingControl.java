@@ -13,6 +13,9 @@ public class AccountingControl implements ContentControl {
   private VerticalPanel   root;
   private HorizontalPanel buttonBar;
   private EucaButton      pdfButton;
+  private EucaButton      csvButton;
+  private EucaButton      xlsButton;
+  
   private Frame           report;
   
   public AccountingControl( String sessionId ) {
@@ -25,8 +28,21 @@ public class AccountingControl implements ContentControl {
         Window.Location.replace( "/reports?type=pdf" );
       }
     } );
+    this.csvButton = new EucaButton( "CSVs are too!1!", "Download this report as a csv.", new ClickHandler( ) {
+      @Override
+      public void onClick( ClickEvent clickevent ) {
+        Window.Location.replace( "/reports?type=csv" );
+      }
+    } );
+    this.xlsButton = new EucaButton( "XLS not so much.", "Download this report as a xls.", new ClickHandler( ) {
+      @Override
+      public void onClick( ClickEvent clickevent ) {
+        Window.Location.replace( "/reports?type=xls" );
+      }
+    } );
     this.buttonBar.add( this.pdfButton );
-    this.buttonBar.setCellWidth( this.pdfButton, "100%" );
+    this.buttonBar.add( this.csvButton );
+    this.buttonBar.add( this.xlsButton );
     this.root.add( buttonBar );
     this.report = new Frame( );
     this.root.add( this.report );

@@ -4,12 +4,12 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.mule.config.ConfigResource;
 import com.eucalyptus.bootstrap.transitions.LoadConfigs;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Lifecycles;
 import com.eucalyptus.component.Resource;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
@@ -17,7 +17,6 @@ import com.eucalyptus.util.Committor;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Transition;
 import com.google.common.collect.Lists;
-import com.eucalyptus.records.EventRecord;
 
 public class Bootstrap {
   private static Logger LOG = Logger.getLogger( Bootstrap.class );

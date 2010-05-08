@@ -114,41 +114,46 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   
   public static class NOOP extends QueuedEventCallback {
     public void fail( Throwable throwable ) {}
+    
     public void verify( BaseMessage msg ) throws Exception {}
+    
     public void prepare( BaseMessage msg ) throws Exception {}
   }
-
-  public QueuedEventCallback<TYPE,RTYPE> regarding( BaseMessage msg ) {
+  
+  public QueuedEventCallback<TYPE, RTYPE> regarding( BaseMessage msg ) {
     this.getRequest( ).regarding( msg );
     return this;
   }
-
-  public QueuedEventCallback<TYPE,RTYPE> regardingUserRequest( BaseMessage msg ) {
+  
+  public QueuedEventCallback<TYPE, RTYPE> regardingUserRequest( BaseMessage msg ) {
     this.getRequest( ).regardingUserRequest( msg );
     return this;
   }
-
-  private AtomicReference<TYPE> request         = new AtomicReference<TYPE>( null );
-  private ChannelFuture         connectFuture;
-  private NioBootstrap          clientBootstrap;
-  @SuppressWarnings( "unchecked" )
-  private SuccessCallback       successCallback = SuccessCallback.NOOP;
-  private FailureCallback<TYPE,RTYPE> failCallback    = FailureCallback.NOOP;
   
-  public QueuedEventCallback<TYPE,RTYPE> then( UnconditionalCallback c ) {
-    this.successCallback = c;
-    this.failCallback = c;
-    return this;
-  }
+  private AtomicReference<TYPE>        request         = new AtomicReference<TYPE>( null );
+  private ChannelFuture                connectFuture;
+  private NioBootstrap                 clientBootstrap;
   @SuppressWarnings( "unchecked" )
-  public QueuedEventCallback<TYPE,RTYPE> then( SuccessCallback c ) {
+  private SuccessCallback              successCallback = SuccessCallback.NOOP;
+  private FailureCallback<TYPE, RTYPE> failCallback    = FailureCallback.NOOP;
+  
+  public QueuedEventCallback<TYPE, RTYPE> then( UnconditionalCallback c ) {
     this.successCallback = c;
-    return this;
-  }
-  public QueuedEventCallback<TYPE,RTYPE> then( FailureCallback<TYPE,RTYPE> c ) {
     this.failCallback = c;
     return this;
   }
+  
+  @SuppressWarnings( "unchecked" )
+  public QueuedEventCallback<TYPE, RTYPE> then( SuccessCallback c ) {
+    this.successCallback = c;
+    return this;
+  }
+  
+  public QueuedEventCallback<TYPE, RTYPE> then( FailureCallback<TYPE, RTYPE> c ) {
+    this.failCallback = c;
+    return this;
+  }
+  
   public void exceptionCaught( final ChannelHandlerContext ctx, final Throwable e ) {
     LOG.debug( e, e );
     this.queueResponse( e );
@@ -161,12 +166,13 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   public abstract void fail( Throwable throwable );
   
   public QueuedEventCallback dispatch( String clusterName ) {
-    EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ).debug( );
+    EventRecord.caller( QueuedEventCallback.class, EventType.QUEUE, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ).debug( );
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
     return this.dispatch( cluster );
   }
+  
   public QueuedEventCallback dispatch( Cluster cluster ) {
-    EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ).debug( );
+    EventRecord.caller( QueuedEventCallback.class, EventType.QUEUE, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ).debug( );
     cluster.getMessageQueue( ).enqueue( this );
     return this;
   }
@@ -223,6 +229,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     this.queueResponse( reply );
     ctx.getChannel( ).close( );
   }
+  
   public void queueResponse( Object o ) {
     if ( o instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) o;
@@ -278,14 +285,15 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   }
   
   public RTYPE pollResponse( Long waitMillis ) throws Exception {
-    if( this.response.get( ) == null && !this.pollForResponse( waitMillis ) ) {
+    if ( this.response.get( ) == null && !this.pollForResponse( waitMillis ) ) {
       return null;
     } else {
       EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ).debug( );
       return this.checkedResponse( );
     }
   }
-  private RTYPE checkedResponse() throws Exception {
+  
+  private RTYPE checkedResponse( ) throws Exception {
     if ( this.response.get( ) instanceof EucalyptusMessage ) {
       return ( RTYPE ) this.response.get( );
     } else if ( this.response.get( ) instanceof Throwable ) {
@@ -293,6 +301,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     }
     throw new EucalyptusClusterException( "Failed to retrieve result of asynchronous operation." );
   }
+  
   @Override
   public RTYPE getResponse( ) throws Exception {
     this.waitForResponse( );
@@ -311,10 +320,10 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
       Thread.currentThread( ).interrupt( );
     } finally {
       this.canHas.unlock( );
-    }    
+    }
     return ret;
-  }  
-
+  }
+  
   public void waitForResponse( ) {
     this.canHas.lock( );
     try {

@@ -74,6 +74,7 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
@@ -103,7 +104,7 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   @Override
   public void prepare( UnassignAddressType msg ) throws Exception {
     if( this.address.isAssigned() && this.address.isPending()) {
-      EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ).info( );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGNING,Transition.unassigning.toString( ), address.toString( ) ).info( );
     }
   }
   
@@ -122,15 +123,15 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   public void verify( BaseMessage msg ) {
     this.clearVmAddress();
     if( msg.get_return() ) {
-      EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ).info( );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGN, address.toString( ) ).info( );
     } else {
-      EventRecord.here( UnassignAddressCallback.class, "broken", address.toString( ) ).warn( );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE,"broken", address.toString( ) ).warn( );
     }
     try{ 
       this.address.clearPending( );
     } catch(Throwable t) {
       LOG.warn(t.getMessage());
-      EventRecord.here( UnassignAddressCallback.class, "broken", address.toString( ) ).warn( );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE,"broken", address.toString( ) ).warn( );
       LOG.trace(t,t);
     } finally {
       if( !this.address.isPending() && this.address.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId() ) ) {

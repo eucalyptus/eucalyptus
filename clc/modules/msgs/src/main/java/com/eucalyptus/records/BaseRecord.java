@@ -21,6 +21,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.google.common.collect.Lists;
@@ -86,7 +87,7 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record info( ) {
     Record newThis = this;
-    try {
+    if( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
@@ -101,7 +102,7 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record error( ) {
     Record newThis = this;
-    try {
+    if( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
@@ -116,7 +117,7 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record trace( ) {
     Record newThis = this;
-    try {
+    if( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
@@ -131,7 +132,7 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record debug( ) {
     Record newThis = this;
-    try {
+    if( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
@@ -146,7 +147,7 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record warn( ) {
     Record newThis = this;
-    try {
+    if( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
