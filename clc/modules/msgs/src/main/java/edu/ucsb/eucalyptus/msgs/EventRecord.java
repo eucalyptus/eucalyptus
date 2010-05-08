@@ -10,7 +10,7 @@ import com.eucalyptus.system.LogLevels;
 import com.google.common.collect.Lists;
 
 public class EventRecord extends EucalyptusMessage {
-  private static Logger            LOG    = Logger.getLogger( EventRecord.class );
+  private static Logger            LOG   = Logger.getLogger( EventRecord.class );
   private static EucalyptusMessage BOGUS  = getBogusMessage( );
   
   private String                   logger;
@@ -30,9 +30,9 @@ public class EventRecord extends EucalyptusMessage {
     this.eventCorrelationId = eventCorrelationId;
     this.eventId = eventId;
     this.others.add( other );
+    StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[distance];
+    this.logger = ste.getClassName( );
     if ( LogLevels.DEBUG ) {
-      StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[distance];
-      this.logger = ste.getClassName( );
       if ( ste != null && ste.getFileName( ) != null ) {
         this.caller = String.format( "%s.%s.%s", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
       } else {
@@ -54,15 +54,24 @@ public class EventRecord extends EucalyptusMessage {
   public EventRecord( ) {}
   
   public EventRecord info( ) {
-    LOG.getLogger( this.logger ).info( this );
+    Logger.getLogger( this.logger ).info( this );
     return this;
   }
   public EventRecord error( ) {
-    LOG.getLogger( this.logger ).info( this );
+    Logger.getLogger( this.logger ).info( this );
     return this;
   }
+  public EventRecord trace( ) {
+    Logger.getLogger( this.logger ).trace( this );
+    return this;    
+  }
+  public EventRecord debug( ) {
+    Logger.getLogger( this.logger ).debug( this );
+    return this;    
+  }
+
   public EventRecord warn( ) {
-    LOG.getLogger( this.logger ).warn( this );
+    Logger.getLogger( this.logger ).warn( this );
     return this;
   }
   
@@ -99,7 +108,7 @@ public class EventRecord extends EucalyptusMessage {
   public static EventRecord create( final String component, final String eventUserId, final String eventCorrelationId, final Object eventName, final String other, int dist ) {
     return new EventRecord( component, eventUserId, eventCorrelationId, eventName.toString( ), getMessageString( other ), 3 + dist );
   }
-  
+
   public static EventRecord here( final Class component, final Object eventName, final String... other ) {
     EucalyptusMessage msg = tryForMessage( );
     return create( component.getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 1 );
@@ -138,5 +147,6 @@ public class EventRecord extends EucalyptusMessage {
     }
     return msg == null ? BOGUS : msg;
   }
+
   
 }

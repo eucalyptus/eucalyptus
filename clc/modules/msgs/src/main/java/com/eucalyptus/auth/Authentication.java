@@ -125,14 +125,14 @@ public class Authentication {
             if( c.isAssignableFrom( candidate ) ) {
               Object curr = Authentication.providers.get( c );
               if( DUMMY.equals( curr ) ) {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, c.getSimpleName( ), candidate.getCanonicalName( ) ) );
+                EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, c.getSimpleName( ), candidate.getCanonicalName( ) ).info( );
                 Authentication.providers.put( c, o );
               } else if( !candidate.getSimpleName( ).startsWith( "Default" ) ) {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "current", curr.getClass( ).getCanonicalName( ) ) );
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "candidate", candidate.getCanonicalName( ) ) );
+                EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "current", curr.getClass( ).getCanonicalName( ) ).info( );
+                EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "candidate", candidate.getCanonicalName( ) ).info( );
                 Authentication.providers.put( c, o );
               } else {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, c.getSimpleName( ), candidate.getCanonicalName( ) ) );
+                EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, c.getSimpleName( ), candidate.getCanonicalName( ) ).info( );
                 return false;
               }
             }

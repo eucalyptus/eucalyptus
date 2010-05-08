@@ -83,12 +83,12 @@ public class TerminateCallback extends QueuedEventCallback<TerminateInstancesTyp
   
   @Override
   public void prepare( TerminateInstancesType msg ) throws Exception {
-    LOG.info( EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATING, LogUtil.dumpObject( msg ) ) );
+    EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATING, LogUtil.dumpObject( msg ) ).info( );
   }
   
   @Override
   public void verify( BaseMessage msg ) throws Exception {
-    LOG.info( EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATED, LogUtil.dumpObject( msg ) ) );
+    EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATED, LogUtil.dumpObject( msg ) ).info( );
   }
   
   @Override

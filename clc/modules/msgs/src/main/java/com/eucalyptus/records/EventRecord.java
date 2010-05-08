@@ -61,7 +61,7 @@ public abstract class EventRecord {
   }
 
   private static class LogFileRecord extends EventRecord {
-    private static Logger            LOG    = Logger.getLogger( EventRecord.class );
+    private static Logger LOG = Logger.getLogger( EventRecord.LogFileRecord.class );
     private static EucalyptusMessage BOGUS  = getBogusMessage( );
     
     private String                   logger;

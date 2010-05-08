@@ -84,7 +84,7 @@ public class RequestQueue {
         throw new NotReadyException( "walrus" );
       }
     }
-    LOG.debug( EventRecord.here( RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), msg.getClass( ).getSimpleName( ) ) );
+    EventRecord.here( RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), msg.getClass( ).getSimpleName( ) ).debug( );
     return msg;
   }
   

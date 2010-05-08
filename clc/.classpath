@@ -138,5 +138,6 @@
 	<classpathentry kind="lib" path="lib/gwt-servlet-2.0.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.0.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-user-2.0.jar"/>
+	<classpathentry kind="lib" path="lib/jasperreports-3.7.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

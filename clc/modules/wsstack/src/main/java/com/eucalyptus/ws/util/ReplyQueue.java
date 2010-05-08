@@ -96,7 +96,7 @@ public class ReplyQueue {
       reply = new EucalyptusErrorMessageType( service, request, t.getMessage( ) );
     }
     String corrId = reply.getCorrelationId( );
-    LOG.debug( EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, reply.getCorrelationId( ), reply.getClass( ).getSimpleName( ) ) );    
+    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, reply.getCorrelationId( ), reply.getClass( ).getSimpleName( ) ).debug( );    
     try {
       Context context = Contexts.lookup( corrId );
       Channel channel = context.getChannel( );
@@ -109,7 +109,7 @@ public class ReplyQueue {
   
   @SuppressWarnings( "unchecked" )
   public void handle( BaseMessage responseMessage ) {
-    LOG.debug( EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ) );
+    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
     String corrId = responseMessage.getCorrelationId( );
     try {
       Context context = Contexts.lookup( corrId );
@@ -123,7 +123,7 @@ public class ReplyQueue {
   }
 
   public void handle( ExceptionMessage exMsg ) {
-    LOG.debug( EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ) );
+    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ).debug( );
     LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
     Throwable exception = exMsg.getException( );
     Object payload = null;

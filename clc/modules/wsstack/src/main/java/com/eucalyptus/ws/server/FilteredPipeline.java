@@ -95,7 +95,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   public boolean accepts( final HttpRequest message ) {
     final boolean result = this.checkAccepts( message );
     if ( result && LogLevels.TRACE ) {
-      LOG.trace( EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ) );
+      EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ).trace( );
     }
     return result;
   }
@@ -125,7 +125,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
       }
       if ( LogLevels.TRACE ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
-          LOG.trace( EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ) );
+          EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ).trace( );
         }
       }
     } catch ( final Exception e ) {

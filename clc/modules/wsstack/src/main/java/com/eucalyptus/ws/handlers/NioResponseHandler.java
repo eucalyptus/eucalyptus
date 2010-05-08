@@ -184,7 +184,7 @@ public class NioResponseHandler extends SimpleChannelHandler implements Response
           Thread.currentThread( ).interrupt( );
         }
       }
-      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get().getClass( ).toString( ) ) );
+      EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get().getClass( ).toString( ) ).debug( );
     } finally {
       this.canHas.unlock( );
     }

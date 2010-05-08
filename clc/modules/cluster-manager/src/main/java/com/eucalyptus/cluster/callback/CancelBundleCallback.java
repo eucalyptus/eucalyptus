@@ -30,7 +30,7 @@ public class CancelBundleCallback extends QueuedEventCallback<CancelBundleTaskTy
     } else {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookupByBundleId( this.getRequest().getBundleId( ) );
-        LOG.info( EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELLED, this.getRequest( ).getUserId( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ) );
+        EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELLED, this.getRequest( ).getUserId( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ).info( );
         vm.resetBundleTask( );
       } catch ( NoSuchElementException e1 ) {
       }

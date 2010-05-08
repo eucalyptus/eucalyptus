@@ -18,11 +18,11 @@ public class DirectoryBootstrapper extends Bootstrapper {
   @Override
   public boolean load( Stage current ) throws Exception {
     for( BaseDirectory b : BaseDirectory.values( ) ) {
-      LOG.info( EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, b.name(), b.toString( ) ) );
+      EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, b.name(), b.toString( ) ).info( );
       b.check( );
     }
     for( SubDirectory s : SubDirectory.values( ) ) {
-      LOG.info( EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, s.name(), s.toString( ) ) );
+      EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, s.name(), s.toString( ) ).info( );
       s.check( );
     }
     return true;

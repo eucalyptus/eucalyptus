@@ -143,7 +143,7 @@ public class VmAdmissionControl {
         throw new EucalyptusCloudException( e.getMessage( ), e );
       }
     }
-    LOG.trace( EventRecord.here( this.getClass(), EventType.VM_RESERVED, LogUtil.dumpObject( vmAllocInfo ) ) );
+    EventRecord.here( this.getClass(), EventType.VM_RESERVED, LogUtil.dumpObject( vmAllocInfo ) ).trace( );
     return vmAllocInfo;
   }
   

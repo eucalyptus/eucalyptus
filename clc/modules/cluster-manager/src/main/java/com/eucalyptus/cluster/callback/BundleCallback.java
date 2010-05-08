@@ -36,7 +36,7 @@ public class BundleCallback extends QueuedEventCallback<BundleInstanceType,Bundl
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
         vm.clearPendingBundleTask( );
-        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).getUserId( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ) );
+        EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).getUserId( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ).info( );
       } catch ( NoSuchElementException e1 ) {
       }
     }

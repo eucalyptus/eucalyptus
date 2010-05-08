@@ -65,9 +65,9 @@ public class Bootstrap {
     }
     
     public void printAgenda( ) {
-      LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_AGENDA, this.name( ), Bootstrap.loading ? "LOAD" : "START" ) );
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_AGENDA, this.name( ), Bootstrap.loading ? "LOAD" : "START" ).info( );
       for ( Bootstrapper b : this.bootstrappers ) {
-        LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_AGENDA, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_AGENDA, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
       }
     }
     
@@ -90,13 +90,13 @@ public class Bootstrap {
       this.printAgenda( );
       for ( Bootstrapper b : this.bootstrappers ) {
         try {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_LOAD, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_LOAD, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           boolean result = b.load( this );
           if ( !result ) {
             throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from load( ): terminating bootstrap." );
           }
         } catch ( Throwable e ) {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
         }
       }
@@ -107,13 +107,13 @@ public class Bootstrap {
       this.printAgenda( );
       for ( Bootstrapper b : this.bootstrappers ) {
         try {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_START, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_START, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           boolean result = b.start( );
           if ( !result ) {
             throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from start( ): terminating bootstrap." );
           }
         } catch ( Throwable e ) {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
         }
       }
@@ -202,7 +202,7 @@ public class Bootstrap {
       starting = false;
       finished = false;
     } else if ( currentStage != null ) {
-      LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_COMPLETE, currentStage.toString( ) ) );
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_COMPLETE, currentStage.toString( ) ).info( );
       if ( Stage.Final.equals( currentStage ) ) {
         currentStage = null;
         if ( loading && !starting && !finished ) {
@@ -221,7 +221,7 @@ public class Bootstrap {
     for ( int i = currOrdinal + 1; i <= Stage.Final.ordinal( ); i++ ) {
       currentStage = Stage.values( )[i];
       if ( currentStage.bootstrappers.isEmpty( ) ) {
-        LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_SKIPPED, currentStage.name( ) ) );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_SKIPPED, currentStage.name( ) ).info( );
         continue;
       } else {
         return currentStage;

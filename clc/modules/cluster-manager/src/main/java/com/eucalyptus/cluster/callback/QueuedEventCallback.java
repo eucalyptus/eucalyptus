@@ -161,12 +161,12 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   public abstract void fail( Throwable throwable );
   
   public QueuedEventCallback dispatch( String clusterName ) {
-    LOG.debug( EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ) );
+    EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ).debug( );
     Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
     return this.dispatch( cluster );
   }
   public QueuedEventCallback dispatch( Cluster cluster ) {
-    LOG.debug( EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ) );
+    EventRecord.caller( QueuedEventCallback.class, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ).debug( );
     cluster.getMessageQueue( ).enqueue( this );
     return this;
   }
@@ -281,7 +281,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     if( this.response.get( ) == null && !this.pollForResponse( waitMillis ) ) {
       return null;
     } else {
-      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ) );
+      EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ).debug( );
       return this.checkedResponse( );
     }
   }
@@ -296,7 +296,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   @Override
   public RTYPE getResponse( ) throws Exception {
     this.waitForResponse( );
-    LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ) );
+    EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ).debug( );
     return this.checkedResponse( );
   }
   
@@ -305,7 +305,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     this.canHas.lock( );
     try {
       ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
-      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ) );
+      EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ).debug( );
     } catch ( InterruptedException e ) {
       LOG.debug( e, e );
       Thread.currentThread( ).interrupt( );

@@ -35,7 +35,7 @@ public class Context {
     this.creationTime = System.nanoTime( );
     this.httpRequest = httpRequest;
     this.channel = channel;
-    LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ) );
+    EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug();
   }
   
   public Channel getChannel( ) {
@@ -56,7 +56,7 @@ public class Context {
   
   public void setRequest( BaseMessage msg ) {
     if ( msg != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_MSG, this.correlationId, msg.getClass( ).getSimpleName( ) ) );
+      EventRecord.caller( Context.class, EventType.CONTEXT_MSG, this.correlationId, msg.getClass( ).getSimpleName( ) ).debug( );
       this.request = msg;
     }
   }
@@ -67,7 +67,7 @@ public class Context {
   
   public void setUser( User user ) {
     if ( user != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getName( ) ) );
+      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getName( ) ).debug( );
       this.user = user;
     }
   }
@@ -91,7 +91,7 @@ public class Context {
   
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_EVENT, this.correlationId, event.getId( ) ) );
+      EventRecord.caller( Context.class, EventType.CONTEXT_EVENT, this.correlationId, event.getId( ) ).debug( );
       this.muleEvent = new WeakReference<MuleEvent>( event );
     }
   }
@@ -111,13 +111,13 @@ public class Context {
   
   public void setSubject( Subject subject ) {
     if ( subject != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_SUBJECT, this.correlationId, subject.getPrincipals( ).toString( ) ) );
+      EventRecord.caller( Context.class, EventType.CONTEXT_SUBJECT, this.correlationId, subject.getPrincipals( ).toString( ) ).debug( );
       this.subject = subject;
     }
   }
   
   void clear( ) {
-    LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ) );
+    EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ).debug( );
     this.channel = null;
     this.httpRequest = null;
     this.muleEvent.clear( );

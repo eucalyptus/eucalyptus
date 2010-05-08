@@ -34,7 +34,7 @@ public class ClusterUtil {
     Boolean cc = realClusterx509.equals( clusterx509 );
     Boolean nc = realNodex509.equals( nodex509 );
 
-    LOG.info( EventRecord.here( Component.cluster, EventType.CLUSTER_CERT, cluster.getName(), "cc", cc.toString( ), "nc", nc.toString( ) ) );
+    EventRecord.here( Cluster.class, EventType.CLUSTER_CERT, cluster.getName(), "cc", cc.toString( ), "nc", nc.toString( ) ).info( );
     if( !cc ) {
       LOG.debug( LogUtil.subheader( "EXPECTED CERTIFICATE" ) + X509Cert.toCertificate( cluster.getCredentials( ).getClusterCertificate( ) ) );
       LOG.debug( LogUtil.subheader( "RECEIVED CERTIFICATE" ) + clusterx509 );

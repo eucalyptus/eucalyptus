@@ -103,7 +103,7 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   @Override
   public void prepare( UnassignAddressType msg ) throws Exception {
     if( this.address.isAssigned() && this.address.isPending()) {
-      LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ) );
+      EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ).info( );
     }
   }
   
@@ -122,15 +122,15 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   public void verify( BaseMessage msg ) {
     this.clearVmAddress();
     if( msg.get_return() ) {
-      LOG.info( EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ) );
+      EventRecord.here( UnassignAddressCallback.class, Transition.unassigning, address.toString( ) ).info( );
     } else {
-      LOG.warn( EventRecord.here( UnassignAddressCallback.class, "broken", address.toString( ) ) );
+      EventRecord.here( UnassignAddressCallback.class, "broken", address.toString( ) ).warn( );
     }
     try{ 
       this.address.clearPending( );
     } catch(Throwable t) {
       LOG.warn(t.getMessage());
-      LOG.warn( EventRecord.here( UnassignAddressCallback.class, "broken", address.toString( ) ) );
+      EventRecord.here( UnassignAddressCallback.class, "broken", address.toString( ) ).warn( );
       LOG.trace(t,t);
     } finally {
       if( !this.address.isPending() && this.address.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId() ) ) {

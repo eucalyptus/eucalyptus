@@ -125,7 +125,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
       channelConnectFuture.addListener( ChannelFutureListener.CLOSE_ON_FAILURE );
       channelConnectFuture.addListener( ChannelUtil.WRITE_AND_CALLBACK( request, new ChannelFutureListener( ) {
         @Override public void operationComplete( ChannelFuture future ) throws Exception {
-          LOG.info( EventRecord.here( o.getClass(), EventType.MSG_SENT, LogUtil.dumpObject( o ) ) );
+          EventRecord.here( o.getClass(), EventType.MSG_SENT, LogUtil.dumpObject( o ) ).info( );
         } } ) );
     }
   }
@@ -155,7 +155,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   
   @Override
   public void channelInterestChanged( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    LOG.trace( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING, e.toString( ) ) );
+    EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING, e.toString( ) ).trace( );
     super.channelInterestChanged( ctx, e );
   }
   
@@ -166,7 +166,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
         MappingHttpResponse response = ( MappingHttpResponse ) ( ( MessageEvent ) e ).getMessage( );
         if ( HttpResponseStatus.OK.equals( response.getStatus( ) ) ) {
           if(!( response.getMessage( ) instanceof GetKeysResponseType )) {
-            LOG.info( EventRecord.here( response.getMessage( ).getClass(), EventType.MSG_SENT, LogUtil.dumpObject( response.getMessage( ) ) ) );
+            EventRecord.here( response.getMessage( ).getClass(), EventType.MSG_SENT, LogUtil.dumpObject( response.getMessage( ) ) ).info( );
           }
           this.upstreamMessage( ctx, ( MessageEvent ) e );
         } else {
@@ -181,7 +181,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   
   @Override
   public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
-    LOG.trace( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_SERVICED, e.toString( ) ) );
+    EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_SERVICED, e.toString( ) ).trace( );
     super.writeComplete( ctx, e );
   }
     

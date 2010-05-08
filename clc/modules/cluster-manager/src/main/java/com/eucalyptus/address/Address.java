@@ -229,12 +229,12 @@ public class Address implements HasName {
   
   private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, SplitTransition transition ) {
     this.transition = transition;
-    LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), this.toString( ) ) );
+    EventRecord.caller( this.getClass( ), this.state.getReference( ), this.toString( ) ).debug( );
     if ( !this.state.compareAndSet( expectedState, newState, expectedMark, newMark ) ) {
       throw new IllegalStateException( String.format( "Cannot mark address as %s[%s.%s->%s.%s] when it is %s.%s: %s", transition.getName( ), expectedState,
                                                       expectedMark, newState, newMark, this.state.getReference( ), this.state.isMarked( ), this.toString( ) ) );
     }
-    LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), "TOP", this.transition.getName( ).name( ), this.toString( ) ) );
+    EventRecord.caller( this.getClass( ), this.state.getReference( ), "TOP", this.transition.getName( ).name( ), this.toString( ) ).debug( );
     this.transition.top( );
     return true;
   }
@@ -341,7 +341,7 @@ public class Address implements HasName {
     if ( !this.state.isMarked( ) ) {
       throw new IllegalStateException( "Trying to clear an address which is not currently pending." );
     } else {
-      LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), "BOTTOM", this.transition.getName( ).name( ), this.toString( ) ) );
+      EventRecord.caller( this.getClass( ), this.state.getReference( ), "BOTTOM", this.transition.getName( ).name( ), this.toString( ) ).debug( );
       try {
         this.transition.bottom( );
       } finally {
