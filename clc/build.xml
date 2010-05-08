@@ -104,6 +104,7 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
 		<ant dir="modules/www" inheritall="false" target="builder" />
+	  <ant dir="modules/vmware-broker" inheritall="false" target="install" />
 		<ant dir="." inheritall="false" target="jar" />
 	</target>
 	<target name="jar" depends="bind">
@@ -125,6 +126,7 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="jar" />
 		<ant dir="modules/dns" inheritall="false" target="jar" />
 		<ant dir="modules/www" inheritall="false" target="jar" />
+    <ant dir="modules/vmware-broker" inheritall="false" target="install" />
 	</target>
 	<target name="shouldBind">
 		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
@@ -173,6 +175,7 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
 		<ant dir="modules/dns" inheritall="false" target="clean" />
 		<ant dir="modules/www" inheritall="false" target="clean" />
+	  <ant dir="modules/vmware-broker" inheritall="false" target="install" />
 		<delete dir="${target.dir}" />
 	</target>
 	<target name="distclean" depends="clean">
