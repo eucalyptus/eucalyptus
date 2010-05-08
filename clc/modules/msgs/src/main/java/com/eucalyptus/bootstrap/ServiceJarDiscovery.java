@@ -37,6 +37,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             try {
               ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
               discovery.add( discover );
+              EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, discovery.getClass( ).getCanonicalName( ) );
             } catch ( Exception e ) {
               LOG.fatal( e, e );
               throw new RuntimeException( e );
