@@ -1,4 +1,4 @@
-package edu.ucsb.eucalyptus.msgs;
+package com.eucalyptus.records;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -6,9 +6,9 @@ import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.records.Recorder;
 import com.eucalyptus.system.LogLevels;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class EventRecord extends EucalyptusMessage {
   private static Logger            LOG   = Logger.getLogger( EventRecord.class );
