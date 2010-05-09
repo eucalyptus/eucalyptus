@@ -80,7 +80,7 @@ import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 
 public class ReplyQueue {
@@ -168,15 +168,15 @@ public class ReplyQueue {
     return errMsg;
   }
 
-  private EucalyptusMessage parsePayload( Object payload ) throws Exception {
-    if ( payload instanceof EucalyptusMessage ) {
-      return ( EucalyptusMessage ) payload;
+  private BaseMessage parsePayload( Object payload ) throws Exception {
+    if ( payload instanceof BaseMessage ) {
+      return ( BaseMessage ) payload;
     } else if ( payload instanceof VmAllocationInfo ) {
       return ( ( VmAllocationInfo ) payload ).getRequest( );
     } else if ( !( payload instanceof String ) ) {
       return new EucalyptusErrorMessageType( "ReplyQueue", LogUtil.dumpObject( payload ) );
     } else {
-      return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
+      return ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
     }
   }
 

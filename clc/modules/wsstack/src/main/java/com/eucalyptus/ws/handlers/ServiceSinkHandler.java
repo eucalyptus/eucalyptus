@@ -101,6 +101,7 @@ import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.NioMessageReceiver;
@@ -108,8 +109,6 @@ import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
