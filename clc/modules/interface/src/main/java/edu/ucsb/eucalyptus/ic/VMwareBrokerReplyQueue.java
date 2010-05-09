@@ -38,7 +38,7 @@ import org.apache.log4j.Logger;
 import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.util.ReplyCoordinator;
 
 public class VMwareBrokerReplyQueue {
@@ -47,7 +47,7 @@ public class VMwareBrokerReplyQueue {
 
     private static ReplyCoordinator replies = new ReplyCoordinator( 3600000 );
 
-    public void handle( EucalyptusMessage msg )
+    public void handle( BaseMessage msg )
     {
         replies.putMessage( msg );
     }
@@ -58,9 +58,9 @@ public class VMwareBrokerReplyQueue {
         {
             Object requestMsg = muleMsg.getPayload();
             String requestString = requestMsg.toString();
-            EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
+            BaseMessage msg = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
             Throwable ex = muleMsg.getException().getCause();
-            EucalyptusMessage errMsg;
+            BaseMessage errMsg;
             errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());
             replies.putMessage( errMsg );
         }
@@ -70,9 +70,9 @@ public class VMwareBrokerReplyQueue {
         }
     }
 
-    public static EucalyptusMessage getReply( String msgId )
+    public static BaseMessage getReply( String msgId )
     {
-        EucalyptusMessage msg = null;
+        BaseMessage msg = null;
         msg = replies.getMessage( msgId );
         LOG.info( "vmware broker got reply to: " + msgId);
         return msg;
