@@ -127,6 +127,7 @@ usage () {
 	echo "   --list-clusters                  			list registered CCs"
 	echo "   --list-nodes                     			list registered NCs"
 	echo "   --list-scs                       			list registered SCs"
+	echo "   --list-vmwarebrokers					list registered VMwareBrokers"
 	echo "   --no-sync                        			used only with --register-* to skip syncing keys"
 	echo "   --cc-port <port>                 			set CC port"
 	echo "   --nc-port <port>                 			set NC port"
@@ -410,7 +411,12 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "--verbose" ]; then 
+	if [ "$1" = "--list-vmwarebrokers" ]; then 
+	    LIST="$LIST vmwarebrokers"
+	    shift
+	    continue
+	fi
+if [ "$1" = "--verbose" ]; then 
 	    VERBOSE="Y"
 	    shift
 	    continue
@@ -1557,6 +1563,18 @@ for x in $LIST ; do
 		fi
 		if [ -n "$LIST_RES" ]; then
 			echo "registered nodes:"
+		fi
+		echo "$LIST_RES"
+	fi
+	if [ "$x" = "vmwarebrokers" ]; then
+		if ! createCloudURL "Action" "DescribeVMwareBrokers" ; then
+			exit 1
+		fi
+		if ! check_ws "$URL" LIST_RES ; then
+			exit 1
+		fi
+		if [ -n "$LIST_RES" ]; then
+			echo "registered vmware brokers:"
 		fi
 		echo "$LIST_RES"
 	fi
