@@ -185,9 +185,12 @@ public class WalrusUtil {
 		}
 		boolean found = false;
 
-		for( X509Certificate x : user.getAllX509Certificates( ) ) {
-		  if( ( found |= ImageUtil.verifyManifestSignature( signature, x, machineConfiguration + image ) ) ) {
-		    break;
+		List<X509Certificate> allX509Certificates = user.getAllX509Certificates( );
+		if ( allX509Certificates != null ) {
+		  for( X509Certificate x : allX509Certificates ) {
+		    if( ( found |= ImageUtil.verifyManifestSignature( signature, x, machineConfiguration + image ) ) ) {
+		      break;
+		    }
 		  }
 		}
 		if ( !found ) throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature." );

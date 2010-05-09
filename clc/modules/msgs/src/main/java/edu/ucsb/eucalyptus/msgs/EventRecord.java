@@ -32,7 +32,8 @@ public class EventRecord extends EucalyptusMessage {
     this.others.add( other );
     if ( LogLevels.DEBUG ) {
       StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[distance];
-      this.logger = ste.getClassName( );
+      if ( ste != null )
+        this.logger = ste.getClassName( );
       if ( ste != null && ste.getFileName( ) != null ) {
         this.caller = String.format( "%s.%s.%s", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
       } else {

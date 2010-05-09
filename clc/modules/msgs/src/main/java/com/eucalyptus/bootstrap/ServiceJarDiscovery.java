@@ -39,6 +39,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
               discovery.add( discover );
             } catch ( Exception e ) {
               LOG.fatal( e, e );
+              jar.close();
               throw new RuntimeException( e );
             }
           }
@@ -47,6 +48,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         }
       }
     }
+    jar.close();
   }
   
   public static void checkUniqueness( Class c ) {

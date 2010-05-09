@@ -241,7 +241,9 @@ public class ClusterAllocator extends Thread {
     } catch ( NoSuchTokenException e ) {
       cb = makeRunRequest( request, token, rsvId, token.getInstanceIds( ), imgInfo, keyInfo, vmInfo, vlan, networkNames, networkIndexes, addresses, userData );
     }
-    this.messages.addRequest( State.CREATE_VMS, cb );
+    if ( cb != null ) {
+      this.messages.addRequest( State.CREATE_VMS, cb );
+    }
   }
   
   private QueuedEventCallback makeRunRequest( RunInstancesType request, ResourceToken childToken, String rsvId, List<String> instanceIds, VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, Integer vlan, List<String> networkNames, List<String> netIndexes, final List<String> addrList, String userData ) {
