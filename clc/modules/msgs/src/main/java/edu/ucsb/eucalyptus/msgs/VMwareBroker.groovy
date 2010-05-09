@@ -41,7 +41,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 // parent to all requests/replies used by VMwareBroker/NC,
 // which inherit correlationId and userId from EucalyptusMessage
 
-public class VMwareBrokerRequestType extends EucalyptusMessage {
+public class VMwareBrokerRequestType extends BaseMessage {
 	String nodeName;
 
   	@Override
@@ -56,7 +56,7 @@ public class VMwareBrokerRequestType extends EucalyptusMessage {
     }
 }
 
-public class VMwareBrokerResponseType extends EucalyptusMessage {
+public class VMwareBrokerResponseType extends BaseMessage {
 
 	public static final String STATUS_MSG_NOT_SUPPORTED = "method not supported";
 	public static final String STATUS_MSG_SUCCESS = "method succeeded";

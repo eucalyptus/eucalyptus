@@ -34,7 +34,11 @@
 <binding force-classes="true">
   <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
 
-  <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true">
+  <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage"/>
+  </mapping>
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
     <value name="correlationId" field="correlationId" usage="optional" />
     <value name="userId" field="userId" usage="optional" />
     <value name="statusMessage" field="statusMessage" usage="optional" />
