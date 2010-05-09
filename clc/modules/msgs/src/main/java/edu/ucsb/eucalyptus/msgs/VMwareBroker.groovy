@@ -39,7 +39,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
  */
 
 // parent to all requests/replies used by VMwareBroker/NC,
-// which inherit correlationId and userId from EucalyptusMessage
+// which inherit correlationId and userId from BaseMessage
 
 public class VMwareBrokerRequestType extends BaseMessage {
 	String nodeName;
