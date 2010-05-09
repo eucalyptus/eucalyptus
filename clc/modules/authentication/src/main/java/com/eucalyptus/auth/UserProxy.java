@@ -235,7 +235,8 @@ public class UserProxy implements User {
 
   @Override
   public boolean checkToken( String testToken ) {
-    boolean ret = this.user.getToken( ).equals( testToken );
+    String token = this.user.getToken( );
+	boolean ret = token.equals( testToken );
     try {
       Transactions.one( this.searchUser, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
