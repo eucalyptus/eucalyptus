@@ -134,7 +134,7 @@ public class EucalyptusManagement {
 	  for( User u : Users.listAllUsers( ) ) {
       try {
         UserInfo userInfo = dbWrapper.getUnique( new UserInfo( u.getName( ) ) );
-        webUsersList.add( Composites.composeNew( UserInfoWeb.class, userInfo, u.getDelegate( ) ) );
+        webUsersList.add( Composites.composeNew( UserInfoWeb.class, userInfo, u ) );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
@@ -173,7 +173,7 @@ public class EucalyptusManagement {
     try {
       UserInfo userInfo = dbWrapper.getUnique( ex );
       User user = Users.lookupUser( userInfo.getUserName( ) );
-      UserInfoWeb webUser = Composites.composeNew( UserInfoWeb.class, userInfo, user.getDelegate( ) );
+      UserInfoWeb webUser = Composites.composeNew( UserInfoWeb.class, userInfo, user );
       dbWrapper.commit( );
       return webUser;
     } catch ( EucalyptusCloudException e ) {
@@ -272,7 +272,7 @@ public class EucalyptusManagement {
         UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
         LOG.debug("---------------> project ");
         LOG.debug("webUser.enabled = " + webUser.isEnabled());
-        Composites.project( webUser, userInfo, user.getDelegate( ) );
+        Composites.project( webUser, userInfo, user );
         dbWrapper.commit( );
       } catch ( EucalyptusCloudException e1 ) {
         dbWrapper.rollback( );
@@ -544,7 +544,7 @@ public class EucalyptusManagement {
 		for (User user : Users.listAllUsers()) {
 			try {
 				UserInfo userInfo = dbWrapper.getUnique(new UserInfo(user.getName()));
-				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, user.getDelegate()));
+				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, user));
 			} catch ( Exception e ) {
 				LOG.debug( e, e );
 			}
@@ -579,7 +579,7 @@ public class EucalyptusManagement {
 		for (User user : getGroupDefaultUsers()) {
 			try {
 				UserInfo userInfo = dbWrapper.getUnique(new UserInfo(user.getName()));
-				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, user.getDelegate()));
+				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, user));
 			} catch ( Exception e ) {
 				LOG.debug( e, e );
 			}
@@ -665,7 +665,7 @@ public class EucalyptusManagement {
 			User u = (User) users.nextElement();
 			try {
 				UserInfo userInfo = dbWrapper.getUnique(new UserInfo(u.getName()));
-				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, u.getDelegate()));
+				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, u));
 			} catch ( Exception e ) {
 				LOG.debug( e, e );
 			}
