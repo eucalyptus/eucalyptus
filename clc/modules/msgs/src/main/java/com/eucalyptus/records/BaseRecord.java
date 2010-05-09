@@ -2,6 +2,7 @@ package com.eucalyptus.records;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
@@ -42,7 +43,7 @@ public class BaseRecord implements Serializable, Record {
   @Column( name = "record_id" )
   String                      id;
   @Column( name = "record_timestamp" )
-  private Long                timestamp;
+  private Date                timestamp;
   @Column( name = "record_type" )
   @Enumerated( EnumType.STRING )
   private EventType           type;
@@ -81,7 +82,7 @@ public class BaseRecord implements Serializable, Record {
     this.codeLocation = codeLocation.toString( );
     this.userId = userId;
     this.correlationId = correlationId;
-    this.timestamp = TimeUnit.MILLISECONDS.convert( System.nanoTime( ), TimeUnit.NANOSECONDS );
+    this.timestamp = new Date();
     this.extra = other;
   }
   
@@ -213,7 +214,7 @@ public class BaseRecord implements Serializable, Record {
   }
   
   private String leadIn( ) {
-    return lead == null ? ( lead = String.format( ":%010d:%s:%s:%s:%s:", this.getTimestamp( ), this.getCreator( ),
+    return lead == null ? ( lead = String.format( ":%010d:%s:%s:%s:%s:", this.getTimestamp( ).getTime( ), this.getCreator( ),
                                                   ( ( this.correlationId != null ) ? this.correlationId : "" ), ( ( this.userId != null ) ? this.userId : "" ),
                                                   this.type ) ) : lead;
   }
@@ -238,14 +239,15 @@ public class BaseRecord implements Serializable, Record {
     this.id = id;
   }
   
-  public Long getTimestamp( ) {
+  
+  public Date getTimestamp( ) {
     return this.timestamp;
   }
-  
-  public void setTimestamp( Long timestamp ) {
+
+  public void setTimestamp( Date timestamp ) {
     this.timestamp = timestamp;
   }
-  
+
   public EventType getType( ) {
     return this.type;
   }

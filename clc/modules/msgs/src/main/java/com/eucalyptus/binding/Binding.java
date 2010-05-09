@@ -66,22 +66,15 @@ package com.eucalyptus.binding;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 import org.apache.axiom.om.OMDataSource;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.om.OMNamespace;
-import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axiom.om.ds.InputStreamDataSource;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.soap.SOAPEnvelope;
@@ -94,10 +87,8 @@ import org.apache.log4j.Logger;
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallable;
-import org.jibx.runtime.IMarshaller;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.IXMLReader;
-import org.jibx.runtime.IXMLWriter;
 import org.jibx.runtime.JiBXException;
 import org.jibx.runtime.impl.StAXReaderWrapper;
 import org.jibx.runtime.impl.StAXWriter;
@@ -116,6 +107,14 @@ public class Binding {
     this.name = name;
   }
   
+  public Class getElementClass( String elementName ) throws BindingException {
+    if( !this.elementToClassMap.containsKey( elementName ) ) {
+      BindingException ex = new BindingException( "Failed to find corresponding class mapping for element: " + elementName + " in namespace: " + this.name );
+      LOG.error( ex, ex );
+      throw ex;
+    }
+    return this.elementToClassMap.get( elementName );
+  }
   public IBindingFactory seed( final Class seed ) throws BindingException {
     try {
       this.bindingFactory = BindingDirectory.getFactory( this.name, seed );
@@ -124,7 +123,7 @@ public class Binding {
         if ( bindingFactory.getElementNames( )[i] != null ) {
           try {
             elementToClassMap.put( bindingFactory.getElementNames( )[i], ClassLoader.getSystemClassLoader().loadClass( mappedClasses[i] ) );
-            LOG.trace( "Caching binding for " + this.name + " on element " + bindingFactory.getElementNames( )[i] + " to class " + mappedClasses[i] );
+//            LOG.trace( "Caching binding for " + this.name + " on element " + bindingFactory.getElementNames( )[i] + " to class " + mappedClasses[i] );
           } catch ( ClassNotFoundException e ) {
             LOG.trace( e, e );
           }
