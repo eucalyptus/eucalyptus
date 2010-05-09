@@ -115,12 +115,12 @@ public class LdapBootstrapper extends Bootstrapper implements DatabaseBootstrapp
   
   @Override
   public boolean check( ) {
-    return false;
+    return true;
   }
   
   @Override
   public boolean destroy( ) throws Exception {
-    return false;
+    return true;
   }
   
   @Override

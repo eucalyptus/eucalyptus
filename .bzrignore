@@ -25,7 +25,6 @@ clc/modules/walrus/build
 clc/modules/wsstack/build
 clc/modules/www/build
 clc/modules/www/build-war
-
 Makedefs
 config.log
 config.status

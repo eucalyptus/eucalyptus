@@ -10,7 +10,9 @@ public class EventRecord extends EucalyptusMessage {
   
   private static Record create( final Class component, final EventType eventName, final String other, int dist ) {
     EucalyptusMessage msg = tryForMessage( );
-    return new LogFileRecord( eventName, component, Thread.currentThread( ).getStackTrace( )[dist+3], msg.getUserId( ), msg.getCorrelationId( ), other );
+    StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
+    StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
+    return new LogFileRecord( eventName, component, ste, msg.getUserId( ), msg.getCorrelationId( ), other );
   }
 
   public static Record here( final Class component, final EventType eventName, final String... other ) {
@@ -21,7 +23,7 @@ public class EventRecord extends EucalyptusMessage {
     return create( component, eventName, getMessageString( other ), 2 );
   }
   
-  private static String getMessageString( final Object... other ) {
+  private static String getMessageString( final Object[] other ) {
     StringBuffer last = new StringBuffer( );
     for ( Object x : other ) {
       last.append( ":" ).append( x.toString( ) );
