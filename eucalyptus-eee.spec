@@ -41,8 +41,8 @@ License:       Eucalyptus EEE Software License
 Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Requires:      %{euca_build_req}
-Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-eee-%{version}.tar.gz
-URL:           http://open.eucalyptus.com
+Source:        %{name}-%{version}.tar.gz
+URL:           http://www.eucalyptus.com
 
 %description
 EUCALYPTUS is a service overlay that implements elastic computing
@@ -57,7 +57,7 @@ them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus-eee = 1.0, %{euca_java}, lvm2
+Requires:     %{name} = %{version}, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description common-java
@@ -70,7 +70,7 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-eee-common-java = 1.0, %{euca_java}, lvm2
+Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description walrus
@@ -85,7 +85,11 @@ cloud controller.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-eee-common-java = 1.0, %{euca_java}, lvm2, vblade
+%if %is_centos
+Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade, scsi-target-utils
+%else
+Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade
+%endif
 Group:        Applications/System
 
 %description sc
@@ -100,7 +104,7 @@ alongside the cluster-controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-eee-common-java = 1.0, %{euca_java}, lvm2
+Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -115,7 +119,7 @@ the cloud clients.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus-eee = 1.0, eucalyptus-eee-gl = 1.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
+Requires:     %{name} = %{version}, %{name}-gl = %{version}, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
 Group:        Applications/System
 
 %description cc
@@ -129,7 +133,7 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus-eee = 1.0, eucalyptus-eee-gl = 1.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
+Requires:     %{name} = %{version}, %{name}-gl = %{version}, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
 Group:        Applications/System
 
 %description nc
@@ -143,7 +147,7 @@ components that handles the instances.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus-eee = 1.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Requires:     %{name} = %{version}, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Group:        Applications/System
 
 %description gl
@@ -156,7 +160,7 @@ This package contains the internal log service of eucalyptus.
 
 %package broker
 Summary:      Elastic Utility Computing Architecture - vmware broker
-Requires:     eucalyptus-eee-common-java = 1.0, %{euca_java}
+Requires:     %{name}-common-java = %{version}, %{euca_java}
 Group:        Applications/System
 
 %description broker
@@ -169,7 +173,7 @@ This package contains broker needed to let EUCALYPTUS control a vmware
 installation.
 
 %prep
-%setup -n eucalyptus-eee-%{version}
+%setup -n %{name}-%{version}
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
@@ -187,7 +191,7 @@ make install
 export DESTDIR=$RPM_BUILD_ROOT
 make uninstall
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
-rm -rf $RPM_BUILD_DIR/eucalyptus-eee-%{version}
+rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
@@ -395,7 +399,7 @@ fi
 /usr/sbin/euca_conf --enable walrus
 
 %post sc
-/usr/bin/killall -9 vblade
+#/usr/bin/killall -9 vblade
 /usr/sbin/euca_conf --enable sc
 
 %post cc
