@@ -10,9 +10,7 @@ public class CompositeHelper<T> {
   public CompositeHelper( Class<T> destType, List<Class> sources ) {
     this.destType = destType;
     this.sourceTypes = sources;
-    destType.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each{ 
-      vars[it.name]=it
-    }
+    this.vars = makeProps( destType );
     def check=vars.clone()
     sources.each{ src -> 
       src.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each {  f ->
@@ -22,27 +20,41 @@ public class CompositeHelper<T> {
     check.each{ k,v -> LOG.debug( "WARNING: the field ${destType.class.name}.${k} will not be set since it is not defined in any of ${args}" ); }    
   }
   
+  def makeProps( arg ) {
+    def type = arg;
+    def props = [:]
+    if( !arg.respondsTo( "getDelegate", null ).isEmpty() ) {
+      type = type.getDelegate();
+    }
+    type.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each{ 
+      props[it.name]=it
+    }
+    return props;
+  }
+  
   public T compose( T dest, Object... args ) {
-    def props = vars.clone();
+    def destProps = vars.clone();
     args.each{ src ->
-      src.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each {
-        if( props.containsKey( it.name ) ) {
+      def srcProps = makeProps( src );
+      srcProps.each {
+        if( destProps.containsKey( it.name ) ) {
           LOG.debug("${src.class.simpleName}.${it.name} as ${dest.class.simpleName}.${it.name}=${src[it.name]}");
           dest[it.name]=src[it.name];
-          props.remove(it.name);
+          destProps.remove(it.name);
         } else {
           LOG.trace("WARNING: Ignoring ${src.class.name}.${it.name} as it is not in the destination type.");
         }
       }
     }
-    dest.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each { LOG.debug("${dest.class.simpleName}.${it.name} = ${dest[it.name]}"); }
+    destProps.each { LOG.debug("${dest.class.simpleName}.${it.name} = ${dest[it.name]}"); }
     return dest;
   }
   
   public List<Object> project( T source, Object... args ) {
+    def srcProps = makeProps( source );
     args.each{ dest ->
-      def props = dest.metaClass.properties.collect{ p -> p.name };
-      source.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class"&&props.contains(it.name)&&source[it.name]!=null }.each { sourceField -> 
+      def destProps = makeProps( dest ).collect{ p -> p.name }
+      srcProps.findAll{ destProps.contains(it.name)&&source[it.name]!=null }.each { sourceField -> 
         LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
         dest[sourceField.name]=source[sourceField.name];
       }
@@ -51,8 +63,9 @@ public class CompositeHelper<T> {
   }
   
   public static Object update( Object source, Object dest ) {
-    def props = dest.metaClass.properties.collect{ p -> p.name };
-    source.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class"&&props.contains(it.name)&&source[it.name]!=null }.each{ sourceField ->
+    def destProps = makeProps( dest ).collect{ p -> p.name };
+    def srcProps = makeProps( source );
+    srcProps.findAll{ destProps.contains(it.name)&&source[it.name]!=null }.each{ sourceField ->
       LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
       dest[sourceField.name]=source[sourceField.name];
     }
@@ -60,8 +73,9 @@ public class CompositeHelper<T> {
   }
   
   public static Object updateNulls( Object source, Object dest ) {
-    def props = dest.metaClass.properties.collect{ p -> p.name };
-    source.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class"&&props.contains(it.name) }.each{ sourceField ->
+    def destProps = makeProps( dest ).collect{ p -> p.name };
+    def srcProps = makeProps( source );
+    srcProps.findAll{ destProps.contains(it.name) }.each{ sourceField ->
       LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
       dest[sourceField.name]=source[sourceField.name];
     }

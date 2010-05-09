@@ -144,15 +144,15 @@
 
 	<property name="servlet.dir" value="${euca.var.dir}/webapps" />
 	<target name="install">
-    <copy todir="${DESTDIR}${euca.conf.dir}">
+    <copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">
       <fileset dir="conf">
         <include name="**/*" />
       </fileset>
     </copy>
-    <copy todir="${DESTDIR}${euca.lib.dir}">
+    <copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
       <fileset file="${jar.file}" />
     </copy>
-		<copy file="${gwt.war}" todir="${DESTDIR}${servlet.dir}" />
+		<copy overwrite="true" file="${gwt.war}" todir="${DESTDIR}${servlet.dir}" />
 	</target>
 
 

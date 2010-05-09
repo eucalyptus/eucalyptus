@@ -66,7 +66,7 @@ package com.eucalyptus.system;
 import java.io.File;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 
 public enum SubDirectory {
@@ -101,7 +101,15 @@ public enum SubDirectory {
   public void check( ) {
     final File dir = new File( this.toString( ) );
     if ( dir.exists( ) ) { return; }
-    LOG.info( EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ) );
+    EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ).info( );
     dir.mkdirs( );
+  }
+  
+  public String getChildPath( String... args ) {
+    String ret = this.toString( );
+    for( String s : args ) {
+      ret += File.separator + s;
+    }
+    return ret;
   }
 }

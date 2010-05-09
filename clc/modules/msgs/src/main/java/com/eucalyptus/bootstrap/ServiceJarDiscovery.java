@@ -13,7 +13,7 @@ import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
   private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );

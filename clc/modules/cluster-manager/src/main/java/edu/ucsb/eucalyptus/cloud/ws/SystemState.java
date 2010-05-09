@@ -102,7 +102,7 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
@@ -207,10 +207,10 @@ public class SystemState {
         if ( address != null ) {
           try {
             if ( address.isSystemOwned( ) ) {
-              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ) );
+              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
               Addresses.release( address );
             } else {
-              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ) );
+              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
               AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
@@ -223,7 +223,7 @@ public class SystemState {
             Network net = Networks.getInstance( ).lookup( networkFqName );
             if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
               net.returnNetworkIndex( networkIndex );
-              LOG.debug( EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ) );
+              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ).debug( );
             }
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
               StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getName( ), net.getNetworkName( ),

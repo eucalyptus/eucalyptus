@@ -1,0 +1,21 @@
+package com.eucalyptus.records;
+
+public enum EventClass {
+  MESSAGE,
+  QUEUE,
+  VM,
+  SOCKET,
+  PIPELINE,
+  LISTENER,
+  TOKEN,
+  COMPONENT,
+  CLUSTER,
+  CONTEXT,
+  PROVIDER,
+  BOOTSTRAP,
+  BOOTSTRAPPER,
+  DISCOVERY,
+  BINDING,
+  LIFECYCLE,
+  ORPHAN
+}

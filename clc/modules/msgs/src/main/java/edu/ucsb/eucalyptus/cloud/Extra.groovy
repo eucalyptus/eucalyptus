@@ -362,7 +362,7 @@ public class Network implements HasName {
       this.availableNetworkIndexes.remove( index );
     } else {
       if( !this.assignedNetworkIndexes.contains( index ) && this.availableNetworkIndexes.remove( index ) ) {
-        LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_ALLOCATED, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
+        EventRecord.caller( this.getClass( ), EventType.TOKEN_ALLOCATED, "network=${this.name}","cluster=${cluster}","networkIndex=${index}").debug( );
         this.assignedNetworkIndexes.add( index );
         NetworkToken token = this.getClusterToken( cluster );
         token.indexes.add( index );
@@ -394,11 +394,11 @@ public class Network implements HasName {
   public Integer allocateNetworkIndex( String cluster ) {
     Integer nextIndex = this.availableNetworkIndexes.pollFirst( );
     if( nextIndex == null ) { 
-      LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+      EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}").debug( );
     } else {
       this.assignedNetworkIndexes.add( nextIndex );
       this.getClusterToken( cluster )?.getIndexes().add( nextIndex );
-      LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+      EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}").debug( );
     }
     return nextIndex;
   }
@@ -409,7 +409,7 @@ public class Network implements HasName {
   }
   
   public void returnNetworkIndex( Integer index ) {
-    LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_RETURNED, "network=${this.name}","networkIndex=${index}") );
+    EventRecord.caller( this.getClass( ), EventType.TOKEN_RETURNED, "network=${this.name}","networkIndex=${index}").debug( );
     this.assignedNetworkIndexes.remove( index );
     this.clusterTokens.values().each { 
       it.getIndexes().remove( index );

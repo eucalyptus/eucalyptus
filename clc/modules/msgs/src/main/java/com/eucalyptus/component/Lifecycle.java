@@ -6,7 +6,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Lifecycles.State;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Transition;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 /**
  * @author decker

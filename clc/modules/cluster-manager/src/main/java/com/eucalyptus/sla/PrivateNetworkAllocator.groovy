@@ -11,7 +11,7 @@ import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import org.apache.log4j.Logger;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class PrivateNetworkAllocator implements ResourceAllocator {
   private static Logger LOG = Logger.getLogger( PrivateNetworkAllocator.class );

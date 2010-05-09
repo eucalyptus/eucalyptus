@@ -84,7 +84,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 import com.eucalyptus.bootstrap.Component;
 
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class NioBootstrap extends Bootstrap {
   

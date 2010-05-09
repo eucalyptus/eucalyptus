@@ -65,7 +65,7 @@ package com.eucalyptus.system;
 import java.io.File;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public enum BaseDirectory {
   HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LIB( "euca.lib.dir" ), LOG( "euca.log.dir" );
@@ -96,7 +96,14 @@ public enum BaseDirectory {
     if ( dir.exists( ) ) {
       return;
     }
-    LOGG.info( EventRecord.here( BaseDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ) );
+    EventRecord.here( BaseDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ).info( );
     dir.mkdirs( );
+  }
+  public String getChildPath( String... args ) {
+    String ret = this.toString( );
+    for( String s : args ) {
+      ret += File.separator + s;
+    }
+    return ret;
   }
 }
