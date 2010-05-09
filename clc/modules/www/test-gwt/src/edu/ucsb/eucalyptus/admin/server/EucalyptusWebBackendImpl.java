@@ -95,6 +95,11 @@ import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
  */
 public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements EucalyptusWebBackend {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
 	static UserInfoWeb adminUser = new UserInfoWeb();
 	static Map<String, UserInfoWeb> users = new HashMap<String, UserInfoWeb>();
 	static Map<String, GroupInfoWeb> groups = new HashMap<String, GroupInfoWeb>();

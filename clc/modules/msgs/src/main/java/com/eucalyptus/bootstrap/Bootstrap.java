@@ -252,7 +252,7 @@ public class Bootstrap {
     Lifecycles.State.PRIMORDIAL.to( Lifecycles.State.INITIALIZED, new Committor<Component>( ) {
       @Override
       public void commit( Component comp ) throws Exception {
-        if( comp.isSingleton( ) && comp.isLocal( ) ) {
+        if( comp.isSingleton( ) && ( comp.isLocal( ) || comp.getPeer().equals(com.eucalyptus.bootstrap.Component.dns) ) ) {
           comp.buildService( );
         }
       }
