@@ -63,12 +63,8 @@ public class UserGroupUtils {
 	}
 	
 	public static List<String> removeSpecialGroups(List<String> groupNames) {
-		List<String> result = new ArrayList<String>();
-		for (String groupName : groupNames) {
-			if (!isSpecialGroup(groupName)) {
-				result.add(groupName);
-			}
-		}
+		List<String> result = new ArrayList<String>(groupNames);
+		result.remove(UserGroupControl.GROUP_ALL);
 		return result;
 	}
 	

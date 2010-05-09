@@ -484,122 +484,6 @@ public class EucalyptusManagement {
 		}
 		return zones;
 	}
-	
-	///////////////////////////////////////////////////////////////////////////
-	// APIs for handling special groups "all" and "default".
-	// TODO (wenye): should be removed once the correct implementation is done.
-	///////////////////////////////////////////////////////////////////////////
-//	private static GroupInfoWeb getGroupAll() {
-//		GroupInfoWeb gi = new GroupInfoWeb();
-//		gi.name = GROUP_ALL;
-//		gi.zones = new ArrayList<String>();
-//		return gi;
-//	}
-	
-//	private static GroupInfoWeb getGroupDefault() {
-//		GroupInfoWeb gi = new GroupInfoWeb();
-//		gi.name = GROUP_DEFAULT;
-//		gi.zones = new ArrayList<String>();
-//		return gi;
-//	}
-	
-//	private static void tryAddingSpecialGroups(List<GroupInfoWeb> groups) {
-//		boolean hasAll = false;
-//		boolean hasDefault = false;
-//		for (GroupInfoWeb gi : groups) {
-//			if (gi.name.equals(GROUP_ALL)) {
-//				hasAll = true;
-//			} else if (gi.name.equals(GROUP_DEFAULT)) {
-//				hasDefault = true;
-//			}
-//		}
-//		if (!hasAll) {
-//			groups.add(getGroupAll());
-//		}
-//		if (!hasDefault) {
-//			groups.add(getGroupDefault());
-//		}
-//	}
-	
-//	private static GroupInfoWeb tryFindingSpecialGroup(String name) {
-//		if (GROUP_ALL.equals(name)) {
-//			try {
-//				Groups.lookupGroup(name);
-//			} catch (NoSuchGroupException nge) {
-//				return getGroupAll();
-//			}
-//		} else if (GROUP_DEFAULT.equals(name)) {
-//			try {
-//				Groups.lookupGroup(name);
-//			} catch (NoSuchGroupException nge) {
-//				return getGroupDefault();
-//			}
-//		}
-//		return null;
-//	}
-	
-	private static List<UserInfoWeb> getGroupAllMembers() {
-		final List<UserInfoWeb> uis = new ArrayList<UserInfoWeb>();
-		final EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get(UserInfo.class);
-		for (User user : Users.listAllUsers()) {
-			try {
-				UserInfo userInfo = dbWrapper.getUnique(new UserInfo(user.getName()));
-				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, user));
-			} catch ( Exception e ) {
-				LOG.debug( e, e );
-			}
-		}
-		dbWrapper.commit();
-		return uis;
-	}
-	
-	private static boolean isGroupDefaultUser(User user) {
-		for (Group group : Groups.lookupUserGroups(user)) {
-			String groupName = group.getName();
-			if (!groupName.equals(Groups.ALL) && !groupName.equals(Groups.DEFAULT)) {
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	private static List<User> getGroupDefaultUsers() {
-		List<User> defaultUsers = new ArrayList<User>();
-		for (User user : Users.listAllUsers()) {
-			if (isGroupDefaultUser(user)) {
-				defaultUsers.add(user);
-			}
-		}
-		return defaultUsers;
-	}
-	
-	private static List<UserInfoWeb> getGroupDefaultMembers() {
-		final List<UserInfoWeb> uis = new ArrayList<UserInfoWeb>();
-		final EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get(UserInfo.class);
-		for (User user : getGroupDefaultUsers()) {
-			try {
-				UserInfo userInfo = dbWrapper.getUnique(new UserInfo(user.getName()));
-				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, user));
-			} catch ( Exception e ) {
-				LOG.debug( e, e );
-			}
-		}
-		dbWrapper.commit();
-		return uis;
-	}
-	
-	// END of special APIs
-	///////////////////////////////////////////////////////////////////////////
-	
-//	private static List<String> removeSpecialGroups(List<String> groupNames) {
-//		List<String> result = new ArrayList<String>();
-//		for (String groupName : groupNames) {
-//			if (!GROUP_ALL.equals(groupName) && !GROUP_DEFAULT.equals(groupName)) {
-//				result.add(groupName);
-//			}
-//		}
-//		return result;
-//	}
 
 	public static List<GroupInfoWeb> getAllGroups() {
 		List<GroupInfoWeb> result = new ArrayList<GroupInfoWeb>();
@@ -612,23 +496,10 @@ public class EucalyptusManagement {
 				result.add(gi);
 			}
 		}
-		/**
-		 * Manually add the "all" and "default" groups if they are not present.
-		 * TODO (wenye): Remove the logic when the correct semantics are implemented.
-		 */
-//grze: see Groups.{ALL,DEFAULT,RESTRICTED_GROUPS}		tryAddingSpecialGroups(result);
 		return result;
 	}
 	
 	public static GroupInfoWeb getGroup(String name) {
-		/**
-		 * Manually return the "all" and "default" groups if they are not present.
-		 * TODO (wenye): Remove the logic when the correct semantics are implemented.
-		 */
-//		GroupInfoWeb special = tryFindingSpecialGroup(name);
-//		if (special != null) {
-//			return special;
-//		}
 		try {
 			Group group = Groups.lookupGroup(name);
 			GroupInfoWeb gi = new GroupInfoWeb();
@@ -642,15 +513,6 @@ public class EucalyptusManagement {
 	}
 	
 	public static List<UserInfoWeb> getGroupMembers(String groupName) {
-		/**
-		 * Manually return the "all" and "default" group members.
-		 * TODO (wenye): Remove the logic when the correct semantics are implemented.
-		 */
-//		if (GROUP_ALL.equals(groupName)) {
-//			return getGroupAllMembers();
-//		} else if (GROUP_DEFAULT.equals(groupName)) {
-//			return getGroupDefaultMembers();
-//		}
 		final List<UserInfoWeb> uis = new ArrayList<UserInfoWeb>();
 		Group group = null;
 		try {
@@ -680,17 +542,11 @@ public class EucalyptusManagement {
 		for (Group group : groups) {
 			groupNames.add(group.getName());
 		}
-//grze: is this still needed?  Alternative is:
-//		return removeSpecialGroups(groupNames);
 		return groupNames;
 	}
 	
 	public static void addGroup(GroupInfoWeb gi) throws Exception {
 	  Groups.checkNotRestricted( gi.getName( ) );
-//grze: see above call 
-//		if (GROUP_ALL.equals(gi.name) || GROUP_DEFAULT.equals(gi.name)) {
-//			throw new Exception("Group name cannot be 'all' or 'default'");
-//		}
 		Group group = Groups.addGroup(gi.name);
 		for (String zone : gi.zones) {
 			group.addAuthorization(new AvailabilityZonePermission(zone));
@@ -699,10 +555,6 @@ public class EucalyptusManagement {
 	
 	public static void updateGroup(GroupInfoWeb gi) throws Exception {
 	  Groups.checkNotRestricted( gi.getName( ) );
-//grze: see above call 
-//		if (GROUP_ALL.equals(gi.name) || GROUP_DEFAULT.equals(gi.name)) {
-//			throw new Exception("Group 'all' or 'default' cannot be changed");
-//		}
 		try {
 			Group group = Groups.lookupGroup(gi.name);
 			Set<String> oldZoneSet = new HashSet<String>(getGroupZones(group));
@@ -711,11 +563,9 @@ public class EucalyptusManagement {
 			Set<String> toAdd = Sets.difference(newZoneSet, oldZoneSet);
 			for (String zone : toRemove) {
 				group.removeAuthorization(new AvailabilityZonePermission(zone));
-				LOG.debug("============> Remove: " + zone);
 			}
 			for (String zone : toAdd) {
 				group.addAuthorization(new AvailabilityZonePermission(zone));
-				LOG.debug("============> Add: " + zone);
 			}
 		} catch (NoSuchGroupException nsge) {
 			throw new Exception("Can not find the group");
@@ -724,10 +574,6 @@ public class EucalyptusManagement {
 	
 	public static void deleteGroup(String groupName) throws Exception {
     Groups.checkNotRestricted( groupName );
-//grze: see above call 
-//		if (GROUP_ALL.equals(groupName) || GROUP_DEFAULT.equals(groupName)) {
-//			throw new Exception("Group 'all' or 'default' cannot be deleted");
-//		}
 		try {
 			Groups.deleteGroup(groupName);
 		} catch (NoSuchGroupException nsge) {
@@ -737,10 +583,9 @@ public class EucalyptusManagement {
 	
 	public static void addUserToGroup(String userName, String groupName) throws Exception {
     Groups.checkNotRestricted( groupName );
-//grze: see above call 
-//		if (GROUP_ALL.equals(groupName) || GROUP_DEFAULT.equals(groupName)) {
-//			throw new Exception("Group 'all' or 'default' cannot be added into");
-//		}
+    if (Groups.NAME_ALL.equalsIgnoreCase(groupName)) {
+      throw new Exception("Group 'all' cannot be added to");
+    }
 		User user = null;
 		try {
 			user = Users.lookupUser(userName);
@@ -759,11 +604,9 @@ public class EucalyptusManagement {
 	}
 	
 	public static void removeUserFromGroup(String userName, String groupName) throws Exception {
-	   Groups.checkNotRestricted( groupName );
- //grze: see above call 
-//		if (GROUP_ALL.equals(groupName) || GROUP_DEFAULT.equals(groupName)) {
-//			throw new Exception("Group 'all' or 'default' cannot be removed from");
-//		}
+		if (Groups.NAME_ALL.equalsIgnoreCase(groupName)) {
+			throw new Exception("Group 'all' cannot be removed from");
+		}
 		User user = null;
 		try {
 			user = Users.lookupUser(userName);
@@ -791,12 +634,9 @@ public class EucalyptusManagement {
 		Set<String> updateGroupSet = new HashSet<String>();
 		updateGroupSet.addAll(updateGroups);
 		for (Group group : Groups.listAllGroups()) {
-		  if( Groups.NAME_RESTRICTED_GROUPS.contains( group.getName( ) ) ) {
+		  if( Groups.NAME_ALL.equalsIgnoreCase( group.getName( ) ) ) {
 		    continue;
 		  }
-//			if (GROUP_ALL.equals(group.getName()) || GROUP_DEFAULT.equals(group.getName())) {
-//				continue;
-//			}
 			if (updateGroupSet.contains(group.getName())) {
 				group.addMember(user);
 			} else {
