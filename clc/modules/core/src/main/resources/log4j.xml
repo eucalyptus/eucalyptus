@@ -114,15 +114,15 @@
     <appender-ref ref="logfile" />
   </category>
   <category name="org.mule" additivity="true">
-    <priority value="${euca.log.level}" />
+    <priority value="FATAL" />
     <appender-ref ref="extlogfile" />
   </category>
   <category name="org.hibernate" additivity="true">
-    <priority value="${euca.log.level}" />
+    <priority value="FATAL" />
     <appender-ref ref="extlogfile" />
   </category>
   <category name="org.jboss" additivity="true">
-    <priority value="${euca.log.level}" />
+    <priority value="FATAL" />
     <appender-ref ref="extlogfile" />
   </category>
   <category name="org.mortbay" additivity="true">
