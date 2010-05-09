@@ -139,15 +139,17 @@ public class Accounts {
         }
       }
     }
-    for ( Group g : groups ) {
-      GroupInfoType groupinfo = new GroupInfoType( g.getName( ) );
-      for ( User u : g.getMembers( ) ) {
-        groupinfo.getUsers( ).add( u.getName( ) );
+    if ( groups != null ) {
+      for ( Group g : groups ) {
+        GroupInfoType groupinfo = new GroupInfoType( g.getName( ) );
+        for ( User u : g.getMembers( ) ) {
+          groupinfo.getUsers( ).add( u.getName( ) );
+        }
+        for ( Authorization a : g.getAuthorizations( ) ) {
+          groupinfo.getAuthorizations( ).add( a.getName( ) + ":" + a.getValue( ) );
+        }
+        reply.getGroups( ).add( groupinfo );
       }
-      for ( Authorization a : g.getAuthorizations( ) ) {
-        groupinfo.getAuthorizations( ).add( a.getName( ) + ":" + a.getValue( ) );
-      }
-      reply.getGroups( ).add( groupinfo );
     }
     return reply;
   }

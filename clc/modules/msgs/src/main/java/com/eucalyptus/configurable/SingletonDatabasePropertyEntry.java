@@ -77,7 +77,11 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
     EntityWrapper db = new EntityWrapper( this.persistenceContext );
     try {
       Object o = db.getUnique( this.getQueryObject( ) );
-      Object prop = this.getGetter( ).invoke( o );
+      Method getter = this.getGetter( );
+      Object prop = null;
+      if ( getter != null ) {
+	    prop = getter.invoke( o );
+      }
       String result = prop != null ? prop.toString( ) : "null";
       db.commit( );
       return result;
@@ -93,7 +97,10 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
     try {
       Object o = db.getUnique( this.getQueryObject( ) );
       Object prop = this.getTypeParser( ).parse( s );
-      this.getSetter( ).invoke( o, prop );
+      Method setter = this.getSetter( );
+      if ( setter != null ) {
+	    setter.invoke( o, prop );
+      }
       db.commit( );
       return s;
     } catch ( Exception e ) {
