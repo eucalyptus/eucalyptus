@@ -650,7 +650,9 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		if (user.isAdministrator()) {
 			password.setEnabled(false);
 			password2.setEnabled(false);
-			approved.setEnabled(false);
+			if (approved != null) {
+			  approved.setEnabled(false);
+			}
 			enabled.setEnabled(false);
 		}
 		action.add(new EucaButton("Finish", new ClickHandler() {
@@ -701,7 +703,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 					updatedUser.setConfirmed(skipConfirmation.getValue());
 				}
 				if (approved == null) {
-				  updatedUser.setApproved(user.isAdministrator());
+				  updatedUser.setApproved(user.isApproved());
 				} else {
 				  updatedUser.setApproved(approved.getValue());
 				}

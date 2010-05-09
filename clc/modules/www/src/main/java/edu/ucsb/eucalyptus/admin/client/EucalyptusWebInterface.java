@@ -66,6 +66,8 @@ package edu.ucsb.eucalyptus.admin.client;
 
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.Cookies;
 import com.google.gwt.user.client.History;
@@ -332,8 +334,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         login_box.setFocus(true); // this box gets focus first
         final PasswordTextBox pass_box = new PasswordTextBox();
 
-        ClickListener LoginButtonListener = new ClickListener() {
-            public void onClick( Widget sender )
+        ClickHandler LoginEucaButtonListener = new ClickHandler() {
+            public void onClick( ClickEvent event )
             {
                 /* perform checks */
                 if ( login_box.getText().length() < 1 )
@@ -377,18 +379,18 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         };
 
-        ClickListener RecoverButtonListener = new ClickListener() {
-            public void onClick( Widget sender )
+        ClickHandler RecoverEucaButtonListener = new ClickHandler() {
+            public void onClick( ClickEvent event )
             {
                 displayPasswordRecoveryPage();
             }
         };
 
-        Button submit_button = new Button( MSG.signInButton(), LoginButtonListener );
+        EucaButton submit_button = new EucaButton( MSG.signInButton(), LoginEucaButtonListener );
         Hyperlink signup_button = new Hyperlink( MSG.applyButton(), "apply" );
-        signup_button.addClickListener( AddUserButtonListener );
+        signup_button.addClickHandler( AddUserEucaButtonListener );
         Hyperlink recover_button = new Hyperlink( MSG.recoverButton(), "recover" );
-        recover_button.addClickListener( RecoverButtonListener );
+        recover_button.addClickHandler( RecoverEucaButtonListener );
         remember_label.setStyleName("euca-remember-text");
 
         /* enable login by pressing Enter */
@@ -644,8 +646,8 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         }
 
-        ClickListener SignupButtonListener = new ClickListener() {
-            public void onClick( Widget sender )
+        ClickHandler SignupEucaButtonListener = new ClickHandler() {
+            public void onClick( ClickEvent event )
             {
                 boolean formOk = true;
 
@@ -825,18 +827,18 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         };
 
-		Button submit_button;
+		EucaButton submit_button;
 		if (newUser) {
 	        if (admin) {
-				submit_button = new Button ( "Add user", SignupButtonListener);
+				submit_button = new EucaButton ( "Add user", SignupEucaButtonListener);
 			} else {
-				submit_button = new Button ( "Sign up", SignupButtonListener);
+				submit_button = new EucaButton ( "Sign up", SignupEucaButtonListener);
 			}
 		} else {
-			submit_button = new Button ( "Update Record", SignupButtonListener );
+			submit_button = new EucaButton ( "Update Record", SignupEucaButtonListener );
 		}
 
-        Button cancel_button = new Button( "Cancel", DefaultPageButtonListener );
+        EucaButton cancel_button = new EucaButton( "Cancel", DefaultPageEucaButtonListener );
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( label_mandatory );
         mpanel.add( g1 );
@@ -904,8 +906,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         cleartextPassword2_box.setWidth("180");
         g1.setWidget( i++, 1, cleartextPassword2_box );
 
-        ClickListener RecoverButtonListener = new ClickListener() {
-            public void onClick( Widget sender )
+        ClickHandler RecoverEucaButtonListener = new ClickHandler() {
+            public void onClick( ClickEvent event )
             {
                 boolean formOk = true;
 
@@ -987,8 +989,8 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         };
 
-        Button submit_button = new Button ( "Recover Password", RecoverButtonListener );
-        Button cancel_button = new Button ( "Cancel", DefaultPageButtonListener );
+        EucaButton submit_button = new EucaButton ( "Recover Password", RecoverEucaButtonListener );
+        EucaButton cancel_button = new EucaButton ( "Cancel", DefaultPageEucaButtonListener );
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( g1 );
 
@@ -1015,12 +1017,12 @@ public class EucalyptusWebInterface implements EntryPoint {
         RootPanel.get().add( wrapper );
     }
 
-    private Button displayDialog ( String greeting, String message )
+    private EucaButton displayDialog ( String greeting, String message )
     {
 		return displayDialog (greeting, message, null);
     }
 
- 	private Button displayDialog ( String greeting, String message, Button firstButton )
+ 	private EucaButton displayDialog ( String greeting, String message, EucaButton firstEucaButton )
     {
 		if ( message==null || message.equalsIgnoreCase("") ) {
             message = "Server is not accessible!"; // TODO: any other reasons why message would be empty?
@@ -1035,12 +1037,12 @@ public class EucalyptusWebInterface implements EntryPoint {
         panel.setStyleName("euca-login-panel");
         panel.setCellHorizontalAlignment(m, HasHorizontalAlignment.ALIGN_CENTER);
         panel.setCellVerticalAlignment(m, HasVerticalAlignment.ALIGN_MIDDLE);
-        Button ok_button = new Button( "Ok", DefaultPageButtonListener );
+        EucaButton ok_button = new EucaButton( "Ok", DefaultPageEucaButtonListener );
 
 		HorizontalPanel hpanel = new HorizontalPanel();
 		hpanel.setSpacing (10);
-		if (firstButton!=null) {
-			hpanel.add (firstButton);
+		if (firstEucaButton!=null) {
+			hpanel.add (firstEucaButton);
 		}
 		hpanel.add (ok_button);
 
@@ -1231,15 +1233,15 @@ public class EucalyptusWebInterface implements EntryPoint {
         }
     }
 
-    ClickListener AddUserButtonListener = new ClickListener() {
-        public void onClick( Widget sender )
+    ClickHandler AddUserEucaButtonListener = new ClickHandler() {
+        public void onClick( ClickEvent event )
         {
             displayUserRecordPage (RootPanel.get(), null);
         }
     };
 
-    ClickListener DefaultPageButtonListener = new ClickListener() {
-        public void onClick( Widget sender )
+    ClickHandler DefaultPageEucaButtonListener = new ClickHandler() {
+        public void onClick( ClickEvent event )
         {
             displayDefaultPage ("");
         }
@@ -1253,7 +1255,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
     public void displayErrorPageFinal( String message )
     {
-        Button ok_button = displayDialog("Error!", message);
+        EucaButton ok_button = displayDialog("Error!", message);
         label_box.setStyleName("euca-greeting-error");
         ok_button.setVisible(false);
     }
@@ -1264,8 +1266,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         label_box.setStyleName("euca-greeting-normal");
     }
 
-    ClickListener LogoutButtonListener = new ClickListener() {
-        public void onClick( Widget sender )
+    ClickHandler LogoutEucaButtonListener = new ClickHandler() {
+        public void onClick( ClickEvent event )
         {
             EucalyptusWebBackend.App.getInstance().logoutSession(
                     sessionId,
@@ -1310,7 +1312,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 + loggedInUser.getUserName()
                 + "</b>&nbsp;&nbsp;|&nbsp;&nbsp;");
         Hyperlink logout_button = new Hyperlink("Logout", "logout");
-        logout_button.addClickListener(LogoutButtonListener);
+        logout_button.addClickHandler(LogoutEucaButtonListener);
         upanel.add(user_name);
         upanel.add(logout_button);
         top_bar.add(upanel);
@@ -1424,27 +1426,27 @@ public class EucalyptusWebInterface implements EntryPoint {
 			cancelled = false;
 			setHTML ("<img src=\"themes/share/pending-FFCC33.gif\" align=\"middle\"> &nbsp; Checking the external IP address...");
 
-			final Button okButton = new Button("OK",
-			new ClickListener() {
-				public void onClick(Widget sender) {
+			final EucaButton okEucaButton = new EucaButton("OK",
+			new ClickHandler() {
+				public void onClick(ClickEvent event) {
 					RightscaleDialog.this.hide();
 					if (rightscaleUrl!=null) {
 						Window.open (rightscaleUrl, "_blank", "");
 					}
 				}
 			});
-			okButton.setEnabled (false);
-			Button cancelButton = new Button("Cancel",
-			new ClickListener() {
-				public void onClick(Widget sender) {
+			okEucaButton.setEnabled (false);
+			EucaButton cancelEucaButton = new EucaButton("Cancel",
+			new ClickHandler() {
+				public void onClick(ClickEvent event) {
 					RightscaleDialog.this.hide();
 					cancelled = true;
 				}
 			});
 
 			HorizontalPanel buttonPanel = new HorizontalPanel();
-			buttonPanel.add (okButton);
-			buttonPanel.add (cancelButton);
+			buttonPanel.add (okEucaButton);
+			buttonPanel.add (cancelEucaButton);
 			setWidget (buttonPanel);
 
 			EucalyptusWebBackend.App.getInstance().getCloudInfo(
@@ -1482,7 +1484,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 							+ GWTUtils.escape (cloudInfo.getCloudId());
 						String pre = "<h3>Cloud registration</h3> You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton. </p> ";
 						setHTML (pre + text);
-						okButton.setEnabled (true);
+						okEucaButton.setEnabled (true);
 						center();
 					}
 					public void onFailure( Throwable caught )
@@ -1518,28 +1520,28 @@ public class EucalyptusWebInterface implements EntryPoint {
 		ppanel.setStyleName("euca-text");
 		ppanel.addStyleName("content");
 		
-        Button passwordButton = new Button ( "Change Password",
-                new ClickListener() {
-                    public void onClick(Widget sender) {
+        EucaButton passwordEucaButton = new EucaButton ( "Change Password",
+                new ClickHandler() {
+                    public void onClick(ClickEvent event) {
                         displayPasswordChangePage (false);
                     }
                 });
-		Button editButton = new Button ( "Edit Account Information",
-			new ClickListener() {
-					public void onClick (Widget sender) {
+		EucaButton editEucaButton = new EucaButton ( "Edit Account Information",
+			new ClickHandler() {
+					public void onClick (ClickEvent event) {
 						displayUserRecordPage (RootPanel.get(), loggedInUser);
 					}
 			});
         ppanel.setSpacing( 0 );
-		ppanel.add(editButton);
-        ppanel.add(passwordButton);
+		ppanel.add(editEucaButton);
+        ppanel.add(passwordEucaButton);
 
 		VerticalPanel cpanel = new VerticalPanel();
 		cpanel.add ( new HTML (certificate_download_text) );
         cpanel.setStyleName( "euca-text" );
         cpanel.addStyleName("content");
-		Button certButton = new Button ("Download Credentials", new ClickListener() {
-				public void onClick (Widget sender) {
+		EucaButton certButton = new EucaButton ("Download Credentials", new ClickHandler() {
+				public void onClick (ClickEvent event) {
 					Window.open(GWT.getModuleBaseURL() +
 						"getX509?user=" + loggedInUser.getUserName() +
 						"&keyValue=" + loggedInUser.getUserName() +
@@ -1564,9 +1566,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 		g0.setWidget (1, 1, secretKey);
 		rpanel.add (g0);
         rpanel.setStyleName( "euca-text" );
-		final Button secretButton = new Button ( "Show keys" );
-		secretButton.addClickListener(new ClickListener() {
-            public void onClick(Widget sender) {
+		final EucaButton secretButton = new EucaButton ( "Show keys", null);
+		secretButton.addClickHandler( new ClickHandler() {
+            public void onClick(ClickEvent event) {
                 if (secretKey.isVisible()) {
 					secretKey.setVisible(false);
 					queryId.setVisible(false);
@@ -1589,20 +1591,6 @@ public class EucalyptusWebInterface implements EntryPoint {
 		credspanel.add(certButton);
 		credspanel.add(rpanel);
 		credspanel.add(secretButton);
-		
-//        final Grid g = new Grid( gridRows, 2 );
-//        g.getColumnFormatter().setWidth(0, "400");
-//        g.getColumnFormatter().setWidth(1, "200");
-//        g.setCellSpacing( 30 );
-//
-//        g.setWidget( 0, 0, ppanel ); g.getCellFormatter().setVerticalAlignment(0, 0, HasVerticalAlignment.ALIGN_TOP);
-//       // g.setWidget( 0, 1, ppanel2); g.getCellFormatter().setVerticalAlignment(0, 1, HasVerticalAlignment.ALIGN_TOP);
-//
-//        g.setWidget( 1, 0, cpanel ); g.getCellFormatter().setVerticalAlignment(1, 0, HasVerticalAlignment.ALIGN_TOP);
-//        g.setWidget( 1, 1, certButton ); g.getCellFormatter().setVerticalAlignment(1, 1, HasVerticalAlignment.ALIGN_TOP);
-//
-//        g.setWidget( 2, 0, rpanel ); g.getCellFormatter().setVerticalAlignment(2, 0, HasVerticalAlignment.ALIGN_TOP);
-//		g.setWidget( 2, 1, secretButton ); g.getCellFormatter().setVerticalAlignment(2, 1, HasVerticalAlignment.ALIGN_TOP);
 
 		if (loggedInUser.isAdministrator() && show_cloud_registration) {
 	        VerticalPanel cloud_panel = new VerticalPanel();
@@ -1622,9 +1610,8 @@ public class EucalyptusWebInterface implements EntryPoint {
 			g1.setWidget (1, 1, cloudId);
 			cloud_panel.add (g1);
 	        cloud_panel.setStyleName( "euca-text" );
-			final Button cloudButton = new Button ( "Register" );
-			cloudButton.addClickListener(new ClickListener() {
-	            public void onClick(Widget sender) {
+			final EucaButton cloudEucaButton = new EucaButton ( "Register", new ClickHandler() {
+	            public void onClick(ClickEvent event) {
 					new RightscaleDialog().center();
 				}
 	        });
@@ -1635,7 +1622,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 			vp.setSpacing (0);
 			HorizontalPanel hp = new HorizontalPanel();
 			hp.setSpacing (0);
-			hp.add (cloudButton);
+			hp.add (cloudEucaButton);
 			hp.add (new HTML ("with"));
 			Image logo = new Image ("themes/share/rightscale-logo-blue.gif");
 			logo.setStyleName("euca-inline-image");
@@ -1712,8 +1699,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         newCleartextPassword2_box.setWidth("180");
         g1.setWidget( i++, 1, newCleartextPassword2_box );
 
-        ClickListener ChangeButtonListener = new ClickListener() {
-            public void onClick( Widget sender )
+        ClickHandler ChangeEucaButtonListener = new ClickHandler() {
+            public void onClick( ClickEvent event )
             {
                 boolean formOk = true;
 
@@ -1784,8 +1771,8 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         };
 
-        Button change_button = new Button( "Change password", ChangeButtonListener );
-        Button cancel_button = new Button( "Cancel", DefaultPageButtonListener );
+        EucaButton change_button = new EucaButton( "Change password", ChangeEucaButtonListener );
+        EucaButton cancel_button = new EucaButton( "Cancel", DefaultPageEucaButtonListener );
 
         HorizontalPanel bpanel = new HorizontalPanel();
         bpanel.add( change_button );
@@ -1836,8 +1823,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         emailAddress2_box.setWidth("180");
         g1.setWidget( i++, 1, emailAddress2_box );
 
-        ClickListener ChangeButtonListener = new ClickListener() {
-            public void onClick( Widget sender )
+        ClickHandler ChangeEucaButtonListener = new ClickHandler() {
+            public void onClick( ClickEvent event )
             {
                 boolean formOk = true;
 
@@ -1890,7 +1877,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         };
 
-        Button change_button = new Button( "Change address", ChangeButtonListener );
+        EucaButton change_button = new EucaButton( "Change address", ChangeEucaButtonListener );
         HTML message = new HTML (admin_email_change_text);
         message.setWidth( "460" );
 
@@ -1935,9 +1922,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 			}
 		);
 
-        Button change_button = new Button( "Confirm URL",
- 			new ClickListener() {
-	            public void onClick( Widget sender )
+        EucaButton change_button = new EucaButton( "Confirm URL",
+ 			new ClickHandler() {
+	            public void onClick( ClickEvent event )
 	            {
 					conf.setCloudHost(box.getText());
 					EucalyptusWebBackend.App.getInstance().setSystemConfig(sessionId,
@@ -2042,20 +2029,20 @@ public class EucalyptusWebInterface implements EntryPoint {
 
 		private boolean cancelled;
 
-		public EucalyptusDialog (String mainMsg, String extraMsg, Button okButton) {
+		public EucalyptusDialog (String mainMsg, String extraMsg, EucaButton okEucaButton) {
 
             super(true);
             cancelled = false;
 			setHTML (mainMsg);
-            Button cancelButton = new Button ("Cancel", new ClickListener() {
-                	public void onClick(Widget sender) {
+            EucaButton cancelEucaButton = new EucaButton ("Cancel", new ClickHandler() {
+                	public void onClick(ClickEvent event) {
 					EucalyptusDialog.this.hide();
 					cancelled = true;
 				}
             });
 			HorizontalPanel buttonPanel = new HorizontalPanel();
-			buttonPanel.add (okButton);
-			buttonPanel.add (cancelButton);
+			buttonPanel.add (okEucaButton);
+			buttonPanel.add (cancelEucaButton);
 			setWidget (buttonPanel);
             center();
 		}
@@ -2063,8 +2050,8 @@ public class EucalyptusWebInterface implements EntryPoint {
 
 	public void displayConfirmDeletePage( final String userName )
     {
-		Button deleteButton = new Button ("Delete", new ClickListener() {
-            public void onClick(Widget sender) {
+		EucaButton deleteEucaButton = new EucaButton ("Delete", new ClickHandler() {
+            public void onClick(ClickEvent event) {
 				GWTUtils.redirect (GWT.getModuleBaseURL()
 					+ "?action=delete"
 					+ "&user=" + userName
@@ -2072,27 +2059,27 @@ public class EucalyptusWebInterface implements EntryPoint {
 			}
         });
 
-		Button okButton = displayDialog ("Sure?",
-			"Do you want to delete user '" + userName + "'?", deleteButton);
-		okButton.setText ("Cancel");
+		EucaButton okEucaButton = displayDialog ("Sure?",
+			"Do you want to delete user '" + userName + "'?", deleteEucaButton);
+		okEucaButton.setText ("Cancel");
 		label_box.setStyleName("euca-greeting-warning");
     }
 
     public void displayConfirmDeletePageNoReload ( final String userName, final VerticalPanel parent )
     {
-		Button deleteButton = new Button ("Delete", new ClickListener() {
-            public void onClick(Widget sender) {
+		EucaButton deleteEucaButton = new EucaButton ("Delete", new ClickHandler() {
+            public void onClick(ClickEvent event) {
                 attemptActionNoReload("delete", userName, parent);
 			}
         });
 
-		Button okButton = displayDialog ("Sure?",
-			"Do you want to delete user '" + userName + "'?", deleteButton);
-		okButton.setText ("Cancel");
+		EucaButton okEucaButton = displayDialog ("Sure?",
+			"Do you want to delete user '" + userName + "'?", deleteEucaButton);
+		okEucaButton.setText ("Cancel");
 		label_box.setStyleName("euca-greeting-warning");
     }
 
-    private HTML userActionButton (String action, UserInfoWeb user)
+    private HTML userActionEucaButton (String action, UserInfoWeb user)
     {
         return new HTML ("<a class=\"euca-action-link\" href=\"" + GWT.getModuleBaseURL()
                 + "?action=" + action.toLowerCase()
@@ -2101,19 +2088,19 @@ public class EucalyptusWebInterface implements EntryPoint {
                 + "\">" + action + "</a>");
     }
 
-    private HTML userActionButtonNoReload (final String action, final UserInfoWeb user, final VerticalPanel parent)
+    private HTML userActionEucaButtonNoReload (final String action, final UserInfoWeb user, final VerticalPanel parent)
     {
         HTML link = new HTML (action);
         link.setStyleName("euca-action-link");
-        link.addClickListener(new ClickListener() {
-            public void onClick (Widget sender) {
+        link.addClickHandler(new ClickHandler() {
+            public void onClick (ClickEvent event) {
                 attemptActionNoReload(action.toLowerCase(), user.getUserName(), parent);
             }
         });
         return link;
     }
 
-	class EditCallback implements ClickListener {
+	class EditCallback implements ClickHandler {
 
 		private EucalyptusWebInterface parent;
 		private UserInfoWeb u;
@@ -2124,7 +2111,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 			this.u = u;
 		}
 
-		public void onClick( final Widget widget )
+		public void onClick( ClickEvent event )
 		{
 			displayUserRecordPage (RootPanel.get(), u);
 		}
@@ -2145,8 +2132,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         if (nusers>0) {
             Anchor sort_button = new Anchor( sortSymbol, true);
 			sort_button.setStyleName ("euca-small-text");
-			sort_button.addClickListener( new ClickListener() {
-				public void onClick(Widget sender) {
+			sort_button.addClickHandler( new ClickHandler() {
+				public void onClick(ClickEvent event) {
                     sortUsersLastFirst = !sortUsersLastFirst;
 					displayUsersList (usersList, parent);
 				}
@@ -2204,24 +2191,24 @@ public class EucalyptusWebInterface implements EntryPoint {
                 ops.setSpacing (3);
 
 				Label editLabel = new Label ("Edit");
-				editLabel.addClickListener (new EditCallback(this, u));
+				editLabel.addClickHandler (new EditCallback(this, u));
 				editLabel.setStyleName ("euca-action-link");
 				ops.add(editLabel);
 
 				// admin can't be disabled or deleted (that breaks things)
 				if (!u.isAdministrator().booleanValue()) {
-					HTML act_button = userActionButtonNoReload ("Disable", u, parent);
+					HTML act_button = userActionEucaButtonNoReload ("Disable", u, parent);
 	                if (!u.isApproved().booleanValue()) {
-	                    act_button = userActionButtonNoReload ("Approve", u, parent);
+	                    act_button = userActionEucaButtonNoReload ("Approve", u, parent);
 	                } else if (!u.isEnabled().booleanValue()) {
-	                    act_button = userActionButtonNoReload ("Enable", u, parent);
+	                    act_button = userActionEucaButtonNoReload ("Enable", u, parent);
 	                }
 	                ops.add(act_button);
 
 					Anchor del_button = new Anchor ( "Delete" );
 					del_button.setStyleName ("euca-action-link");
-					del_button.addClickListener( new ClickListener() {
-						public void onClick(Widget sender) {
+					del_button.addClickHandler( new ClickHandler() {
+						public void onClick(ClickEvent event) {
 							displayConfirmDeletePageNoReload (u.getUserName(), parent);
 						}
 					});
@@ -2233,9 +2220,9 @@ public class EucalyptusWebInterface implements EntryPoint {
                 // view
                 HorizontalPanel views = new HorizontalPanel();
                 views.setSpacing (3);
-                HTML inst_button = userActionButton ("Instances", u);
+                HTML inst_button = userActionEucaButton ("Instances", u);
                 views.add(inst_button);
-                HTML img_button = userActionButton ("Images", u);
+                HTML img_button = userActionEucaButton ("Images", u);
                 views.add(img_button);
                 //g.setWidget(row, 5, views); TODO: implement 'views'
             }
@@ -2243,10 +2230,10 @@ public class EucalyptusWebInterface implements EntryPoint {
         } else {
             vpanel.add(new Label("No users found"));
         }
-        vpanel.add(new Button ("Add user", AddUserButtonListener));
+        vpanel.add(new EucaButton ("Add user", AddUserEucaButtonListener));
     }
 
-    private HTML imageActionButton (String action, ImageInfoWeb img)
+    private HTML imageActionEucaButton (String action, ImageInfoWeb img)
     {
         return new HTML ("<a class=\"euca-action-link\" href=\"" + GWT.getModuleBaseURL()
                 + "?action=" + action.toLowerCase() + "_image"
@@ -2293,13 +2280,13 @@ public class EucalyptusWebInterface implements EntryPoint {
                 if ( showActions ) {
                     HorizontalPanel ops = new HorizontalPanel();
                     ops.setSpacing (3);
-                    HTML act_button = imageActionButton ("Disable", img);
+                    HTML act_button = imageActionEucaButton ("Disable", img);
                     if (img.getImageState().equalsIgnoreCase("deregistered")) {
-                        act_button = imageActionButton ("Enable", img);
+                        act_button = imageActionEucaButton ("Enable", img);
                     }
                     ops.add(act_button);
                     // TODO: uncomment when deletion is implemented
-                    //HTML del_button = imageActionButton ("Delete", img);
+                    //HTML del_button = imageActionEucaButton ("Delete", img);
                     //ops.add(del_button);
                     g.setWidget(row, 5, ops );
                 }
@@ -2452,9 +2439,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 
     	// user clicked submit
 
-    	Button change_button = new Button( "Submit",
-    			new ClickListener() {
-    		public void onClick( Widget sender )
+    	EucaButton change_button = new EucaButton( "Submit",
+    			new ClickHandler() {
+    		public void onClick( ClickEvent event )
     		{
     			boolean formOk = true;
 
