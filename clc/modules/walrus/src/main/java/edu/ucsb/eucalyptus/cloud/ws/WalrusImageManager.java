@@ -588,6 +588,7 @@ public class WalrusImageManager {
 					String verificationString = machineConfiguration + image;
 					FileInputStream inStream = null;
 
+					FileInputStream fileInputStream = null;
 					try {
 						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
 						Signature sigCloud = Signature.getInstance("SHA1withRSA");
@@ -596,7 +597,7 @@ public class WalrusImageManager {
 						String signature = new String(Hashes.bytesToHex(sigCloud.sign()));
 						//TODO: refactor
 						DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance( ).newDocumentBuilder( );
-						FileInputStream fileInputStream = new FileInputStream( file );
+						fileInputStream = new FileInputStream( file );
 						Document docRoot = docBuilder.parse( fileInputStream );
 						Element sigElement = docRoot.createElement("signature");						
 						sigElement.setTextContent(signature);						
@@ -641,6 +642,13 @@ public class WalrusImageManager {
 						if(inStream != null) {
 							try {
 								inStream.close();
+							} catch(IOException e) {
+								LOG.error(e);
+							}
+						}
+						if(fileInputStream != null) {
+							try {
+								fileInputStream.close();
 							} catch(IOException e) {
 								LOG.error(e);
 							}

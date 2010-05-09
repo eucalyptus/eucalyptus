@@ -484,11 +484,11 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 				response = "Your account is now active.";
 			} else {
 				if(user != null) {
-					user.setPassword (user.getPassword());
+			      user.setPassword (user.getPassword());
+				  long now = System.currentTimeMillis();
+				  user.setPasswordExpires( new Long(now + pass_expiration_ms) );
+				  EucalyptusManagement.commitWebUser(user);
 				}
-				long now = System.currentTimeMillis();
-				user.setPasswordExpires( new Long(now + pass_expiration_ms) );
-				EucalyptusManagement.commitWebUser(user);
 				response = "Your password has been reset.";
 			}
 			return response;
