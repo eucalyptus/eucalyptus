@@ -29,6 +29,30 @@ public class Transactions {
     }
   }
   
+  public static <T> T save( T saveMe ) throws TransactionException {
+    return save( saveMe, null );
+  }
+  
+  public static <T> T save( T saveMe, Tx<T> c ) throws TransactionException {
+    EntityWrapper<T> db = EntityWrapper.get( saveMe );
+    try {
+      db.add( saveMe );
+      T entity = db.getUnique( saveMe );
+      if ( c != null ) {
+        c.fire( entity );
+      }
+      db.commit( );
+      return entity;
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new TransactionException( e.getMessage( ), e );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new TransactionFireException( e.getMessage( ), e );
+    }
+  }
+  
   public static <T> List<T> many( T search, Tx<T> c ) throws TransactionException {
     if ( search == null ) {
       TransactionException ex = new TransactionException( "A search object must be supplied" );

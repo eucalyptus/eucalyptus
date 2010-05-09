@@ -5,11 +5,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Record;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class ReentrantListenerRegistry<T> {
   private static Logger              LOG = Logger.getLogger( ReentrantListenerRegistry.class );
@@ -23,7 +24,7 @@ public class ReentrantListenerRegistry<T> {
   }
   
   public void register( T type, EventListener listener ) {
-    LOG.info( EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getCanonicalName( ) ) );
+    EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getCanonicalName( ) ).info( );
     this.modificationLock.lock( );
     try {
       if ( !this.listenerMap.containsEntry( type, listener ) ) {
@@ -35,7 +36,7 @@ public class ReentrantListenerRegistry<T> {
   }
   
   public void deregister( T type, EventListener listener ) {
-    LOG.info( EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getCanonicalName( ) ) );
+    EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getCanonicalName( ) ).info( );
     this.modificationLock.lock( );
     try {
       this.listenerMap.remove( type, listener );
@@ -47,7 +48,7 @@ public class ReentrantListenerRegistry<T> {
   public void destroy( T type ) {
     this.modificationLock.lock( );
     for( EventListener e : this.listenerMap.get( type ) ) {
-      LOG.info( EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DESTROY_ALL, type.getClass( ).getSimpleName( ), e.getClass( ).getCanonicalName( ) ) );
+      EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DESTROY_ALL, type.getClass( ).getSimpleName( ), e.getClass( ).getCanonicalName( ) ).info( );
     }
     try {
       this.listenerMap.removeAll( type );
@@ -72,16 +73,16 @@ public class ReentrantListenerRegistry<T> {
       ce.advertiseEvent( e );
       if ( e.isVetoed( ) ) {
         String cause = e.getCause( ) != null ? e.getCause( ) : "no cause given";
-        LOG.info( EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_VETOD, ce.getClass( ).getSimpleName( ), e.toString( ), cause ) );
+        EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_VETOD, ce.getClass( ).getSimpleName( ), e.toString( ), cause ).info( );
         throw new EventVetoedException( String.format( "Event %s was vetoed by listener %s: %s", LogUtil.dumpObject( e ), LogUtil.dumpObject( ce ), cause ) );
       }
     }
     for ( EventListener ce : listeners ) {
-      EventRecord record = EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getSimpleName( ), e.toString( ));
+      Record record = EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getSimpleName( ), e.toString( ));
       if ( e instanceof ClockTick ) {
-        LOG.trace( record );
+        record.trace( );
       } else {
-        LOG.debug( record );
+        record.debug( );
       }
       ce.fireEvent( e );
       if ( e.getFail( ) != null ) {

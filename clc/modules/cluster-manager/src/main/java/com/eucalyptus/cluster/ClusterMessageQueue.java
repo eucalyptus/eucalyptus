@@ -77,7 +77,7 @@ import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class ClusterMessageQueue implements Runnable {
   
@@ -107,8 +107,7 @@ public class ClusterMessageQueue implements Runnable {
   
   public void enqueue( final QueuedEventCallback callback ) {
     QueuedEvent event = QueuedEvent.make( callback );
-    LOG.info( EventRecord.caller( ClusterMessageQueue.class, EventType.MSG_PENDING, this.clusterName, event.getCallback( ).getClass( ).getSimpleName( ) ) );
-    LOG.trace( EventRecord.caller( ClusterMessageQueue.class, EventType.MSG_PENDING, this.clusterName, event.getEvent( ).toString( ) ), new Exception( ) );
+    EventRecord.caller( ClusterMessageQueue.class, EventType.MSG_PENDING, this.clusterName, event.getCallback( ).getClass( ).getSimpleName( ) ).info( );
     if ( !this.checkDuplicates( event ) ) {
       try {
         while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) ) {
@@ -127,16 +126,16 @@ public class ClusterMessageQueue implements Runnable {
         final StopNetworkCallback incoming = ( StopNetworkCallback ) event.getCallback( );
         final StopNetworkCallback existing = ( StopNetworkCallback ) e.getCallback( );
         if ( incoming.getRequest( ).getNetName( ).equals( existing.getRequest( ).getNetName( ) ) ) {
-          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.MSG_REJECTED.toString( ),
-                                         EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ) );
+          EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.MSG_REJECTED.toString( ),
+                                         EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ).debug( );
           return true;
         }
       } else if ( ( event.getCallback( ) instanceof TerminateCallback ) && ( e.getCallback( ) instanceof TerminateCallback ) ) {
         final TerminateCallback incoming = ( TerminateCallback ) event.getCallback( );
         final TerminateCallback existing = ( TerminateCallback ) e.getCallback( );
         if ( existing.getRequest( ).getInstancesSet( ).containsAll( incoming.getRequest( ).getInstancesSet( ) ) ) {
-          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.MSG_REJECTED.toString( ),
-                                         EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ) );
+          EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.MSG_REJECTED.toString( ),
+                                         EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ).debug( );
           return true;
         }
       } else if ( ( event.getCallback( ) instanceof UnassignAddressCallback ) && ( e.getCallback( ) instanceof UnassignAddressCallback ) ) {
@@ -144,8 +143,8 @@ public class ClusterMessageQueue implements Runnable {
         final UnassignAddressCallback existing = ( UnassignAddressCallback ) e.getCallback( );
         if ( incoming.getRequest( ).getSource( ).equals( existing.getRequest( ).getSource( ) )
              && incoming.getRequest( ).getDestination( ).equals( existing.getRequest( ).getDestination( ) ) ) {
-          LOG.debug( EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.MSG_REJECTED.toString( ),
-                                         EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ) );
+          EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.MSG_REJECTED.toString( ),
+                                         EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ).debug();
           return true;
         }
       }

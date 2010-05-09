@@ -11,7 +11,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class Components {
   private static Logger                                                                                  LOG                  = Logger
@@ -77,12 +77,12 @@ public class Components {
 
   public static <T extends ComponentInformation> void deregister( T componentInfo ) {
     remove( componentInfo );
-    LOG.info( EventRecord.here( Bootstrap.class, EventType.COMPONENT_DEREGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ) );
+    EventRecord.here( Bootstrap.class, EventType.COMPONENT_DEREGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ).info( );
   }
   
   static <T extends ComponentInformation> void register( T componentInfo ) {
     if ( !contains( componentInfo.getClass( ), componentInfo.getName( ) ) ) {
-      LOG.info( EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ) );
+      EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ).info( );
       Components.put( componentInfo );
     }
   }

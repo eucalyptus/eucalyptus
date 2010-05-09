@@ -20,11 +20,9 @@ import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.api.CertificateProvider;
 import com.eucalyptus.auth.api.CryptoProvider;
 import com.eucalyptus.auth.api.HmacProvider;
-import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.SubDirectory;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String  KEY_ALGORITHM         = "RSA";
@@ -166,7 +164,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   public KeyPair generateKeyPair( ) {
     KeyPairGenerator keyGen = null;
     try {
-      LOG.debug( EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR ) );
+      EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR );
       keyGen = KeyPairGenerator.getInstance( KEY_ALGORITHM, "BC" );
       SecureRandom random = new SecureRandom( );
       random.setSeed( System.currentTimeMillis( ) );

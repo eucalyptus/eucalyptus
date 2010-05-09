@@ -77,7 +77,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.cloud.ws.SystemState;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   private static Logger LOG = Logger.getLogger( VmInstances.class );

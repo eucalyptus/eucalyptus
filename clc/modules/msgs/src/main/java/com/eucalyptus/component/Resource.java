@@ -11,7 +11,7 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.records.EventType;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class Resource implements ComponentInformation {
   enum Keys {

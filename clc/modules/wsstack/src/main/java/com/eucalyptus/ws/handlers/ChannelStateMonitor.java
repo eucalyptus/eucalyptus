@@ -10,8 +10,8 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.records.EventRecord;
 
 @ChannelPipelineCoverage( "one" )
 public class ChannelStateMonitor extends SimpleChannelHandler {
@@ -41,7 +41,7 @@ public class ChannelStateMonitor extends SimpleChannelHandler {
   @Override
   public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     openTime.getAndSet( System.currentTimeMillis( ) );
-    LOG.trace( EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), EventType.SOCKET_OPEN, ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ) );
+    EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), EventType.SOCKET_OPEN, ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ) ).trace( );
     super.channelConnected( ctx, e );
   }
   
