@@ -128,7 +128,7 @@ public class UserGroupControl implements ContentControl {
 		
 		List<String> groupColumns = new ArrayList<String>();
 		groupColumns.add("Name");
-		groupColumns.add("Zone");
+		groupColumns.add("Zones");
 		
 		List<String> userColumns = new ArrayList<String>();
 		userColumns.add("Name");
