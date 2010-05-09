@@ -148,6 +148,7 @@
 				<include name="**/*.jar" />
 			</fileset>
 		</path>
+    <delete file="modules/msgs/src/main/resources/msgs-binding.xml" />
 		<taskdef name="bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
 		<bindings>
 			<classfileset dir="${project.basedir}/modules" includes="*/build/**" />

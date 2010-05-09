@@ -700,7 +700,11 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				} else {
 					updatedUser.setConfirmed(skipConfirmation.getValue());
 				}
-				updatedUser.setApproved(approved.getValue());
+				if (approved == null) {
+				  updatedUser.setApproved(user.isAdministrator());
+				} else {
+				  updatedUser.setApproved(approved.getValue());
+				}
 				updatedUser.setEnabled(enabled.getValue());
 				updatedUser.setTelephoneNumber(phone.getText());
 				updatedUser.setAffiliation(affiliation.getText());
