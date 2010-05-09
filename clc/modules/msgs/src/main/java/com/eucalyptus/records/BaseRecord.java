@@ -70,10 +70,13 @@ public class BaseRecord implements Serializable, Record {
   private static final String NEXT   = "\n";
   @Transient
   private transient String    lead;
+  @Transient
+  private Class               realCreator;
   
   public BaseRecord( EventType type, EventClass clazz, Class creator, StackTraceElement codeLocation, String userId, String correlationId, String other ) {
     this.type = type;
     this.clazz = clazz;
+    this.realCreator = creator;
     this.creator = creator.getSimpleName( );
     this.codeLocation = codeLocation.toString( );
     this.userId = userId;
@@ -96,7 +99,7 @@ public class BaseRecord implements Serializable, Record {
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).info( this );
+    Logger.getLogger( this.realCreator ).info( this );
     return newThis;
   }
   
@@ -112,7 +115,7 @@ public class BaseRecord implements Serializable, Record {
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).error( this );
+    Logger.getLogger( this.realCreator ).error( this );
     return newThis;
   }
   
@@ -128,7 +131,7 @@ public class BaseRecord implements Serializable, Record {
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).trace( this );
+    Logger.getLogger( this.realCreator ).trace( this );
     return newThis;
   }
   
@@ -144,7 +147,7 @@ public class BaseRecord implements Serializable, Record {
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).debug( this );
+    Logger.getLogger( this.realCreator ).debug( this );
     return newThis;
   }
   
@@ -160,7 +163,7 @@ public class BaseRecord implements Serializable, Record {
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).warn( this );
+    Logger.getLogger( this.realCreator ).warn( this );
     return newThis;
   }
   

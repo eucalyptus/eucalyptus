@@ -39,7 +39,7 @@ public class Reports extends HttpServlet {
       reportType = ( String ) temp;
     }
     String baseDir = this.getServletConfig( ).getInitParameter( "PWD" );
-    String url = String.format( "%s_%s?createDatabaseIfNotExist=true", Component.db.getUri( ).toString( ), "auth" );
+    String url = String.format( "%s_%s?createDatabaseIfNotExist=true", Component.db.getUri( ).toString( ), "records" );
     final JRExporter exporter;
     if ( "pdf".equals( reportType ) ) {
       res.setContentType( "application/pdf" );
