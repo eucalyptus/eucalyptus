@@ -318,7 +318,9 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
     if (!strcmp(ncOp, "ncGetConsoleOutput")) {
       char *instId = va_arg(al, char *);
       char **outConsoleOutput = va_arg(al, char **);
-      *outConsoleOutput = NULL;
+      if (outConsoleOutput) {
+	*outConsoleOutput = NULL;
+      }
       if (timeout && outConsoleOutput) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
@@ -341,7 +343,9 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *instId = va_arg(al, char *);
       int *shutdownState = va_arg(al, int *);
       int *previousState = va_arg(al, int *);
-      *shutdownState = *previousState = 0;
+      if (shutdownState && previousState) {
+	*shutdownState = *previousState = 0;
+      }
       if (timeout && shutdownState && previousState) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
@@ -366,6 +370,9 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       int port = va_arg(al, int);
       int vlan = va_arg(al, int);
       char **outStatus = va_arg(al, char **);
+      if (outStatus) {
+	*outStatus = NULL;
+      }
       if (timeout && outStatus) {
 	*outStatus = NULL;
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
@@ -402,16 +409,17 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char **netNames = va_arg(al, char **);
       int netNamesLen = va_arg(al, int);
       ncInstance **outInst = va_arg(al, ncInstance **);
-      if (timeout && outInst) {
+      if (outInst) {
 	*outInst = NULL;
-      
+      }
+      if (timeout && outInst) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
 	  kill(pid, SIGKILL);
 	  opFail=1;
 	} else {
 	  *outInst = malloc(sizeof(ncInstance));
-	  if (!outInst) {
+	  if (!*outInst) {
 	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
 	    unlock_exit(1);
 	  }
@@ -427,8 +435,10 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       int instIdsLen = va_arg(al, int);
       ncInstance ***ncOutInsts=va_arg(al, ncInstance ***);
       int *ncOutInstsLen=va_arg(al, int *);
-      *ncOutInstsLen = 0;
-      *ncOutInsts = NULL;
+      if (ncOutInstsLen && ncOutInsts) {
+	*ncOutInstsLen = 0;
+	*ncOutInsts = NULL;
+      }
       if (timeout && ncOutInsts && ncOutInstsLen) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
@@ -456,7 +466,9 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
     } else if (!strcmp(ncOp, "ncDescribeResource")) {
       char *resourceType = va_arg(al, char *);
       ncResource **outRes=va_arg(al, ncResource **);
-      *outRes = NULL;
+      if (outRes) {
+	*outRes = NULL;
+      }
       if (timeout && outRes) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
@@ -1235,8 +1247,8 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    numInsts++;
 	    
 	    // grab instance from cache, if available.  otherwise, start from scratch
-	    find_instanceCacheId(ncOutInsts[j]->instanceId, &myInstance);
-	    if (!myInstance) {
+	    rc = find_instanceCacheId(ncOutInsts[j]->instanceId, &myInstance);
+	    if (rc || !myInstance) {
 	      myInstance = malloc(sizeof(ccInstance));
 	      if (!myInstance) {
 		logprintfl(EUCAFATAL, "refresh_instances(): out of memory!\n");
@@ -1335,12 +1347,12 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 
     for (i=0; i<MAXINSTANCES; i++) {
       if (instanceCache->cacheState[i] == INSTVALID) {
-	memcpy( &((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
-	count++;
-	if (count > instanceCache->numInsts) {
+	if (count >= instanceCache->numInsts) {
 	  logprintfl(EUCAWARN, "doDescribeInstances(): found more instances than reported by numInsts, will only report a subset of instances\n");
 	  count=0;
 	}
+	memcpy( &((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
+	count++;
       }
     }
     
