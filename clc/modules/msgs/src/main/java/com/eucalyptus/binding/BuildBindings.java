@@ -125,6 +125,7 @@ public class BuildBindings extends Task {
         for ( FileSet fs : this.classFileSets ) {
           for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
             try {
+              if( !classFileName.endsWith( "class" ) ) continue;
               Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
               if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
                 for( BindingGenerator gen : generators ) {

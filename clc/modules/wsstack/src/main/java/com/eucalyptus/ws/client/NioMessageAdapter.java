@@ -67,7 +67,7 @@ import org.mule.api.MessagingException;
 import org.mule.api.transport.MessageTypeNotSupportedException;
 import org.mule.transport.AbstractMessageAdapter;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class NioMessageAdapter extends AbstractMessageAdapter {
 
@@ -75,9 +75,9 @@ public class NioMessageAdapter extends AbstractMessageAdapter {
 
   public NioMessageAdapter( Object message ) throws MessagingException
   {
-    if ( message instanceof EucalyptusMessage )
+    if ( message instanceof BaseMessage )
     {
-      this.payload = ( EucalyptusMessage ) message;
+      this.payload = ( BaseMessage ) message;
     }
     else
     {
