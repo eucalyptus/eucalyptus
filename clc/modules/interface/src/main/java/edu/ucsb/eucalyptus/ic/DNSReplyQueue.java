@@ -67,7 +67,7 @@ package edu.ucsb.eucalyptus.ic;
 
 import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.StorageErrorMessageType;
 import edu.ucsb.eucalyptus.util.ReplyCoordinator;
 import org.apache.log4j.Logger;
@@ -81,7 +81,7 @@ public class DNSReplyQueue {
 
     private static ReplyCoordinator replies = new ReplyCoordinator( 3600000 );
 
-    public void handle( EucalyptusMessage msg )
+    public void handle( BaseMessage msg )
     {
         Logger.getLogger( DNSReplyQueue.class ).warn( "storage queueing reply to " + msg.getCorrelationId() );
         replies.putMessage( msg );
@@ -93,9 +93,9 @@ public class DNSReplyQueue {
         {
             Object requestMsg = muleMsg.getPayload();
             String requestString = requestMsg.toString();
-            EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
+            BaseMessage msg = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
             Throwable ex = muleMsg.getException().getCause();
-            EucalyptusMessage errMsg;
+            BaseMessage errMsg;
 
 
             errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());
@@ -108,10 +108,10 @@ public class DNSReplyQueue {
         }
     }
 
-    public static EucalyptusMessage getReply( String msgId )
+    public static BaseMessage getReply( String msgId )
     {
         Logger.getLogger( DNSReplyQueue.class ).warn( "dns request for reply to " + msgId );
-        EucalyptusMessage msg = replies.getMessage( msgId );
+        BaseMessage msg = replies.getMessage( msgId );
         Logger.getLogger( DNSReplyQueue.class ).warn( "dns obtained reply to " + msgId );
         return msg;
     }
