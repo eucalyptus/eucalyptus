@@ -1566,7 +1566,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		g0.setWidget (1, 1, secretKey);
 		rpanel.add (g0);
         rpanel.setStyleName( "euca-text" );
-		final EucaButton secretButton = new EucaButton ( "Show keys", null);
+		final EucaButton secretButton = new EucaButton ( "Show keys" );
 		secretButton.addClickHandler( new ClickHandler() {
             public void onClick(ClickEvent event) {
                 if (secretKey.isVisible()) {
