@@ -1,5 +1,6 @@
 package com.eucalyptus.records;
 
+import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
@@ -10,31 +11,37 @@ import com.eucalyptus.system.LogLevels;
 @Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records_logs" )
-@DiscriminatorValue(value = "base")
+@DiscriminatorValue( value = "base" )
 public class LogFileRecord extends BaseRecord {
-  private static Logger            LOG   = Logger.getLogger( EventRecord.class );
+  private static Logger LOG = Logger.getLogger( EventRecord.class );
+  @Column( name = "record_caller" )
+  private String        caller;
   
-  private String                   caller;
+  public LogFileRecord( ) {
+    super( );
+  }
   
-  LogFileRecord( final String component, final String eventUserId, final String eventCorrelationId, final String eventId, final String other, int distance ) {
-    super( EventType.BOGUS, EventClass.ORPHAN, component, Thread.currentThread( ).getStackTrace( )[distance].getClassName( ), eventUserId, eventCorrelationId, other );
-    StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[distance];
+  public LogFileRecord( EventType type, Class creator, StackTraceElement callerStack, String userId, String correlationId, String other ) {
+    this( type, EventClass.ORPHAN, creator, callerStack, userId, correlationId, other );
+  }
+  
+  public LogFileRecord( EventType type, EventClass clazz, Class creator, StackTraceElement callerStack, String userId, String correlationId, String other ) {
+    super( type, clazz, creator, callerStack, userId, correlationId, other );
     if ( LogLevels.DEBUG ) {
-      if ( ste != null && ste.getFileName( ) != null ) {
-        this.caller = String.format( "%s.%s.%s", ste.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), ste.getMethodName( ), ste.getLineNumber( ) );
+      if ( callerStack != null && callerStack.getFileName( ) != null ) {
+        this.caller = String.format( "%s.%s.%s", callerStack.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), callerStack.getMethodName( ), callerStack.getLineNumber( ) );
       } else {
         this.caller = "unknown";
       }
     }
   }
   
-
   public String getCaller( ) {
     return this.caller;
   }
 
   @Override
-  public String toString() {
+  public String toString( ) {
     return this.caller != null ? super.toString( ) + ":" + this.caller : super.toString( );
   }
   

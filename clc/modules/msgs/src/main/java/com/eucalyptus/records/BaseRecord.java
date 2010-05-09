@@ -35,7 +35,7 @@ import com.google.common.collect.Lists;
 @DiscriminatorValue( value = "base" )
 public class BaseRecord implements Serializable, Record {
   @Transient
-  private static Logger LOG = Logger.getLogger( BaseRecord.class );
+  private static Logger       LOG    = Logger.getLogger( BaseRecord.class );
   @Id
   @GeneratedValue( generator = "system-uuid" )
   @GenericGenerator( name = "system-uuid", strategy = "uuid" )
@@ -59,6 +59,9 @@ public class BaseRecord implements Serializable, Record {
   private String              correlationId;
   @Column( name = "record_extra" )
   private String              extra;
+  @Column( name = "record_level" )
+  @Enumerated( EnumType.STRING )
+  private RecordLevel         level;
   @Transient
   private ArrayList           others = Lists.newArrayList( );
   @Transient
@@ -68,15 +71,15 @@ public class BaseRecord implements Serializable, Record {
   @Transient
   private transient String    lead;
   
-  public BaseRecord( EventType type, EventClass clazz, String creator, String codeLocation, String userId, String correlationId, String other ) {
+  public BaseRecord( EventType type, EventClass clazz, Class creator, StackTraceElement codeLocation, String userId, String correlationId, String other ) {
     this.type = type;
     this.clazz = clazz;
-    this.creator = creator;
-    this.codeLocation = codeLocation;
+    this.creator = creator.getSimpleName( );
+    this.codeLocation = codeLocation.toString( );
     this.userId = userId;
     this.correlationId = correlationId;
     this.timestamp = TimeUnit.MILLISECONDS.convert( System.nanoTime( ), TimeUnit.NANOSECONDS );
-    
+    this.extra = other;
   }
   
   public BaseRecord( ) {}
@@ -86,8 +89,9 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record info( ) {
+    this.level = RecordLevel.INFO;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
@@ -101,8 +105,9 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record error( ) {
+    this.level = RecordLevel.ERROR;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
@@ -116,8 +121,9 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record trace( ) {
+    this.level = RecordLevel.TRACE;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
@@ -131,8 +137,9 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record debug( ) {
+    this.level = RecordLevel.DEBUG;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
@@ -146,8 +153,9 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record warn( ) {
+    this.level = RecordLevel.WARN;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
@@ -162,6 +170,10 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record next( ) {
     this.others.add( NEXT );
+    this.extra = "";
+    for ( Object o : this.others ) {
+      this.extra += ":" + o.toString( );
+    }
     return this;
   }
   
@@ -172,7 +184,11 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record append( Object... obj ) {
     for ( Object o : obj ) {
-      this.others.add( o == null ? ISNULL : o.toString( ) );
+      this.others.add( o == null ? ISNULL : "" + o );
+    }
+    this.extra = "";
+    for ( Object o : this.others ) {
+      this.extra += ":" + o.toString( );
     }
     return this;
   }
@@ -195,8 +211,8 @@ public class BaseRecord implements Serializable, Record {
   
   private String leadIn( ) {
     return lead == null ? ( lead = String.format( ":%010d:%s:%s:%s:%s:", this.getTimestamp( ), this.getCreator( ),
-                                                  ( ( this.correlationId != null ) ? this.correlationId : "" ),
-                                                  ( ( this.userId != null ) ? this.userId : "" ), this.type) ) : lead;
+                                                  ( ( this.correlationId != null ) ? this.correlationId : "" ), ( ( this.userId != null ) ? this.userId : "" ),
+                                                  this.type ) ) : lead;
   }
   
   /**
@@ -269,6 +285,14 @@ public class BaseRecord implements Serializable, Record {
   
   public String getCorrelationId( ) {
     return this.correlationId;
+  }
+  
+  public String getExtra( ) {
+    return this.extra;
+  }
+  
+  public void setExtra( String extra ) {
+    this.extra = extra;
   }
   
   public void setCorrelationId( String correlationId ) {
