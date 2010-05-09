@@ -114,20 +114,36 @@
     <appender-ref ref="logfile" />
   </category>
   <category name="org.mule" additivity="true">
-    <priority value="FATAL" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="extlogfile" />
   </category>
   <category name="org.hibernate" additivity="true">
-    <priority value="FATAL" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="extlogfile" />
   </category>
   <category name="org.jboss" additivity="true">
-    <priority value="FATAL" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="extlogfile" />
   </category>
   <category name="org.mortbay" additivity="true">
     <priority value="INFO" />
     <appender-ref ref="extlogfile" />
+  </category>
+  <category name="org.mule" additivity="true">
+    <priority value="FATAL" />
+    <appender-ref ref="${euca.log.appender}" />
+  </category>
+  <category name="org.hibernate" additivity="true">
+    <priority value="FATAL" />
+    <appender-ref ref="${euca.log.appender}" />
+  </category>
+  <category name="org.jboss" additivity="true">
+    <priority value="FATAL" />
+    <appender-ref ref="${euca.log.appender}" />
+  </category>
+  <category name="org.mortbay" additivity="true">
+    <priority value="FATAL" />
+    <appender-ref ref="${euca.log.appender}" />
   </category>
   <!--
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
