@@ -64,9 +64,7 @@
 package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
-
 import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.VMwareBrokerBindingHandler;
 
 public class BindingStage implements UnrollableStage {
   
