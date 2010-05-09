@@ -22,7 +22,7 @@ import com.eucalyptus.auth.api.CryptoProvider;
 import com.eucalyptus.auth.api.HmacProvider;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String  KEY_ALGORITHM         = "RSA";
@@ -66,7 +66,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateSecretKey( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA224, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" );
   }
   
   /**
@@ -74,7 +74,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateCertificateCode( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA512, false ).replaceAll( "\\p{Punct}", "" );
   }
   
   /**
@@ -82,7 +82,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateConfirmationCode( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA512, false ).replaceAll( "\\p{Punct}", "" );
   }
   
   /**
@@ -90,7 +90,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateSessionToken( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA512, false ).replaceAll( "\\p{Punct}", "" );
   }
 
   /**
@@ -104,7 +104,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
     digest.update( inputBytes );
     if ( randomize ) {
       SecureRandom random = new SecureRandom( );
-      random.setSeed( System.currentTimeMillis( ) );
+//TODO: RELEASE:      random.setSeed( System.currentTimeMillis( ) );
       byte[] randomBytes = random.generateSeed( inputBytes.length );
       digest.update( randomBytes );
     }
@@ -134,7 +134,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey ) {
     signer = ( signingKey == null ? signer : subjectDn );
     signingKey = ( signingKey == null ? keys.getPrivate( ) : signingKey );
-    LOG.debug( EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ) );
+    EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ).info();
     X509V3CertificateGenerator certGen = new X509V3CertificateGenerator( );
     certGen.setSerialNumber( BigInteger.valueOf( System.nanoTime( ) ).shiftLeft( 4 ).add( BigInteger.valueOf( ( long ) Math.rint( Math.random( ) * 1000 ) ) ) );
     certGen.setIssuerDN( signer );
@@ -164,7 +164,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   public KeyPair generateKeyPair( ) {
     KeyPairGenerator keyGen = null;
     try {
-      LOG.debug( EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR ) );
+      EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR );
       keyGen = KeyPairGenerator.getInstance( KEY_ALGORITHM, "BC" );
       SecureRandom random = new SecureRandom( );
       random.setSeed( System.currentTimeMillis( ) );

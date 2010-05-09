@@ -85,6 +85,7 @@ public class EquallogicVolumeInfo {
 	private String scName;
 	private String iqn;
 	private String storeUser;
+	@Lob
 	private String encryptedPassword;
 	@Column(name = "size")
 	protected Integer size;

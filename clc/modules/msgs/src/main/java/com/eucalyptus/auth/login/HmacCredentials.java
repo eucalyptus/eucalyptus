@@ -24,7 +24,7 @@ public class HmacCredentials extends WrappedCredentials<String> {
     this.verb = verb;
     this.servicePath = servicePath;
     this.headerHost = headerHost;
-    this.headerPort = "8773";
+    this.headerPort = System.getProperty("euca.ws.port");
     if ( headerHost != null && headerHost.contains( ":" ) ) {
       String[] hostTokens = this.headerHost.split( ":" );
       this.headerHost = hostTokens[0];

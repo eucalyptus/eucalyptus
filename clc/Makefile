@@ -8,7 +8,7 @@ web_prop_dir	= ${TOP}/clc/modules/www/conf
 
 .PHONY: all build update_properties update_theme deps extras install
 
-all: build
+all: deps build
 
 deps:
 	@$(ANT) deps
@@ -41,7 +41,7 @@ extras: update_properties
 		fi \
 	fi
 
-build: extras
+build: deps extras
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi

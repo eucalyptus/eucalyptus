@@ -60,6 +60,8 @@
 *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.client;
 
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 
@@ -88,7 +90,7 @@ public class VmTypeTable extends VerticalPanel {
 		this.add ( this.grid );
 		HorizontalPanel hpanel = new HorizontalPanel ();
 		hpanel.setSpacing (5);
-		hpanel.add ( new Button( "Save VmTypes", new SaveCallback( this ) ) );
+		hpanel.add ( new EucaButton( "Save VmTypes", new SaveCallback( this ) ) );
 		hpanel.add ( this.statusLabel );
 //		this.statusLabel.setWidth ("250");
 		this.statusLabel.setText ("");
@@ -225,7 +227,7 @@ public class VmTypeTable extends VerticalPanel {
 		}
 	}
 
-	class SaveCallback implements AsyncCallback, ClickListener {
+	class SaveCallback implements AsyncCallback, ClickHandler {
 
 		private VmTypeTable parent;
 
@@ -234,7 +236,7 @@ public class VmTypeTable extends VerticalPanel {
 			this.parent = parent;
 		}
 
-		public void onClick( final Widget widget )
+		public void onClick( ClickEvent event )
 		{
 			this.parent.statusLabel.setText ("Saving...");
 			this.parent.statusLabel.setStyleName ("euca-greeting-pending");

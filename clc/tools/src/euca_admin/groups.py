@@ -98,6 +98,7 @@ class Group():
       self.euca.handle_error(ex)
 
   def remove_membership(self):
+    options = self.get_membership_parser()
     try:
       reply = self.euca.connection.get_object('AddGroupMember', {'GroupName':options.groupName,'UserName':options.userName},BooleanResponse)
       print reply

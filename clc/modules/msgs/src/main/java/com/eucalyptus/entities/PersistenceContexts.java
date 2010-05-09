@@ -16,7 +16,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import edu.emory.mathcs.backport.java.util.Collections;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
@@ -44,20 +44,20 @@ public class PersistenceContexts {
   }
   
   private static boolean isDuplicate( Class entity ) {
-    String ctxName = Ats.from( entity ).get( PersistenceContext.class ).name( );
+    PersistenceContext ctx = Ats.from( entity ).get( PersistenceContext.class );
     if ( sharedEntities.contains( entity ) ) {
       Class old = sharedEntities.get( sharedEntities.indexOf( entity ) );
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       throw BootstrapException.throwFatal( "Duplicate entity definition in shared entities: " + entity.getCanonicalName( ) + ". See error logs for details." );
-    } else if ( entities.get( ctxName ).contains( entity ) ) {
-      List<Class> context = entities.get( ctxName );
+    } else if ( entities.get( ctx.name( ) ).contains( entity ) ) {
+      List<Class> context = entities.get( ctx.name( ) );
       Class old = context.get( context.indexOf( entity ) );
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
-      throw BootstrapException.throwFatal( "Duplicate entity definition in '" + ctxName + "': " + entity.getCanonicalName( ) + ". See error logs for details." );
+      throw BootstrapException.throwFatal( "Duplicate entity definition in '" + ctx.name( ) + "': " + entity.getCanonicalName( ) + ". See error logs for details." );
     } else {
       return false;
     }

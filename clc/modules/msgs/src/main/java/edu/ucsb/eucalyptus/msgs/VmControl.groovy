@@ -236,11 +236,12 @@ public class RunningInstancesItemType extends EucalyptusData {
   boolean monitoring = false;
   String platform;
 }
+
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
   String virtualName; // ephemeralN, root, ami, swap
   String deviceName;
-//  Integer deviceSize; // in megabytes
-//  String format; // optional, defaults to none (none, ext3, ntfs, swap)
+  Integer size; // in megabytes
+  String format; // optional, defaults to none (none, ext3, ntfs, swap)
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
     this.virtualName = virtualName;
     this.deviceName = deviceName;

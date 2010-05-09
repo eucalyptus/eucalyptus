@@ -91,7 +91,7 @@ public class BaseMessage {
   }
   
   public String toString( ) {
-    String str = this.toString( "msgs_eucalyptus_ucsb_edu" );
+    String str = this.toString( "msgs_eucalyptus_com" );
     str = ( str != null ) ? str : this.toString( "eucalyptus_ucsb_edu" );
     str = ( str != null ) ? str : "Failed to bind message of type: " + this.getClass( ).getName( ) + " at "
                                   + Thread.currentThread( ).getStackTrace( )[1].toString( );
@@ -107,9 +107,9 @@ public class BaseMessage {
   public String toString( String namespace ) {
     ByteArrayOutputStream temp = new ByteArrayOutputStream( );
     Class targetClass = this.getClass( );
-    while ( !targetClass.getSimpleName( ).endsWith( "Type" ) ) {
-      targetClass = targetClass.getSuperclass( );
-    }
+//    while ( !targetClass.getSimpleName( ).endsWith( "Type" ) && BaseMessage.class.equals( targetClass ) ) {
+//      targetClass = targetClass.getSuperclass( );
+//    }
     try {
       IBindingFactory bindingFactory = BindingDirectory.getFactory( namespace, targetClass );
       IMarshallingContext mctx = bindingFactory.createMarshallingContext( );

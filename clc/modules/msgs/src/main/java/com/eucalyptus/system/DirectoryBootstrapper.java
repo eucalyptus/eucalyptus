@@ -8,7 +8,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @Provides(Component.bootstrap)
 @RunDuring(Bootstrap.Stage.UnprivilegedConfiguration)
@@ -18,11 +18,11 @@ public class DirectoryBootstrapper extends Bootstrapper {
   @Override
   public boolean load( Stage current ) throws Exception {
     for( BaseDirectory b : BaseDirectory.values( ) ) {
-      LOG.info( EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, b.name(), b.toString( ) ) );
+      EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, b.name(), b.toString( ) ).info( );
       b.check( );
     }
     for( SubDirectory s : SubDirectory.values( ) ) {
-      LOG.info( EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, s.name(), s.toString( ) ) );
+      EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, s.name(), s.toString( ) ).info( );
       s.check( );
     }
     return true;

@@ -9,10 +9,11 @@ import org.mule.config.ConfigResource;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Record;
 import com.eucalyptus.util.Nameable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 /**
  * @author decker
@@ -148,7 +149,7 @@ public class Component implements ComponentInformation, Nameable<Component> {
   }
   
   public String toString( ) {
-    EventRecord rec = EventRecord.caller( Component.class, EventType.COMPONENT_INFO, this.getName( ), "enabled", this.isEnabled( ), "local", this.isLocal( ),
+    Record rec = EventRecord.caller( Component.class, EventType.COMPONENT_INFO, this.getName( ), "enabled", this.isEnabled( ), "local", this.isLocal( ),
                                           "state", this.getLifecycle( ).getState( ) );
     for ( ConfigResource cfg : this.getConfiguration( ).getResource( ).getConfigurations( ) ) {
       rec.next( ).append( ConfigResource.class, EventType.COMPONENT_INFO, this.getName( ), "->" + cfg.getUrl( ) );

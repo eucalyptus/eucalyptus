@@ -147,7 +147,36 @@ public interface EucalyptusWebBackend extends RemoteService {
 
 	public List<DownloadsWeb> getDownloads ( String sessionId, String downloadsUrl ) throws SerializableException;
 
+	public List<GroupInfoWeb> getGroups(String sessionId, String name) throws Exception;
+	
+	public List<UserInfoWeb> getUsersByGroups(String sessionId, List<String> groupNames) throws Exception;
+	
+	public void addGroup(String sessionId, GroupInfoWeb group) throws Exception;
+	
+	public void updateGroup(String sessionId, GroupInfoWeb group) throws Exception;
+	
+	public List<String> getGroupsByUser(String sessionId, String userName) throws Exception;
+	
+	public void deleteGroups(String sessionId, List<String> groupNames) throws Exception;
+	
+	public void addUser(String sessionId, UserInfoWeb user, List<String> groupNames) throws Exception;
+	
+	public void updateUser(String sessionId, UserInfoWeb user, List<String> groupNames) throws Exception;
+	
+	public void deleteUsers(String sessionId, List<String> userNames) throws Exception;
+	
+	public void enableUsers(String sessionId, List<String> userNames) throws Exception;
+	
+	public void disableUsers(String sessionId, List<String> userNames) throws Exception;
 
+	public void approveUsers(String sessionId, List<String> userNames) throws Exception;
+	
+	public void addUsersToGroups(String sessionId, List<String> userNames, List<String> groupNames) throws Exception;
+	
+	public void removeUsersFromGroups(String sessionId, List<String> userNames, List<String> groupNames) throws Exception;
+	
+	public List<String> getZones(String sessionId) throws Exception;
+	
 	/**
 	 * Utility/Convenience class.
 	 * Use EucalyptusWebBackend.App.getInstance() to access static instance of EucalyptusWebBackendAsync

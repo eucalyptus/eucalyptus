@@ -39,7 +39,7 @@ import org.mule.api.MuleException;
 import org.mule.module.client.MuleClient;
 
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 
 public class VMwareBrokerMessaging {
@@ -57,7 +57,7 @@ public class VMwareBrokerMessaging {
         return client;
     }
 
-    public static void enqueue( EucalyptusMessage msg ) throws EucalyptusCloudException
+    public static void enqueue( BaseMessage msg ) throws EucalyptusCloudException
     {
         try
         {
@@ -70,7 +70,7 @@ public class VMwareBrokerMessaging {
         }
     }
 
-    public static EucalyptusMessage dequeue( String msgId )
+    public static BaseMessage dequeue( String msgId )
     {
         return VMwareBrokerReplyQueue.getReply( msgId );
     }

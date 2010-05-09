@@ -49,7 +49,7 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
     }
     super.setCredential( credentials.getQueryId( ) );
     super.setPrincipal( user );
-    super.getGroups( ).addAll( Groups.lookupGroups( super.getPrincipal( ) ) );
+    super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
     return true;
   }
 

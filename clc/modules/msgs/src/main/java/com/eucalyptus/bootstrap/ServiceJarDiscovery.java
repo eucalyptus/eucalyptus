@@ -13,7 +13,7 @@ import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
   private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
@@ -37,6 +37,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             try {
               ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
               discovery.add( discover );
+              EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, discovery.getClass( ).getCanonicalName( ) );
             } catch ( Exception e ) {
               LOG.fatal( e, e );
               jar.close();

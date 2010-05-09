@@ -84,7 +84,7 @@ import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypeAvailability;
 import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -132,20 +132,20 @@ public class ClusterNodeState {
     LOG.debug( sorted );
 
     ResourceToken token = new ResourceToken( this.clusterName, requestId, userName, quantity, this.virtualTimer++, vmTypeName );
-    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_RESERVED, token.toString( ) ) );
+    EventRecord.caller( ResourceToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
     this.pendingTokens.add( token );
     return token;
   }
   
   public synchronized List<ResourceToken> splitToken( ResourceToken token ) throws NoSuchTokenException {
-    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_SPLIT, token.toString( ) ) );
+    EventRecord.caller( ResourceToken.class, EventType.TOKEN_SPLIT, token.toString( ) ).info( );
     if( !this.pendingTokens.contains( token ) ) {
       throw new NoSuchTokenException( "Splitting the requested token is not possible since it is not pending: " + token );
     }
     List<ResourceToken> childTokens = Lists.newArrayList( );
     for( int index = 0; index < token.getAmount( ); index++ ) {
       ResourceToken childToken = new ResourceToken( token.getCluster( ), token.getCorrelationId( )+index, token.getUserName( ), 1, this.virtualTimer++, token.getVmType( ) );
-      LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_CHILD, childToken.toString( ) ) );
+      EventRecord.caller( ResourceToken.class, EventType.TOKEN_CHILD, childToken.toString( ) ).info( );
       childTokens.add( childToken );
     }
     this.pendingTokens.remove( token );
@@ -154,14 +154,14 @@ public class ClusterNodeState {
   }
 
   public synchronized void releaseToken( ResourceToken token ) {
-    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_RETURNED, token.toString( ) ) );
+    EventRecord.caller( ResourceToken.class, EventType.TOKEN_RETURNED, token.toString( ) ).info( );
     this.pendingTokens.remove( token );
     this.submittedTokens.remove( token );
     this.redeemedTokens.remove( token );
   }
 
   public synchronized void submitToken( ResourceToken token ) throws NoSuchTokenException {
-    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_SUBMITTED, token.toString( ) ) );
+    EventRecord.caller( ResourceToken.class, EventType.TOKEN_SUBMITTED, token.toString( ) ).info( );
     if ( this.pendingTokens.remove( token ) )
       this.submittedTokens.add( token );
     else
@@ -169,7 +169,7 @@ public class ClusterNodeState {
   }
 
   public synchronized void redeemToken( ResourceToken token ) throws NoSuchTokenException {
-    LOG.info( EventRecord.caller( ResourceToken.class, EventType.TOKEN_REDEEMED, token.toString( ) ) );
+    EventRecord.caller( ResourceToken.class, EventType.TOKEN_REDEEMED, token.toString( ) ).info( );
     if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) )
       this.redeemedTokens.add( token );
     else
@@ -187,7 +187,7 @@ public class ClusterNodeState {
     for( ResourceToken t : this.redeemedTokens )
       redeemed += t.getAmount();
     outstandingCount = pending + submitted;
-    LOG.info( EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, String.format( "outstanding=%d:pending=%d:submitted=%d:redeemed=%d", outstandingCount, pending, submitted, redeemed ) ) );
+    EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, String.format( "outstanding=%d:pending=%d:submitted=%d:redeemed=%d", outstandingCount, pending, submitted, redeemed ) ).info( );
     this.redeemedTokens.clear();
 
     StringBuffer before = new StringBuffer();
@@ -201,8 +201,8 @@ public class ClusterNodeState {
       vmAvailable.setMax( rsc.getMaxInstances() );
       after.append( String.format( ":%s:%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
     }
-    LOG.info( EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "ANTE" + before.toString( ) ) );
-    LOG.info( EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "POST" + after.toString( ) ) );
+    EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "ANTE" + before.toString( ) ).info( );
+    EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "POST" + after.toString( ) ).info( );
   }
 
   private NavigableSet<VmTypeAvailability> sorted() {

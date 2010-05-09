@@ -77,7 +77,8 @@ import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 
 public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType,AssignAddressResponseType> {
   private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
@@ -102,7 +103,7 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
       }
       throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + this.getRequest( ) );      
     } else {
-      LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, address.toString( ) ) );
+      EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), address.toString( ) ).debug( );
     }
   }
   
@@ -150,12 +151,12 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
     if( !this.checkVmState( ) ) {
       throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
     } else {
-      LOG.info( EventRecord.here( AssignAddressCallback.class, Address.State.assigned, LogUtil.dumpObject( address ) ) );
+      EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), LogUtil.dumpObject( address ) ).info( );
     }
   }
 
   private void cleanupState( ) {
-    LOG.debug( EventRecord.here( AssignAddressCallback.class, Transition.assigning, LogUtil.FAIL, address.toString( ) ) );
+    EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), LogUtil.FAIL, address.toString( ) ).debug( );
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
     if( this.address.isPending( ) ) {
       this.address.clearPending( );

@@ -9,10 +9,12 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
@@ -128,6 +130,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     } catch ( EucalyptusCloudException e ) {
       throw new ServiceRegistrationException( e.getMessage( ), e );
     }
+    Groups.DEFAULT.addAuthorization( new AvailabilityZonePermission( config.getName( ) ) );
     return config;
   }
   

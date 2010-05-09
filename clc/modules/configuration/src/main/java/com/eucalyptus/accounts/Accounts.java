@@ -1,7 +1,6 @@
 package com.eucalyptus.accounts;
 
 import java.util.List;
-import org.apache.commons.collections.EnumerationUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.GroupExistsException;
 import com.eucalyptus.auth.Groups;
@@ -143,7 +142,7 @@ public class Accounts {
     if ( groups != null ) {
       for ( Group g : groups ) {
         GroupInfoType groupinfo = new GroupInfoType( g.getName( ) );
-        for ( User u : g.getUsers( ) ) {
+        for ( User u : g.getMembers( ) ) {
           groupinfo.getUsers( ).add( u.getName( ) );
         }
         for ( Authorization a : g.getAuthorizations( ) ) {
@@ -158,7 +157,7 @@ public class Accounts {
   public AddGroupResponseType addGroup( AddGroupType request ) throws EucalyptusCloudException {
     AddGroupResponseType reply = request.getReply( );
     try {
-      Groups.addGroup( request.getGroupName( ) ).addAuthorization( new AvailabilityZonePermission( "testing" ) );
+      Groups.addGroup( request.getGroupName( ) );
       reply.set_return( true );
     } catch ( GroupExistsException e ) {
       throw new EucalyptusCloudException( "Group already exists: " + request.getGroupName( ), e );

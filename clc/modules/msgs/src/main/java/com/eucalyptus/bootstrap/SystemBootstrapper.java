@@ -100,6 +100,7 @@ public class SystemBootstrapper {
       Security.addProvider( new BouncyCastleProvider( ) );
       LogLevels.DEBUG = doDebug;
       LogLevels.TRACE = doDebug;
+      System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
       t.printStackTrace( );
       System.exit( 1 );

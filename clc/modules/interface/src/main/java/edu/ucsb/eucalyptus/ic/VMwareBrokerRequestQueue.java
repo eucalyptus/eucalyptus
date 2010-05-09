@@ -34,12 +34,12 @@
 
 package edu.ucsb.eucalyptus.ic;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 
 public class VMwareBrokerRequestQueue
 {
-  public EucalyptusMessage handle( EucalyptusMessage msg )
+  public BaseMessage handle( BaseMessage msg )
   {
     Logger.getLogger( VMwareBrokerRequestQueue.class ).warn( "vmware broker received request " + msg.getCorrelationId( ) + " type:" + msg.getClass().getSimpleName() );
     return msg;

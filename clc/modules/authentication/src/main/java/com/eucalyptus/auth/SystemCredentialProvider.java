@@ -71,6 +71,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
@@ -78,6 +79,7 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.system.SubDirectory;
 
 @Provides( Component.any )
 @RunDuring( Bootstrap.Stage.SystemCredentialsInit )
@@ -156,6 +158,10 @@ public class SystemCredentialProvider extends Bootstrapper {
     try {
       KeyPair sysKp = Certs.generateKeyPair( );
       X509Certificate sysX509 = Certs.generateServiceCertificate( sysKp, name.name( ) );
+      if( Component.eucalyptus.equals( name ) ) {
+        PEMFiles.write( SubDirectory.KEYS.toString( ) + "/cloud-cert.pem", sysX509 );
+        PEMFiles.write( SubDirectory.KEYS.toString( ) + "/cloud-pk.pem", sysKp.getPrivate( ) );
+      }
       SystemCredentialProvider.certs.put( name, sysX509 );
       SystemCredentialProvider.keypairs.put( name, sysKp );
       // TODO: might need separate keystore for euca/hsqldb/ssl/jetty/etc.
@@ -172,6 +178,7 @@ public class SystemCredentialProvider extends Bootstrapper {
   @Override
   public boolean load( Stage current ) throws Exception {
     try {
+      if ( !SystemCredentialProvider.check( Component.eucalyptus ) ) SystemCredentialProvider.init( Component.eucalyptus );
       for ( Component c : Component.values( ) ) {
         try {
           if ( !SystemCredentialProvider.check( c ) ) SystemCredentialProvider.init( c );

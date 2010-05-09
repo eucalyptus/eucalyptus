@@ -270,6 +270,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	public void configure() {
 		exportManager.configure();
 		//First call to StorageInfo.getStorageInfo will add entity if it does not exist
+		LOG.info(StorageInfo.getStorageInfo().getName());
 		checkVolumesDir();
 	}
 

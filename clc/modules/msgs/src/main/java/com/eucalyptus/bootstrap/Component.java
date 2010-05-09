@@ -81,6 +81,7 @@ public enum Component {
   dns( true ),
   storage( false ),
   db( true ),
+  ldap( true ),
   jetty( true ),
   configuration( true ),
   cluster( false ),

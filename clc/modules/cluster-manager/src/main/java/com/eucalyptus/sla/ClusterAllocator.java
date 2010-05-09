@@ -72,7 +72,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterThreadFactory;
 import com.eucalyptus.cluster.Clusters;
@@ -84,7 +83,6 @@ import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -101,8 +99,7 @@ import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.ws.SystemState;
-import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -176,13 +173,13 @@ public class ClusterAllocator extends Thread {
     if ( networkToken != null ) {
       QueuedEventCallback callback = new StartNetworkCallback( networkToken ).regardingUserRequest( vmAllocInfo.getRequest( ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
-      LOG.debug( EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ),networkToken.toString( ) ) );
+      EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ),networkToken.toString( ) ).debug( );
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest( );
       if ( networkToken != null ) {
         Network network = Networks.getInstance( ).lookup( networkToken.getName( ) );
-        LOG.debug( EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, ConfigureNetworkCallback.class.getSimpleName( ), network.getRules().toString( ) ) );
+        EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, ConfigureNetworkCallback.class.getSimpleName( ), network.getRules().toString( ) ).debug( );
         if ( !network.getRules( ).isEmpty( ) ) {
           this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( this.vmAllocInfo.getRequest( ).getUserId( ), network.getRules( ) ) );
         }

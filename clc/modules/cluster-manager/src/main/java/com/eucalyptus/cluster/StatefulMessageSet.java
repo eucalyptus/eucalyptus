@@ -9,7 +9,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class StatefulMessageSet<E extends Enum<E>> {
   private static Logger                              LOG           = Logger.getLogger( StatefulMessageSet.class );
@@ -49,7 +49,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
   }
   
   public void addRequest( E state, QueuedEventCallback callback ) {
-    LOG.debug( EventRecord.caller( StatefulMessageSet.class, EventType.VM_PREPARE, state.name( ), callback.getClass( ).getSimpleName( ) ) );
+    EventRecord.caller( StatefulMessageSet.class, EventType.VM_PREPARE, state.name( ), callback.getClass( ).getSimpleName( ) ).debug( );
     this.messages.put( state, callback );
   }
   
@@ -60,13 +60,13 @@ public class StatefulMessageSet<E extends Enum<E>> {
         final BroadcastCallback callback = ( BroadcastCallback ) event;
         this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, QueuedEventCallback>( ) {
           public QueuedEventCallback apply( Cluster c ) {
-            LOG.info( EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), c.getName( ), event.getClass( ).getSimpleName( ) ) );
+            EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), c.getName( ), event.getClass( ).getSimpleName( ) ).info( );
             return callback.newInstance( ).regardingUserRequest( callback.getRequest( ) ).dispatch( c );
           }
         } ) );
       } else {
         this.pendingEvents.add( event.dispatch( cluster ) );
-        LOG.info( EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), cluster.getName( ), event.getClass( ).getSimpleName( ) ) );
+        EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), cluster.getName( ), event.getClass( ).getSimpleName( ) ).info( );
       }
     }
   }
@@ -79,15 +79,15 @@ public class StatefulMessageSet<E extends Enum<E>> {
       try {
         Object o = event.pollResponse( 1000l );
         if ( o != null ) {
-          LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ) );
+          EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
         }
       } catch ( Throwable t ) {
-        LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ) );
+        EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ).info( );
         LOG.debug( t, t );
         nextState = this.rollback( );
       }
     }
-    LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), EventType.TRANSITION.name( ), nextState.name( ) ) );
+    EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), EventType.TRANSITION.name( ), nextState.name( ) ).info( );
     return nextState;
   }
   

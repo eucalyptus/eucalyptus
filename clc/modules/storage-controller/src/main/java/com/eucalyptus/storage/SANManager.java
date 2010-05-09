@@ -177,6 +177,9 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void configure() {
+		//dummy init
+		LOG.info(StorageInfo.getStorageInfo().getName());
+		//configure provider
 		connectionManager.configure();
 	}
 
