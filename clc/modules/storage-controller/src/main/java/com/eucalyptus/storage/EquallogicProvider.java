@@ -187,7 +187,7 @@ public class EquallogicProvider implements SANProvider {
 			}				
 		} catch(EucalyptusCloudException ex) {
 			db.rollback();
-			throw new EucalyptusCloudException("Unable to get CHAP password");
+			throw ex;
 		}
 	}
 

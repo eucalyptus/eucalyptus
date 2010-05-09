@@ -84,6 +84,13 @@
 
   <servlet>
     <description></description>
+    <display-name>Report Generator</display-name>
+    <servlet-name>Reports</servlet-name>
+    <servlet-class>com.eucalyptus.www.Reports</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet>
+    <description></description>
     <display-name>X509Downloader</display-name>
     <servlet-name>X509Download</servlet-name>
     <servlet-class>edu.ucsb.eucalyptus.admin.server.X509Download</servlet-class>
@@ -107,6 +114,12 @@
     <servlet-name>X509Download</servlet-name>
     <url-pattern>/getX509</url-pattern>
   </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>Reports</servlet-name>
+    <url-pattern>/reports</url-pattern>
+  </servlet-mapping>
+
 
   <servlet-mapping>
     <servlet-name>CloudRegistration</servlet-name>

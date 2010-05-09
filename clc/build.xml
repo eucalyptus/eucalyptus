@@ -94,6 +94,7 @@
 		<ant dir="modules/configuration" inheritall="false" target="builder" />
 		<ant dir="modules/core" inheritall="false" target="builder" />
 		<ant dir="modules/wsstack" inheritall="false" target="builder" />
+    <ant dir="modules/component" inheritall="false" target="builder" />
 		<ant dir="modules/interface" inheritall="false" target="builder" />
 		<ant dir="modules/group-manager" inheritall="false" target="builder" />
 		<ant dir="modules/cluster-manager" inheritall="false" target="builder" />
@@ -104,6 +105,7 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
 		<ant dir="modules/www" inheritall="false" target="builder" />
+	  <ant dir="modules/vmware-broker" inheritall="false" target="builder" />
 		<ant dir="." inheritall="false" target="jar" />
 	</target>
 	<target name="jar" depends="bind">
@@ -113,6 +115,7 @@
 		<ant dir="modules/authentication" inheritall="false" target="jar" />
 		<ant dir="modules/cloud" inheritall="false" target="jar" />
 		<ant dir="modules/configuration" inheritall="false" target="jar" />
+    <ant dir="modules/component" inheritall="false" target="jar" />
 		<ant dir="modules/core" inheritall="false" target="jar" />
 		<ant dir="modules/wsstack" inheritall="false" target="jar" />
 		<ant dir="modules/interface" inheritall="false" target="jar" />
@@ -125,6 +128,7 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="jar" />
 		<ant dir="modules/dns" inheritall="false" target="jar" />
 		<ant dir="modules/www" inheritall="false" target="jar" />
+    <ant dir="modules/vmware-broker" inheritall="false" target="jar" />
 	</target>
 	<target name="shouldBind">
 		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
@@ -161,6 +165,7 @@
 		<ant dir="modules/cloud" inheritall="false" target="clean" />
 		<ant dir="modules/authentication" inheritall="false" target="clean" />
 		<ant dir="modules/configuration" inheritall="false" target="clean" />
+    <ant dir="modules/component" inheritall="false" target="clean" />
 		<ant dir="modules/core" inheritall="false" target="clean" />
 		<ant dir="modules/wsstack" inheritall="false" target="clean" />
 		<ant dir="modules/interface" inheritall="false" target="clean" />
@@ -173,6 +178,7 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
 		<ant dir="modules/dns" inheritall="false" target="clean" />
 		<ant dir="modules/www" inheritall="false" target="clean" />
+	  <ant dir="modules/vmware-broker" inheritall="false" target="clean" />
 		<delete dir="${target.dir}" />
 	</target>
 	<target name="distclean" depends="clean">

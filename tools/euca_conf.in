@@ -79,7 +79,8 @@ NODEMODE=""
 SYNC=""
 WALRUS=""
 WALRUS_MODE=""
-VMWAREBROKER=""
+VMWAREBROKERNAME=""
+VMWAREBROKERHOST=""
 VMWAREBROKER_MODE=""
 CLUSNAME=""
 NEWCLUS=""
@@ -105,44 +106,43 @@ usage () {
 	echo "$0 [options] [<file>]"
 	echo
 	echo "where <file> is the configuration file ($FILE by default)"
-	echo "   --help                           this message"
-	echo "   -d <dir>                         point EUCALYPTUS to <dir>"
-	echo "   --no-rsync                       don't use rsync"
-	echo "   --no-scp                         don't use scp"
-	echo "   --skip-scp-hostcheck             skip scp interactive host keycheck"
-	echo "   --get-credentials <zipfile>      download credentials to <zipfile>"
-	echo "   --register-nodes \"host host ...\" add new nodes to EUCALYPTUS"
-	echo "   --deregister-nodes \"host host ...\"   remove nodes from EUCALYPTUS"
-	echo "   --register-cluster <clustername> <host> add new cluster to EUCALYPTUS"
-	echo "   --deregister-cluster <clustername>      remove cluster from EUCALYPTUS"
-	echo "   --configure-vmware                add new vmware to EUCALYPTUS"
-	echo "   --register-walrus <host>         add walrus to EUCALYPTUS"
-	echo "   --deregister-walrus <host>       remove walrus from EUCALYPTUS"
-        echo "   --register-sc <clustername> <host>      add storage controller"
-        echo "   --deregister-sc <clustername>           remove storage controller from EUCALYPTUS"
-	echo "   --register-vmwarebroker <host>         add vmware broker to EUCALYPTUS"
-	echo "   --deregister-vmwarebroker <host>       remove vmware broker from EUCALYPTUS"
-	echo "   --list-walruses                  list registered walrus(es)"
-	echo "   --list-clusters                  list registered CCs"
-	echo "   --list-nodes                     list registered NCs"
-	echo "   --list-scs                       list registered SCs"
-	echo "   --no-sync                        used only with --register-* to skip syncing keys"
-	echo "   --cc-port <port>                 set CC port"
-	echo "   --nc-port <port>                 set NC port"
-	echo "   --instances <path>               set the INSTANCE path"
-#	echo "   --cloud-port <port1> <port2>     set the 2 cloud ports"
-	echo "   --hypervisor <kvm|xen>           set hypervisor to use"
-	echo "   --user <euca_user>               set the user to use"
-	echo "   --dhcpd <dhcpd>                  set the dhcpd binary to <name>"
-	echo "   --dhcp_user <user>               set the username to run dhcpd as"
-	echo "   --name <var>                     returns the value or <name>"
-	echo "   --import-conf <file>             import variables from <file> into eucalyptus.conf"
-	echo "   --setup                          perform initial setup"
-	echo "   --enable {cloud|walrus|sc|vmwarebroker}       enable service at next start"
-	echo "   --disable {cloud|walrus|sc|vmwarebroker}      disable service at next start"
-	echo "   --check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}  pre-flight checks"
-#	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
-	echo "   --version                        eucalyptus version"
+	echo "   --help                           			this message"
+	echo "   -d <dir>                         			point EUCALYPTUS to <dir>"
+	echo "   --no-rsync                       			don't use rsync"
+	echo "   --no-scp                         			don't use scp"
+	echo "   --skip-scp-hostcheck             			skip scp interactive host keycheck"
+	echo "   --get-credentials <zipfile>      			download credentials to <zipfile>"
+	echo "   --register-nodes \"host host ...\" 			add new nodes to EUCALYPTUS"
+	echo "   --deregister-nodes \"host host ...\"   		remove nodes from EUCALYPTUS"
+	echo "   --register-cluster <clustername> <host>		add new cluster to EUCALYPTUS"
+	echo "   --deregister-cluster <clustername>     		remove cluster from EUCALYPTUS"
+	echo "   --configure-vmware                			add new vmware to EUCALYPTUS"
+	echo "   --register-walrus <host>         			add walrus to EUCALYPTUS"
+	echo "   --deregister-walrus <host>       			remove walrus from EUCALYPTUS"
+        echo "   --register-sc <clustername> <host>      		add storage controller"
+        echo "   --deregister-sc <clustername>           		remove storage controller from EUCALYPTUS"
+	echo "   --register-vmwarebroker <clustername> <host>		add vmware broker to EUCALYPTUS"
+	echo "   --deregister-vmwarebroker <clustername>       		remove vmware broker from EUCALYPTUS"
+	echo "   --list-walruses                  			list registered walrus(es)"
+	echo "   --list-clusters                  			list registered CCs"
+	echo "   --list-nodes                     			list registered NCs"
+	echo "   --list-scs                       			list registered SCs"
+	echo "   --list-vmwarebrokers					list registered VMwareBrokers"
+	echo "   --no-sync                        			used only with --register-* to skip syncing keys"
+	echo "   --cc-port <port>                 			set CC port"
+	echo "   --nc-port <port>                 			set NC port"
+	echo "   --instances <path>               			set the INSTANCE path"
+	echo "   --hypervisor <kvm|xen>           			set hypervisor to use"
+	echo "   --user <euca_user>               			set the user to use"
+	echo "   --dhcpd <dhcpd>                  			set the dhcpd binary to <name>"
+	echo "   --dhcp_user <user>               			set the username to run dhcpd as"
+	echo "   --name <var>                     			returns the value or <name>"
+	echo "   --import-conf <file>             			import variables from <file> into eucalyptus.conf"
+	echo "   --setup                          			perform initial setup"
+	echo "   --enable {cloud|walrus|sc|vmwarebroker}  		enable service at next start"
+	echo "   --disable {cloud|walrus|sc|vmwarebroker}    		disable service at next start"
+	echo "   --check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}	pre-flight checks"
+	echo "   --version                        			eucalyptus version"
 	echo
 }
 
@@ -411,7 +411,12 @@ while [ $# -gt 0 ]; do
 	    shift
 	    continue
 	fi
-	if [ "$1" = "--verbose" ]; then 
+	if [ "$1" = "--list-vmwarebrokers" ]; then 
+	    LIST="$LIST vmwarebrokers"
+	    shift
+	    continue
+	fi
+if [ "$1" = "--verbose" ]; then 
 	    VERBOSE="Y"
 	    shift
 	    continue
@@ -598,14 +603,19 @@ while [ $# -gt 0 ]; do
 		continue
 	fi
 	if [ "$1" = "--register-vmwarebroker" ]; then
+		if [ $# -lt 3 ]; then
+			echo "--register-vmwarebroker requires a cluster and a hostname"
+			exit 1
+		fi
 		VMWAREBROKER_MODE="ADD"
-		VMWAREBROKER="$2"
-		shift; shift
+		VMWAREBROKERNAME="$2"
+		VMWAREBROKERHOST="$3"
+		shift; shift; shift
 		continue
 	fi
 	if [ "$1" = "--deregister-vmwarebroker" ]; then
 		VMWAREBROKER_MODE="DEL"
-		VMWAREBROKER="$2"
+		VMWAREBROKERNAME="$2"
 		shift; shift
 		continue
 	fi
@@ -1353,13 +1363,13 @@ if [ -n "$VMWARE" ]; then
 fi
 
 # vmware broker 
-if [ -n "$VMWAREBROKER" -o -n "$VMWAREBROKER_MODE" ]; then
+if [ -n "$VMWAREBROKERNAME" -o -n "$VMWAREBROKER_MODE" ]; then
     if ! checkLocalService "CLC" ; then
 	exit 1
     fi
     
     if [ "$VMWAREBROKER_MODE" = "ADD" ]; then
-	echo "Adding VMware Broker host $VMWAREBROKER"
+	echo "Adding VMwareBroker $VMWAREBROKERHOST to cluster $VMWAREBROKERNAME"
 	if [ -d "${EUCALYPTUS}/var/lib/eucalyptus/keys/" ]; then
 	    SOURCEDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
 	    DESTDIR=${EUCALYPTUS}/var/lib/eucalyptus/keys/
@@ -1369,7 +1379,7 @@ if [ -n "$VMWAREBROKER" -o -n "$VMWAREBROKER_MODE" ]; then
 	fi
 	
 	URL=""
-	if ! createCloudURL "Action" "RegisterVMwareBroker" "Host" "${VMWAREBROKER}" "Name" "vmwarebroker" "Port" "8773"; then
+	if ! createCloudURL "Action" "RegisterVMwareBroker" "Host" "${VMWAREBROKERHOST}" "Name" "${VMWAREBROKERNAME}" "Port" "8773"; then
 	    exit 1
 	fi
 
@@ -1380,21 +1390,21 @@ if [ -n "$VMWAREBROKER" -o -n "$VMWAREBROKER_MODE" ]; then
 	
 	# check that vmware broker is at least running on the remote host
 	sleep 3
-	if ! check_heartbeat ${VMWAREBROKER} vmwarebroker ; then
+	if ! check_heartbeat ${VMWAREBROKERHOST} vmwarebroker ; then
 		echo "VMware Broker is not up on host ${VMWAREBROKER}: check the logs"
 	fi
 	
 	# sync the keys
-	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${VMWAREBROKER} euca.p12 ; then
-	    echo "ERROR: failed to sync keys with ${VMWAREBROKER}."
+	if ! sync_keys ${SOURCEDIR} ${DESTDIR} ${VMWAREBROKERHOST} euca.p12 ; then
+	    echo "ERROR: failed to sync keys with ${VMWAREBROKERHOST}."
             exit 1
 	fi
 	echo
-	echo "SUCCESS: new vmware broker on host '${VMWAREBROKER}' successfully registered."
+	echo "SUCCESS: new vmware broker on host '${VMWAREBROKERHOST}' successfully registered."
 	
     elif [ "$VMWAREBROKER_MODE" = "DEL" ]; then
 	URL=""
-	if ! createCloudURL "Action" "DeregisterVMwareBroker" "Name" "vmwarebroker"; then
+	if ! createCloudURL "Action" "DeregisterVMwareBroker" "Name" "${VMWAREBROKERNAME}"; then
 	    exit 1
 	fi
 	if ! check_ws "$URL" ; then
@@ -1553,6 +1563,18 @@ for x in $LIST ; do
 		fi
 		if [ -n "$LIST_RES" ]; then
 			echo "registered nodes:"
+		fi
+		echo "$LIST_RES"
+	fi
+	if [ "$x" = "vmwarebrokers" ]; then
+		if ! createCloudURL "Action" "DescribeVMwareBrokers" ; then
+			exit 1
+		fi
+		if ! check_ws "$URL" LIST_RES ; then
+			exit 1
+		fi
+		if [ -n "$LIST_RES" ]; then
+			echo "registered vmware brokers:"
 		fi
 		echo "$LIST_RES"
 	fi

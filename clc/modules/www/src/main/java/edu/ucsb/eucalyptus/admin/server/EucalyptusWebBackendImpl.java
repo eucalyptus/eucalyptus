@@ -695,6 +695,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
 		oldRecord.setAdministrator(newRecord.isAdministrator());
+    oldRecord.setEnabled(newRecord.isEnabled( ));
 
 		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
 		if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {
@@ -1014,11 +1015,6 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	@Override
 	public void updateUser(String sessionId, UserInfoWeb user,
 			List<String> groupNames) throws Exception {
-		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
-		if (!reqUser.isAdministrator()) {
-			throw new Exception("Only admin can update a group");
-		}
 		updateUserRecord(sessionId, user);
 		EucalyptusManagement.updateUserGroups(user.getUserName(), groupNames);
 	}
