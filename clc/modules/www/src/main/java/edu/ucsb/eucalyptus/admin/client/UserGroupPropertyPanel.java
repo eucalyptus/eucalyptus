@@ -187,12 +187,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			addHtmlContent(UserGroupUtils.getSpecialGroupHelp(group.name));
 		} else {
 			HorizontalPanel action = addActionBar();
-			action.add(new EucaButton("Edit", new ClickHandler() {
+			action.add(new EucaButton("Edit", "Edit group " + group.name, new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					control.displayEditGroupUI();
 				}
 			}));
-			action.add(new EucaButton("Delete", new ClickHandler() {
+			action.add(new EucaButton("Delete", "Delete group " + group.name, new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					control.displayDeleteGroupUI();
 				}
@@ -209,7 +209,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.cleanup();
 		setHeaderText("Groups: " + groups.size());		
 		HorizontalPanel action = addActionBar();
-		action.add(new EucaButton("Delete", new ClickHandler() {
+		action.add(new EucaButton("Delete", "Delete selected groups", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayDeleteGroupsUI();
 			}
@@ -234,14 +234,14 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.cleanup();
 		setHeaderText("User: " + user.getRealName());		
 		HorizontalPanel action = addActionBar();
-		action.add(new EucaButton("Edit", new ClickHandler() {
+		action.add(new EucaButton("Edit", "Edit user " + user.getUserName(), new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayEditUserUI();
 			}
 		}));
 		// admin can not delete another admin
 		if (!user.isAdministrator()) {
-			action.add(new EucaButton("Delete", new ClickHandler() {
+			action.add(new EucaButton("Delete", "Delete user " + user.getUserName(), new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					control.displayDeleteUserUI();
 				}
@@ -270,32 +270,32 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.cleanup();
 		setHeaderText("Users: " + users.size());		
 		HorizontalPanel action = addActionBar();
-		action.add(new EucaButton("Add to", new ClickHandler() {
+		action.add(new EucaButton("Add to", "Add selected users to groups", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayAddUsersToGroupsUI();
 			}
 		}));
-		action.add(new EucaButton("Remove from", new ClickHandler() {
+		action.add(new EucaButton("Remove from", "Remove selected users from groups", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayRemoveUsersFromGroupsUI();
 			}
 		}));
-		action.add(new EucaButton("Approve", new ClickHandler() {
+		action.add(new EucaButton("Approve", "Approve selected users", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayApproveUsersUI();
 			}
 		}));
-		action.add(new EucaButton("Enable", new ClickHandler() {
+		action.add(new EucaButton("Enable", "Enable selected users", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayEnableUsersUI();
 			}
 		}));
-		action.add(new EucaButton("Disable", new ClickHandler() {
+		action.add(new EucaButton("Disable", "Disable selected users", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayDisableUsersUI();
 			}
 		}));
-		action.add(new EucaButton("Delete", new ClickHandler() {
+		action.add(new EucaButton("Delete", "Delete selected users", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayDeleteUsersUI();
 			}
