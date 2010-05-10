@@ -85,6 +85,7 @@ import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.Authorization;
@@ -103,6 +104,7 @@ import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.Composites;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Tx;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -129,17 +131,15 @@ public class EucalyptusManagement {
 	/* TODO: for now 'pattern' is ignored and all users are returned */
 	public static List <UserInfoWeb> getWebUsers (String pattern) throws SerializableException
 	{
-    final EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get( UserInfo.class );
 	  final List<UserInfoWeb> webUsersList = Lists.newArrayList();
 	  for( User u : Users.listAllUsers( ) ) {
       try {
-        UserInfo userInfo = dbWrapper.getUnique( new UserInfo( u.getName( ) ) );
+        UserInfo userInfo = UserInfoStore.getUserInfo( new UserInfo( u.getName( ) ) );
         webUsersList.add( Composites.composeNew( UserInfoWeb.class, userInfo, u ) );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
 	  }
-		dbWrapper.commit();
 		return webUsersList;
 	}
 
@@ -169,18 +169,12 @@ public class EucalyptusManagement {
   }
   
   private static UserInfoWeb getWebUserByExample( UserInfo ex ) throws SerializableException {
-    EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
     try {
-      UserInfo userInfo = dbWrapper.getUnique( ex );
+      UserInfo userInfo = UserInfoStore.getUserInfo( ex );
       User user = Users.lookupUser( userInfo.getUserName( ) );
       UserInfoWeb webUser = Composites.composeNew( UserInfoWeb.class, userInfo, user );
-      dbWrapper.commit( );
       return webUser;
-    } catch ( EucalyptusCloudException e ) {
-      dbWrapper.rollback( );
-      throw EucalyptusManagement.makeFault( "Error looking up user information: " + e.getMessage( ) );
     } catch ( NoSuchUserException e ) {
-      dbWrapper.rollback( );
       throw EucalyptusManagement.makeFault( "User does not exist" );
     }
   }
@@ -194,7 +188,6 @@ public class EucalyptusManagement {
     } catch ( NoSuchUserException e ) {
       try {
         user = Users.addUser( webUser.getUserName( ), webUser.isAdministrator( ), webUser.isEnabled( ) );
-        EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get( UserInfo.class );
         try {
           UserInfo userInfo = Composites.updateNew( webUser, UserInfo.class );
           userInfo.setConfirmationCode( Crypto.generateSessionToken( webUser.getUserName() ) );
@@ -203,16 +196,8 @@ public class EucalyptusManagement {
           } catch ( EucalyptusCloudException e1 ) {
             LOG.debug( e1, e1 );
           }
-          dbWrapper.add( userInfo );
-          dbWrapper.commit();
+          UserInfoStore.addUserInfo( userInfo );
         } catch ( Exception e1 ) {
-          dbWrapper.rollback();
-          StringBuilder sb = new StringBuilder();
-          for (StackTraceElement ste : e1.getStackTrace()) {
-        	  sb.append(ste.toString());
-        	  sb.append("\n");
-          }
-          LOG.error(sb.toString());
           LOG.error( e1, e1 );
           throw EucalyptusManagement.makeFault("Error adding user: " + e1.getMessage( ) );
         }
@@ -243,16 +228,7 @@ public class EucalyptusManagement {
 	{
 	  try {
       Users.deleteUser( userName );
-      EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
-      try {
-        UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
-        dbWrapper.delete( userInfo );
-        dbWrapper.commit( );
-      } catch ( EucalyptusCloudException e1 ) {
-        dbWrapper.rollback( );
-        LOG.error( e1, e1 );
-        throw EucalyptusManagement.makeFault("Error while deleting user: " + e1.getMessage( ) );      
-      }
+      UserInfoStore.deleteUserInfo( userName );
     } catch ( NoSuchUserException e1 ) {
       LOG.debug( e1, e1 );
       throw EucalyptusManagement.makeFault( "Unable to delete user" );
@@ -262,23 +238,20 @@ public class EucalyptusManagement {
     }
 	}
 
-	public static void commitWebUser( UserInfoWeb webUser ) throws SerializableException
+	public static void commitWebUser( final UserInfoWeb webUser ) throws SerializableException
 	{
 	  String userName = webUser.getUserName( );
     try {
-      User user = Users.lookupUser( userName );
-      EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
-      try {
-        UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
-        LOG.debug("---------------> project ");
-        LOG.debug("webUser.enabled = " + webUser.isEnabled());
-        Composites.project( webUser, userInfo, user );
-        dbWrapper.commit( );
-      } catch ( EucalyptusCloudException e1 ) {
-        dbWrapper.rollback( );
-        LOG.error( e1, e1 );
-        throw EucalyptusManagement.makeFault("Error while updating user: " + e1.getMessage( ) );      
-      }
+      Users.updateUser( userName, new Tx<User>( ) {
+        public void fire( User user ) throws Throwable {
+          Composites.project( webUser, user );
+        }
+      });
+      UserInfoStore.updateUserInfo( userName, new Tx<UserInfo>( ) {
+        public void fire( UserInfo info ) throws Throwable {
+          Composites.project( webUser, info );
+        }
+      });
     } catch ( NoSuchUserException e1 ) {
       LOG.error( e1, e1 );
       throw EucalyptusManagement.makeFault( "Unable to update user" );
@@ -290,13 +263,11 @@ public class EucalyptusManagement {
 
 	public static String getAdminEmail() throws SerializableException
 	{
-		EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>(  );
 		String addr = null;
 		try {
-      UserInfo adminUser = db.getUnique( new UserInfo("admin") );
+      UserInfo adminUser = UserInfoStore.getUserInfo( new UserInfo("admin") );
       addr = adminUser.getEmail( );
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( NoSuchUserException e ) {
       throw EucalyptusManagement.makeFault("Administrator account not found" );
     }
     if (addr==null || addr.equals("")) {
@@ -522,17 +493,15 @@ public class EucalyptusManagement {
 			return uis;
 		}
 		Enumeration<? extends Principal> users = group.members();
-		final EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get(UserInfo.class);
 		while (users.hasMoreElements()) {
 			User u = (User) users.nextElement();
 			try {
-				UserInfo userInfo = dbWrapper.getUnique(new UserInfo(u.getName()));
+				UserInfo userInfo = UserInfoStore.getUserInfo(new UserInfo(u.getName()));
 				uis.add(Composites.composeNew(UserInfoWeb.class, userInfo, u));
 			} catch ( Exception e ) {
 				LOG.debug( e, e );
 			}
 		}
-		dbWrapper.commit();
 		return uis;
 	}
 	

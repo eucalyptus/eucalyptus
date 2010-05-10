@@ -740,7 +740,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			public void onClick(ClickEvent event) {
 				List<String> userNames = new ArrayList<String>();
 				userNames.add(user.getUserName());
-				control.deleteGroups(userNames);
+				control.deleteUsers(userNames);
 			}
 		}));
 		action.add(new EucaButton("No", new ClickHandler() {

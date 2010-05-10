@@ -23,6 +23,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
     Users.setUserProvider( dbAuth );
     Groups.setGroupProvider( dbAuth );
+    UserInfoStore.setUserInfoProvider( dbAuth );
     return true;
   }
   

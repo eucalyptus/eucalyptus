@@ -11,19 +11,19 @@ import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
 
-public class UserProxy implements User {
+public class DatabaseWrappedUser implements User {
   
-  public static Function<UserEntity, UserProxy> proxyFunction = new Function<UserEntity, UserProxy>( ) {
-                                                                public UserProxy apply( UserEntity arg0 ) {
-                                                                  return new UserProxy( arg0 );
+  public static Function<UserEntity, DatabaseWrappedUser> proxyFunction = new Function<UserEntity, DatabaseWrappedUser>( ) {
+                                                                public DatabaseWrappedUser apply( UserEntity arg0 ) {
+                                                                  return new DatabaseWrappedUser( arg0 );
                                                                 }
                                                               };
   
-  private static Logger                         LOG           = Logger.getLogger( UserProxy.class );
+  private static Logger                         LOG           = Logger.getLogger( DatabaseWrappedUser.class );
   private final UserEntity                      searchUser;
   private UserEntity                                  user;
   
-  public UserProxy( UserEntity user ) {
+  public DatabaseWrappedUser( UserEntity user ) {
     this.searchUser = new UserEntity( user.getName( ) );
     this.user = user;
   }
