@@ -137,6 +137,10 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="extlogfile" />
   </category>
+  <category name="net.sf.jasperreports" additivity="true">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="extlogfile" />
+  </category>
   <category name="org.mule" additivity="true">
     <priority value="FATAL" />
     <appender-ref ref="${euca.log.appender}" />
@@ -158,6 +162,10 @@
     <appender-ref ref="${euca.log.appender}" />
   </category>
   <category name="bitronix.tm" additivity="true">
+    <priority value="FATAL" />
+    <appender-ref ref="${euca.log.appender}" />
+  </category>
+  <category name="net.sf.jasperreports" additivity="true">
     <priority value="FATAL" />
     <appender-ref ref="${euca.log.appender}" />
   </category>
