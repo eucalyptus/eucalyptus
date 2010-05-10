@@ -28,60 +28,87 @@ import com.eucalyptus.system.BaseDirectory;
 
 public class Reports extends HttpServlet {
   private static Logger LOG = Logger.getLogger( Reports.class );
-  
+  enum Param {
+    name, type;
+    public String get( HttpServletRequest req ) throws IllegalArgumentException {
+      if( req.getParameter( this.name( ) ) == null ) {
+        throw new IllegalArgumentException( "'" + this.name() + "' is a required argument." );
+      } else {
+        String res = req.getParameter( this.name() );
+        LOG.debug( "Found parameter: " + this.name() + "=" + res );
+        return res;
+      }
+    }
+  }
+  enum Type {
+    pdf {
+      @Override
+      public JRExporter setup( HttpServletResponse res ) throws IOException {
+        res.setContentType( "application/pdf" );
+        res.setHeader( "Content-Disposition", "file; filename=FIXME.pdf" );
+        JRExporter exporter = new JRPdfExporter( );
+        exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
+        return exporter;        
+      }
+    }, csv {
+      @Override
+      public JRExporter setup( HttpServletResponse res ) throws IOException {
+        res.setContentType( "text/plain" );
+        res.setHeader( "Content-Disposition", "file; filename=FIXME.csv" );
+        JRExporter exporter = new JRCsvExporter( );
+        exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
+        return exporter;
+      }
+    }, html {
+      @Override
+      public JRExporter setup( HttpServletResponse res ) throws IOException {
+        PrintWriter out = res.getWriter( );
+        res.setContentType( "text/html" );
+        JRExporter exporter = new JRHtmlExporter( );
+        exporter.setParameter( new JRExporterParameter( "EUCA_WWW_DIR" ) {}, "/" );
+        exporter.setParameter( JRExporterParameter.OUTPUT_WRITER, res.getWriter( ) );
+        return exporter;
+      }
+      @Override
+      public void close( HttpServletResponse res ) throws IOException {
+        res.getWriter( ).close( );
+      }
+    }, xls {
+      @Override
+      public JRExporter setup( HttpServletResponse res ) throws IOException {
+        res.setContentType( "application/vnd.ms-excel" );
+        res.setHeader( "Content-Disposition", "file; filename=FIXME.xls" );
+        JRExporter exporter = new JRXlsExporter( );
+        exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
+        return exporter;
+      }
+    };
+    public abstract JRExporter setup( HttpServletResponse res ) throws IOException;
+    public void close( HttpServletResponse res ) throws IOException {
+      res.getOutputStream( ).close( );
+    }
+  }
   @Override
   protected void doGet( HttpServletRequest req, HttpServletResponse res ) throws ServletException, IOException {
-    
-    String temp = req.getParameter( "type" );
-    LOG.info( "Report request of type=" + temp );
-    String reportType = null;
-    if ( temp instanceof String ) {
-      reportType = ( String ) temp;
-    }
-    String baseDir = this.getServletConfig( ).getInitParameter( "PWD" );
-    String url = String.format( "%s_%s?createDatabaseIfNotExist=true", Component.db.getUri( ).toString( ), "auth" );
-    final JRExporter exporter;
-    if ( "pdf".equals( reportType ) ) {
-      res.setContentType( "application/pdf" );
-      res.setHeader( "Content-Disposition", "file; filename=FIXME.pdf" );
-      exporter = new JRPdfExporter( );
-      exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
-    } else if ( "csv".equals( reportType ) ) {
-      res.setContentType( "text/plain" );
-      res.setHeader( "Content-Disposition", "file; filename=FIXME.csv" );
-      exporter = new JRCsvExporter( );
-      exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
-    } else if ( "xls".equals( reportType ) ) {
-      res.setContentType( "application/vnd.ms-excel" );
-      res.setHeader( "Content-Disposition", "file; filename=FIXME.xls" );
-      exporter = new JRXlsExporter( );
-      exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
-    } else {
-      baseDir = "/";
-      PrintWriter out = res.getWriter( );
-      res.setContentType( "text/html" );
-      exporter = new JRHtmlExporter( );
-      exporter.setParameter( new JRExporterParameter( "EUCA_WWW_DIR" ) {}, baseDir );
-      exporter.setParameter( JRExporterParameter.OUTPUT_WRITER, res.getWriter( ) );
-    }
-    
+    //FIXME: RELEASE: verify the session id somewhere?
+    String name = Param.name.get( req );
+    String type = Param.type.get( req );
+    String url = String.format( "%s_%s?createDatabaseIfNotExist=true", Component.db.getUri( ).toString( ), "records" );
+    Type reportType = Type.valueOf( type );
+    final JRExporter exporter = reportType.setup( res );    
     try {
-      JasperDesign jasperDesign = JRXmlLoader.load( BaseDirectory.CONF.toString( ) + File.separator + "report2.jrxml" );
+      JasperDesign jasperDesign = JRXmlLoader.load( BaseDirectory.CONF.toString( ) + File.separator + name +".jrxml" );
       JasperReport jasperReport = JasperCompileManager.compileReport( jasperDesign );
       Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
       JasperPrint jasperPrint = JasperFillManager.fillReport( jasperReport, null, jdbcConnection );
       exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
       exporter.exportReport( );
-    } catch ( Exception ex ) {
-      res.setContentType( "text/html" );
+    } catch ( Throwable ex ) {
+      res.setContentType( "text/plain" );
       LOG.error( "Could not create the report stream " + ex.getMessage( ) + " " + ex.getLocalizedMessage( ) );
       ex.printStackTrace( res.getWriter( ) );
     } finally {
-      if ( exporter instanceof JRHtmlExporter ) {
-        res.getWriter( ).close( );
-      } else {
-        res.getOutputStream( ).close( );
-      }
+      reportType.close( res );
     }
   }
 }

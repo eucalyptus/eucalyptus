@@ -95,20 +95,19 @@ public class BindingHandler extends MessageStackHandler {
   public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
-      //:: TODO: need an index of message types based on name space :://
-      Class msgType = null;
-      try {
-        msgType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs." + httpMessage.getOmMessage( ).getLocalName( ) + "Type" );
-      } catch ( ClassNotFoundException e ) {}
       BaseMessage msg = null;
       OMElement elem = httpMessage.getOmMessage( );
       OMNamespace omNs = elem.getNamespace( );
       String namespace = omNs.getNamespaceURI( );
+      Class msgType = null;
       try {
         this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
+        msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
       } catch ( Exception e1 ) {
         if( this.binding == null ) {
           throw new WebServicesException(e1);
+        } else {
+          throw new WebServicesException( "Failed to find binding for namespace: " + namespace + " due to: " + e1.getMessage( ), e1 );
         }
       }
       try {

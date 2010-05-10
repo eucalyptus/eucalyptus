@@ -86,7 +86,10 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_LOADED_ENTRY, this.getClass( ).getSimpleName( ), candidate.getName( ) ).info( );
       }
     } catch ( Throwable e ) {
-      LOG.trace( e, e );
+      if( e instanceof InstantiationException ) {
+      } else {
+        LOG.trace( e, e );
+      }
     }
   }
   

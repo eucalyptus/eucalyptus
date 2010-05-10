@@ -8,21 +8,22 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 public class EventRecord extends EucalyptusMessage {
   private static Logger            LOG   = Logger.getLogger( EventRecord.class );
   
-  public static Record create( final String component, final String eventUserId, final String eventCorrelationId, final Object eventName, final String other, int dist ) {
-    return new LogFileRecord( component, eventUserId, eventCorrelationId, eventName.toString( ), getMessageString( other ), 3 + dist );
+  private static Record create( final Class component, final EventType eventName, final String other, int dist ) {
+    EucalyptusMessage msg = tryForMessage( );
+    StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
+    StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
+    return new LogFileRecord( eventName, component, ste, msg.getUserId( ), msg.getCorrelationId( ), other );
   }
 
   public static Record here( final Class component, final EventType eventName, final String... other ) {
-    EucalyptusMessage msg = tryForMessage( );
-    return create( component.getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 1 );
+    return create( component, eventName, getMessageString( other ), 1 );
   }
     
   public static Record caller( final Class component, final EventType eventName, final Object... other ) {
-    EucalyptusMessage msg = tryForMessage( );
-    return create( component.getSimpleName( ), msg.getUserId( ), msg.getCorrelationId( ), eventName.toString( ), getMessageString( other ), 2 );
+    return create( component, eventName, getMessageString( other ), 2 );
   }
   
-  private static String getMessageString( final Object... other ) {
+  private static String getMessageString( final Object[] other ) {
     StringBuffer last = new StringBuffer( );
     for ( Object x : other ) {
       last.append( ":" ).append( x.toString( ) );
