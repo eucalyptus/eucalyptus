@@ -482,7 +482,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			String response;
 
 			if (action.equals("confirm")) {
-				user.setConfirmed(true);
+				if ( user != null ) {
+				  user.setConfirmed(true);
+				}
 				EucalyptusManagement.commitWebUser(user);
 				response = "Your account is now active.";
 			} else {
