@@ -71,6 +71,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.auth.api.GroupProvider;
 import com.eucalyptus.auth.api.NoSuchCertificateException;
+import com.eucalyptus.auth.api.UserInfoProvider;
 import com.eucalyptus.auth.api.UserProvider;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.crypto.Hmacs;
@@ -80,9 +81,10 @@ import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
-public class DatabaseAuthProvider implements UserProvider, GroupProvider {
+public class DatabaseAuthProvider implements UserProvider, GroupProvider, UserInfoProvider {
   private static Logger LOG = Logger.getLogger( DatabaseAuthProvider.class );
   
   DatabaseAuthProvider( ) {}
@@ -114,7 +116,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       LOG.debug( e, e );
       dbU.rollback( );
     }    
-    User proxy = new UserProxy( newUser );
+    User proxy = new DatabaseWrappedUser( newUser );
     Groups.DEFAULT.addMember( proxy );
     return proxy;
   }
@@ -185,7 +187,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     UserEntity user = null;
     try {
       for( UserEntity u : db.query( searchUser ) ) {
-        users.add( new UserProxy( u ) );
+        users.add( new DatabaseWrappedUser( u ) );
       }
       db.commit( );
     } catch ( Throwable e ) {
@@ -203,7 +205,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     UserEntity user = null;
     try {
       for( UserEntity u : db.query( searchUser ) ) {
-        users.add( new UserProxy( u ) );
+        users.add( new DatabaseWrappedUser( u ) );
       }
       db.commit( );
     } catch ( Throwable e ) {
@@ -230,7 +232,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       UserEntity ret = users.size( ) == 1 ? users.get( 0 ) : null;
       int size = users.size( );
       if ( ret != null ) {
-        return new UserProxy( ret );
+        return new DatabaseWrappedUser( ret );
       } else {
         throw new GeneralSecurityException( ( size == 0 ) ? "No user with the specified certificate." : "Multiple users with the same certificate." );
       }
@@ -281,7 +283,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       db.rollback( );
       throw new NoSuchUserException( e );
     }
-    return new UserProxy( user );
+    return new DatabaseWrappedUser( user );
   }
   
   @Override
@@ -296,7 +298,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
       db.rollback( );
       throw new NoSuchUserException( e );
     }
-    return new UserProxy( user );
+    return new DatabaseWrappedUser( user );
   }
   
   @Override
@@ -339,5 +341,79 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider {
     }    
   }
 
-  
+  @Override
+  public void updateUser( String name, Tx<User> userTx ) throws NoSuchUserException {
+    UserEntity search = new UserEntity(name);
+    EntityWrapper<UserEntity> db = EntityWrapper.get( search );
+    try {
+      UserEntity entity = db.getUnique( search );
+      userTx.fire( entity );
+      db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new NoSuchUserException( e.getMessage( ), e );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new NoSuchUserException( e.getMessage( ), e );
+    }    
+  }
+
+  @Override
+  public void addUserInfo( UserInfo user ) throws UserExistsException {
+    EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get( UserInfo.class );
+    try {
+      dbWrapper.add( user );
+      dbWrapper.commit();
+    } catch ( Exception e1 ) {
+      dbWrapper.rollback();
+      LOG.error( e1, e1 );
+      throw new UserExistsException( "User info exists", e1 );
+    }    
+  }
+
+  @Override
+  public void deleteUserInfo( String userName ) throws NoSuchUserException {
+    EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
+    try {
+      UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
+      dbWrapper.delete( userInfo );
+      dbWrapper.commit( );
+    } catch ( EucalyptusCloudException e1 ) {
+      dbWrapper.rollback( );
+      LOG.error( e1, e1 );
+      throw new NoSuchUserException( "User info does not exist", e1 );  
+    }    
+  }
+
+  @Override
+  public UserInfo getUserInfo( UserInfo search ) throws NoSuchUserException {
+    EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
+    try {
+      UserInfo userInfo = dbWrapper.getUnique( search );
+      dbWrapper.commit( );
+      return userInfo;
+    } catch ( EucalyptusCloudException e ) {
+      dbWrapper.rollback( );
+      throw new NoSuchUserException( "User info does not exist", e );
+    }
+  }
+
+  @Override
+  public void updateUserInfo( String name, Tx<UserInfo> infoTx ) throws NoSuchUserException {
+    EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
+    try {
+      UserInfo userInfo = dbWrapper.getUnique( new UserInfo(name) );
+      infoTx.fire( userInfo );
+      dbWrapper.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      dbWrapper.rollback( );
+      LOG.error( e, e );
+      throw new NoSuchUserException( "User info does not exist", e );
+    } catch ( Throwable t ) {
+      dbWrapper.rollback( );
+      LOG.error( t, t );
+      throw new NoSuchUserException( "Error in updating user info", t );
+    }
+  }
 }
