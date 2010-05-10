@@ -76,6 +76,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ConcurrentSkipListSet
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.records.*;
 import com.google.common.collect.*;
 
 public class Pair {
