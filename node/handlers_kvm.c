@@ -341,7 +341,6 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 	if (rc < 0) {
 	  logprintfl(EUCAERROR, "cannot seek to beginning of file\n");
 	  if (console_append) free(console_append);
-	  if (console_output) free(console_output);
 	  return(1);
 	}
       }

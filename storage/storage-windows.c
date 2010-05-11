@@ -48,12 +48,16 @@ int decryptWindowsPassword(char *encpass, int encsize, char *pkfile, char **out)
   }
 
   *out = malloc(512);
-  bzero(*out, 512);  
-  rc = RSA_private_decrypt(encsize, (unsigned char *)dec64, (unsigned char *)*out, pr, RSA_PKCS1_PADDING);    
-  if (!*out) {
+  if(!*out) {
+    if (dec64) free(dec64);
     return(1);
   }
-
+  bzero(*out, 512);  
+  rc = RSA_private_decrypt(encsize, (unsigned char *)dec64, (unsigned char *)*out, pr, RSA_PKCS1_PADDING);    
+  if (dec64) free(dec64);
+  if (rc) {
+    return(1);
+  }
   return(0);
 }
 
@@ -88,6 +92,10 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize) {
   
   // read public exponent
   exponentbuf = malloc(32768);
+  if (!exponentbuf) {
+    if (sshkey_dec) free(sshkey_dec);
+    return(1);
+  }
   exponent = 0;
   memcpy(&exponent, ptr, len);
   exponent = htonl(exponent);
@@ -101,42 +109,60 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize) {
   
   // read modulus material
   modbuf = malloc(32768);
+  if (!modbuf) {
+    if (sshkey_dec) free(sshkey_dec);
+    if (exponentbuf) free(exponentbuf);
+    return(1);
+  }
   bzero(modbuf, 32768);
   ilen = (int)len;
   for (i=0; i<ilen; i++) {
     tmp = strndup(ptr, 1);
-    len = *tmp;
-    sprintf(hexstr, "%02X", (len<<24)>>24);
-    strcat(modbuf, hexstr);
-    ptr++;
+    if (tmp) {
+      len = *tmp;
+      sprintf(hexstr, "%02X", (len<<24)>>24);
+      strcat(modbuf, hexstr);
+      ptr++;
+      free(tmp);
+    }
   }
   //  printf("MOD: |%s|\n", modbuf);
   //  printf("EXPONENT: |%s|\n", exponentbuf);
     
   r = RSA_new();
   if (!r) {
-    free(modbuf); free(exponentbuf);
+    if (sshkey_dec) free(sshkey_dec);
+    if (exponentbuf) free(exponentbuf);
+    if (modbuf) free(modbuf);
     return(1);
   }
   if (!BN_hex2bn(&(r->e), exponentbuf) || !BN_hex2bn(&(r->n), modbuf)) {
-    free(modbuf); free(exponentbuf);
+    if (sshkey_dec) free(sshkey_dec);
+    if (exponentbuf) free(exponentbuf);
+    if (modbuf) free(modbuf);
     return(1);
   }
 
   bzero(encpassword, 512);
   encsize = RSA_public_encrypt(strlen(pass), (unsigned char *)pass, (unsigned char *)encpassword, r, RSA_PKCS1_PADDING);
   if (encsize <= 0) {
-    free(modbuf); free(exponentbuf);
+    if (sshkey_dec) free(sshkey_dec);
+    if (exponentbuf) free(exponentbuf);
+    if (modbuf) free(modbuf);
     return(1);
   }
 
   *out = base64_enc((unsigned char *)encpassword, encsize);
   *outsize = encsize;
   if (!*out || *outsize <= 0) {
-    free(modbuf); free(exponentbuf);
+    if (sshkey_dec) free(sshkey_dec);
+    if (exponentbuf) free(exponentbuf);
+    if (modbuf) free(modbuf);
     return(1);
   }
-  
+  if (sshkey_dec) free(sshkey_dec);
+  if (exponentbuf) free(exponentbuf);
+  if (modbuf) free(modbuf);
   return(0);
 }
 
@@ -177,12 +203,19 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
   
   rbytes = read(fd, buf, 1024 * 2048);
   close(fd);
+  if (rbytes < 0) {
+    if (buf) free(buf);
+    return(1);
+  }
   
   ptr = buf;
   count=0;
   tmp = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
   newpass = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
-  
+  if (!tmp || !newpass) {
+    if (buf) free(buf);
+    return(1);
+  }
   bzero(tmp, strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
   bzero(newpass, strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
   snprintf(newpass, strlen(password)+1, "%s", password);
@@ -199,11 +232,15 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
   fd = open(dest_path, O_CREAT | O_TRUNC | O_RDWR, 0700);
   if (fd < 0) {
     if (buf) free(buf);
+    if (tmp) free(tmp);
+    if (newpass) free(newpass);
     return(1);
   }
   rc = write(fd, buf, rbytes);
   if (rc != rbytes) {
     if (buf) free(buf);
+    if (tmp) free(tmp);
+    if (newpass) free(newpass);
     return(1);
   }
   close(fd);
@@ -214,6 +251,8 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
   sscanf(keyName, "%s %s %s", tmp, enckey, tmp);
   rc = encryptWindowsPassword(password, enckey, &encpassword, &encsize);
   if (rc) {
+    if (tmp) free(tmp);
+    if (newpass) free(newpass);
     return(1);
   }
 
@@ -224,9 +263,12 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
     fclose(FH);
   } else {
     if (encpassword) free(encpassword);
+    if (tmp) free(tmp);
+    if (newpass) free(newpass);
     return(1);
   }
   if (encpassword) free(encpassword);
-
+  if (tmp) free(tmp);
+  if (newpass) free(newpass);
   return(0);
 }

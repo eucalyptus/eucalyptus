@@ -656,6 +656,7 @@ long long scFSCK (bunchOfInstances ** instances)
     long long cache_bytes = init_cache (cache_path);
     free (cache_path);
     if (cache_bytes < 0) {
+      if (work_path) free(work_path);
         return -1;
     }
     
