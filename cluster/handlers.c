@@ -446,7 +446,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	  opFail=1;
 	} else {
 	  *ncOutInsts = malloc(sizeof(ncInstance *) * len);
-	  if (!ncOutInsts) {
+	  if (!*ncOutInsts) {
 	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
 	    unlock_exit(1);
 	  }

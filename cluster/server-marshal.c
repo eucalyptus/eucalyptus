@@ -936,7 +936,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex;
+  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *tmp;
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
@@ -958,10 +958,13 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   kernelURL = adb_runInstancesType_get_kernelURL(rit, env);
   ramdiskURL = adb_runInstancesType_get_ramdiskURL(rit, env);
 
-  userData = adb_runInstancesType_get_userData(rit, env);
-  if (!userData) {
+  tmp = adb_runInstancesType_get_userData(rit, env);
+  if (!tmp) {
     userData = strdup("");
+  } else {
+    userData = strdup(tmp);
   }
+
   launchIndex = adb_runInstancesType_get_launchIndex(rit, env);
   
   vm = adb_runInstancesType_get_instanceType(rit, env);
@@ -1036,7 +1039,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   free(macAddrs);
   free(netNames);
   free(instIds);
-  
+  free(userData);
+
   return(ret);
 }
 

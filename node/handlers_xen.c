@@ -316,6 +316,11 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 
   bufsize = sizeof(char) * 1024 * 64;
   console_main = malloc(bufsize);
+  if (!console_main) {
+    logprintfl(EUCAERROR, "doGetConsoleOutput(): out of memory!\n");
+    if (console_append) free(console_append);
+    return(1);
+  }
   bzero(console_main, bufsize);
 
   snprintf(console_file, MAX_PATH, "/tmp/consoleOutput.%s", instanceId);
