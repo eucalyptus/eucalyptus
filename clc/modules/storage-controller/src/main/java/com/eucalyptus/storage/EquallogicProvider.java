@@ -101,7 +101,8 @@ public class EquallogicProvider implements SANProvider {
 	private static final Pattern SNAPSHOT_DELETE_PATTERN = Pattern.compile("Snapshot deletion succeeded.");
 	private static final Pattern USER_DELETE_PATTERN = Pattern.compile("CHAP user deletion succeeded.");
 	private static final Pattern USER_SHOW_PATTERN = Pattern.compile(".*Password: (.*)\r");
-
+	private static final Pattern SHOW_SPACE_PATTERN = Pattern.compile("GB.* ([0-9]+\\.[0-9]+.*)\r");
+	
 	private static final String EOF_COMMAND = "whoami\r";
 
 	private final long TASK_TIMEOUT = 5 * 60 * 1000;
@@ -113,17 +114,18 @@ public class EquallogicProvider implements SANProvider {
 		this.host = sanInfo.getSanHost();
 		this.username = sanInfo.getSanUser();
 		this.password = sanInfo.getSanPassword();
-		if(sessionManager != null)
+		if(sessionManager != null) {
 			try {
 				if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) {
 					sessionManager.update(host, username, password);
+					showFreeSpace();
 				}
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e, e);
 			}
-			else {
-				sessionManager = new SessionManager(host, username, password);
-			}
+		} else {
+			sessionManager = new SessionManager(host, username, password);
+		}
 	}
 
 	public EquallogicProvider(String host, String username, String password) {
@@ -445,6 +447,18 @@ public class EquallogicProvider implements SANProvider {
 			return true;
 		}
 		return false;
+	}
+	
+	private void showFreeSpace() {
+		try {
+			String returnValue = execCommand("stty hardwrap off\rshow pool\r");
+			String freeSpaceString = matchPattern(returnValue, SHOW_SPACE_PATTERN);
+			if(freeSpaceString != null && (freeSpaceString.length() > 0)) {
+				LOG.info("Free Space on " + this.host + " : " + freeSpaceString);
+			}
+		} catch (EucalyptusCloudException e) {
+			LOG.error(e);
+		}
 	}
 }
 
