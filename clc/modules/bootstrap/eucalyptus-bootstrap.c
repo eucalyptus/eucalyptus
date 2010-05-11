@@ -212,9 +212,6 @@ static void * signal_set( int sig, void * newHandler ) {
 
 static int __get_pid( char *pidpath ) {
 	FILE* pidfile; int pid;
-	if( (pidfile = fopen( pidpath, "r"))==NULL ) {
-		return -1;
-	}
 	__abort(-1,(pidfile = fopen( pidpath, "r"))==NULL,"");
 	__abort(-1,(fscanf(pidfile,"%d",&pid)<0),"Failed to read pid file.");
 	fclose( pidfile );
