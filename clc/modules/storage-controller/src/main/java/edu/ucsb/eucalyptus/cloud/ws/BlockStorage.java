@@ -253,7 +253,8 @@ public class BlockStorage {
 		volumeInfo.setVolumeId(volumeId);
 		List<VolumeInfo> volumeList = db.query(volumeInfo);
 
-		reply.set_return(Boolean.FALSE);
+		//always return true. 
+		reply.set_return(Boolean.TRUE);
 		if(volumeList.size() > 0) {
 			VolumeInfo foundVolume = volumeList.get(0);
 			//check its status
@@ -261,8 +262,7 @@ public class BlockStorage {
 			if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
 				VolumeDeleter volumeDeleter = new VolumeDeleter(volumeId);
 				volumeService.add(volumeDeleter);
-				reply.set_return(Boolean.TRUE);
-			}
+			} 
 		} 
 		db.commit();
 		return reply;
