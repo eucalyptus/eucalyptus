@@ -12,6 +12,7 @@
 #include <dirent.h> /* open|read|close dir */
 #include <time.h> /* time() */
 #include <stdint.h>
+#include <arpa/inet.h>
 
 #include <openssl/sha.h>
 #include <openssl/rsa.h>

@@ -12,7 +12,7 @@ SUBDIRS			=	tools \
 				gatherlog \
 				node  \
 				cluster \
-			        clc
+#			        clc
 
 .PHONY: all clean distclean build 
 

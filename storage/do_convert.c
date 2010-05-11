@@ -29,11 +29,11 @@ int do_convert(
     int i, rc, done, first_sector, last_sector;
     off_t disksize=0;
     struct stat mystat;
-    char *output, *loopdev, *loopdevp, *ptr;
+    char *output=NULL, *loopdev=NULL, *loopdevp=NULL, *ptr=NULL;
     char file[1024], cmd[1024];
     char *tmpdir=NULL, *kfile=NULL, *rfile=NULL;
     char bail = 0;
-    FILE *PH;
+    FILE *PH=NULL;
 
     rc = stat(infile, &mystat);
     disksize = (mystat.st_size)/1000000 + swap + ephemeral + 1;
@@ -79,6 +79,7 @@ int do_convert(
             output = pruntf("%s %s -o 32256 %s %s-disk", helpers_path[ROOTWRAP], helpers_path[LOSETUP], loopdev, infile);
             if (!output) {
                 logprintfl (EUCAINFO, "ERROR: cannot attach %s-disk to loop device %s\n", infile, loopdev);
+		if (loopdev) free(loopdev);
                 return(1);
             }
         } else {
@@ -93,13 +94,19 @@ int do_convert(
             bail = 1;
         }
 
-        output = pruntf("%s %s", helpers_path[ROOTWRAP], helpers_path[SYNC]);
+        pruntf("%s %s", helpers_path[ROOTWRAP], helpers_path[SYNC]);
         output = pruntf("%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], loopdev);
         if (!output) {
             logprintfl (EUCAINFO, "ERROR: cannot detach loop device\n");
+	    if (loopdev) free(loopdev);
             return(1);
         }
-        if (bail) return 1;
+        if (bail) {
+	  if (loopdev) free(loopdev);
+	  return (1);
+	}
+	if (loopdev) free(loopdev);
+	loopdev = NULL;
     }
 
     logprintfl (EUCAINFO, "Setting up swap and ephemeral partitions...\n");
@@ -143,6 +150,7 @@ int do_convert(
             output = pruntf("%s %s -o 32256 %s %s-disk", helpers_path[ROOTWRAP], helpers_path[LOSETUP], loopdev, infile);
             if (!output) {
                 logprintfl (EUCAINFO, "ERROR: cannot attach %s-disk to loop device %s\n", infile, loopdev);
+		if (loopdev) free(loopdev);
                 return(1);
             }
         } else {
@@ -299,6 +307,7 @@ clean_up:
   
     return 0; // dmitrii stops here
     
+    /* 
     logprintfl (EUCAINFO, "Converting intermediate volume to VMWare image...\n");
     output = pruntf("%s %s convert -f raw %s-disk -O vmdk %s", helpers_path[ROOTWRAP], helpers_path[KVMIMG], infile, outfile);
     if (!output) {
@@ -327,6 +336,7 @@ clean_up:
     logprintfl (EUCAINFO, "config=%s.vmx\n", outfile);
   
     return(0);
+    */
 }
 
   
