@@ -94,6 +94,7 @@ public class EquallogicProvider implements SANProvider {
 
 	private static final Pattern VOLUME_CREATE_PATTERN = Pattern.compile(".*iSCSI target name is (.*)\r");
 	private static final Pattern VOLUME_DELETE_PATTERN = Pattern.compile(".*Volume deletion succeeded.");
+	private static final Pattern VOLUME_SHOW_PATTERN = Pattern.compile("Volume Information");
 	private static final Pattern USER_CREATE_PATTERN = Pattern.compile(".*Password is (.*)\r");
 	private static final Pattern SNAPSHOT_CREATE_PATTERN = Pattern.compile(".*Snapshot name is (.*)\r");
 	private static final Pattern SNAPSHOT_TARGET_NAME_PATTERN = Pattern.compile(".*iSCSI Name: (.*)\r");
@@ -152,6 +153,10 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
+			if(volumeExists(volumeId)) {
+				LOG.error("Volume already exists: " + volumeId);
+				return null;
+			}
 			String returnValue = execCommand("stty hardwrap off\rvolume select " + snapshotId + 
 					" offline\rvolume select " + snapshotId + " clone " + volumeId + "\r");
 			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
@@ -248,6 +253,10 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
+			if(volumeExists(volumeName)) {
+				LOG.error("Volume already exists: " + volumeName);
+				return null;
+			}
 			String returnValue = execCommand("stty hardwrap off\rvolume create " + volumeName + " " + (size * StorageProperties.KB) + "\r");
 			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 			if(targetName != null) {
@@ -273,11 +282,17 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
-			String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeName + " offline\rvolume delete " + volumeName + "\r");
-			if(returnValue.split(VOLUME_DELETE_PATTERN.toString()).length > 1)
+			if(volumeExists(volumeName)) {
+				String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeName + " offline\rvolume delete " + volumeName + "\r");
+				if(returnValue.split(VOLUME_DELETE_PATTERN.toString()).length > 1)
+					return true;
+				else
+					return false;
+			} else {
+				//record error, clean up anyway
+				LOG.error("Volume not found: " + volumeName);
 				return true;
-			else
-				return false;
+			}
 		} catch(EucalyptusCloudException e) {
 			LOG.error(e);
 			return false;
@@ -293,6 +308,10 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
+			if(!volumeExists(volumeId)) {
+				LOG.error("Volume not found: " + volumeId);
+				return null;
+			}
 			String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " clone " + snapshotId + "\r");
 			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 			if(targetName != null) {
@@ -418,6 +437,14 @@ public class EquallogicProvider implements SANProvider {
 			db.rollback();
 			throw new EucalyptusCloudException(ex);
 		}
+	}
+
+	public boolean volumeExists(String volumeId) throws EucalyptusCloudException {
+		String returnValue = execCommand("stty hardwrap off\rvolume show " + volumeId + " \r");
+		if((returnValue.split(VOLUME_SHOW_PATTERN.toString()).length > 1) && returnValue.contains(volumeId)) {
+			return true;
+		}
+		return false;
 	}
 }
 
