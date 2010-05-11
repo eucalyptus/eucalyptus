@@ -93,7 +93,7 @@ public class EquallogicProvider implements SANProvider {
 	private SessionManager sessionManager;
 
 	private static final Pattern VOLUME_CREATE_PATTERN = Pattern.compile(".*iSCSI target name is (.*)\r");
-	private static final Pattern VOLUME_DELETE_PATTERN = Pattern.compile(".*Volume deletion succeeded.");
+	private static final Pattern VOLUME_DELETE_PATTERN = Pattern.compile("Volume deletion succeeded.");
 	private static final Pattern VOLUME_SHOW_PATTERN = Pattern.compile("Volume Information");
 	private static final Pattern USER_CREATE_PATTERN = Pattern.compile(".*Password is (.*)\r");
 	private static final Pattern SNAPSHOT_CREATE_PATTERN = Pattern.compile(".*Snapshot name is (.*)\r");
