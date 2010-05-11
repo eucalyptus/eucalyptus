@@ -1190,6 +1190,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   free(netNames);
   free(instIds);
   free(userData);
+
   return(ret);
 }
 
