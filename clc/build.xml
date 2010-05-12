@@ -82,6 +82,7 @@
 	<property name="deps.url" value="http://mirror.eucalyptus/dependencies/${euca.version}" />
 	<property name="deps.dir" value="deps" />
 	<property name="deps.lib.dir" value="lib" />
+        <property name="tools.dir" value="tools/src" />
   <property name="deps.lib" value="cloud-lib" />
   <property name="bind.timestamp" value="target/.bind-timestamp" />
 	<!--================================== build targets ==================================-->
@@ -192,6 +193,7 @@
 	<property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus" />
 	<property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus" />
 	<property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus" />
+	<property name="euca.bin.dir" value="${euca.home}/usr/sbin" />
 	<target name="install">
 		<!-- copy libraries over -->
 		<mkdir dir="${DESTDIR}${euca.lib.dir}" />
@@ -204,6 +206,16 @@
 				<exclude name="**/gwt-user-*.jar" />
 			</fileset>
 		</copy>
+		<!--copy admin tools -->
+		<mkdir dir="${DESTDIR}${euca.bin.dir}" />
+		<copy todir="${DESTDIR}${euca.bin.dir}" overwrite="true">
+			<fileset dir="${tools.dir}">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+ 		<chmod dir="${DESTDIR}${euca.bin.dir}" perm="0755">
+			<include name="**/euca-*" />
+		</chmod>
 		<mkdir dir="${DESTDIR}${euca.conf.dir}" />
 		<chmod dir="${DESTDIR}${euca.conf.dir}" perm="0755" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/" />
@@ -213,8 +225,8 @@
 		<mkdir dir="${DESTDIR}${euca.var.dir}/webapps" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/modules" />
 		<ant dir="modules/msgs" inheritall="false" target="install" />
-    <ant dir="modules/mysql" inheritall="false" target="install" />
-    <ant dir="modules/ldap" inheritall="false" target="install" />
+    		<ant dir="modules/mysql" inheritall="false" target="install" />
+    		<ant dir="modules/ldap" inheritall="false" target="install" />
 		<ant dir="modules/cloud" inheritall="false" target="install" />
 		<ant dir="modules/authentication" inheritall="false" target="install" />
 		<ant dir="modules/configuration" inheritall="false" target="install" />
