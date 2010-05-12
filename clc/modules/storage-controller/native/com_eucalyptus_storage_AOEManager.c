@@ -43,6 +43,7 @@ JNIEXPORT jint JNICALL Java_com_eucalyptus_storage_AOEManager_exportVolume
     int pid = run_command_and_get_pid(rootwrap, args);
     (*env)->ReleaseStringUTFChars(env, lvName, lv_name);
     (*env)->ReleaseStringUTFChars(env, iface, if_name);
+    if (home) free(home);
     return pid;
 }
 

@@ -44,16 +44,19 @@ public class SlapdResource {
   }
   
   public void initialize( ) throws IOException {
-    if ( !new File( CONFIG_FILE ).exists( ) && new File( CONFIG_FILE ).getParentFile( ).mkdirs( ) ) {
-      File conf = new File( SlapdResource.CONFIG_FILE );
-      FileOutputStream confOut = new FileOutputStream( conf );
-      try {
-        confOut.write( String.format( SlapdResource.initialConfig, SubDirectory.LDAP.toString( ), Hmacs.generateSystemSignature( ) ).getBytes( ) );
-        confOut.flush( );
-      } finally {
-        confOut.close( );
+    File parentFile = new File( CONFIG_FILE ).getParentFile( );
+    if(parentFile != null) {
+	  if ( !new File( CONFIG_FILE ).exists( ) && parentFile.mkdirs( ) ) {
+        File conf = new File( SlapdResource.CONFIG_FILE );
+        FileOutputStream confOut = new FileOutputStream( conf );
+        try {
+          confOut.write( String.format( SlapdResource.initialConfig, SubDirectory.LDAP.toString( ), Hmacs.generateSystemSignature( ) ).getBytes( ) );
+          confOut.flush( );
+        } finally {
+          confOut.close( );
+        }
+        this.expandResourceJarInner( SubDirectory.LDAP.getFile( ), "data.jar" );
       }
-      this.expandResourceJarInner( SubDirectory.LDAP.getFile( ), "data.jar" );
     }
   }
   
@@ -94,29 +97,34 @@ public class SlapdResource {
           if ( entry.isDirectory( ) ) {
             LOG.info( "Creating directory: " + file.getCanonicalPath( ) );
             file.mkdirs( );
-          } else if ( file.getParentFile( ).exists( ) || file.getParentFile( ).mkdirs( ) ) {
-            LOG.info( "Creating entry:     " + file.getCanonicalPath( ) );
-            FileOutputStream to = new FileOutputStream( file );
-            try {
-              byte[] buf = new byte[8192];
-              for ( int i = 0; ( i = jis.read( buf ) ) != -1; to.write( buf, 0, i ) );
-              to.flush( );
-            } catch ( IOException e ) {
-              LOG.error( e, e );
-              throw e;
-            } catch ( Exception e ) {
-              LOG.error( e, e );
-              throw new RuntimeException( e );
-            } finally {
-              to.close( );
-            }
-            if ( entry.getName( ).matches( "([^/]|\\./)*bin/[^/]*" ) ) {
-              LOG.info( "Marking executable: " + file.getCanonicalPath( ) );
-              file.setExecutable( true );
-            }
           } else {
-            LOG.warn( "Failed to create directory: " + file.getParentFile( ).getAbsolutePath( ) + " for resource: " + entry.getName( ) );
-          }
+			File parentFile = file.getParentFile( );
+			if(parentFile != null) {
+			  if ( parentFile.exists( ) || parentFile.mkdirs( ) ) {
+			    LOG.info( "Creating entry:     " + file.getCanonicalPath( ) );
+			    FileOutputStream to = new FileOutputStream( file );
+			    try {
+			      byte[] buf = new byte[8192];
+			      for ( int i = 0; ( i = jis.read( buf ) ) != -1; to.write( buf, 0, i ) );
+			      to.flush( );
+			    } catch ( IOException e ) {
+			      LOG.error( e, e );
+			      throw e;
+			    } catch ( Exception e ) {
+			      LOG.error( e, e );
+			      throw new RuntimeException( e );
+			    } finally {
+			      to.close( );
+			    }
+			    if ( entry.getName( ).matches( "([^/]|\\./)*bin/[^/]*" ) ) {
+			      LOG.info( "Marking executable: " + file.getCanonicalPath( ) );
+			      file.setExecutable( true );
+			    }
+			  } else {
+			    LOG.warn( "Failed to create directory: " + parentFile.getAbsolutePath( ) + " for resource: " + entry.getName( ) );
+			  }
+			}
+		  }
         }
       } while ( entry != null );
     } finally {

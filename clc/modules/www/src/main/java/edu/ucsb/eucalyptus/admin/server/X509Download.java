@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.admin.server;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
@@ -120,7 +121,6 @@ public class X509Download extends HttpServlet {
       hasError( "Confirmation code is invalid", response );
       return;
     }
-    
     response.setContentType( mimetype );
     response.setHeader( "Content-Disposition", "attachment; filename=\"" + X509Download.NAME_SHORT + "-" + userName + "-x509.zip\"" );
     LOG.info( "pushing out the X509 certificate for user " + userName );
@@ -182,8 +182,11 @@ public class X509Download extends HttpServlet {
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
       StringBuffer sb = new StringBuffer( );
       
-      String userNumber = Users.lookupUser( userName ).getNumber( ).toString( );
-      
+      BigInteger number = Users.lookupUser( userName ).getNumber( );
+      String userNumber = null;
+      if ( number != null ) {
+	    userNumber = number.toString( );
+      }
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
       
       try {
@@ -198,9 +201,11 @@ public class X509Download extends HttpServlet {
       sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
       sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
       sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
-      sb.append( "\n# This is a bogus value; Eucalyptus does not need this but client tools do.\nexport EC2_USER_ID='" + userNumber + "'" );
-      sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user " + userNumber
+      if ( userNumber != null ) {
+        sb.append( "\n# This is a bogus value; Eucalyptus does not need this but client tools do.\nexport EC2_USER_ID='" + userNumber + "'" );
+        sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user " + userNumber
                  + " --ec2cert ${EUCALYPTUS_CERT}\"" );
+      }
       sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${EUCALYPTUS_CERT}\"" );
       sb.append( "\n" );
       zipOut.putNextEntry( new ZipEntry( "eucarc" ) );

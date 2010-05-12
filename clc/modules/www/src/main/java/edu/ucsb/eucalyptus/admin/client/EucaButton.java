@@ -84,15 +84,20 @@ public class EucaButton extends com.google.gwt.user.client.ui.Button {
 	
 	public EucaButton(String html, String tooltip, ClickHandler handler) {
 		super(html, handler);
-		this.tooltip = tooltip;
-		
-		this.addStyleName(MAIN_STYLE_NAME);
-		
+		this.tooltip = tooltip;		
+		this.addStyleName(MAIN_STYLE_NAME);		
 		setEventHandler();
 	}
 	
 	public EucaButton(String html, ClickHandler handler) {
 		this(html, null, handler);
+	}
+	
+	public EucaButton(String html) {
+	  super(html);
+	  this.tooltip = null;
+	  this.addStyleName(MAIN_STYLE_NAME);
+	  setEventHandler();
 	}
 	
 	private void setEventHandler() {

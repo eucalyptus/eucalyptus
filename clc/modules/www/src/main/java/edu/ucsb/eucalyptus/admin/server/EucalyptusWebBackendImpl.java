@@ -99,13 +99,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-/**
- * Created by IntelliJ IDEA.
- * User: dmitriizagorodnov
- * Date: May 3, 2008
- * Time: 2:57:31 PM
- * To change this template use File | Settings | File Templates.
- */
 public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements EucalyptusWebBackend {
 
 	private static Logger LOG = Logger.getLogger( EucalyptusWebBackendImpl.class );
@@ -489,14 +482,18 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			String response;
 
 			if (action.equals("confirm")) {
-				user.setConfirmed(true);
+				if ( user != null ) {
+				  user.setConfirmed(true);
+				}
 				EucalyptusManagement.commitWebUser(user);
 				response = "Your account is now active.";
 			} else {
-				user.setPassword (user.getPassword());
-				long now = System.currentTimeMillis();
-				user.setPasswordExpires( new Long(now + pass_expiration_ms) );
-				EucalyptusManagement.commitWebUser(user);
+				if(user != null) {
+			      user.setPassword (user.getPassword());
+				  long now = System.currentTimeMillis();
+				  user.setPasswordExpires( new Long(now + pass_expiration_ms) );
+				  EucalyptusManagement.commitWebUser(user);
+				}
 				response = "Your password has been reset.";
 			}
 			return response;

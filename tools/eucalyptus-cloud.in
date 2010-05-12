@@ -210,7 +210,7 @@ check_java() {
 
 do_start() {
 	if [ -z "$CLOUD_OPTS" ]; then
-		local CLOUD_OPTS="--log-level=TRACE"
+		local CLOUD_OPTS="--log-level=DEBUG"
 	fi
 
 	# basic checks

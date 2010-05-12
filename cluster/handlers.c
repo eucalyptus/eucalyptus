@@ -256,14 +256,14 @@ int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bu
     
     for (i=0; i<MAXINSTANCES; i++) {
       if (instanceCache->cacheState[i] == INSTVALID) {
+	if (count >= instanceCache->numInsts) {
+	  logprintfl(EUCAWARN, "doDescribeBundleTasks(): found more bundles than reported by numBundles, will only report a subset of bundles\n");
+	  count=0;
+	}
 	snprintf((*outBundleTasks)[count].instanceId, CHAR_BUFFER_SIZE, "%s", instanceCache->instances[i].instanceId);
 	snprintf((*outBundleTasks)[count].state, 64, "%s", instanceCache->instances[i].bundleTaskStateName);
 	(*outBundleTasksLen)++;
 	count++;
-	if (count > instanceCache->numInsts) {
-	  logprintfl(EUCAWARN, "doDescribeBundleTasks(): found more bundles than reported by numBundles, will only report a subset of bundles\n");
-	  count=0;
-	}
       }
     }
   }
@@ -511,7 +511,9 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
     if (!strcmp(ncOp, "ncGetConsoleOutput")) {
       char *instId = va_arg(al, char *);
       char **outConsoleOutput = va_arg(al, char **);
-      *outConsoleOutput = NULL;
+      if (outConsoleOutput) {
+	*outConsoleOutput = NULL;
+      }
       if (timeout && outConsoleOutput) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
@@ -534,7 +536,9 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *instId = va_arg(al, char *);
       int *shutdownState = va_arg(al, int *);
       int *previousState = va_arg(al, int *);
-      *shutdownState = *previousState = 0;
+      if (shutdownState && previousState) {
+	*shutdownState = *previousState = 0;
+      }
       if (timeout && shutdownState && previousState) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
@@ -559,6 +563,9 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       int port = va_arg(al, int);
       int vlan = va_arg(al, int);
       char **outStatus = va_arg(al, char **);
+      if (outStatus) {
+	*outStatus = NULL;
+      }
       if (timeout && outStatus) {
 	*outStatus = NULL;
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
@@ -596,16 +603,17 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char **netNames = va_arg(al, char **);
       int netNamesLen = va_arg(al, int);
       ncInstance **outInst = va_arg(al, ncInstance **);
-      if (timeout && outInst) {
+      if (outInst) {
 	*outInst = NULL;
-      
+      }
+      if (timeout && outInst) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
 	  kill(pid, SIGKILL);
 	  opFail=1;
 	} else {
 	  *outInst = malloc(sizeof(ncInstance));
-	  if (!outInst) {
+	  if (!*outInst) {
 	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
 	    unlock_exit(1);
 	  }
@@ -621,8 +629,10 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       int instIdsLen = va_arg(al, int);
       ncInstance ***ncOutInsts=va_arg(al, ncInstance ***);
       int *ncOutInstsLen=va_arg(al, int *);
-      *ncOutInstsLen = 0;
-      *ncOutInsts = NULL;
+      if (ncOutInstsLen && ncOutInsts) {
+	*ncOutInstsLen = 0;
+	*ncOutInsts = NULL;
+      }
       if (timeout && ncOutInsts && ncOutInstsLen) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
@@ -630,7 +640,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	  opFail=1;
 	} else {
 	  *ncOutInsts = malloc(sizeof(ncInstance *) * len);
-	  if (!ncOutInsts) {
+	  if (!*ncOutInsts) {
 	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
 	    unlock_exit(1);
 	  }
@@ -650,7 +660,9 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
     } else if (!strcmp(ncOp, "ncDescribeResource")) {
       char *resourceType = va_arg(al, char *);
       ncResource **outRes=va_arg(al, ncResource **);
-      *outRes = NULL;
+      if (outRes) {
+	*outRes = NULL;
+      }
       if (timeout && outRes) {
 	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
 	if (rbytes <= 0) {
@@ -1322,7 +1334,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
   
   for (i=0; i<resourceCacheLocal.numResources; i++) {
     ncResDst=NULL;
-    if (resourceCacheLocal.resources[i].state != RESASLEEP) {
+    if (resourceCacheLocal.resources[i].state != RESASLEEP && resourceCacheLocal.resources[i].running == 0) {
       nctimeout = ncGetTimeout(op_start, timeout, resourceCacheLocal.numResources, i);
       rc = ncClientCall(ccMeta, nctimeout, NCCALL, resourceCacheLocal.resources[i].ncURL, "ncDescribeResource", NULL, &ncResDst);
       if (rc != 0) {
@@ -1351,7 +1363,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 	changeState(&(resourceCacheLocal.resources[i]), RESUP);
       }
     } else {
-      logprintfl(EUCADEBUG, "refresh_resources(): resource asleep, skipping resource update\n");
+      logprintfl(EUCADEBUG, "refresh_resources(): resource asleep/running instances (%d), skipping resource update\n", resourceCacheLocal.resources[i].running);
     }
 
     // try to discover the mac address of the resource
@@ -1430,8 +1442,8 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    numInsts++;
 	    
 	    // grab instance from cache, if available.  otherwise, start from scratch
-	    find_instanceCacheId(ncOutInsts[j]->instanceId, &myInstance);
-	    if (!myInstance) {
+	    rc = find_instanceCacheId(ncOutInsts[j]->instanceId, &myInstance);
+	    if (rc || !myInstance) {
 	      myInstance = malloc(sizeof(ccInstance));
 	      if (!myInstance) {
 		logprintfl(EUCAFATAL, "refresh_instances(): out of memory!\n");
@@ -1530,12 +1542,12 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
 
     for (i=0; i<MAXINSTANCES; i++) {
       if (instanceCache->cacheState[i] == INSTVALID) {
-	memcpy( &((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
-	count++;
-	if (count > instanceCache->numInsts) {
+	if (count >= instanceCache->numInsts) {
 	  logprintfl(EUCAWARN, "doDescribeInstances(): found more instances than reported by numInsts, will only report a subset of instances\n");
 	  count=0;
 	}
+	memcpy( &((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
+	count++;
       }
     }
     
@@ -1997,13 +2009,20 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	int pid, status, ret, rbytes;
 	
 	// try to run the instance on the chosen resource
-	logprintfl(EUCADEBUG, "RunInstances(): scheduler decided to run instance '%s' on resource '%s'\n", instId, res->ncURL);
+	logprintfl(EUCADEBUG, "RunInstances(): scheduler decided to run instance '%s' on resource '%s', running count '%d'\n", instId, res->ncURL, res->running);
 	
 	outInst=NULL;
 	
 	pid = fork();
 	if (pid == 0) {
 	  time_t startRun;
+
+	  sem_mywait(RESCACHE);
+	  if (res->running > 0) {
+	    res->running++;
+	  }
+	  sem_mypost(RESCACHE);
+
 	  ret=0;
 	  logprintfl(EUCAINFO,"RunInstances(): sending run instance: node=%s instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%.32s... mem=%d disk=%d cores=%d\n", res->ncURL, instId, SP(amiId), ncnet.privateMac, ncnet.privateIp, ncnet.publicIp, ncnet.vlan, ncnet.networkIndex, SP(keyName), ncvm.mem, ncvm.disk, ncvm.cores);
 	  rc = 1;
@@ -2045,6 +2064,13 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  } else {
 	    ret = 1;
 	  }
+	  
+	  sem_mywait(RESCACHE);
+	  if (res->running > 0) {
+	    res->running--;
+	  }
+	  sem_mypost(RESCACHE);
+
 	  exit(ret);
 	} else {
 	  rc = 0;

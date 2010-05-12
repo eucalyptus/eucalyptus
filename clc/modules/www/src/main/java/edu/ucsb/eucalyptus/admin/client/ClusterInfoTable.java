@@ -60,6 +60,8 @@
  *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.client;
 
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 
@@ -68,14 +70,14 @@ import java.util.List;
 
 // dmitrii TODO: remove commented out lines once the CSS-based design is confirmed
 
-public class ClusterInfoTable extends VerticalPanel implements ClickListener {
+public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 
 	private static String warningMessage = "Note: adding a cluster requires synchronization of keys among all nodes, which cannot be done through this interface.  See documentation for details.";
 	private static int maxClusters = 4096; //arbitrary
 	private Label noClusterLabel = new Label();
 	private Label statusLabel = new Label();
 	private Grid grid = new Grid ();
-	private Button add_button = new Button ( "Register cluster", this );
+	private EucaButton add_button = new EucaButton ( "Register cluster", this );
 	private HTML hint = new HTML ();
 	private List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>();
 	private List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>();
@@ -103,7 +105,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		HorizontalPanel hpanel = new HorizontalPanel ();
 		hpanel.setSpacing (2);
 		hpanel.add ( add_button );
-		hpanel.add ( new Button( "Save cluster configuration", new SaveCallback( this ) ) );
+		hpanel.add ( new EucaButton( "Save cluster configuration", new SaveCallback( this ) ) );
 		hpanel.add ( this.statusLabel );
 		//		this.statusLabel.setWidth ("250");
 		this.statusLabel.setText ("");
@@ -118,7 +120,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 				this.sessionId, new GetStorageListCallback(this));
 	}
 
-	public void onClick( final Widget widget ) // Add cluster button
+	public void onClick( ClickEvent event ) // Add cluster button
 	{
 		this.clusterList.add (new ClusterInfoWeb ("cluster-name", "cc-host", 8774, 10, 4096));
 		//these values are just defaults
@@ -190,7 +192,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			nb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
 			namePanel.add ( nb );
 		}
-		namePanel.add (new Button ("Deregister Cluster", new DeleteCallback( this, row )));
+		namePanel.add (new EucaButton ("Deregister Cluster", new DeleteCallback( this, row )));
 		g.setWidget ( i, 1, namePanel);
 
 		i++; // next row
@@ -423,7 +425,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		}
 	}
 
-	class DeleteCallback implements ClickListener {
+	class DeleteCallback implements ClickHandler {
 
 		private ClusterInfoTable parent;
 		private int row;
@@ -434,7 +436,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			this.row = row;
 		}
 
-		public void onClick( final Widget widget )
+		public void onClick( ClickEvent event )
 		{
 			this.parent.clusterList.remove (this.row);
 			this.parent.storageList.remove(this.row);
@@ -518,7 +520,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 		}
 	}
 
-	class SaveCallback implements AsyncCallback, ClickListener {
+	class SaveCallback implements AsyncCallback, ClickHandler {
 
 		private ClusterInfoTable parent;
 
@@ -527,7 +529,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickListener {
 			this.parent = parent;
 		}
 
-		public void onClick( final Widget widget )
+		public void onClick( ClickEvent event )
 		{
 			this.parent.statusLabel.setText ("Saving...");
 			this.parent.statusLabel.setStyleName ("euca-greeting-pending");

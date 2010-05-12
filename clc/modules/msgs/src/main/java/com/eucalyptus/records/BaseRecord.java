@@ -2,6 +2,7 @@ package com.eucalyptus.records;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
@@ -35,14 +36,14 @@ import com.google.common.collect.Lists;
 @DiscriminatorValue( value = "base" )
 public class BaseRecord implements Serializable, Record {
   @Transient
-  private static Logger LOG = Logger.getLogger( BaseRecord.class );
+  private static Logger       LOG    = Logger.getLogger( BaseRecord.class );
   @Id
   @GeneratedValue( generator = "system-uuid" )
   @GenericGenerator( name = "system-uuid", strategy = "uuid" )
   @Column( name = "record_id" )
   String                      id;
   @Column( name = "record_timestamp" )
-  private Long                timestamp;
+  private Date                timestamp;
   @Column( name = "record_type" )
   @Enumerated( EnumType.STRING )
   private EventType           type;
@@ -59,6 +60,9 @@ public class BaseRecord implements Serializable, Record {
   private String              correlationId;
   @Column( name = "record_extra" )
   private String              extra;
+  @Column( name = "record_level" )
+  @Enumerated( EnumType.STRING )
+  private RecordLevel         level;
   @Transient
   private ArrayList           others = Lists.newArrayList( );
   @Transient
@@ -67,16 +71,19 @@ public class BaseRecord implements Serializable, Record {
   private static final String NEXT   = "\n";
   @Transient
   private transient String    lead;
+  @Transient
+  private Class               realCreator;
   
-  public BaseRecord( EventType type, EventClass clazz, String creator, String codeLocation, String userId, String correlationId, String other ) {
+  public BaseRecord( EventType type, EventClass clazz, Class creator, StackTraceElement codeLocation, String userId, String correlationId, String other ) {
     this.type = type;
     this.clazz = clazz;
-    this.creator = creator;
-    this.codeLocation = codeLocation;
+    this.realCreator = creator;
+    this.creator = creator.getSimpleName( );
+    this.codeLocation = codeLocation.toString( );
     this.userId = userId;
     this.correlationId = correlationId;
-    this.timestamp = TimeUnit.MILLISECONDS.convert( System.nanoTime( ), TimeUnit.NANOSECONDS );
-    
+    this.timestamp = new Date();
+    this.extra = other;
   }
   
   public BaseRecord( ) {}
@@ -86,13 +93,14 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record info( ) {
+    this.level = RecordLevel.INFO;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).info( this );
+    Logger.getLogger( this.realCreator ).info( this );
     return newThis;
   }
   
@@ -101,13 +109,14 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record error( ) {
+    this.level = RecordLevel.ERROR;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).error( this );
+    Logger.getLogger( this.realCreator ).error( this );
     return newThis;
   }
   
@@ -116,13 +125,14 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record trace( ) {
+    this.level = RecordLevel.TRACE;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).trace( this );
+    Logger.getLogger( this.realCreator ).trace( this );
     return newThis;
   }
   
@@ -131,13 +141,14 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record debug( ) {
+    this.level = RecordLevel.DEBUG;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).debug( this );
+    Logger.getLogger( this.realCreator ).debug( this );
     return newThis;
   }
   
@@ -146,13 +157,14 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record warn( ) {
+    this.level = RecordLevel.WARN;
     Record newThis = this;
-    if( Bootstrap.isFinished( ) ) try {
+    if ( Bootstrap.isFinished( ) ) try {
       newThis = Transactions.save( this );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
     }
-    Logger.getLogger( this.getCodeLocation( ) ).warn( this );
+    Logger.getLogger( this.realCreator ).warn( this );
     return newThis;
   }
   
@@ -162,6 +174,10 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record next( ) {
     this.others.add( NEXT );
+    this.extra = "";
+    for ( Object o : this.others ) {
+      this.extra += ":" + o.toString( );
+    }
     return this;
   }
   
@@ -172,7 +188,11 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record append( Object... obj ) {
     for ( Object o : obj ) {
-      this.others.add( o == null ? ISNULL : o.toString( ) );
+      this.others.add( o == null ? ISNULL : "" + o );
+    }
+    this.extra = "";
+    for ( Object o : this.others ) {
+      this.extra += ":" + o.toString( );
     }
     return this;
   }
@@ -194,9 +214,9 @@ public class BaseRecord implements Serializable, Record {
   }
   
   private String leadIn( ) {
-    return lead == null ? ( lead = String.format( ":%010d:%s:%s:%s:%s:", this.getTimestamp( ), this.getCreator( ),
-                                                  ( ( this.correlationId != null ) ? this.correlationId : "" ),
-                                                  ( ( this.userId != null ) ? this.userId : "" ), this.type) ) : lead;
+    return lead == null ? ( lead = String.format( ":%010d:%s:%s:%s:%s:", this.getTimestamp( ).getTime( ), this.getCreator( ),
+                                                  ( ( this.correlationId != null ) ? this.correlationId : "" ), ( ( this.userId != null ) ? this.userId : "" ),
+                                                  this.type ) ) : lead;
   }
   
   /**
@@ -219,14 +239,15 @@ public class BaseRecord implements Serializable, Record {
     this.id = id;
   }
   
-  public Long getTimestamp( ) {
+  
+  public Date getTimestamp( ) {
     return this.timestamp;
   }
-  
-  public void setTimestamp( Long timestamp ) {
+
+  public void setTimestamp( Date timestamp ) {
     this.timestamp = timestamp;
   }
-  
+
   public EventType getType( ) {
     return this.type;
   }
@@ -269,6 +290,14 @@ public class BaseRecord implements Serializable, Record {
   
   public String getCorrelationId( ) {
     return this.correlationId;
+  }
+  
+  public String getExtra( ) {
+    return this.extra;
+  }
+  
+  public void setExtra( String extra ) {
+    this.extra = extra;
   }
   
   public void setCorrelationId( String correlationId ) {

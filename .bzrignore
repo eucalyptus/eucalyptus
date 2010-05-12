@@ -25,4 +25,16 @@ clc/modules/walrus/build
 clc/modules/wsstack/build
 clc/modules/www/build
 clc/modules/www/build-war
-
+Makedefs
+config.log
+config.status
+tools/euca_conf
+tools/eucalyptus-cloud
+tools/eucalyptus-nc
+util/euca_mountwrap
+util/euca_rootwrap
+util/eucalyptus-config.h
+tools/eucalyptus-cc
+clc/bind.log
+clc/modules/www/conf/eucalyptus-web.properties
+clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes/active
