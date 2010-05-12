@@ -129,7 +129,7 @@ pid_t timewait(pid_t pid, int *status, int timeout) {
   time_t timer=0;
   int rc;
 
-  if (timeout < 0) timeout = 1;
+  if (timeout <= 0) timeout = 1;
 
   *status = 1;
   rc = waitpid(pid, status, WNOHANG);
@@ -1131,6 +1131,20 @@ int write2file(const char *path, char *str) {
   return(0);
 }
 
+char * file2strn (const char * path, const ssize_t limit) 
+{
+  struct stat mystat;
+  if (stat (path, &mystat) < 0) {
+    logprintfl (EUCAERROR, "error: file2strn() could not stat file %s\n", path);
+    return NULL;
+  }
+  if (mystat.st_size>limit) {
+    logprintfl (EUCAERROR, "error: file %s exceeds the limit (%d) in file2strn()\n", path, limit);
+    return NULL;
+  }
+  return file2str (path);
+}
+
 /* read file 'path' into a new string */
 char * file2str (const char * path)
 {
@@ -1181,45 +1195,60 @@ char * file2str (const char * path)
     return content;
 }
 
-/* extract integer from str bound by 'begin' and 'end' */
-long long str2longlong (const char * str, const char * begin, const char * end)
+// extract string from str bound by 'begin' and 'end'
+char * str2str (const char * str, const char * begin, const char * end)
 {
-    long long value = -1L;
+  char * buf = NULL;
 
     if ( str==NULL || begin==NULL || end==NULL || strlen (str)<3 || strlen (begin)<1 || strlen (end)<1 ) {
-        logprintfl (EUCAERROR, "error: str2int() called with bad parameters\n");
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() called with bad parameters\n");
+        return buf;
     }
 
     char * b = strstr ( str, begin );
     if ( b==NULL ) {
-        logprintfl (EUCAERROR, "error: str2int() beginning string '%s' not found\n", begin);
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() beginning string '%s' not found\n", begin);
+        return buf;
     }
 
     char * e = strstr ( str, end );
     if ( e==NULL ) {
-        logprintfl (EUCAERROR, "error: str2int() end string '%s' not found\n", end);
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() end string '%s' not found\n", end);
+        return buf;
     }
 
-    b += strlen (begin); // b now points at the supposed number
+    b += strlen (begin); // b now points at the supposed content
     int len = e-b;
     if ( len < 0 ) {
-        logprintfl (EUCAERROR, "error: str2int() there is nothing between '%s' and '%s'\n", begin, end);
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() there is nothing between '%s' and '%s'\n", begin, end);
+        return buf;
     }
 
     if ( len > BUFSIZE-1 ) {
-        logprintfl (EUCAERROR, "error: str2int() string between '%s' and '%s' is too long\n", begin, end);
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() string between '%s' and '%s' is too long\n", begin, end);
+        return buf;
     }
 
-    char buf [BUFSIZE];
-    strncpy (buf, b, len);
-    value = atoll (buf);
+    buf = malloc (len+1);
+    if (buf!=NULL) {
+      strncpy (buf, b, len);
+      buf [len] = '\0';
+    }
 
-    return value;
+    return buf;
+}
+
+/* extract integer from str bound by 'begin' and 'end' */
+long long str2longlong (const char * str, const char * begin, const char * end)
+{
+  long long val = -1L;
+  char * buf = str2str (str, begin, end);
+  if (buf!=NULL) {
+    val = atoll (buf);
+    free (buf);
+  }
+
+  return val;
 }
 
 int uint32compar(const void *ina, const void *inb) {
@@ -1300,4 +1329,58 @@ int maxint(int a, int b) {
 
 int minint(int a, int b) {
   return(a<b?a:b);
+}
+
+// copies contents of src to dst, possibly overwriting whatever is in dst
+int copy_file (const char * src, const char * dst)
+{
+	struct stat mystat;
+
+	if (stat (src, &mystat) < 0) {
+		logprintfl (EUCAERROR, "error: cannot stat '%s'\n", src);
+		return ERROR;
+	}
+
+	int ifp = open (src, O_RDONLY);
+	if (ifp<0) {
+		logprintfl (EUCAERROR, "failed to open the input file '%s'\n", src);
+		return ERROR;
+	}
+
+	int ofp = open (dst, O_WRONLY | O_CREAT);
+	if (ofp<0) {
+		logprintfl (EUCAERROR, "failed to create the ouput file '%s'\n", dst);
+		close (ifp);
+		return ERROR;
+	}
+
+#   define _BUFSIZE 16384
+	char buf [_BUFSIZE];
+	ssize_t bytes;
+	int ret = OK;
+
+	while ((bytes = read (ifp, buf, _BUFSIZE)) > 0) {
+		if (write (ofp, buf, bytes) < 1) {
+			logprintfl (EUCAERROR, "failed while writing to '%s'\n", dst);
+			ret = ERROR;
+			break;
+		}
+	}
+	if (bytes<0) {
+		logprintfl (EUCAERROR, "failed while writing to '%s'\n", dst);
+		ret = ERROR;
+	}
+
+	close (ifp);
+	close (ofp);
+
+	return ret;
+}
+
+long long file_size (const char * file_path)
+{
+    struct stat mystat;
+    int err = stat (file_path, &mystat);
+    if (err<0) return (long long)err;
+    return (long long)(mystat.st_size);
 }

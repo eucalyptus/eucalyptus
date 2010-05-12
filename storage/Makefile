@@ -5,16 +5,15 @@
 include ../Makedefs
 
 STORAGE_LIBS = -lcurl -lssl
-IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o walrus.o img.o cache.o ami2vmx.o do_convert.o http.o vmdk.o
-VDDK_PATH = $(usrdir)/packages/vmware-vix-disklib
-VDDK_FLAGS = -I$(VDDK_PATH)/include  -L$(VDDK_PATH)/lib64 -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
+IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o helpers.o
+VDDK_FLAGS = -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
 
 all: storage.o storage-windows.o walrus.o Wclient euca_imager
 
 build: all
 
-euca_imager: Makefile euca_imager.c $(IMAGER_LIBS)
-	$(CC) $(CFLAGS) $(INCLUDES) euca_imager.c -o euca_imager $(IMAGER_LIBS) $(VDDK_FLAGS) -lcurl -lrt -lssl
+euca_imager: Makefile imager.c imager.h cmd.h $(IMAGER_LIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o euca_imager $(IMAGER_LIBS) $(VDDK_FLAGS) -lcurl -lrt -lssl
 
 Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
 	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o http.o $(STORAGE_LIBS)
