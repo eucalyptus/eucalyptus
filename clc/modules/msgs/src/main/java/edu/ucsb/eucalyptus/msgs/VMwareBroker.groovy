@@ -162,9 +162,11 @@ public class InstanceType extends EucalyptusData {
 	VirtualMachineType instanceType;
 	NetConfigType netParams;
 	String stateName;
+	String bundleTaskStateName;
 	String launchTime;
 	String userData;
 	String launchIndex;
+	String platform;
 	ArrayList<String> groupNames = new ArrayList<String>();
 	ArrayList<VolumeType> volumes = new ArrayList<VolumeType>();
 	String serviceTag;
@@ -246,6 +248,7 @@ public class EucalyptusNCNcRunInstanceType extends VMwareBrokerRequestType {
 	NetConfigType netParams;
 	String userData;
 	String launchIndex;
+	String platform;
 	ArrayList<String> groupNames = new ArrayList<String>();
     def EucalyptusNCNcRunInstanceType() {}
 
