@@ -214,6 +214,8 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
   tmp = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
   newpass = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
   if (!tmp || !newpass) {
+    if (tmp) free(tmp);
+    if (newpass) free(newpass);
     if (buf) free(buf);
     return(1);
   }
