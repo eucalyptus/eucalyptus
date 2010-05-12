@@ -102,7 +102,7 @@ public class EquallogicProvider implements SANProvider {
 	private static final Pattern USER_DELETE_PATTERN = Pattern.compile("CHAP user deletion succeeded.");
 	private static final Pattern USER_SHOW_PATTERN = Pattern.compile(".*Password: (.*)\r");
 	private static final Pattern SHOW_SPACE_PATTERN = Pattern.compile("GB.* ([0-9]+\\.[0-9]+.*)\r");
-	
+
 	private static final String EOF_COMMAND = "whoami\r";
 
 	private final long TASK_TIMEOUT = 5 * 60 * 1000;
@@ -125,6 +125,15 @@ public class EquallogicProvider implements SANProvider {
 			}
 		} else {
 			sessionManager = new SessionManager(host, username, password);
+		}
+	}
+
+	public void checkPreconditions() throws EucalyptusCloudException {
+		if(!new File(BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl").exists()) {
+			throw new EucalyptusCloudException("connect_iscitarget_sc.pl not found");
+		}
+		if(!new File(BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl").exists()) {
+			throw new EucalyptusCloudException("disconnect_iscitarget_sc.pl not found");
 		}
 	}
 
@@ -448,7 +457,7 @@ public class EquallogicProvider implements SANProvider {
 		}
 		return false;
 	}
-	
+
 	private void showFreeSpace() {
 		try {
 			String returnValue = execCommand("stty hardwrap off\rshow pool\r");

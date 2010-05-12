@@ -95,5 +95,7 @@ public interface SANProvider {
 
 	public void disconnectTarget(String iqn) throws EucalyptusCloudException;
 
+	public void checkPreconditions() throws EucalyptusCloudException;
+
 }
 

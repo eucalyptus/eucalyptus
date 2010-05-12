@@ -134,6 +134,7 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
+		connectionManager.checkPreconditions();
 	}
 
 	@Override
