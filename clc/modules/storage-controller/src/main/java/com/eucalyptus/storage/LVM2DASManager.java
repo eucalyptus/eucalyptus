@@ -259,6 +259,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 		exportManager.configure();
 		//dummy init
 		LOG.info(StorageInfo.getStorageInfo().getName());
+		LOG.info(DirectStorageInfo.getStorageInfo().getName());
 		LOG.info(DASInfo.getStorageInfo().getName());
 	}
 
@@ -882,6 +883,14 @@ public class LVM2DASManager implements LogicalStorageManager {
 			String prefix = configurableClass.alias();
 			componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
 		}
+		configurableClass = DirectStorageInfo.class.getAnnotation(ConfigurableClass.class);
+		if(configurableClass != null) {
+			String prefix = configurableClass.alias();
+			if(componentProperties == null)
+				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
+			else 
+				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(prefix));
+		}			
 		configurableClass = DASInfo.class.getAnnotation(ConfigurableClass.class);
 		if(configurableClass != null) {
 			String prefix = configurableClass.alias();
@@ -914,12 +923,12 @@ public class LVM2DASManager implements LogicalStorageManager {
 	@Override
 	public void finishVolume(String snapshotId) throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public String getSnapshotPath(String snapshotId)
-			throws EucalyptusCloudException {
+	throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(snapshotId);
 		if(volInfo != null) {
@@ -934,7 +943,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 
 	@Override
 	public String getVolumePath(String volumeId)
-			throws EucalyptusCloudException {
+	throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volInfo != null) {
@@ -978,7 +987,7 @@ public class LVM2DASManager implements LogicalStorageManager {
 
 	@Override
 	public void importVolume(String volumeId, String volumePath, int size)
-			throws EucalyptusCloudException {
+	throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volInfo != null) {
