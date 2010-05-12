@@ -99,13 +99,15 @@ public class VMwareBrokerResponseType extends BaseMessage {
 // fields used by {Run|Describe}Instance
 
 public class VirtualMachineType extends EucalyptusData {
+	String name;
 	Integer memory;
 	Integer cores;
 	Integer disk;
 	
 	VirtualMachineType () {}
 	
-	VirtualMachineType (int cores, int disk, int memory) {
+	VirtualMachineType (String name, int cores, int disk, int memory) {
+		this.name = name;
 		this.memory = memory;
 		this.cores = cores;
 		this.disk = disk;
