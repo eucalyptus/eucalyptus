@@ -15,6 +15,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -58,6 +59,7 @@ public class BaseRecord implements Serializable, Record {
   private String              userId;
   @Column( name = "record_correlation_id" )
   private String              correlationId;
+  @Lob
   @Column( name = "record_extra" )
   private String              extra;
   @Column( name = "record_level" )
