@@ -119,6 +119,7 @@ static imager_command * validate_cmd (int index, char *this_cmd, imager_param *p
 
 static void set_global_parameter (char * key, char * val)
 {
+  logprintfl (EUCAINFO, "GLOBAL: %s=%s\n", key, val);
 	if (strcmp (key, "work")==0) {
 		set_work_dir (val);
 	} else if (strcmp (key, "work_size")==0) {
@@ -334,14 +335,6 @@ int ensure_path_exists (const char * path, mode_t mode)
 					logprintfl (EUCAERROR, "error: failed to create path %s: %s\n", path_copy, strerror (errno));
 					
 					if (path_copy) 
-						free (path_copy);
-					return errno;
-				}
-			} else {
-				if ( chmod (path_copy, mode) == -1) {
-					logprintfl (EUCAERROR, "error: failed to chmod path %s: %s\n", path_copy, strerror (errno));
-
-					if (path_copy)
 						free (path_copy);
 					return errno;
 				}
