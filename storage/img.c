@@ -19,12 +19,14 @@
 #include "img.h"
 #include "ipc.h"
 #include "http.h" // http_put
+#include "vmdk.h" // vmdk_*
 
 static img_env g_env = { initialized: 0 };
 static sem * img_sem;
 static char add_key_command_path [SIZE] = "";
 static char disk_convert_command_path [SIZE] = "";
 static char * euca_home = NULL;
+extern char debug;
 
 static void max_to_str (char * str, const int size, int limit_mb) 
 {
@@ -133,7 +135,7 @@ static void strnsub (char * dest, const char *src, const unsigned int sindex, co
     strncpy (dest, src+sindex, ((eindex-sindex)>size)?size:eindex-sindex);
 }
 
-static int parse_img_spec (img_loc * img, const char * str)
+static int parse_img_spec (img_loc * loc, const char * str)
 {
     char low [SIZE];
     int i;
@@ -144,8 +146,8 @@ static int parse_img_spec (img_loc * img, const char * str)
 
     if (!strncmp (low, "http://", 7) || !strncmp (low, "https://", 8)) {
         if (strstr (str, "services/Walrus")) {
-            img->type=WALRUS;
-            strncpy (img->url, str, sizeof(img->url));
+            loc->type=WALRUS;
+            strncpy (loc->url, str, sizeof(loc->url));
        
         } else if (strstr (str, "dcPath=")) {            
             // EXAMPLE: https://192.168.7.236/folder/i-4DD50852?dcPath=ha-datacenter&dsName=S1
@@ -168,28 +170,61 @@ static int parse_img_spec (img_loc * img, const char * str)
                 logprintfl (EUCAERROR, "parse_img_spec: unexpected number of matched elements in %s\n", ex);
                 return 1;
             }
+            loc->type=VSPHERE;
 
-            img->type=VSPHERE;
-            strncpy (img->url,            str, sizeof (img->url));
-            strnsub (img->vsphere_host,   str, pmatch[1].rm_so, pmatch[1].rm_eo, sizeof (img->vsphere_host));
-            strnsub (img->path,           str, pmatch[2].rm_so, pmatch[2].rm_eo, sizeof (img->path));
-            strnsub (img->vsphere_dcPath, str, pmatch[3].rm_so, pmatch[3].rm_eo, sizeof (img->vsphere_dcPath));
-            strnsub (img->vsphere_dsName, str, pmatch[4].rm_so, pmatch[4].rm_eo, sizeof (img->vsphere_dsName));
+			char path [SIZE];
+            strncpy (loc->url,            str, sizeof (loc->url));
+            strnsub (loc->vsphere_host,   str, pmatch[1].rm_so, pmatch[1].rm_eo, sizeof (loc->vsphere_host));
+            strnsub (path,                str, pmatch[2].rm_so, pmatch[2].rm_eo, sizeof (loc->path));
+            strnsub (loc->vsphere_dcPath, str, pmatch[3].rm_so, pmatch[3].rm_eo, sizeof (loc->vsphere_dcPath));
+            strnsub (loc->vsphere_dsName, str, pmatch[4].rm_so, pmatch[4].rm_eo, sizeof (loc->vsphere_dsName));
 
-            //logprintfl (EUCADEBUG, "parse_img_spec: re_nsub=%d host=%s path=%s dc=%s ds=%s\n", re.re_nsub, img->vsphere_host, img->path, img->vsphere_dcPath, img->vsphere_dsName);
+			// extract path, split into directory and filename
+			loc->dir  [0] = '\0';
+			loc->file [0] = '\0';
+			loc->path [0] = '\0';
+			char * t = strtok (path, "/");
+			if (t==NULL || strcmp (t, "folder")!=0) {
+				logprintfl (EUCAERROR, "parse_img_spec: failed to parse path in URL (must begin with 'folder'): %s...\n", path);
+				return 1;
+			}
+			char * pt = NULL;
+			while ((t = strtok (NULL, "/"))!=NULL) {
+				if (pt) {
+					if (loc->dir[0]!='\0')
+						strncat (loc->dir, "/", sizeof(loc->dir));
+					strncat (loc->dir, pt, sizeof(loc->dir));
+				}
+				pt = t;
+			}
+			if (pt) {
+				strncat (loc->file, pt, sizeof(loc->file));
+			}
+			if (loc->dir[0]=='\0') {
+				strncpy (loc->path, loc->file, sizeof(loc->path));
+			} else {
+				snprintf (loc->path, sizeof(loc->path), "%s/%s", loc->dir, loc->file);
+			}
+
+            logprintfl (EUCADEBUG, "parse_img_spec: re_nsub=%d host=%s path='%s' ('%s' + '%s') dc=%s ds=%s\n", 
+						re.re_nsub, 
+						loc->vsphere_host, 
+						loc->path, loc->dir, loc->file,
+						loc->vsphere_dcPath, 
+						loc->vsphere_dsName);
 
         } else {
-            img->type=HTTP;
-            strncpy (img->url, str, sizeof(img->url));
+            loc->type=HTTP;
+            strncpy (loc->url, str, sizeof(loc->url));
         }
 
     } else if (!strncmp (low, "sftp://", 7)) {
-        img->type=SFTP;
-        strncpy (img->url, str, sizeof(img->url));
+        loc->type=SFTP;
+        strncpy (loc->url, str, sizeof(loc->url));
 
     } else {
-        img->type=PATH;
-        strncpy (img->path, str, sizeof(img->path));
+        loc->type=PATH;
+        strncpy (loc->path, str, sizeof(loc->path));
     }
     
     return 0;
@@ -256,7 +291,7 @@ static const char * img_creds_location_str (const img_loc * loc)
 static void print_img_spec (const char * name, const img_spec * spec)
 {
     if (name==NULL || spec==NULL || strlen(name)==0 || strlen(spec->id)==0) return;
-    logprintfl (EUCADEBUG, "\t%s: id=%-12ss type=%-7s creds=%-8s %s\n", 
+    logprintfl (EUCADEBUG, "\t%s: id=%-12s type=%-7s creds=%-8s %s\n", 
                 name, 
                 spec->id,
                 img_spec_type_str (spec->location.type),
@@ -701,79 +736,6 @@ static void gen_hash (char * hash, const int size,
     snprintf (hash, size, "%x", code);
 }
 
-static int gen_vmdk (const char * disk_path, const char * vmdk_path)
-{
-    struct stat mystat;
-    if (stat (disk_path, &mystat) < 0 ) {
-        logprintfl (EUCAERROR, "failed to stat file %s\n", disk_path);
-        return 1;
-    }
-    int total_size = (int)(mystat.st_size/512); // file size in blocks (TODO: do we need to round up?)
-    
-    static const char desc_template[] =
-        "# Disk DescriptorFile\n"
-        "version=1\n"
-        "CID=%x\n"
-        "parentCID=ffffffff\n"
-        "createType=\"%s\"\n"
-        "\n"
-        "# Extent description\n"
-        "RW %d %s \"%s\"\n"
-        "\n"
-        "# The Disk Data Base \n"
-        "#DDB\n"
-        "\n"
-        "ddb.virtualHWVersion = \"%d\"\n"
-        "ddb.geometry.cylinders = \"%d\"\n"
-        "ddb.geometry.heads = \"16\"\n"
-        "ddb.geometry.sectors = \"63\"\n"
-        "ddb.adapterType = \"%s\"\n";
-    char desc[1024];
-    int fd = open (vmdk_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd<0) {
-        logprintfl (EUCAFATAL, "failed to create %s\n", vmdk_path);
-        return 1;        
-    }
-    snprintf(desc, sizeof(desc), desc_template, 
-            (unsigned int)time(NULL),
-            "vmfs", // can also be "monolithicSparse"
-             total_size, // in blocks
-             "VMFS", // can also be SPARSE
-             "disk-flat.vmdk", // backing store file's name
-             4, // qemu-img can also produce 6, vmkfstools seems to be on 7 now
-             (int)(total_size / (int64_t)(63 * 16)),
-             "lsilogic" // can also be "ide" and "buslogic"
-             );
-    write(fd, desc, strlen(desc));
-    close(fd);
-    
-    return 0;
-}
-
-static int upload_vmdk (const char * disk_path, const char * vmdk_path, const img_spec * dest)
-{
-    const img_loc * loc = &(dest->location);
-    char url[1024];
-
-    logprintfl (EUCAINFO, "uploading disk backing files to destination\n");    
-    
-    // EXAMPLE: https://192.168.7.236/folder/i-4DD50852?dcPath=ha-datacenter&dsName=S1
-    snprintf (url, sizeof(url), "https://%s/%s/%s/%s?dcPath=%s&dsName=%s", loc->vsphere_host, loc->path, dest->id, "disk-flat.vmdk", loc->vsphere_dcPath, loc->vsphere_dsName);
-    int rc = http_put (disk_path, url, loc->creds.login, loc->creds.password);
-    if (rc) {
-        logprintfl (EUCAFATAL, "upload of disk file failed\n");
-        return 1;        
-    }
-    
-    snprintf (url, sizeof(url), "https://%s/%s/%s/%s?dcPath=%s&dsName=%s", loc->vsphere_host, loc->path, dest->id, "disk.vmdk", loc->vsphere_dcPath, loc->vsphere_dsName);
-    rc = http_put (vmdk_path, url, loc->creds.login, loc->creds.password);
-    if (rc) {
-        logprintfl (EUCAFATAL, "upload of disk file metadata failed\n");
-        return 1;        
-    }
-    return 0;
-}
-
 int img_convert (
         img_spec * root, 
         img_spec * kernel, 
@@ -809,7 +771,7 @@ int img_convert (
     
     if (file_size (cached_path)>0 && file_size (cached_path_vmdk)>0) {
         logprintfl (EUCAINFO, "found a cached copy of the file in %s\n", cached_path);
-        rc = upload_vmdk (cached_path, cached_path_vmdk, dest);
+        rc = vmdk_clone (cached_path_vmdk, dest);
 
     } else {
         char unique_path [SIZE]; 
@@ -852,8 +814,8 @@ int img_convert (
             goto cleanup;        
         }
         
-        if (gen_vmdk (disk_path, vmdk_path) || 
-            upload_vmdk (disk_path, vmdk_path, dest)) {
+        if (vmdk_convert (disk_path, vmdk_path) || 
+            vmdk_clone (vmdk_path, dest)) {
             rc = 1;
             goto cleanup;
         }
@@ -867,13 +829,17 @@ int img_convert (
         sem_v (img_sem);
         
     cleanup:
-        unlink (disk_path); // will silently fail if they've been renamed
-        unlink (vmdk_path);
-        
-        unlink (image_path);
-        unlink (kernel_path);
-        unlink (ramdisk_path);
-        rmdir (unique_path);        
+		if (debug) {
+			logprintfl (EUCADEBUG, "in debug mode, not cleaning up\n");
+		} else {
+			unlink (disk_path); // will silently fail if they've been renamed
+			unlink (vmdk_path);
+			
+			unlink (image_path);
+			unlink (kernel_path);
+			unlink (ramdisk_path);
+			rmdir (unique_path);        
+		}
     }
 
     return rc;
