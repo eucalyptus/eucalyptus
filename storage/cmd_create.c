@@ -292,21 +292,6 @@ int create_execute (imager_request * req)
 				if (ret!=OK) 
 					goto cleanup;
 			}
-
-/*
-			// update partition sizes based on sizes of input files
-			for (int i=0; i<state->nparts; i++) {
-				struct _part_type * p = &(state->parts [i]);
-				if (p->size==0) {
-					p->size = file_size (p->content);
-					if (p->size < 1) {
-						logprintfl (EUCAERROR, "input file '%s' is missing\n", p->content);
-						ret = ERROR;
-						goto cleanup;
-					}
-				}
-			}
-*/
 		}
 
 		// create the output file
@@ -343,7 +328,9 @@ int create_execute (imager_request * req)
 			for (int i=0; i<state->nparts; i++) {
 				struct _part_type * p = &(state->parts [i]);
 				if (p->content) {
-					_CALL_CHECK(df_dd (df, i, p->content));
+				  char path [EUCA_MAX_PATH];
+				  snprintf (path, sizeof (path), "%s/%s", get_work_dir(), p->content); // TODO: fix this to work with work and cache
+				  _CALL_CHECK(df_dd (df, i, path));
 				} else {
 					_CALL_CHECK(df_format (df, i, p->format));
 				}

@@ -1347,7 +1347,7 @@ int copy_file (const char * src, const char * dst)
 		return ERROR;
 	}
 
-	int ofp = open (dst, O_WRONLY | O_CREAT);
+	int ofp = open (dst, O_WRONLY | O_CREAT, 0600);
 	if (ofp<0) {
 		logprintfl (EUCAERROR, "failed to create the ouput file '%s'\n", dst);
 		close (ifp);

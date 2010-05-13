@@ -238,7 +238,7 @@ int help_mount (const char * dev, const char * mnt_pt)
 	int ret = OK;
 	char * output;
 
-    output = pruntf ("%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNT], dev, mnt_pt);
+    output = pruntf ("%s %s mount %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev, mnt_pt);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot mount device '%s' on '%s'\n", dev, mnt_pt);
         ret = ERROR;
@@ -254,7 +254,7 @@ int help_umount (const char * dev)
 	int ret = OK;
 	char * output;
 
-    output = pruntf ("%s %s %s", helpers_path[ROOTWRAP], helpers_path[UMOUNT], dev);
+    output = pruntf ("%s %s umount %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot unmount device '%s'\n", dev);
         ret = ERROR;
@@ -263,6 +263,30 @@ int help_umount (const char * dev)
 	}
 
 	return ret;
+}
+
+int help_write2file (const char * file, const char * str)
+{
+  int ret = OK;
+  char tmpfile [] = "/tmp/euca-temp-XXXXXX";
+  int fd = mkstemp (tmpfile);
+  if (fd<0) {
+    logprintfl (EUCAERROR, "error: failed to create temporary directory\n");
+    return ERROR;
+  }
+  int size = strlen (str);
+  if (write (fd, str, size) != size) {
+    logprintfl (EUCAERROR, "error: failed to create temporary directory\n");
+    ret = ERROR;
+  } else {
+    if (help_cp (tmpfile, file) != OK) {
+      logprintfl (EUCAERROR, "error: failed to copy temp file to destination (%s)\n", file);
+      ret = ERROR;
+    }
+  }
+  close (fd);
+  
+  return ret;
 }
 
 int help_grub_files (const char * mnt_pt, const int part, const char * kernel, const char * ramdisk) 
@@ -344,9 +368,9 @@ int help_grub_files (const char * mnt_pt, const int part, const char * kernel, c
 	char grub_conf_path [EUCA_MAX_PATH];
 	snprintf (grub_conf_path, sizeof (grub_conf_path), "%s/boot/grub/grub.conf", mnt_pt);
 
-	if (write2file (menu_lst_path, buf)!=OK)
+	if (help_write2file (menu_lst_path, buf)!=OK)
 		return ERROR;
-	if (write2file (grub_conf_path, buf)!=OK)
+	if (help_write2file (grub_conf_path, buf)!=OK)
 		return ERROR;
 			  
 	return OK;
@@ -358,13 +382,16 @@ int help_grub_mbr (const char * path, const int part)
 	int rc = 1;
 
     snprintf(cmd, sizeof (cmd), "%s --device-map=/dev/null --batch >/dev/null 2>&1", helpers_path[GRUB]);
+    logprintfl (EUCADEBUG, "running %s\n", cmd);
     FILE * fp = popen (cmd, "w");
 	if (fp!=NULL) {
-		fprintf (fp, "device (hd0) %s-disk\n", path);
-		fprintf (fp, "root (hd0,%d)\n", part);
-		fprintf (fp, "setup (hd0)\n");
-		fprintf (fp, "quit\n");
-		rc = pclose (fp);
+	  char s [EUCA_MAX_PATH];
+#define   _PR fprintf (fp, "%s", s); logprintfl (EUCADEBUG, "\t%s", s)
+	  snprintf (s, sizeof (s), "device (hd0) %s\n", path); _PR;
+	  snprintf (s, sizeof (s), "root (hd0,%d)\n", part);   _PR;
+	  snprintf (s, sizeof (s), "setup (hd0)\n");           _PR;
+	  snprintf (s, sizeof (s), "quit\n");                  _PR;
+	  rc = pclose (fp);
 	}
 
 	if (rc==0) return OK;
@@ -392,6 +419,32 @@ int help_ch (const char * path, const char * user, const int perms)
 		}
 		free (output); 
 	}
+
+	return OK;
+}
+
+int help_mkdir (const char * path)
+{
+	char * output;
+
+	output = pruntf ("%s %s -p %s", helpers_path[ROOTWRAP], helpers_path[MKDIR], path);
+	if (!output) {
+	  return ERROR;
+	}
+	free (output); 
+
+	return OK;
+}
+
+int help_cp (const char * from, const char * to)
+{
+	char * output;
+
+	output = pruntf ("%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CP], from, to);
+	if (!output) {
+	  return ERROR;
+	}
+	free (output);
 
 	return OK;
 }

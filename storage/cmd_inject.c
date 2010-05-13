@@ -220,9 +220,11 @@ int inject_execute (imager_request * req)
 
 		// if not in-place injection, make a copy
 		if (strcmp (state->in, state->out)!=0) {
-			logprintfl (EUCAINFO, "copying '%s' to '%s'\n", state->in, o->path);
-			if (copy_file (state->in, o->path)!=OK) {
-				logprintfl (EUCAERROR, "failed to copy '%s' to '%s'\n", state->in, o->path);
+		  char path [EUCA_MAX_PATH];
+		  snprintf (path, sizeof (path), "%s/%s", get_work_dir(), state->in); // TODO: fix this to work with work and cache
+			logprintfl (EUCAINFO, "copying '%s' to '%s'\n", path, o->path);
+			if (copy_file (path, o->path)!=OK) {
+				logprintfl (EUCAERROR, "failed to copy '%s' to '%s'\n", path, o->path);
 				ret = ERROR;
 				goto cleanup;
 			}
@@ -258,13 +260,13 @@ int inject_execute (imager_request * req)
 
 		// do the single-file injection
 		logprintfl (EUCAINFO, "injecting '%s' to '%s' on '%s'\n", state->infile, state->outfile, id);
-		if (ensure_dir_exists (mnt_pt_outfile, 0700)!=OK) { // TODO: don't hardcode perms
+		if (help_mkdir (mnt_pt_outfile)!=OK) {
             logprintfl (EUCAINFO, "error: failed to create subdirectories in '%s'\n", mnt_pt_outfile);
 			ret = ERROR;
 			goto unmount;
 		}
 
-		if (copy_file (state->infile, mnt_pt_outfile)!=OK) {
+		if (help_cp (state->infile, mnt_pt_outfile)!=OK) {
             logprintfl (EUCAINFO, "error: failed to copy '%s' to '%s'\n", state->infile, mnt_pt_outfile);
 			ret = ERROR;
 			goto unmount;
@@ -283,8 +285,12 @@ int inject_execute (imager_request * req)
 				ret = ERROR;
 				goto unmount;
 			}
+			char kpath [EUCA_MAX_PATH];
+			snprintf (kpath, sizeof (kpath), "%s/%s", get_work_dir(), state->kernel); // TODO: fix this to work with work and cache
+			char rpath [EUCA_MAX_PATH];
+			snprintf (rpath, sizeof (rpath), "%s/%s", get_work_dir(), state->ramdisk); // TODO: fix this to work with work and cache
 			logprintfl (EUCAINFO, "making partition %d bootable with kernel %s and ramdisk %s\n", state->part, state->kernel, state->ramdisk);
-			if (help_grub_files (mnt_pt, state->part, state->kernel, state->ramdisk)!=OK) {
+			if (help_grub_files (mnt_pt, state->part, kpath, rpath)!=OK) {
 				logprintfl (EUCAERROR, "error: failed to make partition %d of '%s' bootable\n", state->part, state->out);
 				ret = ERROR;
 				goto unmount;
@@ -305,8 +311,8 @@ unmount:
 
 		// run grub over MBR
 		if (ret == OK) {
-			if (help_grub_mbr (state->out, state->part)!=OK) {
-				logprintfl (EUCAINFO, "error: failed to remove %s (there may be a resource leak!): %s\n", mnt_pt, strerror(errno));
+			if (help_grub_mbr (o->path, state->part)!=OK) {
+				logprintfl (EUCAINFO, "error: failed to remove %s: %s\n", mnt_pt, strerror(errno));
 				ret = ERROR;
 			}
 		}

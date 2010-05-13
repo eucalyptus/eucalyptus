@@ -85,7 +85,7 @@ static imager_command * validate_cmd (int index, char *this_cmd, imager_param *p
 			cmd = next_cmd;
 		}
 	}
-
+	
 	// find the function pointers for the command
 	imager_command *cmd_struct = find_struct (cmd);
 	if (cmd_struct==NULL)
@@ -146,6 +146,14 @@ int main (int argc, char * argv[])
     if (!euca_home) {
         euca_home = root;
     }
+
+	// TODO: make printing of argv[]
+    char buf [4096] = "\"";
+    for (int i=0; i<argc; i++) {
+      strncat (buf, argv[i], sizeof (buf));
+      strncat (buf, "\" ", sizeof (buf));
+    }
+    logprintfl (EUCADEBUG, "argv[]: %s\n", buf);
 
 	// parse command-line parameters
 	char * cmd_name = NULL;

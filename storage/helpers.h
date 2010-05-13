@@ -20,5 +20,7 @@ int help_umount (const char * dev);
 int help_grub_files (const char * mnt_pt, const int part, const char * kernel, const char * ramdisk);
 int help_grub_mbr (const char * path, const int part);
 int help_ch (const char * path, const char * user, const int perms);
+int help_mkdir (const char * path);
+int help_cp (const char * from, const char * to);
 
 #endif

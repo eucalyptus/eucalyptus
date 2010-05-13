@@ -294,7 +294,8 @@ int df_mount (diskfile * df, const int part, const char * path)
 		return ERROR;
 	}
 
-	if (help_mount (p->lodev, path)!=OK) {
+	strncpy (p->mntpt, path, sizeof (p->mntpt));
+	if (help_mount (p->lodev, p->mntpt)!=OK) {
 		logprintfl (EUCAERROR, "error: failed to mount '%s' on '%s'\n", p->lodev, path);
 		ret = ERROR;
 	}	
@@ -323,8 +324,8 @@ int df_umount (diskfile * df, const int part, boolean tune2fs)
 		p->last_sector = df->size_sectors-1;
 	}
 
-	if (help_umount (p->lodev)!=OK) {
-		logprintfl (EUCAERROR, "error: failed to umount '%s' (there may be a leak!)\n", p->lodev);
+	if (help_umount (p->mntpt)!=OK) {
+		logprintfl (EUCAERROR, "error: failed to umount '%s' (there may be a leak!)\n", p->mntpt);
 		ret = ERROR;
 	}
 
