@@ -85,6 +85,7 @@ public class ISCSIMetaInfo extends LVMMetaInfo {
 	private String store_prefix;
 	@Column(name = "store_number")
 	private Integer storeNumber;
+	@ConfigurableField( description = "Next Target ID for ISCSI device", displayName = "Next Target ID", type = ConfigurableFieldType.PRIVATE)
 	@Column(name = "tid")
 	private Integer tid;
 	@Column(name = "store_user")
