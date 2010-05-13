@@ -81,6 +81,7 @@ import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
@@ -237,14 +238,14 @@ public class ISCSIManager implements StorageExportManager {
 			//check if account actually exists, if not create it.			
 			if(!checkUser("eucalyptus")) {
 				try {
-					addUser("eucalyptus", userInfo.getEncryptedPassword());
+					addUser("eucalyptus", BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
 				} catch (ExecutionException e1) {
 					LOG.error(e1);					
 					return;
 				}
 			}
 		} catch(EucalyptusCloudException ex) {
-			String password = Hashes.getRandom(16);
+			String password = Hashes.getRandom(20);
 			try {
 				addUser("eucalyptus", password);
 			} catch (ExecutionException e1) {
@@ -252,8 +253,13 @@ public class ISCSIManager implements StorageExportManager {
 				dbUser.rollback();
 				return;
 			}
-			CHAPUserInfo userInfo = new CHAPUserInfo("eucalyptus", password);
-			dbUser.add(userInfo);
+			CHAPUserInfo userInfo;
+			try {
+				userInfo = new CHAPUserInfo("eucalyptus", BlockStorageUtil.encryptSCTargetPassword(password));
+				dbUser.add(userInfo);
+			} catch (EucalyptusCloudException e) {
+				LOG.error(e);
+			}
 		} finally {
 			dbUser.commit();
 		}
@@ -278,22 +284,6 @@ public class ISCSIManager implements StorageExportManager {
 				foundMetaInfo.setTid(++tid);
 			}
 			db.commit();
-		}
-	}
-
-	private String encryptTargetPassword(String password) throws EucalyptusCloudException {
-		EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-		try {
-			ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
-			PublicKey ncPublicKey = X509Cert.toCertificate(credentials.getNodeCertificate()).getPublicKey();
-			credDb.commit();
-			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-			cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
-			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
-		} catch ( Exception e ) {
-			LOG.error( "Unable to encrypt storage target password" );
-			credDb.rollback( );
-			throw new EucalyptusCloudException(e.getMessage(), e);
 		}
 	}
 
@@ -331,16 +321,10 @@ public class ISCSIManager implements StorageExportManager {
 		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo("eucalyptus"));
-			String encryptedPassword;
-			try {
-				encryptedPassword = encryptTargetPassword(userInfo.getEncryptedPassword());
-				return encryptedPassword;
-			} catch (EucalyptusCloudException e) {
-				LOG.error("Unable to encrypt target password. Please check credentials. Have you configured a cluster?", e);
-			}
-			return null;
+			String encryptedPassword = userInfo.getEncryptedPassword();
+			return BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(encryptedPassword));
 		} catch(EucalyptusCloudException ex) {
-			throw new EucalyptusCloudException("Unable to find CHAP user: " + "eucalyptus");
+			throw new EucalyptusCloudException("Unable to get CHAP password for: " + "eucalyptus");
 		} finally {
 			db.commit();
 		}
