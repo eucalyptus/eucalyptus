@@ -97,8 +97,6 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class ISCSIManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
-	private static final String STORE_PREFIX = "iqn.2009-06." + StorageProperties.SC_LOCAL_NAME + ":store";
-
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
 		String returnValue;
@@ -221,7 +219,7 @@ public class ISCSIManager implements StorageExportManager {
 		try {
 			List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
 			if(metaInfoList.size() <= 0) {
-				metaInfo.setStore_prefix(STORE_PREFIX);
+				metaInfo.setStorePrefix(StorageProperties.STORE_PREFIX);
 				metaInfo.setStoreNumber(0);
 				metaInfo.setStoreUser("eucalyptus");
 				metaInfo.setTid(1);
@@ -276,7 +274,7 @@ public class ISCSIManager implements StorageExportManager {
 				ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
 				int storeNumber = foundMetaInfo.getStoreNumber();
 				int tid = foundMetaInfo.getTid();
-				iscsiVolumeInfo.setStoreName(foundMetaInfo.getStore_prefix() + storeNumber);
+				iscsiVolumeInfo.setStoreName(foundMetaInfo.getStorePrefix() + StorageProperties.NAME + ":store" + storeNumber);
 				iscsiVolumeInfo.setStoreUser(foundMetaInfo.getStoreUser());
 				iscsiVolumeInfo.setTid(tid);
 				iscsiVolumeInfo.setLun(1);

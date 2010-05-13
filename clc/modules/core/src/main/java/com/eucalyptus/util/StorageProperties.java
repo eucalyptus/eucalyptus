@@ -105,6 +105,8 @@ public class StorageProperties {
 	public static final String ETHERD_PREFIX = "/dev/etherd/e";
 	public static String iface = "eth0";
 	public static boolean zeroFillVolumes = false;
+	public static String STORE_PREFIX = "iqn.2009-06.com.eucalyptus.";
+	public static Integer ISCSI_LUN = 1;
 
 	public static final String DUMMY_SAN_PASSWORD = "password";
 	public static final String DUMMY_SAN_HOST = "san_host";
