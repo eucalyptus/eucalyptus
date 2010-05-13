@@ -286,9 +286,17 @@ int inject_execute (imager_request * req)
 				goto unmount;
 			}
 			char kpath [EUCA_MAX_PATH];
-			snprintf (kpath, sizeof (kpath), "%s/%s", get_work_dir(), state->kernel); // TODO: fix this to work with work and cache
+			if (state->kernel [0] == '/') {
+			  strncpy (kpath, state->kernel, sizeof (kpath));
+			} else {
+			  snprintf (kpath, sizeof (kpath), "%s/%s", get_work_dir(), state->kernel); // TODO: fix this to work with work and cache
+			}
 			char rpath [EUCA_MAX_PATH];
-			snprintf (rpath, sizeof (rpath), "%s/%s", get_work_dir(), state->ramdisk); // TODO: fix this to work with work and cache
+			if (state->ramdisk [0] == '/') {
+			  strncpy (rpath, state->in, sizeof (rpath));
+			} else {
+			  snprintf (rpath, sizeof (rpath), "%s/%s", get_work_dir(), state->ramdisk); // TODO: fix this to work with work and cache
+			}
 			logprintfl (EUCAINFO, "making partition %d bootable with kernel %s and ramdisk %s\n", state->part, state->kernel, state->ramdisk);
 			if (help_grub_files (mnt_pt, state->part, kpath, rpath)!=OK) {
 				logprintfl (EUCAERROR, "error: failed to make partition %d of '%s' bootable\n", state->part, state->out);

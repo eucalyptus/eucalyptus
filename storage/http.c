@@ -57,19 +57,22 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
-#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h> /* close, stat */
+#include <unistd.h> // close, stat
 #include <assert.h>
 #include <string.h>
 #include <strings.h>
-#include <fcntl.h> /* open */
-#include <sys/types.h> /* stat */
-#include <sys/stat.h> /* stat */
+#include <fcntl.h> // open
+#include <ctype.h> // tolower, isdigit
+#include <sys/types.h> // stat
+#include <sys/stat.h> // stat 
 #include <curl/curl.h>
 #include <curl/easy.h>
+
+#ifndef _UNIT_TEST // http_ functions aren't part of the unit test
+#include "config.h"
 #include "eucalyptus.h"
 #include "misc.h"
 
@@ -229,3 +232,79 @@ static size_t read_data (char *buffer, size_t size, size_t nitems, void *params)
 
     return items_read;
 }
+
+#endif
+
+// converts hex character to integer
+static char hch_to_int (char ch) {
+  return isdigit (ch) ? (ch - '0') : (10 + tolower (ch) - 'a');
+}
+
+// converts integer to hex character
+static char int_to_hch (char i) {
+  static char hex[] = "0123456789ABCDEF";
+  return hex [i & 15];
+}
+
+// converts a string to url-encoded string (which must be freed)
+char * url_encode (const char * unencoded) {
+  char * encoded = malloc (strlen (unencoded) * 3 + 1);
+  if (encoded==NULL) return NULL;
+
+  const char * pu = unencoded;
+  char * pe = encoded;  
+  while (*pu) {
+    if (isalnum (*pu) 
+	|| *pu == '-' 
+	|| *pu == '_' 
+	|| *pu == '.' 
+	|| *pu == '~') 
+      *pe++ = *pu;
+    else if (*pu == ' ') 
+      *pe++ = '+';
+    else {
+      *pe++ = '%';
+      *pe++ = int_to_hch (*pu >> 4);
+      *pe++ = int_to_hch (*pu & 15);
+    }
+    pu++;
+  }
+  *pe = '\0';
+
+  return encoded;
+}
+
+// converts a url-encoded string to regular (which must be freed)
+char * url_decode (const char * encoded) {
+  char * unencoded = malloc (strlen (encoded) + 1);
+  if (unencoded==NULL) return NULL;
+  
+  const char * pe = encoded;
+  char * pu = unencoded;
+  while (*pe) {
+    if (*pe == '%') {
+      if (pe[1] && pe[2]) {
+        *pu++ = hch_to_int (pe[1]) << 4 | hch_to_int (pe[2]);
+        pe += 2;
+      }
+    } else if (*pe == '+') { 
+      *pu++ = ' ';
+    } else {
+      *pu++ = *pe;
+    }
+    pe++;
+  }
+  *pu = '\0';
+  
+  return unencoded;
+}
+
+#ifdef _UNIT_TEST
+int main (int argc, char ** argv)
+{
+#define _T(_S) { char * e = url_encode (_S); char * u = url_decode (e); printf ("orig: %s\nenco: %s\ndeco: %s\n\n", _S, e, u); free (e); free (u); }
+  _T("hello world");
+  _T("~`!1@2#3$4%5^6&7*8(9)0_-+={[}]|\\:;\"'<,>.?/");
+  _T("[datastore1 (1)] windows 2003 enterprise/windows 2003 enterprise.vmx");
+}
+#endif

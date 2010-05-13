@@ -24,6 +24,9 @@ walrus.o: walrus.c walrus.h
 test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
 	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
 
+test_url: http.c
+	$(CC) -D_UNIT_TEST -o test_url http.c
+
 .c.o: 
 	$(CC) -c $(CFLAGS) $(INCLUDES) $(VDDK_FLAGS) $<
 
@@ -43,7 +46,7 @@ test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o
 	make -C ../util
 
 clean:
-	rm -rf *~ *.o Wclient euca_imager
+	rm -rf *~ *.o Wclient euca_imager test test_url
 
 distclean:
 

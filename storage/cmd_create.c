@@ -329,7 +329,11 @@ int create_execute (imager_request * req)
 				struct _part_type * p = &(state->parts [i]);
 				if (p->content) {
 				  char path [EUCA_MAX_PATH];
-				  snprintf (path, sizeof (path), "%s/%s", get_work_dir(), p->content); // TODO: fix this to work with work and cache
+				  if (p->content [0] == '/') {
+				    strncpy (path, p->content, sizeof (path));
+				  } else {
+				    snprintf (path, sizeof (path), "%s/%s", get_work_dir(), p->content); // TODO: fix this to work with work and cache
+				  }
 				  _CALL_CHECK(df_dd (df, i, path));
 				} else {
 					_CALL_CHECK(df_format (df, i, p->format));

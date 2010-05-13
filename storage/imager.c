@@ -151,7 +151,7 @@ int main (int argc, char * argv[])
     char buf [4096] = "\"";
     for (int i=0; i<argc; i++) {
       strncat (buf, argv[i], sizeof (buf));
-      strncat (buf, "\" ", sizeof (buf));
+      strncat (buf, "\" \"", sizeof (buf));
     }
     logprintfl (EUCADEBUG, "argv[]: %s\n", buf);
 
