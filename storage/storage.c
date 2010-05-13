@@ -1189,10 +1189,9 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
         }
         free (key_template);
       }
-    }
 
-    /* if the image is a root partition... */
-    if (!convert_to_disk) {
+      /* if the image is a root partition... */
+      if (!convert_to_disk) {
         /* create swap partition */
         if (swap_size_mb>0) { 
 	    sem_p (disk_sem);
@@ -1223,6 +1222,7 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
             }
 	    sem_v (disk_sem);
         }
+      }
     }
     
     * instance_path = strdup (rundir_path);
