@@ -186,14 +186,16 @@ int verify_ami2vmx_helpers(int force, char * extra_path) {
 	toka = strtok_r(NULL, ":", &savea);
       }
       tok = strtok_r(NULL, ":", &save);
+      if (helper) free(helper);
     }
     if (!done) {
       printf("ERROR: cannot find helper '%s' in your path\n", helpers[i]);
+      if (path) free(path);
       return(1);
     }
     
     helpers_path[i] = strdup(file);
-    free(path);
+    if (path) free(path);
   }
   
   
@@ -211,11 +213,13 @@ int verify_input(char *file, char *kernel, char *ramdisk, char *modules, int for
       return(1);
     }
   }
-  if (strstr(output, "ext2 filesystem") || strstr(output, "ext3 filesystem") || strstr(output, "ext4 filesystem")) {
-  } else {
-    printf("WARNING: supplied image is not an ext2, ext3 or ext4 filesystem '%s'\n", file);
+  if (output) {
+    if (strstr(output, "ext2 filesystem") || strstr(output, "ext3 filesystem") || strstr(output, "ext4 filesystem")) {
+    } else {
+      printf("WARNING: supplied image is not an ext2, ext3 or ext4 filesystem '%s'\n", file);
+    }
+    free(output);
   }
-  free(output);
 
   output = pruntf("file %s", kernel);
   if (!output) {
@@ -223,11 +227,13 @@ int verify_input(char *file, char *kernel, char *ramdisk, char *modules, int for
       return(1);
     }
   }
-  if (strstr(output, "Linux kernel")) {
-  } else {
-    printf("WARNING: supplied kernel may not be a Linux kernel '%s'\n", kernel);
+  if (output) {
+    if (strstr(output, "Linux kernel")) {
+    } else {
+      printf("WARNING: supplied kernel may not be a Linux kernel '%s'\n", kernel);
+    }
+    free(output);
   }
-  free(output);
 
   if (ramdisk) {
     rc = stat(ramdisk, &statbuf);
@@ -269,10 +275,15 @@ char *pruntf(char *format, ...) {
   IF=popen(cmd, "r");
   if (!IF) {
     printf("ERROR: cannot popen() cmd '%s' for read\n", cmd);
+    va_end(ap);
     return(NULL);
   }
   
   output = malloc(sizeof(char) * outsize);
+  if (!output) {
+    printf("ERROR: out of memory!\n");
+    return(NULL);
+  }
   while((bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
     output[(outsize-1025)+bytes] = '\0';
     outsize += 1024;
@@ -285,6 +296,7 @@ char *pruntf(char *format, ...) {
     printf("ERROR: bad return code from cmd '%s'\n", cmd);
   } 
   //  printf("OUTPUT: '%s'\n", output);
+  va_end(ap);
   return(output);
 }
 

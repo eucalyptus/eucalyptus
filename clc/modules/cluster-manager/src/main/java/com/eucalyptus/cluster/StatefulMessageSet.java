@@ -78,7 +78,9 @@ public class StatefulMessageSet<E extends Enum<E>> {
       while ( !event.pollForResponse( 1000l ) );
       try {
         Object o = event.pollResponse( 1000l );
-        EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
+        if ( o != null ) {
+          EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
+        }
       } catch ( Throwable t ) {
         EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ).info( );
         LOG.debug( t, t );

@@ -165,6 +165,7 @@ int scInitConfig (void)
 	/* set the initial value of semaphore to number of 'disk intensive' operations that can run in parallel on this node */
 	if ((disk_sem = sem_alloc (concurrent_disk_ops, "mutex")) == NULL) {
 	  logprintfl (EUCAERROR, "failed to create and initialize disk semaphore\n");
+	  if (home) free(home);
 	  return(1);
 	}
     }
@@ -173,18 +174,18 @@ int scInitConfig (void)
     /* we need to have valid path */
     if (check_directory(sc_instance_path)) {
 	    logprintfl (EUCAERROR, "ERROR: INSTANCE_PATH (%s) does not exist!\n", sc_instance_path);
-	    free(home);
+	    if (home) free(home);
 	    return(1);
     }
 
     if (euca_init_cert ()) {
         logprintfl (EUCAFATAL, "failed to find cryptographic certificates\n");
-        free(home);
+        if (home) free(home);
         return 1;
     }
 
     snprintf (disk_convert_command_path, BUFSIZE, EUCALYPTUS_DISK_CONVERT, home, home);
-    free(home);
+    if (home) free(home);
 
     scConfigInit=1;
     return(0);
@@ -655,6 +656,7 @@ long long scFSCK (bunchOfInstances ** instances)
     long long cache_bytes = init_cache (cache_path);
     free (cache_path);
     if (cache_bytes < 0) {
+      if (work_path) free(work_path);
         return -1;
     }
     

@@ -130,6 +130,7 @@ typedef struct resource_t {
   // state information
   int state, lastState;
   time_t stateChange, idleStart;
+  int running;
 } ccResource;
 int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory, int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart);
 

@@ -318,6 +318,7 @@ static int ensure_path_exists (const char * path)
                 logprintfl (EUCADEBUG, "trying to create path %s\n", path_copy);
                 if ((mkdir (path_copy, (mode_t)0) == -1) || (chmod (path_copy, (mode_t)0774) == -1)) {
                     printf ("error: failed to create path %s\n", path_copy);
+		    if (path_copy) free(path_copy);
                     return errno;
                 }
             }
@@ -325,7 +326,7 @@ static int ensure_path_exists (const char * path)
         }
     }
 
-	free (path_copy);
+    if (path_copy) free (path_copy);
     return 0;
 }
 

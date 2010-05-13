@@ -51,6 +51,8 @@ install: build
 	@$(INSTALL) -m 755 disconnect_iscsitarget_sc.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 get_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 644 floppy $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 644 libvirt-kvm-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
+	@$(INSTALL) -m 644 libvirt-xen-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 
 uninstall: 
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud

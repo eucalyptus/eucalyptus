@@ -93,13 +93,15 @@ public class EquallogicProvider implements SANProvider {
 	private SessionManager sessionManager;
 
 	private static final Pattern VOLUME_CREATE_PATTERN = Pattern.compile(".*iSCSI target name is (.*)\r");
-	private static final Pattern VOLUME_DELETE_PATTERN = Pattern.compile(".*Volume deletion succeeded.");
+	private static final Pattern VOLUME_DELETE_PATTERN = Pattern.compile("Volume deletion succeeded.");
+	private static final Pattern VOLUME_SHOW_PATTERN = Pattern.compile("Volume Information");
 	private static final Pattern USER_CREATE_PATTERN = Pattern.compile(".*Password is (.*)\r");
 	private static final Pattern SNAPSHOT_CREATE_PATTERN = Pattern.compile(".*Snapshot name is (.*)\r");
 	private static final Pattern SNAPSHOT_TARGET_NAME_PATTERN = Pattern.compile(".*iSCSI Name: (.*)\r");
 	private static final Pattern SNAPSHOT_DELETE_PATTERN = Pattern.compile("Snapshot deletion succeeded.");
 	private static final Pattern USER_DELETE_PATTERN = Pattern.compile("CHAP user deletion succeeded.");
 	private static final Pattern USER_SHOW_PATTERN = Pattern.compile(".*Password: (.*)\r");
+	private static final Pattern SHOW_SPACE_PATTERN = Pattern.compile("GB.* ([0-9]+\\.[0-9]+.*)\r");
 
 	private static final String EOF_COMMAND = "whoami\r";
 
@@ -112,17 +114,27 @@ public class EquallogicProvider implements SANProvider {
 		this.host = sanInfo.getSanHost();
 		this.username = sanInfo.getSanUser();
 		this.password = sanInfo.getSanPassword();
-		if(sessionManager != null)
+		if(sessionManager != null) {
 			try {
 				if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) {
 					sessionManager.update(host, username, password);
+					showFreeSpace();
 				}
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e, e);
 			}
-			else {
-				sessionManager = new SessionManager(host, username, password);
-			}
+		} else {
+			sessionManager = new SessionManager(host, username, password);
+		}
+	}
+
+	public void checkPreconditions() throws EucalyptusCloudException {
+		if(!new File(BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl").exists()) {
+			throw new EucalyptusCloudException("connect_iscitarget_sc.pl not found");
+		}
+		if(!new File(BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl").exists()) {
+			throw new EucalyptusCloudException("disconnect_iscitarget_sc.pl not found");
+		}
 	}
 
 	public EquallogicProvider(String host, String username, String password) {
@@ -152,6 +164,10 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
+			if(volumeExists(volumeId)) {
+				LOG.error("Volume already exists: " + volumeId);
+				return null;
+			}
 			String returnValue = execCommand("stty hardwrap off\rvolume select " + snapshotId + 
 					" offline\rvolume select " + snapshotId + " clone " + volumeId + "\r");
 			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
@@ -248,6 +264,10 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
+			if(volumeExists(volumeName)) {
+				LOG.error("Volume already exists: " + volumeName);
+				return null;
+			}
 			String returnValue = execCommand("stty hardwrap off\rvolume create " + volumeName + " " + (size * StorageProperties.KB) + "\r");
 			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 			if(targetName != null) {
@@ -273,11 +293,17 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
-			String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeName + " offline\rvolume delete " + volumeName + "\r");
-			if(returnValue.split(VOLUME_DELETE_PATTERN.toString()).length > 1)
+			if(volumeExists(volumeName)) {
+				String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeName + " offline\rvolume delete " + volumeName + "\r");
+				if(returnValue.split(VOLUME_DELETE_PATTERN.toString()).length > 1)
+					return true;
+				else
+					return false;
+			} else {
+				//record error, clean up anyway
+				LOG.error("Volume not found: " + volumeName);
 				return true;
-			else
-				return false;
+			}
 		} catch(EucalyptusCloudException e) {
 			LOG.error(e);
 			return false;
@@ -293,6 +319,10 @@ public class EquallogicProvider implements SANProvider {
 			}
 		}
 		try {
+			if(!volumeExists(volumeId)) {
+				LOG.error("Volume not found: " + volumeId);
+				return null;
+			}
 			String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " clone " + snapshotId + "\r");
 			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
 			if(targetName != null) {
@@ -417,6 +447,26 @@ public class EquallogicProvider implements SANProvider {
 		} catch(EucalyptusCloudException ex) {
 			db.rollback();
 			throw new EucalyptusCloudException(ex);
+		}
+	}
+
+	public boolean volumeExists(String volumeId) throws EucalyptusCloudException {
+		String returnValue = execCommand("stty hardwrap off\rvolume show " + volumeId + " \r");
+		if((returnValue.split(VOLUME_SHOW_PATTERN.toString()).length > 1) && returnValue.contains(volumeId)) {
+			return true;
+		}
+		return false;
+	}
+
+	private void showFreeSpace() {
+		try {
+			String returnValue = execCommand("stty hardwrap off\rshow pool\r");
+			String freeSpaceString = matchPattern(returnValue, SHOW_SPACE_PATTERN);
+			if(freeSpaceString != null && (freeSpaceString.length() > 0)) {
+				LOG.info("Free Space on " + this.host + " : " + freeSpaceString);
+			}
+		} catch (EucalyptusCloudException e) {
+			LOG.error(e);
 		}
 	}
 }

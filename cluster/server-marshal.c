@@ -1033,10 +1033,10 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   adb_ccInstanceType_set_serviceTag(dst, env, src->serviceTag);
   adb_ccInstanceType_set_userData(dst, env, src->userData);
   adb_ccInstanceType_set_launchIndex(dst, env, src->launchIndex);
-  if (src->platform && strlen(src->platform)) {
+  if (strlen(src->platform)) {
     adb_ccInstanceType_set_platform(dst, env, src->platform);
   }
-  if (src->bundleTaskStateName && strlen(src->bundleTaskStateName)) {
+  if (strlen(src->bundleTaskStateName)) {
     adb_ccInstanceType_set_bundleTaskStateName(dst, env, src->bundleTaskStateName);
   }
   for (i=0; i<64; i++) {
@@ -1087,7 +1087,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *platform;
+  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *platform, *tmp;
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
@@ -1109,10 +1109,13 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   kernelURL = adb_runInstancesType_get_kernelURL(rit, env);
   ramdiskURL = adb_runInstancesType_get_ramdiskURL(rit, env);
 
-  userData = adb_runInstancesType_get_userData(rit, env);
-  if (!userData) {
+  tmp = adb_runInstancesType_get_userData(rit, env);
+  if (!tmp) {
     userData = strdup("");
+  } else {
+    userData = strdup(tmp);
   }
+
   launchIndex = adb_runInstancesType_get_launchIndex(rit, env);
   platform = adb_runInstancesType_get_platform(rit, env);
   
@@ -1186,7 +1189,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   free(macAddrs);
   free(netNames);
   free(instIds);
-  
+  free(userData);
+
   return(ret);
 }
 

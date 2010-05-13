@@ -259,7 +259,7 @@ public class WalrusImageManager {
 							throw new AccessDeniedException(userId,e);            
 						}         
 						try {
-						        X509Certificate cert = user.getX509Certificate( );
+							X509Certificate cert = user.getX509Certificate( );
 							signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 						} catch(Exception ex) {
 							db.rollback();
@@ -402,7 +402,7 @@ public class WalrusImageManager {
 					}
 
 					try {
-					        X509Certificate cert = user.getX509Certificate( );
+						X509Certificate cert = user.getX509Certificate( );
 						PublicKey publicKey = cert.getPublicKey();
 						sigVerifier.initVerify(publicKey);
 						sigVerifier.update((machineConfiguration + image).getBytes());
@@ -586,7 +586,9 @@ public class WalrusImageManager {
 					String image = parser.getXML("image");
 					String machineConfiguration = parser.getXML("machine_configuration");
 					String verificationString = machineConfiguration + image;
+					FileInputStream inStream = null;
 
+					FileInputStream fileInputStream = null;
 					try {
 						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
 						Signature sigCloud = Signature.getInstance("SHA1withRSA");
@@ -595,7 +597,7 @@ public class WalrusImageManager {
 						String signature = new String(Hashes.bytesToHex(sigCloud.sign()));
 						//TODO: refactor
 						DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance( ).newDocumentBuilder( );
-						FileInputStream fileInputStream = new FileInputStream( file );
+						fileInputStream = new FileInputStream( file );
 						Document docRoot = docBuilder.parse( fileInputStream );
 						Element sigElement = docRoot.createElement("signature");						
 						sigElement.setTextContent(signature);						
@@ -606,10 +608,10 @@ public class WalrusImageManager {
 						Source source = new DOMSource(docRoot);
 						Result result = new StreamResult(file);
 						Transformer xformer = TransformerFactory.newInstance().newTransformer();
-						xformer.transform(source,result);						
+						xformer.transform(source,result);
 						try {
 							MessageDigest digest = Digest.MD5.get();
-							FileInputStream inStream = new FileInputStream(file);
+							inStream = new FileInputStream(file);
 							byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
 							int bytesRead = -1;
 							long totalBytesRead = 0;
@@ -637,6 +639,20 @@ public class WalrusImageManager {
 							throw new EucalyptusCloudException(e);
 						}
 					} catch(Exception ex) {
+						if(inStream != null) {
+							try {
+								inStream.close();
+							} catch(IOException e) {
+								LOG.error(e);
+							}
+						}
+						if(fileInputStream != null) {
+							try {
+								fileInputStream.close();
+							} catch(IOException e) {
+								LOG.error(e);
+							}
+						}
 						db.rollback();
 						LOG.error(ex, ex);
 						throw new EucalyptusCloudException("Unable to sign manifest: " + bucketName + "/" + objectKey);

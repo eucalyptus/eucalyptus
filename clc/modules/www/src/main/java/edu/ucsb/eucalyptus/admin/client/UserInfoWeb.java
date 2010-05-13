@@ -66,7 +66,7 @@
 package edu.ucsb.eucalyptus.admin.client;
 
 import com.eucalyptus.auth.UserInfo;
-import com.eucalyptus.auth.UserProxy;
+import com.eucalyptus.auth.DatabaseWrappedUser;
 import com.eucalyptus.util.Composite;
 import com.google.gwt.user.client.rpc.IsSerializable;
 
@@ -77,7 +77,7 @@ import com.google.gwt.user.client.rpc.IsSerializable;
  * Time: 3:35:41 PM
  * To change this template use File | Settings | File Templates.
  */
-@Composite({UserInfo.class,UserProxy.class})
+@Composite({UserInfo.class, DatabaseWrappedUser.class})
 public class UserInfoWeb implements IsSerializable
 {
     /** these come from com.eucalyptus.auth.UserInfo.class **/

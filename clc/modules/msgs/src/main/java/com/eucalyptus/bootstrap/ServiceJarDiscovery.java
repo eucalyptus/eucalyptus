@@ -40,6 +40,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
               EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, discovery.getClass( ).getCanonicalName( ) );
             } catch ( Exception e ) {
               LOG.fatal( e, e );
+              jar.close();
               throw new RuntimeException( e );
             }
           }
@@ -48,6 +49,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         }
       }
     }
+    jar.close();
   }
   
   public static void checkUniqueness( Class c ) {

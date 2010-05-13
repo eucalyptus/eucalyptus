@@ -639,6 +639,7 @@ doBundleInstance(
 	int err = find_and_destroy_instance (instanceId, &instance);
 	if (err!=OK) {
 		sem_v (inst_sem);
+		if (params) free(params);
 		return err;
 	}
 
@@ -654,7 +655,7 @@ doBundleInstance(
 	pthread_attr_init (&tattr);
 	pthread_attr_setdetachstate (&tattr, PTHREAD_CREATE_DETACHED);
 	if (pthread_create (&tid, &tattr, bundling_thread, (void *)params)!=0) {
-		logprintfl (EUCAERROR, "doBundleInstance: failed to start VM budling thread\n");
+		logprintfl (EUCAERROR, "doBundleInstance: failed to start VM bundling thread\n");
 		return cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);
 	}
 

@@ -55,7 +55,7 @@ public class Groups {
   
   public static void checkNotRestricted( String groupName ) {
     if ( Groups.NAME_RESTRICTED_GROUPS.contains( groupName ) ) {
-      throw new IllegalArgumentException( "The groups " + Groups.NAME_RESTRICTED_GROUPS + " cannot be deleted." );
+      throw new IllegalArgumentException( "The groups " + Groups.NAME_RESTRICTED_GROUPS + " cannot be deleted or changed." );
     }
   }
   

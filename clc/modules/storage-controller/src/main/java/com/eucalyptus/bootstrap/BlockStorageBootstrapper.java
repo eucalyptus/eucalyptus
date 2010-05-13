@@ -64,6 +64,7 @@ package com.eucalyptus.bootstrap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
+import com.eucalyptus.storage.LogicalStorageManager;
 
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 
@@ -98,7 +99,9 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean load(Stage current ) throws Exception {
-		BlockStorageManagerFactory.getBlockStorageManager().checkPreconditions();
+		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
+		if(blockStorageManager != null)
+			blockStorageManager.checkPreconditions();
 		return true;
 	}
 

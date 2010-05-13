@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.Set;
 
 public class UserGroupPropertyPanel extends VerticalPanel {
-	
+
 	public static final String DEFAULT_HEADER = "Property";
-	
+
 	private static final String HEADER_STYLE_NAME = "euca-UserGroupTabPanel-header";
 	private static final String SCROLL_STYLE_NAME = "euca-UserGroupPropertyPanel-scroll";
 	private static final String CONTENT_STYLE_NAME = "euca-UserGroupPropertyPanel-content";
@@ -42,33 +42,33 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 	private static final String DATA_TEXT_STYLE_NAME = "euca-UserGroupPropertyPanel-data-text";
 	private static final String DATA_LIST_STYLE_NAME = "euca-UserGroupPropertyPanel-data-list";
 	private static final String MAIN_STYLE_NAME = "euca-UserGroupPropertyPanel";
-	
+
 	private static final int MAX_GROUP_DISPLAY_SIZE = 64;
 	private static final int MAX_USER_DISPLAY_SIZE = 64;
 	// Time to show status bar
 	private static final int STATUS_DELAY_IN_MILLIS = 10000;
-	
+
 	private Label header;
 	private VerticalPanel content;
-	
+
 	private Label status;
 	private Timer statusTimer;
-	
+
 	private HTML subtitle;
-	
+
 	private UserGroupControl control;
-	
+
 	UserGroupPropertyPanel(UserGroupControl control) {
 		super();
-		
+
 		this.control = control;
-		
+
 		header = new Label();
 		header.addStyleName(HEADER_STYLE_NAME);
 		this.add(header);
 		// Tightening the header space
 		this.setCellHeight(header, "20px");
-		
+
 		this.status = new Label();
 		this.status.addStyleName(CONTENT_STATUS_STYLE_NAME);
 		this.statusTimer = new Timer() {
@@ -76,7 +76,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				remove(status);
 			}
 		};
-		
+
 		ScrollPanel scroll = new ScrollPanel();
 		scroll.addStyleName(SCROLL_STYLE_NAME);
 		content = new VerticalPanel();
@@ -84,16 +84,16 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		content.addStyleName(CONTENT_STYLE_NAME);
 		scroll.add(content);
 		this.add(scroll);
-		
+
 		this.setSpacing(0);
 		//this.setBorderWidth(2);
 		this.addStyleName(MAIN_STYLE_NAME);
 	}
-	
+
 	public void setHeaderText(String title) {
 		this.header.setText(title);
 	}
-	
+
 	public void showStatus(String text, boolean isError) {
 		if (isError) {
 			this.status.addStyleName(CONTENT_STATUS_ERROR_STYLE_NAME);
@@ -109,7 +109,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.statusTimer.cancel();
 		this.statusTimer.schedule(STATUS_DELAY_IN_MILLIS);
 	}
-	
+
 	private HTML addHtml(String html, String style) {
 		HTML w = new HTML(html);
 		if (style != null) {
@@ -118,30 +118,30 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.content.add(w);
 		return w;
 	}
-	
+
 	private void cleanup() {
 		if (this.status != null) {
 			this.remove(this.status);
 		}
 		this.content.clear();
 	}
-	
+
 	private void addTitle(String title) {
 		addHtml(title, CONTENT_TITLE_STYLE_NAME);
 	}
-	
+
 	private void addSubtitle(String sub) {
 		this.subtitle = addHtml(sub, CONTENT_SUBTITLE_STYLE_NAME);
 	}
-	
+
 	private void addSeparator() {
 		addHtml("<br>", CONTENT_DETAIL_STYLE_NAME);
 	}
-	
+
 	private void addHtmlContent(String content) {
 		addHtml(content, CONTENT_DETAIL_STYLE_NAME);
 	}
-	
+
 	private HorizontalPanel addActionBar() {
 		HorizontalPanel actionBar = new HorizontalPanel();
 		actionBar.setHorizontalAlignment(ALIGN_CENTER);
@@ -150,11 +150,11 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.content.add(actionBar);
 		return actionBar;
 	}
-	
+
 	public void setSubtitle(String sub) {
 		this.subtitle.setHTML(sub);
 	}
-	
+
 	private void addDataRow(Grid grid, int row, String name, String value) {
 		CellFormatter cellFormatter = grid.getCellFormatter();
 		if (name != null) {
@@ -166,7 +166,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			cellFormatter.addStyleName(row, 1, DATA_VALUE_STYLE_NAME);
 		}
 	}
-	
+
 	private Grid addDataGrid(int rows) {
 		Grid grid = new Grid(rows, 2);
 		grid.addStyleName(DATA_STYLE_NAME);
@@ -176,7 +176,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.content.add(grid);
 		return grid;
 	}
-	
+
 	public void showGroup(GroupInfoWeb group) {
 		this.cleanup();
 		setHeaderText("Group: " + group.name);
@@ -187,12 +187,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			addHtmlContent(UserGroupUtils.getSpecialGroupHelp(group.name));
 		} else {
 			HorizontalPanel action = addActionBar();
-			action.add(new EucaButton("Edit", new ClickHandler() {
+			action.add(new EucaButton("Edit", "Edit group " + group.name, new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					control.displayEditGroupUI();
 				}
 			}));
-			action.add(new EucaButton("Delete", new ClickHandler() {
+			action.add(new EucaButton("Delete", "Delete group " + group.name, new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					control.displayDeleteGroupUI();
 				}
@@ -204,12 +204,12 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			addDataRow(grid, 0, "Availability Zones", UserGroupUtils.getListString(group.zones, 0));
 		}
 	}
-	
+
 	public void showGroups(List<GroupInfoWeb> groups) {
 		this.cleanup();
 		setHeaderText("Groups: " + groups.size());		
 		HorizontalPanel action = addActionBar();
-		action.add(new EucaButton("Delete", new ClickHandler() {
+		action.add(new EucaButton("Delete", "Delete selected groups", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayDeleteGroupsUI();
 			}
@@ -222,26 +222,26 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 				UserGroupUtils.getListString(
 						UserGroupUtils.getGroupNamesFromGroups(groups), MAX_GROUP_DISPLAY_SIZE));
 	}
-	
+
 	private String getBooleanString(Boolean value) {
 		if (value == null) {
 			return "no";
 		}
 		return value ? "yes" : "no";
 	}
-	
+
 	public Grid showUser(UserInfoWeb user) {
 		this.cleanup();
 		setHeaderText("User: " + user.getRealName());		
 		HorizontalPanel action = addActionBar();
-		action.add(new EucaButton("Edit", new ClickHandler() {
+		action.add(new EucaButton("Edit", "Edit user " + user.getUserName(), new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayEditUserUI();
 			}
 		}));
 		// admin can not delete another admin
 		if (!user.isAdministrator()) {
-			action.add(new EucaButton("Delete", new ClickHandler() {
+			action.add(new EucaButton("Delete", "Delete user " + user.getUserName(), new ClickHandler() {
 				public void onClick(ClickEvent event) {
 					control.displayDeleteUserUI();
 				}
@@ -262,40 +262,40 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addDataRow(grid, i++, "Department", user.getProjectPIName());
 		addDataRow(grid, i++, "Notes", user.getProjectDescription());
 		addDataRow(grid, i++, "Groups", "");
-		
+
 		return grid;
 	}
-	
+
 	public void showUsers(List<UserInfoWeb> users) {
 		this.cleanup();
 		setHeaderText("Users: " + users.size());		
 		HorizontalPanel action = addActionBar();
-		action.add(new EucaButton("Add to", new ClickHandler() {
+		action.add(new EucaButton("Add to", "Add selected users to groups", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayAddUsersToGroupsUI();
 			}
 		}));
-		action.add(new EucaButton("Remove from", new ClickHandler() {
+		action.add(new EucaButton("Remove from", "Remove selected users from groups", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayRemoveUsersFromGroupsUI();
 			}
 		}));
-		action.add(new EucaButton("Approve", new ClickHandler() {
+		action.add(new EucaButton("Approve", "Approve selected users", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayApproveUsersUI();
 			}
 		}));
-		action.add(new EucaButton("Enable", new ClickHandler() {
+		action.add(new EucaButton("Enable", "Enable selected users", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayEnableUsersUI();
 			}
 		}));
-		action.add(new EucaButton("Disable", new ClickHandler() {
+		action.add(new EucaButton("Disable", "Disable selected users", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayDisableUsersUI();
 			}
 		}));
-		action.add(new EucaButton("Delete", new ClickHandler() {
+		action.add(new EucaButton("Delete", "Delete selected users", new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				control.displayDeleteUsersUI();
 			}
@@ -306,7 +306,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addDataRow(grid, 0, "Selected Users", UserGroupUtils.getListString(
 				UserGroupUtils.getUserNamesFromUsers(users), MAX_USER_DISPLAY_SIZE));
 	}
-	
+
 	public void showEmptyPrompt() {
 		this.cleanup();
 		setHeaderText(DEFAULT_HEADER);
@@ -314,7 +314,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		addSeparator();
 		addHtmlContent("Select groups or users to display their details and operations");
 	}
-	
+
 	private void setNameColumn(Grid grid, int row, String name, boolean required) {
 		CellFormatter cellFormatter = grid.getCellFormatter();
 		if (required) {
@@ -323,7 +323,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		grid.setText(row, 0, name);
 		cellFormatter.addStyleName(row, 0, DATA_NAME_STYLE_NAME);
 	}
-	
+
 	private TextBox addTextBoxRow(Grid grid, int row, String name, String value, boolean required) {
 		setNameColumn(grid, row, name, required);
 		TextBox input = new TextBox();
@@ -334,7 +334,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		grid.setWidget(row, 1, input);
 		return input;
 	}
-	
+
 	private CheckBox addCheckBoxRow(Grid grid, int row, String name, boolean value, boolean required) {
 		setNameColumn(grid, row, name, required);
 		CheckBox input = new CheckBox();
@@ -342,7 +342,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		grid.setWidget(row, 1, input);
 		return input;
 	}
-	
+
 	private PasswordTextBox addPasswordRow(Grid grid, int row, String name, String value, boolean required) {
 		setNameColumn(grid, row, name, required);
 		PasswordTextBox input = new PasswordTextBox();
@@ -353,7 +353,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		grid.setWidget(row, 1, input);
 		return input;
 	}
-	
+
 	private TextArea addTextAreaRow(Grid grid, int row, String name, String value,
 			boolean required) {
 		setNameColumn(grid, row, name, required);
@@ -379,11 +379,13 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		}
 		if (selected != null) {
 			Set<String> selectedSet = new HashSet<String>(selected);
-			for (int i = 0; i < values.size(); i++) {
-				if (selectedSet.contains(input.getItemText(i))) {
-					input.setItemSelected(i, true);
-				} else {
-					input.setItemSelected(i, false);
+			if (values != null) {
+				for (int i = 0; i < values.size(); i++) {
+					if (selectedSet.contains(input.getItemText(i))) {
+						input.setItemSelected(i, true);
+					} else {
+						input.setItemSelected(i, false);
+					}
 				}
 			}
 		}
@@ -391,7 +393,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		grid.setWidget(row, 1, input);
 		return input;
 	}
-	
+
 	public void showAddGroup(final List<String> zones) {
 		this.cleanup();
 		setHeaderText("Adding group");
@@ -418,7 +420,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showEditGroup(final GroupInfoWeb group, final List<String> zones) {
 		this.cleanup();
 		setHeaderText("Editing " + group.name);
@@ -442,7 +444,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showDeleteGroup(final GroupInfoWeb group) {
 		this.cleanup();
 		setHeaderText("Deleting " + group.name);
@@ -462,7 +464,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showDeleteGroups(final List<GroupInfoWeb> groups) {
 		final List<String> groupNames = UserGroupUtils.getGroupNamesFromGroups(groups);
 		this.cleanup();
@@ -482,7 +484,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	private List<String> getListSelectedItems(ListBox list) {
 		List<String> items = new ArrayList<String>();
 		for (int i = 0; i < list.getItemCount(); i++) {
@@ -492,7 +494,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		}
 		return items;
 	}
-	
+
 	public void showAddUser(final List<String> groupNames, final List<String> selectedGroupNames) {
 		this.cleanup();
 		setHeaderText("Adding user");
@@ -598,7 +600,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showEditUser(final UserInfoWeb user, final List<String> groupNames,
 			final List<String> selectedGroupNames) {
 		this.cleanup();
@@ -627,10 +629,10 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		}
 		final CheckBox approved;
 		if (!user.isApproved()) {
-		  approved = addCheckBoxRow(grid, i++, "Approved", user.isApproved(),
-				false /* required */);
+			approved = addCheckBoxRow(grid, i++, "Approved", user.isApproved(),
+					false /* required */);
 		} else {
-		  approved = null;
+			approved = null;
 		}
 		final CheckBox enabled = addCheckBoxRow(grid, i++, "Enabled", user.isEnabled(),
 				false /* required */);
@@ -650,7 +652,9 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		if (user.isAdministrator()) {
 			password.setEnabled(false);
 			password2.setEnabled(false);
-			approved.setEnabled(false);
+			if (approved != null) {
+				approved.setEnabled(false);
+			}
 			enabled.setEnabled(false);
 		}
 		action.add(new EucaButton("Finish", new ClickHandler() {
@@ -701,16 +705,16 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 					updatedUser.setConfirmed(skipConfirmation.getValue());
 				}
 				if (approved == null) {
-				  updatedUser.setApproved(user.isAdministrator());
+					updatedUser.setApproved(user.isApproved());
 				} else {
-				  updatedUser.setApproved(approved.getValue());
+					updatedUser.setApproved(approved.getValue());
 				}
 				updatedUser.setEnabled(enabled.getValue());
 				updatedUser.setTelephoneNumber(phone.getText());
 				updatedUser.setAffiliation(affiliation.getText());
 				updatedUser.setProjectPIName(pi.getText());
 				updatedUser.setProjectDescription(description.getText());
-				
+
 				List<String> addToGroups = new ArrayList<String>();
 				for (int i = 0; i < groups.getItemCount(); i++) {
 					if (groups.isItemSelected(i)) {
@@ -726,7 +730,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showDeleteUser(final UserInfoWeb user) {
 		this.cleanup();
 		setHeaderText("Deleting " + user.getRealName());
@@ -738,7 +742,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			public void onClick(ClickEvent event) {
 				List<String> userNames = new ArrayList<String>();
 				userNames.add(user.getUserName());
-				control.deleteGroups(userNames);
+				control.deleteUsers(userNames);
 			}
 		}));
 		action.add(new EucaButton("No", new ClickHandler() {
@@ -747,7 +751,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showDeleteUsers(final List<UserInfoWeb> users) {
 		final List<String> userNames = UserGroupUtils.getUserNamesFromUsers(users);
 		this.cleanup();
@@ -767,7 +771,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showAddUsersToGroups(final List<UserInfoWeb> users, 
 			final List<String> groupNames) {
 		final List<String> userNames = UserGroupUtils.getUserNamesFromUsers(users);
@@ -792,7 +796,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showRemoveUsersFromGroups(final List<UserInfoWeb> users, 
 			final List<String> groupNames, final List<String> selectedGroupNames) {
 		final List<String> userNames = UserGroupUtils.getUserNamesFromUsers(users);
@@ -817,7 +821,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showEnableUsers(final List<UserInfoWeb> users) {
 		final List<String> userNames = UserGroupUtils.getUserNamesFromUsers(users);
 		this.cleanup();
@@ -837,7 +841,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showDisableUsers(final List<UserInfoWeb> users) {
 		final List<String> userNames = UserGroupUtils.getUserNamesFromUsers(users);
 		this.cleanup();
@@ -857,7 +861,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 			}
 		}));
 	}
-	
+
 	public void showApproveUsers(final List<UserInfoWeb> users) {
 		final List<String> userNames = UserGroupUtils.getUserNamesFromUsers(users);
 		this.cleanup();
