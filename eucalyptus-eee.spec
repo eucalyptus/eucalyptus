@@ -36,7 +36,7 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus-eee
 Version:       1.0
-Release:       0.1236
+Release:       0.1319
 License:       Eucalyptus EEE Software License
 Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
@@ -104,7 +104,7 @@ alongside the cluster-controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2
+Requires:     %{name}-common-java = %{version}, euca2ools-eee, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -133,7 +133,7 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     %{name} = %{version}, %{name}-gl = %{version}, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
+Requires:     %{name} = %{version}, %{name}-gl = %{version}, euca2ools-eee, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
 Group:        Applications/System
 
 %description nc
@@ -182,6 +182,11 @@ cd clc
 make deps
 cd ..
 make 2> err.log > out.log
+%if %is_centos
+for x in `/bin/ls clc/tools/src/euca-*`; do
+	sed --in-place 's:#!/usr/bin/env python:#!/usr/bin/env python2.5:' $x
+done
+%endif
 
 %install
 export DESTDIR=$RPM_BUILD_ROOT
@@ -220,6 +225,41 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 /usr/share/eucalyptus/udev/iscsidev-centos.sh
 /usr/share/eucalyptus/udev/iscsidev-opensuse.sh
 /usr/share/eucalyptus/udev/iscsidev-ubuntu.sh
+/usr/sbin/euca-add-group
+/usr/sbin/euca-add-group-membership
+/usr/sbin/euca-add-user
+/usr/sbin/euca-convert-volumes
+/usr/sbin/euca-delete-group
+/usr/sbin/euca-delete-user
+/usr/sbin/euca-deregister-cluster
+/usr/sbin/euca-deregister-storage-controller
+/usr/sbin/euca-deregister-walrus
+/usr/sbin/euca-describe-clusters
+/usr/sbin/euca-describe-groups
+/usr/sbin/euca-describe-properties
+/usr/sbin/euca-describe-storage-controllers
+/usr/sbin/euca-describe-users
+/usr/sbin/euca-describe-walruses
+/usr/sbin/euca-get-credentials
+/usr/sbin/euca-grant-zone-permission
+/usr/sbin/euca-modify-property
+/usr/sbin/euca-register-cluster
+/usr/sbin/euca-register-storage-controller
+/usr/sbin/euca-register-walrus
+/usr/sbin/euca-remove-group-membership
+/usr/sbin/euca-revoke-zone-permission
+/usr/sbin/euca_admin/__init__.py
+/usr/sbin/euca_admin/clusters.py
+/usr/sbin/euca_admin/component.py
+/usr/sbin/euca_admin/generic.py
+/usr/sbin/euca_admin/groups.py
+/usr/sbin/euca_admin/local.py
+/usr/sbin/euca_admin/properties.py
+/usr/sbin/euca_admin/storagecontrollers.py
+/usr/sbin/euca_admin/users.py
+/usr/sbin/euca_admin/walruses.py
+/usr/share/eucalyptus/doc
+
 
 %files common-java
 /etc/init.d/eucalyptus-cloud
@@ -381,6 +421,7 @@ then
     fi
 fi
 chkconfig --add eucalyptus-cloud
+/usr/sbin/euca_conf -setup
 
 %post cloud
 /usr/sbin/euca_conf --enable cloud
@@ -416,6 +457,9 @@ fi
 
 %post nc
 chkconfig --add eucalyptus-nc
+	sed -i "s/.*NC_BUNDLE_UPLOAD_PATH=.*/NC_BUNDLE_UPLOAD_PATH=\"\/usr\/bin\/euca-bundle-upload\"/" /etc/eucalyptus/eucalyptus.conf
+	sed -i "s/.*NC_CHECK_BUCKET_PATH=.*/NC_CHECK_BUCKET_PATH=\"\/usr\/bin\/euca-check-bucket\"/" /etc/eucalyptus/eucalyptus.conf
+	sed -i "s/.*NC_DELETE_BUNDLE_PATH=.*/NC_DELETE_BUNDLE_PATH=\"\/usr\/bin\/euca-delete-bundle\"/" /etc/eucalyptus/eucalyptus.conf
 %if %is_fedora
 	usermod -G kvm eucalyptus
 %endif
