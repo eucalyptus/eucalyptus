@@ -129,11 +129,11 @@ public class BaseRecord implements Serializable, Record {
   public Record trace( ) {
     this.level = RecordLevel.TRACE;
     Record newThis = this;
-    if ( Bootstrap.isFinished( ) ) try {
-      newThis = Transactions.save( this );
-    } catch ( TransactionException e1 ) {
-      LOG.debug( e1, e1 );
-    }
+//    if ( Bootstrap.isFinished( ) ) try {
+//      newThis = Transactions.save( this );
+//    } catch ( TransactionException e1 ) {
+//      LOG.debug( e1, e1 );
+//    }
     Logger.getLogger( this.realCreator ).trace( this );
     return newThis;
   }
@@ -145,11 +145,11 @@ public class BaseRecord implements Serializable, Record {
   public Record debug( ) {
     this.level = RecordLevel.DEBUG;
     Record newThis = this;
-    if ( Bootstrap.isFinished( ) ) try {
-      newThis = Transactions.save( this );
-    } catch ( TransactionException e1 ) {
-      LOG.debug( e1, e1 );
-    }
+//    if ( Bootstrap.isFinished( ) ) try {
+//      newThis = Transactions.save( this );
+//    } catch ( TransactionException e1 ) {
+//      LOG.debug( e1, e1 );
+//    }
     Logger.getLogger( this.realCreator ).debug( this );
     return newThis;
   }
