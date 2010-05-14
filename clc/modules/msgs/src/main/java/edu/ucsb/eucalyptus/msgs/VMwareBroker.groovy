@@ -174,6 +174,22 @@ public class InstanceType extends EucalyptusData {
 	public InstanceType() {}
 }
 
+// class used by DescribeBundleTasks
+
+public class BundleTaskType extends EucalyptusData {
+	String instanceId;
+	String state;
+	String manifest;
+	
+	BundleTaskType () {}
+	
+	BundleTaskType (String instanceId, String state, String manifest) {
+		this.instanceId = instanceId;
+		this.state = state;
+		this.manifest = manifest;
+	}
+}
+
 // DescribeResource
 
 public class EucalyptusNCNcDescribeResourceType extends VMwareBrokerRequestType {		
@@ -412,6 +428,18 @@ public class EucalyptusNCNcCancelBundleType extends VMwareBrokerRequestType {
 
 public class EucalyptusNCNcCancelBundleResponseType extends VMwareBrokerResponseType {
     def EucalyptusNCNcCancelBundleResponseType() {}
+}
+
+// DescribeBundleTasks
+
+public class EucalyptusNCNcDescribeBundleTasksType extends VMwareBrokerRequestType {
+	ArrayList<String> instanceIds = new ArrayList<String>();
+    def EucalyptusNCNcDescribeBundleTasksType() {}
+}
+
+public class EucalyptusNCNcDescribeBundleTasksResponseType extends VMwareBrokerResponseType {
+	ArrayList<BundleTaskType> bundleTasks = new ArrayList<BundleTaskType>();
+    def EucalyptusNCNcDescribeBundleTasksResponseType() {}
 }
 
 // Template 
