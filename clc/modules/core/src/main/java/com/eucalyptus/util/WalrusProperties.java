@@ -84,14 +84,14 @@ public class WalrusProperties {
 
 	public static final String SERVICE_NAME = "Walrus";
 	public static String NAME = "Walrus";
-	public static String DB_NAME             = "eucalyptus_walrus";
+	public static final String DB_NAME             = "eucalyptus_walrus";
 	public static final String VIRTUAL_SUBDOMAIN = "I_R_Bukkit";
-	public static String WALRUS_SUBDOMAIN = "walrus";
 	public static final long G = 1024*1024*1024;
 	public static final long M = 1024*1024;
 	public static final long K = 1024;
+	public static String WALRUS_SUBDOMAIN = "walrus";
 
-	public static String bucketRootDirectory = BaseDirectory.VAR.toString() + "/bukkits";
+	public static final String bucketRootDirectory = BaseDirectory.VAR.toString() + "/bukkits";
 	public static int MAX_BUCKETS_PER_USER = 5;
 	public static long MAX_BUCKET_SIZE = 5 * G;
 	public static long IMAGE_CACHE_SIZE = 30 * G;
@@ -136,20 +136,20 @@ public class WalrusProperties {
 
 	public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
 	public static final String NULL_VERSION_ID = "null";
-	
-	public static String TRACKER_BINARY = "bttrack";
-	public static String TORRENT_CREATOR_BINARY = "btmakemetafile";
-	public static String TORRENT_CLIENT_BINARY = "btdownloadheadless";
+
+	public static final String TRACKER_BINARY = "bttrack";
+	public static final String TORRENT_CREATOR_BINARY = "btmakemetafile";
+	public static final String TORRENT_CLIENT_BINARY = "btdownloadheadless";
 	public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
 
-        static { GroovyUtil.loadConfig("walrusprops.groovy"); }
+	static { GroovyUtil.loadConfig("walrusprops.groovy"); }
 
 	public enum VersioningStatus {
 		Enabled, Disabled, Suspended
 	}
-	
+
 	public enum Headers {
 		Bucket, Key, RandomKey, VolumeId, S3UploadPolicy, S3UploadPolicySignature
 	}
