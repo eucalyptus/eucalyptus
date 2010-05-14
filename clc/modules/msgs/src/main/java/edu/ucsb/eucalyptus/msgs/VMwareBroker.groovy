@@ -372,6 +372,32 @@ public class EucalyptusNCNcPowerDownResponseType extends VMwareBrokerResponseTyp
     def EucalyptusNCNcPowerDownResponseType() {}
 }
 
+// BundleInstance 
+
+public class EucalyptusNCNcBundleInstanceType extends VMwareBrokerRequestType {
+    String instanceId;
+    String bucketName;
+    String filePrefix;
+    String walrusURL;
+    String userPublicKey;
+    String cloudPublicKey;
+    
+    def EucalyptusNCNcBundleInstanceType() {}
+
+  	@Override
+    public String toString() {
+    	return super.toString ("BundleInstance: instanceId=" + this.instanceId 
+    			+ " bucketName=" + this.bucketName 
+    			+ " filePrefix=" + this.filePrefix
+    			+ " walrusURL=" + this.walrusURL);
+    }
+}
+
+public class EucalyptusNCNcBundleInstanceResponseType extends VMwareBrokerResponseType {
+    def EucalyptusNCNcBundleInstanceResponseType() {}
+}
+
+
 // Template 
 /*
 public class EucalyptusNCNcXXXType extends VMwareBrokerRequestType {
