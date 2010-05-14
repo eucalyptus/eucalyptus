@@ -5,7 +5,7 @@
 include ../Makedefs
 
 STORAGE_LIBS = -lcurl -lssl
-IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o helpers.o
+IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_bundle.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o helpers.o
 VDDK_FLAGS = -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
 
 all: storage.o storage-windows.o walrus.o Wclient euca_imager

@@ -39,13 +39,20 @@ int upload_requirements (imager_request *);
 int upload_execute (imager_request *);
 int upload_cleanup (imager_request *);
 
+char ** bundle_parameters ();
+int bundle_validate (imager_request *);
+int bundle_requirements (imager_request *);
+int bundle_execute (imager_request *);
+int bundle_cleanup (imager_request *);
+
 static imager_command known_cmds [] = {
 	{ "fsck", fsck_parameters, fsck_validate, NULL, fsck_execute, NULL },
 	{ "download", download_parameters, download_validate, download_requirements, download_execute, download_cleanup },
 	{ "create", create_parameters, create_validate, create_requirements, create_execute, create_cleanup },
 	{ "convert", convert_parameters, convert_validate, convert_requirements, convert_execute, convert_cleanup },
 	{ "inject", inject_parameters, inject_validate, inject_requirements, inject_execute, inject_cleanup },
-	{ "upload", upload_parameters, upload_validate, upload_requirements, upload_execute, upload_cleanup }
+	{ "upload", upload_parameters, upload_validate, upload_requirements, upload_execute, upload_cleanup },
+	{ "bundle", bundle_parameters, bundle_validate, bundle_requirements, bundle_execute, bundle_cleanup }
 };
 
 #endif // _CMD_H_
