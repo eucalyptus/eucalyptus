@@ -66,6 +66,9 @@
 package com.eucalyptus.storage;
 
 import java.io.File;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -103,6 +106,8 @@ public class EquallogicProvider implements SANProvider {
 	private static final String EOF_COMMAND = "whoami\r";
 
 	private final long TASK_TIMEOUT = 5 * 60 * 1000;
+	private ScheduledExecutorService sessionRefresh;
+	private int REFRESH_PERIODICITY = 30;
 
 	public EquallogicProvider() {
 		sessionManager = new SessionManager();
@@ -115,6 +120,14 @@ public class EquallogicProvider implements SANProvider {
 				if(!StorageProperties.DUMMY_SAN_HOST.equals(sanInfo.getSanHost())) {
 					sessionManager.update();
 					showFreeSpace();
+					if(sessionRefresh == null) {
+						sessionRefresh = Executors.newSingleThreadScheduledExecutor();
+						sessionRefresh.scheduleAtFixedRate(new Runnable() {
+							@Override
+							public void run() {
+								showFreeSpace();
+							}}, 1, REFRESH_PERIODICITY, TimeUnit.MINUTES);				
+					}
 				}
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e, e);
