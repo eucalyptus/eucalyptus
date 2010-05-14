@@ -85,9 +85,6 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class EquallogicProvider implements SANProvider {
 	private static Logger LOG = Logger.getLogger(EquallogicProvider.class);
-	private String host;
-	private String username;
-	private String password;
 	private final String TARGET_USERNAME = "eucalyptus"; 
 	private boolean enabled;
 	private SessionManager sessionManager;
@@ -107,24 +104,23 @@ public class EquallogicProvider implements SANProvider {
 
 	private final long TASK_TIMEOUT = 5 * 60 * 1000;
 
-	public EquallogicProvider() {}
+	public EquallogicProvider() {
+		sessionManager = new SessionManager();
+	}
 
 	public void configure() {
 		SANInfo sanInfo = SANInfo.getStorageInfo();
-		this.host = sanInfo.getSanHost();
-		this.username = sanInfo.getSanUser();
-		this.password = sanInfo.getSanPassword();
 		if(sessionManager != null) {
 			try {
-				if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) {
-					sessionManager.update(host, username, password);
+				if(!StorageProperties.DUMMY_SAN_HOST.equals(sanInfo.getSanHost())) {
+					sessionManager.update();
 					showFreeSpace();
 				}
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e, e);
 			}
 		} else {
-			sessionManager = new SessionManager(host, username, password);
+			sessionManager = new SessionManager();
 		}
 	}
 
@@ -136,17 +132,10 @@ public class EquallogicProvider implements SANProvider {
 			throw new EucalyptusCloudException("disconnect_iscitarget_sc.pl not found");
 		}
 	}
-
-	public EquallogicProvider(String host, String username, String password) {
-		this.host = host;
-		this.username = username;
-		this.password = password;
-		sessionManager = new SessionManager(host, username, password);
-	}
-
 	public void checkConnection() {
 		try {
-			if(!StorageProperties.DUMMY_SAN_HOST.equals(host)) 
+			SANInfo sanInfo = SANInfo.getStorageInfo();
+			if(!StorageProperties.DUMMY_SAN_HOST.equals(sanInfo.getSanHost())) 
 				sessionManager.checkConnection();
 		} catch (EucalyptusCloudException e) {
 			enabled = false;
@@ -188,12 +177,13 @@ public class EquallogicProvider implements SANProvider {
 	public String connectTarget(String iqn) throws EucalyptusCloudException {
 		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
 		try {
+			SANInfo sanInfo = SANInfo.getStorageInfo();
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(TARGET_USERNAME));
 			String encryptedPassword = userInfo.getEncryptedPassword();
 			db.commit();
 			try {
 				String deviceName = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
-						System.getProperty("euca.home") + "," + host + "," + iqn + "," + encryptedPassword});
+						System.getProperty("euca.home") + "," + sanInfo.getSanHost() + "," + iqn + "," + encryptedPassword});
 				if(deviceName.length() == 0) {
 					throw new EucalyptusCloudException("Unable to get device name. Connect failed.");
 				}
@@ -210,11 +200,12 @@ public class EquallogicProvider implements SANProvider {
 	public String getVolumeProperty(String volumeId) {
 		EntityWrapper<EquallogicVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
+			SANInfo sanInfo = SANInfo.getStorageInfo();
 			EquallogicVolumeInfo searchVolumeInfo = new EquallogicVolumeInfo(volumeId);
 			EquallogicVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
 			EntityWrapper<CHAPUserInfo> dbUser = db.recast(CHAPUserInfo.class);
 			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
-			String property = System.getProperty("euca.home") + "," + host + "," + volumeInfo.getIqn() + "," + BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
+			String property = System.getProperty("euca.home") + "," + sanInfo.getSanHost() + "," + volumeInfo.getIqn() + "," + BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
 			db.commit();
 			return property;
 		} catch(EucalyptusCloudException ex) {
@@ -436,8 +427,9 @@ public class EquallogicProvider implements SANProvider {
 			String encryptedPassword = userInfo.getEncryptedPassword();
 			db.commit();
 			try {
+				SANInfo sanInfo = SANInfo.getStorageInfo();
 				String returnValue = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl", System.getProperty("euca.home") + "," +  
-						host + "," + iqn + "," + encryptedPassword});
+						sanInfo.getSanHost() + "," + iqn + "," + encryptedPassword});
 				if(returnValue.length() == 0) {
 					throw new EucalyptusCloudException("Unable to disconnect target");
 				}
@@ -462,8 +454,9 @@ public class EquallogicProvider implements SANProvider {
 		try {
 			String returnValue = execCommand("stty hardwrap off\rshow pool\r");
 			String freeSpaceString = matchPattern(returnValue, SHOW_SPACE_PATTERN);
+			SANInfo sanInfo = SANInfo.getStorageInfo();
 			if(freeSpaceString != null && (freeSpaceString.length() > 0)) {
-				LOG.info("Free Space on " + this.host + " : " + freeSpaceString);
+				LOG.info("Free Space on " + sanInfo.getSanHost() + " : " + freeSpaceString);
 			}
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
