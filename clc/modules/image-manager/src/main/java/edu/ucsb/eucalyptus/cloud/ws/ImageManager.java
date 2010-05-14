@@ -190,26 +190,26 @@ public class ImageManager {
       defaultKernelId = SystemConfiguration.getSystemConfiguration( ).getDefaultKernel( );
       defaultRamdiskId = SystemConfiguration.getSystemConfiguration( ).getDefaultRamdisk( );
     } catch ( Exception e1 ) {}
-    String kernelId = ImageUtil.getImageInfobyId( msg.getKernelId( ), diskInfo.getKernelId( ), defaultKernelId );
-    if ( kernelId == null ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "Unable to determine required kernel image." );
-    }
-    try {
-      kernelInfo = db.getUnique( new ImageInfo( kernelId ) );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find kernel image: " + kernelId );
-    }
-    if ( !kernelInfo.isAllowed( user ) ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "You do not have permission to launch: " + kernelInfo.getImageId( ) );
-    }
-    if( !"kernel".equals( kernelInfo.getImageType( ) ) ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelInfo.toString( ) );
-    }
     if( !ImageManager.IMAGE_PLATFORM_WINDOWS.equals( diskInfo.getPlatform( ) ) ) {
+      String kernelId = ImageUtil.getImageInfobyId( msg.getKernelId( ), diskInfo.getKernelId( ), defaultKernelId );
+      if ( kernelId == null ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "Unable to determine required kernel image." );
+      }
+      try {
+        kernelInfo = db.getUnique( new ImageInfo( kernelId ) );
+      } catch ( EucalyptusCloudException e ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "Failed to find kernel image: " + kernelId );
+      }
+      if ( !kernelInfo.isAllowed( user ) ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "You do not have permission to launch: " + kernelInfo.getImageId( ) );
+      }
+      if( !"kernel".equals( kernelInfo.getImageType( ) ) ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelInfo.toString( ) );
+      }
       boolean nord = ( ImageUtil.isSet( msg.getKernelId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) );
       nord |= ( !ImageUtil.isSet( msg.getKernelId() ) && ImageUtil.isSet( diskInfo.getKernelId( ) ) && !ImageUtil.isSet( diskInfo.getRamdiskId() ) && !ImageUtil.isSet( msg.getRamdiskId() ) ); 
       String ramdiskId = nord?null:ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
