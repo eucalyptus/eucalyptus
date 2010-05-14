@@ -420,9 +420,13 @@ doAttachVolume (	struct nc_state_t *nc,
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*login to target*/
-                if((local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev)) == NULL)
-                    return ERROR;
-                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+		local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev);
+		if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
+		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
+		  rc = 1;
+		} else {
+		  snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+		}
             } else {
                 snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
                 rc = stat(remoteDev, &statbuf);
