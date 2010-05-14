@@ -226,18 +226,21 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 /usr/share/eucalyptus/udev/iscsidev-opensuse.sh
 /usr/share/eucalyptus/udev/iscsidev-ubuntu.sh
 /usr/sbin/euca-add-group
+/usr/sbin/euca-delete-group
+/usr/sbin/euca-describe-groups
 /usr/sbin/euca-add-group-membership
 /usr/sbin/euca-add-user
+/usr/sbin/euca-add-user-group
 /usr/sbin/euca-convert-volumes
-/usr/sbin/euca-delete-group
 /usr/sbin/euca-delete-user
+/usr/sbin/euca-delete-user-group
 /usr/sbin/euca-deregister-cluster
 /usr/sbin/euca-deregister-storage-controller
 /usr/sbin/euca-deregister-walrus
 /usr/sbin/euca-describe-clusters
-/usr/sbin/euca-describe-groups
 /usr/sbin/euca-describe-properties
 /usr/sbin/euca-describe-storage-controllers
+/usr/sbin/euca-describe-user-groups
 /usr/sbin/euca-describe-users
 /usr/sbin/euca-describe-walruses
 /usr/sbin/euca-get-credentials
@@ -248,16 +251,7 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 /usr/sbin/euca-register-walrus
 /usr/sbin/euca-remove-group-membership
 /usr/sbin/euca-revoke-zone-permission
-/usr/sbin/euca_admin/__init__.py
-/usr/sbin/euca_admin/clusters.py
-/usr/sbin/euca_admin/component.py
-/usr/sbin/euca_admin/generic.py
-/usr/sbin/euca_admin/groups.py
-/usr/sbin/euca_admin/local.py
-/usr/sbin/euca_admin/properties.py
-/usr/sbin/euca_admin/storagecontrollers.py
-/usr/sbin/euca_admin/users.py
-/usr/sbin/euca_admin/walruses.py
+/usr/sbin/euca_admin
 /usr/share/eucalyptus/doc
 
 
