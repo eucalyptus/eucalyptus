@@ -397,6 +397,22 @@ public class EucalyptusNCNcBundleInstanceResponseType extends VMwareBrokerRespon
     def EucalyptusNCNcBundleInstanceResponseType() {}
 }
 
+// CancelBundle
+
+public class EucalyptusNCNcCancelBundleType extends VMwareBrokerRequestType {
+    String instanceId;
+    
+    def EucalyptusNCNcCancelBundleType() {}
+
+  	@Override
+    public String toString() {
+    	return super.toString ("CancelBundle: instanceId=" + this.instanceId);
+    }
+}
+
+public class EucalyptusNCNcCancelBundleResponseType extends VMwareBrokerResponseType {
+    def EucalyptusNCNcCancelBundleResponseType() {}
+}
 
 // Template 
 /*
