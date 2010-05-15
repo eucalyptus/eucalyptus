@@ -225,9 +225,6 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 /usr/share/eucalyptus/udev/iscsidev-centos.sh
 /usr/share/eucalyptus/udev/iscsidev-opensuse.sh
 /usr/share/eucalyptus/udev/iscsidev-ubuntu.sh
-/usr/sbin/euca-add-group
-/usr/sbin/euca-delete-group
-/usr/sbin/euca-describe-groups
 /usr/sbin/euca-add-group-membership
 /usr/sbin/euca-add-user
 /usr/sbin/euca-add-user-group
