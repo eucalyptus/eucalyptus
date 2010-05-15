@@ -581,7 +581,7 @@ void *startup_thread (void * arg)
     // check one more time for cancellation
     if (instance->state==TEARDOWN) { 
       // timed out in BOOTING
-    } else if (instance->state==CANCELED) {
+    } else if (instance->state==CANCELED || instance->state==SHUTOFF) {
       logprintfl (EUCAFATAL, "startup of instance %s was cancelled\n", instance->instanceId);
       change_state (instance, SHUTOFF);
     } else {
