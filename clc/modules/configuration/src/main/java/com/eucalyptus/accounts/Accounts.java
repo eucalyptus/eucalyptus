@@ -84,7 +84,7 @@ public class Accounts {
     boolean admin = request.getAdmin( );
     try {
       User u = null;
-      if ( email == null || "N/A".equals( email ) ) {
+      if ( email == null || UserInfo.BOGUS_ENTRY.equals( email ) ) {
         u = Users.addUser( userName, admin, true );
       } else {
         u = Users.addUser( userName, admin, false );

@@ -64,6 +64,7 @@
 
 package edu.ucsb.eucalyptus.admin.client;
 
+import com.eucalyptus.auth.UserInfo;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -1218,7 +1219,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         if (loggedInUser!=null) {
             if ( loggedInUser.isAdministrator().booleanValue() )
             {
-                if (loggedInUser.getEmail().equalsIgnoreCase( "" ) ) {
+                if (loggedInUser.getEmail().equalsIgnoreCase( "n/a" ) ) {
                     displayFirstTimeConfiguration();
                 } else {
                     displayBarAndTabs(message);
@@ -2469,9 +2470,9 @@ public class EucalyptusWebInterface implements EntryPoint {
     				formOk = false;
     			}
 
-    			if ( emailAddress_box.getText().length() < 1 )
+    			if ( emailAddress_box.getText().length() < 1 || emailAddress_box.getText( ).equalsIgnoreCase( "n/a" ) )
     			{
-    				Label l = new Label( "Email address is empty!" );
+    				Label l = new Label( "Email address is empty or n/a!" );
     				l.setStyleName("euca-error-hint");
     				g2.setWidget( emailAddress_row, 2, l );
     				formOk = false;

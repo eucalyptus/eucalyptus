@@ -65,6 +65,9 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.gwt.user.client.rpc.SerializableException;
@@ -394,7 +397,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 		if (verifyPasswordAge) {
 			if (isPasswordExpired(user) && 
-					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase(""))) { // first-time config will catch that
+					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY))) { // first-time config will catch that
 				throw new SerializableException("Password expired");
 			}
 		}
@@ -678,7 +681,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 
 		// set expiration for admin setting password for the first time
-		if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase("")) {
+		if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY)) {
 			long now = System.currentTimeMillis();
 			oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
 		}
@@ -919,6 +922,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		addUserRecord(sessionId, user);
 		for (String groupName : groupNames) {
 			try {
+			  EucalyptusManagement.removeUserFromGroup( user.getUserName( ), Groups.NAME_DEFAULT );
 				EucalyptusManagement.addUserToGroup(user.getUserName(), groupName);
 			} catch (Exception e) {
 				// Ignore exception
