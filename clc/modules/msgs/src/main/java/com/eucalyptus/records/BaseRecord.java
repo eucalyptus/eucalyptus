@@ -3,7 +3,6 @@ package com.eucalyptus.records;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
@@ -15,6 +14,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -30,7 +30,7 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.NONE )
 @Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
 @DiscriminatorColumn( name = "record_class", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "base" )
@@ -58,6 +58,7 @@ public class BaseRecord implements Serializable, Record {
   private String              userId;
   @Column( name = "record_correlation_id" )
   private String              correlationId;
+  @Lob
   @Column( name = "record_extra" )
   private String              extra;
   @Column( name = "record_level" )
@@ -127,11 +128,11 @@ public class BaseRecord implements Serializable, Record {
   public Record trace( ) {
     this.level = RecordLevel.TRACE;
     Record newThis = this;
-    if ( Bootstrap.isFinished( ) ) try {
-      newThis = Transactions.save( this );
-    } catch ( TransactionException e1 ) {
-      LOG.debug( e1, e1 );
-    }
+//    if ( Bootstrap.isFinished( ) ) try {
+//      newThis = Transactions.save( this );
+//    } catch ( TransactionException e1 ) {
+//      LOG.debug( e1, e1 );
+//    }
     Logger.getLogger( this.realCreator ).trace( this );
     return newThis;
   }
@@ -143,11 +144,11 @@ public class BaseRecord implements Serializable, Record {
   public Record debug( ) {
     this.level = RecordLevel.DEBUG;
     Record newThis = this;
-    if ( Bootstrap.isFinished( ) ) try {
-      newThis = Transactions.save( this );
-    } catch ( TransactionException e1 ) {
-      LOG.debug( e1, e1 );
-    }
+//    if ( Bootstrap.isFinished( ) ) try {
+//      newThis = Transactions.save( this );
+//    } catch ( TransactionException e1 ) {
+//      LOG.debug( e1, e1 );
+//    }
     Logger.getLogger( this.realCreator ).debug( this );
     return newThis;
   }

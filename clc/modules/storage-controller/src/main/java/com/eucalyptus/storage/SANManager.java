@@ -109,8 +109,22 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	public SANManager() {
-		//TODO: Change to a factory
-		connectionManager = new EquallogicProvider();
+		String sanProvider = "EquallogicProvider";
+		if(System.getProperty("euca.disable.san") == null) {
+			if(System.getProperty("ebs.san.provider") != null) {
+				sanProvider = System.getProperty("ebs.san.provider");
+			}
+		}
+		try {
+			sanProvider = "com.eucalyptus.storage." + sanProvider;
+			connectionManager = (SANProvider) ClassLoader.getSystemClassLoader().loadClass(sanProvider).newInstance();
+		} catch (InstantiationException e) {
+			LOG.error(e, e); 
+		} catch (IllegalAccessException e) {
+			LOG.error(e, e); 
+		} catch (ClassNotFoundException e) {
+			LOG.error(e, e); 
+		}
 	}
 
 	@Override
@@ -120,6 +134,7 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
+		connectionManager.checkPreconditions();
 	}
 
 	@Override

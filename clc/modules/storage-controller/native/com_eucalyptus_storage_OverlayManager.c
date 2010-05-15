@@ -2,7 +2,8 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-#include <com_eucalyptus_storage_LVM2Manager.h>
+#include <com_eucalyptus_storage_OverlayManager.h>
+#include <storage_native.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
@@ -80,7 +81,7 @@ void sigchld(int signal)
 	while (0 < waitpid(-1, NULL, WNOHANG));
 }
 
-JNIEXPORT void JNICALL Java_com_eucalyptus_storage_LVM2Manager_registerSignals
+JNIEXPORT void JNICALL Java_com_eucalyptus_storage_OverlayManager_registerSignals
 (JNIEnv *env, jobject obj) {
 	signal(SIGCHLD, sigchld);
 }

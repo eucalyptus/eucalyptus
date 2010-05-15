@@ -294,6 +294,9 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
   }
 
   va_start(al, ncOp);
+
+  // grab the lock
+  sem_mywait(ncLock);
   
   pid = fork();
   if (!pid) {
@@ -311,9 +314,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *instId = va_arg(al, char *);
       char **consoleOutput=va_arg(al, char **);
 
-      sem_mywait(ncLock);
       rc = ncGetConsoleOutputStub(ncs, meta, instId, consoleOutput);
-      sem_mypost(ncLock);
       if (timeout && consoleOutput) {
 	if (!rc && *consoleOutput) {
 	  len = strlen(*consoleOutput) + 1;
@@ -332,9 +333,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *remoteDev = va_arg(al, char *);      
       char *localDev = va_arg(al, char *);      
 
-      sem_mywait(ncLock);
       rc = ncAttachVolumeStub(ncs, meta, instanceId, volumeId, remoteDev, localDev);
-      sem_mypost(ncLock);
     } else if (!strcmp(ncOp, "ncDetachVolume")) {
       char *instanceId = va_arg(al, char *);
       char *volumeId = va_arg(al, char *);      
@@ -342,27 +341,19 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *localDev = va_arg(al, char *);      
       int force = va_arg(al, int);
 
-      sem_mywait(ncLock);
       rc = ncDetachVolumeStub(ncs, meta, instanceId, volumeId, remoteDev, localDev, force);
-      sem_mypost(ncLock);
     } else if (!strcmp(ncOp, "ncPowerDown")) {
-      sem_mywait(ncLock);
       rc = ncPowerDownStub(ncs, meta);
-      sem_mypost(ncLock);
     } else if (!strcmp(ncOp, "ncRebootInstance")) {
       char *instId = va_arg(al, char *);
 
-      sem_mywait(ncLock);
       rc = ncRebootInstanceStub(ncs, meta, instId);
-      sem_mypost(ncLock);
     } else if (!strcmp(ncOp, "ncTerminateInstance")) {
       char *instId = va_arg(al, char *);
       int *shutdownState = va_arg(al, int *);
       int *previousState = va_arg(al, int *);
       
-      sem_mywait(ncLock);
       rc = ncTerminateInstanceStub(ncs, meta, instId, shutdownState, previousState);
-      sem_mypost(ncLock);
       if (timeout) {
 	if (!rc) {
 	  len = 2;
@@ -383,9 +374,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       int vlan = va_arg(al, int);
       char **outStatus = va_arg(al, char **);
       
-      sem_mywait(ncLock);
       rc = ncStartNetworkStub(ncs, meta, peers, peersLen, port, vlan, outStatus);
-      sem_mypost(ncLock);
       if (timeout && outStatus) {
 	if (!rc && *outStatus) {
 	  len = strlen(*outStatus) + 1;
@@ -417,9 +406,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       int netNamesLen = va_arg(al, int);
       ncInstance **outInst = va_arg(al, ncInstance **);
       
-      sem_mywait(ncLock);
       rc = ncRunInstanceStub(ncs, meta, instId, reservationId, ncvm, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, ncnet, userData, launchIndex, platform, netNames, netNamesLen, outInst);
-      sem_mypost(ncLock);
       if (timeout && outInst) {
 	if (!rc && *outInst) {
 	  len = sizeof(ncInstance);
@@ -438,9 +425,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       ncInstance ***ncOutInsts=va_arg(al, ncInstance ***);
       int *ncOutInstsLen= va_arg(al, int *);
 
-      sem_mywait(ncLock);
       rc = ncDescribeInstancesStub(ncs, meta, instIds, instIdsLen, ncOutInsts, ncOutInstsLen);
-      sem_mypost(ncLock);
       if (timeout && ncOutInsts && ncOutInstsLen) {
 	if (!rc) {
 	  len = *ncOutInstsLen;
@@ -461,9 +446,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *resourceType = va_arg(al, char *);
       ncResource **outRes=va_arg(al, ncResource **);
 
-      sem_mywait(ncLock);
       rc = ncDescribeResourceStub(ncs, meta, resourceType, outRes);
-      sem_mypost(ncLock);
       if (timeout && outRes) {
 	if (!rc && *outRes) {
 	  len = sizeof(ncResource);
@@ -483,15 +466,11 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *walrusURL = va_arg(al, char *);
       char *userPublicKey = va_arg(al, char *);      
 
-      sem_mywait(ncLock);
       rc = ncBundleInstanceStub(ncs, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
-      sem_mypost(ncLock);
     } else if (!strcmp(ncOp, "ncCancelBundleTask")) {
       char *instanceId = va_arg(al, char *);
 
-      sem_mywait(ncLock);
       rc = ncCancelBundleTaskStub(ncs, meta, instanceId);
-      sem_mypost(ncLock);
     } else {
       logprintfl(EUCAWARN, "\tncClientCall(%s): ppid=%d operation '%s' not found\n", ncOp, getppid(), ncOp);
       rc = 1;
@@ -694,15 +673,18 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
     }
   }
 
-  va_end(al);
-
   logprintfl(EUCADEBUG, "ncClientCall(%s): done clientrc=%d opFail=%d\n", ncOp, rc, opFail);
   if (rc || opFail) {
     ret = 1;
   } else {
     ret = 0;
   }
-
+  
+  // release the lock
+  sem_mypost(ncLock);
+  
+  va_end(al);
+  
   return(ret);
 }
 
@@ -2004,7 +1986,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	// could not find resource
 	logprintfl(EUCAERROR, "RunInstances(): scheduler could not find resource to run the instance on\n");
 	// couldn't run this VM, remove networking information from system
-	free_instanceNetwork(mac, vlan, 1);
+	free_instanceNetwork(mac, vlan, 1, 1);
       } else {
 	int pid, status, ret, rbytes;
 	
@@ -2082,7 +2064,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  res->state = RESDOWN;
 	  i--;
 	  // couldn't run this VM, remove networking information from system
-	  free_instanceNetwork(mac, vlan, 1);
+	  free_instanceNetwork(mac, vlan, 1, 1);
 	} else {
 	  res->availMemory -= ccvm->mem;
 	  res->availDisk -= ccvm->disk;
@@ -2302,7 +2284,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	(*outStatus)[i] = 0;
       }
       
-      rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan, 1);
+      rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan, 1, 1);
 
       free(myInstance);
     } else {
@@ -3346,7 +3328,7 @@ int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPor
   return(0);
 }
 
-int free_instanceNetwork(char *mac, int vlan, int dolock) {
+int free_instanceNetwork(char *mac, int vlan, int force, int dolock) {
   int inuse, i;
   unsigned char hexmac[6];
   mac2hex(mac, hexmac);
@@ -3357,12 +3339,17 @@ int free_instanceNetwork(char *mac, int vlan, int dolock) {
   if (dolock) {
     sem_mywait(INSTCACHE);
   }
+
   inuse=0;
-  for (i=0; i<MAXINSTANCES && !inuse; i++) {
-    if (!strcmp(instanceCache->instances[i].ccnet.privateMac, mac) && strcmp(instanceCache->instances[i].state, "Teardown")) {
-      inuse++;
+  if (!force) {
+    // check to make sure the mac isn't in use elsewhere
+    for (i=0; i<MAXINSTANCES && !inuse; i++) {
+      if (!strcmp(instanceCache->instances[i].ccnet.privateMac, mac) && strcmp(instanceCache->instances[i].state, "Teardown")) {
+	inuse++;
+      }
     }
   }
+
   if (dolock) {
     sem_mypost(INSTCACHE);
   }
@@ -3538,7 +3525,7 @@ void invalidate_instanceCache(void) {
   for (i=0; i<MAXINSTANCES; i++) {
     // if instance is in teardown, free up network information
     if ( !strcmp(instanceCache->instances[i].state, "Teardown") ) {
-      free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0);
+      free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0, 0);
     }
     if ( (instanceCache->cacheState[i] == INSTVALID) && ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout)) {
       logprintfl(EUCADEBUG, "invalidate_instanceCache(): invalidating instance '%s' (last seen %d seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
