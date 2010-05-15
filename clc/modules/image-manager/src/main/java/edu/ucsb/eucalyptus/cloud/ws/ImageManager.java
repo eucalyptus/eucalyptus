@@ -326,7 +326,7 @@ public class ImageManager {
       imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_RAMDISK_PREFIX, imageInfo.getImageLocation( ) ) );
       imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );
     } else {
-      if( imagePathParts[1].startsWith( ImageManager.IMAGE_PLATFORM_WINDOWS ) ) {
+      if( imagePathParts[1].startsWith( ImageManager.IMAGE_PLATFORM_WINDOWS ) && System.getProperty( "euca.disable.windows" ) == null ) {
         imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_WINDOWS );
       } else {
         imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );        
