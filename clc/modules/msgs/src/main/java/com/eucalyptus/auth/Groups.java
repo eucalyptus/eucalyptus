@@ -5,7 +5,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.GroupProvider;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities.EntityWrapper;
 import com.google.common.collect.Lists;
 
 public class Groups {
@@ -17,10 +16,6 @@ public class Groups {
   public static final List<Group>  RESTRICTED_GROUPS      = Lists.newArrayList( );
   public static final List<String> NAME_RESTRICTED_GROUPS = Lists.newArrayList( NAME_ALL, NAME_DEFAULT );
   private static GroupProvider     groups;
-  
-  public static <T> EntityWrapper<T> getEntityWrapper( ) {
-    return new EntityWrapper<T>( "eucalyptus_auth" );
-  }
   
   public static void setGroupProvider( GroupProvider provider ) {
     synchronized ( Users.class ) {
