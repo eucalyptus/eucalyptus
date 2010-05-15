@@ -60,6 +60,8 @@
 #
 #FAKEREG="yes"
 
+USELDAP="Y"
+
 FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
 IMPORTFILE=""
 EUCALYPTUS=""
@@ -1127,7 +1129,11 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
-  KEY=$(echo "select auth_user_token from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
+  if [ "$USELDAP" = "Y" ]; then
+    KEY=$(ldapsearch -x -w ${DB_PASS} -H ldap://localhost:8778 -D "cn=EucalyptusManager,dc=eucalyptus,dc=com" -b "ou=people,dc=eucalyptus,dc=com" -LLL -z 1 uid=admin token | grep -v 'dn:' | awk '/token:/ { x = $2 } /^ / { print x $1 }')
+  else
+    KEY=$(echo "select auth_user_token from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
+  fi
   if [ -z "$KEY" ]; then
   	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
   	exit 1
