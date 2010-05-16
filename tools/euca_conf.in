@@ -1063,8 +1063,8 @@ createCloudURL () {
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
-  AKEY=$(print_query_id())
-  SKEY=$(print_secret_key())
+  AKEY=$(print_query_id)
+  SKEY=$(print_secret_key)
   
   if [[ -z "${AKEY}" && -z "${SKEY}" ]]; then 
     echo "ERROR: Failed to get admin credentials"
@@ -1153,7 +1153,7 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
-  KEY=$(print_token())
+  KEY=$(print_token)
   if [ -z "$KEY" ]; then
   	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
   	exit 1
