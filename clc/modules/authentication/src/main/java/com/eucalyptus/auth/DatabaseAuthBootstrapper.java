@@ -18,7 +18,7 @@ import com.eucalyptus.entities.VmType;
 @DependsLocal( Component.eucalyptus )
 public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
-  public static boolean ENABLE = false;
+  public static boolean ENABLE = true;
   
   public boolean load( Stage current ) throws Exception {
     if (ENABLE) {
