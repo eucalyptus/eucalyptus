@@ -117,6 +117,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
       if ( users.size( ) != 1 ) {
         throw new NoSuchUserException( ( users.size( ) == 0 ) ? "No user with the specified certificate." : "Multiple users with the same certificate." );
       }
+      return users.get( 0 );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchUserException( e );
