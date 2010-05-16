@@ -60,7 +60,7 @@
 #
 #FAKEREG="yes"
 
-USELDAP="Y"
+USELDAP="N"
 
 FILE="@prefix@/etc/eucalyptus/eucalyptus.conf"
 IMPORTFILE=""
