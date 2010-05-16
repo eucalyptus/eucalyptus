@@ -8,12 +8,12 @@ import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -44,15 +44,14 @@ public class Accounts {
   public DescribeUsersResponseType describeUsers( DescribeUsersType request ) {
     DescribeUsersResponseType reply = request.getReply( );
     
-    final EntityWrapper<UserInfo> db = EntityWrapper.get( new UserInfo( ) );
     Function<User, UserInfoType> mapUser = new Function<User, UserInfoType>( ) {
       @Override
       public UserInfoType apply( User u ) {
         UserInfo otherInfo;
         try {
-          otherInfo = db.getUnique( new UserInfo( u.getName( ) ) );
+          otherInfo = UserInfoStore.getUserInfo( new UserInfo( u.getName( ) ) );
           return new UserInfoType( u, otherInfo.getEmail( ), otherInfo.getConfirmationCode( ) );
-        } catch ( EucalyptusCloudException e ) {
+        } catch ( NoSuchUserException e ) {
           return new UserInfoType( u, null, null );
         }
       }
@@ -72,7 +71,6 @@ public class Accounts {
         } catch ( NoSuchUserException e ) {}
       }
     }
-    db.commit( );
     return reply;
   }
   
