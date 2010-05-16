@@ -371,6 +371,30 @@ sync_keys() {
 	return 1
 }
 
+print_token() {
+  if [ "$USELDAP" = "Y" ]; then
+    ldapsearch -x -w ${DB_PASS} -H ldap://localhost:8778 -D "cn=EucalyptusManager,dc=eucalyptus,dc=com" -b "ou=people,dc=eucalyptus,dc=com" -LLL -z 1 uid=admin token | grep -v 'dn:' | awk '/token:/ { x = $2 } /^ / { print x $1 }'
+  else
+    echo "select auth_user_token from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1
+  fi
+}
+
+print_secret_key() {
+  if [ "$USELDAP" = "Y" ]; then
+    ldapsearch -x -w ${DB_PASS} -H ldap://localhost:8778 -D "cn=EucalyptusManager,dc=eucalyptus,dc=com" -b "ou=people,dc=eucalyptus,dc=com" -LLL -z 1 uid=admin secretKey | grep -v 'dn:' | awk '/secretKey:/ { print $2 }'
+  else
+    echo "select auth_user_secretkey from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth  | tail -n1
+  fi
+}
+
+print_query_id() {
+  if [ "$USELDAP" = "Y" ]; then
+    ldapsearch -x -w ${DB_PASS} -H ldap://localhost:8778 -D "cn=EucalyptusManager,dc=eucalyptus,dc=com" -b "ou=people,dc=eucalyptus,dc=com" -LLL -z 1 uid=admin queryId | grep -v 'dn:' | awk '/queryId:/ { print $2 }'
+  else
+    echo "select auth_user_query_id from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1
+  fi
+}
+
 if [ $# -eq 0 ]; then
 	usage
 	exit 1
@@ -1039,8 +1063,8 @@ createCloudURL () {
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
-  AKEY=$(echo "select auth_user_query_id from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
-  SKEY=$(echo "select auth_user_secretkey from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth  | tail -n1)
+  AKEY=$(print_query_id())
+  SKEY=$(print_secret_key())
   
   if [[ -z "${AKEY}" && -z "${SKEY}" ]]; then 
     echo "ERROR: Failed to get admin credentials"
@@ -1129,11 +1153,7 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
-  if [ "$USELDAP" = "Y" ]; then
-    KEY=$(ldapsearch -x -w ${DB_PASS} -H ldap://localhost:8778 -D "cn=EucalyptusManager,dc=eucalyptus,dc=com" -b "ou=people,dc=eucalyptus,dc=com" -LLL -z 1 uid=admin token | grep -v 'dn:' | awk '/token:/ { x = $2 } /^ / { print x $1 }')
-  else
-    KEY=$(echo "select auth_user_token from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1)
-  fi
+  KEY=$(print_token())
   if [ -z "$KEY" ]; then
   	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
   	exit 1
