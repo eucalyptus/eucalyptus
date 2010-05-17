@@ -215,9 +215,10 @@ int main (int argc, char * argv[])
 				err ("failed while verifying requirements");
 
 	// invoke the last command, which will trigger the commands it depends on
+	int ret;
 	for (int i=ncmds-1; i>=0; i--) {
 		if (reqs[ncmds-1].cmd->execute!=NULL) {
-			reqs[ncmds-1].cmd->execute(&reqs[ncmds-1]);
+			ret = reqs[ncmds-1].cmd->execute(&reqs[ncmds-1]);
 			break;
 		}
 	}
@@ -227,7 +228,7 @@ int main (int argc, char * argv[])
 		if (reqs[i].cmd->cleanup!=NULL)
 			reqs[i].cmd->cleanup (&reqs[i]);
 
-	exit (0);
+	exit (ret);
 }
 
 // common functions used by commands
