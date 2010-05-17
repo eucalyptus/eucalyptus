@@ -99,7 +99,7 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
 
   private boolean checkAllKeys( ) {
     for ( Component c : Component.values( ) ) {
-      if ( c.isEnabled( ) && !Component.any.equals( c ) ) {
+      if ( !Component.any.equals( c ) && c.isEnabled( ) ) {
         try {
           if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.name( ) ) ) {
             return false;
