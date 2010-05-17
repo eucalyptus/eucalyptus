@@ -413,6 +413,9 @@ button {
 	text-align: left;
 	vertical-align: top;
 }
+.euca-UserGroupPropertyPanel-data-altbg {
+	background: #FFFFCC;
+}
 
 .euca-UserGroupPropertyPanel-data-value {
 	font-weight: 300;

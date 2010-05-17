@@ -37,7 +37,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 	private static final String ACTION_BAR_STYLE_NAME = "euca-UserGroupPropertyPanel-action";
 	private static final String DATA_STYLE_NAME = "euca-UserGroupPropertyPanel-data";
 	private static final String DATA_NAME_STYLE_NAME = "euca-UserGroupPropertyPanel-data-name";
-	private static final String DATA_REQUIRED_STYLE_NAME = "euca-UserGroupPropertyPanel-data-required";
+	private static final String DATA_ALT_BG_STYLE_NAME = "euca-UserGroupPropertyPanel-data-altbg";
 	private static final String DATA_VALUE_STYLE_NAME = "euca-UserGroupPropertyPanel-data-value";
 	private static final String DATA_TEXT_STYLE_NAME = "euca-UserGroupPropertyPanel-data-text";
 	private static final String DATA_LIST_STYLE_NAME = "euca-UserGroupPropertyPanel-data-list";
@@ -154,15 +154,22 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.subtitle.setHTML(sub);
 	}
 
+	private void setDataRowAlternatingBackground( CellFormatter formatter, int row, int col) {
+	  if ( row % 2 == 1 ) {
+	    formatter.addStyleName( row, col, DATA_ALT_BG_STYLE_NAME );
+	  }
+	}
 	private void addDataRow(Grid grid, int row, String name, String value) {
 		CellFormatter cellFormatter = grid.getCellFormatter();
 		if (name != null) {
 			grid.setText(row, 0, name);
 			cellFormatter.addStyleName(row, 0, DATA_NAME_STYLE_NAME);
+			setDataRowAlternatingBackground( cellFormatter, row, 0 );
 		}
 		if (value != null) {
 			grid.setText(row, 1, value);
 			cellFormatter.addStyleName(row, 1, DATA_VALUE_STYLE_NAME);
+	    setDataRowAlternatingBackground( cellFormatter, row, 1 );
 		}
 	}
 
