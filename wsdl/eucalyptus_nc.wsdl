@@ -263,10 +263,10 @@
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
 	    <xs:element name="imageId" type="xs:string"/>
-	    <xs:element name="kernelId" type="xs:string"/>
+	    <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
 	    <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
 	    <xs:element name="imageURL" type="xs:string"/>
-	    <xs:element name="kernelURL" type="xs:string"/>
+	    <xs:element minOccurs="0" name="kernelURL" type="xs:string"/>
 	    <xs:element minOccurs="0" name="ramdiskURL" type="xs:string"/>
 	    <xs:element name="reservationId" type="xs:string"/>
 	    <xs:element name="instanceId" type="xs:string"/>
@@ -303,7 +303,7 @@
 	    <xs:element minOccurs="1" name="reservationId" type="xs:string"/>
 	    <xs:element minOccurs="1" name="instanceId" type="xs:string"/>
 	    <xs:element minOccurs="1" name="imageId" type="xs:string"/>
-	    <xs:element minOccurs="1" name="kernelId" type="xs:string"/>
+	    <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
 	    <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
 	    <xs:element minOccurs="1" name="userId" type="xs:string"/> <!-- == owner ID in CC -->
 	    <xs:element minOccurs="1" name="keyName" type="xs:string"/>
