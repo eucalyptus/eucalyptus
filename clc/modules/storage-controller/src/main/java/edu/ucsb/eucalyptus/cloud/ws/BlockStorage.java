@@ -860,7 +860,6 @@ public class BlockStorage {
 				}
 			} catch (EucalyptusCloudException e) {
 				db.rollback();
-				LOG.error(e);	
 			}
 		}
 	}
