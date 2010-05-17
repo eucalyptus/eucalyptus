@@ -97,7 +97,7 @@ import edu.emory.mathcs.backport.java.util.Collections;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class GroupEntity extends AbstractPersistent implements Group {
   @Transient
-  private static Logger LOG = Logger.getLogger( GroupEntity.class );
+  private static Logger   LOG      = Logger.getLogger( GroupEntity.class );
   @Column( name = "auth_group_name", unique = true )
   @Ldap( names = { LdapConstants.CN } )
   String                  name;
@@ -105,7 +105,7 @@ public class GroupEntity extends AbstractPersistent implements Group {
   @ManyToMany( cascade = CascadeType.PERSIST )
   @JoinTable( name = "auth_group_has_userList", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<UserEntity>        userList          = new ArrayList<UserEntity>( );
+  List<UserEntity>        userList = new ArrayList<UserEntity>( );
   
   @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "auth_group_has_authorization", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_authorization_id" ) )
@@ -113,10 +113,19 @@ public class GroupEntity extends AbstractPersistent implements Group {
   @Ldap( names = { LdapConstants.PERMISSION }, converter = EucaLdapMapping.PERMISSION )
   List<BaseAuthorization> authList = new ArrayList<BaseAuthorization>( );
   
+  @Transient
+  @Ldap( names = { LdapConstants.EUCA_GROUP_TIMESTAMP } )
+  String                  timestamp;
+  
   public GroupEntity( ) {}
   
   public GroupEntity( final String name ) {
     this.name = name;
+  }
+  
+  public GroupEntity( final String name, final String timestamp ) {
+    this.name = name;
+    this.timestamp = timestamp;
   }
   
   public String getName( ) {
@@ -130,17 +139,25 @@ public class GroupEntity extends AbstractPersistent implements Group {
   public List<BaseAuthorization> getAuthList( ) {
     return this.authList;
   }
-
+  
   public void setAuthList( List<BaseAuthorization> authorizations ) {
     this.authList = authorizations;
   }
-
+  
   public List<UserEntity> getUserList( ) {
     return userList;
   }
   
   public void setUserList( final List<UserEntity> userList ) {
     this.userList = userList;
+  }
+  
+  public String getTimestamp( ) {
+    return timestamp;
+  }
+  
+  public void setTimestamp( String timestamp ) {
+    this.timestamp = timestamp;
   }
   
   @Override
@@ -162,80 +179,80 @@ public class GroupEntity extends AbstractPersistent implements Group {
   
   @Override
   public boolean addAuthorization( Authorization auth ) {
-    if( auth instanceof BaseAuthorization ) {
-      return this.authList.add( (BaseAuthorization) auth );
+    if ( auth instanceof BaseAuthorization ) {
+      return this.authList.add( ( BaseAuthorization ) auth );
     } else {
       throw new RuntimeException( "EID: Authorizations must extend BaseAuthorization." );
     }
   }
-
+  
   @Override
   public boolean removeAuthorization( Authorization auth ) {
-    if( auth instanceof BaseAuthorization ) {
-      return this.authList.remove( (BaseAuthorization) auth );
+    if ( auth instanceof BaseAuthorization ) {
+      return this.authList.remove( ( BaseAuthorization ) auth );
     } else {
       throw new RuntimeException( "EID: Authorizations must extend BaseAuthorization." );
     }
   }
-
+  
   @Override
   public boolean addMember( Principal user ) {
-    if( user instanceof UserEntity ) {
-      return this.userList.add( (UserEntity) user );
+    if ( user instanceof UserEntity ) {
+      return this.userList.add( ( UserEntity ) user );
     } else {
       LOG.debug( "EID: GroupEntity only supports users of type UserEntity" );
       return false;
     }
   }
-
+  
   @Override
   public boolean isMember( Principal member ) {
-    if( member instanceof UserEntity ) {
-      return this.userList.contains( (UserEntity) member );
+    if ( member instanceof UserEntity ) {
+      return this.userList.contains( ( UserEntity ) member );
     } else {
       LOG.debug( "EID: GroupEntity only supports users of type UserEntity" );
       return false;
     }
   }
-
+  
   @Override
   public Enumeration<? extends Principal> members( ) {
     return Iterators.asEnumeration( this.userList.iterator( ) );
   }
-
+  
   @Override
   public boolean removeMember( Principal user ) {
-    if( user instanceof UserEntity ) {
-      return this.userList.remove( (UserEntity) user );
+    if ( user instanceof UserEntity ) {
+      return this.userList.remove( ( UserEntity ) user );
     } else {
       LOG.debug( "EID: GroupEntity only supports users of type UserEntity" );
       return false;
     }
   }
-
+  
   @Override
   public ImmutableList<Authorization> getAuthorizations( ) {
-    return ImmutableList.copyOf( (List)this.authList );
+    return ImmutableList.copyOf( ( List ) this.authList );
   }
-
+  
   @Override
   public ImmutableList<User> getMembers( ) {
-    return ImmutableList.copyOf( (List)this.userList );
+    return ImmutableList.copyOf( ( List ) this.userList );
   }
   
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
-    sb.append( "GroupEntity [ ");
-    sb.append( "name = ").append( name == null ? "null" : name ).append( ", " );
-    sb.append( "userList = ");
+    sb.append( "GroupEntity [ " );
+    sb.append( "name = " ).append( name == null ? "null" : name ).append( ", " );
+    sb.append( "userList = " );
     for ( UserEntity u : userList ) {
       sb.append( u.getName( ) ).append( ", " );
     }
-    sb.append( "authList = ");
+    sb.append( "authList = " );
     for ( BaseAuthorization auth : authList ) {
       sb.append( auth.getValue( ) ).append( ", " );
     }
-    sb.append( "]");
+    sb.append( "]" );
     return sb.toString( );
   }
 }

@@ -2,6 +2,7 @@ package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.GroupProvider;
@@ -43,7 +44,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
     } catch ( LdapException e ) {
       LOG.error( e, e );
     }
-    User proxy = new LdapWrappedUser( newUser, newUserInfo, null);
+    User proxy = new LdapWrappedUser( newUser, newUserInfo );
     Groups.DEFAULT.addMember( proxy );
     return proxy;
   }
@@ -55,7 +56,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
       searchUser.setEnabled( true );
       searchUser.setX509Certificate( cert );
       searchUser.revokeX509Certificate( );
-      List<User> users = EucaLdapHelper.getUsers( searchUser, null, null );
+      List<User> users = EucaLdapHelper.getUsers( searchUser, null );
       if ( users.size( ) != 1 ) {
         throw new NoSuchCertificateException( ( users.size( ) == 0 ) ? "No user with the specified certificate." : "Multiple users with the same certificate." );
       }
@@ -98,7 +99,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
     try {
       UserEntity user = new UserEntity( );
       user.setEnabled( true );
-      return EucaLdapHelper.getUsers( user, null, null );
+      return EucaLdapHelper.getUsers( user, null );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -113,7 +114,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
       UserEntity searchUser = new UserEntity( );
       searchUser.setEnabled( true );
       searchUser.setX509Certificate( cert );
-      List<User> users = EucaLdapHelper.getUsers( searchUser, null, null );
+      List<User> users = EucaLdapHelper.getUsers( searchUser, null );
       if ( users.size( ) != 1 ) {
         throw new NoSuchUserException( ( users.size( ) == 0 ) ? "No user with the specified certificate." : "Multiple users with the same certificate." );
       }
@@ -132,7 +133,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
     try {
       UserEntity searchUser = new UserEntity( );
       searchUser.setQueryId( queryId );
-      return EucaLdapHelper.getUsers( searchUser, null, null ).get( 0 );
+      return EucaLdapHelper.getUsers( searchUser, null ).get( 0 );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchUserException( e );
@@ -147,7 +148,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
     try {
       UserEntity search = new UserEntity( );
       search.setName( userName );
-      return EucaLdapHelper.getUsers( search, null, null ).get( 0 );
+      return EucaLdapHelper.getUsers( search, null ).get( 0 );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchUserException( e );
@@ -177,7 +178,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
   
   @Override
   public Group addGroup( String groupName ) throws GroupExistsException {
-    GroupEntity newGroup = new GroupEntity( groupName );
+    GroupEntity newGroup = new GroupEntity( groupName, Long.toString( Calendar.getInstance( ).getTimeInMillis( ) ) );
     try {     
       EucaLdapHelper.addGroup( newGroup );
     } catch ( EntryExistsException e ) {
@@ -238,7 +239,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
     try {
       UserEntity search = new UserEntity( );
       search.setName( user.getName( ) );
-      LdapWrappedUser foundUser = ( LdapWrappedUser ) EucaLdapHelper.getUsers( search, null, null ).get( 0 );
+      LdapWrappedUser foundUser = ( LdapWrappedUser ) EucaLdapHelper.getUsers( search, null ).get( 0 );
       return EucaLdapHelper.getGroups( EucaLdapHelper.getSearchGroupFilter( foundUser.getEucaGroupIds( ) ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
@@ -267,7 +268,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
   @Override
   public UserInfo getUserInfo( UserInfo info ) throws NoSuchUserException {
     try {
-      return ( ( WrappedUser ) EucaLdapHelper.getUsers( null, info, null ).get( 0 ) ).getUserInfo( );
+      return ( ( WrappedUser ) EucaLdapHelper.getUsers( null, info ).get( 0 ) ).getUserInfo( );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchUserException( e );

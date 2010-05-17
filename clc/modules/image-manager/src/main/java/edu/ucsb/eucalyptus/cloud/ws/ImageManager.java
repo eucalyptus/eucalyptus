@@ -366,6 +366,7 @@ public class ImageManager {
       db.add( imageInfo );
       UserInfo user = UserInfoStore.getUserInfo( new UserInfo( request.getUserId( ) ) );
 //      UserGroupEntity group = db.recast( UserGroupEntity.class ).getUnique( new UserGroupEntity( "all" ) );
+      // TODO (wenye): database schema needs to change to make this work when UserInfo is not in database.
       imageInfo.getPermissions( ).add( user );
 // TODO: RELEASE: restore
 //      imageInfo.getUserGroups( ).add( group );

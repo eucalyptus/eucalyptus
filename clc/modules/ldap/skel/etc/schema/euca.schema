@@ -82,16 +82,23 @@ attributetype ( 1.3.6.1.4.1.35803.2.3.12
 	EQUALITY octetStringMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.40 )
 
-# Format "className value"
+# Format "className:value"
 attributetype ( 1.3.6.1.4.1.35803.2.3.13
 	NAME 'permission'
 	DESC 'Eucalyptus Permission'
 	EQUALITY octetStringMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{128} )
 
+# Format "name:timestamp"
 attributetype ( 1.3.6.1.4.1.35803.2.3.14
 	NAME 'eucaGroupId'
 	DESC 'Eucalyptus Group ID'
+	EQUALITY caseIgnoreMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+	
+attributetype ( 1.3.6.1.4.1.35803.2.3.15
+	NAME 'eucaGroupTimestamp'
+	DESC 'Eucalyptus Group Creation Timestamp'
 	EQUALITY caseIgnoreMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
 
@@ -104,15 +111,15 @@ objectClass ( 1.3.6.1.4.1.35803.2.4.2
 		mail $ userPassword $ telephoneNumber $
 		employeeType $ description $ departmentNumber $
 		queryId $ secretKey $ token $ isAdministrator $ enabled $
-    eucaCertificate $ eucaRevokedCertificate $
+		eucaCertificate $ eucaRevokedCertificate $
 		approved $ confirmed $ passwordExpires $ confirmationCode $
-    eucaGroupId ) )
+		eucaGroupId ) )
 
 objectClass ( 1.3.6.1.4.1.35803.2.4.3
 	NAME 'eucaGroup'
 	DESC 'Eucalyptus Group'
 	SUP posixGroup STRUCTURAL
-	MUST ( cn $ gidNumber )
+	MUST ( cn $ gidNumber $ eucaGroupTimestamp )
 	MAY ( memberUid $ permission ) )
 
 objectClass ( 1.3.6.1.4.1.35803.2.4.1

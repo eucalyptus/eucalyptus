@@ -19,18 +19,10 @@ public class LdapWrappedUser implements User, WrappedUser {
   
   private UserEntity    user;
   private UserInfo      userInfo;
-  private List<String>  eucaGroupIds = Lists.newArrayList( );
   
-  public LdapWrappedUser( UserEntity user, UserInfo userInfo, LdapUserGroups userGroups ) {
+  public LdapWrappedUser( UserEntity user, UserInfo userInfo ) {
     this.user = user;
     this.userInfo = userInfo;
-    if ( userGroups != null ) {
-      this.eucaGroupIds.addAll( userGroups.getEucaGroupIds( ) );
-    }
-  }
-  
-  public List<String> getEucaGroupIds( ) {
-    return this.eucaGroupIds;
   }
   
   @Override
@@ -222,7 +214,7 @@ public class LdapWrappedUser implements User, WrappedUser {
   @Override
   public List<Group> getUserGroups( ) {
     try {
-      return EucaLdapHelper.getGroups( EucaLdapHelper.getSearchGroupFilter( this.eucaGroupIds ) );
+      return EucaLdapHelper.getGroups( EucaLdapHelper.getSearchGroupFilter( this.user.getEucaGroupIds( ) ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -249,15 +241,15 @@ public class LdapWrappedUser implements User, WrappedUser {
     return this.user.isEnabled( );
   }
   
+  public List<String> getEucaGroupIds( ) {
+    return this.user.getEucaGroupIds( );
+  }
+  
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
     sb.append( "LdapWrappedUser [ " );
     sb.append( "user = " ).append( user ).append( ", " );
     sb.append(" userInfo = ").append( userInfo ).append( ", " );
-    sb.append(" eucaGroupIds = ");
-    for ( String id : eucaGroupIds ) {
-      sb.append( id ).append( " " );
-    }
     sb.append( "]" );
     return sb.toString( );
   }
