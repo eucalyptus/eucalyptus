@@ -97,7 +97,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         
         X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
         String hexSig = Hmacs.generateSystemToken( "vtunpass".getBytes( ) );
-        PEMFiles.write( SubDirectory.KEYS.toString( ) + File.separator + "cloud-cert.pem", systemX509 );
+        PEMFiles.write( directory + File.separator + "cloud-cert.pem", systemX509 );
         out = new FileWriter( directory + File.separator + "vtunpass" );
         out.write( hexSig );
         out.flush( );
