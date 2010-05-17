@@ -73,7 +73,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.status.addStyleName(CONTENT_STATUS_STYLE_NAME);
 		this.statusTimer = new Timer() {
 			public void run() {
-				remove(status);
+				content.remove(status);
 			}
 		};
 
@@ -95,17 +95,16 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 	}
 
 	public void showStatus(String text, boolean isError) {
+	  this.content.remove( status );
 		if (isError) {
 			this.status.addStyleName(CONTENT_STATUS_ERROR_STYLE_NAME);
 		} else {
 			this.status.removeStyleName(CONTENT_STATUS_ERROR_STYLE_NAME);
 		}
 		this.status.setText(text);
-		if (!this.getChildren().contains(status)) {
-			this.insert(status, 1);
-			// Tightening the header space
-			this.setCellHeight(status, "20px");
-		}
+		this.content.insert( status, 0 );
+		// Tightening the header space
+		this.content.setCellHeight(status, "30px");
 		this.statusTimer.cancel();
 		this.statusTimer.schedule(STATUS_DELAY_IN_MILLIS);
 	}
