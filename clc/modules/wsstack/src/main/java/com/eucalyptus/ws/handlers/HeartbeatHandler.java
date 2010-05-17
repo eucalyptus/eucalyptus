@@ -175,7 +175,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
         Components.lookup( Components.delegate.vmwarebroker ).markDisabled( );
       }
       System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
-      System.setProperty( "euca.db.url", Components.lookup( Components.delegate.db ).getBuilder( ).list( ).get( 0 ).getUri( ) );
+      //TODO: FIXME: this is a temporary fix
+      System.setProperty( "euca.db.url", String.format( "jdbc:mysql://%s:%d/eucalyptus", addr.getHostName( ), 8777 ) );
       try {
         GroovyUtil.evaluateScript( "after_database.groovy" );
       } catch ( ScriptExecutionFailedException e1 ) {
