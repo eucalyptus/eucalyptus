@@ -93,6 +93,7 @@ import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -145,7 +146,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   
   private void prepareComponent( com.eucalyptus.bootstrap.Component component, InetSocketAddress addr ) throws ServiceRegistrationException {
     Component c = Components.lookup( component );
-    c.buildService( c.getUri( addr.getHostName( ), c.getConfiguration( ).getDefaultPort( ) ) );
+    c.buildService( c.getUri( addr.getAddress( ).getHostAddress( ), c.getConfiguration( ).getDefaultPort( ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -162,7 +163,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       for ( HeartbeatComponentType component : msg.getComponents( ) ) {
         LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
-        Components.lookup( component.getName( ) ).buildService( );
+        Component comp = Components.lookup( component.getComponent( ) );
+        comp.buildService( comp.getUri( addr.getAddress( ).getHostAddress( ), comp.getConfiguration( ).getDefaultPort( ) ) );
         initializedComponents.add( component.getComponent( ) );
       }
       if ( !initializedComponents.contains( Components.delegate.storage.name( ) ) ) {
@@ -174,8 +176,14 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       if ( !initializedComponents.contains( Components.delegate.vmwarebroker.name( ) ) ) {
         Components.lookup( Components.delegate.vmwarebroker ).markDisabled( );
       }
+      for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+        stage.updateBootstrapDependencies( );
+      }
       System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
-      System.setProperty( "euca.db.url", Components.lookup( Components.delegate.db ).getBuilder( ).list( ).get( 0 ).getUri( ) );
+      //TODO: FIXME: this is a temporary fix
+      System.setProperty( "euca.db.url", String.format( "jdbc:mysql://%s:%d/eucalyptus", addr.getAddress( ).getHostAddress( ), 8777 ) );
+      System.setProperty( "euca.db.host", addr.getAddress( ).getHostAddress( ) );
+      System.setProperty( "euca.db.port", "8777" );
       try {
         GroovyUtil.evaluateScript( "after_database.groovy" );
       } catch ( ScriptExecutionFailedException e1 ) {
@@ -207,7 +215,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       LOG.error( e, e );
       System.exit( 123 );
     } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
+      LOG.error( e, e );
       System.exit( 123 );
     }
   }

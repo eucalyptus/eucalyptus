@@ -145,7 +145,11 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   @Ldap( names = [ LdapConstants.EUCA_CERTIFICATE, LdapConstants.EUCA_REVOKED_CERTIFICATE ], converter = EucaLdapMapping.CERTIFICATE )
-  List<X509Cert> certificates = []
+  List<X509Cert> certificates = [];
+  
+  @Transient
+  @Ldap( names = [ LdapConstants.EUCA_GROUP_ID ], converter = EucaLdapMapping.MEMBERSHIP )
+  List<String> eucaGroupIds = [];
   
   public UserEntity(){
   }
@@ -189,6 +193,10 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
       }
     }
     return null;
+  }
+  
+  public void addEucaGroupId( String name, String timestamp ) {
+    this.eucaGroupIds.add( name + ":" + timestamp );
   }
   
   public boolean checkToken( String token ) {
@@ -239,6 +247,10 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
     sb.append( "certificates = ");
     for ( X509Cert certificate : getCertificates( ) ) {
       sb.append( certificate.toString( ) ).append( ", " );
+    }
+    sb.append( "eucaGroupIds = " );
+    for ( String id : eucaGroupIds ) {
+      sb.append( id ).append( ", ");
     }
     sb.append( "]");
   }

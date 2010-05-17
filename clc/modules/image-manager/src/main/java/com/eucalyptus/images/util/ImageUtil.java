@@ -259,10 +259,9 @@ public class ImageUtil {
   public static VmImageInfo getVmImageInfo( final String walrusUrl, final Image diskInfo, final Image kernelInfo, final Image ramdiskInfo, final ArrayList<String> productCodes ) throws EucalyptusCloudException {
     String diskUrl = getImageUrl( walrusUrl, diskInfo );
     String kernelUrl = kernelInfo != null ? getImageUrl( walrusUrl, kernelInfo ) : null;
-    String ramdiskUrl = null;
-    if ( ramdiskInfo != null ) ramdiskUrl = getImageUrl( walrusUrl, ramdiskInfo );
+    String ramdiskUrl = ramdiskInfo != null ? getImageUrl( walrusUrl, ramdiskInfo ) : null;
     //:: create the response assets now since we might not have a ramdisk anyway :://
-    VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo.getImageId( ),
+    VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo == null ? null : kernelInfo.getImageId( ),
       ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl, ramdiskInfo == null ? null
                                                                                                      : ramdiskUrl,
       productCodes, diskInfo.getPlatform( ) );
@@ -275,11 +274,14 @@ public class ImageUtil {
       db.commit( );
       return imgInfo;
     } catch ( EucalyptusCloudException e ) {
+      LOG.error( e, e );
       db.commit( );
       throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
     } catch ( Throwable t ) {
+      LOG.error( t, t );
       db.commit( );
     }
+    LOG.error( "Failed to find registered image with id " + searchId );
     throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
   }
   public static String getImageInfobyId( String userSuppliedId, String imageDefaultId, String systemDefaultId ) {

@@ -82,7 +82,7 @@ import javax.persistence.*;
 public class ISCSIMetaInfo extends LVMMetaInfo {
 	@ConfigurableField( description = "Prefix for ISCSI device", displayName = "ISCSI Prefix", type = ConfigurableFieldType.PRIVATE)
 	@Column(name = "store_prefix")
-	private String store_prefix;
+	private String storePrefix;
 	@Column(name = "store_number")
 	private Integer storeNumber;
 	@ConfigurableField( description = "Next Target ID for ISCSI device", displayName = "Next Target ID", type = ConfigurableFieldType.PRIVATE)
@@ -98,11 +98,11 @@ public class ISCSIMetaInfo extends LVMMetaInfo {
 	}
 
 	public String getStorePrefix() {
-		return store_prefix;
+		return storePrefix;
 	}
 
 	public void setStorePrefix(String store_prefix) {
-		this.store_prefix = store_prefix;
+		this.storePrefix = store_prefix;
 	}
 
 	public Integer getStoreNumber() {

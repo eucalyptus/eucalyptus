@@ -55,11 +55,12 @@ public interface LdapConstants {
   public static final String CONFIRMATION_CODE = "confirmationCode";
   public static final String PERMISSION = "permission";
   public static final String EUCA_GROUP_ID = "eucaGroupId";
+  public static final String EUCA_GROUP_TIMESTAMP = "eucaGroupTimestamp";
   public static final String TEST_ATTR = "testAttr";
   
   // schema enforcement
   public static final String EUCA_USER_MUSTS[] = { UID, CN, SN };
-  public static final String EUCA_GROUP_MUSTS[] = { CN, GID_NUMBER };
+  public static final String EUCA_GROUP_MUSTS[] = { CN, GID_NUMBER, EUCA_GROUP_TIMESTAMP };
   
   // object classes
   public static final String EUCA_USER_OBJECT_CLASSES[] = { TOP, PERSON, ORGANIZATIONAL_PERSON, INET_ORG_PERSON, EUCA_USER };

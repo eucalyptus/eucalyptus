@@ -37,7 +37,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 	private static final String ACTION_BAR_STYLE_NAME = "euca-UserGroupPropertyPanel-action";
 	private static final String DATA_STYLE_NAME = "euca-UserGroupPropertyPanel-data";
 	private static final String DATA_NAME_STYLE_NAME = "euca-UserGroupPropertyPanel-data-name";
-	private static final String DATA_REQUIRED_STYLE_NAME = "euca-UserGroupPropertyPanel-data-required";
+	private static final String DATA_ALT_BG_STYLE_NAME = "euca-UserGroupPropertyPanel-data-altbg";
 	private static final String DATA_VALUE_STYLE_NAME = "euca-UserGroupPropertyPanel-data-value";
 	private static final String DATA_TEXT_STYLE_NAME = "euca-UserGroupPropertyPanel-data-text";
 	private static final String DATA_LIST_STYLE_NAME = "euca-UserGroupPropertyPanel-data-list";
@@ -73,7 +73,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.status.addStyleName(CONTENT_STATUS_STYLE_NAME);
 		this.statusTimer = new Timer() {
 			public void run() {
-				remove(status);
+				content.remove(status);
 			}
 		};
 
@@ -95,17 +95,16 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 	}
 
 	public void showStatus(String text, boolean isError) {
+	  this.content.remove( status );
 		if (isError) {
 			this.status.addStyleName(CONTENT_STATUS_ERROR_STYLE_NAME);
 		} else {
 			this.status.removeStyleName(CONTENT_STATUS_ERROR_STYLE_NAME);
 		}
 		this.status.setText(text);
-		if (!this.getChildren().contains(status)) {
-			this.insert(status, 1);
-			// Tightening the header space
-			this.setCellHeight(status, "20px");
-		}
+		this.content.insert( status, 0 );
+		// Tightening the header space
+		this.content.setCellHeight(status, "30px");
 		this.statusTimer.cancel();
 		this.statusTimer.schedule(STATUS_DELAY_IN_MILLIS);
 	}
@@ -155,15 +154,22 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 		this.subtitle.setHTML(sub);
 	}
 
+	private void setDataRowAlternatingBackground( CellFormatter formatter, int row, int col) {
+	  if ( row % 2 == 1 ) {
+	    formatter.addStyleName( row, col, DATA_ALT_BG_STYLE_NAME );
+	  }
+	}
 	private void addDataRow(Grid grid, int row, String name, String value) {
 		CellFormatter cellFormatter = grid.getCellFormatter();
 		if (name != null) {
 			grid.setText(row, 0, name);
 			cellFormatter.addStyleName(row, 0, DATA_NAME_STYLE_NAME);
+			setDataRowAlternatingBackground( cellFormatter, row, 0 );
 		}
 		if (value != null) {
 			grid.setText(row, 1, value);
 			cellFormatter.addStyleName(row, 1, DATA_VALUE_STYLE_NAME);
+	    setDataRowAlternatingBackground( cellFormatter, row, 1 );
 		}
 	}
 
