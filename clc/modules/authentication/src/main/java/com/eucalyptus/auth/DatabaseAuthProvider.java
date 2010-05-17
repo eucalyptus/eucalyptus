@@ -150,7 +150,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, UserIn
   @Override
   public List<Group> lookupUserGroups( User user ) {
     List<Group> userGroups = Lists.newArrayList( );
-    EntityWrapper<GroupEntity> db = Groups.getEntityWrapper( );
+    EntityWrapper<GroupEntity> db = Authentication.getEntityWrapper( );
     try {
       UserEntity userInfo = db.recast( UserEntity.class ).getUnique( new UserEntity( user.getName( ) ) );
       for ( GroupEntity g : db.query( new GroupEntity( ) ) ) {
@@ -168,7 +168,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, UserIn
   
   @Override
   public Group lookupGroup( String groupName ) throws NoSuchGroupException {
-    EntityWrapper<GroupEntity> db = Groups.getEntityWrapper( );
+    EntityWrapper<GroupEntity> db = Authentication.getEntityWrapper( );
     try {
       GroupEntity group = db.getUnique( new GroupEntity( groupName ) );
       db.commit( );
@@ -303,7 +303,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, UserIn
   
   @Override
   public Group addGroup( String groupName ) throws GroupExistsException {
-    EntityWrapper<GroupEntity> db = Groups.getEntityWrapper( );
+    EntityWrapper<GroupEntity> db = Authentication.getEntityWrapper( );
     GroupEntity newGroup = new GroupEntity( groupName );
     try {
       db.add( newGroup );
@@ -329,7 +329,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, UserIn
   @Override
   public void deleteGroup( String groupName ) throws NoSuchGroupException {
     Groups.checkNotRestricted( groupName );
-    EntityWrapper<GroupEntity> db = Groups.getEntityWrapper( );
+    EntityWrapper<GroupEntity> db = Authentication.getEntityWrapper( );
     GroupEntity delGroup = new GroupEntity( groupName );
     try {
       GroupEntity g = db.getUnique( delGroup );

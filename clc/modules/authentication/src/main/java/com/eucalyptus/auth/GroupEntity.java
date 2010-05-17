@@ -81,6 +81,7 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.EucaLdapMapping;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.BaseAuthorization;
 import com.eucalyptus.auth.principal.Group;
@@ -98,15 +99,19 @@ public class GroupEntity extends AbstractPersistent implements Group {
   @Transient
   private static Logger LOG = Logger.getLogger( GroupEntity.class );
   @Column( name = "auth_group_name", unique = true )
-  private String                  name;
+  @Ldap( names = { LdapConstants.CN } )
+  String                  name;
+  
   @ManyToMany( cascade = CascadeType.PERSIST )
   @JoinTable( name = "auth_group_has_userList", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<UserEntity>        userList          = new ArrayList<UserEntity>( );
+  List<UserEntity>        userList          = new ArrayList<UserEntity>( );
+  
   @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "auth_group_has_authorization", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_authorization_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<BaseAuthorization> authList = new ArrayList<BaseAuthorization>( );
+  @Ldap( names = { LdapConstants.PERMISSION }, converter = EucaLdapMapping.PERMISSION )
+  List<BaseAuthorization> authList = new ArrayList<BaseAuthorization>( );
   
   public GroupEntity( ) {}
   
@@ -218,4 +223,19 @@ public class GroupEntity extends AbstractPersistent implements Group {
     return ImmutableList.copyOf( (List)this.userList );
   }
   
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "GroupEntity [ ");
+    sb.append( "name = ").append( name == null ? "null" : name ).append( ", " );
+    sb.append( "userList = ");
+    for ( UserEntity u : userList ) {
+      sb.append( u.getName( ) ).append( ", " );
+    }
+    sb.append( "authList = ");
+    for ( BaseAuthorization auth : authList ) {
+      sb.append( auth.getValue( ) ).append( ", " );
+    }
+    sb.append( "]");
+    return sb.toString( );
+  }
 }

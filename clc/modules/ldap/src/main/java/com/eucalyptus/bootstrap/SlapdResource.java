@@ -77,7 +77,8 @@ public class SlapdResource {
   //#  chown ldap:ldap /path/to/ldap/log/file
   private static String initialConfig = "require authc\n" + "include    %1$s/etc/schema/core.schema\n" + "include   %1$s/etc/schema/cosine.schema\n"
                                         + "include   %1$s/etc/schema/inetorgperson.schema\n" + "include   %1$s/etc/schema/nis.schema\n"
-                                        + "include   %1$s/etc/schema/misc.schema\n" + "pidfile   %1$s/var/run/slapd.pid\n"
+                                        + "include   %1$s/etc/schema/misc.schema\n" + "include   %1$s/etc/schema/euca.schema\n"
+                                        + "pidfile   %1$s/var/run/slapd.pid\n"
                                         + "argsfile  %1$s/var/run/slapd.args\n" + "database  bdb\n" + "suffix    \"dc=eucalyptus,dc=com\"\n"
                                         + "rootdn    \"cn=EucalyptusManager,dc=eucalyptus,dc=com\"\n" + "rootpw    %2$s\n"
                                         + "directory %1$s/var/openldap-data\n" + "index objectClass eq\n";

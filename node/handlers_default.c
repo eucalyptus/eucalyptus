@@ -189,11 +189,11 @@ doTerminateInstance(	struct nc_state_t *nc,
 
 	// change the state and let the monitoring_thread clean up state
 	if (instance->state!=TEARDOWN) { // do not leave TEARDOWN
-		if (instance->state==BOOTING || instance->state==STAGING) {
-			change_state (instance, CANCELED);
-		} else {
-			change_state (instance, SHUTOFF);
-		}
+	  if (instance->state==STAGING) {
+	    change_state (instance, CANCELED);
+	  } else {
+	    change_state (instance, SHUTOFF);
+	  }
 	}
     sem_v (inst_sem);
 

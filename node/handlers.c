@@ -577,18 +577,19 @@ void *startup_thread (void * arg)
     virDomainFree(dom);
     sem_v(hyp_sem);
 
+    sem_p (inst_sem);
     // check one more time for cancellation
-	if (instance->state==TEARDOWN) { // timed out in BOOTING
-        return NULL;
-	}
-    if (instance->state==CANCELED) {
-        logprintfl (EUCAFATAL, "startup of instance %s was cancelled\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
+    if (instance->state==TEARDOWN) { 
+      // timed out in BOOTING
+    } else if (instance->state==CANCELED || instance->state==SHUTOFF) {
+      logprintfl (EUCAFATAL, "startup of instance %s was cancelled\n", instance->instanceId);
+      change_state (instance, SHUTOFF);
     } else {
-        logprintfl (EUCAINFO, "booting VM instance %s\n", instance->instanceId);
-		instance->bootTime = time (NULL);
-        change_state (instance, BOOTING);
+      logprintfl (EUCAINFO, "booting VM instance %s\n", instance->instanceId);
+      instance->bootTime = time (NULL);
+      change_state (instance, BOOTING);
     }
+    sem_v (inst_sem);
     return NULL;
 }
 

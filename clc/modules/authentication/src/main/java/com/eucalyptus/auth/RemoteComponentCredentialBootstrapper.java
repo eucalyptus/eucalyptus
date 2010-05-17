@@ -75,7 +75,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 
 @Provides(Component.bootstrap)
-@RunDuring(Bootstrap.Stage.RemoteServicesInit)
+@RunDuring(Bootstrap.Stage.SystemCredentialsInit)
 @DependsRemote(Component.eucalyptus)
 public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteComponentCredentialBootstrapper.class );
@@ -99,7 +99,7 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
 
   private boolean checkAllKeys( ) {
     for ( Component c : Component.values( ) ) {
-      if ( c.isEnabled( ) ) {
+      if ( !Component.any.equals( c ) && c.isEnabled( ) ) {
         try {
           if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.name( ) ) ) {
             return false;

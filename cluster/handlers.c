@@ -2661,6 +2661,7 @@ int update_config(void) {
       logprintfl(EUCAERROR, "update_config(): cannot read list of nodes, check your config file\n");
       sem_mywait(RESCACHE);
       resourceCache->numResources = 0;
+      config->schedState = 0;
       bzero(resourceCache->resources, sizeof(ccResource) * MAXNODES);
       sem_mypost(RESCACHE);
       ret = 1;
@@ -2671,6 +2672,7 @@ int update_config(void) {
 	numHosts = MAXNODES;
       }
       resourceCache->numResources = numHosts;
+      config->schedState = 0;
       memcpy(resourceCache->resources, res, sizeof(ccResource) * numHosts);
       sem_mypost(RESCACHE);
     }
