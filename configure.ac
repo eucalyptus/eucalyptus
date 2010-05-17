@@ -106,9 +106,9 @@ if test -n "${LIBVIRT_HOME}" ; then
 	fi
 fi
 if test -n "${VDDK_HOME}" ; then
-	if test -d "${VDDK_HOME}"/include ; then
-		INCLUDES="${INCLUDES} -I${VDDK_HOME}/include"
-		LIBS="-L${LIBVIRT_HOME}/lib64 ${LIBS}"
+	if test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
+		INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
+		LIBS="-L${VDDK_HOME}/lib ${LIBS}"
 	fi
 fi
 
