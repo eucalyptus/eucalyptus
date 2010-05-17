@@ -86,7 +86,6 @@ import com.eucalyptus.records.EventRecord;
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
   private static List<com.eucalyptus.bootstrap.Component> ignored = Lists.newArrayList( com.eucalyptus.bootstrap.Component.any, 
-                                                                                        /*com.eucalyptus.bootstrap.Component.vmwarebroker,*/
                                                                                         com.eucalyptus.bootstrap.Component.component ); 
   
   @Override
