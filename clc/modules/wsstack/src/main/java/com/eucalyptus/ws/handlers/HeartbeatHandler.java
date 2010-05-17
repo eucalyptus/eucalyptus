@@ -208,7 +208,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       LOG.error( e, e );
       System.exit( 123 );
     } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
+      LOG.error( e, e );
       System.exit( 123 );
     }
   }
