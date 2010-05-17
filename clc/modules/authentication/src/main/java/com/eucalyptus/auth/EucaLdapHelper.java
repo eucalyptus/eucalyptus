@@ -9,6 +9,7 @@ import com.eucalyptus.auth.ldap.LdapAttributes;
 import com.eucalyptus.auth.ldap.LdapConfiguration;
 import com.eucalyptus.auth.ldap.LdapContextManager;
 import com.eucalyptus.auth.ldap.LdapException;
+import com.eucalyptus.auth.ldap.LdapFilter;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.google.common.collect.Lists;
@@ -37,21 +38,27 @@ public class EucaLdapHelper {
    */
   private static final String[] USER_ENTITY_FIELD_ATTRIBUTES_CERTIFICATES = EucaLdapMapper.getFieldAttributeNames( UserEntity.class, "certificates" );
   private static final String   GROUP_ENTITY_FIELD_ATTRIBUTE_NAME         = EucaLdapMapper.getFieldAttributeNames( GroupEntity.class, "name" )[0];
+  private static final String   GROUP_ENTITY_FIELD_ATTRIBUTE_TIMESTAMP    = EucaLdapMapper.getFieldAttributeNames( GroupEntity.class, "timestamp" )[0];
   
   private static final String   ATTRIBUTE_DUMMY                           = "0";
   
-  public static String getSearchGroupFilter( List<String> groupIds ) {
-    StringBuilder sb = new StringBuilder( );
-    if ( groupIds != null ) {
-      sb.append( "(|" );
-      for ( String groupId : groupIds ) {
-        if ( groupId != null ) {
-          sb.append( "(" ).append( GROUP_ENTITY_FIELD_ATTRIBUTE_NAME ).append( "=" ).append( groupId ).append( ")" );
-        }
+  public static String getSearchGroupFilter( List<String> groupIds ) throws LdapException {
+    LdapFilter filter = new LdapFilter( );
+    filter.opBegin( LdapFilter.Op.OR );
+    for ( String id : groupIds ) {
+      int colon = id.indexOf( ':' );
+      if ( colon < 1 || colon > id.length( ) - 2 ) {
+        throw new LdapException( "Invalid eucaGroupId string: " + id );
       }
-      sb.append( ")" );
+      String name = id.substring( 0, colon );
+      String timestamp = id.substring( colon + 1 );
+      filter.opBegin( LdapFilter.Op.AND )
+                .operand( LdapFilter.Type.EQUAL, GROUP_ENTITY_FIELD_ATTRIBUTE_NAME, name )
+                .operand( LdapFilter.Type.EQUAL, GROUP_ENTITY_FIELD_ATTRIBUTE_TIMESTAMP, timestamp )
+            .opEnd( );
     }
-    return sb.toString( );
+    filter.opEnd( );
+    return filter.toString( );
   }
   
   /*
@@ -157,13 +164,12 @@ public class EucaLdapHelper {
   private static List<User> translateUserSearchResult( List<Attributes> results ) throws LdapException, EntryNotFoundException {
     List<User> users = Lists.newArrayList( );
     for ( Attributes attrs : results ) {
-      List<Object> entities = EucaLdapMapper.attributeToEntity( attrs, UserEntity.class, UserInfo.class, LdapUserGroups.class );
+      List<Object> entities = EucaLdapMapper.attributeToEntity( attrs, UserEntity.class, UserInfo.class );
       int size = entities.size( );
-      if ( size > 0 && size < 4 ) {
+      if ( size > 0 && size < 3 ) {
         UserEntity user = ( UserEntity ) entities.get( 0 );
         UserInfo info = ( size > 1 ) ? ( UserInfo ) entities.get( 1 ) : null;
-        LdapUserGroups groups = ( size > 2 ) ? ( LdapUserGroups ) entities.get( 2 ) : null;
-        LdapWrappedUser wrapped = new LdapWrappedUser( user, info, groups );
+        LdapWrappedUser wrapped = new LdapWrappedUser( user, info );
         users.add( wrapped );
       } else {
         LOG.debug( "Got invalid mapping result with " + size + " objects for " + attrs.toString( ) );
@@ -199,11 +205,11 @@ public class EucaLdapHelper {
    * @throws LdapException
    * @throws EntryNotFoundException
    */
-  public static List<User> getUsers( UserEntity user, UserInfo info, LdapUserGroups groups ) throws EntryNotFoundException, LdapException {
+  public static List<User> getUsers( UserEntity user, UserInfo info ) throws EntryNotFoundException, LdapException {
     LdapContextManager contextManager = LdapContextManager.getInstance( );
-    Attributes attrs = EucaLdapMapper.entityToAttribute( user, info, groups );
+    Attributes attrs = EucaLdapMapper.entityToAttribute( user, info );
     List<User> result = translateUserSearchResult( contextManager.search( LdapConfiguration.USER_BASE_DN, attrs, null ) );
-    Debugging.logWT( LOG, ( Object ) user, ( Object ) info, ( Object ) groups, ( Object ) Debugging.getListString( result ) );
+    Debugging.logWT( LOG, ( Object ) user, ( Object ) info, ( Object ) Debugging.getListString( result ) );
     return result;
   }
   
@@ -304,20 +310,6 @@ public class EucaLdapHelper {
     Debugging.logWT( LOG, ( Object ) user, ( Object ) attrs );
     LdapContextManager contextManager = LdapContextManager.getInstance( );
     contextManager.deleteEntryAttribute( dn, attrs );
-  }
-  
-  public static void addUserAttribute( String userName, LdapUserGroups groups ) throws LdapException, EntryNotFoundException {
-    Attributes attrs = EucaLdapMapper.entityToAttribute( groups );
-    Debugging.logWT( LOG, ( Object ) userName, ( Object ) groups, ( Object ) attrs );
-    LdapContextManager contextManager = LdapContextManager.getInstance( );
-    contextManager.addEntryAttribute( composeUserDn( userName ), attrs );
-  }
-  
-  public static void deleteUserAttribute( String userName, LdapUserGroups groups ) throws LdapException, EntryNotFoundException {
-    Attributes attrs = EucaLdapMapper.entityToAttribute( groups );
-    Debugging.logWT( LOG, ( Object ) userName, ( Object ) groups, ( Object ) attrs );
-    LdapContextManager contextManager = LdapContextManager.getInstance( );
-    contextManager.deleteEntryAttribute( composeUserDn( userName ), attrs );
   }
   
   /**

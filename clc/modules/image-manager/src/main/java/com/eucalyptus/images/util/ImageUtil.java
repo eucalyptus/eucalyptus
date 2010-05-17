@@ -275,11 +275,14 @@ public class ImageUtil {
       db.commit( );
       return imgInfo;
     } catch ( EucalyptusCloudException e ) {
+      LOG.error( e, e );
       db.commit( );
       throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
     } catch ( Throwable t ) {
+      LOG.error( t, t );
       db.commit( );
     }
+    LOG.error( "Failed to find registered image with id " + searchId );
     throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
   }
   public static String getImageInfobyId( String userSuppliedId, String imageDefaultId, String systemDefaultId ) {

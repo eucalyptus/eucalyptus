@@ -55,9 +55,10 @@ public class LdapWrappedGroup implements Group {
   @Override
   public ImmutableList<User> getMembers( ) {
     try {
-      LdapUserGroups groups = new LdapUserGroups( );
-      groups.addGroupId( this.group.getName( ) );
-      List<User> users = EucaLdapHelper.getUsers( null, null, groups );
+      GroupEntity entity = ( GroupEntity ) this.group;
+      UserEntity search = new UserEntity( );
+      search.addEucaGroupId( entity.getName( ), entity.getTimestamp( ) );
+      List<User> users = EucaLdapHelper.getUsers( search, null );
       return ImmutableList.copyOf( users );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
@@ -91,9 +92,10 @@ public class LdapWrappedGroup implements Group {
   @Override
   public boolean addMember( Principal principal ) {
     try {
-      LdapUserGroups search = new LdapUserGroups( );
-      search.addGroupId( this.group.getName( ) );
-      EucaLdapHelper.addUserAttribute( principal.getName( ), search );
+      GroupEntity entity = ( GroupEntity ) this.group;
+      UserEntity search = new UserEntity( principal.getName( ) );
+      search.addEucaGroupId( entity.getName( ), entity.getTimestamp( ) );
+      EucaLdapHelper.addUserAttribute( search );
       return true;
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
@@ -116,9 +118,10 @@ public class LdapWrappedGroup implements Group {
   @Override
   public Enumeration<? extends Principal> members( ) {
     try {
-      LdapUserGroups groups = new LdapUserGroups( );
-      groups.addGroupId( this.group.getName( ) );
-      List<User> users = EucaLdapHelper.getUsers( null, null, groups );
+      GroupEntity entity = ( GroupEntity ) this.group;
+      UserEntity search = new UserEntity( );
+      search.addEucaGroupId( entity.getName( ), entity.getTimestamp( ) );
+      List<User> users = EucaLdapHelper.getUsers( search, null );
       return Iterators.asEnumeration( users.iterator( ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
@@ -131,9 +134,10 @@ public class LdapWrappedGroup implements Group {
   @Override
   public boolean removeMember( Principal principal ) {
     try {
-      LdapUserGroups search = new LdapUserGroups( );
-      search.addGroupId( this.group.getName( ) );
-      EucaLdapHelper.deleteUserAttribute( principal.getName( ), search );
+      GroupEntity entity = ( GroupEntity ) this.group;
+      UserEntity search = new UserEntity( principal.getName( ) );
+      search.addEucaGroupId( entity.getName( ), entity.getTimestamp( ) );
+      EucaLdapHelper.deleteUserAttribute( search );
       return true;
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
