@@ -83,6 +83,8 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
+import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
+
 
 public class SessionManager {
 	private BufferedWriter writer;
@@ -90,14 +92,10 @@ public class SessionManager {
 	private Channel channel;
 	private final ExecutorService pool;
 
-	private String host;
-	private String username;
-	private String password;
-
 	private static Logger LOG = Logger.getLogger(SessionManager.class);
 	private final int NUM_THREADS = 1;
 
-	public SessionManager(String host, String username, String password) {
+	public SessionManager() {
 		pool = Executors.newFixedThreadPool(NUM_THREADS);
 	}
 
@@ -121,9 +119,10 @@ public class SessionManager {
 	public void connect() throws JSchException, IOException {
 		JSch jsch = new JSch();
 		Session session;
-		session = jsch.getSession(username, host);
+		SANInfo sanInfo = SANInfo.getStorageInfo();
+		session = jsch.getSession(sanInfo.getSanUser(), sanInfo.getSanHost());
 		session.setConfig("StrictHostKeyChecking", "no");
-		session.setPassword(password);
+		session.setPassword(sanInfo.getSanPassword());
 		session.connect();
 		channel = session.openChannel("shell");
 		PipedOutputStream outStream = new PipedOutputStream();
@@ -172,10 +171,7 @@ public class SessionManager {
 		});
 	}
 
-	public void update(String host, String username, String password) throws EucalyptusCloudException {
-		this.host = host;
-		this.username = username;
-		this.password = password;
+	public void update() throws EucalyptusCloudException {
 		try {
 			if(channel != null) {
 				refresh();

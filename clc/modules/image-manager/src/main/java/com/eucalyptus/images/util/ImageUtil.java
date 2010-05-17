@@ -82,6 +82,7 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
@@ -273,11 +274,14 @@ public class ImageUtil {
       db.commit( );
       return imgInfo;
     } catch ( EucalyptusCloudException e ) {
+      LOG.error( e, e );
       db.commit( );
       throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
     } catch ( Throwable t ) {
+      LOG.error( t, t );
       db.commit( );
     }
+    LOG.error( "Failed to find registered image with id " + searchId );
     throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
   }
   public static String getImageInfobyId( String userSuppliedId, String imageDefaultId, String systemDefaultId ) {
@@ -362,10 +366,9 @@ public class ImageUtil {
       } else if ( perm.isUser( ) ) {
         UserInfo target = new UserInfo( perm.getUserId( ) );
         if ( adding && !imgInfo.getPermissions( ).contains( target ) ) {
-          EntityWrapper<UserInfo> dbUser = db.recast( UserInfo.class );
           try {
-            target = dbUser.getUnique( target );
-          } catch ( EucalyptusCloudException e ) {
+            target = UserInfoStore.getUserInfo( target );
+          } catch ( NoSuchUserException e ) {
             throw new EucalyptusCloudException( "image attribute: invalid user id." );
           } finally {
             imgInfo.getPermissions( ).add( target );
@@ -453,7 +456,7 @@ public class ImageUtil {
     try {
       for ( String execUserId : executable ) {
         if ( "all".equals( execUserId ) ) continue;
-        final UserInfo execUser = db.recast( UserInfo.class ).getUnique( new UserInfo( execUserId ) );
+        final UserInfo execUser = UserInfoStore.getUserInfo( new UserInfo( execUserId ) );
         Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.ALL ), new Predicate<ImageInfo>( ) {
           @Override public boolean apply( ImageInfo arg0 ) {
             return arg0.isAllowed( execUser ) || arg0.getImagePublic( );
@@ -462,7 +465,7 @@ public class ImageUtil {
         repList.addAll( Lists.transform( Lists.newArrayList( results ), ImageInfo.TO_IMAGE_DETAILS ) );
       }
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( NoSuchUserException e ) {
       LOG.debug( e, e );
       db.commit( );
     }

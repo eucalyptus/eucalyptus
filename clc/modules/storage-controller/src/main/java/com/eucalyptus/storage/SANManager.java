@@ -239,7 +239,6 @@ public class SANManager implements LogicalStorageManager {
 			EntityWrapper<EquallogicVolumeInfo> db = StorageProperties.getEntityWrapper();
 			db.add(volumeInfo);
 			db.commit();
-			LOG.info("Volume: " + volumeId + " added to db");
 		}
 	}
 

@@ -105,14 +105,14 @@ import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
-public class LVM2Manager implements LogicalStorageManager {
+public class OverlayManager implements LogicalStorageManager {
 
 	public static final String lvmRootDirectory = "/dev";
 	public static final String PATH_SEPARATOR = File.separator;
 	public static boolean initialized = false;
 	public static final int MAX_LOOP_DEVICES = 256;
 	public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
-	private static Logger LOG = Logger.getLogger(LVM2Manager.class);
+	private static Logger LOG = Logger.getLogger(OverlayManager.class);
 	public static String eucaHome = System.getProperty("euca.home");
 	private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
 	public static StorageExportManager exportManager;

@@ -66,6 +66,9 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -646,6 +649,11 @@ public class BlockStorage {
 				}
 			} catch(Exception ex) {
 				semaphore.release();
+				try {
+					blockManager.finishVolume(snapshotId);
+				} catch (EucalyptusCloudException e1) {
+					LOG.error(e1);
+				}
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 				try {
@@ -660,11 +668,32 @@ public class BlockStorage {
 			}
 		}
 
-		private void transferSnapshot(String sizeAsString) {
+		private void transferSnapshot(String sizeAsString) throws EucalyptusCloudException {
 			long size = Long.parseLong(sizeAsString);
 
 			File snapshotFile = new File(snapshotFileName);
 			assert(snapshotFile.exists());
+			//do a little test to check if we can read from it
+			FileInputStream snapInStream = null;
+			try {
+				snapInStream = new FileInputStream(snapshotFile);
+				byte[] bytes = new byte[1024];
+				if(snapInStream.read(bytes) <= 0) {
+					throw new EucalyptusCloudException("Unable to read snapshot file");
+				}				
+			} catch (FileNotFoundException e) {
+				throw new EucalyptusCloudException(e);
+			} catch (IOException e) {
+				throw new EucalyptusCloudException(e);
+			} finally {
+				if(snapInStream != null) {
+					try {
+						snapInStream.close();
+					} catch (IOException e) {
+						throw new EucalyptusCloudException(e);
+					}
+				}
+			}
 			SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
 			Map<String, String> httpParamaters = new HashMap<String, String>();
 			HttpWriter httpWriter;

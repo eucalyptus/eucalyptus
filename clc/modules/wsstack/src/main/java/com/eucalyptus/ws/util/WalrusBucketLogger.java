@@ -103,14 +103,14 @@ public class WalrusBucketLogger {
 	private Logger LOG = Logger.getLogger( WalrusBucketLogger.class );
 	private static WalrusBucketLogger singleton;
 
-        private static int LOG_THRESHOLD = 10;
+	private static int LOG_THRESHOLD = 10;
 	private static int LOG_PERIODICITY = 120;
 
 	private LinkedBlockingQueue<BucketLogData> logData;
 	private ConcurrentHashMap<String, LogFileEntry> logFileMap;
 	ScheduledExecutorService logger;
 
-  	static { GroovyUtil.loadConfig("walruslogger.groovy"); }
+	static { GroovyUtil.loadConfig("walruslogger.groovy"); }
 
 	public WalrusBucketLogger() {
 		logData = new LinkedBlockingQueue<BucketLogData>();
@@ -163,7 +163,7 @@ public class WalrusBucketLogger {
 								User userInfo = Users.lookupUser(ownerId);
 								ArrayList<Grant> grants = new ArrayList<Grant>();
 								grants.add(new Grant(new Grantee(new CanonicalUserType(userInfo.getQueryId(), ownerId)), 
-										"FULL_CONTROL"));
+								"FULL_CONTROL"));
 								request.getAccessControlList().setGrants(grants);
 							} catch (NoSuchUserException e1) {
 								LOG.error(e1);

@@ -92,6 +92,7 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.WrappedUser;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventVetoedException;
@@ -134,7 +135,7 @@ public class EucalyptusManagement {
 	  final List<UserInfoWeb> webUsersList = Lists.newArrayList();
 	  for( User u : Users.listAllUsers( ) ) {
       try {
-        UserInfo userInfo = UserInfoStore.getUserInfo( new UserInfo( u.getName( ) ) );
+        UserInfo userInfo = (( WrappedUser ) u).getUserInfo( );
         webUsersList.add( Composites.composeNew( UserInfoWeb.class, userInfo, u ) );
       } catch ( Exception e ) {
         LOG.debug( e, e );

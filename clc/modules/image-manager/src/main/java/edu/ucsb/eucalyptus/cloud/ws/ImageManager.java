@@ -76,7 +76,9 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.GroupEntity;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.Image;
@@ -168,10 +170,10 @@ public class ImageManager {
     }
     UserInfo user = null;
     try {
-      user = db.recast( UserInfo.class ).getUnique( new UserInfo( msg.getUserId( ) ) );
-    } catch ( Exception e1 ) {
+      user = UserInfoStore.getUserInfo( new UserInfo( msg.getUserId( ) ) );
+    } catch ( NoSuchUserException e1 ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "You do not have permissions to run this image." );
+      throw new EucalyptusCloudException( "Can not find user info for this image." );
     }
     if ( !diskInfo.isAllowed( user ) ) {
       db.rollback( );
@@ -260,12 +262,11 @@ public class ImageManager {
         imgList.add( db.getUnique( ImageInfo.named( imageId ) ) );
       } catch ( Throwable e ) {}
     }
+    db.commit( );
     UserInfo user = null;
     try {
-      user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) );
-      db.commit( );
-    } catch ( Throwable e ) {
-      db.commit( );
+      user = UserInfoStore.getUserInfo( new UserInfo( request.getUserId( ) ) );
+    } catch ( NoSuchUserException e ) {
       throw new EucalyptusCloudException( "Failed to find user information for: " + request.getUserId( ), e );
     }
     ArrayList<String> imageList = request.getImagesSet( );
@@ -363,16 +364,17 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
       db.add( imageInfo );
-      UserInfo user = db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) );
+      UserInfo user = UserInfoStore.getUserInfo( new UserInfo( request.getUserId( ) ) );
 //      UserGroupEntity group = db.recast( UserGroupEntity.class ).getUnique( new UserGroupEntity( "all" ) );
+      // TODO (wenye): database schema needs to change to make this work when UserInfo is not in database.
       imageInfo.getPermissions( ).add( user );
 // TODO: RELEASE: restore
 //      imageInfo.getUserGroups( ).add( group );
       db.commit( );
       LOG.info( "Registering image pk=" + imageInfo.getId( ) + " ownerId=" + user.getUserName( ) );
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( NoSuchUserException e ) {
       db.rollback( );
-      throw e;
+      throw new EucalyptusCloudException( "can not find user info");
     }
 
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId( ) );
@@ -448,7 +450,7 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
       ImageInfo imgInfo = db.getUnique( new ImageInfo( request.getImageId( ) ) );
-      if ( !imgInfo.isAllowed( db.recast( UserInfo.class ).getUnique( new UserInfo( request.getUserId( ) ) ) ) ) throw new EucalyptusCloudException( "image attribute: not authorized." );
+      if ( !imgInfo.isAllowed( UserInfoStore.getUserInfo( new UserInfo( request.getUserId( ) ) ) ) ) throw new EucalyptusCloudException( "image attribute: not authorized." );
       if ( request.getKernel( ) != null ) {
         reply.setRealResponse( reply.getKernel( ) );
         if ( imgInfo.getKernelId( ) != null ) {
@@ -483,6 +485,9 @@ public class ImageManager {
     } catch ( EucalyptusCloudException e ) {
       db.commit( );
       throw e;
+    } catch ( NoSuchUserException e ) {
+      db.commit( );
+      throw new EucalyptusCloudException( "can not find user info." );
     }
     return reply;
   }
@@ -524,12 +529,15 @@ public class ImageManager {
 
       if ( !request.getUserId( ).equals( imgInfo.getImageOwnerId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Not allowed to modify image: " + imgInfo.getImageId( ) );
       imgInfo.getPermissions( ).clear( );
-      imgInfo.getPermissions( ).add( db.recast( UserInfo.class ).getUnique( new UserInfo( imgInfo.getImageOwnerId( ) ) ) );
+      imgInfo.getPermissions( ).add( UserInfoStore.getUserInfo( new UserInfo( imgInfo.getImageOwnerId( ) ) ) );
 // TODO: RELEASE: restore
 //      imgInfo.getUserGroups( ).clear( );
 //      imgInfo.getUserGroups( ).add( db.recast( UserGroupEntity.class ).getUnique( UserGroupEntity.named( "all" ) ) );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      reply.set_return( false );
+    } catch ( NoSuchUserException e ) {
       db.rollback( );
       reply.set_return( false );
     }

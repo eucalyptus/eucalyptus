@@ -5,23 +5,24 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Crypto;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
 
-public class DatabaseWrappedUser implements User {
+public class DatabaseWrappedUser implements User, WrappedUser {
   
   public static Function<UserEntity, DatabaseWrappedUser> proxyFunction = new Function<UserEntity, DatabaseWrappedUser>( ) {
-                                                                public DatabaseWrappedUser apply( UserEntity arg0 ) {
-                                                                  return new DatabaseWrappedUser( arg0 );
-                                                                }
-                                                              };
+                                                                          public DatabaseWrappedUser apply( UserEntity arg0 ) {
+                                                                            return new DatabaseWrappedUser( arg0 );
+                                                                          }
+                                                                        };
   
-  private static Logger                         LOG           = Logger.getLogger( DatabaseWrappedUser.class );
-  private final UserEntity                      searchUser;
-  private UserEntity                                  user;
+  private static Logger                                   LOG           = Logger.getLogger( DatabaseWrappedUser.class );
+  private final UserEntity                                searchUser;
+  private UserEntity                                      user;
   
   public DatabaseWrappedUser( UserEntity user ) {
     this.searchUser = new UserEntity( user.getName( ) );
@@ -142,6 +143,7 @@ public class DatabaseWrappedUser implements User {
   
   /**
    * Just to make CompositeHelper.goovy happy.
+   * 
    * @return
    */
   public Boolean getAdministrator( ) {
@@ -159,6 +161,7 @@ public class DatabaseWrappedUser implements User {
   
   /**
    * Just to make CompositeHelper.goovy happy.
+   * 
    * @return
    */
   public Boolean getEnabled( ) {
@@ -227,16 +230,16 @@ public class DatabaseWrappedUser implements User {
   public List<X509Certificate> getAllX509Certificates( ) {
     return this.user.getAllX509Certificates( );
   }
-
+  
   @Override
   public User getDelegate( ) {
     return this.user;
   }
-
+  
   @Override
   public boolean checkToken( String testToken ) {
     String token = this.user.getToken( );
-	boolean ret = token.equals( testToken );
+    boolean ret = token.equals( testToken );
     try {
       Transactions.one( this.searchUser, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
@@ -248,12 +251,12 @@ public class DatabaseWrappedUser implements User {
     }
     return ret;
   }
-
+  
   @Override
   public String getPassword( ) {
     return this.user.getPassword( );
   }
-
+  
   @Override
   public void setPassword( final String password ) {
     try {
@@ -264,7 +267,7 @@ public class DatabaseWrappedUser implements User {
       } );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
-    }    
+    }
   }
   
   public void setToken( final String token ) {
@@ -276,6 +279,15 @@ public class DatabaseWrappedUser implements User {
       } );
     } catch ( TransactionException e1 ) {
       LOG.debug( e1, e1 );
-    }    
+    }
+  }
+  
+  public UserInfo getUserInfo( ) throws NoSuchUserException {
+    return UserInfoStore.getUserInfo( new UserInfo( this.user.getName( ) ) );
+  }
+
+  @Override
+  public List<Group> getUserGroups( ) {
+    return Groups.lookupUserGroups( searchUser );
   }
 }

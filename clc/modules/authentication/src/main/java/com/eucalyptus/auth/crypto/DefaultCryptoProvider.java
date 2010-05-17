@@ -66,7 +66,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateSecretKey( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA224, true ).replaceAll( "\\p{Punct}", "" );
   }
   
   /**
@@ -74,7 +74,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateCertificateCode( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, false ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
   }
   
   /**
@@ -82,7 +82,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateConfirmationCode( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, false ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
   }
   
   /**
@@ -90,7 +90,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateSessionToken( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, false ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
   }
 
   /**
