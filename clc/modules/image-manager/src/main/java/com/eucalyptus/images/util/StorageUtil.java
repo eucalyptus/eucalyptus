@@ -149,7 +149,7 @@ public class StorageUtil {
         if( v.getSize() != 0 ) {
           v.setSize( new Integer( size ) );
         }
-        if( "unknown".equals( v.getRemoteDevice( ) ) || v.getRemoteDevice( ) == null ) {
+        if( "invalid".equals ( v.getRemoteDevice( ) ) || "unknown".equals( v.getRemoteDevice( ) ) || v.getRemoteDevice( ) == null ) {
           v.setRemoteDevice( actualDeviceName );
         }
         edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
