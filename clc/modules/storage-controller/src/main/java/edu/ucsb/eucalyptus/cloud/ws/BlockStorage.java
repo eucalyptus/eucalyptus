@@ -812,8 +812,7 @@ public class BlockStorage {
 						}
 						foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 						if(StorageProperties.trackUsageStatistics) {
-							blockStorageStatistics.incrementVolumeCount();
-							blockStorageStatistics.updateSpaceUsed((size * StorageProperties.GB));
+							blockStorageStatistics.incrementVolumeCount((size * StorageProperties.GB));
 						}
 					} else {
 						foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
@@ -855,8 +854,7 @@ public class BlockStorage {
 				db.commit();
 				EucaSemaphoreDirectory.removeSemaphore(volumeId);
 				if(StorageProperties.trackUsageStatistics) { 
-					blockStorageStatistics.decrementVolumeCount();
-					blockStorageStatistics.updateSpaceUsed(-(foundVolume.getSize() * StorageProperties.GB));
+					blockStorageStatistics.decrementVolumeCount(-(foundVolume.getSize() * StorageProperties.GB));
 				}
 			} catch (EucalyptusCloudException e) {
 				db.rollback();
