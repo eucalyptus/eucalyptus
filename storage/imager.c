@@ -24,6 +24,17 @@ extern char ** environ;
 static imager_request reqs [MAX_REQS];
 static char * euca_home = NULL;
 static map * artifacts_map;
+static boolean debug = FALSE;
+
+static void set_debug (boolean yes)
+{
+    // so euca libs will log to stdout
+    if (yes==TRUE) {
+        logfile (NULL, EUCADEBUG);
+    } else {
+        logfile (NULL, EUCAERROR);
+    }
+}
 
 static void usage (const char * msg) 
 { 
@@ -119,8 +130,10 @@ static imager_command * validate_cmd (int index, char *this_cmd, imager_param *p
 
 static void set_global_parameter (char * key, char * val)
 {
-  logprintfl (EUCAINFO, "GLOBAL: %s=%s\n", key, val);
-	if (strcmp (key, "work")==0) {
+	if (strcmp (key, "debug")==0) {
+        debug = parse_boolean (val);
+        set_debug (debug);
+    } else if (strcmp (key, "work")==0) {
 		set_work_dir (val);
 	} else if (strcmp (key, "work_size")==0) {
 		set_work_limit (atoll(val));
@@ -131,11 +144,13 @@ static void set_global_parameter (char * key, char * val)
 	} else {
 		err ("unknown global parameter '%s'", key);
 	}
+    logprintfl (EUCAINFO, "GLOBAL: %s=%s\n", key, val);
 }
 
 int main (int argc, char * argv[])
 {
-    logfile (NULL, EUCADEBUG); // so euca libs will log to stdout
+    set_debug (debug);
+
 
 	// initialize globals
 	artifacts_map = map_create (10);
