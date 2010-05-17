@@ -3,6 +3,7 @@ package com.eucalyptus.records;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
@@ -25,12 +26,14 @@ import org.hibernate.annotations.GenericGenerator;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records" )
-@Cache( usage = CacheConcurrencyStrategy.NONE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
 @DiscriminatorColumn( name = "record_class", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "base" )
@@ -85,6 +88,7 @@ public class BaseRecord implements Serializable, Record {
     this.correlationId = correlationId;
     this.timestamp = new Date();
     this.extra = other;
+    this.others.add( other );
   }
   
   public BaseRecord( ) {}
@@ -95,12 +99,7 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record info( ) {
     this.level = RecordLevel.INFO;
-    Record newThis = this;
-    if ( Bootstrap.isFinished( ) ) try {
-      newThis = Transactions.save( this );
-    } catch ( TransactionException e1 ) {
-      LOG.debug( e1, e1 );
-    }
+    Record newThis = this.maybeSave();
     Logger.getLogger( this.realCreator ).info( this );
     return newThis;
   }
@@ -111,12 +110,7 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record error( ) {
     this.level = RecordLevel.ERROR;
-    Record newThis = this;
-    if ( Bootstrap.isFinished( ) ) try {
-      newThis = Transactions.save( this );
-    } catch ( TransactionException e1 ) {
-      LOG.debug( e1, e1 );
-    }
+    Record newThis = this.maybeSave();
     Logger.getLogger( this.realCreator ).error( this );
     return newThis;
   }
@@ -127,14 +121,8 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record trace( ) {
     this.level = RecordLevel.TRACE;
-    Record newThis = this;
-//    if ( Bootstrap.isFinished( ) ) try {
-//      newThis = Transactions.save( this );
-//    } catch ( TransactionException e1 ) {
-//      LOG.debug( e1, e1 );
-//    }
     Logger.getLogger( this.realCreator ).trace( this );
-    return newThis;
+    return this;
   }
   
   /**
@@ -143,14 +131,8 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record debug( ) {
     this.level = RecordLevel.DEBUG;
-    Record newThis = this;
-//    if ( Bootstrap.isFinished( ) ) try {
-//      newThis = Transactions.save( this );
-//    } catch ( TransactionException e1 ) {
-//      LOG.debug( e1, e1 );
-//    }
     Logger.getLogger( this.realCreator ).debug( this );
-    return newThis;
+    return this;
   }
   
   /**
@@ -159,14 +141,29 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record warn( ) {
     this.level = RecordLevel.WARN;
-    Record newThis = this;
-    if ( Bootstrap.isFinished( ) ) try {
-      newThis = Transactions.save( this );
-    } catch ( TransactionException e1 ) {
-      LOG.debug( e1, e1 );
-    }
+    Record newThis = this.maybeSave();
     Logger.getLogger( this.realCreator ).warn( this );
     return newThis;
+  }
+  private static List<String> storePrefixes = Lists.newArrayList( "MSG_", "VM_", "ADDRESS_" );
+  private BaseRecord maybeSave() {
+    BaseRecord newThis = this;
+    if( this.type != null && Bootstrap.isFinished( ) ) {
+      final EventType check = this.type;
+      boolean save = Iterables.any( storePrefixes, new Predicate<String>() {
+        @Override
+        public boolean apply( String arg0 ) {
+          return check.name().startsWith( arg0 );
+        }} );
+      try {
+        newThis = Transactions.save( this );
+      } catch ( TransactionException e1 ) {
+        LOG.debug( e1, e1 );
+      }
+      return newThis;
+    } else {
+      return newThis;
+    }
   }
   
   /**

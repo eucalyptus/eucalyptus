@@ -51,7 +51,7 @@ public class PersistenceContexts {
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       throw BootstrapException.throwFatal( "Duplicate entity definition in shared entities: " + entity.getCanonicalName( ) + ". See error logs for details." );
-    } else if ( entities.get( ctx.name( ) ).contains( entity ) ) {
+    } else if ( entities.get( ctx.name( ) ) != null && entities.get( ctx.name( ) ).contains( entity ) ) {
       List<Class> context = entities.get( ctx.name( ) );
       Class old = context.get( context.indexOf( entity ) );
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
