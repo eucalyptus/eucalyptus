@@ -69,7 +69,7 @@ import com.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 
 @Provides(Component.storage)
-@RunDuring(Bootstrap.Stage.PrivilegedConfiguration)
+@RunDuring(Bootstrap.Stage.DatabaseInit)
 @DependsLocal(Component.storage)
 public class BlockStorageBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
