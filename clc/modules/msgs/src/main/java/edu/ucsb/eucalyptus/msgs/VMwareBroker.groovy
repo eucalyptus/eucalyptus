@@ -5,7 +5,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.cloud.ws.VMwareInstance;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /*
@@ -191,18 +190,6 @@ public class BundleTaskType extends EucalyptusData {
 		this.instanceId = instanceId;
 		this.state = state;
 		this.manifest = manifest;
-	}
-
-	public static ArrayList<BundleTaskType> convertFromInstances(Set<VMwareInstance> instances) {
-		ArrayList<BundleTaskType> bundleTasks = new ArrayList<BundleTaskType>();
-		for (VMwareInstance instance : instances.values()) {
-			BundleTaskType bundleTask = new BundleTaskType (
-					instance.getInstanceId(), 
-					instance.getBundleTaskStateName(),
-					null);
-			bundleTasks.add (bundleTask);
-		}
-		return bundleTasks;
 	}
 }
 
