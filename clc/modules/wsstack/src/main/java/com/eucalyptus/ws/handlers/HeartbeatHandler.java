@@ -162,7 +162,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       for ( HeartbeatComponentType component : msg.getComponents( ) ) {
         LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
-        Components.lookup( component.getName( ) ).buildService( );
+        Components.lookup( component.getComponent( ) ).buildService( );
         initializedComponents.add( component.getComponent( ) );
       }
       if ( !initializedComponents.contains( Components.delegate.storage.name( ) ) ) {
