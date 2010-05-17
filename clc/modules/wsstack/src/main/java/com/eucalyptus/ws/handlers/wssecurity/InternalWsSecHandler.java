@@ -77,7 +77,9 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Element;
+import com.eucalyptus.auth.DatabaseWrappedUser;
 import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.auth.UserEntity;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.principal.User;
@@ -121,8 +123,9 @@ public class InternalWsSecHandler extends WsSecHandler {
           throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
         }
       }
-      User admin = Users.lookupUser( "admin" ); 
-      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( admin );
+      UserEntity user = new UserEntity( "admin", true );
+      user.setAdministrator( true );
+      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( user );
     }
   }
 }
