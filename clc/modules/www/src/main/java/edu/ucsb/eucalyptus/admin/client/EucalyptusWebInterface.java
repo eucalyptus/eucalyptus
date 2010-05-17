@@ -115,6 +115,8 @@ import java.util.List;
 
 public class EucalyptusWebInterface implements EntryPoint {
 
+  public static final int CONF_DEFAULT_PAGE = 4;
+  
 	private static final AppMessages MSG = (AppMessages) GWT.create(AppMessages.class);
 
     private static String cookie_name = "eucalyptus-session-id";
@@ -1932,7 +1934,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 						conf,
 						new AsyncCallback() {
 							public void onSuccess ( final Object result ) {
-								currentTabIndex = 3; // TODO: change this to confTabIndex
+								currentTabIndex = CONF_DEFAULT_PAGE; // TODO: change this to confTabIndex
 								displayDefaultPage ("");
 							}
 							public void onFailure ( Throwable caught ) {
@@ -2521,7 +2523,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     													conf,
     													new AsyncCallback() {
     												public void onSuccess ( final Object result ) {
-    													currentTabIndex = 3; // TODO: change this to confTabIndex when it's available
+    													currentTabIndex = CONF_DEFAULT_PAGE; // TODO: change this to confTabIndex when it's available
     													displayDefaultPage ("");
     												}
     												public void onFailure ( Throwable caught ) {
