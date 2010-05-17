@@ -258,10 +258,9 @@ public class ImageUtil {
   public static VmImageInfo getVmImageInfo( final String walrusUrl, final Image diskInfo, final Image kernelInfo, final Image ramdiskInfo, final ArrayList<String> productCodes ) throws EucalyptusCloudException {
     String diskUrl = getImageUrl( walrusUrl, diskInfo );
     String kernelUrl = kernelInfo != null ? getImageUrl( walrusUrl, kernelInfo ) : null;
-    String ramdiskUrl = null;
-    if ( ramdiskInfo != null ) ramdiskUrl = getImageUrl( walrusUrl, ramdiskInfo );
+    String ramdiskUrl = ramdiskInfo != null ? getImageUrl( walrusUrl, ramdiskInfo ) : null;
     //:: create the response assets now since we might not have a ramdisk anyway :://
-    VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo.getImageId( ),
+    VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo == null ? null : kernelInfo.getImageId( ),
       ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl, ramdiskInfo == null ? null
                                                                                                      : ramdiskUrl,
       productCodes, diskInfo.getPlatform( ) );
