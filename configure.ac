@@ -32,6 +32,7 @@ AXIS2C_HOME="${AXIS2C_HOME}"
 AXIS2_HOME="${AXIS2_HOME}"
 AXIS2C_SERVICES=""
 LIBVIRT_HOME="${LIBVIRT_HOME}"
+VDDK_HOME="${VDDK_HOME}"
 INTERFACE_THEME="eucalyptus"
 EXTENSIONS=""
 ANT=""
@@ -62,6 +63,9 @@ AC_ARG_WITH(axis2,
 AC_ARG_WITH(libvirt,
         [  --with-libvirt=<dir>                 where libvirt is installed],
         [LIBVIRT_HOME="${withval}"])
+AC_ARG_WITH(vddk,
+        [  --with-vddk=<dir>                    where VMware's VDDK is installed],
+        [VDDK_HOME="${withval}"])
 AC_ARG_WITH(interface-theme,
         [  --with-interface-theme=<name>        the theme to be used],
         [INTERFACE_THEME="${withval}"])
@@ -99,6 +103,12 @@ if test -n "${LIBVIRT_HOME}" ; then
 	if test -d "${LIBVIRT_HOME}"/include ; then
 		INCLUDES="${INCLUDES} -I${LIBVIRT_HOME}/include"
 		LIBS="-L${LIBVIRT_HOME}/lib ${LIBS}"
+	fi
+fi
+if test -n "${VDDK_HOME}" ; then
+	if test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
+		INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
+		LIBS="-L${VDDK_HOME}/lib ${LIBS}"
 	fi
 fi
 
@@ -241,6 +251,7 @@ AC_SUBST(AXIS2C_HOME)
 AC_SUBST(AXIS2C_SERVICES)
 AC_SUBST(AXIS2_HOME)
 AC_SUBST(LIBVIRT_HOME)
+AC_SUBST(VDDK_HOME)
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 AC_SUBST(LIBS)

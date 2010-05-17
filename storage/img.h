@@ -13,35 +13,29 @@ typedef struct _img_creds {
 } img_creds;
 
 typedef struct _img_loc {
-    enum { PATH, HTTP, VSPHERE, WALRUS, SFTP } type;
+    enum { PATH, HTTP, HTTPS, VSPHERE, WALRUS, SFTP } type;
     char url [SIZE];
-    char path [SIZE];
-    char vsphere_host [SIZE];
-    char vsphere_dcPath [SIZE];
-    char vsphere_dsName [SIZE];
+    char path [SIZE]; // dir/file
+	char dir [SIZE]; 
+	char file [SIZE];
+    char host [SIZE];
+	char params [SIZE];
+	int port;
+    char vsphere_dc [SIZE];
+    char vsphere_ds [SIZE];
+	char vsphere_vmx_ds [SIZE];
+	char vsphere_vmx_path [SIZE];
     img_creds creds;
 } img_loc;
 
 typedef struct _img_spec {
-    enum { EMI, EKI, ERI, DISK, VDDK } type;
+//    enum { EMI, EKI, ERI, DISK, VDDK } type;
     char id [SIZE];
     img_loc location;
     int size;
 } img_spec;
-    
-typedef struct _img_env {
-    char initialized;
-    img_loc wloc;
-    int wloc_max_mb;
-    img_loc cloc;
-    int cloc_max_mb;
-    img_creds default_walrus_creds;
-    img_creds default_node_creds;
-} img_env;
 
-img_env * img_init (char * wdir, int wdir_max_mb, char * cdir, int cdir_max_mb);
-void img_cleanup (void);
-int img_init_spec (img_spec * spec, const char * id, const char * loc, const img_creds * creds);
-int img_convert (img_spec * root, img_spec * kernel, img_spec * ramdisk, img_spec * dest, const char * key, int rsize_mb, int ssize_mb, int esize_mb);
+int parse_img_spec (img_loc * loc, const char * str);
+void print_img_spec (const char * name, const img_spec * spec);
     
 #endif

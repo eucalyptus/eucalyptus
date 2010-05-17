@@ -1,5 +1,8 @@
 package edu.ucsb.eucalyptus.msgs
 
+import java.util.ArrayList;
+import java.util.Set;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -39,7 +42,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
  */
 
 // parent to all requests/replies used by VMwareBroker/NC,
-// which inherit correlationId and userId from EucalyptusMessage
+// which inherit correlationId and userId from BaseMessage
 
 public class VMwareBrokerRequestType extends BaseMessage {
 	String nodeName;
@@ -99,13 +102,15 @@ public class VMwareBrokerResponseType extends BaseMessage {
 // fields used by {Run|Describe}Instance
 
 public class VirtualMachineType extends EucalyptusData {
+	String name;
 	Integer memory;
 	Integer cores;
 	Integer disk;
 	
 	VirtualMachineType () {}
 	
-	VirtualMachineType (int cores, int disk, int memory) {
+	VirtualMachineType (String name, int cores, int disk, int memory) {
+		this.name = name;
 		this.memory = memory;
 		this.cores = cores;
 		this.disk = disk;
@@ -160,14 +165,32 @@ public class InstanceType extends EucalyptusData {
 	VirtualMachineType instanceType;
 	NetConfigType netParams;
 	String stateName;
+	String bundleTaskStateName;
 	String launchTime;
 	String userData;
 	String launchIndex;
+	String platform;
 	ArrayList<String> groupNames = new ArrayList<String>();
 	ArrayList<VolumeType> volumes = new ArrayList<VolumeType>();
 	String serviceTag;
 
 	public InstanceType() {}
+}
+
+// class used by DescribeBundleTasks
+
+public class BundleTaskType extends EucalyptusData {
+	String instanceId;
+	String state;
+	String manifest;
+	
+	BundleTaskType () {}
+	
+	BundleTaskType (String instanceId, String state, String manifest) {
+		this.instanceId = instanceId;
+		this.state = state;
+		this.manifest = manifest;
+	}
 }
 
 // DescribeResource
@@ -244,6 +267,7 @@ public class EucalyptusNCNcRunInstanceType extends VMwareBrokerRequestType {
 	NetConfigType netParams;
 	String userData;
 	String launchIndex;
+	String platform;
 	ArrayList<String> groupNames = new ArrayList<String>();
     def EucalyptusNCNcRunInstanceType() {}
 
@@ -365,6 +389,60 @@ public class EucalyptusNCNcPowerDownType extends VMwareBrokerRequestType {
 
 public class EucalyptusNCNcPowerDownResponseType extends VMwareBrokerResponseType {
     def EucalyptusNCNcPowerDownResponseType() {}
+}
+
+// BundleInstance 
+
+public class EucalyptusNCNcBundleInstanceType extends VMwareBrokerRequestType {
+    String instanceId;
+    String bucketName;
+    String filePrefix;
+    String walrusURL;
+    String userPublicKey;
+    String cloudPublicKey;
+    
+    def EucalyptusNCNcBundleInstanceType() {}
+
+  	@Override
+    public String toString() {
+    	return super.toString ("BundleInstance: instanceId=" + this.instanceId 
+    			+ " bucketName=" + this.bucketName 
+    			+ " filePrefix=" + this.filePrefix
+    			+ " walrusURL=" + this.walrusURL);
+    }
+}
+
+public class EucalyptusNCNcBundleInstanceResponseType extends VMwareBrokerResponseType {
+    def EucalyptusNCNcBundleInstanceResponseType() {}
+}
+
+// CancelBundle
+
+public class EucalyptusNCNcCancelBundleType extends VMwareBrokerRequestType {
+    String instanceId;
+    
+    def EucalyptusNCNcCancelBundleType() {}
+
+  	@Override
+    public String toString() {
+    	return super.toString ("CancelBundle: instanceId=" + this.instanceId);
+    }
+}
+
+public class EucalyptusNCNcCancelBundleResponseType extends VMwareBrokerResponseType {
+    def EucalyptusNCNcCancelBundleResponseType() {}
+}
+
+// DescribeBundleTasks
+
+public class EucalyptusNCNcDescribeBundleTasksType extends VMwareBrokerRequestType {
+	ArrayList<String> instanceIds = new ArrayList<String>();
+    def EucalyptusNCNcDescribeBundleTasksType() {}
+}
+
+public class EucalyptusNCNcDescribeBundleTasksResponseType extends VMwareBrokerResponseType {
+	ArrayList<BundleTaskType> bundleTasks = new ArrayList<BundleTaskType>();
+    def EucalyptusNCNcDescribeBundleTasksResponseType() {}
 }
 
 // Template 

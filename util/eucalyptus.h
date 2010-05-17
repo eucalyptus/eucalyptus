@@ -124,10 +124,11 @@ permission notice:
 #define EUCA_MAX_GROUPS 64
 #define EUCA_MAX_VOLUMES 256
 #define EUCA_MAX_DEVMAPS 64
+#define EUCA_MAX_PATH 4096
 #define DEFAULT_NC_CACHE_SIZE 999999 // in MB
 #define DEFAULT_NC_WORK_SIZE  999999 // in MB
 #define DEFAULT_SWAP_SIZE 512 /* in MB */
-#define MAX_PATH_SIZE 4096
+#define MAX_PATH_SIZE 4096 // TODO: remove
 
 #define MEGABYTE 1048576
 #define OK 0

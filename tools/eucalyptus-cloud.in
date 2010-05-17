@@ -257,8 +257,12 @@ do_start() {
 	fi
 	if [ "$VMWAREBROKER_WS" != "Y" ]; then
 		OPTS="$OPTS --disable-vmwarebroker"
-		if ! $EUCALYPTUS/usr/sbin/euca_conf --check vmwarebroker ; then
+	else
+    		if ! $EUCALYPTUS/usr/sbin/euca_conf --check vmwarebroker ; then
 			exit 1
+		fi
+		if ! $EUCALYPTUS/usr/lib/eucalyptus/euca_imager fsck ; then
+		    exit 1
 		fi
 	fi
 	if [ "$CLOUD_WS" != "Y" ]; then
@@ -329,7 +333,10 @@ if [ -z "$EUCA_USER" ] ; then
 fi
 
 # set the library path correctly
-export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
+export VDDK_HOME="@VDDK_HOME@"
+export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/:$LD_LIBRARY_PATH" # to ensure euca_imager finds VDDK libs
+export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca_imager has euca_rootwrap
+
 #VERBOSE="yes"
 
 # read services to start

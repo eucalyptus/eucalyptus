@@ -62,7 +62,13 @@ permission notice:
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <unistd.h> // ssize_t
 #include <linux/limits.h>
+
+typedef unsigned char boolean;
+#define TRUE 1
+#define FALSE 0
+
 #ifndef MAX_PATH
 #define MAX_PATH 4096
 #endif
@@ -178,8 +184,10 @@ int logcat (int debug_level, const char * file_name);
 int touch (const char * path);
 int diff (const char * path1, const char * path2);
 long long dir_size (const char * path);
+char * file2strn (const char * path, const ssize_t limit);
 char * file2str (const char * path); /* read file 'path' into a new string */
 int write2file(const char *path, char *str);
+char * str2str (const char * str, const char * begin, const char * end);
 long long str2longlong (const char * str, const char * begin, const char * end); /* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
 int uint32compar(const void *ina, const void *inb);
@@ -188,6 +196,7 @@ int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER);
 int maxint(int a, int b);
 int minint(int a, int b);
-
+int copy_file (const char * src, const char * dst);
+long long file_size (const char * file_path);
 
 #endif
