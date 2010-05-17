@@ -7,6 +7,8 @@ package com.eucalyptus.auth.ldap;
  *
  */
 public interface LdapConfiguration {
+  public static final boolean ENABLE_LDAP = false;
+  
   public static final String LDAP_CONTEXT_FACTORY = "com.sun.jndi.ldap.LdapCtxFactory";
   public static final String LDAP_LOCAL_SERVER_URL = "ldap://localhost:8778";
   public static final String LDAP_SECURITY_AUTHENTICATION = "simple";
