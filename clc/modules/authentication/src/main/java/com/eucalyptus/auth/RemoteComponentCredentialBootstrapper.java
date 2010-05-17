@@ -75,7 +75,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 
 @Provides(Component.bootstrap)
-@RunDuring(Bootstrap.Stage.RemoteServicesInit)
+@RunDuring(Bootstrap.Stage.SystemCredentialsInit)
 @DependsRemote(Component.eucalyptus)
 public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteComponentCredentialBootstrapper.class );
