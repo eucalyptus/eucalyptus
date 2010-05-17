@@ -70,7 +70,7 @@ public class Bootstrap {
       }
     }
     
-    private void updateBootstrapDependencies( ) {
+    public void updateBootstrapDependencies( ) {
       for ( Bootstrapper b : Lists.newArrayList( this.bootstrappers ) ) {
         if ( !b.checkLocal( ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ), this.getClass( ).getSimpleName( ),
