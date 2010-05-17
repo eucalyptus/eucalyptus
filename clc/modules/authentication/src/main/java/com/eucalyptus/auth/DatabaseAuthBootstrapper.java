@@ -1,6 +1,7 @@
 package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.ldap.LdapConfiguration;
 import com.eucalyptus.auth.util.AuthBootstrapHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -18,7 +19,8 @@ import com.eucalyptus.entities.VmType;
 @DependsLocal( Component.eucalyptus )
 public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
-  public static boolean ENABLE = true;
+  
+  public static boolean ENABLE = !LdapConfiguration.ENABLE_LDAP;
   
   public boolean load( Stage current ) throws Exception {
     if (ENABLE) {
