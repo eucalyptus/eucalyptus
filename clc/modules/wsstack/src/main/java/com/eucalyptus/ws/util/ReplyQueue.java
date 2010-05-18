@@ -80,7 +80,6 @@ import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 
 public class ReplyQueue {
@@ -100,8 +99,8 @@ public class ReplyQueue {
     try {
       Context context = Contexts.lookup( corrId );
       Channel channel = context.getChannel( );
-      Contexts.clear(context);
       Channels.write( channel, reply );
+      Contexts.clear(context);
     } catch ( NoSuchContextException e ) {
       LOG.debug( e, e );
     }

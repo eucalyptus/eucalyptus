@@ -236,7 +236,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   
   private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final BaseMessage msg ) throws NoSuchContextException {
     try {
-      final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), false );
+      final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
       if ( reply != null ) {
         ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
       } else {

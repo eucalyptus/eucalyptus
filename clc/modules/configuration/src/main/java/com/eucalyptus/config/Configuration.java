@@ -129,11 +129,12 @@ public class Configuration {
     ServiceConfiguration conf;
     try {
       conf = builder.lookupByName( request.getName( ) );
+      builder.fireStop( conf );
       builder.remove( conf );
       builder.getComponent( ).removeService( conf );
-      builder.fireStop( conf );
       reply.set_return( true );
     } catch( EucalyptusCloudException e ) {
+      LOG.debug( e, e );
       throw e;
     } catch ( Exception e ) {
       LOG.debug( e, e );
