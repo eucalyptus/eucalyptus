@@ -119,7 +119,7 @@ public class Volume extends AbstractIsomorph {
       case GENERATING: return "creating";
       case EXTANT: return "available";
       case ANNIHILATING: return "deleting";
-      case ANNILATED: return "deleted";
+      case ANNIHILATED: return "deleted";
       case FAIL: return "failed";
       case BUSY: return "in-use";
       default: return "unavailable";
@@ -131,7 +131,7 @@ public class Volume extends AbstractIsomorph {
     else if(StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
     else if(StorageProperties.Status.available.toString().equals( state ) ) this.setState( State.EXTANT );
     else if("in-use".equals( state ) ) this.setState( State.BUSY );
-    else this.setState( State.ANNILATED );
+    else this.setState( State.ANNIHILATED );
   }
 
   public Object morph( final Object o ) {

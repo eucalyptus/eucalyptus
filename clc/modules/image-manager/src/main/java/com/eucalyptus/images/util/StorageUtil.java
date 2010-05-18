@@ -141,6 +141,8 @@ public class StorageUtil {
           status = vol.getStatus( );
           size = Integer.parseInt( vol.getSize( ) );
           actualDeviceName = vol.getActualDeviceName( );
+        } else {
+          v.setState( State.ANNIHILATED );
         }
         if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
           v.setState( State.BUSY );
