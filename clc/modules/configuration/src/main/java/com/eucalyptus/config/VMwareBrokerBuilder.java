@@ -1,10 +1,13 @@
 package com.eucalyptus.config;
 
+import java.util.List;
+
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.DeregisterVMwareBrokerType;
 import edu.ucsb.eucalyptus.msgs.DescribeVMwareBrokersType;
@@ -43,5 +46,14 @@ public class VMwareBrokerBuilder extends DatabaseServiceBuilder<VMwareBrokerConf
   @Override
   public Boolean checkRemove( String name ) throws ServiceRegistrationException {
     return super.checkRemove( name );
+  }
+  
+  @Override
+  public List<VMwareBrokerConfiguration> list( ) throws ServiceRegistrationException {
+    try {
+      return Configuration.getVMwareBrokerConfigurations( );
+    } catch ( EucalyptusCloudException e ) {
+      return super.list( );
+    }
   }
 }
