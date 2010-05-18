@@ -242,6 +242,7 @@ public class UserGroupEntityPanel extends VerticalPanel {
 					for (int i = 0; i < columns.size(); i++) {
 						if (row.get(i).toLowerCase().contains(filterString)) {
 							filteredData.add(row);
+							break;
 						}
 					}
 				}

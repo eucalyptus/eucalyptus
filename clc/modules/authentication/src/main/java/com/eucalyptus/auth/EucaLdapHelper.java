@@ -42,23 +42,39 @@ public class EucaLdapHelper {
   
   private static final String   ATTRIBUTE_DUMMY                           = "0";
   
+  private static final String   EUCA_GROUP_ID_SEPARATOR                   = ":";
+  
   public static String getSearchGroupFilter( List<String> groupIds ) throws LdapException {
     LdapFilter filter = new LdapFilter( );
     filter.opBegin( LdapFilter.Op.OR );
     for ( String id : groupIds ) {
-      int colon = id.indexOf( ':' );
+      int colon = id.indexOf( EUCA_GROUP_ID_SEPARATOR );
       if ( colon < 1 || colon > id.length( ) - 2 ) {
         throw new LdapException( "Invalid eucaGroupId string: " + id );
       }
       String name = id.substring( 0, colon );
       String timestamp = id.substring( colon + 1 );
-      filter.opBegin( LdapFilter.Op.AND )
-                .operand( LdapFilter.Type.EQUAL, GROUP_ENTITY_FIELD_ATTRIBUTE_NAME, name )
-                .operand( LdapFilter.Type.EQUAL, GROUP_ENTITY_FIELD_ATTRIBUTE_TIMESTAMP, timestamp )
-            .opEnd( );
+      filter.opBegin( LdapFilter.Op.AND ).operand( LdapFilter.Type.EQUAL, GROUP_ENTITY_FIELD_ATTRIBUTE_NAME, name )
+            .operand( LdapFilter.Type.EQUAL, GROUP_ENTITY_FIELD_ATTRIBUTE_TIMESTAMP, timestamp ).opEnd( );
     }
     filter.opEnd( );
     return filter.toString( );
+  }
+  
+  public static List<String> getNamesFromEucaGroupIds( List<String> groupIds ) throws LdapException {
+    List<String> names = Lists.newArrayList( );
+    for ( String id : groupIds ) {
+      int colon = id.indexOf( EUCA_GROUP_ID_SEPARATOR );
+      if ( colon < 1 || colon > id.length( ) - 2 ) {
+        throw new LdapException( "Invalid eucaGroupId string: " + id );
+      }
+      names.add( id.substring( 0, colon ) );
+    }
+    return names;
+  }
+  
+  public static String getEucaGroupIdString( String name, String timestamp ) {
+    return name + EUCA_GROUP_ID_SEPARATOR + timestamp;
   }
   
   /*

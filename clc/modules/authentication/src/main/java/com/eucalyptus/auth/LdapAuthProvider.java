@@ -51,16 +51,19 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
   
   @Override
   public boolean checkRevokedCertificate( X509Certificate cert ) throws NoSuchCertificateException {
-    try {
+    try {    
       UserEntity searchUser = new UserEntity( );
       searchUser.setEnabled( true );
       searchUser.setX509Certificate( cert );
       searchUser.revokeX509Certificate( );
-      List<User> users = EucaLdapHelper.getUsers( searchUser, null );
-      if ( users.size( ) != 1 ) {
-        throw new NoSuchCertificateException( ( users.size( ) == 0 ) ? "No user with the specified certificate." : "Multiple users with the same certificate." );
+      User found;
+      if ( ( found = LdapCache.getInstance( ).getUserByRevokedCert( searchUser.getCertificates( ).get( 0 ).getPemCertificate( ) ) ) == null ) {
+        found = EucaLdapHelper.getUsers( searchUser, null ).get( 0 );
+        LdapCache.getInstance( ).addUser( found );
       }
-      return true;
+      if ( found.isEnabled( ) ) {
+        return true;
+      }
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchCertificateException( "No user with the specified certificate.", e );
@@ -80,6 +83,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
     } catch ( LdapException e ) {
       LOG.error( e, e );
     }
+    LdapCache.getInstance( ).removeUser( userName );
   }
   
   @Override
@@ -114,48 +118,62 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
       UserEntity searchUser = new UserEntity( );
       searchUser.setEnabled( true );
       searchUser.setX509Certificate( cert );
-      List<User> users = EucaLdapHelper.getUsers( searchUser, null );
-      if ( users.size( ) != 1 ) {
-        throw new NoSuchUserException( ( users.size( ) == 0 ) ? "No user with the specified certificate." : "Multiple users with the same certificate." );
+      User found;
+      if ( ( found = LdapCache.getInstance( ).getUserByCert( searchUser.getCertificates( ).get( 0 ).getPemCertificate( ) ) ) == null ) {
+        found = EucaLdapHelper.getUsers( searchUser, null ).get( 0 );
+        LdapCache.getInstance( ).addUser( found );
       }
-      return users.get( 0 );
+      if ( found.isEnabled( ) ) {
+        return found;
+      }
+      throw new EntryNotFoundException( "Found user is not enabled" );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchUserException( e );
     } catch ( LdapException e ) {
       LOG.error( e, e );
+      throw new NoSuchUserException( e );
     }
-    return null;
   }
   
   @Override
   public User lookupQueryId( String queryId ) throws NoSuchUserException {
     try {
-      UserEntity searchUser = new UserEntity( );
-      searchUser.setQueryId( queryId );
-      return EucaLdapHelper.getUsers( searchUser, null ).get( 0 );
+      User found;
+      if ( ( found = LdapCache.getInstance( ).getUserByQueryId( queryId ) ) == null ) {
+        UserEntity searchUser = new UserEntity( );
+        searchUser.setQueryId( queryId );
+        found = EucaLdapHelper.getUsers( searchUser, null ).get( 0 );
+        LdapCache.getInstance( ).addUser( found );
+      } 
+      return found;
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchUserException( e );
     } catch ( LdapException e ) {
       LOG.error( e, e );
+      throw new NoSuchUserException( e );
     }
-    return null;
   }
   
   @Override
   public User lookupUser( String userName ) throws NoSuchUserException {
     try {
-      UserEntity search = new UserEntity( );
-      search.setName( userName );
-      return EucaLdapHelper.getUsers( search, null ).get( 0 );
+      User found;
+      if ( ( found = LdapCache.getInstance( ).getUserByName( userName ) ) == null ) {
+        UserEntity search = new UserEntity( );
+        search.setName( userName );
+        found = EucaLdapHelper.getUsers( search, null ).get( 0 );
+        LdapCache.getInstance( ).addUser( found );
+      }
+      return found;
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchUserException( e );
     } catch ( LdapException e ) {
       LOG.error( e, e );
+      throw new NoSuchUserException( e );
     }
-    return null;
   }
   
   @Override
@@ -165,6 +183,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
         UserEntity user = new UserEntity( userName );
         userTx.fire( user );
         EucaLdapHelper.updateUser( user, null );
+        LdapCache.getInstance( ).removeUser( userName );
       }
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
@@ -187,6 +206,8 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
     } catch ( LdapException e ) {
       LOG.error( e, e );
     }
+    // Invalid group cache
+    LdapCache.getInstance( ).clearGroups( );
     return LdapWrappedGroup.newInstance( newGroup );
   }
   
@@ -205,12 +226,17 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
     } catch ( LdapException e ) {
       LOG.error( e, e );
     }
+    // Invalid group cache
+    LdapCache.getInstance( ).clearGroups( );
   }
   
   @Override
   public List<Group> listAllGroups( ) {
     try {
-      return EucaLdapHelper.getGroups( EucaLdapHelper.FILTER_ALL_GROUPS );
+      if ( LdapCache.getInstance( ).isGroupCacheInvalidated( ) ) {
+        LdapCache.getInstance( ).reloadGroups( EucaLdapHelper.getGroups( EucaLdapHelper.FILTER_ALL_GROUPS ) );
+      }
+      return LdapCache.getInstance( ).getGroups( null );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -222,25 +248,40 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
   @Override
   public Group lookupGroup( String groupName ) throws NoSuchGroupException {
     try {
-      GroupEntity group = new GroupEntity( );
-      group.setName( groupName );
-      return EucaLdapHelper.getGroups( group ).get( 0 );
+      if ( LdapCache.getInstance( ).isGroupCacheInvalidated( ) ) {
+        LdapCache.getInstance( ).reloadGroups( EucaLdapHelper.getGroups( EucaLdapHelper.FILTER_ALL_GROUPS ) );
+      }
+      Group result = LdapCache.getInstance( ).getGroup( groupName );
+      if ( result == null ) {
+        throw new EntryNotFoundException( "Can not found group " + groupName );
+      }
+      return result;
+      //GroupEntity group = new GroupEntity( );
+      //group.setName( groupName );
+      //return EucaLdapHelper.getGroups( group ).get( 0 );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchGroupException( e );
     } catch ( LdapException e ) {
       LOG.error( e, e );
+      throw new NoSuchGroupException( e );
     }
-    return null;
   }
   
   @Override
   public List<Group> lookupUserGroups( User user ) {
     try {
-      UserEntity search = new UserEntity( );
-      search.setName( user.getName( ) );
-      LdapWrappedUser foundUser = ( LdapWrappedUser ) EucaLdapHelper.getUsers( search, null ).get( 0 );
-      return EucaLdapHelper.getGroups( EucaLdapHelper.getSearchGroupFilter( foundUser.getEucaGroupIds( ) ) );
+      LdapWrappedUser foundUser = ( LdapWrappedUser ) lookupUser( user.getName( ) );
+      if ( LdapCache.getInstance( ).isGroupCacheInvalidated( ) ) {
+        LdapCache.getInstance( ).reloadGroups( EucaLdapHelper.getGroups( EucaLdapHelper.FILTER_ALL_GROUPS ) );
+      }
+      return LdapCache.getInstance( ).getGroups( EucaLdapHelper.getNamesFromEucaGroupIds( foundUser.getEucaGroupIds( ) ) );
+      //UserEntity search = new UserEntity( );
+      //search.setName( user.getName( ) );
+      //LdapWrappedUser foundUser = ( LdapWrappedUser ) EucaLdapHelper.getUsers( search, null ).get( 0 );
+      //return EucaLdapHelper.getGroups( EucaLdapHelper.getSearchGroupFilter( foundUser.getEucaGroupIds( ) ) );
+    } catch ( NoSuchUserException e ) {
+      LOG.error( e, e );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -258,6 +299,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
     } catch ( LdapException e ) {
       LOG.error( e, e );
     }
+    LdapCache.getInstance( ).removeUser( user.getUserName( ) );
   }
   
   @Override
@@ -268,14 +310,19 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
   @Override
   public UserInfo getUserInfo( UserInfo info ) throws NoSuchUserException {
     try {
-      return ( ( WrappedUser ) EucaLdapHelper.getUsers( null, info ).get( 0 ) ).getUserInfo( );
+      User found;
+      if ( ( found = LdapCache.getInstance( ).getUserByName( info.getUserName( ) ) ) == null ) {
+        found = EucaLdapHelper.getUsers( null, info ).get( 0 );
+        LdapCache.getInstance( ).addUser( found );
+      }
+      return ( ( WrappedUser ) found ).getUserInfo( );    
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
       throw new NoSuchUserException( e );
     } catch ( LdapException e ) {
       LOG.error( e, e );
+      throw new NoSuchUserException( e );
     }
-    return null;
   }
   
   @Override
@@ -285,6 +332,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
         UserInfo search = new UserInfo( name );
         infoTx.fire( search );
         EucaLdapHelper.updateUser( null, search );
+        LdapCache.getInstance( ).removeUser( name );
       }
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
