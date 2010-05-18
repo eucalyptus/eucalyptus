@@ -231,6 +231,8 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   }
   
   public void queueResponse( Object o ) {
+    LOG.debug( this.getClass( ).getSimpleName( ) + " whatever: " + LogUtil.dumpObject( o ) );
+
     if ( o instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) o;
       if ( httpResponse.getMessage( ) != null ) {
@@ -258,6 +260,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     } finally {
       this.canHas.unlock( );
     }
+    LOG.debug( this.getClass( ).getSimpleName( ) + " whatevs: " + LogUtil.dumpObject(this.response.get()) );
   }
   
   public Throwable getException( ) {
@@ -285,7 +288,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   }
   
   public RTYPE pollResponse( Long waitMillis ) throws Exception {
-    if ( this.response.get( ) == null && !this.pollForResponse( waitMillis ) ) {
+    if ( !this.pollForResponse( waitMillis ) ) {
       return null;
     } else {
       EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ).debug( );
@@ -313,8 +316,12 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     boolean ret = false;
     this.canHas.lock( );
     try {
-      ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
-      EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ).debug( );
+      if (this.response.get( ) != null) {
+	  return true;
+      } else {
+	  ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
+	  EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ).debug( );
+      }
     } catch ( InterruptedException e ) {
       LOG.debug( e, e );
       Thread.currentThread( ).interrupt( );
@@ -327,7 +334,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   public void waitForResponse( ) {
     this.canHas.lock( );
     try {
-      while ( this.response.get( ) == null && !this.pollForResponse( 5000l ) );
+      while ( !this.pollForResponse( 5000l ) );
     } finally {
       this.canHas.unlock( );
     }
