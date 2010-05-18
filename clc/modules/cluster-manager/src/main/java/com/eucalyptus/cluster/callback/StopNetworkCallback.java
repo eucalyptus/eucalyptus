@@ -97,6 +97,9 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopN
       LOG.debug( "Releasing network token back to cluster: " + token );
       if( net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
       cluster.getState( ).releaseNetworkAllocation( token );
+    } catch ( EucalyptusClusterException e ) {
+      LOG.debug( "Aborting stop network for network with live instances: " + e.getMessage( ), e );
+      throw e;
     } catch ( Exception e ) {
       LOG.debug( e );
     }
