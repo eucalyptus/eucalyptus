@@ -334,7 +334,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   public void waitForResponse( ) {
     this.canHas.lock( );
     try {
-      while ( !this.pollForResponse( 5000l ) );
+      while ( !this.pollForResponse( 100l ) );
     } finally {
       this.canHas.unlock( );
     }

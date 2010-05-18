@@ -75,9 +75,9 @@ public class StatefulMessageSet<E extends Enum<E>> {
     QueuedEventCallback event = null;
     E nextState = this.states[currentState.ordinal( ) + 1];
     while ( ( event = this.pendingEvents.poll( ) ) != null ) {
-      while ( !event.pollForResponse( 1000l ) );
+      while ( !event.pollForResponse( 100l ) );
       try {
-        Object o = event.pollResponse( 1000l );
+        Object o = event.pollResponse( 100l );
         if ( o != null ) {
           EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
         }
