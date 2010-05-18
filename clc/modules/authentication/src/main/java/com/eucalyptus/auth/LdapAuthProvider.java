@@ -275,7 +275,7 @@ public class LdapAuthProvider implements UserProvider, GroupProvider, UserInfoPr
       if ( LdapCache.getInstance( ).isGroupCacheInvalidated( ) ) {
         LdapCache.getInstance( ).reloadGroups( EucaLdapHelper.getGroups( EucaLdapHelper.FILTER_ALL_GROUPS ) );
       }
-      return LdapCache.getInstance( ).getGroups( EucaLdapHelper.getNamesFromEucaGroupIds( foundUser.getEucaGroupIds( ) ) );
+      return LdapCache.getInstance( ).getGroups( foundUser.getEucaGroupIds( ) );
       //UserEntity search = new UserEntity( );
       //search.setName( user.getName( ) );
       //LdapWrappedUser foundUser = ( LdapWrappedUser ) EucaLdapHelper.getUsers( search, null ).get( 0 );

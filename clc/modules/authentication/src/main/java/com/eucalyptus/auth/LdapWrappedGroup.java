@@ -151,6 +151,10 @@ public class LdapWrappedGroup implements Group {
     return false;
   }
 
+  public String getTimestamp( ) {
+    return ( ( GroupEntity) this.group ).getTimestamp( );
+  }
+  
   public String toString( ) {
     return "LdapWrappedGroup [ group = " + this.group.toString( ) + " ]";
   }

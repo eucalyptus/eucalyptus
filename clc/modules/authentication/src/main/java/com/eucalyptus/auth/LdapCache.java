@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.ldap.LdapException;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 
@@ -56,14 +57,21 @@ public class LdapCache {
     return groupCache.get( name );
   }
   
-  public synchronized List<Group> getGroups( List<String> names ) {
+  public synchronized List<Group> getGroups( List<String> eucaGroupIds ) {
     List<Group> results = new ArrayList<Group>( );
-    if ( names == null ) {
+    if ( eucaGroupIds == null ) {
       results.addAll( groupCache.values( ) );
     } else {
-      for ( String name : names ) {
+      for ( String id : eucaGroupIds ) {
+        int colon = id.indexOf( EucaLdapHelper.EUCA_GROUP_ID_SEPARATOR );
+        if ( colon < 1 || colon > id.length( ) - 2 ) {
+          LOG.error( "Invalid eucaGroupId string: " + id );
+          continue;
+        }
+        String name = id.substring( 0, colon );
+        String timestamp = id.substring( colon + 1 );
         Group result = groupCache.get( name );
-        if ( result != null ) {
+        if ( result != null && timestamp.equals( ( ( LdapWrappedGroup ) result ).getTimestamp( ) ) ) {
           results.add( result );
         }
       }

@@ -42,7 +42,7 @@ public class EucaLdapHelper {
   
   private static final String   ATTRIBUTE_DUMMY                           = "0";
   
-  private static final String   EUCA_GROUP_ID_SEPARATOR                   = ":";
+  public static final String   EUCA_GROUP_ID_SEPARATOR                   = ":";
   
   public static String getSearchGroupFilter( List<String> groupIds ) throws LdapException {
     LdapFilter filter = new LdapFilter( );
@@ -59,18 +59,6 @@ public class EucaLdapHelper {
     }
     filter.opEnd( );
     return filter.toString( );
-  }
-  
-  public static List<String> getNamesFromEucaGroupIds( List<String> groupIds ) throws LdapException {
-    List<String> names = Lists.newArrayList( );
-    for ( String id : groupIds ) {
-      int colon = id.indexOf( EUCA_GROUP_ID_SEPARATOR );
-      if ( colon < 1 || colon > id.length( ) - 2 ) {
-        throw new LdapException( "Invalid eucaGroupId string: " + id );
-      }
-      names.add( id.substring( 0, colon ) );
-    }
-    return names;
   }
   
   public static String getEucaGroupIdString( String name, String timestamp ) {
