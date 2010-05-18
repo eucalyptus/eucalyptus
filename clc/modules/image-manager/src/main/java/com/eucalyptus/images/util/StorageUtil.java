@@ -133,6 +133,7 @@ public class StorageUtil {
         idStorageVolumeMap.put( vol.getVolumeId( ), vol );
       }
       for( Volume v : volumes ) {
+        if( !cluster.equals( v.getCluster( ) ) ) continue;
         String status = null;
         Integer size = 0;
         String actualDeviceName = "unknown";
