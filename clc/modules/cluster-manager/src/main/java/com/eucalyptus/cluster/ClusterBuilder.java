@@ -86,17 +86,19 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   public com.eucalyptus.component.Component getComponent( ) {
     return Components.lookup( Component.cluster );
   }
+  private static String         CLUSTER_KEY_FSTRING = "cc-%s";
+  private static String         NODE_KEY_FSTRING    = "nc-%s";
   
   @Override
   public ClusterConfiguration add( String name, String host, Integer port ) throws ServiceRegistrationException {
     ClusterConfiguration config = super.add( name, host, port );
     try {
       /** generate the Component keys **/
-      String ccAlias = String.format( Configuration.CLUSTER_KEY_FSTRING, config.getName( ) );
-      String ncAlias = String.format( Configuration.NODE_KEY_FSTRING, config.getName( ) );
+      String ccAlias = String.format( CLUSTER_KEY_FSTRING, config.getName( ) );
+      String ncAlias = String.format( NODE_KEY_FSTRING, config.getName( ) );
       String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
       File keyDir = new File( directory );
-      Configuration.LOG.info( "creating keys in " + directory );
+      LOG.info( "creating keys in " + directory );
       if ( !keyDir.mkdir( ) && !keyDir.exists( ) ) {
         throw new EucalyptusCloudException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) );
       }
@@ -132,7 +134,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
           credDb.add( componentCredentials );
           credDb.commit( );
         } catch ( Exception e ) {
-          Configuration.LOG.error( e, e );
+          LOG.error( e, e );
           credDb.rollback( );
         }
       } catch ( Exception eee ) {
