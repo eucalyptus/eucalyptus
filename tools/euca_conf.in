@@ -1047,10 +1047,6 @@ if [ -n "$CHECK" ]; then
 fi
 
 createCloudURL () {
-  ## FIXME: URGENTLY: only works on deb
-  if ! which mysql; then
-    apt-get --force-yes -y install mysql-client-5.1
-  fi 
   if [ ! -e ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem ]; then
     openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
     -name eucalyptus -name "eucalyptus" \

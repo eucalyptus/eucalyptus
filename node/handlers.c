@@ -1021,9 +1021,10 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
 
 	logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
 	logprintfl (EUCAINFO, "                         image=%s at %s\n", imageId, imageURL);
-	logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
-	if (ramdiskId)
-		logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
+	if (kernelId && kernelURL)
+	  logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
+	if (ramdiskId && ramdiskURL)
+	  logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
 	logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
 
 	int i;

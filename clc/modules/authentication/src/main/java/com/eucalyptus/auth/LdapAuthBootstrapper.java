@@ -21,7 +21,8 @@ import org.apache.log4j.Logger;
 @DependsLocal( Component.eucalyptus )
 public class LdapAuthBootstrapper extends Bootstrapper {
   private static Logger       LOG    = Logger.getLogger( LdapAuthBootstrapper.class );
-  public static final boolean ENABLE = !DatabaseAuthBootstrapper.ENABLE;
+  
+  public static final boolean ENABLE = LdapConfiguration.ENABLE_LDAP;
   
   @Override
   public boolean load( Stage current ) throws Exception {

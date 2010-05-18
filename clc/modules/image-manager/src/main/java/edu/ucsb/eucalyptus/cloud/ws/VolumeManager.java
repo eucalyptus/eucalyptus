@@ -206,11 +206,7 @@ public class VolumeManager {
       }      
       DeleteStorageVolumeResponseType scReply = StorageUtil.send( vol.getCluster( ), new DeleteStorageVolumeType( vol.getDisplayName( ) ) );
       if( scReply.get_return( ) ) {
-        db.delete( vol );
-        db.getSession( ).flush( );
-        if( !vol.getState(  ).equals( State.ANNILATED ) ) {
-          StorageUtil.dispatchAll( new DeleteStorageVolumeType( vol.getDisplayName() ) );
-        }
+    	vol.setState( State.ANNIHILATING ); 
         db.commit();
       } else {
         reallyFailed = true;
@@ -245,12 +241,14 @@ public class VolumeManager {
       List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : volumes ) {
-        if ( request.getVolumeSet().isEmpty() || request.getVolumeSet().contains( v.getDisplayName() ) ) {
+    	if ( !State.ANNIHILATED.equals(v.getState( ) ) ) {
           describeVolumes.add( v );
+    	} else {
+    	  db.delete( v );	
         }
       }
       try {
-        ArrayList<edu.ucsb.eucalyptus.msgs.Volume> volumeReplyList = StorageUtil.getVolumeReply( attachedVolumes, volumes );
+        ArrayList<edu.ucsb.eucalyptus.msgs.Volume> volumeReplyList = StorageUtil.getVolumeReply( attachedVolumes, describeVolumes );
         reply.getVolumeSet().addAll( volumeReplyList );
       } catch ( Exception e ) {
         LOG.warn( "Error getting volume information from the Storage Controller: " + e );

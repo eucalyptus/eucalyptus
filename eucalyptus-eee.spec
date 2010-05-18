@@ -177,7 +177,7 @@ installation.
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
-./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
+./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/ --with-vddk=/opt/packages/vddk/
 cd clc
 make deps
 cd ..

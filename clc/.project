@@ -20,11 +20,6 @@
 			<arguments>
 			</arguments>
 		</buildCommand>
-		<buildCommand>
-			<name>net.sf.eclipsecs.core.CheckstyleBuilder</name>
-			<arguments>
-			</arguments>
-		</buildCommand>
 	</buildSpec>
 	<natures>
 		<nature>org.eclipse.jdt.groovy.core.groovyNature</nature>
@@ -32,7 +27,6 @@
 		<nature>org.eclipse.wst.common.project.facet.core.nature</nature>
 		<nature>com.tssap.selena.model.modeling_nature</nature>
 		<nature>com.borland.selena.uml20.uml20_nature</nature>
-		<nature>net.sf.eclipsecs.core.CheckstyleNature</nature>
 		<nature>org.python.pydev.pythonNature</nature>
 	</natures>
 	<linkedResources>

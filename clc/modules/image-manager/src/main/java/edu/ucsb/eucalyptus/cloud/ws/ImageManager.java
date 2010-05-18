@@ -79,6 +79,7 @@ import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.UserInfoStore;
+import com.eucalyptus.auth.ldap.LdapConfiguration;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.Image;
@@ -367,7 +368,9 @@ public class ImageManager {
       UserInfo user = UserInfoStore.getUserInfo( new UserInfo( request.getUserId( ) ) );
 //      UserGroupEntity group = db.recast( UserGroupEntity.class ).getUnique( new UserGroupEntity( "all" ) );
       // TODO (wenye): database schema needs to change to make this work when UserInfo is not in database.
-      imageInfo.getPermissions( ).add( user );
+      if ( !LdapConfiguration.ENABLE_LDAP ) {
+        imageInfo.getPermissions( ).add( user );
+      }
 // TODO: RELEASE: restore
 //      imageInfo.getUserGroups( ).add( group );
       db.commit( );
@@ -529,7 +532,10 @@ public class ImageManager {
 
       if ( !request.getUserId( ).equals( imgInfo.getImageOwnerId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Not allowed to modify image: " + imgInfo.getImageId( ) );
       imgInfo.getPermissions( ).clear( );
-      imgInfo.getPermissions( ).add( UserInfoStore.getUserInfo( new UserInfo( imgInfo.getImageOwnerId( ) ) ) );
+      // TODO (wenye): database schema needs to change to make this work when UserInfo is not in database.
+      if ( !LdapConfiguration.ENABLE_LDAP ) {
+        imgInfo.getPermissions( ).add( UserInfoStore.getUserInfo( new UserInfo( imgInfo.getImageOwnerId( ) ) ) );
+      }
 // TODO: RELEASE: restore
 //      imgInfo.getUserGroups( ).clear( );
 //      imgInfo.getUserGroups( ).add( db.recast( UserGroupEntity.class ).getUnique( UserGroupEntity.named( "all" ) ) );

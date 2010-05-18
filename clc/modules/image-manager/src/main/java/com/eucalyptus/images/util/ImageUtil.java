@@ -84,6 +84,7 @@ import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.ldap.LdapConfiguration;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
@@ -371,7 +372,10 @@ public class ImageUtil {
           } catch ( NoSuchUserException e ) {
             throw new EucalyptusCloudException( "image attribute: invalid user id." );
           } finally {
-            imgInfo.getPermissions( ).add( target );
+            // TODO (wenye): database schema needs to change to make this work when UserInfo is not in database.
+            if ( !LdapConfiguration.ENABLE_LDAP ) {
+              imgInfo.getPermissions( ).add( target );
+            }
           }
         } else if ( !adding && imgInfo.getPermissions( ).contains( target ) ) {
           imgInfo.getPermissions( ).remove( target );

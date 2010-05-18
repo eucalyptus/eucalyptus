@@ -262,6 +262,9 @@ public class SANManager implements LogicalStorageManager {
 			db = StorageProperties.getEntityWrapper();
 			db.add(volumeInfo);
 			db.commit();
+		} else {
+			db.rollback();
+			throw new EucalyptusCloudException("Unable to create volume: " + volumeId);
 		}
 		return size;
 	}

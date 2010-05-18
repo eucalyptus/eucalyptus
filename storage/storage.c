@@ -1128,13 +1128,15 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
     CHECK_LIMIT("swap");
     
     /* do kernel & ramdisk first, since either the disk or the ephemeral partition will take up the rest */
-    if ((kernel_size_b=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, 0, limit_mb))<1L) return e;
-    limit_mb -= kernel_size_b/MEGABYTE;
-    CHECK_LIMIT("kernel")
+    if (kernelId && strnlen(kernelId, CHAR_BUFFER_SIZE) ) {
+      if ((kernel_size_b=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, 0, limit_mb))<1L) return e;
+      limit_mb -= kernel_size_b/MEGABYTE;
+      CHECK_LIMIT("kernel");
+    }
     if (ramdiskId && strnlen (ramdiskId, CHAR_BUFFER_SIZE) ) {
-        if ((ramdisk_size_b=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, 0, limit_mb))<1L) return e;
-        limit_mb -= ramdisk_size_b/MEGABYTE;
-        CHECK_LIMIT("ramdisk")
+      if ((ramdisk_size_b=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, 0, limit_mb))<1L) return e;
+      limit_mb -= ramdisk_size_b/MEGABYTE;
+      CHECK_LIMIT("ramdisk")
     }
 
     if ((image_size_b=get_cached_file (userId, imageURL, imageId, instanceId, image_name, image_path, s, convert_to_disk, limit_mb))<1L) return e;

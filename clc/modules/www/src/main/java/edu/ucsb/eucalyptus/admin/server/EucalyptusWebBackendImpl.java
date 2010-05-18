@@ -68,6 +68,8 @@ package edu.ucsb.eucalyptus.admin.server;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.gwt.user.client.rpc.SerializableException;
@@ -1086,9 +1088,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 		for (String userName : userNames) {
 			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName);
-			LOG.debug("==================> Disabling user " + userName);
 			updateUser.setEnabled(false);
-			LOG.debug("==================> User.isEnabled = " + updateUser.isEnabled());
 			EucalyptusManagement.commitWebUser(updateUser);
 		}
 	}
@@ -1113,9 +1113,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public List<String> getZones(final String sessionId) throws Exception {
 		// TODO: get zone list when chris is ready
 		List<String> zones = new ArrayList<String>();
-		zones.add("cluster1");
-		zones.add("cluster2");
-		zones.add("cluster3");
+		for ( ClusterConfiguration cluster : Configuration.getClusterConfigurations( ) ) {
+		  zones.add( cluster.getName( ) );
+		}
 		return zones;
 	}
 }

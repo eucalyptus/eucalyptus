@@ -60,4 +60,6 @@ permission notice:
 #ifndef HTTP_H
 #define HTTP_H
 int http_put (const char * file_name, const char * url, const char * login, const char * password);
+char * url_encode (const char * unencoded);
+char * url_decode (const char * encoded);
 #endif /* HTTP_H */
