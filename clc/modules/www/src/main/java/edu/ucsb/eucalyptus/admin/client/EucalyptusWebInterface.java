@@ -2355,7 +2355,9 @@ public class EucalyptusWebInterface implements EntryPoint {
           conf = (SystemConfigWeb) result;
           displayFirstTimeConfiguration( conf );
         }
-        public void onFailure ( Throwable caught ) { }
+        public void onFailure ( Throwable caught ) { 
+          displayFirstTimeConfiguration( null );
+        }
       }
       );
     }
@@ -2430,7 +2432,9 @@ public class EucalyptusWebInterface implements EntryPoint {
     	g3.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);       
     	final TextBox cloudUrl_box = new TextBox();
     	cloudUrl_box.setWidth("180");
-    	cloudUrl_box.setText( conf.getCloudHost( ) );
+    	if ( config != null ) {
+    	  cloudUrl_box.setText( config.getCloudHost( ) );
+    	}
     	g3.setWidget( i++, 1, cloudUrl_box );
 
     	VerticalPanel cpanel = new VerticalPanel();
