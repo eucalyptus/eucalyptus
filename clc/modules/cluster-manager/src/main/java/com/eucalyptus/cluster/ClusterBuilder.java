@@ -1,4 +1,4 @@
-package com.eucalyptus.config;
+package com.eucalyptus.cluster;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -16,12 +16,29 @@ import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.util.PEMFiles;
+import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.event.NewClusterEvent;
+import com.eucalyptus.cluster.event.TeardownClusterEvent;
+import com.eucalyptus.cluster.handlers.AddressStateHandler;
+import com.eucalyptus.cluster.handlers.ClusterCertificateHandler;
+import com.eucalyptus.cluster.handlers.LogStateHandler;
+import com.eucalyptus.cluster.handlers.NetworkStateHandler;
+import com.eucalyptus.cluster.handlers.ResourceStateHandler;
+import com.eucalyptus.cluster.handlers.VmStateHandler;
+import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.Handles;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
@@ -142,6 +159,26 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     } catch ( EucalyptusCloudException e ) {
       return true;
     }
+  }
+  
+  @Override
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
+    Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
+    ClusterCertificateHandler cc;
+    try {
+      ClusterUtil.deregisterClusterStateHandler( cluster, new ClusterCertificateHandler( cluster ) );
+      ClusterUtil.deregisterClusterStateHandler( cluster, new NetworkStateHandler( cluster ) );
+      ClusterUtil.deregisterClusterStateHandler( cluster, new LogStateHandler( cluster ) );
+      ClusterUtil.deregisterClusterStateHandler( cluster, new ResourceStateHandler( cluster ) );
+      ClusterUtil.deregisterClusterStateHandler( cluster, new VmStateHandler( cluster ) );
+      ClusterUtil.deregisterClusterStateHandler( cluster, new AddressStateHandler( cluster ) );
+    } catch ( BindingException e ) {
+      LOG.error( e, e );
+    } catch ( EventVetoedException e ) {
+      LOG.error( e, e );
+    }
+
+    super.fireStop( config );
   }
   
 }
