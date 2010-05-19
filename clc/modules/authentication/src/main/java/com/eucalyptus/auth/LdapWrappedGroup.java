@@ -38,6 +38,7 @@ public class LdapWrappedGroup implements Group {
       GroupEntity search = new GroupEntity( this.group.getName( ) );
       search.addAuthorization( auth );
       EucaLdapHelper.addGroupAttribute( search );
+      LdapCache.getInstance( ).clearGroups( );
       return true;
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
@@ -57,7 +58,7 @@ public class LdapWrappedGroup implements Group {
     try {
       GroupEntity entity = ( GroupEntity ) this.group;
       UserEntity search = new UserEntity( );
-      search.addEucaGroupId( entity.getName( ), entity.getTimestamp( ) );
+      search.getEucaGroupIds( ).add( EucaLdapHelper.getEucaGroupIdString( entity.getName( ), entity.getTimestamp( ) ) );
       List<User> users = EucaLdapHelper.getUsers( search, null );
       return ImmutableList.copyOf( users );
     } catch ( EntryNotFoundException e ) {
@@ -80,6 +81,7 @@ public class LdapWrappedGroup implements Group {
       GroupEntity search = new GroupEntity( this.group.getName( ) );
       search.addAuthorization( auth );
       EucaLdapHelper.deleteGroupAttribute( search );
+      LdapCache.getInstance( ).clearGroups( );
       return true;
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
@@ -94,8 +96,9 @@ public class LdapWrappedGroup implements Group {
     try {
       GroupEntity entity = ( GroupEntity ) this.group;
       UserEntity search = new UserEntity( principal.getName( ) );
-      search.addEucaGroupId( entity.getName( ), entity.getTimestamp( ) );
+      search.getEucaGroupIds( ).add( EucaLdapHelper.getEucaGroupIdString( entity.getName( ), entity.getTimestamp( ) ) );
       EucaLdapHelper.addUserAttribute( search );
+      LdapCache.getInstance( ).removeUser( principal.getName( ) );
       return true;
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
@@ -120,7 +123,7 @@ public class LdapWrappedGroup implements Group {
     try {
       GroupEntity entity = ( GroupEntity ) this.group;
       UserEntity search = new UserEntity( );
-      search.addEucaGroupId( entity.getName( ), entity.getTimestamp( ) );
+      search.getEucaGroupIds( ).add( EucaLdapHelper.getEucaGroupIdString( entity.getName( ), entity.getTimestamp( ) ) );
       List<User> users = EucaLdapHelper.getUsers( search, null );
       return Iterators.asEnumeration( users.iterator( ) );
     } catch ( EntryNotFoundException e ) {
@@ -136,8 +139,9 @@ public class LdapWrappedGroup implements Group {
     try {
       GroupEntity entity = ( GroupEntity ) this.group;
       UserEntity search = new UserEntity( principal.getName( ) );
-      search.addEucaGroupId( entity.getName( ), entity.getTimestamp( ) );
+      search.getEucaGroupIds( ).add( EucaLdapHelper.getEucaGroupIdString( entity.getName( ), entity.getTimestamp( ) ) );
       EucaLdapHelper.deleteUserAttribute( search );
+      LdapCache.getInstance( ).removeUser( principal.getName( ) );
       return true;
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
@@ -145,6 +149,10 @@ public class LdapWrappedGroup implements Group {
       LOG.error( e, e );
     }
     return false;
+  }
+
+  public String getTimestamp( ) {
+    return ( ( GroupEntity) this.group ).getTimestamp( );
   }
   
   public String toString( ) {

@@ -195,10 +195,6 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
     return null;
   }
   
-  public void addEucaGroupId( String name, String timestamp ) {
-    this.eucaGroupIds.add( name + ":" + timestamp );
-  }
-  
   public boolean checkToken( String token ) {
     return this.getToken( ).equals( token )
   }
