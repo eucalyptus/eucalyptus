@@ -161,6 +161,7 @@ This package contains the internal log service of eucalyptus.
 %package broker
 Summary:      Elastic Utility Computing Architecture - vmware broker
 Requires:     %{name}-common-java = %{version}, %{euca_java}
+AutoReqProv:  no
 Group:        Applications/System
 
 %description broker
