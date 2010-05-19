@@ -132,9 +132,10 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 // finds instance by ID and destroys it on the hypervisor
 // NOTE: this must be called with inst_sem semaphore held
 static int 
-find_and_destroy_instance ( 
+find_and_terminate_instance ( 
 	char *instanceId, 
-	ncInstance **instance_p )
+	ncInstance **instance_p,
+	char destroy)
 {
 	ncInstance *instance;
 	virConnectPtr *conn;
@@ -154,7 +155,10 @@ find_and_destroy_instance (
 		if (dom) {
 			/* also protect 'destroy' commands, just in case */
 			sem_p (hyp_sem);
-			err = virDomainDestroy (dom);
+			if (destroy)
+			  err = virDomainDestroy (dom);
+			else 
+			  err = virDomainShutdown (dom);
 			sem_v (hyp_sem);
 			if (err==0) {
 				logprintfl (EUCAINFO, "destroyed domain for instance %s\n", instanceId);
@@ -181,7 +185,7 @@ doTerminateInstance(	struct nc_state_t *nc,
 	int err;
 
 	sem_p (inst_sem);
-	err = find_and_destroy_instance (instanceId, &instance);
+	err = find_and_terminate_instance (instanceId, &instance, 1);
 	if (err!=OK) {
 		sem_v(inst_sem);
 		return err;
@@ -507,8 +511,20 @@ static void * bundling_thread (void *arg)
 	char cmd[MAX_PATH];
 	char buf[MAX_PATH];
 
-	logprintfl (EUCAINFO, "bundling_thread: started bundling instance %s\n", instance->instanceId);
+	logprintfl (EUCAINFO, "bundling_thread: waiting for instance %s to shut down\n", instance->instanceId);
+	// wait until monitor thread changes the state of the instance instance 
+	if (wait_state_transition (instance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) { 
+	  if (instance->bundleCanceled) { // cancel request came in while the instance was shutting down
+	    logprintfl (EUCAINFO, "bundling_thread: cancelled while bundling instance %s\n", instance->instanceId);
+	    cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_CANCELLED);
+	  } else {
+	    logprintfl (EUCAINFO, "bundling_thread: failed while bundling instance %s\n", instance->instanceId);
+	    cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);
+	  }
+	  return NULL;
+	}
 
+	logprintfl (EUCAINFO, "bundling_thread: started bundling instance %s\n", instance->instanceId);
 	char dstDiskPath[MAX_PATH];
 	snprintf(dstDiskPath, MAX_PATH, "%s/%s/%s/%s", scGetInstancePath(), params->instance->userId, params->instance->instanceId, params->filePrefix);
 
@@ -635,20 +651,19 @@ doBundleInstance(
 		return cleanup_bundling_task (instance, params, NO_STATE, BUNDLING_FAILED);
 
 	// terminate the instance
-    sem_p (inst_sem);
-	int err = find_and_destroy_instance (instanceId, &instance);
-	if (err!=OK) {
-		sem_v (inst_sem);
-		if (params) free(params);
-		return err;
-	}
-
-	// while still under lock, update its state
+	sem_p (inst_sem);
 	instance->bundlingTime = time (NULL);
-	change_state (instance, BUNDLING);
+	change_state (instance, BUNDLING_SHUTDOWN);
 	change_bundling_state (instance, BUNDLING_IN_PROGRESS);
-    sem_v (inst_sem);
-
+	
+	int err = find_and_terminate_instance (instanceId, &instance, 0);
+	if (err!=OK) {
+	  sem_v (inst_sem);
+	  if (params) free(params);
+	  return err;
+	}
+	sem_v (inst_sem);
+	
 	// do the rest in a thread
 	pthread_attr_t tattr;
 	pthread_t tid;
@@ -673,6 +688,7 @@ doCancelBundleTask(
     logprintfl (EUCAERROR, "doCancelBundleTask: instance %s not found\n", instanceId);
     return ERROR;
   } 
+  instance->bundleCanceled = 1; // record the intent to cancel bundling so that bundling thread can abort
   if (instance->bundlePid > 0 && !check_process(instance->bundlePid, "euca-bundle-upload")) {
     logprintfl(EUCADEBUG, "doCancelBundleTask: found bundlePid '%d', sending kill signal...\n", instance->bundlePid);
     kill(instance->bundlePid, 9);

@@ -215,7 +215,8 @@ void change_state(	ncInstance *instance,
     case SHUTDOWN:
     case SHUTOFF:
     case CRASHED:
-	case BUNDLING:
+    case BUNDLING_SHUTDOWN:
+    case BUNDLING_SHUTOFF:
         instance->stateCode = EXTANT;
 	instance->retries = LIBVIRT_QUERY_RETRIES;
         break;
@@ -230,6 +231,25 @@ void change_state(	ncInstance *instance,
     strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
 }
 
+// waits indefinitely until a state transition takes place
+// (timeouts are implemented in the monitoring thread) and
+// returns 0 if from_state->to_state transition takes place
+// and 1 otherwise
+int 
+wait_state_transition (ncInstance * instance, 
+		       instance_states from_state,
+		       instance_states to_state) 
+{
+  while (1) {
+    instance_states current_state = instance->state;
+    if (current_state == to_state ) 
+      return 0;
+    if (current_state != from_state )
+      return 1;
+    sleep (MONITORING_PERIOD); // no point in checking more frequently
+  }
+}
+
 static void
 refresh_instance_info(	struct nc_state_t *nc,
 			ncInstance *instance)
@@ -240,14 +260,17 @@ refresh_instance_info(	struct nc_state_t *nc,
 	    return;
 
     /* no need to bug for domains without state on Hypervisor */
-    if (now==TEARDOWN || now==STAGING || now==BUNDLING)
+    if (now==TEARDOWN || now==STAGING || now==BUNDLING_SHUTOFF)
         return;
     
     sem_p(hyp_sem);
     virDomainPtr dom = virDomainLookupByName (nc_state.conn, instance->instanceId);
     sem_v(hyp_sem);
     if (dom == NULL) { /* hypervisor doesn't know about it */
-        if (now==RUNNING ||
+      if (now==BUNDLING_SHUTDOWN) {
+	logprintfl (EUCAINFO, "detected disappearance of bundled domain %s\n", instance->instanceId);
+	change_state (instance, BUNDLING_SHUTOFF);
+      } else if (now==RUNNING ||
             now==BLOCKED ||
             now==PAUSED ||
             now==SHUTDOWN) {
@@ -300,6 +323,9 @@ refresh_instance_info(	struct nc_state_t *nc,
             change_state (instance, xen);
         }
         break;
+    case BUNDLING_SHUTDOWN:
+      logprintfl (EUCADEBUG, "hypervisor state for bundling domain %s is %s\n", instance->instanceId, instance_state_names [xen]);
+      break;
     default:
         logprintfl (EUCAERROR, "error: refresh...(): unexpected state (%d) for instance %s\n", now, instance->instanceId);
         return;
@@ -426,7 +452,8 @@ monitoring_thread (void *arg)
             if (instance->state!=STAGING && instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
                 instance->state!=SHUTDOWN &&
-				instance->state!=BUNDLING &&
+		instance->state!=BUNDLING_SHUTDOWN &&
+		instance->state!=BUNDLING_SHUTOFF &&
                 instance->state!=TEARDOWN) continue;
 
             if (instance->state==TEARDOWN) {
@@ -440,10 +467,13 @@ monitoring_thread (void *arg)
                 continue;
             }
 
-			// time out logic for STAGING or BOOTING or BUNDLING instances
-            if (instance->state==STAGING  && (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
-            if (instance->state==BOOTING  && (now - instance->bootTime)     < booting_cleanup_threshold) continue;
-            if (instance->state==BUNDLING && (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
+	    // time out logic for STAGING or BOOTING or BUNDLING instances
+            if (instance->state==STAGING  
+		&& (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
+            if (instance->state==BOOTING  
+		&& (now - instance->bootTime)     < booting_cleanup_threshold) continue;
+            if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF) 
+		&& (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
             
             /* ok, it's been condemned => destroy the files */
             if (!nc_state.save_instance_files) {

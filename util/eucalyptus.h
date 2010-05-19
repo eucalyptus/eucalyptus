@@ -151,8 +151,9 @@ typedef enum instance_states_t {
     BOOTING,
     CANCELED,
 
-	/* state after running */
-	BUNDLING,
+    /* state after running */
+    BUNDLING_SHUTDOWN,
+    BUNDLING_SHUTOFF,
 
     /* the only three states reported to CLC */
     PENDING,  /* staging in data, starting to boot, failed to boot */ 
