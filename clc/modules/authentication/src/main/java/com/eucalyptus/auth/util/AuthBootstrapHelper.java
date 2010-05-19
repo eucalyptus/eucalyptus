@@ -13,10 +13,10 @@ public class AuthBootstrapHelper {
 
   public static void ensureStandardGroupsExists( ) {
     try {
-      Groups.ALL = Groups.lookupGroup( "all" );
+      Groups.ALL = Groups.lookupGroup( Groups.NAME_ALL );
     } catch ( NoSuchGroupException e ) {
       try {
-        Groups.ALL = Groups.addGroup( "all" );
+        Groups.ALL = Groups.addGroup( Groups.NAME_ALL );
       } catch ( GroupExistsException e1 ) {
         LOG.error( e1, e1 );
         LOG.error( "Failed to add the 'all' group.  The system may not be able to store group information." );
@@ -25,13 +25,13 @@ public class AuthBootstrapHelper {
     Groups.RESTRICTED_GROUPS.add( Groups.ALL );
     
     try {
-      Groups.DEFAULT = Groups.lookupGroup( "default" );
+      Groups.DEFAULT = Groups.lookupGroup( Groups.NAME_DEFAULT );
     } catch ( NoSuchGroupException e ) {
       try {
-        Groups.DEFAULT = Groups.addGroup( "default" );
+        Groups.DEFAULT = Groups.addGroup( Groups.NAME_DEFAULT );
       } catch ( GroupExistsException e1 ) {
         LOG.error( e1, e1 );
-        LOG.error( "Failed to add the 'all' group.  The system may not be able to store group information." );
+        LOG.error( "Failed to add the 'default' group.  The system may not be able to store group information." );
       }
     }
     Groups.RESTRICTED_GROUPS.add( Groups.DEFAULT );

@@ -327,6 +327,7 @@ public class EucalyptusManagement {
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
 	{
 		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration();
+		LOG.debug( "Sending cloud host: " + sysConf.getCloudHost( ) );
 		return new SystemConfigWeb( 
 				sysConf.getDefaultKernel(),
 				sysConf.getDefaultRamdisk(),

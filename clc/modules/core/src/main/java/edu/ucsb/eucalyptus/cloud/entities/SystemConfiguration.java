@@ -260,6 +260,7 @@ public class SystemConfiguration {
   	}
   	catch ( EucalyptusCloudException e ) {
   	  LOG.warn("Failed to get system configuration. Loading defaults.");
+  	  LOG.error( e, e );
   		conf = SystemConfiguration.validateSystemConfiguration(null);
   		confDb.add(conf);
   		confDb.commit();
