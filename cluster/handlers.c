@@ -2453,7 +2453,6 @@ void *monitor_thread(void *in) {
     unlock_exit(1);
   }
   
-
   while(1) {
     // set up default signal handler for this child process (for SIGTERM)
     struct sigaction newsigact;
@@ -2496,6 +2495,9 @@ void *monitor_thread(void *in) {
 
 int init_pthreads() {
   // start any background threads
+  if (!config_init) {
+    return(1);
+  }
   sem_mywait(CONFIG);
   if (config->threads[MONITOR] == 0 || check_process(config->threads[MONITOR], "httpd-cc.conf")) {
     int pid;

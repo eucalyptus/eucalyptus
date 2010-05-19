@@ -64,6 +64,7 @@
 package com.eucalyptus.ws.client;
 
 import java.security.GeneralSecurityException;
+import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import org.apache.log4j.Logger;
@@ -94,6 +95,7 @@ import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -104,6 +106,7 @@ import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -181,6 +184,16 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
 
   @Override
   public boolean start( ) throws Exception {
+    List<ServiceConfiguration> configs = Lists.newArrayList( );
+    configs.addAll( Configuration.getStorageControllerConfigurations( ) );
+    configs.addAll( Configuration.getWalrusConfigurations( ) );
+    configs.addAll( Configuration.getVMwareBrokerConfigurations( ) );
+    for( ServiceConfiguration c : configs ) {
+      if( !c.isLocal( ) ) {
+        this.addRemoteComponent( c );
+        this.fireRemoteStartEvent( c );
+      }
+    }
     return true;
   }
 

@@ -110,6 +110,7 @@ public class StorageUtil {
       sc.dispatch( message );
     }
   }
+
   public static ArrayList<edu.ucsb.eucalyptus.msgs.Volume> getVolumeReply( Map<String, AttachedVolume> attachedVolumes, List<Volume> volumes ) throws EucalyptusCloudException {
     Multimap<String,Volume> clusterVolumeMap = Multimaps.newHashMultimap( );
     Map<String,StorageVolume> idStorageVolumeMap = Maps.newHashMap( );
@@ -128,10 +129,11 @@ public class StorageUtil {
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
       Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
       DescribeStorageVolumesResponseType volState = sc.send( descVols, DescribeStorageVolumesResponseType.class );    
-      for ( StorageVolume vol : volState.getVolumeSet( ) ) {    
+      for ( StorageVolume vol : volState.getVolumeSet( ) ) {
         idStorageVolumeMap.put( vol.getVolumeId( ), vol );
       }
       for( Volume v : volumes ) {
+        if( !cluster.equals( v.getCluster( ) ) ) continue;
         String status = null;
         Integer size = 0;
         String actualDeviceName = "unknown";
@@ -140,16 +142,18 @@ public class StorageUtil {
           status = vol.getStatus( );
           size = Integer.parseInt( vol.getSize( ) );
           actualDeviceName = vol.getActualDeviceName( );
+        } else {
+          v.setState( State.ANNIHILATED );
         }
         if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
           v.setState( State.BUSY );
         } else if( status != null ) {
-          v.setMappedState( status );        
+          v.setMappedState( status );
         }
         if( v.getSize() != 0 ) {
           v.setSize( new Integer( size ) );
         }
-        if( "unknown".equals( v.getRemoteDevice( ) ) || v.getRemoteDevice( ) == null ) {
+        if( "invalid".equals ( v.getRemoteDevice( ) ) || "unknown".equals( v.getRemoteDevice( ) ) || v.getRemoteDevice( ) == null ) {
           v.setRemoteDevice( actualDeviceName );
         }
         edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );

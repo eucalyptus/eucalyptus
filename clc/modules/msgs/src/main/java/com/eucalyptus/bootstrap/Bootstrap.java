@@ -77,7 +77,8 @@ public class Bootstrap {
                             "Depends.local=" + b.toString( ), "Component." + b.toString( ) + "=remote" ).info( );
           this.bootstrappers.remove( b );
         } else if ( !b.checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ) ).append( this.getClass( ).getSimpleName( ) ).append( "Depends.remote=" + b.toString( ) ).append(  "Component." + b.toString( ) + "=local" ).info( );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ), this.getClass( ).getSimpleName( ),
+                            "Depends.remote=" + b.toString( ), "Component." + b.toString( ) + "=local" ).info( );
           this.bootstrappers.remove( b );
         }
       }

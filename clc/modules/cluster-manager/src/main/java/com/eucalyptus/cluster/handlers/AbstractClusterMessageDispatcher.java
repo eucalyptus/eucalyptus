@@ -241,28 +241,24 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( hostName == null ) ? 0 : hostName.hashCode( ) );
-    result = prime * result + port;
-    result = prime * result + ( ( servicePath == null ) ? 0 : servicePath.hashCode( ) );
+    result = prime * result + ( ( this.cluster == null ) ? 0 : this.cluster.hashCode( ) );
     return result;
   }
+
   
+    
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) return true;
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
     AbstractClusterMessageDispatcher other = ( AbstractClusterMessageDispatcher ) obj;
-    if ( hostName == null ) {
-      if ( other.hostName != null ) return false;
-    } else if ( !hostName.equals( other.hostName ) ) return false;
-    if ( port != other.port ) return false;
-    if ( servicePath == null ) {
-      if ( other.servicePath != null ) return false;
-    } else if ( !servicePath.equals( other.servicePath ) ) return false;
+    if ( this.cluster == null ) {
+      if ( other.cluster != null ) return false;
+    } else if ( !this.cluster.getName( ).equals( other.cluster.getName( ) ) ) return false;
     return true;
   }
-    
+
   @Override
   public void advertiseEvent( Event event ) {}
   

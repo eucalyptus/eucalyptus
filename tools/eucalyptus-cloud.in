@@ -256,7 +256,7 @@ do_start() {
 		fi
 	fi
 	if [ "$VMWAREBROKER_WS" != "Y" ]; then
-		OPTS="$OPTS --disable-vmwarebroker"
+		CLOUD_OPTS="$CLOUD_OPTS --disable-vmwarebroker"
 	else
     		if ! $EUCALYPTUS/usr/sbin/euca_conf --check vmwarebroker ; then
 			exit 1
