@@ -5,6 +5,7 @@ import java.util.NavigableMap;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.VmTypeAvailability;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
@@ -14,7 +15,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.cluster.VmTypeAvailability;
 
 public class NodeResourceAllocator implements ResourceAllocator {
   private static String ALLOCATOR = "euca.cluster.allocator";

@@ -58,7 +58,7 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package com.eucalyptus.images.util;
+package com.eucalyptus.blockstorage;
 
 import java.io.ByteArrayInputStream;
 import java.security.PrivateKey;
@@ -79,12 +79,13 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.images.Image;
+import com.eucalyptus.images.ImageManager;
+import com.eucalyptus.images.ImageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.cloud.ws.ImageManager;
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
 import edu.ucsb.eucalyptus.msgs.CheckImageType;
 import edu.ucsb.eucalyptus.msgs.FlushCachedImageType;

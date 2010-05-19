@@ -61,95 +61,136 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.state;
+package com.eucalyptus.blockstorage;
 
 import com.eucalyptus.util.StorageProperties;
+import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
+import edu.ucsb.eucalyptus.cloud.state.State;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 
 @Entity
 @PersistenceContext(name="eucalyptus_images")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Snapshot extends AbstractIsomorph {
-  private String parentVolume;
-  private String cluster;
+public class Volume extends AbstractIsomorph {
 
-  public Snapshot() {
-    super();
+  private Integer size;
+  private String cluster;
+  private String parentSnapshot;
+  @Lob
+  private String remoteDevice;
+  private String localDevice;
+
+  public Volume() {
+    super( );
   }
 
-  public Snapshot( final String userName, final String displayName ) {
+  public Volume( final String userName, final String displayName, final Integer size, final String cluster, final String parentSnapshot ) {
+    super( userName, displayName );
+    this.size = size;
+    this.cluster = cluster;
+    this.parentSnapshot = parentSnapshot;
+  }
+
+  public Volume( String userName, String displayName ) {
     super( userName, displayName );
   }
 
-  public Snapshot( final String userName, final String displayName, final String parentVolume ) {
-    this( userName, displayName );
-    this.parentVolume = parentVolume;
-  }
-
-  public static Snapshot named( String userName, String volumeId ) {
-    Snapshot v = new Snapshot();
+  public static Volume named( String userName, String volumeId ) {
+    Volume v = new Volume(  );
     v.setDisplayName( volumeId );
     v.setUserName( userName );
     return v;
   }
 
-  public static Snapshot ownedBy( String userName ) {
-    Snapshot v = new Snapshot();
+
+  public static Volume ownedBy( String userName ) {
+    Volume v = new Volume(  );
     v.setUserName( userName );
     return v;
   }
 
-  public String mapState() {
-    switch ( this.getState() ) {
-      case GENERATING:
-        return "pending";
-      case EXTANT:
-        return "completed";
-      default:
-        return "failed";
+  public String mapState( ) {
+    switch(this.getState()) {
+      case GENERATING: return "creating";
+      case EXTANT: return "available";
+      case ANNIHILATING: return "deleting";
+      case ANNIHILATED: return "deleted";
+      case FAIL: return "failed";
+      case BUSY: return "in-use";
+      default: return "unavailable";
     }
   }
 
   public void setMappedState( final String state ) {
-    if ( StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
-    else if ( StorageProperties.Status.pending.toString().equals( state ) ) this.setState( State.GENERATING );
-    else if ( StorageProperties.Status.completed.toString().equals( state ) ) this.setState( State.EXTANT );
-    else if ( StorageProperties.Status.available.toString().equals( state ) ) this.setState( State.EXTANT );
-    else if ( StorageProperties.Status.failed.toString().equals( state ) ) this.setState( State.FAIL );
+    if( StorageProperties.Status.failed.toString().equals( state ) ) this.setState( State.FAIL );
+    else if(StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if(StorageProperties.Status.available.toString().equals( state ) ) this.setState( State.EXTANT );
+    else if("in-use".equals( state ) ) this.setState( State.BUSY );
+    else this.setState( State.ANNIHILATED );
   }
 
   public Object morph( final Object o ) {
     return null;
   }
 
-  public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
-    snap.setSnapshotId( this.getDisplayName() );
-    snap.setStatus( this.mapState() );
-    snap.setStartTime( this.getBirthday() );
-    snap.setVolumeId( this.getParentVolume() );
-    snap.setProgress( this.getState().equals( State.EXTANT ) ? "100%" : "" );
-    return snap;
+  public edu.ucsb.eucalyptus.msgs.Volume morph( final edu.ucsb.eucalyptus.msgs.Volume vol ) {
+    vol.setAvailabilityZone( this.getCluster() );
+    vol.setCreateTime( this.getBirthday() );
+    vol.setVolumeId( this.getDisplayName() );
+    vol.setSnapshotId( this.getParentSnapshot() );
+    vol.setStatus( this.mapState() );
+    vol.setSize( (this.getSize() == -1) || (this.getSize() == null)? null : this.getSize().toString() );
+    return vol;
   }
 
-  public String getParentVolume() {
-    return parentVolume;
+  public Integer getSize() {
+    return size;
   }
 
-  public void setParentVolume( final String parentVolume ) {
-    this.parentVolume = parentVolume;
-  }
-
-  public String getCluster( ) {
+  public String getCluster() {
     return cluster;
   }
 
-  public void setCluster( String cluster ) {
+  public void setSize( final Integer size ) {
+    this.size = size;
+  }
+
+  public void setCluster( final String cluster ) {
     this.cluster = cluster;
+  }
+
+  public String getParentSnapshot() {
+    return parentSnapshot;
+  }
+
+  public void setParentSnapshot( final String parentSnapshot ) {
+    this.parentSnapshot = parentSnapshot;
+  }
+
+  public String getRemoteDevice() {
+    return remoteDevice;
+  }
+
+  public void setRemoteDevice( final String remoteDevice ) {
+    this.remoteDevice = remoteDevice;
+  }
+
+  public String getLocalDevice() {
+    return localDevice;
+  }
+
+  public void setLocalDevice( final String localDevice ) {
+    this.localDevice = localDevice;
+  }
+  
+  public boolean isReady() {
+	  return this.getState().equals(State.EXTANT);
   }
 }

@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.images.util;
+package com.eucalyptus.blockstorage;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -84,7 +84,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
 import edu.ucsb.eucalyptus.cloud.state.State;
-import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;

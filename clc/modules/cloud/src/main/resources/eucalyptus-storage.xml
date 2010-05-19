@@ -81,7 +81,7 @@
             <inbound>
                 <inbound-endpoint ref="ImageWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.ImageManager"/>
+            <component class="com.eucalyptus.images.ImageManager"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint"/>
@@ -92,7 +92,7 @@
             <inbound>
                 <inbound-endpoint ref="VolumeWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.VolumeManager"/>
+            <component class="com.eucalyptus.blockstorage.VolumeManager"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint"/>
@@ -103,7 +103,7 @@
             <inbound>
                 <inbound-endpoint ref="SnapshotWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.SnapshotManager"/>
+            <component class="com.eucalyptus.blockstorage.SnapshotManager"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint"/>

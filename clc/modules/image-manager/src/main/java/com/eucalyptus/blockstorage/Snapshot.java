@@ -61,106 +61,97 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.blockstorage;
 
-import com.eucalyptus.entities.VmType;
+import com.eucalyptus.util.StorageProperties;
+import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
+import edu.ucsb.eucalyptus.cloud.state.State;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-public class VmTypeAvailability implements Comparable {
-  private VmType type;
-  private int max;
-  private int available;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
 
-  public VmTypeAvailability( final VmType type, final int max, final int available ) {
-    this.type = type;
-    this.max = max;
-    this.available = available;
+@Entity
+@PersistenceContext(name="eucalyptus_images")
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class Snapshot extends AbstractIsomorph {
+  private String parentVolume;
+  private String cluster;
+
+  public Snapshot() {
+    super();
   }
 
-  public VmType getType() {
-    return type;
+  public Snapshot( final String userName, final String displayName ) {
+    super( userName, displayName );
   }
 
-  public void decrement( int quantity ) {
-    this.available -= quantity;
-    this.available = ( this.available < 0 ) ? 0 : this.available;
+  public Snapshot( final String userName, final String displayName, final String parentVolume ) {
+    this( userName, displayName );
+    this.parentVolume = parentVolume;
   }
 
-  public int getMax() {
-    return max;
+  public static Snapshot named( String userName, String volumeId ) {
+    Snapshot v = new Snapshot();
+    v.setDisplayName( volumeId );
+    v.setUserName( userName );
+    return v;
   }
 
-  public void setMax( final int max ) {
-    this.max = max;
+  public static Snapshot ownedBy( String userName ) {
+    Snapshot v = new Snapshot();
+    v.setUserName( userName );
+    return v;
   }
 
-  public int getAvailable() {
-    return available;
-  }
-
-  public void setAvailable( final int available ) {
-    this.available = available;
-  }
-
-  @Override
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( !( o instanceof VmTypeAvailability ) ) return false;
-
-    VmTypeAvailability that = ( VmTypeAvailability ) o;
-
-    if ( !type.equals( that.type ) ) return false;
-
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return type.hashCode();
-  }
-
-  public int compareTo( final Object o ) {
-    VmTypeAvailability v = ( VmTypeAvailability ) o;
-    if ( v.getAvailable() == this.getAvailable() ) return this.type.compareTo( v.getType() );
-    return v.getAvailable() - this.getAvailable();
-  }
-
-  @Override
-  public String toString() {
-    return "VmTypeAvailability{" +
-           "type=" + type +
-           ", max=" + max +
-           ", available=" + available +
-           "}\n";
-  }
-
-  public static VmTypeAvailability ZERO = new ZeroTypeAvailability();
-
-  static class ZeroTypeAvailability extends VmTypeAvailability {
-    ZeroTypeAvailability() {
-      super( new VmType( "ZERO", -1, -1, -1 ), 0, 0 );
+  public String mapState() {
+    switch ( this.getState() ) {
+      case GENERATING:
+        return "pending";
+      case EXTANT:
+        return "completed";
+      default:
+        return "failed";
     }
-
-    @Override
-    public int compareTo( final Object o ) {
-      VmTypeAvailability v = ( VmTypeAvailability ) o;
-      if ( v == ZERO ) return 0;
-      if ( v.getAvailable() > 0 ) return 1;
-      else return -1;
-    }
-
-    @Override
-    public void setAvailable( final int available ) {}
-
-    @Override
-    public void decrement( final int quantity ) {}
-
-    @Override
-    public boolean equals( final Object o ) {
-      if ( this == o ) return true;
-      return false;
-    }
-
   }
 
+  public void setMappedState( final String state ) {
+    if ( StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if ( StorageProperties.Status.pending.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if ( StorageProperties.Status.completed.toString().equals( state ) ) this.setState( State.EXTANT );
+    else if ( StorageProperties.Status.available.toString().equals( state ) ) this.setState( State.EXTANT );
+    else if ( StorageProperties.Status.failed.toString().equals( state ) ) this.setState( State.FAIL );
+  }
+
+  public Object morph( final Object o ) {
+    return null;
+  }
+
+  public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
+    snap.setSnapshotId( this.getDisplayName() );
+    snap.setStatus( this.mapState() );
+    snap.setStartTime( this.getBirthday() );
+    snap.setVolumeId( this.getParentVolume() );
+    snap.setProgress( this.getState().equals( State.EXTANT ) ? "100%" : "" );
+    return snap;
+  }
+
+  public String getParentVolume() {
+    return parentVolume;
+  }
+
+  public void setParentVolume( final String parentVolume ) {
+    this.parentVolume = parentVolume;
+  }
+
+  public String getCluster( ) {
+    return cluster;
+  }
+
+  public void setCluster( String cluster ) {
+    this.cluster = cluster;
+  }
 }
-
