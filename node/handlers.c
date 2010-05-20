@@ -202,6 +202,7 @@ check_hypervisor_conn()
 void change_state(	ncInstance *instance,
 			instance_states state)
 {
+    int old_state = instance->state;
     instance->state = (int) state;
     switch (state) { /* mapping from NC's internal states into external ones */
     case STAGING:
@@ -229,6 +230,13 @@ void change_state(	ncInstance *instance,
     }
 
     strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
+    if (old_state != state) {
+        logprintfl (EUCADEBUG, "state change for instance %s: %s -> %s (%s)\n", 
+                    instance->instanceId, 
+                    instance_state_names [old_state],
+                    instance_state_names [instance->state],
+                    instance_state_names [instance->stateCode]);
+    }
 }
 
 // waits indefinitely until a state transition takes place

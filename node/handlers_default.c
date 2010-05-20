@@ -161,7 +161,10 @@ find_and_terminate_instance (
 			  err = virDomainShutdown (dom);
 			sem_v (hyp_sem);
 			if (err==0) {
-				logprintfl (EUCAINFO, "destroyed domain for instance %s\n", instanceId);
+                if (destroy)
+                    logprintfl (EUCAINFO, "destroyed domain for instance %s\n", instanceId);
+                else
+                    logprintfl (EUCAINFO, "shutting down domain for instance %s\n", instanceId);
 			}
 			sem_p(hyp_sem);
 			virDomainFree(dom); /* necessary? */
