@@ -167,7 +167,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
     UnconditionalCallback cleanup = new UnconditionalCallback( ) {
       public void apply( ) {
-        if ( address != null && !VmInstance.DEFAULT_IP.equals( address.getInstanceAddress( ) ) ) {
+        if ( address != null ) {
           try {
             if ( address.isSystemOwned( ) ) {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
