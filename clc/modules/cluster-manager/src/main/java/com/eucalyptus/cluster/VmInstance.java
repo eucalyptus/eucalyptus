@@ -69,6 +69,7 @@ import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.records.EventType;
 import com.google.common.base.Predicate;
@@ -207,7 +208,9 @@ public class VmInstance implements HasName {
   public void setState( final VmState newState, String reason ) {
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
-    if( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
+    if( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && SystemState.INSTANCE_TERMINATED.equals( reason ) ) {
+      VmInstances.cleanUp( this );
+    } else if( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
       VmInstances.getInstance( ).deregister( this.getName( ) );
     } else if ( !this.getState( ).equals( newState ) ) {
       LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
