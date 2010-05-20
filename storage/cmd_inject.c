@@ -135,7 +135,7 @@ int inject_requirements (imager_request * req)
 		long long size;
 
 		kernel_spec = map_get (get_artifacts_map(), state->kernel);
-		if (input_spec==NULL) { // no artifact from an earlier stage
+		if (kernel_spec==NULL) { // no artifact from an earlier stage
 			size = file_size (state->kernel); // file size won't change in conversion
 		} else {
 			size = kernel_spec->size; // file size won't change in conversion
@@ -147,7 +147,7 @@ int inject_requirements (imager_request * req)
 
 		if (state->ramdisk) {
 			ramdisk_spec = map_get (get_artifacts_map(), state->ramdisk);
-			if (input_spec==NULL) { // no artifact from an earlier stage
+			if (ramdisk_spec==NULL) { // no artifact from an earlier stage
 				size = file_size (state->kernel); // file size won't change in conversion
 			} else {
 				size = ramdisk_spec->size; // file size won't change in conversion

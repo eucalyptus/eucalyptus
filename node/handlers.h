@@ -224,6 +224,10 @@ void print_running_domains(	void);
 virConnectPtr *check_hypervisor_conn();
 void change_state(		ncInstance * instance,
 				instance_states state);
+int 
+wait_state_transition (         ncInstance * instance, 
+				instance_states from_state,
+				instance_states to_state);
 void adopt_instances();
 int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *userId,
