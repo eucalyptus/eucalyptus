@@ -224,7 +224,7 @@ public class VmInstance implements HasName {
           this.state.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
           VmInstances.cleanUp( this );
-        } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) <= VmState.RUNNING.ordinal( )  ) {
+        } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) > VmState.RUNNING.ordinal( )  ) {
           this.state.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
         } else if ( VmState.RUNNING.ordinal( ) < newState.ordinal( ) && newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
