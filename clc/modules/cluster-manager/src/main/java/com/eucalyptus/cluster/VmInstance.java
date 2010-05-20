@@ -224,7 +224,7 @@ public class VmInstance implements HasName {
     if ( this.reason == null ) {
       this.reason = Reason.NORMAL;
     } 
-    return this.reason.name() + ": "+ this.reason + " -- " + this.reasonDetails;
+    return this.reason.name() + ": "+ this.reason + (this.reasonDetails!=null? " -- " + this.reasonDetails:"");
   }
   
   private int           stateCounter   = 0;
