@@ -140,7 +140,7 @@ public class VmInstance implements HasName {
   private Date                                        launchTime    = new Date( );
   private String                                      serviceTag;
   private SystemState.Reason                          reason;
-  private String                                      reasonDetails;
+  private final List<String>                          reasonDetails = Lists.newArrayList( );
   private StringBuffer                                consoleOutput = new StringBuffer( );
   private String                                      passwordData;
   private Boolean                                     privateNetwork;
@@ -219,40 +219,37 @@ public class VmInstance implements HasName {
   public void setState( final VmState state ) {
     this.setState( state, SystemState.Reason.NORMAL );
   }
-
+  
   public String getReason( ) {
     if ( this.reason == null ) {
       this.reason = Reason.NORMAL;
-    } 
-    return this.reason.name() + ": "+ this.reason + (this.reasonDetails!=null? " -- " + this.reasonDetails:"");
+    }
+    return this.reason.name( ) + ": " + this.reason + ( this.reasonDetails != null ? " -- " + this.reasonDetails : "" );
   }
   
-  private int           stateCounter   = 0;
+  private int           stateCounter        = 0;
   private static String SEND_USER_TERMINATE = "SIGTERM";
   
-
   private void addReasonDetail( String... extra ) {
-    String newDetails = " " + this.reason.name( ) + ":";
-    for( String s : extra ) {
-      newDetails += "[" + s + "]";
+    for ( String s : extra ) {
+      this.reasonDetails.add( s );
     }
-    this.reasonDetails += newDetails;
   }
+  
   public void setState( final VmState newState, SystemState.Reason reason, String... extra ) {
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
-    if( Reason.APPEND.equals( reason ) ) {
-      reason = this.reason;
-      this.addReasonDetail( extra );
-    }
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this );
-      if( !this.reasonDetails.matches( ".*" + SEND_USER_TERMINATE + ".*" ) ) {
-        this.reasonDetails += " [" + SEND_USER_TERMINATE + "]";
+      if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
+        this.addReasonDetail( SEND_USER_TERMINATE );
       }
     } else if ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
       VmInstances.getInstance( ).deregister( this.getName( ) );
     } else if ( !this.getState( ).equals( newState ) ) {
+      if ( Reason.APPEND.equals( reason ) ) {
+        reason = this.reason;
+      }
       this.addReasonDetail( extra );
       LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       this.reason = reason;
