@@ -177,7 +177,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
-            SystemState.LOG.debug( e, e );
+            LOG.debug( e, e );
           }
         }
         vm.updateNetworkIndex( -1 );
@@ -197,7 +197,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
             }
           }
         } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
-          SystemState.LOG.debug( e1, e1 );
+          LOG.debug( e1, e1 );
         }
       }
     };
@@ -215,7 +215,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
         try {
           address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
         } catch ( NoSuchElementException e ) {} catch ( Throwable e1 ) {
-          SystemState.LOG.debug( e1, e1 );
+          LOG.debug( e1, e1 );
         }
       }
       cb.then( VmInstances.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
