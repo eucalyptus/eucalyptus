@@ -136,7 +136,7 @@ permission notice:
 #define ERROR_FATAL 1
 #define ERROR_RETRY -1
 
-typedef enum instance_states_t {
+typedef enum instance_states_t { // these must match instance_sate_names[] below!
     /* the first 7 should match libvirt */
     NO_STATE = 0, 
     RUNNING,
@@ -151,8 +151,9 @@ typedef enum instance_states_t {
     BOOTING,
     CANCELED,
 
-	/* state after running */
-	BUNDLING,
+    /* state after running */
+    BUNDLING_SHUTDOWN,
+    BUNDLING_SHUTOFF,
 
     /* the only three states reported to CLC */
     PENDING,  /* staging in data, starting to boot, failed to boot */ 
@@ -175,7 +176,8 @@ static char * instance_state_names[] = {
     "Booting",
     "Canceled",
 
-	"Bundling",
+	"Bundling-Shutdown",
+    "Bundling-Shutoff",
 
     "Pending",
     "Extant",
