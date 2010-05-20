@@ -15,6 +15,8 @@
 %global euca_libcurl libcurl-devel
 %global euca_bridge  br0
 %global euca_java    java-sdk >= 1.6.0
+%global euca_iscsi_client open-iscsi
+%global euca_iscsi_server tgt
 %global euca_build_req vlan
 %endif
 %if %is_centos
@@ -22,6 +24,8 @@
 %global euca_hypervisor xen
 %global euca_bridge  xenbr0
 %global euca_java    java-sdk >= 1.6.0
+%global euca_iscsi_client iscsi-initiator-utils
+%global euca_iscsi_server scsi-target-utils
 %endif
 %if %is_fedora
 %global euca_libvirt libvirt
@@ -39,8 +43,8 @@ Version:       1.0
 Release:       0.1319
 License:       Eucalyptus EEE Software License
 Group:         Applications/System
-BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
-Requires:      %{euca_build_req}
+BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
+Requires:      %{euca_build_req}, perl-Crypt-OpenSSL-RSA, perl-Crypt-OpenSSL-Random
 Source:        %{name}-%{version}.tar.gz
 URL:           http://www.eucalyptus.com
 
@@ -86,9 +90,9 @@ cloud controller.
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
 %if %is_centos
-Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade, scsi-target-utils
+Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
 %else
-Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade
+Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
 %endif
 Group:        Applications/System
 
@@ -133,7 +137,7 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     %{name} = %{version}, %{name}-gl = %{version}, euca2ools-eee, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
+Requires:     %{name} = %{version}, %{name}-gl = %{version}, euca2ools-eee, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}, %{euca_iscsi_client}
 Group:        Applications/System
 
 %description nc
@@ -161,6 +165,7 @@ This package contains the internal log service of eucalyptus.
 %package broker
 Summary:      Elastic Utility Computing Architecture - vmware broker
 Requires:     %{name}-common-java = %{version}, %{euca_java}
+AutoReqProv:  no
 Group:        Applications/System
 
 %description broker
@@ -345,24 +350,22 @@ cp /usr/share/eucalyptus/udev/55-openiscsi.rules /etc/udev/rules.d/
 mkdir -p /etc/udev/scripts/
 %if %is_suse
         cp /usr/share/eucalyptus/udev/iscsidev-opensuse.sh /etc/udev/scripts/iscsidev.sh
+	udevadm control --reload-rules
 %endif
 %if %is_centos
         cp /usr/share/eucalyptus/udev/iscsidev-centos.sh /etc/udev/scripts/iscsidev.sh
         udevcontrol reload_rules
         sed -i "s/node\.startup.*/node\.startup\ = manual/" /etc/iscsi/iscsid.conf
         sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
-        cat <<EOF >> /etc/sudoers
+%endif
+cat <<EOF >> /etc/sudoers
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget_sc.pl
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget.pl
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget.pl
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/get_iscsitarget.pl
-EOF
-        sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
-        cat <<EOF >> /etc/sudoers
 eucalyptus ALL=NOPASSWD: /usr/sbin/tgtadm
 EOF
-%endif
 chmod +x /etc/udev/scripts/iscsidev.sh
 
 # we need a eucalyptus user
@@ -477,7 +480,6 @@ fi
 /usr/sbin/euca_conf --enable vmwarebroker
 sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/services\/VMwareBroker\"/" /etc/eucalyptus/eucalyptus.conf
 sed -i "s/NC_PORT=.*/NC_PORT=\"8773\"/" /etc/eucalyptus/eucalyptus.conf
-sed -i "s/ENABLE_WS_SECURITY=.*/ENABLE_WS_SECURITY=\"N\"/" /etc/eucalyptus/eucalyptus.conf
 echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus/eucalyptus.conf
 
 %postun

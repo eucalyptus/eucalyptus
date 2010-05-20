@@ -72,6 +72,7 @@ public class LdapWrappedUser implements User, WrappedUser {
       UserEntity search = new UserEntity( this.user.getName( ) );
       search.setAdministrator( admin );
       EucaLdapHelper.updateUser( search, null );
+      LdapCache.getInstance( ).removeUser( this.user.getName( ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -85,6 +86,7 @@ public class LdapWrappedUser implements User, WrappedUser {
       UserEntity search = new UserEntity( this.user.getName( ) );
       search.setEnabled( enabled );
       EucaLdapHelper.updateUser( search, null );
+      LdapCache.getInstance( ).removeUser( this.user.getName( ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -98,6 +100,7 @@ public class LdapWrappedUser implements User, WrappedUser {
       UserEntity search = new UserEntity( this.user.getName( ) );
       search.setPassword( password );
       EucaLdapHelper.updateUser( search, null );
+      LdapCache.getInstance( ).removeUser( this.user.getName( ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -127,6 +130,7 @@ public class LdapWrappedUser implements User, WrappedUser {
       search.setCertificates( user.getCertificates( ) );
       search.revokeX509Certificate( );
       EucaLdapHelper.updateUserCertificates( search );
+      LdapCache.getInstance( ).removeUser( this.user.getName( ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -141,6 +145,7 @@ public class LdapWrappedUser implements User, WrappedUser {
       search.setCertificates( user.getCertificates( ) );
       search.setX509Certificate( cert );
       EucaLdapHelper.updateUser( search, null );
+      LdapCache.getInstance( ).removeUser( this.user.getName( ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -173,6 +178,7 @@ public class LdapWrappedUser implements User, WrappedUser {
       UserEntity search = new UserEntity( this.user.getName( ) );
       search.setSecretKey( this.user.getSecretKey( ) );
       EucaLdapHelper.deleteUserAttribute( search );
+      LdapCache.getInstance( ).removeUser( this.user.getName( ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -186,6 +192,7 @@ public class LdapWrappedUser implements User, WrappedUser {
       UserEntity search = new UserEntity( this.user.getName( ) );
       search.setQueryId( queryId );
       EucaLdapHelper.updateUser( search, null );
+      LdapCache.getInstance( ).removeUser( this.user.getName( ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -199,6 +206,7 @@ public class LdapWrappedUser implements User, WrappedUser {
       UserEntity search = new UserEntity( this.user.getName( ) );
       search.setSecretKey( secretKey );
       EucaLdapHelper.updateUser( search, null );
+      LdapCache.getInstance( ).removeUser( this.user.getName( ) );
     } catch ( EntryNotFoundException e ) {
       LOG.error( e, e );
     } catch ( LdapException e ) {
@@ -209,18 +217,6 @@ public class LdapWrappedUser implements User, WrappedUser {
   @Override
   public UserInfo getUserInfo( ) throws NoSuchUserException {
     return userInfo;
-  }
-
-  @Override
-  public List<Group> getUserGroups( ) {
-    try {
-      return EucaLdapHelper.getGroups( EucaLdapHelper.getSearchGroupFilter( this.user.getEucaGroupIds( ) ) );
-    } catch ( EntryNotFoundException e ) {
-      LOG.error( e, e );
-    } catch ( LdapException e ) {
-      LOG.error( e, e );
-    }
-    return new ArrayList<Group>( );
   }
   
   /**
@@ -243,6 +239,10 @@ public class LdapWrappedUser implements User, WrappedUser {
   
   public List<String> getEucaGroupIds( ) {
     return this.user.getEucaGroupIds( );
+  }
+  
+  public List<X509Cert> getCertificates( ) {
+    return this.user.getCertificates( );
   }
   
   public String toString( ) {

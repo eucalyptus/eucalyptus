@@ -70,6 +70,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 
 import javax.persistence.*;
 
@@ -77,8 +78,11 @@ import javax.persistence.*;
 @Table( name = "AOEMetaInfo" )
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(alias = "storage.aoe", description = "Storage controller AOE meta info")
+@ConfigurableClass(root = "storage", description = "Storage controller AOE meta info", singleton=false, deferred = true)
 public class AOEMetaInfo extends LVMMetaInfo {
+	@ConfigurableIdentifier
+	@Column(name = "hostname")
+	private String hostName;
 	@ConfigurableField( description = "AOE Major Number", displayName = "AOE Major Number", type = ConfigurableFieldType.PRIVATE)
 	@Column(name = "major_number")
 	private Integer majorNumber;
@@ -106,5 +110,13 @@ public class AOEMetaInfo extends LVMMetaInfo {
 
 	public void setMinorNumber(Integer minorNumber) {
 		this.minorNumber = minorNumber;
+	}
+
+	public String getHostName() {
+		return hostName;
+	}
+
+	public void setHostName(String hostName) {
+		this.hostName = hostName;
 	}
 }

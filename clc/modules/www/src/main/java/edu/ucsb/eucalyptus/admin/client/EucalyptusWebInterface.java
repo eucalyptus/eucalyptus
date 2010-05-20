@@ -2344,10 +2344,26 @@ public class EucalyptusWebInterface implements EntryPoint {
         parent.clear();
         parent.add(imageStore);
     }
-        
-    public void displayFirstTimeConfiguration()
+    
+    public void displayFirstTimeConfiguration( ) {
+      displayStatusPage("Loading first-time configuration page...");
+      // pull in guessed cloud URL
+
+      EucalyptusWebBackend.App.getInstance().getSystemConfig(sessionId,
+          new AsyncCallback( ) {
+        public void onSuccess ( final Object result ) {
+          conf = (SystemConfigWeb) result;
+          displayFirstTimeConfiguration( conf );
+        }
+        public void onFailure ( Throwable caught ) { 
+          displayFirstTimeConfiguration( null );
+        }
+      }
+      );
+    }
+    
+    public void displayFirstTimeConfiguration( SystemConfigWeb config )
     {
-    	displayStatusPage("Loading first-time configuration page...");
 
     	VerticalPanel gpanel = new VerticalPanel();
     	gpanel.setSpacing(25);
@@ -2416,6 +2432,9 @@ public class EucalyptusWebInterface implements EntryPoint {
     	g3.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);       
     	final TextBox cloudUrl_box = new TextBox();
     	cloudUrl_box.setWidth("180");
+    	if ( config != null ) {
+    	  cloudUrl_box.setText( config.getCloudHost( ) );
+    	}
     	g3.setWidget( i++, 1, cloudUrl_box );
 
     	VerticalPanel cpanel = new VerticalPanel();
@@ -2427,18 +2446,6 @@ public class EucalyptusWebInterface implements EntryPoint {
     	cloudUrlMsg.setStyleName("euca-small-text");
     	cpanel.add (cloudUrlMsg);
     	gpanel.add(cpanel);
-
-    	// pull in guessed cloud URL
-
-    	EucalyptusWebBackend.App.getInstance().getSystemConfig(sessionId,
-    			new AsyncCallback( ) {
-    		public void onSuccess ( final Object result ) {
-    			conf = (SystemConfigWeb) result;
-    			cloudUrl_box.setText (conf.getCloudHost());
-    		}
-    		public void onFailure ( Throwable caught ) { }
-    	}
-    	);
 
     	// user clicked submit
 

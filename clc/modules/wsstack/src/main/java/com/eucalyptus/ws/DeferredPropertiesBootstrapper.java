@@ -75,6 +75,10 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
+import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
@@ -83,66 +87,31 @@ import com.eucalyptus.records.EventRecord;
 
 @Provides( com.eucalyptus.bootstrap.Component.any )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-public class ServiceDispatchBootstrapper extends Bootstrapper {
-  private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
-  private static List<com.eucalyptus.bootstrap.Component> ignored = Lists.newArrayList( com.eucalyptus.bootstrap.Component.any, 
-                                                                                        com.eucalyptus.bootstrap.Component.component ); 
-  
-  @Override
-  public boolean load( Stage current ) throws Exception {
-    /** TODO: ultimately remove this: it is legacy and enforces a one-to-one relationship between component impls **/
-    for ( com.eucalyptus.bootstrap.Component c : com.eucalyptus.bootstrap.Component.values( ) ) {
-      if ( ignored.contains( c ) ) continue;
-      try {
-        Component comp = Components.lookup( c );
-      } catch ( NoSuchElementException e ) {
-        throw Exceptions.uncatchable( "Failed to lookup required component: " + c.name( ) );
-      }
-    }
-    LOG.trace( "Touching class: " + ServiceDispatcher.class );
-    boolean failed = false;
-    for ( Component comp : Components.list( ) ) {
-      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
-      for ( ServiceConfiguration s : comp.list( ) ) {
-        try {
-          if ( comp.isEnabled( ) ) {
-            comp.buildService( s );
-          }
-        } catch ( Throwable ex ) {
-          LOG.warn( ex );
-          LOG.error( ex, ex );
-          failed = true;
-        }
-      }
-    }
-    if ( failed ) {
-      BootstrapException.throwFatal( "Failures occurred while attempting to start component services.  See the log files for more information." );
-    }
-    
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    boolean failed = false;
-    for ( Component comp : Components.list( ) ) {
-      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
-      for ( ServiceConfiguration s : comp.list( ) ) {
-        try {
-          if ( comp.isEnabled( ) ) {
-            comp.startService( s );
-          }
-        } catch ( Throwable ex ) {
-          LOG.warn( ex );
-          LOG.error( ex, ex );
-          failed = true;
-        }
-      }
-    }
-    if ( failed ) {
-      BootstrapException.throwFatal( "Failures occurred while attempting to start component services.  See the log files for more information." );
-    }
-    return true;
-  }
-  
+public class DeferredPropertiesBootstrapper extends Bootstrapper {
+	private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
+	@Override
+	public boolean start( ) throws Exception {
+		for ( Component comp : Components.list( ) ) {
+			for ( ServiceConfiguration s : comp.list( ) ) {
+				if(!s.isLocal()) {
+					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponent().name());
+					for ( ConfigurableProperty prop : props ) {
+						ConfigurableProperty addProp = null;
+						if (prop instanceof SingletonDatabasePropertyEntry) {
+							addProp = prop;
+						} else if (prop instanceof MultiDatabasePropertyEntry) {
+							addProp = ((MultiDatabasePropertyEntry) prop).getClone(s.getName());
+						}
+						PropertyDirectory.addProperty(addProp);
+					}
+				}
+			}
+		}
+		return true;
+	}
+	@Override
+	public boolean load(Stage current) throws Exception {
+		return true;
+	}
+
 }

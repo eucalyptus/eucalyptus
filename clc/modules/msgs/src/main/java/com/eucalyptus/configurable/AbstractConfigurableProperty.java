@@ -5,18 +5,19 @@ import org.apache.log4j.Logger;
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {
 
   private static Logger LOG = Logger.getLogger( AbstractConfigurableProperty.class );
-  private String entrySetName;
+  protected String entrySetName;
   private String fieldName;
-  private String qualifiedName;
-  private String description;
-  private PropertyTypeParser typeParser;
-  private String defaultValue;
-  private Class definingClass;
-  private Boolean readOnly;
-  private String displayName;
-  private ConfigurableFieldType widgetType;
+  protected String qualifiedName;
+  protected String description;
+  protected PropertyTypeParser typeParser;
+  protected String defaultValue;
+  protected Class definingClass;
+  protected Boolean readOnly;
+  protected String displayName;
+  protected ConfigurableFieldType widgetType;
+  protected String alias;
   
-  public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType ) {
+  public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
     this.definingClass = definingClass;
     this.entrySetName = entrySetName.toLowerCase( );
     this.fieldName = propertyName.toLowerCase( );
@@ -27,6 +28,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     this.readOnly = readOnly;
     this.displayName = displayName;
     this.widgetType = widgetType;
+    this.alias = alias;
   }
 
   public String getFieldName( ) {
@@ -66,10 +68,14 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   }
   
   public String getDisplayName( ) {
-	  return this.displayName;
+	return this.displayName;
   }
   
   public ConfigurableFieldType getWidgetType( ) {
-	  return this.widgetType;
+	return this.widgetType;
+  }
+  
+  public String getAlias() {
+	return this.alias;
   }
 }
