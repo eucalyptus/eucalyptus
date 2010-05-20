@@ -221,11 +221,10 @@ public class VmInstance implements HasName {
   }
 
   public String getReason( ) {
-    if ( this.getReason( ) != null && !"".equals( this.getReason( ) ) ) {
-      return reason + " " + this.reasonDetails;
-    } else {
-      return null;
-    }
+    if ( this.reason == null ) {
+      this.reason = Reason.NORMAL;
+    } 
+    return this.reason.name() + ": "+ this.reason + " -- " + this.reasonDetails;
   }
   
   private int           stateCounter   = 0;
