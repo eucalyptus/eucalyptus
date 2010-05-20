@@ -204,7 +204,9 @@ public class VmInstance implements HasName {
   public void setState( final VmState newState, String reason ) {
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
-    if ( !this.getState( ).equals( newState ) ) {
+    if( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
+      VmInstances.getInstance( ).deregister( this.getName( ) );
+    } else if ( !this.getState( ).equals( newState ) ) {
       this.reason = reason;
       if ( this.state.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
         if ( VmState.SHUTTING_DOWN.equals( newState ) ) {
