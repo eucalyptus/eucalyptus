@@ -93,7 +93,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( addr != null && vm == null ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr == null && vm != null ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getName( ), Component.eucalyptus.name( ), vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) );
+          addr = new Address( addrInfo.getAddress( ), cluster.getName( ), Component.eucalyptus.name( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           cluster.getState( ).clearOrphan( addrInfo );
         } else if( addr == null && vm == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );
@@ -145,7 +145,7 @@ public abstract class AbstractSystemAddressManager {
     private static void clearVmState( ClusterAddressInfo addrInfo ) {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookupByPublicIp( addrInfo.getAddress( ) );
-        vm.getNetworkConfig( ).setIgnoredPublicIp( vm.getNetworkConfig( ).getIpAddress( ) );
+        vm.updatePublicAddress( vm.getPrivateAddress( ) );
       } catch ( NoSuchElementException e ) {
       }
     }
@@ -155,8 +155,8 @@ public abstract class AbstractSystemAddressManager {
       try {
         vm = VmInstances.getInstance( ).lookupByInstanceIp( privateIp );
         LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + publicIp );
-        if ( publicIp.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
-          vm.getNetworkConfig( ).setIgnoredPublicIp( publicIp );
+        if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
+          vm.updatePublicAddress( publicIp );
           LOG.trace( "Updated vm with address information: " + vm.getInstanceId( ) + " " + publicIp );
         }
       } catch ( NoSuchElementException e ) {}
@@ -166,7 +166,7 @@ public abstract class AbstractSystemAddressManager {
     private static void ensureAssigned( Address addr, VmInstance vm ) {
       if ( !addr.isAssigned( ) && !addr.isPending( ) ) {
         try {
-          addr.assign( vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) ).clearPending( );
+          addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
         } catch ( Throwable e1 ) {
           LOG.debug( e1, e1 );
         }
@@ -188,7 +188,7 @@ public abstract class AbstractSystemAddressManager {
       if ( vmCount > 1 ) {
         String vmList = "";
         for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-          if ( addrInfo.getAddress( ).equals( v.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
+          if ( addrInfo.getAddress( ).equals( v.getPublicAddress( ) ) ) {
             vmList += " " + v.getInstanceId( );
           }
         }

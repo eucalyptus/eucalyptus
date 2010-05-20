@@ -37,7 +37,7 @@ public class Transactions {
     EntityWrapper<T> db = EntityWrapper.get( saveMe );
     try {
       db.add( saveMe );
-      T entity = db.getUnique( saveMe );
+      T entity = saveMe; //db.getUnique( saveMe );
       if ( c != null ) {
         c.fire( entity );
       }

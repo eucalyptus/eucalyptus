@@ -120,7 +120,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   
   public VmInstance lookupByInstanceIp( String ip ) throws NoSuchElementException {
     for ( VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getNetworkConfig( ).getIpAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+      if ( ip.equals( vm.getPrivateAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         return vm;
       }
     }
@@ -130,7 +130,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   public int countByPublicIp( String ip ) throws NoSuchElementException {
     int count = 0;
     for ( VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         count++;
       }
     }
@@ -139,7 +139,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   
   public VmInstance lookupByPublicIp( String ip ) throws NoSuchElementException {
     for ( VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         return vm;
       }
     }
@@ -167,7 +167,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
     UnconditionalCallback cleanup = new UnconditionalCallback( ) {
       public void apply( ) {
-        if ( address != null ) {
+        if ( address != null && !VmInstance.DEFAULT_IP.equals( address.getInstanceAddress( ) ) ) {
           try {
             if ( address.isSystemOwned( ) ) {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
@@ -208,12 +208,12 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     try {
       String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
       Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-      int networkIndex = vm.getNetworkConfig( ).getNetworkIndex( );
+      int networkIndex = vm.getNetworkIndex( );
       Address address = null;
       QueuedEventCallback cb = new TerminateCallback( vm.getInstanceId( ) );
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         try {
-          address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
+          address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
         } catch ( NoSuchElementException e ) {} catch ( Throwable e1 ) {
           LOG.debug( e1, e1 );
         }

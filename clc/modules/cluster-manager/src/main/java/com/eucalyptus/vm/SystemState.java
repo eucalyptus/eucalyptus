@@ -168,7 +168,7 @@ public class SystemState {
       vm.setVolumes( runVm.getVolumes( ) );
       try {
         Network network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
-        network.extantNetworkIndex( vm.getPlacement( ), vm.getNetworkConfig( ).getNetworkIndex( ) );
+        network.extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
       } catch ( Exception e ) {}
     }
   }
@@ -235,12 +235,7 @@ public class SystemState {
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
       vm.setLaunchTime( runVm.getLaunchTime( ) );
-      vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
-      String dnsDomain = "dns-disabled";
-      try {
-        dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
-      } catch ( Exception e ) {}
-      vm.getNetworkConfig( ).updateDns( dnsDomain );
+      vm.updatePublicAddress( VmInstance.DEFAULT_IP );
       vm.setKeyInfo( keyInfo );
       vm.setImageInfo( imgInfo );
       VmInstances.getInstance( ).register( vm );

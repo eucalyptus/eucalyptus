@@ -179,7 +179,7 @@ public class AddressManager {
     Address oldAddr = null;
     if ( vm.hasPublicAddress( ) ) {
       try {
-        oldAddr = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
+        oldAddr = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
         EventRecord.here( AddressManager.class, EventType.ADDRESS_UNASSIGN, oldAddr.toString( ), vm.toString( ) ).info( );
       } catch ( Exception e ) {
         LOG.debug( e, e );

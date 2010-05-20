@@ -113,6 +113,10 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   protected BlockingQueue<EucalyptusMessage> requestQueue = new LinkedBlockingQueue<EucalyptusMessage>( );
   
   public static class NOOP extends QueuedEventCallback {
+    public NOOP() {
+      RuntimeException ex = new RuntimeException( "Operation returning a NOOP." );
+      LOG.debug( ex, ex );
+    }
     public void fail( Throwable throwable ) {}
     
     public void verify( BaseMessage msg ) throws Exception {}
