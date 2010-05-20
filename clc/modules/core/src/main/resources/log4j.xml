@@ -117,6 +117,10 @@
     <priority value="INFO" />
     <appender-ref ref="extlogfile" />
   </category>
+  <category name="com.eucalyptus.util.ServiceProcess$IOMonitor" additivity="true">
+    <priority value="INFO" />
+    <appender-ref ref="extlogfile" />
+  </category>
   <category name="org.mule" additivity="true">
     <priority value="${euca.log.level}" />
     <appender-ref ref="extlogfile" />
