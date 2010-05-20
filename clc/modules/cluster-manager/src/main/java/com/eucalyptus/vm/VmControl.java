@@ -135,7 +135,7 @@ public class VmControl {
       final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
       final Boolean admin = request.isAdministrator( );
       final String userId = request.getUserId( );
-      boolean result = Iterables.any( request.getInstancesSet( ), new Predicate<String>( ) {
+      Iterables.all( request.getInstancesSet( ), new Predicate<String>( ) {
         @Override
         public boolean apply( String instanceId ) {
           try {
@@ -159,7 +159,7 @@ public class VmControl {
           }
         }
       } );
-      reply.set_return( result );
+      reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
     } catch ( Throwable e ) {
       LOG.error( e );
