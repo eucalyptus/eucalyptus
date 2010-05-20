@@ -223,6 +223,7 @@ public class VmInstance implements HasName {
     VmState oldState = this.state.getReference( );
     if( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && SystemState.INSTANCE_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this );
+      this.reason += "(ASYNC)";
     } else if( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
       VmInstances.getInstance( ).deregister( this.getName( ) );
     } else if ( !this.getState( ).equals( newState ) ) {
