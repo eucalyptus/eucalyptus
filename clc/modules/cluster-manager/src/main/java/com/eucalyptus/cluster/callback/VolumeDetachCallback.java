@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.LogUtil;
+import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
@@ -85,8 +86,7 @@ public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType,D
   }
   
   @Override
-  public void verify( BaseMessage msg ) throws Exception {
-    DetachVolumeResponseType reply = (DetachVolumeResponseType) msg;
+  public void verify( DetachVolumeResponseType reply ) throws Exception {
     if ( reply.get_return( ) ) {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
       vm.getVolumes( ).remove( new AttachedVolume( this.getRequest( ).getVolumeId( ) ) );

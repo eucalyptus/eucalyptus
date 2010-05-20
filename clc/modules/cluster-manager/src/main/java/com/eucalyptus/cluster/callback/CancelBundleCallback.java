@@ -2,14 +2,13 @@ package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.CancelBundleTaskResponseType;
 import edu.ucsb.eucalyptus.msgs.CancelBundleTaskType;
-import com.eucalyptus.records.EventRecord;
 
 public class CancelBundleCallback extends QueuedEventCallback<CancelBundleTaskType,CancelBundleTaskResponseType> {
 
@@ -23,8 +22,7 @@ public class CancelBundleCallback extends QueuedEventCallback<CancelBundleTaskTy
   public void prepare( CancelBundleTaskType msg ) throws Exception {}
 
   @Override
-  public void verify( BaseMessage response ) throws Exception {
-    CancelBundleTaskResponseType reply = (CancelBundleTaskResponseType) response;
+  public void verify( CancelBundleTaskResponseType reply ) throws Exception {
     if ( !reply.get_return( ) ) {
       LOG.info( "Attempt to CancelBundleTask for instance " + this.getRequest( ).getBundleId( ) + " has failed." );
     } else {

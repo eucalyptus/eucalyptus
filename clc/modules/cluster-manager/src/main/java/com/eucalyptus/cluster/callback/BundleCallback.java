@@ -2,14 +2,13 @@ package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceType;
-import com.eucalyptus.records.EventRecord;
 
 public class BundleCallback extends QueuedEventCallback<BundleInstanceType,BundleInstanceResponseType> {
 
@@ -23,8 +22,7 @@ public class BundleCallback extends QueuedEventCallback<BundleInstanceType,Bundl
   public void prepare( BundleInstanceType msg ) throws Exception {}
 
   @Override
-  public void verify( BaseMessage response ) throws Exception {
-    BundleInstanceResponseType reply = (BundleInstanceResponseType) response;
+  public void verify( BundleInstanceResponseType reply ) throws Exception {
     if ( !reply.get_return( ) ) {
       LOG.info( "Attempt to bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
       try {

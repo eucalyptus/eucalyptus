@@ -7,7 +7,6 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.util.Messaging;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
@@ -28,10 +27,6 @@ public class PasswordDataCallback extends QueuedEventCallback<GetConsoleOutputTy
   public void prepare( GetConsoleOutputType msg ) throws Exception {}
   
   @Override
-  public void verify( BaseMessage msg ) throws Exception {
-    this.verify( ( GetConsoleOutputResponseType ) msg );
-  }
-  
   public void verify( GetConsoleOutputResponseType reply ) throws Exception {
     VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
     String output = null;

@@ -159,7 +159,9 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     this.queueResponse( e );
   }
   
-  public abstract void prepare( TYPE msg ) throws Exception;
+  public void prepare( TYPE msg ) throws Exception {
+    LOG.debug( this.getClass( ).getCanonicalName( ) + " should implement: prepare( TYPE t ) to check any preconditions!" );    
+  }
   
   public abstract void verify( RTYPE msg ) throws Exception;
   

@@ -108,7 +108,7 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
   
   @Override
-  public void verify( BaseMessage msg ) throws Exception {
+  public void verify( AssignAddressResponseType msg ) throws Exception {
     try {
       this.updateState( );
       this.address.clearPending( );

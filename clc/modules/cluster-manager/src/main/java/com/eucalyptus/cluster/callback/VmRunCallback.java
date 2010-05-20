@@ -70,7 +70,6 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -79,7 +78,6 @@ import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseType> {
 
@@ -102,8 +100,8 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     }
   }
 
-  public void verify( BaseMessage response ) throws Exception {
-    VmRunResponseType reply = (VmRunResponseType) response; 
+  @Override
+  public void verify( VmRunResponseType reply ) throws Exception {
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
     } catch ( Throwable e ) {
@@ -157,5 +155,6 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
   }
+
 
 }
