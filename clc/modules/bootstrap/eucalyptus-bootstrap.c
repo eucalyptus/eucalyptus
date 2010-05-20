@@ -600,6 +600,9 @@ int java_init(euca_opts *args, java_home_t *data) {
     	JVM_ARG(opt[++x],"-Dcom.sun.management.jmxremote");
     	JVM_ARG(opt[++x],"-XX:+HeapDumpOnOutOfMemoryError");
     	JVM_ARG(opt[++x],"-XX:HeapDumpPath=%s/var/log/eucalyptus/",GETARG(args,home));
+    	JVM_ARG(opt[++x],"-verbose:gc");
+    	JVM_ARG(opt[++x],"-XX:+PrintGCTimeStamps");
+    	JVM_ARG(opt[++x],"-XX:+PrintGCDetails");
     }
     if(args->profile_flag && args->agentlib_given ) {
     	JVM_ARG(opt[++x],"-agentlib:%s",GETARG(args,agentlib));

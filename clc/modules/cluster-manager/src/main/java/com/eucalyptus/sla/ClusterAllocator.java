@@ -88,6 +88,7 @@ import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
+import com.eucalyptus.vm.SystemState.Reason;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -156,7 +157,7 @@ public class ClusterAllocator extends Thread {
         for( String vmId : vmToken.getInstanceIds( ) ) {
           try {
             VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-            vm.setState( VmState.TERMINATED, SystemState.INSTANCE_FAILED + " " + e.getMessage( ) );
+            vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
             VmInstances.getInstance( ).disable( vmId );
           } catch ( Exception e1 ) {
             LOG.debug( e1, e1 );

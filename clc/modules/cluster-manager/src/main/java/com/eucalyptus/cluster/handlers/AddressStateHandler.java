@@ -53,27 +53,26 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
       LOG.trace( "Ignoring unknown event: " + LogUtil.dumpObject( event ) );
     }
   }
-
+  
   @Override
   public void upstreamMessage( ChannelHandlerContext ctx, MessageEvent e ) {
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = ( MappingHttpResponse ) e.getMessage( );
       DescribePublicAddressesResponseType reply = ( DescribePublicAddressesResponseType ) resp.getMessage( );
       this.getCluster( ).getState( ).setPublicAddressing( reply.get_return( ) );
-
+      
       if ( reply.get_return( ) ) {
         List<ClusterAddressInfo> addrInfo = ClusterAddressInfo.fromLists( reply.getAddresses( ), reply.getMapping( ) );
-	if(addrInfo != null) {
+        if ( addrInfo != null ) {
           Addresses.getAddressManager( ).update( this.getCluster( ), addrInfo );
-	}
+        }
       } else {
         LOG.warn( "Response from cluster [" + this.getCluster( ).getName( ) + "]: " + reply.getStatusMessage( ) );
       }
       this.verified = true;
     }
   }
-
-    
+  
   public static Address getAddress( String cluster, Pair p ) {
     Address address;
     try {

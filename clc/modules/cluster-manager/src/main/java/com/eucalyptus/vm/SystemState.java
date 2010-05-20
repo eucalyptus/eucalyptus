@@ -97,14 +97,33 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 @ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class SystemState {
   
-  public static Logger      LOG                 = Logger.getLogger( SystemState.class );
+  public static Logger  LOG            = Logger.getLogger( SystemState.class );
   @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
-  public static Integer      BURY_TIME           = -1;
+  public static Integer BURY_TIME      = -1;
   @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
-  public static Integer      SHUT_DOWN_TIME      = -1;
-  public static final String INSTANCE_EXPIRED    = "Instance no longer reported as existing.";
-  public static final String INSTANCE_FAILED     = "Starting the instance failed.";
-  public static final String INSTANCE_TERMINATED = "User requested shutdown.";
+  public static Integer SHUT_DOWN_TIME = -1;
+  
+  public enum Reason {
+    NORMAL(""),
+    EXPIRED( "Instance expired after not being reported for %s ms.", SystemState.SHUT_DOWN_TIME ),
+    FAILED( "The instance failed to start on the NC." ),
+    USER_TERMINATED( "User initiated terminate." ),
+    BURIED( "Instance buried after timeout of %s ms.", SystemState.BURY_TIME ),
+    APPEND("");
+    private String   message;
+    private Object[] args;
+    
+    Reason( String message, Object... args ) {
+      this.message = message;
+      this.args = args;
+    }
+    
+    @Override
+    public String toString( ) {
+      return String.format( this.message.toString( ), this.args );
+    }
+    
+  }
   
   public static void handle( VmDescribeResponseType request ) {
     VmInstances.flushBuried( );
@@ -125,7 +144,7 @@ public class SystemState {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
         if ( vm.getSplitTime( ) > SHUT_DOWN_TIME ) {
-          vm.setState( VmState.TERMINATED, INSTANCE_EXPIRED );
+          vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         }
       } catch ( NoSuchElementException e ) {}
     }
@@ -140,7 +159,7 @@ public class SystemState {
       try {
         vm = VmInstances.getInstance( ).lookupDisabled( runVm.getInstanceId( ) );
         if ( !VmState.BURIED.equals( vm.getState( ) ) && vm.getSplitTime( ) > BURY_TIME ) {
-          vm.setState( VmState.BURIED );
+          vm.setState( VmState.BURIED, Reason.BURIED );
         }
         return;
       } catch ( NoSuchElementException e1 ) {
@@ -158,12 +177,12 @@ public class SystemState {
     vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
     if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
-      vm.setState( VmState.TERMINATED, INSTANCE_EXPIRED );
+      vm.setState( VmState.TERMINATED, Reason.EXPIRED );
     } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-      vm.setState( VmState.TERMINATED, INSTANCE_TERMINATED );
+      vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
     } else {
       vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
-      vm.setState( VmState.Mapper.get( runVm.getStateName( ) ) );
+      vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
       vm.updateNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
       vm.setVolumes( runVm.getVolumes( ) );
       try {

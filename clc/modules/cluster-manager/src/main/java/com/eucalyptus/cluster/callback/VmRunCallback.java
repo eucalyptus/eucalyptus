@@ -72,6 +72,7 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -91,7 +92,17 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
   }
 
   public void prepare( final VmRunType msg ) throws Exception {
-    LOG.debug( LogUtil.subheader( msg.toString( ) ) );
+//    LOG.trace( LogUtil.subheader( msg.toString( ) ) );
+    for( String vmId : msg.getInstanceIds( ) ) {
+      try {
+        VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
+        if( !VmState.PENDING.equals( vm.getState( ) ) ) {
+          throw new EucalyptusClusterException("Intercepted a RunInstances request for an instance which has meanwhile been terminated." );
+        }
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+      }
+    }
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
     } catch ( Exception e2 ) {

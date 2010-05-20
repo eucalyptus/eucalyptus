@@ -116,6 +116,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     public NOOP() {
       RuntimeException ex = new RuntimeException( "Operation returning a NOOP." );
       LOG.debug( ex, ex );
+      this.setRequest( new EucalyptusMessage() );
     }
     public void fail( Throwable throwable ) {}
     
@@ -240,7 +241,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   }
   
   public void queueResponse( Object o ) {
-    LOG.debug( this.getClass( ).getSimpleName( ) + " whatever: " + LogUtil.dumpObject( o ) );
+    EventRecord.here( this.getClass( ), EventType.MSG_REPLY, LogUtil.dumpObject( o ) );
 
     if ( o instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) o;
@@ -269,7 +270,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     } finally {
       this.canHas.unlock( );
     }
-    LOG.debug( this.getClass( ).getSimpleName( ) + " whatevs: " + LogUtil.dumpObject(this.response.get()) );
+    EventRecord.here( this.getClass( ), EventType.MSG_REPLY, LogUtil.dumpObject( this.response.get( ) ) );
   }
   
   public Throwable getException( ) {

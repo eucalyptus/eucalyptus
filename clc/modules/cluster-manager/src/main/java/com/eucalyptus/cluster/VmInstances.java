@@ -82,6 +82,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
+import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -236,7 +237,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   public static void flushBuried( ) {
     for ( VmInstance vm : VmInstances.getInstance( ).getDisabledEntries( ) ) {
       if ( vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME && !VmState.BURIED.equals( vm.getState( ) ) ) {
-        vm.setState( VmState.BURIED );
+        vm.setState( VmState.BURIED, Reason.BURIED );
       } else if ( vm.getSplitTime( ) > SystemState.BURY_TIME && VmState.BURIED.equals( vm.getState( ) ) ) {
         VmInstances.getInstance( ).deregister( vm.getName( ) );
       }

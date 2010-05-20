@@ -71,11 +71,13 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
+import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.records.EventType;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
@@ -137,7 +139,8 @@ public class VmInstance implements HasName {
   
   private Date                                        launchTime    = new Date( );
   private String                                      serviceTag;
-  private String                                      reason;
+  private SystemState.Reason                          reason;
+  private final List<String>                          reasonDetails = Lists.newArrayList( );
   private StringBuffer                                consoleOutput = new StringBuffer( );
   private String                                      passwordData;
   private Boolean                                     privateNetwork;
@@ -175,14 +178,14 @@ public class VmInstance implements HasName {
     this.updatePrivateAddress( privateAddr );
     this.updatePublicAddress( publicAddr );
   }
-
+  
   public void updatePublicAddress( String publicAddr ) {
-    if ( VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) && !VmInstance.DEFAULT_IP.equals( publicAddr )
-         && !"".equals( publicAddr ) && publicAddr != null ) {
+    if ( VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) && !VmInstance.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr )
+         && publicAddr != null ) {
       this.getNetworkConfig( ).setIgnoredPublicIp( publicAddr );
     }
   }
-
+  
   private void updateDns( ) {
     String dnsDomain = "dns-disabled";
     try {
@@ -190,7 +193,7 @@ public class VmInstance implements HasName {
     } catch ( Exception e ) {}
     this.getNetworkConfig( ).updateDns( dnsDomain );
   }
-
+  
   public void updatePrivateAddress( String privateAddr ) {
     if ( !VmInstance.DEFAULT_IP.equals( privateAddr ) && !"".equals( privateAddr ) && privateAddr != null ) {
       this.getNetworkConfig( ).setIpAddress( privateAddr );
@@ -214,19 +217,40 @@ public class VmInstance implements HasName {
   }
   
   public void setState( final VmState state ) {
-    this.setState( state, "Operating normally." );
+    this.setState( state, SystemState.Reason.NORMAL );
   }
   
-  private int stateCounter = 0;
-  public void setState( final VmState newState, String reason ) {
+  public String getReason( ) {
+    if ( this.reason == null ) {
+      this.reason = Reason.NORMAL;
+    }
+    return this.reason.name( ) + ": " + this.reason + ( this.reasonDetails != null ? " -- " + this.reasonDetails : "" );
+  }
+  
+  private int           stateCounter        = 0;
+  private static String SEND_USER_TERMINATE = "SIGTERM";
+  
+  private void addReasonDetail( String... extra ) {
+    for ( String s : extra ) {
+      this.reasonDetails.add( s );
+    }
+  }
+  
+  public void setState( final VmState newState, SystemState.Reason reason, String... extra ) {
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
-    if( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && SystemState.INSTANCE_TERMINATED.equals( reason ) ) {
+    if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this );
-      this.reason += "(ASYNC)";
-    } else if( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
+      if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
+        this.addReasonDetail( SEND_USER_TERMINATE );
+      }
+    } else if ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
       VmInstances.getInstance( ).deregister( this.getName( ) );
     } else if ( !this.getState( ).equals( newState ) ) {
+      if ( Reason.APPEND.equals( reason ) ) {
+        reason = this.reason;
+      }
+      this.addReasonDetail( extra );
       LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       this.reason = reason;
       if ( this.state.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
@@ -243,17 +267,17 @@ public class VmInstance implements HasName {
           VmInstances.cleanUp( this );
         } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
           this.state.set( newState, false );
-        } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) <= VmState.RUNNING.ordinal( )  ) {
+        } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
           this.state.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
           VmInstances.cleanUp( this );
-        } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) > VmState.RUNNING.ordinal( )  ) {
+        } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
           this.state.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
         } else if ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) && newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
           this.state.set( oldState, false );
           VmInstances.cleanUp( this );
-        } else if( newState.ordinal( ) > oldState.ordinal( ) ) {
+        } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
           this.state.set( newState, false );
         }
       } else {
@@ -468,7 +492,7 @@ public class VmInstance implements HasName {
         runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
       }
     }
-    if ( this.getReason( ) != null || !"".equals( this.getReason( ) ) ) runningInstance.setReason( this.getReason( ) );
+    runningInstance.setReason( this.getReason( ) );
     
     if ( this.getKeyInfo( ) != null )
       runningInstance.setKeyName( this.getKeyInfo( ).getName( ) );
@@ -539,14 +563,6 @@ public class VmInstance implements HasName {
     return keyInfo;
   }
   
-  public String getReason( ) {
-    return reason;
-  }
-  
-  public void setReason( final String reason ) {
-    this.reason = reason;
-  }
-  
   public StringBuffer getConsoleOutput( ) {
     return consoleOutput;
   }
@@ -587,7 +603,7 @@ public class VmInstance implements HasName {
   public String getPrivateAddress( ) {
     return networkConfig.getIpAddress( );
   }
-
+  
   public String getPublicAddress( ) {
     return networkConfig.getIgnoredPublicIp( );
   }
@@ -675,7 +691,7 @@ public class VmInstance implements HasName {
                           this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
                           this.volumes, this.getBundleTask( ) != null ? LogUtil.dumpObject( this.getBundleTask( ) ) : "null" );
   }
-
+  
   public int getNetworkIndex( ) {
     return this.getNetworkConfig( ).getNetworkIndex( );
   }
