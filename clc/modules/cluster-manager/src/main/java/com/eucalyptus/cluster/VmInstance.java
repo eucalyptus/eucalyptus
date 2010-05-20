@@ -202,8 +202,6 @@ public class VmInstance implements HasName {
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
     if ( !this.getState( ).equals( newState ) ) {
-      EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.ownerId, this.state.getReference( ).name( ), this.launchTime );
-      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       this.reason = reason;
       if ( this.state.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
         if ( VmState.SHUTTING_DOWN.equals( newState ) ) {
@@ -212,23 +210,27 @@ public class VmInstance implements HasName {
           this.state.set( newState, false );
         }
       } else if ( this.state.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );        
+        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       } else if ( !this.state.isMarked( ) ) {
-        if ( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( newState ) ) {
+        if ( VmState.PENDING.equals( oldState ) && newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
           this.state.set( newState, false );
           VmInstances.cleanUp( this );
         } else if ( VmState.PENDING.equals( oldState ) ) {
           this.state.set( newState, false );
-        } else if ( VmState.TERMINATED.equals( newState ) ) {
+        } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) <= VmState.RUNNING.ordinal( )  ) {
           this.state.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
           VmInstances.cleanUp( this );
-        } else if ( VmState.SHUTTING_DOWN.equals( newState ) || VmState.BURIED.equals( newState ) ) {
-          this.state.set( newState, false );          
+        } else if ( VmState.RUNNING.ordinal( ) < newState.ordinal( ) && newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
+          this.state.set( oldState, false );
           VmInstances.cleanUp( this );
         }
       } else {
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
+      }
+      if ( !this.getState( ).equals( oldState ) ) {
+        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.ownerId, this.state.getReference( ).name( ), this.launchTime );
+        LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       }
     }
   }
