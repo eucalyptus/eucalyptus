@@ -207,6 +207,7 @@ public class VmInstance implements HasName {
     if( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
       VmInstances.getInstance( ).deregister( this.getName( ) );
     } else if ( !this.getState( ).equals( newState ) ) {
+      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       this.reason = reason;
       if ( this.state.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
         if ( VmState.SHUTTING_DOWN.equals( newState ) ) {
@@ -240,7 +241,6 @@ public class VmInstance implements HasName {
       }
       if ( !this.getState( ).equals( oldState ) ) {
         EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.ownerId, this.state.getReference( ).name( ), this.launchTime );
-        LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       }
     }
   }
