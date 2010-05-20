@@ -198,33 +198,33 @@ public class VmInstance implements HasName {
     this.setState( state, "Operating normally." );
   }
   
-  public void setState( final VmState state, String reason ) {
+  public void setState( final VmState newState, String reason ) {
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
-    if ( !this.getState( ).equals( state ) ) {
+    if ( !this.getState( ).equals( newState ) ) {
       EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.ownerId, this.state.getReference( ).name( ), this.launchTime );
-      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), state ) );
+      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       this.reason = reason;
       if ( this.state.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
-        if ( VmState.SHUTTING_DOWN.equals( state ) ) {
-          this.state.set( state, true );
+        if ( VmState.SHUTTING_DOWN.equals( newState ) ) {
+          this.state.set( newState, true );
         } else {
-          this.state.set( state, false );
+          this.state.set( newState, false );
         }
       } else if ( this.state.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );        
       } else if ( !this.state.isMarked( ) ) {
-        if ( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( state ) ) {
-          this.state.set( state, false );
+        if ( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( newState ) ) {
+          this.state.set( newState, false );
           VmInstances.cleanUp( this );
         } else if ( VmState.PENDING.equals( oldState ) ) {
-          this.state.set( state, false );
-        } else if ( VmState.TERMINATED.equals( state ) ) {
-          this.state.set( state, false );
+          this.state.set( newState, false );
+        } else if ( VmState.TERMINATED.equals( newState ) ) {
+          this.state.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
           VmInstances.cleanUp( this );
-        } else if ( VmState.SHUTTING_DOWN.equals( state ) || VmState.BURIED.equals( state ) ) {
-          this.state.set( state, false );          
+        } else if ( VmState.SHUTTING_DOWN.equals( newState ) || VmState.BURIED.equals( newState ) ) {
+          this.state.set( newState, false );          
           VmInstances.cleanUp( this );
         }
       } else {
