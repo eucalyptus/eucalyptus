@@ -212,10 +212,10 @@ public class VmInstance implements HasName {
       } else if ( this.state.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       } else if ( !this.state.isMarked( ) ) {
-        if ( VmState.PENDING.equals( oldState ) && newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+        if ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) && newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
           this.state.set( newState, false );
           VmInstances.cleanUp( this );
-        } else if ( VmState.PENDING.equals( oldState ) ) {
+        } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
           this.state.set( newState, false );
         } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) <= VmState.RUNNING.ordinal( )  ) {
           this.state.set( newState, false );
