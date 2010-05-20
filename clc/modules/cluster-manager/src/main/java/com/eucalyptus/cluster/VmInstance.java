@@ -223,14 +223,8 @@ public class VmInstance implements HasName {
           this.state.set( state, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
           VmInstances.cleanUp( this );
-        } else if ( VmState.SHUTTING_DOWN.equals( this.getState( ) ) || VmState.BURIED.equals( this.getState( ) ) ) {
-          VmInstances.cleanUp( this );
-        }
-        if ( VmState.TERMINATED.equals( state ) ) {
-          this.state.set( state, false );
-          VmInstances.getInstance( ).disable( this.getName( ) );
-          VmInstances.cleanUp( this );
-        } else if ( VmState.SHUTTING_DOWN.equals( this.getState( ) ) || VmState.BURIED.equals( this.getState( ) ) ) {
+        } else if ( VmState.SHUTTING_DOWN.equals( state ) || VmState.BURIED.equals( state ) ) {
+          this.state.set( state, false );          
           VmInstances.cleanUp( this );
         }
       } else {
