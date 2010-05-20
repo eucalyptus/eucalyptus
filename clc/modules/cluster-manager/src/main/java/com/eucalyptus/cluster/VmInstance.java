@@ -185,10 +185,12 @@ public class VmInstance implements HasName {
   }
   
   public boolean clearPending( ) {
-    if ( this.state.compareAndSet( this.getState( ), this.getState( ), true, false ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
+    if ( this.state.isMarked( ) && this.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+      this.state.set( this.getState( ), false );
       VmInstances.cleanUp( this );
       return true;
     } else {
+      this.state.set( this.getState( ), false );
       return false;
     }
   }
@@ -201,6 +203,7 @@ public class VmInstance implements HasName {
     this.setState( state, "Operating normally." );
   }
   
+  private int stateCounter = 0;
   public void setState( final VmState newState, String reason ) {
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
