@@ -169,7 +169,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 	{
 		final ArrayList<String> storageParams = storageInfo.getStorageParams();
 		numStorageParams = storageParams.size()/4;
-		Grid g = new Grid (8 +  numStorageParams, 2);
+		Grid g = new Grid (9 +  numStorageParams, 2);
 		g.setStyleName( "euca-table" );
 		if (row > 0) {
 			g.setStyleName( "euca-nonfirst-cluster-entry" );
@@ -291,6 +291,16 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 
 		i++; // next row
 		g.setWidget( i, 1, new Label( "Storage Controller" ));
+
+		i++; // next row
+		g.setWidget( i, 0, new Label( "Host:" ) );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		final TextBox hs = new TextBox();
+		hs.addChangeListener (new ChangeCallback (this, row));
+		hs.setVisibleLength( 20 );
+		hs.setText( storageInfo.getHost() );
+		hs.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+		g.setWidget ( i, 1, hs );
 
 		for(int paramidx = 0; paramidx < numStorageParams; ++paramidx) {
 			i++; // next row
