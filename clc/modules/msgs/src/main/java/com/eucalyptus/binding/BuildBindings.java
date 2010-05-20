@@ -150,7 +150,7 @@ public class BuildBindings extends Task {
         Thread.currentThread( ).setContextClassLoader( old );
       }
       try {
-        Compile compiler = new Compile( true, false, false, false, true );
+        Compile compiler = new Compile( true, true, false, false, true );
         compiler.compile( paths( ), bindings() );
       } catch ( Throwable e ) {
         error( e );
