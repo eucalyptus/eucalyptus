@@ -922,14 +922,20 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			throw new Exception("Only admin can add a user");
 		}
 		addUserRecord(sessionId, user);
+		boolean inDefaultGroup = false;
 		for (String groupName : groupNames) {
+		  if ( Groups.NAME_DEFAULT.equals( groupName ) ) {
+		    inDefaultGroup = true;
+		  }
 			try {
-			  EucalyptusManagement.removeUserFromGroup( user.getUserName( ), Groups.NAME_DEFAULT );
 				EucalyptusManagement.addUserToGroup(user.getUserName(), groupName);
 			} catch (Exception e) {
 				// Ignore exception
 				LOG.debug(e, e);
 			}
+		}
+		if ( !inDefaultGroup && groupNames.size( ) > 0 ) {
+		  EucalyptusManagement.removeUserFromGroup( user.getUserName( ), Groups.NAME_DEFAULT );
 		}
 	}
 
