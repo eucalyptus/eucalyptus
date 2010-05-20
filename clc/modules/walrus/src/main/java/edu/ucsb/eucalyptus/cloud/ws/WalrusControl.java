@@ -225,7 +225,7 @@ public class WalrusControl {
 		if(WalrusProperties.NAME.equals(name)) {
 			ConfigurableClass configurableClass = WalrusInfo.class.getAnnotation(ConfigurableClass.class);
 			if(configurableClass != null) {
-				String prefix = configurableClass.alias();
+				String prefix = configurableClass.root();
 				reply.setProperties((ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix));
 			}
 		}

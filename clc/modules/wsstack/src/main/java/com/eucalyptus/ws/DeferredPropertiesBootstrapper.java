@@ -59,31 +59,59 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.ws;
 
-package edu.ucsb.eucalyptus.cloud.entities;
+import java.util.List;
+import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
+import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.collect.Lists;
+import com.eucalyptus.records.EventRecord;
 
-import java.io.Serializable;
-
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.GenericGenerator;
-
-import com.eucalyptus.configurable.ConfigurableIdentifier;
-
-import javax.persistence.*;
-
-@MappedSuperclass
-public class LVMMetaInfo implements Serializable {
-	@Id
-	@GeneratedValue(generator = "system-uuid")
-	@GenericGenerator(name="system-uuid", strategy = "uuid")
-	@Column( name = "id" )
-	String id;
-
-	public LVMMetaInfo() {
-		super();
+@Provides( com.eucalyptus.bootstrap.Component.any )
+@RunDuring( Bootstrap.Stage.RemoteServicesInit )
+public class DeferredPropertiesBootstrapper extends Bootstrapper {
+	private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
+	@Override
+	public boolean start( ) throws Exception {
+		for ( Component comp : Components.list( ) ) {
+			for ( ServiceConfiguration s : comp.list( ) ) {
+				if(!s.isLocal()) {
+					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponent().name());
+					for ( ConfigurableProperty prop : props ) {
+						ConfigurableProperty addProp = null;
+						if (prop instanceof SingletonDatabasePropertyEntry) {
+							addProp = prop;
+						} else if (prop instanceof MultiDatabasePropertyEntry) {
+							addProp = ((MultiDatabasePropertyEntry) prop).getClone(s.getName());
+						}
+						PropertyDirectory.addProperty(addProp);
+					}
+				}
+			}
+		}
+		return true;
 	}
+	@Override
+	public boolean load(Stage current) throws Exception {
+		return true;
+	}
+
 }

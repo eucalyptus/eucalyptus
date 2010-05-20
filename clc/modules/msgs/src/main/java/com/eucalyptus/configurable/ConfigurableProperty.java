@@ -19,6 +19,8 @@ public interface ConfigurableProperty {
   
   public abstract ConfigurableFieldType getWidgetType( );
   
+  public abstract String getAlias();
+  
   public abstract PropertyTypeParser getTypeParser( );
   
   public abstract String getDefaultValue( );

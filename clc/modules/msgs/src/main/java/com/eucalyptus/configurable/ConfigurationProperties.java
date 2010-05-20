@@ -119,7 +119,7 @@ public class ConfigurationProperties {
     }
     props.clear( );
     for( final ConfigurableProperty p : PropertyDirectory.getPropertyEntrySet( entrySetName ) ) {
-      if( !( p instanceof SingletonDatabasePropertyEntry ) ) {
+      if( !( p instanceof SingletonDatabasePropertyEntry ) && !( p instanceof MultiDatabasePropertyEntry ) ) {
         props.setProperty( p.getFieldName( ), p.getValue( ) );
       }
     }

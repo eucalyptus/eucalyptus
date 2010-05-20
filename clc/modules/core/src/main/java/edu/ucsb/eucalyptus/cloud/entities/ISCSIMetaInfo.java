@@ -71,6 +71,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 
 import javax.persistence.*;
 
@@ -78,8 +79,11 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "ISCSIMetadata" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(alias = "storage.iscsi", description = "Storage controller ISCSI meta info")
+@ConfigurableClass(root = "storage", description = "Storage controller ISCSI meta info", singleton=false, deferred = true)
 public class ISCSIMetaInfo extends LVMMetaInfo {
+	@ConfigurableIdentifier
+	@Column(name = "hostname")
+	private String hostName;
 	@ConfigurableField( description = "Prefix for ISCSI device", displayName = "ISCSI Prefix", type = ConfigurableFieldType.PRIVATE)
 	@Column(name = "store_prefix")
 	private String storePrefix;
@@ -127,5 +131,13 @@ public class ISCSIMetaInfo extends LVMMetaInfo {
 
 	public void setStoreUser(String storeUser) {
 		this.storeUser = storeUser;
+	}
+
+	public String getHostName() {
+		return hostName;
+	}
+
+	public void setHostName(String hostName) {
+		this.hostName = hostName;
 	}
 }

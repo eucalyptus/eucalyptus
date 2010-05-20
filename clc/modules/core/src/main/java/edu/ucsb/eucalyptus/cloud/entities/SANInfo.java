@@ -70,6 +70,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -81,7 +82,7 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "san_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(alias = "storage.san", description = "Basic storage controller configuration for SAN.")
+@ConfigurableClass(root = "storage", alias="san", description = "Basic storage controller configuration for SAN.", singleton=false, deferred = true)
 public class
 SANInfo {
 	private static Logger LOG = Logger.getLogger( SANInfo.class );
@@ -90,6 +91,7 @@ SANInfo {
 	@GeneratedValue
 	@Column( name = "storage_san_id" )
 	private Long id = -1l;
+	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
 	@ConfigurableField( description = "Hostname for SAN device.", displayName = "SAN Host" )

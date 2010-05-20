@@ -1064,16 +1064,18 @@ public class OverlayManager implements LogicalStorageManager {
 		ArrayList<ComponentProperty> componentProperties = null;
 		ConfigurableClass configurableClass = StorageInfo.class.getAnnotation(ConfigurableClass.class);
 		if(configurableClass != null) {
-			String prefix = configurableClass.alias();
-			componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
+			String root = configurableClass.root();
+			String alias = configurableClass.alias();
+			componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias);
 		}
 		configurableClass = DirectStorageInfo.class.getAnnotation(ConfigurableClass.class);
 		if(configurableClass != null) {
-			String prefix = configurableClass.alias();
+			String root = configurableClass.root();
+			String alias = configurableClass.alias();
 			if(componentProperties == null)
-				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
+				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias);
 			else 
-				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(prefix));
+				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias));
 		}			
 		return componentProperties;
 	}

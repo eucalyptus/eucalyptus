@@ -40,7 +40,7 @@ Release:       0.1319
 License:       Eucalyptus EEE Software License
 Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
-Requires:      %{euca_build_req}
+Requires:      %{euca_build_req}, perl-Crypt-OpenSSL-RSA, perl-Crypt-OpenSSL-Random
 Source:        %{name}-%{version}.tar.gz
 URL:           http://www.eucalyptus.com
 
@@ -88,7 +88,7 @@ Summary:      Elastic Utility Computing Architecture - storage controller
 %if %is_centos
 Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade, scsi-target-utils
 %else
-Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade
+Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade, tgt
 %endif
 Group:        Applications/System
 
@@ -161,6 +161,7 @@ This package contains the internal log service of eucalyptus.
 %package broker
 Summary:      Elastic Utility Computing Architecture - vmware broker
 Requires:     %{name}-common-java = %{version}, %{euca_java}
+AutoReqProv:  no
 Group:        Applications/System
 
 %description broker
@@ -345,24 +346,22 @@ cp /usr/share/eucalyptus/udev/55-openiscsi.rules /etc/udev/rules.d/
 mkdir -p /etc/udev/scripts/
 %if %is_suse
         cp /usr/share/eucalyptus/udev/iscsidev-opensuse.sh /etc/udev/scripts/iscsidev.sh
+	udevadm control --reload-rules
 %endif
 %if %is_centos
         cp /usr/share/eucalyptus/udev/iscsidev-centos.sh /etc/udev/scripts/iscsidev.sh
         udevcontrol reload_rules
         sed -i "s/node\.startup.*/node\.startup\ = manual/" /etc/iscsi/iscsid.conf
         sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
-        cat <<EOF >> /etc/sudoers
+%endif
+cat <<EOF >> /etc/sudoers
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget_sc.pl
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/connect_iscsitarget.pl
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/disconnect_iscsitarget.pl
 eucalyptus ALL=NOPASSWD: /usr/share/eucalyptus/get_iscsitarget.pl
-EOF
-        sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
-        cat <<EOF >> /etc/sudoers
 eucalyptus ALL=NOPASSWD: /usr/sbin/tgtadm
 EOF
-%endif
 chmod +x /etc/udev/scripts/iscsidev.sh
 
 # we need a eucalyptus user
@@ -477,7 +476,6 @@ fi
 /usr/sbin/euca_conf --enable vmwarebroker
 sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/services\/VMwareBroker\"/" /etc/eucalyptus/eucalyptus.conf
 sed -i "s/NC_PORT=.*/NC_PORT=\"8773\"/" /etc/eucalyptus/eucalyptus.conf
-sed -i "s/ENABLE_WS_SECURITY=.*/ENABLE_WS_SECURITY=\"N\"/" /etc/eucalyptus/eucalyptus.conf
 echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus/eucalyptus.conf
 
 %postun

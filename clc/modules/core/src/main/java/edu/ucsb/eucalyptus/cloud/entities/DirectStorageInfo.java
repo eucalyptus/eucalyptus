@@ -70,6 +70,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -80,7 +81,7 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "direct_storage_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(alias = "storage.direct", description = "Basic storage controller configuration.")
+@ConfigurableClass(root = "storage", alias = "direct", description = "Basic storage controller configuration.", singleton=false, deferred = true)
 public class
 DirectStorageInfo {
 	private static Logger LOG = Logger.getLogger( DirectStorageInfo.class );
@@ -89,6 +90,7 @@ DirectStorageInfo {
 	@GeneratedValue
 	@Column( name = "storage_direct_id" )
 	private Long id = -1l;
+	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
 	@ConfigurableField( description = "Storage network interface.", displayName = "Storage Interface" )

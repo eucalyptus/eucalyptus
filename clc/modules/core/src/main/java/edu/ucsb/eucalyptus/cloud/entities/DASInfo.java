@@ -70,6 +70,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -80,7 +81,7 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "das_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(alias = "storage.das", description = "Basic storage controller configuration for DAS.")
+@ConfigurableClass(root = "storage", alias = "das", description = "Basic storage controller configuration for DAS.", singleton=false, deferred = true)
 public class
 DASInfo {
 	private static Logger LOG = Logger.getLogger( DASInfo.class );
@@ -89,6 +90,7 @@ DASInfo {
 	@GeneratedValue
 	@Column( name = "storage_das_id" )
 	private Long id = -1l;
+	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
 	@ConfigurableField( description = "Direct attached storage device location", displayName = "Direct attached storage device" )

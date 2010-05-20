@@ -6,6 +6,7 @@ import com.eucalyptus.auth.ldap.LdapAttributes;
 import com.eucalyptus.auth.ldap.LdapConfiguration;
 import com.eucalyptus.auth.ldap.LdapContextManager;
 import com.eucalyptus.auth.ldap.LdapException;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.AuthBootstrapHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -43,6 +44,7 @@ public class LdapAuthBootstrapper extends Bootstrapper {
       }
       AuthBootstrapHelper.ensureStandardGroupsExists( );
       AuthBootstrapHelper.ensureAdminExists( );
+      loadCache( );
     }
     return true;
   }
@@ -53,5 +55,12 @@ public class LdapAuthBootstrapper extends Bootstrapper {
     result = result && EucaLdapHelper.createUserRoot( );
     LOG.debug( "Built or found LDAP tree" );
     return result;
+  }
+  
+  private void loadCache( ) {
+    LdapCache.getInstance( ).reloadGroups( Groups.listAllGroups( ) );
+    for ( User user : Users.listAllUsers( ) ) {
+      LdapCache.getInstance( ).addUser( user );
+    }
   }
 }

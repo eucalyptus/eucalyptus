@@ -285,9 +285,4 @@ public class DatabaseWrappedUser implements User, WrappedUser {
   public UserInfo getUserInfo( ) throws NoSuchUserException {
     return UserInfoStore.getUserInfo( new UserInfo( this.user.getName( ) ) );
   }
-
-  @Override
-  public List<Group> getUserGroups( ) {
-    return Groups.lookupUserGroups( searchUser );
-  }
 }

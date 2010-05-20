@@ -94,7 +94,7 @@ import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-@ConfigurableClass( alias = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
+@ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class SystemState {
   
   public static Logger      LOG                 = Logger.getLogger( SystemState.class );
