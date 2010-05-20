@@ -69,6 +69,7 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.Address.Transition;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.records.EventRecord;
@@ -109,7 +110,6 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   public void verify( AssignAddressResponseType msg ) throws Exception {
     try {
       this.updateState( );
-      this.address.clearPending( );
     } catch ( IllegalStateException e ) {
       AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
     } catch ( Exception e ) {
@@ -142,9 +142,11 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   
   private void updateState( ) {
     if( !this.checkVmState( ) ) {
+      this.address.clearPending( );
       throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
     } else {
       EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), LogUtil.dumpObject( address ) ).info( );
+      this.address.clearPending( );
     }
   }
 
