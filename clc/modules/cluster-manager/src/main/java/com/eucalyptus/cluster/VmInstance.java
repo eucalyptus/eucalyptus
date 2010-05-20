@@ -216,7 +216,7 @@ public class VmInstance implements HasName {
       LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       this.reason = reason;
       if ( this.state.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
-        if ( VmState.SHUTTING_DOWN.equals( newState ) ) {
+        if ( VmState.SHUTTING_DOWN.equals( newState ) || VmState.PENDING.equals( newState ) ) {
           this.state.set( newState, true );
         } else {
           this.state.set( newState, false );
