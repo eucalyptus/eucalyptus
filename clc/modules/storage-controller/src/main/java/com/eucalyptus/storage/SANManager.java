@@ -78,6 +78,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -389,16 +390,18 @@ public class SANManager implements LogicalStorageManager {
 		ArrayList<ComponentProperty> componentProperties = null;
 		ConfigurableClass configurableClass = StorageInfo.class.getAnnotation(ConfigurableClass.class);
 		if(configurableClass != null) {
-			String prefix = configurableClass.alias();
-			componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
+			String root = configurableClass.root();
+			String alias = configurableClass.alias();
+			componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias);
 		}
 		configurableClass = SANInfo.class.getAnnotation(ConfigurableClass.class);
 		if(configurableClass != null) {
-			String prefix = configurableClass.alias();
+			String root = configurableClass.root();
+			String alias = configurableClass.alias();
 			if(componentProperties == null)
-				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
+				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias);
 			else 
-				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(prefix));
+				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias));
 		}			
 		return componentProperties;
 	}
@@ -407,9 +410,9 @@ public class SANManager implements LogicalStorageManager {
 	public void setStorageProps(ArrayList<ComponentProperty> storageProps) {
 		for (ComponentProperty prop : storageProps) {
 			try {
-					ConfigurableProperty entry = PropertyDirectory.getPropertyEntry(prop.getQualifiedName());
-					//type parser will correctly covert the value
-					entry.setValue(prop.getValue());
+				ConfigurableProperty entry = PropertyDirectory.getPropertyEntry(prop.getQualifiedName());
+				//type parser will correctly covert the value
+				entry.setValue(prop.getValue());
 			} catch (IllegalAccessException e) {
 				LOG.error(e, e);
 			}

@@ -70,6 +70,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -80,7 +81,7 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "storage_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(alias = "storage", description = "Basic storage controller configuration.")
+@ConfigurableClass(root = "storage", alias="basic", description = "Basic storage controller configuration.", singleton=false, deferred = true)
 public class
 StorageInfo {
 	private static Logger LOG = Logger.getLogger( StorageInfo.class );
@@ -89,6 +90,7 @@ StorageInfo {
 	@GeneratedValue
 	@Column( name = "storage_id" )
 	private Long id = -1l;
+	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
 	@ConfigurableField( description = "Total disk space reserved for volumes", displayName = "Disk space reserved for volumes" )

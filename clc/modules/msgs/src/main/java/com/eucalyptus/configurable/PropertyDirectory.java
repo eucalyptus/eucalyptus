@@ -1,6 +1,7 @@
 package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -15,9 +16,12 @@ public class PropertyDirectory {
   private static Logger                                 LOG         = Logger.getLogger( PropertyDirectory.class );
   private static Map<String, ConfigurableProperty>      fqMap       = Maps.newHashMap( );
   private static Multimap<String, ConfigurableProperty> fqPrefixMap = Multimaps.newHashMultimap( );
-  
+  private static Map<String, ConfigurableProperty>      fqPendingMap       = Maps.newHashMap( );
+ private static Multimap<String, ConfigurableProperty> fqPendingPrefixMap = Multimaps.newHashMultimap( );
+
   private static List<ConfigurablePropertyBuilder>      builders    = Lists.newArrayList( new StaticPropertyEntry.StaticPropertyBuilder( ),
-                                                                                          new SingletonDatabasePropertyEntry.DatabasePropertyBuilder( ) ); //FIXME: make this dynamic kkthx.
+                                                                                          new SingletonDatabasePropertyEntry.DatabasePropertyBuilder( ),
+                                                                                          new MultiDatabasePropertyEntry.DatabasePropertyBuilder( )); //FIXME: make this dynamic kkthx.
                                                                                                                                                   
   @SuppressWarnings( { "unchecked" } )
   public static ConfigurableProperty buildPropertyEntry( Class c, Field field ) {
@@ -25,17 +29,26 @@ public class PropertyDirectory {
       try {
         ConfigurableProperty prop = b.buildProperty( c, field );
         if ( prop != null ) {
-          if ( !fqMap.containsKey( prop.getQualifiedName( ) ) ) {
-            fqMap.put( prop.getQualifiedName( ), prop );
-            fqPrefixMap.put( prop.getEntrySetName( ), prop );
-            return prop;
+          ConfigurableClass configurableAnnot = (ConfigurableClass) c.getAnnotation(ConfigurableClass.class);
+          if ( configurableAnnot.deferred() ) {
+        	if ( !fqPendingMap.containsKey( prop.getQualifiedName( ) ) ) {
+              fqPendingMap.put( prop.getQualifiedName( ), prop );
+              fqPendingPrefixMap.put( prop.getEntrySetName( ), prop );
+              return prop;
+            }    
           } else {
-            RuntimeException r = new RuntimeException( "Duplicate configurable field in same config file: \n" + "-> "
+            if ( !fqMap.containsKey( prop.getQualifiedName( ) ) ) {
+              fqMap.put( prop.getQualifiedName( ), prop );
+              fqPrefixMap.put( prop.getEntrySetName( ), prop );
+              return prop;
+            } else {
+              RuntimeException r = new RuntimeException( "Duplicate configurable field in same config file: \n" + "-> "
                                                        + fqMap.get( prop.getQualifiedName( ) ).getDefiningClass( ).getCanonicalName( ) + "." + field.getName( )
                                                        + "\n" + "-> " + c.getCanonicalName( ) + "." + field.getName( ) + "\n" );
-            LOG.fatal( r, r );
-            System.exit( 1 );
-            throw r;
+              LOG.fatal( r, r );
+              System.exit( 1 );
+              throw r;
+            }
           }
         }
       } catch ( ConfigurablePropertyException e ) {
@@ -64,7 +77,16 @@ public class PropertyDirectory {
     }
     return props;
   }
-  
+ 
+  public static List<ConfigurableProperty> getPropertyEntrySet( String prefix, String alias ) {
+	List<ConfigurableProperty> props = Lists.newArrayList( );
+	for ( ConfigurableProperty fq : fqPrefixMap.get( prefix ) ) {
+	if(fq.getAlias().equals(alias))
+	    props.add( fq );
+	}
+	return props;
+  }
+
   public static ConfigurableProperty getPropertyEntry( String fq ) throws IllegalAccessException {
     if ( !fqMap.containsKey( fq ) ) {
       throw new IllegalAccessException( "No such property: " + fq );
@@ -73,6 +95,14 @@ public class PropertyDirectory {
     }
   }
   
+  public static List<ConfigurableProperty> getPendingPropertyEntrySet( String prefix ) {
+	List<ConfigurableProperty> props = Lists.newArrayList( );
+	for ( ConfigurableProperty fq : fqPendingPrefixMap.get( prefix ) ) {
+	  props.add( fq );
+	}
+	return props;
+  }
+
   public static String getEntrySetDescription( String entrySetName ) {
     return "Temporary description";
   }
@@ -84,5 +114,28 @@ public class PropertyDirectory {
 		  componentProps.add(new ComponentProperty(prop.getWidgetType().toString(), prop.getDisplayName(), prop.getValue(), prop.getQualifiedName()));
 	  }
 	  return componentProps;
+  }
+  
+  public static void addProperty(ConfigurableProperty prop) {
+  	if ( !fqMap.containsKey( prop.getQualifiedName( ) ) ) {
+  	  fqMap.put( prop.getQualifiedName( ), prop );
+      fqPrefixMap.put( prop.getEntrySetName( ), prop );
+    }
+  }
+  
+  public static void removeProperty(ConfigurableProperty prop) {
+    if ( fqMap.containsKey( prop.getQualifiedName( ) ) ) {
+      fqMap.remove( prop.getQualifiedName( ) );
+	  fqPrefixMap.remove( prop.getEntrySetName( ), prop );
+	}	 
+  }
+
+  public static List<ComponentProperty> getComponentPropertySet(String prefix, String alias) {
+	List<ComponentProperty> componentProps = Lists.newArrayList();
+	List<ConfigurableProperty> props = getPropertyEntrySet( prefix, alias );
+	for (ConfigurableProperty prop : props) {
+	 componentProps.add(new ComponentProperty(prop.getWidgetType().toString(), prop.getDisplayName(), prop.getValue(), prop.getQualifiedName()));
+	}
+	return componentProps;
   }
 }
