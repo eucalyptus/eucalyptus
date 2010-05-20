@@ -13,6 +13,7 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.vm.VmState;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 
@@ -90,6 +91,8 @@ public abstract class AbstractSystemAddressManager {
           Helper.ensureAllocated( addr );
           Helper.ensureAssigned( addr, vm );
           cluster.getState( ).clearOrphan( addrInfo );
+        } else if ( addr != null && vm != null && vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+          cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr != null && vm == null ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr == null && vm != null ) {
