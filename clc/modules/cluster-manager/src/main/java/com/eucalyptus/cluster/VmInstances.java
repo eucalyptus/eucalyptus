@@ -180,7 +180,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
             SystemState.LOG.debug( e, e );
           }
         }
-        vm.getNetworkConfig( ).setNetworkIndex( -1 );
+        vm.updateNetworkIndex( -1 );
         try {
           if ( networkFqName != null ) {
             Network net = Networks.getInstance( ).lookup( networkFqName );
@@ -205,20 +205,24 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   }
 
   public static void cleanUp( final VmInstance vm ) {
-    String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
-    Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-    int networkIndex = vm.getNetworkConfig( ).getNetworkIndex( );
-    Address address = null;
-    QueuedEventCallback cb = new TerminateCallback( vm.getInstanceId( ) );
-    if ( Clusters.getInstance( ).hasNetworking( ) ) {
-      try {
-        address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
-      } catch ( NoSuchElementException e ) {} catch ( Throwable e1 ) {
-        SystemState.LOG.debug( e1, e1 );
+    try {
+      String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
+      Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+      int networkIndex = vm.getNetworkConfig( ).getNetworkIndex( );
+      Address address = null;
+      QueuedEventCallback cb = new TerminateCallback( vm.getInstanceId( ) );
+      if ( Clusters.getInstance( ).hasNetworking( ) ) {
+        try {
+          address = Addresses.getInstance( ).lookup( vm.getNetworkConfig( ).getIgnoredPublicIp( ) );
+        } catch ( NoSuchElementException e ) {} catch ( Throwable e1 ) {
+          SystemState.LOG.debug( e1, e1 );
+        }
       }
+      cb.then( VmInstances.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
+      cb.dispatch( cluster );
+    } catch ( Throwable e ) {
+      LOG.error( e, e );
     }
-    cb.then( VmInstances.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
-    cb.dispatch( cluster );
   }
 
   public static VmInstance restrictedLookup( String userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {

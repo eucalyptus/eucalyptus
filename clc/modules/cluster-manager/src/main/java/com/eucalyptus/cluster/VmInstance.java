@@ -66,6 +66,7 @@ package com.eucalyptus.cluster;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.BundleCallback;
+import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.VmState;
@@ -163,7 +164,7 @@ public class VmInstance implements HasName {
   
   public void updateNetworkIndex( Integer newIndex ) {
     if ( this.getNetworkConfig( ).getNetworkIndex( ) > 0 && newIndex > 0
-         && ( VmState.RUNNING.equals( this.getState( )) || VmState.PENDING.equals( this.getState( )) ) ) {
+         && ( VmState.RUNNING.equals( this.getState( ) ) || VmState.PENDING.equals( this.getState( ) ) ) ) {
       this.getNetworkConfig( ).setNetworkIndex( newIndex );
     }
   }
@@ -183,12 +184,10 @@ public class VmInstance implements HasName {
     this.getNetworkConfig( ).updateDns( dnsDomain );
   }
   
-  public Boolean clearPending( ) {
-    return this.state.compareAndSet( this.state.getReference( ), this.state.getReference( ), true, false );
-  }
-  
-  public Boolean isPending( ) {
-    return this.state.isMarked( );
+  public void clearPending( ) {
+    if( this.state.compareAndSet( this.getState( ), this.getState( ), true, false ) && VmState.SHUTTING_DOWN.equals(this.getState()) ) {
+      VmInstances.cleanUp( this );
+    }
   }
   
   public VmState getState( ) {
@@ -199,33 +198,33 @@ public class VmInstance implements HasName {
     this.setState( state, "Operating normally." );
   }
   
+  private volatile Boolean pendingTerminate = false;
+  
   public void setState( final VmState state, String reason ) {
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
     if ( !this.getState( ).equals( state ) ) {
       EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.ownerId, this.state.getReference( ).name( ), this.launchTime );
       LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), state ) );
-    }
-    this.state.set( state, this.state.isMarked( ) );
-    this.reason = reason;
-    if ( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
-      try {
-        VmInstances.cleanUp( this );
-      } catch ( Throwable t ) {
-        LOG.debug( t, t );
-      }
-    } else if ( VmState.TERMINATED.equals( this.getState( ) ) ) {
-      VmInstances.getInstance( ).disable( this.getName( ) );
-      try {
-        VmInstances.cleanUp( this );
-      } catch ( Throwable t ) {
-        LOG.debug( t, t );
-      }
-    } else if ( VmState.SHUTTING_DOWN.equals( this.getState( )) || VmState.BURIED.equals( this.getState( )) ) {
-      try {
-        VmInstances.cleanUp( this );
-      } catch ( Throwable t ) {
-        LOG.debug( t, t );
+      this.reason = reason;
+      if ( this.state.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+        this.state.set( state, true );
+      } else if( !this.state.isMarked( ) ) {
+        this.state.set( state, false );
+        if ( VmState.PENDING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
+          if ( this.state.isMarked( ) ) {
+            this.pendingTerminate = true;
+          } else {
+            VmInstances.cleanUp( this );
+          }
+        } else if ( VmState.TERMINATED.equals( this.getState( ) ) ) {
+          VmInstances.getInstance( ).disable( this.getName( ) );
+          VmInstances.cleanUp( this );
+        } else if ( VmState.SHUTTING_DOWN.equals( this.getState( ) ) || VmState.BURIED.equals( this.getState( ) ) ) {
+          VmInstances.cleanUp( this );
+        }
+      } else {
+        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + newState );
       }
     }
   }
@@ -562,14 +561,15 @@ public class VmInstance implements HasName {
   }
   
   public void updateVolumeState( final String volumeId, String state ) {
-    AttachedVolume v = Iterables.find( this.volumes, new Predicate<AttachedVolume>() {
+    AttachedVolume v = Iterables.find( this.volumes, new Predicate<AttachedVolume>( ) {
       @Override
       public boolean apply( AttachedVolume arg0 ) {
         return arg0.getVolumeId( ).equals( volumeId );
-      }} );
+      }
+    } );
     v.setStatus( state );
   }
-
+  
   public NavigableSet<AttachedVolume> getVolumes( ) {
     return this.volumes;
   }
@@ -631,5 +631,5 @@ public class VmInstance implements HasName {
                           this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
                           this.volumes, this.getBundleTask( ) != null ? LogUtil.dumpObject( this.getBundleTask( ) ) : "null" );
   }
-
+  
 }
