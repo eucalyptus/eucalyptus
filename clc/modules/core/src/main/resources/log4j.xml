@@ -112,8 +112,12 @@
   <category name="edu.ucsb.eucalyptus" additivity="true">
     <priority value="${euca.log.level}" />
     <appender-ref ref="logfile" />
+  </category><!--
+  <category name="com.eucalyptus.util.ServiceProcess$IOMonitor" additivity="true">
+    <priority value="INFO" />
+    <appender-ref ref="extlogfile" />
   </category>
-  <category name="org.mule" additivity="true">
+  --><category name="org.mule" additivity="true">
     <priority value="${euca.log.level}" />
     <appender-ref ref="extlogfile" />
   </category>

@@ -63,7 +63,7 @@
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.blockstorage;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -74,19 +74,16 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.util.StorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.cloud.state.Snapshot;
 import edu.ucsb.eucalyptus.cloud.state.State;
-import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;

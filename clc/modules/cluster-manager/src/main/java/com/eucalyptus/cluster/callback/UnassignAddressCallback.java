@@ -69,12 +69,13 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.ClusterAddressInfo;
 import com.eucalyptus.address.Address.Transition;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
@@ -120,9 +121,9 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
     }
   }
   @Override
-  public void verify( BaseMessage msg ) {
+  public void verify( UnassignAddressResponseType reply ) {
     this.clearVmAddress();
-    if( msg.get_return() ) {
+    if( reply.get_return() ) {
       EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGN, address.toString( ) ).info( );
     } else {
       EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE,"broken", address.toString( ) ).warn( );

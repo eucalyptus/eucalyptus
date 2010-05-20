@@ -61,37 +61,31 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.cluster;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.msgs.*;
-
-import java.util.*;
-
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-public class VmReplyTransform {
+import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-  public RunInstancesResponseType allocate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
+public class VmTypeVerify {
+
+  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
   {
-    RunInstancesResponseType reply = vmAllocInfo.getReply();
+    String instanceType = vmAllocInfo.getRequest().getInstanceType();
+    VmType v = VmTypes.getVmType( (instanceType==null)?"m1.small":instanceType );
+    if( v == null ) {
+      throw new EucalyptusCloudException( "instance type does not exist: " + vmAllocInfo.getRequest().getInstanceType() );
+    }
 
-    List<String> networkNames = new ArrayList<String>();
-    for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
+    VmImageInfo vmImgInfo = vmAllocInfo.getImageInfo();
+    if( vmImgInfo.getSize() > 1024l*1024l*1024l*v.getDisk() ) {
+      throw new EucalyptusCloudException( "image too large [size="+vmImgInfo.getSize()/(1024l*1024l)+"MB] for instance type " + v.getName() + " [disk="+v.getDisk()*1024l+"MB]" );
+    }
 
-    ReservationInfoType reservation = new ReservationInfoType( vmAllocInfo.getReservationId(),
-                                                               reply.getUserId(),
-                                                               networkNames );
-
-    for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )
-      for( String instId : allocToken.getInstanceIds() ) {
-        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( Component.dns.isLocal( ) ) );
-      }
-
-    reply.setRsvInfo( reservation );
-    return vmAllocInfo.getReply();
+    vmAllocInfo.setVmTypeInfo( new VmTypeInfo( v.getName(),v.getMemory(),v.getDisk(),v.getCpu() ) );
+    return vmAllocInfo;
   }
 
 }

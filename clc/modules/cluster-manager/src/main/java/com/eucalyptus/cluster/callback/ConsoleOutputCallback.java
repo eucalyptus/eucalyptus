@@ -66,11 +66,10 @@ package com.eucalyptus.cluster.callback;
 import java.util.Date;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.util.Messaging;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 
@@ -86,10 +85,6 @@ public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputT
   public void prepare( GetConsoleOutputType msg ) throws Exception {}
   
   @Override
-  public void verify( BaseMessage msg ) throws Exception {
-    this.verify( ( GetConsoleOutputResponseType ) msg );
-  }
-  
   public void verify( GetConsoleOutputResponseType reply ) throws Exception {
     VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
     String output = null;

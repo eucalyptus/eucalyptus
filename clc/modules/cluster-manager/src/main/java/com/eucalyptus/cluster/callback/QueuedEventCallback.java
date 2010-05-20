@@ -159,11 +159,16 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     this.queueResponse( e );
   }
   
-  public abstract void prepare( TYPE msg ) throws Exception;
+  public void prepare( TYPE msg ) throws Exception {
+    LOG.debug( this.getClass( ).getCanonicalName( ) + " should implement: prepare( TYPE t ) to check any preconditions!" );    
+  }
   
-  public abstract void verify( BaseMessage msg ) throws Exception;
+  public abstract void verify( RTYPE msg ) throws Exception;
   
-  public abstract void fail( Throwable throwable );
+  public void fail( Throwable t ) {
+    LOG.info( this.getClass( ).getCanonicalName( ) + " should implement: fail( Throwable t ) to handle errors!" );
+    LOG.error( t, t );
+  }
   
   public QueuedEventCallback dispatch( String clusterName ) {
     EventRecord.caller( QueuedEventCallback.class, EventType.QUEUE, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ).debug( );
@@ -192,7 +197,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
       try {
-        EucalyptusMessage msg = ( EucalyptusMessage ) response.getMessage( );
+        RTYPE msg = ( RTYPE ) response.getMessage( );
         if ( !msg.get_return( ) ) {
           throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
         }

@@ -69,11 +69,11 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.Address.Transition;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.VmState;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -108,7 +108,7 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
   
   @Override
-  public void verify( BaseMessage msg ) throws Exception {
+  public void verify( AssignAddressResponseType msg ) throws Exception {
     try {
       this.updateState( );
       this.address.clearPending( );

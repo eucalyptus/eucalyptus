@@ -81,9 +81,6 @@ import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
-import edu.ucsb.eucalyptus.cloud.cluster.VmTypeAvailability;
-import edu.ucsb.eucalyptus.cloud.cluster.VmTypes;
 import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;

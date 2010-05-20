@@ -61,36 +61,22 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.cluster;
 
-import edu.ucsb.eucalyptus.cloud.cluster.*;
-import org.apache.log4j.Logger;
+public class NoSuchTokenException extends Exception {
 
-public class VmMetadata {
-  private static Logger LOG = Logger.getLogger( VmMetadata.class );
+  public NoSuchTokenException( String string ) {}
 
-  public String handle( String path ) {
-    String[] parts = path.split( ":" );
-    String vmIp = parts[0];
-    String url = parts.length==2?parts[ 1 ]:"/";
-    LOG.debug( "Instance Metadata: " + path + " " + url );
-    if( url.matches("[/]*") ) {
-      return "dynamic\nuser-data\nmeta-data";
-    }
-    for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
-      if ( vmIp.equals( vm.getNetworkConfig( ).getIpAddress( ) ) || vmIp.equals( vm.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
-        if ( url.matches( "user-data[/]*" ) ) {
-          return vm.getUserData( );
-        } else if ( url.matches( "dynamic[/]*" ) ) {
-          return "";
-        } else if ( url.matches( "meta-data(/.*)*" ) ) {
-          url = url.replaceAll( "meta-data/?", "" );
-          return vm.getByKey( url );
-        }
-      }
-    }
-    return "";
+  public NoSuchTokenException( ) {
+    super( );
   }
+
+  public NoSuchTokenException( String message, Throwable cause ) {
+    super( message, cause );
+  }
+
+  public NoSuchTokenException( Throwable cause ) {
+    super( cause );
+  }
+
 }
-
-

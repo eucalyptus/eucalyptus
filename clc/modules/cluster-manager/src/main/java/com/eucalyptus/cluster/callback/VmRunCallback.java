@@ -68,7 +68,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.sla.ClusterAllocator;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -77,9 +78,6 @@ import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseType> {
 
@@ -102,8 +100,8 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     }
   }
 
-  public void verify( BaseMessage response ) throws Exception {
-    VmRunResponseType reply = (VmRunResponseType) response; 
+  @Override
+  public void verify( VmRunResponseType reply ) throws Exception {
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
     } catch ( Throwable e ) {
@@ -115,16 +113,8 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
       if ( reply != null && reply.get_return() ) {
         for ( VmInfo vmInfo : reply.getVms() ) {
           VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
-          vm.getNetworkConfig().setIpAddress( vmInfo.getNetParams().getIpAddress() );
-          if( VmInstance.DEFAULT_IP.equals( vm.getNetworkConfig().getIgnoredPublicIp() ) ) {
-            vm.getNetworkConfig().setIgnoredPublicIp( vmInfo.getNetParams().getIgnoredPublicIp() );
-          }
-          String dnsDomain = "dns-disabled";
-          try {
-            dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
-          } catch ( Exception e ) {
-          }
-          vm.getNetworkConfig( ).updateDns( dnsDomain );
+          vm.updateAddresses( vmInfo.getNetParams().getIpAddress(), vmInfo.getNetParams().getIgnoredPublicIp() );
+          vm.clearPending( );
         }
       } else {
         this.fail( new EucalyptusClusterException( "RunInstances returned false." + this.getRequest( ) ) );
@@ -165,5 +155,6 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
   }
+
 
 }

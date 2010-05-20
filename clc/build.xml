@@ -82,20 +82,20 @@
 	<property name="deps.url" value="http://mirror.eucalyptus/dependencies/${euca.version}" />
 	<property name="deps.dir" value="deps" />
 	<property name="deps.lib.dir" value="lib" />
-        <property name="tools.dir" value="tools/src" />
-  <property name="deps.lib" value="cloud-lib" />
-  <property name="bind.timestamp" value="target/.bind-timestamp" />
+	<property name="tools.dir" value="tools/src" />
+	<property name="deps.lib" value="cloud-lib" />
+	<property name="bind.timestamp" value="target/.bind-timestamp" />
 	<!--================================== build targets ==================================-->
 	<target name="build">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder" />
-    <ant dir="modules/ldap" inheritall="false" target="builder" />
+		<ant dir="modules/ldap" inheritall="false" target="builder" />
 		<ant dir="modules/authentication" inheritall="false" target="builder" />
 		<ant dir="modules/cloud" inheritall="false" target="builder" />
 		<ant dir="modules/configuration" inheritall="false" target="builder" />
 		<ant dir="modules/core" inheritall="false" target="builder" />
 		<ant dir="modules/wsstack" inheritall="false" target="builder" />
-    <ant dir="modules/component" inheritall="false" target="builder" />
+		<ant dir="modules/component" inheritall="false" target="builder" />
 		<ant dir="modules/interface" inheritall="false" target="builder" />
 		<ant dir="modules/group-manager" inheritall="false" target="builder" />
 		<ant dir="modules/cluster-manager" inheritall="false" target="builder" />
@@ -106,17 +106,17 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
 		<ant dir="modules/www" inheritall="false" target="builder" />
-	  <ant dir="modules/vmware-broker" inheritall="false" target="builder" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
 		<ant dir="." inheritall="false" target="jar" />
 	</target>
 	<target name="jar" depends="bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
-    <ant dir="modules/mysql" inheritall="false" target="jar" />
-    <ant dir="modules/ldap" inheritall="false" target="jar" />
+		<ant dir="modules/mysql" inheritall="false" target="jar" />
+		<ant dir="modules/ldap" inheritall="false" target="jar" />
 		<ant dir="modules/authentication" inheritall="false" target="jar" />
 		<ant dir="modules/cloud" inheritall="false" target="jar" />
 		<ant dir="modules/configuration" inheritall="false" target="jar" />
-    <ant dir="modules/component" inheritall="false" target="jar" />
+		<ant dir="modules/component" inheritall="false" target="jar" />
 		<ant dir="modules/core" inheritall="false" target="jar" />
 		<ant dir="modules/wsstack" inheritall="false" target="jar" />
 		<ant dir="modules/interface" inheritall="false" target="jar" />
@@ -129,18 +129,18 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="jar" />
 		<ant dir="modules/dns" inheritall="false" target="jar" />
 		<ant dir="modules/www" inheritall="false" target="jar" />
-    <ant dir="modules/vmware-broker" inheritall="false" target="jar" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="jar" />
 	</target>
 	<target name="shouldBind">
 		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
-		  <srcfiles dir="modules">
-		    <include name="**/*.java"/>
-		  </srcfiles>
+			<srcfiles dir="modules">
+				<include name="**/*.java"/>
+			</srcfiles>
 		</uptodate>
-    <echo message="[BINDING] Up-to-date check shows bind.notRequred=${bind.notRequired}." />
+		<echo message="[BINDING] Up-to-date check shows bind.notRequred=${bind.notRequired}." />
 	</target>
 	<target name="bind" depends="shouldBind" unless="bind.notRequired">
-    <echo message="[BINDING] Running binding compiler." />
+		<echo message="[BINDING] Running binding compiler." />
 		<path id="bindingclasspath">
 			<dirset dir="modules">
 				<include name="**/build" />
@@ -149,7 +149,10 @@
 				<include name="**/*.jar" />
 			</fileset>
 		</path>
-    <delete file="modules/msgs/src/main/resources/msgs-binding.xml" />
+		<delete>
+			<fileset dir="modules" includes="**/*JiBX*" />
+		</delete>
+		<delete file="modules/msgs/src/main/resources/msgs-binding.xml" />
 		<taskdef name="bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
 		<bindings>
 			<classfileset dir="${project.basedir}/modules" includes="*/build/**" />
@@ -162,12 +165,12 @@
 	<target name="clean">
 		<delete file="${bind.timestamp}"/>
 		<ant dir="modules/msgs" inheritall="false" target="clean" />
-    <ant dir="modules/mysql" inheritall="false" target="clean" />
-    <ant dir="modules/ldap" inheritall="false" target="clean" />
+		<ant dir="modules/mysql" inheritall="false" target="clean" />
+		<ant dir="modules/ldap" inheritall="false" target="clean" />
 		<ant dir="modules/cloud" inheritall="false" target="clean" />
 		<ant dir="modules/authentication" inheritall="false" target="clean" />
 		<ant dir="modules/configuration" inheritall="false" target="clean" />
-    <ant dir="modules/component" inheritall="false" target="clean" />
+		<ant dir="modules/component" inheritall="false" target="clean" />
 		<ant dir="modules/core" inheritall="false" target="clean" />
 		<ant dir="modules/wsstack" inheritall="false" target="clean" />
 		<ant dir="modules/interface" inheritall="false" target="clean" />
@@ -180,7 +183,7 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
 		<ant dir="modules/dns" inheritall="false" target="clean" />
 		<ant dir="modules/www" inheritall="false" target="clean" />
-	  <ant dir="modules/vmware-broker" inheritall="false" target="clean" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="clean" />
 		<delete dir="${target.dir}" />
 	</target>
 	<target name="distclean" depends="clean">
@@ -213,7 +216,7 @@
 				<include name="**/*" />
 			</fileset>
 		</copy>
- 		<chmod dir="${DESTDIR}${euca.bin.dir}" perm="0755">
+		<chmod dir="${DESTDIR}${euca.bin.dir}" perm="0755">
 			<include name="**/euca-*" />
 		</chmod>
 		<mkdir dir="${DESTDIR}${euca.conf.dir}" />
@@ -225,8 +228,8 @@
 		<mkdir dir="${DESTDIR}${euca.var.dir}/webapps" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/modules" />
 		<ant dir="modules/msgs" inheritall="false" target="install" />
-    		<ant dir="modules/mysql" inheritall="false" target="install" />
-    		<ant dir="modules/ldap" inheritall="false" target="install" />
+		<ant dir="modules/mysql" inheritall="false" target="install" />
+		<ant dir="modules/ldap" inheritall="false" target="install" />
 		<ant dir="modules/cloud" inheritall="false" target="install" />
 		<ant dir="modules/authentication" inheritall="false" target="install" />
 		<ant dir="modules/configuration" inheritall="false" target="install" />

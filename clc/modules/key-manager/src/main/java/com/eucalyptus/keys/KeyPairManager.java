@@ -10,12 +10,12 @@ import org.bouncycastle.openssl.PEMWriter;
 
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.entities.SshKeyPair;
+import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
-import edu.ucsb.eucalyptus.cloud.ws.ImageManager;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType;
