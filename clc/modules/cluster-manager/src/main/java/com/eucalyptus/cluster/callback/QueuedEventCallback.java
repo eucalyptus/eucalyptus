@@ -116,6 +116,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     public NOOP() {
       RuntimeException ex = new RuntimeException( "Operation returning a NOOP." );
       LOG.debug( ex, ex );
+      this.setRequest( new EucalyptusMessage() );
     }
     public void fail( Throwable throwable ) {}
     

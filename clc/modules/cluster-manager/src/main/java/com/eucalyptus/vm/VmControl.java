@@ -84,6 +84,7 @@ import com.eucalyptus.cluster.callback.PasswordDataCallback;
 import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -145,13 +146,13 @@ public class VmControl {
               String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
-                v.setState( VmState.SHUTTING_DOWN, SystemState.INSTANCE_TERMINATED );
+                v.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
               }
             }
             return true;
           } catch ( NoSuchElementException e ) {
             try {
-              VmInstances.getInstance( ).lookupDisabled( instanceId ).setState( VmState.BURIED );
+              VmInstances.getInstance( ).lookupDisabled( instanceId ).setState( VmState.BURIED, Reason.BURIED );
               return true;
             } catch ( NoSuchElementException e1 ) {
               return false;
