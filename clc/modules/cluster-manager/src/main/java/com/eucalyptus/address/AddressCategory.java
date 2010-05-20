@@ -14,6 +14,7 @@ public class AddressCategory {
   @SuppressWarnings( "unchecked" )
   public static QueuedEventCallback unassign( final Address addr ) {
     final String instanceId = addr.getInstanceId( );
+    if( !VmInstance.DEFAULT_IP.equals( addr.getInstanceAddress( ) ) ) {
       return addr.unassign( ).getCallback( ).then( new SuccessCallback( ) {
         public void apply( BaseMessage response ) {
           try {
@@ -22,13 +23,17 @@ public class AddressCategory {
           } catch ( NoSuchElementException e ) {}
         }
       } );
+    } else {
+      return new QueuedEventCallback.NOOP();
+    }
+
   }
   
   @SuppressWarnings( "unchecked" )
   public static QueuedEventCallback assign( final Address addr, final VmInstance vm ) {
-    return addr.assign( vm.getInstanceId( ), vm.getNetworkConfig( ).getIpAddress( ) ).getCallback( ).then( new SuccessCallback() {
+    return addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).getCallback( ).then( new SuccessCallback() {
       public void apply( BaseMessage response ) {
-        vm.getNetworkConfig( ).setIgnoredPublicIp( addr.getName( ) );
+        vm.updatePublicAddress( addr.getName( ) );
       }
     });
   }

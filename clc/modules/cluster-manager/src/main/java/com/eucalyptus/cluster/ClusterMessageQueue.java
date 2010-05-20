@@ -121,6 +121,11 @@ public class ClusterMessageQueue implements Runnable {
   }
   
   private boolean checkDuplicates( final QueuedEvent event ) {
+    if( event.getCallback( ) instanceof QueuedEventCallback.NOOP ) {
+      RuntimeException ex = new RuntimeException( "Operation returning a NOOP." );
+      LOG.debug( ex, ex );      
+      return true;
+    }
     for ( final QueuedEvent e : this.msgQueue ) {
       if ( ( event.getCallback( ) instanceof StopNetworkCallback ) && ( e.getCallback( ) instanceof StopNetworkCallback ) ) {
         final StopNetworkCallback incoming = ( StopNetworkCallback ) event.getCallback( );

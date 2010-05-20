@@ -71,15 +71,13 @@ import com.eucalyptus.address.ClusterAddressInfo;
 import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
+import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
-public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddressType,UnassignAddressResponseType> {
+public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddressType, UnassignAddressResponseType> {
   
   private static Logger LOG = Logger.getLogger( UnassignAddressCallback.class );
   private Address       address;
@@ -88,55 +86,60 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
     super.setRequest( new UnassignAddressType( addr, vmIp ) );
     try {
       this.address = Addresses.getInstance( ).lookup( addr );
-    } catch( Exception e ) {
+    } catch ( Exception e ) {
       this.address = Addresses.getInstance( ).lookupDisabled( addr );
     }
   }
+  
   public UnassignAddressCallback( String addr ) {
-    this( addr, Addresses.getInstance( ).lookup( addr ).getInstanceAddress() );
+    this( addr, Addresses.getInstance( ).lookup( addr ).getInstanceAddress( ) );
   }
+  
   public UnassignAddressCallback( ClusterAddressInfo addrInfo ) {
-    this( addrInfo.getAddress( ), addrInfo.getInstanceIp() );
+    this( addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
   }
+  
   public UnassignAddressCallback( final Address address ) {
-    this(address.getName(),address.getInstanceAddress());
+    this( address.getName( ), address.getInstanceAddress( ) );
   }
   
   @Override
   public void prepare( UnassignAddressType msg ) throws Exception {
-    if( this.address.isAssigned() && this.address.isPending()) {
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGNING,Transition.unassigning.toString( ), address.toString( ) ).info( );
+    if ( this.address.isAssigned( ) && this.address.isPending( ) ) {
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGNING, Transition.unassigning.toString( ), address.toString( ) ).info( );
     }
   }
   
-  public void clearVmAddress() {
+  public void clearVmAddress( ) {
     try {
-      VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( super.getRequest().getDestination() );
-      if( vm.getNetworkConfig( ).getIgnoredPublicIp() == super.getRequest().getSource() ) {
-        vm.getNetworkConfig().setIgnoredPublicIp( vm.getNetworkConfig( ).getIpAddress() );
+      VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( super.getRequest( ).getDestination( ) );
+      if ( vm.getPublicAddress( ) == super.getRequest( ).getSource( ) ) {
+        vm.updatePublicAddress( vm.getPrivateAddress( ) );
       }
-    } catch(NoSuchElementException e) {
-    } catch(Throwable t) {
-      LOG.debug(t,t);
+    } catch ( NoSuchElementException e ) {} catch ( Throwable t ) {
+      LOG.debug( t, t );
     }
   }
+  
   @Override
   public void verify( UnassignAddressResponseType reply ) {
-    this.clearVmAddress();
-    if( reply.get_return() ) {
+    this.clearVmAddress( );
+    if ( reply.get_return( ) ) {
       EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGN, address.toString( ) ).info( );
     } else {
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE,"broken", address.toString( ) ).warn( );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
     }
-    try{ 
+    try {
       this.address.clearPending( );
-    } catch(Throwable t) {
-      LOG.warn(t.getMessage());
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE,"broken", address.toString( ) ).warn( );
-      LOG.trace(t,t);
+    } catch ( Throwable t ) {
+      LOG.warn( t.getMessage( ) );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
+      LOG.trace( t, t );
     } finally {
-      if( !this.address.isPending() && this.address.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId() ) ) {
-        try { this.address.release(); } catch( Throwable t ) {
+      if ( !this.address.isPending( ) && this.address.isSystemOwned( ) && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId( ) ) ) {
+        try {
+          this.address.release( );
+        } catch ( Throwable t ) {
           LOG.warn( "Failed to release orphan address: " + this.address );
         }
       }
@@ -146,12 +149,12 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   @Override
   public void fail( Throwable e ) {
     try {
-      VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( super.getRequest().getDestination() );
-      vm.getNetworkConfig().setIgnoredPublicIp( VmInstance.DEFAULT_IP );
-    } catch( Throwable t ) {
-      LOG.debug(t,t);
+      VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( super.getRequest( ).getDestination( ) );
+      vm.updatePublicAddress( VmInstance.DEFAULT_IP );
+    } catch ( Throwable t ) {
+      LOG.debug( t, t );
     } finally {
-      if(this.address.isPending( )) {
+      if ( this.address.isPending( ) ) {
         this.address.clearPending( );
       }
     }

@@ -161,6 +161,7 @@ public class VmInstance implements HasName {
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
     this.networkConfig.setNetworkIndex( Integer.parseInt( networkIndex ) );
     this.stopWatch.start( );
+    this.updateDns( );
   }
   
   public void updateNetworkIndex( Integer newIndex ) {
@@ -171,18 +172,30 @@ public class VmInstance implements HasName {
   }
   
   public void updateAddresses( String privateAddr, String publicAddr ) {
-    if ( !VmInstance.DEFAULT_IP.equals( privateAddr ) && !"".equals( privateAddr ) && privateAddr != null ) {
-      this.getNetworkConfig( ).setIpAddress( privateAddr );
-    }
-    if ( VmInstance.DEFAULT_IP.equals( this.getNetworkConfig( ).getIgnoredPublicIp( ) ) && !VmInstance.DEFAULT_IP.equals( publicAddr )
+    this.updatePrivateAddress( privateAddr );
+    this.updatePublicAddress( publicAddr );
+  }
+
+  public void updatePublicAddress( String publicAddr ) {
+    if ( VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) && !VmInstance.DEFAULT_IP.equals( publicAddr )
          && !"".equals( publicAddr ) && publicAddr != null ) {
       this.getNetworkConfig( ).setIgnoredPublicIp( publicAddr );
     }
+  }
+
+  private void updateDns( ) {
     String dnsDomain = "dns-disabled";
     try {
       dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
     } catch ( Exception e ) {}
     this.getNetworkConfig( ).updateDns( dnsDomain );
+  }
+
+  public void updatePrivateAddress( String privateAddr ) {
+    if ( !VmInstance.DEFAULT_IP.equals( privateAddr ) && !"".equals( privateAddr ) && privateAddr != null ) {
+      this.getNetworkConfig( ).setIpAddress( privateAddr );
+    }
+    updateDns( );
   }
   
   public boolean clearPending( ) {
@@ -267,7 +280,7 @@ public class VmInstance implements HasName {
     m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     
     m.put( "ami-manifest-path", this.getImageInfo( ).getImageLocation( ) );
-    m.put( "hostname", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    m.put( "hostname", this.getPublicAddress( ) );
     m.put( "instance-id", this.getInstanceId( ) );
     m.put( "instance-type", this.getVmTypeInfo( ).getName( ) );
     if ( Component.dns.isLocal( ) ) {
@@ -279,9 +292,9 @@ public class VmInstance implements HasName {
     if ( Component.dns.isLocal( ) ) {
       m.put( "public-hostname", this.getNetworkConfig( ).getPublicDnsName( ) );
     } else {
-      m.put( "public-hostname", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+      m.put( "public-hostname", this.getPublicAddress( ) );
     }
-    m.put( "public-ipv4", this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+    m.put( "public-ipv4", this.getPublicAddress( ) );
     m.put( "reservation-id", this.getReservationId( ) );
     m.put( "kernel-id", this.getImageInfo( ).getKernelId( ) );
     if ( this.getImageInfo( ).getRamdiskId( ) != null ) {
@@ -448,8 +461,8 @@ public class VmInstance implements HasName {
       runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getPrivateDnsName( ) );
     } else {
       runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getIpAddress( ) );
-      if ( !VmInstance.DEFAULT_IP.equals( this.getNetworkConfig( ).getIgnoredPublicIp( ) ) ) {
-        runningInstance.setDnsName( this.getNetworkConfig( ).getIgnoredPublicIp( ) );
+      if ( !VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) ) {
+        runningInstance.setDnsName( this.getPublicAddress( ) );
       } else {
         runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
       }
@@ -570,7 +583,15 @@ public class VmInstance implements HasName {
     return nets;
   }
   
-  public NetworkConfigType getNetworkConfig( ) {
+  public String getPrivateAddress( ) {
+    return networkConfig.getIpAddress( );
+  }
+
+  public String getPublicAddress( ) {
+    return networkConfig.getIgnoredPublicIp( );
+  }
+  
+  private NetworkConfigType getNetworkConfig( ) {
     return networkConfig;
   }
   
@@ -652,6 +673,10 @@ public class VmInstance implements HasName {
                           this.imageInfo, this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.ownerId,
                           this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
                           this.volumes, this.getBundleTask( ) != null ? LogUtil.dumpObject( this.getBundleTask( ) ) : "null" );
+  }
+
+  public int getNetworkIndex( ) {
+    return this.getNetworkConfig( ).getNetworkIndex( );
   }
   
 }
