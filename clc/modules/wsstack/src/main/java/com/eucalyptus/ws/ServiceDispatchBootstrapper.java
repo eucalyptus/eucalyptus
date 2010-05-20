@@ -105,7 +105,9 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
         try {
-          comp.buildService( s );
+          if ( comp.isEnabled( ) ) {
+            comp.buildService( s );
+          }
         } catch ( Throwable ex ) {
           LOG.warn( ex );
           LOG.error( ex, ex );
@@ -127,7 +129,9 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
         try {
-          comp.startService( s );
+          if ( comp.isEnabled( ) ) {
+            comp.startService( s );
+          }
         } catch ( Throwable ex ) {
           LOG.warn( ex );
           LOG.error( ex, ex );
