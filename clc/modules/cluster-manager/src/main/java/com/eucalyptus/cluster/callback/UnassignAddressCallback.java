@@ -123,7 +123,7 @@ public class UnassignAddressCallback extends QueuedEventCallback<UnassignAddress
   @Override
   public void verify( UnassignAddressResponseType reply ) {
     this.clearVmAddress();
-    if( msg.get_return() ) {
+    if( reply.get_return() ) {
       EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGN, address.toString( ) ).info( );
     } else {
       EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE,"broken", address.toString( ) ).warn( );
