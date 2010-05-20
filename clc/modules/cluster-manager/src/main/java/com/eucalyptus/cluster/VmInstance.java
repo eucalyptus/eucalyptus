@@ -184,9 +184,12 @@ public class VmInstance implements HasName {
     this.getNetworkConfig( ).updateDns( dnsDomain );
   }
   
-  public void clearPending( ) {
+  public boolean clearPending( ) {
     if ( this.state.compareAndSet( this.getState( ), this.getState( ), true, false ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
       VmInstances.cleanUp( this );
+      return true;
+    } else {
+      return false;
     }
   }
   

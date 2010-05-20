@@ -115,8 +115,8 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
       if ( reply != null && reply.get_return() ) {
         for ( VmInfo vmInfo : reply.getVms() ) {
           VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
-          vm.clearPending( );
           vm.updateAddresses( vmInfo.getNetParams().getIpAddress(), vmInfo.getNetParams().getIgnoredPublicIp() );
+          vm.clearPending( );
         }
       } else {
         this.fail( new EucalyptusClusterException( "RunInstances returned false." + this.getRequest( ) ) );
