@@ -224,7 +224,7 @@ public class VmInstance implements HasName {
           VmInstances.cleanUp( this );
         }
       } else {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + newState );
+        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       }
     }
   }
