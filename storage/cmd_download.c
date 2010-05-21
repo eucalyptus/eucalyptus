@@ -214,7 +214,7 @@ int download_requirements (imager_request * req)
 		digest = str2str (walrus_digest, "<digest algorithm=\"SHA1\">", "</digest>");
 		if (digest==NULL) {
 			logprintfl (EUCAWARN, "warning: no digest found in Walrus manifest '%s'\n", state->in);
-			digest = "N/A";
+			digest = strdup ("N/A"); // because digest will get freed
 		}
 		free (walrus_digest);
 		break;
