@@ -67,6 +67,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -75,7 +76,6 @@ import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
 import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 

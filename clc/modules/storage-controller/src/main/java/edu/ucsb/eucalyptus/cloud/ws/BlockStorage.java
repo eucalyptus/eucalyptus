@@ -553,6 +553,7 @@ public class BlockStorage {
 	public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
 		ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
 		String provider = request.getOriginalProvider();
+		provider = "com.eucalyptus.storage." + provider;
 		if(!blockManager.getClass().getName().equals(provider)) {
 			//different backend provider. Try upgrade
 			try {

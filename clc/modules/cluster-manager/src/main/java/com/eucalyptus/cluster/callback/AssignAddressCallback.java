@@ -69,16 +69,15 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.Address.Transition;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.vm.VmState;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
-import edu.ucsb.eucalyptus.msgs.AssignAddressType;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.vm.VmState;
+import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
+import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 
 public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType,AssignAddressResponseType> {
   private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
@@ -108,12 +107,13 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
   
   @Override
-  public void verify( BaseMessage msg ) throws Exception {
+  public void verify( AssignAddressResponseType msg ) throws Exception {
     try {
       this.updateState( );
-      this.address.clearPending( );
-    } catch ( Exception e1 ) {
-      LOG.debug( e1, e1 );
+    } catch ( IllegalStateException e ) {
+      AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
       AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
     }
   }
@@ -128,18 +128,11 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
     try {
       VmInstance vm = VmInstances.getInstance( ).lookup( super.getRequest().getInstanceId( ) );
       VmState vmState = vm.getState( );
-      String dnsDomain = "dns-disabled";
-      try {
-        dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
-      } catch ( Exception e ) {
-      }
       if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
-        vm.getNetworkConfig( ).setIgnoredPublicIp( VmInstance.DEFAULT_IP );
-        vm.getNetworkConfig( ).updateDns( dnsDomain );
+        vm.updatePublicAddress( VmInstance.DEFAULT_IP );
         return false;
       } else {
-        vm.getNetworkConfig( ).setIgnoredPublicIp( this.address.getName( ) );
-        vm.getNetworkConfig( ).updateDns( dnsDomain );
+        vm.updatePublicAddress( this.address.getName( ) );
         return true;
       }
     } catch ( NoSuchElementException e ) {
@@ -149,9 +142,11 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   
   private void updateState( ) {
     if( !this.checkVmState( ) ) {
+      this.address.clearPending( );
       throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
     } else {
       EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), LogUtil.dumpObject( address ) ).info( );
+      this.address.clearPending( );
     }
   }
 

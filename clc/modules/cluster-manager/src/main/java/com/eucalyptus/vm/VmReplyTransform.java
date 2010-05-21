@@ -61,22 +61,37 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.vm;
 
-public class NoSuchTokenException extends Exception {
+import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.msgs.*;
 
-  public NoSuchTokenException( String string ) {}
+import java.util.*;
 
-  public NoSuchTokenException( ) {
-    super( );
-  }
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-  public NoSuchTokenException( String message, Throwable cause ) {
-    super( message, cause );
-  }
+public class VmReplyTransform {
 
-  public NoSuchTokenException( Throwable cause ) {
-    super( cause );
+  public RunInstancesResponseType allocate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
+  {
+    RunInstancesResponseType reply = vmAllocInfo.getReply();
+
+    List<String> networkNames = new ArrayList<String>();
+    for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
+
+    ReservationInfoType reservation = new ReservationInfoType( vmAllocInfo.getReservationId(),
+                                                               reply.getUserId(),
+                                                               networkNames );
+
+    for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )
+      for( String instId : allocToken.getInstanceIds() ) {
+        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( Component.dns.isLocal( ) ) );
+      }
+
+    reply.setRsvInfo( reservation );
+    return vmAllocInfo.getReply();
   }
 
 }

@@ -84,7 +84,6 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 
@@ -112,7 +111,7 @@ public class ClusterState {
     orphanCount = ( orphanCount == null ) ? 1 : orphanCount;
     orphans.put( address, orphanCount + 1 );
     LOG.warn( "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
-    if ( orphanCount > 10 ) {
+    if ( orphanCount > 3 ) {
       LOG.warn( "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );

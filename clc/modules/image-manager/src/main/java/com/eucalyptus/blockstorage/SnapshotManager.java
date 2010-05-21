@@ -62,7 +62,7 @@
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.blockstorage;
 
 import java.util.List;
 import org.apache.log4j.Logger;
@@ -72,12 +72,9 @@ import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.util.StorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.state.Snapshot;
-import edu.ucsb.eucalyptus.cloud.state.Volume;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;

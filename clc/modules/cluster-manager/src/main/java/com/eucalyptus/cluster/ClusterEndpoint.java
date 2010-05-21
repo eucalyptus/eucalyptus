@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -75,9 +75,6 @@ import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.sla.ClusterAllocator;

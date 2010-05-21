@@ -61,15 +61,15 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.sla;
 
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 
 public class CreateVmInstances {
   
@@ -107,12 +107,6 @@ public class CreateVmInstances {
                                         vmAllocInfo.getVmTypeInfo(),
                                         vmAllocInfo.getNetworks(),
                                         networkIndex.toString( ) );
-    String dnsDomain = "dns-disabled";
-    try {
-      dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
-    } catch ( Exception e ) {
-    }
-    vmInst.getNetworkConfig( ).updateDns( dnsDomain );
     return vmInst;
   }
 }

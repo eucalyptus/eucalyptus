@@ -61,37 +61,97 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.blockstorage;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.msgs.*;
+import com.eucalyptus.util.StorageProperties;
+import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
+import edu.ucsb.eucalyptus.cloud.state.State;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import java.util.*;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
 
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.util.EucalyptusCloudException;
+@Entity
+@PersistenceContext(name="eucalyptus_images")
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class Snapshot extends AbstractIsomorph {
+  private String parentVolume;
+  private String cluster;
 
-public class VmReplyTransform {
-
-  public RunInstancesResponseType allocate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
-  {
-    RunInstancesResponseType reply = vmAllocInfo.getReply();
-
-    List<String> networkNames = new ArrayList<String>();
-    for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
-
-    ReservationInfoType reservation = new ReservationInfoType( vmAllocInfo.getReservationId(),
-                                                               reply.getUserId(),
-                                                               networkNames );
-
-    for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )
-      for( String instId : allocToken.getInstanceIds() ) {
-        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( Component.dns.isLocal( ) ) );
-      }
-
-    reply.setRsvInfo( reservation );
-    return vmAllocInfo.getReply();
+  public Snapshot() {
+    super();
   }
 
+  public Snapshot( final String userName, final String displayName ) {
+    super( userName, displayName );
+  }
+
+  public Snapshot( final String userName, final String displayName, final String parentVolume ) {
+    this( userName, displayName );
+    this.parentVolume = parentVolume;
+  }
+
+  public static Snapshot named( String userName, String volumeId ) {
+    Snapshot v = new Snapshot();
+    v.setDisplayName( volumeId );
+    v.setUserName( userName );
+    return v;
+  }
+
+  public static Snapshot ownedBy( String userName ) {
+    Snapshot v = new Snapshot();
+    v.setUserName( userName );
+    return v;
+  }
+
+  public String mapState() {
+    switch ( this.getState() ) {
+      case GENERATING:
+        return "pending";
+      case EXTANT:
+        return "completed";
+      default:
+        return "failed";
+    }
+  }
+
+  public void setMappedState( final String state ) {
+    if ( StorageProperties.Status.creating.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if ( StorageProperties.Status.pending.toString().equals( state ) ) this.setState( State.GENERATING );
+    else if ( StorageProperties.Status.completed.toString().equals( state ) ) this.setState( State.EXTANT );
+    else if ( StorageProperties.Status.available.toString().equals( state ) ) this.setState( State.EXTANT );
+    else if ( StorageProperties.Status.failed.toString().equals( state ) ) this.setState( State.FAIL );
+  }
+
+  public Object morph( final Object o ) {
+    return null;
+  }
+
+  public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
+    snap.setSnapshotId( this.getDisplayName() );
+    snap.setStatus( this.mapState() );
+    snap.setStartTime( this.getBirthday() );
+    snap.setVolumeId( this.getParentVolume() );
+    snap.setProgress( this.getState().equals( State.EXTANT ) ? "100%" : "" );
+    return snap;
+  }
+
+  public String getParentVolume() {
+    return parentVolume;
+  }
+
+  public void setParentVolume( final String parentVolume ) {
+    this.parentVolume = parentVolume;
+  }
+
+  public String getCluster( ) {
+    return cluster;
+  }
+
+  public void setCluster( String cluster ) {
+    this.cluster = cluster;
+  }
 }

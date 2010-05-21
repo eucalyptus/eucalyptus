@@ -68,6 +68,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.ldap.LdapConfiguration;
 
 @RunDuring( Bootstrap.Stage.DatabaseInit )
 @Provides( Component.any )
@@ -125,11 +126,13 @@ public class LdapBootstrapper extends Bootstrapper implements DatabaseBootstrapp
   
   @Override
   public boolean load( Stage current ) throws Exception {
-    try {
-      LOG.debug( "Initializing SSL just in case: " + Class.forName( "com.eucalyptus.auth.util.SslSetup" ) );
-      LOG.debug( "Initializing db password: " + Class.forName( "com.eucalyptus.auth.util.Hashes" ) );
-    } catch ( Throwable t ) {}
-    this.startServiceResource( );
+    if ( LdapConfiguration.ENABLE_LDAP ) {
+      try {
+        LOG.debug( "Initializing SSL just in case: " + Class.forName( "com.eucalyptus.auth.util.SslSetup" ) );
+        LOG.debug( "Initializing db password: " + Class.forName( "com.eucalyptus.auth.util.Hashes" ) );
+      } catch ( Throwable t ) {}
+      this.startServiceResource( );
+    }
     return true;
   }
   

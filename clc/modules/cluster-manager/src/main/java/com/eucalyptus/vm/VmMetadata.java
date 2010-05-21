@@ -61,31 +61,37 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.cluster;
+package com.eucalyptus.vm;
 
-import com.eucalyptus.entities.VmType;
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+public class VmMetadata {
+  private static Logger LOG = Logger.getLogger( VmMetadata.class );
 
-public class VmTypeVerify {
-
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
-  {
-    String instanceType = vmAllocInfo.getRequest().getInstanceType();
-    VmType v = VmTypes.getVmType( (instanceType==null)?"m1.small":instanceType );
-    if( v == null ) {
-      throw new EucalyptusCloudException( "instance type does not exist: " + vmAllocInfo.getRequest().getInstanceType() );
+  public String handle( String path ) {
+    String[] parts = path.split( ":" );
+    String vmIp = parts[0];
+    String url = parts.length==2?parts[ 1 ]:"/";
+    LOG.debug( "Instance Metadata: " + path + " " + url );
+    if( url.matches("[/]*") ) {
+      return "dynamic\nuser-data\nmeta-data";
     }
-
-    VmImageInfo vmImgInfo = vmAllocInfo.getImageInfo();
-    if( vmImgInfo.getSize() > 1024l*1024l*1024l*v.getDisk() ) {
-      throw new EucalyptusCloudException( "image too large [size="+vmImgInfo.getSize()/(1024l*1024l)+"MB] for instance type " + v.getName() + " [disk="+v.getDisk()*1024l+"MB]" );
+    for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
+      if ( vmIp.equals( vm.getPrivateAddress( ) ) || vmIp.equals( vm.getPublicAddress( ) ) ) {
+        if ( url.matches( "user-data[/]*" ) ) {
+          return vm.getUserData( );
+        } else if ( url.matches( "dynamic[/]*" ) ) {
+          return "";
+        } else if ( url.matches( "meta-data(/.*)*" ) ) {
+          url = url.replaceAll( "meta-data/?", "" );
+          return vm.getByKey( url );
+        }
+      }
     }
-
-    vmAllocInfo.setVmTypeInfo( new VmTypeInfo( v.getName(),v.getMemory(),v.getDisk(),v.getCpu() ) );
-    return vmAllocInfo;
+    return "";
   }
-
 }
+
+

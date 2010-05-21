@@ -195,4 +195,5 @@ public enum EventType {
   ADDRESS_UNASSIGNING,
   ADDRESS_STATE,
   CONFIG_VLANS,
+  VM_STATE,
 }

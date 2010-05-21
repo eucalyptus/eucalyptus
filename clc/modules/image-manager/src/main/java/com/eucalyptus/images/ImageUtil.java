@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.images.util;
+package com.eucalyptus.images;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -84,19 +84,20 @@ import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.ldap.LdapConfiguration;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.ldap.LdapConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
+import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.cloud.ws.ImageManager;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -488,5 +489,31 @@ public class ImageUtil {
     } catch ( Throwable e1 ) {
       db.rollback( );
     }
+  }
+  public static VmImageInfo resolveImage( VmInfo vmInfo ) throws EucalyptusCloudException {
+    String walrusUrl = getWalrusUrl( );
+    ArrayList<String> productCodes = Lists.newArrayList( );
+    ImageInfo diskInfo = null, kernelInfo = null, ramdiskInfo = null;
+    String diskUrl = null, kernelUrl = null, ramdiskUrl = null;
+  
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    try {
+      diskInfo = db.getUnique( new ImageInfo( vmInfo.getImageId( ) ) );
+      for ( ProductCode p : diskInfo.getProductCodes( ) ) {
+        productCodes.add( p.getValue( ) );
+      }
+      diskUrl = getImageUrl( walrusUrl, diskInfo );
+      db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+    }
+    VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId( ), vmInfo.getKernelId( ), vmInfo.getRamdiskId( ), diskUrl, null, null, productCodes, vmInfo.getPlatform( ) );
+    if( Component.walrus.isLocal( ) ) {
+      ArrayList<String> ancestorIds = getAncestors( vmInfo.getOwnerId( ), diskInfo.getImageLocation( ) );
+      vmImgInfo.setAncestorIds( ancestorIds );
+    } else {//FIXME: handle populating these in a defered way for the remote case.
+      vmImgInfo.setAncestorIds( new ArrayList<String>() );
+    }
+    return vmImgInfo;
   }
 }

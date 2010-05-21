@@ -63,9 +63,10 @@
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.vm;
 
 import java.util.Date;
+import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
@@ -74,17 +75,18 @@ import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.cluster.callback.CancelBundleCallback;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
 import com.eucalyptus.cluster.callback.PasswordDataCallback;
+import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.vm.VmState;
+import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceType;
@@ -96,7 +98,10 @@ import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
 import com.eucalyptus.records.EventRecord;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataType;
@@ -113,7 +118,7 @@ public class VmControl {
     return vmAllocInfo;
   }
   
-  public DescribeInstancesResponseType DescribeInstances( DescribeInstancesType msg ) throws EucalyptusCloudException {
+  public DescribeInstancesResponseType describeInstances( DescribeInstancesType msg ) throws EucalyptusCloudException {
     DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     try {
       reply.setReservationSet( SystemState.handle( msg.getUserId( ), msg.getInstancesSet( ), msg.isAdministrator( ) ) );
@@ -125,10 +130,68 @@ public class VmControl {
     return reply;
   }
   
-  public TerminateInstancesResponseType TerminateInstances( TerminateInstancesType msg ) throws EucalyptusCloudException {
-    TerminateInstancesResponseType reply = ( TerminateInstancesResponseType ) msg.getReply( );
+  public TerminateInstancesResponseType terminateInstances( TerminateInstancesType request ) throws EucalyptusCloudException {
+    TerminateInstancesResponseType reply = ( TerminateInstancesResponseType ) request.getReply( );
     try {
-      return SystemState.handle( msg );
+      final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
+      final Boolean admin = request.isAdministrator( );
+      final String userId = request.getUserId( );
+      Iterables.all( request.getInstancesSet( ), new Predicate<String>( ) {
+        @Override
+        public boolean apply( String instanceId ) {
+          try {
+            VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
+            if ( admin || v.getOwnerId( ).equals( userId ) ) {
+              int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+              if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+                v.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
+              }
+            }
+            return true;
+          } catch ( NoSuchElementException e ) {
+            try {
+              VmInstances.getInstance( ).lookupDisabled( instanceId ).setState( VmState.BURIED, Reason.BURIED );
+              return true;
+            } catch ( NoSuchElementException e1 ) {
+              return false;
+            }
+          }
+        }
+      } );
+      reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
+      return reply;
+    } catch ( Throwable e ) {
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
+  }
+  
+  public RebootInstancesResponseType rebootInstances( final RebootInstancesType request ) throws EucalyptusCloudException {
+    RebootInstancesResponseType reply = ( RebootInstancesResponseType ) request.getReply( );
+    try {
+      final String userId = request.getUserId( );
+      final Boolean admin = request.isAdministrator( );
+      boolean result = Iterables.any( request.getInstancesSet( ), new Predicate<String>( ) {
+        @Override
+        public boolean apply( String instanceId ) {
+          try {
+            VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
+            if ( admin || v.getOwnerId( ).equals( userId ) ) {
+              new RebootCallback( v.getInstanceId( ) ).regarding( request ).dispatch( v.getPlacement( ) );
+              return true;
+            } else {
+              return false;
+            }
+          } catch ( NoSuchElementException e ) {
+            return false;
+          }
+        }
+      } );
+      reply.set_return( result );
+      return reply;
     } catch ( Exception e ) {
       LOG.error( e );
       LOG.debug( e, e );
@@ -136,17 +199,7 @@ public class VmControl {
     }
   }
   
-  public RebootInstancesResponseType RebootInstances( RebootInstancesType msg ) throws EucalyptusCloudException {
-    try {
-      return SystemState.handle( msg );
-    } catch ( Exception e ) {
-      LOG.error( e );
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( e.getMessage( ) );
-    }
-  }
-  
-  public void GetConsoleOutput( GetConsoleOutputType request ) throws EucalyptusCloudException {
+  public void getConsoleOutput( GetConsoleOutputType request ) throws EucalyptusCloudException {
     VmInstance v = null;
     try {
       v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
@@ -211,7 +264,6 @@ public class VmControl {
         request.setInstanceId( v.getInstanceId( ) );
         reply.setTask( v.getBundleTask( ) );
         new CancelBundleCallback( request ).dispatch( cluster );
-        
         return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
@@ -268,7 +320,7 @@ public class VmControl {
     }
   }
   
-  public static void handle( GetPasswordDataType request ) throws Exception {
+  public void getPasswordData( GetPasswordDataType request ) throws Exception {
     try {
       Cluster cluster = null;
       VmInstance v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );

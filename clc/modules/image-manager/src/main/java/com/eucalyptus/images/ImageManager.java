@@ -62,7 +62,7 @@
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.images;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,22 +79,20 @@ import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.UserInfoStore;
-import com.eucalyptus.auth.ldap.LdapConfiguration;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.blockstorage.WalrusUtil;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
-import com.eucalyptus.images.util.ImageUtil;
-import com.eucalyptus.images.util.WalrusUtil;
+import com.eucalyptus.ldap.LdapConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
@@ -126,32 +124,9 @@ public class ImageManager {
   public static String IMAGE_PLATFORM_WINDOWS = "windows";
 
   public VmImageInfo resolve( VmInfo vmInfo ) throws EucalyptusCloudException {
-    String walrusUrl = ImageUtil.getWalrusUrl( );
-    ArrayList<String> productCodes = Lists.newArrayList( );
-    ImageInfo diskInfo = null, kernelInfo = null, ramdiskInfo = null;
-    String diskUrl = null, kernelUrl = null, ramdiskUrl = null;
-
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-    try {
-      diskInfo = db.getUnique( new ImageInfo( vmInfo.getImageId( ) ) );
-      for ( ProductCode p : diskInfo.getProductCodes( ) ) {
-        productCodes.add( p.getValue( ) );
-      }
-      diskUrl = ImageUtil.getImageUrl( walrusUrl, diskInfo );
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-    }
-    VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId( ), vmInfo.getKernelId( ), vmInfo.getRamdiskId( ), diskUrl, null, null, productCodes, vmInfo.getPlatform( ) );
-    if( Component.walrus.isLocal( ) ) {
-      ArrayList<String> ancestorIds = ImageUtil.getAncestors( vmInfo.getOwnerId( ), diskInfo.getImageLocation( ) );
-      vmImgInfo.setAncestorIds( ancestorIds );
-    } else {//FIXME: handle populating these in a defered way for the remote case.
-      vmImgInfo.setAncestorIds( new ArrayList<String>() );
-    }
-    return vmImgInfo;
+    return ImageUtil.resolveImage( vmInfo );
   }
-
+  
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     String walrusUrl = ImageUtil.getWalrusUrl( );
 

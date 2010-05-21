@@ -113,6 +113,11 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   protected BlockingQueue<EucalyptusMessage> requestQueue = new LinkedBlockingQueue<EucalyptusMessage>( );
   
   public static class NOOP extends QueuedEventCallback {
+    public NOOP() {
+      RuntimeException ex = new RuntimeException( "Operation returning a NOOP." );
+      LOG.debug( ex, ex );
+      this.setRequest( new EucalyptusMessage() );
+    }
     public void fail( Throwable throwable ) {}
     
     public void verify( BaseMessage msg ) throws Exception {}
@@ -159,11 +164,16 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     this.queueResponse( e );
   }
   
-  public abstract void prepare( TYPE msg ) throws Exception;
+  public void prepare( TYPE msg ) throws Exception {
+    LOG.debug( this.getClass( ).getCanonicalName( ) + " should implement: prepare( TYPE t ) to check any preconditions!" );    
+  }
   
-  public abstract void verify( BaseMessage msg ) throws Exception;
+  public abstract void verify( RTYPE msg ) throws Exception;
   
-  public abstract void fail( Throwable throwable );
+  public void fail( Throwable t ) {
+    LOG.info( this.getClass( ).getCanonicalName( ) + " should implement: fail( Throwable t ) to handle errors!" );
+    LOG.error( t, t );
+  }
   
   public QueuedEventCallback dispatch( String clusterName ) {
     EventRecord.caller( QueuedEventCallback.class, EventType.QUEUE, this.getRequest( ).getClass( ), LogUtil.dumpObject( this.getRequest( ) ) ).debug( );
@@ -192,7 +202,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     if ( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
       try {
-        EucalyptusMessage msg = ( EucalyptusMessage ) response.getMessage( );
+        RTYPE msg = ( RTYPE ) response.getMessage( );
         if ( !msg.get_return( ) ) {
           throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
         }
@@ -231,7 +241,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   }
   
   public void queueResponse( Object o ) {
-    LOG.debug( this.getClass( ).getSimpleName( ) + " whatever: " + LogUtil.dumpObject( o ) );
+    EventRecord.here( this.getClass( ), EventType.MSG_REPLY, LogUtil.dumpObject( o ) );
 
     if ( o instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) o;
@@ -260,7 +270,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     } finally {
       this.canHas.unlock( );
     }
-    LOG.debug( this.getClass( ).getSimpleName( ) + " whatevs: " + LogUtil.dumpObject(this.response.get()) );
+    EventRecord.here( this.getClass( ), EventType.MSG_REPLY, LogUtil.dumpObject( this.response.get( ) ) );
   }
   
   public Throwable getException( ) {

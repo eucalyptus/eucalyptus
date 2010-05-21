@@ -76,14 +76,19 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterThreadFactory;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.StatefulMessageSet;
 import com.eucalyptus.cluster.SuccessCallback;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
 import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
+import com.eucalyptus.vm.SystemState.Reason;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -95,10 +100,6 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.cloud.ws.SystemState;
 import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -156,9 +157,7 @@ public class ClusterAllocator extends Thread {
         for( String vmId : vmToken.getInstanceIds( ) ) {
           try {
             VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-            vm.setState( VmState.TERMINATED );
-            vm.resetStopWatch( );
-            vm.setReason( SystemState.INSTANCE_FAILED + " " + e.getMessage( ) );
+            vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
             VmInstances.getInstance( ).disable( vmId );
           } catch ( Exception e1 ) {
             LOG.debug( e1, e1 );

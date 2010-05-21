@@ -65,7 +65,6 @@ package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 
@@ -84,7 +83,7 @@ public class RebootCallback extends QueuedEventCallback<RebootInstancesType,Rebo
   public void prepare( RebootInstancesType msg ) throws Exception {}
 
   @Override
-  public void verify( BaseMessage msg ) throws Exception {}
+  public void verify( RebootInstancesResponseType msg ) throws Exception {}
 
   @Override
   public void fail( Throwable e ) {

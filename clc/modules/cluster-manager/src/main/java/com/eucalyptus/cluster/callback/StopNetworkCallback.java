@@ -71,7 +71,6 @@ import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.StopNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 
@@ -87,7 +86,7 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopN
   }
 
   @Override
-  public void verify( BaseMessage msg ) throws Exception {}
+  public void verify( StopNetworkResponseType msg ) throws Exception {}
 
   @Override
   public void prepare( StopNetworkType msg ) throws Exception {

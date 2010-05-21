@@ -169,7 +169,7 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 	{
 		final ArrayList<String> storageParams = storageInfo.getStorageParams();
 		numStorageParams = storageParams.size()/4;
-		Grid g = new Grid (8 +  numStorageParams, 2);
+		Grid g = new Grid (9 +  numStorageParams, 2);
 		g.setStyleName( "euca-table" );
 		if (row > 0) {
 			g.setStyleName( "euca-nonfirst-cluster-entry" );
@@ -201,13 +201,16 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 		i++; // next row
 		g.setWidget( i, 0, new Label( "Host:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox hb = new TextBox();
-		hb.addChangeListener (new ChangeCallback (this, row));
-		hb.setVisibleLength( 20 );
-		hb.setText( clusterInfo.getHost() );
-		hb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget ( i, 1, hb );
-
+		if (clusterInfo.isCommitted()) {
+			g.setWidget(i, 1, new Label(clusterInfo.getHost()));	
+		} else {
+			final TextBox hb = new TextBox();
+			hb.addChangeListener (new ChangeCallback (this, row));
+			hb.setVisibleLength( 20 );
+			hb.setText( clusterInfo.getHost() );
+			hb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+			g.setWidget ( i, 1, hb );
+		}
 		i++; // next row
 		/*		g.setWidget( i, 0, new Label( "Port:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
@@ -292,6 +295,19 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 		i++; // next row
 		g.setWidget( i, 1, new Label( "Storage Controller" ));
 
+		i++; // next row
+		g.setWidget( i, 0, new Label( "Host:" ) );
+		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+		if (storageInfo.isCommitted()) {
+			g.setWidget(i, 1, new Label(storageInfo.getHost()));	
+		} else {
+			final TextBox hs = new TextBox();
+			hs.addChangeListener (new ChangeCallback (this, row));
+			hs.setVisibleLength( 20 );
+			hs.setText( storageInfo.getHost() );
+			hs.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+			g.setWidget ( i, 1, hs );
+		}
 		for(int paramidx = 0; paramidx < numStorageParams; ++paramidx) {
 			i++; // next row
 			if ("KEYVALUE".equals(storageParams.get(4 * paramidx))) {
@@ -397,6 +413,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 	{
 		for ( ClusterInfoWeb cluster : this.clusterList ) {
 			cluster.setCommitted ();
+		}
+		for ( StorageInfoWeb storage : this.storageList ) {
+			storage.setCommitted ();
 		}
 	}
 
