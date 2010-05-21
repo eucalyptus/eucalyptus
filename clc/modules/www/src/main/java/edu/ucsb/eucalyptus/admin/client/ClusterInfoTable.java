@@ -401,7 +401,8 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 		cluster.setMaxVlans(Integer.parseInt(((TextBox)p.getWidget(2)).getText()));
 		//7 is SC label
 		// SC section
-		int widgetStartIndex = 8;
+		storage.setHost (((TextBox)g.getWidget(8, 1)).getText());
+		int widgetStartIndex = 9;
 		ArrayList<String> storageParams = storage.getStorageParams();
 		for(int i = 0; i < numStorageParams; ++i) {
 			if(storageParams.get(4*i).startsWith("KEYVALUE"))

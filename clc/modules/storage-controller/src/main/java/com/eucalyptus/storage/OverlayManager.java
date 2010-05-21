@@ -60,7 +60,7 @@
  *******************************************************************************/
 /*
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
 
 package com.eucalyptus.storage;
