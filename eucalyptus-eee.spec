@@ -38,9 +38,9 @@
 BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 %endif
 Summary:       Elastic Utility Computing Architecture
-Name:          eucalyptus-eee
-Version:       1.0
-Release:       0.1319
+Name:          eucalyptus
+Version:       eee-2.0
+Release:       0.1410
 License:       Eucalyptus EEE Software License
 Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
@@ -303,7 +303,7 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 if [ "$1" = "2" ]; 
 then
 	# let's see where we installed
-	EUCADIRS="/ /opt/eucalyptus/"
+	EUCADIRS="/"
 	for i in $EUCADIRS
 	do
 	    if [ -e $i/etc/eucalyptus/eucalyptus-version ]; then
