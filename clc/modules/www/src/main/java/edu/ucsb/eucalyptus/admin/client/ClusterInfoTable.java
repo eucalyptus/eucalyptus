@@ -390,7 +390,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 		}
 
 		// CC section
-		cluster.setHost (((TextBox)g.getWidget(2, 1)).getText());
+		if (g.getWidget(2,1) instanceof TextBox) {
+			cluster.setHost (((TextBox)g.getWidget(2, 1)).getText());
+		}
 		//cluster.setPort (Integer.parseInt(((TextBox)g.getWidget(3, 1)).getText()));
 		p = (HorizontalPanel)g.getWidget(4, 1);
 		systemConfig.setSystemReservedPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
@@ -401,7 +403,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 		cluster.setMaxVlans(Integer.parseInt(((TextBox)p.getWidget(2)).getText()));
 		//7 is SC label
 		// SC section
-		storage.setHost (((TextBox)g.getWidget(8, 1)).getText());
+		if(g.getWidget(8, 1) instanceof TextBox) {
+			storage.setHost (((TextBox)g.getWidget(8, 1)).getText());
+		}
 		int widgetStartIndex = 9;
 		ArrayList<String> storageParams = storage.getStorageParams();
 		for(int i = 0; i < numStorageParams; ++i) {
