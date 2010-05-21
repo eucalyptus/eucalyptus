@@ -285,4 +285,12 @@ public class DatabaseWrappedUser implements User, WrappedUser {
   public UserInfo getUserInfo( ) throws NoSuchUserException {
     return UserInfoStore.getUserInfo( new UserInfo( this.user.getName( ) ) );
   }
+  
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "DatabaseWrappedUser [ " );
+    sb.append( "user = " ).append( user ).append( ", " );
+    sb.append( "]" );
+    return sb.toString( );
+  }
 }

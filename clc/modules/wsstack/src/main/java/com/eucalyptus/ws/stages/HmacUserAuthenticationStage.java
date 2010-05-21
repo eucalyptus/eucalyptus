@@ -85,7 +85,7 @@ public class HmacUserAuthenticationStage implements UnrollableStage {
 
   @Override
   public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "hmac-v2-verify", new HmacHandler( true ) );
+    pipeline.addLast( "hmac-v2-verify", new HmacHandler( false ) );
     pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
   }
 
