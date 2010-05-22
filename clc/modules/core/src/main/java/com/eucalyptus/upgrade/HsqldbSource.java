@@ -41,11 +41,6 @@ public class HsqldbSource implements DatabaseSource {
           props = new Properties( );
           props.setProperty( "user", "sa" );
           props.setProperty( "password", System.getProperty( "euca.db.password" ) );
-          try {
-            props.store( System.out, "Connection properties for " + url );
-          } catch ( IOException e ) {
-            LOG.debug( e, e );
-          }
         }
       }
     }
