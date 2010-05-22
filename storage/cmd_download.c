@@ -302,6 +302,7 @@ int download_cleanup (imager_request * req)
 	download_params * state = (download_params *) req->internal;
 
 	logprintfl (EUCAINFO, "cleaning up for '%s'...\n", req->cmd->name);
+    rm_workfile (state->out);
 	free (state);
 
 	return 0;

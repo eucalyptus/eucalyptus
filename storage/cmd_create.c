@@ -365,6 +365,7 @@ int create_cleanup (imager_request * req)
 	create_params * state = (create_params *) req->internal;
 
 	logprintfl (EUCAINFO, "cleaning up for '%s'...\n", req->cmd->name);
+    rm_workfile (state->out);
 	free (state);
 
 	return 0;

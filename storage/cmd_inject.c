@@ -250,8 +250,16 @@ int inject_execute (imager_request * req)
             ret = ERROR;
 			goto cleanup;
 		}
-		char mnt_pt_outfile [EUCA_MAX_PATH];
-		snprintf (mnt_pt_outfile, EUCA_MAX_PATH, "%s/%s", mnt_pt, state->outfile);
+		char mnt_pt_outfile    [EUCA_MAX_PATH];
+		char mnt_pt_outfiledir [EUCA_MAX_PATH];
+		snprintf (mnt_pt_outfile,    EUCA_MAX_PATH, "%s/%s", mnt_pt, state->outfile);
+		snprintf (mnt_pt_outfiledir, EUCA_MAX_PATH, "%s/%s", mnt_pt, state->outfile);
+        for (int i=strlen(mnt_pt_outfiledir)-1; i>0; i--) { // remove file name from path
+            if (mnt_pt_outfiledir[i]=='/') {
+                mnt_pt_outfiledir[i] = '\0';
+                break;
+            }
+        }
 		if (df_mount (df, state->part, mnt_pt)!=OK) {
             logprintfl (EUCAINFO, "error: failed to mount '%s' on '%s'\n", df->path, mnt_pt);
 			ret = ERROR;
@@ -260,8 +268,8 @@ int inject_execute (imager_request * req)
 
 		// do the single-file injection
 		logprintfl (EUCAINFO, "injecting '%s' to '%s' on '%s'\n", state->infile, state->outfile, id);
-		if (help_mkdir (mnt_pt_outfile)!=OK) {
-            logprintfl (EUCAINFO, "error: failed to create subdirectories in '%s'\n", mnt_pt_outfile);
+		if (help_mkdir (mnt_pt_outfiledir)!=OK) {
+            logprintfl (EUCAINFO, "error: failed to create subdirectories for '%s'\n", mnt_pt_outfiledir);
 			ret = ERROR;
 			goto unmount;
 		}
@@ -344,8 +352,8 @@ int inject_cleanup (imager_request * req)
 	inject_params * state = (inject_params *) req->internal;
 
 	logprintfl (EUCAINFO, "cleaning up for '%s'...\n", req->cmd->name);
+    rm_workfile (state->out);
 	free (state);
 
 	return 0;
 }
-

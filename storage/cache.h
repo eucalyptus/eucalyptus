@@ -82,4 +82,6 @@ void free_artifacts_spec (artifacts_spec * spec);
 output_file * preprocess_output_path (const char * id, artifacts_spec * spec, boolean use_work, boolean use_cache, artifacts_spec * prev_spec);
 void postprocess_output_path (output_file * o, boolean success);
 
+void rm_workfile (const char * filename);
+
 #endif // _CACHE_H
