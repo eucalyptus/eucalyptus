@@ -461,6 +461,15 @@ public class EquallogicProvider implements SANProvider {
 		if((returnValue.split(VOLUME_SHOW_PATTERN.toString()).length > 1) && returnValue.contains(volumeId)) {
 			return true;
 		}
+		EntityWrapper<EquallogicVolumeInfo> db = StorageProperties.getEntityWrapper();
+		EquallogicVolumeInfo searchVolumeInfo = new EquallogicVolumeInfo(volumeId);
+		try {
+			EquallogicVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
+			db.delete(volumeInfo);
+		} catch (EucalyptusCloudException ex) {			
+		} finally {
+			db.commit();
+		}
 		return false;
 	}
 
