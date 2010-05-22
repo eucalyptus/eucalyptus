@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.Security;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
@@ -29,12 +30,18 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DispatcherFactory;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.entities.PersistenceContextDiscovery;
+import com.eucalyptus.entities.PersistenceContexts;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.system.SubDirectory;
+import com.google.common.collect.Lists;
 
 public class StandalonePersistence {
   private static Logger                     LOG;
   private static ConcurrentMap<String, Sql> sqlConnections = new ConcurrentHashMap<String, Sql>( );
+  private static List<UpgradeScript> upgradeScripts = Lists.newArrayList( );
   static {
     Security.addProvider( new BouncyCastleProvider( ) );
   }
@@ -83,10 +90,22 @@ public class StandalonePersistence {
   }
   
   public static void runUpgrade( ) {
-    LOG.info( "HOOOOOOOOOOOOOOOOOOORAH!!!11!!>!@!" );
-    //TODO: Run the upgrade scripts here.
+    LOG.info( upgradeScripts );
+    for( UpgradeScript up : upgradeScripts ) {
+      try {
+        up.upgrade( oldLibDir, newLibDir );
+      } catch ( Throwable e ) {
+        LOG.error( e, e );
+      }
+    }
+    LOG.info( "=============================" );
+    LOG.info( "= DATABASE UPGRADE COMPLETE =" );
+    LOG.info( "=============================" );
   }
   
+  public static Collection<Sql> listConnections( ) {
+    return sqlConnections.values( );
+  }
   public static Sql getConnection( String persistenceContext ) throws SQLException {
     Sql newSql = source.getSqlSession( persistenceContext );
     Sql conn = sqlConnections.putIfAbsent( persistenceContext, newSql );
@@ -128,8 +147,14 @@ public class StandalonePersistence {
   }
   
   private static void setupDatabases( ) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
-    dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
     source = ( DatabaseSource ) ClassLoader.getSystemClassLoader( ).loadClass( eucaSource ).newInstance( );
+    dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
+    Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
+      @Override
+      public void run( ) {
+        PersistenceContexts.shutdown( );
+      }
+    } );
   }
   
   private static void setupInitProviders( ) throws Exception {
@@ -213,14 +238,36 @@ public class StandalonePersistence {
     return eucaLibDir;
   }
   
+  public static void registerUpgradeScript( UpgradeScript up ) {
+    if( up.accepts( eucaOldVersion, eucaNewVersion ) ) {
+      LOG.info( String.format( "Found upgrade script for [%s->%s] in:      %s\n", eucaOldVersion, eucaNewVersion, up.getClass( ).getCanonicalName() ) );
+      upgradeScripts.add( up );
+    } else {
+      LOG.info( String.format( "Ignoring upgrade script for [%s->%s] in:   %s\n", eucaOldVersion, eucaNewVersion, up.getClass( ).getCanonicalName() ) );      
+    }
+  }
+  
   public static void runDiscovery( ) {
     List<Class> classList = ServiceJarDiscovery.classesInDir( new File( BaseDirectory.LIB.toString( ) ) );
-    PersistenceContextDiscovery ctxDisc = new PersistenceContextDiscovery( );
-    for ( Class c : classList ) {
+    for( ServiceJarDiscovery d : Lists.newArrayList( new PersistenceContextDiscovery( ), new UpgradeScriptDiscovery( ) ) ) {
+      for ( Class c : classList ) {
+        try {
+          d.checkClass( c );
+        } catch ( Throwable t ) {
+          if( t instanceof ClassNotFoundException ) {
+          } else {
+            LOG.debug( t, t );
+          }
+        }
+      }
+    }
+    for( File script : SubDirectory.UPGRADE.getFile( ).listFiles( ) ) {
+      LOG.debug( "Trying to load what looks like an upgrade script: " + script.getAbsolutePath( ) );
       try {
-        ctxDisc.checkClass( c );
-      } catch ( Throwable t ) {
-        LOG.debug( t, t );
+        UpgradeScript u = GroovyUtil.newInstance( script.getAbsolutePath( ) );
+        registerUpgradeScript( u );
+      } catch ( ScriptExecutionFailedException e ) {
+        LOG.debug( e, e );
       }
     }
   }

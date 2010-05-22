@@ -2,12 +2,28 @@ package com.eucalyptus.upgrade;
 
 import groovy.sql.Sql;
 import java.io.File;
+import java.io.IOException;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
+import org.apache.log4j.Logger;
 
 public class HsqldbSource implements DatabaseSource {
-  private File oldDbDir = new File( System.getProperty( "euca.upgrade.old.dir" ) + "/var/lib/eucalyptus/db/" );
+  private static Logger     LOG      = Logger.getLogger( HsqldbSource.class );
+  private File              oldDbDir = new File( System.getProperty( "euca.upgrade.old.dir" ) + "/var/lib/eucalyptus/db/" );
+  private static Driver     driver;
+  private static Properties props;
+  static {
+    try {
+      Class driverClass = ClassLoader.getSystemClassLoader( ).loadClass( "org.hsqldb.jdbcDriver" );
+      driver = ( Driver ) driverClass.newInstance( );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      System.exit( -1 );
+    }
+  }
   
   public HsqldbSource( ) {}
   
@@ -18,8 +34,17 @@ public class HsqldbSource implements DatabaseSource {
    * @throws SQLException
    */
   public Sql getSqlSession( String persistenceContext ) throws SQLException {
-    Connection conn = DriverManager.getConnection( "jdbc:hsqldb:file:" + oldDbDir.getAbsolutePath( ) + File.separator + persistenceContext, "eucalyptus",
-                                                   System.getProperty( "euca.db.password" ) );
+    String url = "jdbc:hsqldb:file:" + oldDbDir.getAbsolutePath( ) + File.separator + persistenceContext;
+    if ( props == null ) {
+      synchronized ( HsqldbSource.class ) {
+        if ( props == null ) {
+          props = new Properties( );
+          props.setProperty( "user", "sa" );
+          props.setProperty( "password", System.getProperty( "euca.db.password" ) );
+        }
+      }
+    }
+    Connection conn = driver.connect( url, props );
     return new Sql( conn );
   }
 }

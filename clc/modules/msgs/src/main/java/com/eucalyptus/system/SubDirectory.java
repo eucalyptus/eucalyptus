@@ -78,6 +78,7 @@ public enum SubDirectory {
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
   SCRIPTS( BaseDirectory.CONF, "scripts" ),
+  UPGRADE( BaseDirectory.CONF, "upgrade" ),
   CONF( BaseDirectory.CONF, "conf" ),
   LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" );
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
