@@ -91,7 +91,6 @@ public class PersistenceContexts {
   }
   
   public static void handleConnectionError( Throwable cause ) {
-    //		DebugUtil.debug( );
     touchDatabase( );
   }
   
@@ -114,6 +113,18 @@ public class PersistenceContexts {
       throw e;
     }
     return emf.get( persistenceContext );
+  }
+
+  public static void shutdown() {
+    for( String ctx : emf.keySet( ) ) {
+      EntityManagerFactoryImpl em = emf.get( ctx );
+      if( em.isOpen( ) ) {
+        LOG.info( "Closing persistence context: " + ctx );
+        em.close( );
+      } else {
+        LOG.info( "Closing persistence context: " + ctx + " (found it closed already)" );
+      }
+    }
   }
   
 }

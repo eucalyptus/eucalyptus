@@ -29,8 +29,8 @@ public class GroovyUtil {
       return groovyEngine;      
     }
   }
-  
-  public static Object newInstance( String fileName ) throws ScriptExecutionFailedException {
+
+  public static <T> T newInstance( String fileName ) throws ScriptExecutionFailedException {
     GroovyObject groovyObject = null;
     try {
       ClassLoader parent = ClassLoader.getSystemClassLoader( );
@@ -45,7 +45,12 @@ public class GroovyUtil {
     catch ( Exception e ) {
       throw new ScriptExecutionFailedException( e );
     }
-    return groovyObject;
+    try {
+      return ( T ) groovyObject;
+    } catch ( ClassCastException e ) {
+      LOG.debug( e, e );
+      throw new ScriptExecutionFailedException( e.getMessage( ), e );
+    }
   }
 
   public static Object evaluateScript( String fileName ) throws ScriptExecutionFailedException {

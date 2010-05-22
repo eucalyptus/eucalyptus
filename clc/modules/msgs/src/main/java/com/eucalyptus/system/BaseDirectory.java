@@ -90,6 +90,10 @@ public enum BaseDirectory {
   public String toString( ) {
     return System.getProperty( this.key );
   }
+
+  public File getFile() {
+    return new File( this.toString( ) );
+  }
   
   public void create( ) {
     final File dir = new File( this.toString( ) );
