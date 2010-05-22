@@ -427,6 +427,7 @@ public class EquallogicProvider implements SANProvider {
 						enabled = true;
 					}
 				}
+				returnValue = execCommand("stty hardwrap off\rcli-settings confirmation off\r");
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e);
 			}
