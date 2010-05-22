@@ -7,7 +7,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class HsqldbSource implements DatabaseSource {
-  private File oldDbDir = new File( System.getProperty( "euca.upgrade.olddir" ) + "/var/lib/eucalyptus/db/" );
+  private File oldDbDir = new File( System.getProperty( "euca.upgrade.old.dir" ) + "/var/lib/eucalyptus/db/" );
   
   public HsqldbSource( ) {}
   
