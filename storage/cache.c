@@ -826,3 +826,16 @@ void postprocess_output_path (output_file * o, boolean success)
 
 	free (o);
 }
+
+// remove file and its summary in work directory
+void rm_workfile (const char * filename)
+{
+    char file_path [EUCA_MAX_PATH];
+    char summ_path [EUCA_MAX_PATH];
+
+    snprintf (file_path, EUCA_MAX_PATH, "%s/%s", get_work_dir(), filename);
+    snprintf (summ_path, EUCA_MAX_PATH, "%s/%s-summary", get_work_dir(), filename);
+
+    unlink (file_path); // ignore errors
+    unlink (summ_path);
+}
