@@ -178,17 +178,22 @@ public class SystemCredentialProvider extends Bootstrapper {
   @Override
   public boolean load( Stage current ) throws Exception {
     try {
-      if ( !SystemCredentialProvider.check( Component.eucalyptus ) ) SystemCredentialProvider.init( Component.eucalyptus );
+      if ( !SystemCredentialProvider.check( Component.eucalyptus ) ) {
+        SystemCredentialProvider.init( Component.eucalyptus );
+      }
       for ( Component c : Component.values( ) ) {
         try {
-          if ( !SystemCredentialProvider.check( c ) ) SystemCredentialProvider.init( c );
+          if ( !SystemCredentialProvider.check( c ) ) {
+            SystemCredentialProvider.init( c );
+          }
         } catch ( Exception e ) {
-          LOG.error( e );
+          LOG.error( e, e );
           return false;
         }
       }
     } catch ( Exception e ) {
       LOG.error( e, e );
+      return false;
     }
     return true;
   }

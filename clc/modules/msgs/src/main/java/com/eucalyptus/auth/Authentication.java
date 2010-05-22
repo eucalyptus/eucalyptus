@@ -82,23 +82,25 @@ public class Authentication {
   private static CryptoProvider cryptoProvider;
   private static CertificateProvider certProvider;
   private static HmacProvider hmacProvider;
+  private static BaseSecurityProvider DUMMY = new BaseSecurityProvider( ) {};
+  private static ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<Class, BaseSecurityProvider>( );
   static {
-    //TODO FIXME TODO BROKEN FAIL: discover this at bootstrap time.
+    BaseSecurityProvider provider;
     try {
-      ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
-    } catch ( ClassNotFoundException e ) {
+      Class provClass = ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
+      provider = ( BaseSecurityProvider ) provClass.newInstance( );
+    } catch ( Throwable t ) {
+      LOG.debug( t, t );
+      provider = DUMMY;
     }
+    providers.put( CertificateProvider.class, provider );
+    providers.put( HmacProvider.class, provider );
+    providers.put( CryptoProvider.class, provider );
   }
   
   public static <T> EntityWrapper<T> getEntityWrapper( ) {
     return new EntityWrapper<T>( Authentication.DB_NAME );
   }
-  private static BaseSecurityProvider DUMMY = new BaseSecurityProvider() {};
-  private static ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<Class, BaseSecurityProvider>( ){{    
-    put( CertificateProvider.class, DUMMY );
-    put( HmacProvider.class, DUMMY );
-    put( CryptoProvider.class, DUMMY );
-  }};
   
   public static CertificateProvider getCertificateProvider( ) {
     return (CertificateProvider) providers.get( CertificateProvider.class );
