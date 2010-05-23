@@ -18,6 +18,7 @@
 %global euca_iscsi_client open-iscsi
 %global euca_iscsi_server tgt
 %global euca_build_req vlan
+%global euca_fuse libfuse2
 %endif
 %if %is_centos
 %global euca_libvirt libvirt >= 0.6
@@ -26,6 +27,7 @@
 %global euca_java    java-sdk >= 1.6.0
 %global euca_iscsi_client iscsi-initiator-utils
 %global euca_iscsi_server scsi-target-utils
+%global euca_fuse fuse-libs
 %endif
 %if %is_fedora
 %global euca_libvirt libvirt
@@ -61,7 +63,7 @@ them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     %{name} = %{version}, %{euca_java}, lvm2
+Requires:     %{name} = %{version}, %{euca_java}, lvm2, %{euca_fuse}
 Group:        Applications/System
 
 %description common-java
