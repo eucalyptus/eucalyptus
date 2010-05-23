@@ -10,7 +10,9 @@ import java.security.Security;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
@@ -64,23 +66,18 @@ public class StandalonePersistence {
     } else if ( ( eucaDest = System.getProperty( "euca.upgrade.destination" ) ) == null ) {
       throw new RuntimeException( "Failed to find required 'euca.upgrade.destination' property: " + eucaHome );
     } else {
-      /**
-       * TODO: DO OLD.VERSION->NEW.VERSION UPDATE PATH EXISTANCE TEST!
-       */
       StandalonePersistence.setupSystemProperties( );
       StandalonePersistence.setupConfigurations( );
       StandalonePersistence.setupInitProviders( );
-      StandalonePersistence.setupDatabases( );
     }
     /** Prepare for database upgrade **/
     try {
-      /** Bring up the new destination database **/
-      dest.initialize( );
       /** Setup the persistence contexts **/
       StandalonePersistence.runDiscovery( );
       /** Setup some system mechanisms after starting the true destination db **/
       StandalonePersistence.setupProviders( );
       /** Create connections for each of the source databases **/
+      StandalonePersistence.setupNewDatabase( );
       StandalonePersistence.setupOldDatabase( );
       StandalonePersistence.runUpgrade( );
     } catch ( Throwable e ) {
@@ -125,7 +122,8 @@ public class StandalonePersistence {
     UserInfoStore.setUserInfoProvider( dbAuth );
   }
   
-  private static void setupOldDatabase( ) throws SQLException {
+  private static void setupOldDatabase( ) throws Exception {
+    source = ( DatabaseSource ) ClassLoader.getSystemClassLoader( ).loadClass( eucaSource ).newInstance( );
     /** Register a shutdown hook which closes all source-sql sessions **/
     Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
       @Override
@@ -146,9 +144,9 @@ public class StandalonePersistence {
     }
   }
   
-  private static void setupDatabases( ) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
-    source = ( DatabaseSource ) ClassLoader.getSystemClassLoader( ).loadClass( eucaSource ).newInstance( );
+  private static void setupNewDatabase( ) throws Exception {
     dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
+    dest.initialize( );    
     Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
       @Override
       public void run( ) {

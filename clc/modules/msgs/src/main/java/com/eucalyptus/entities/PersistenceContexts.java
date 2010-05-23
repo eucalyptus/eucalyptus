@@ -71,7 +71,7 @@ public class PersistenceContexts {
   }
   
   public static EntityManagerFactoryImpl registerPersistenceContext( final String persistenceContext, final Ejb3Configuration config ) {
-    synchronized ( EntityWrapper.class ) {
+    synchronized ( PersistenceContexts.class ) {
       if ( illegalAccesses != null && !illegalAccesses.isEmpty( ) ) {
         for ( Exception e : illegalAccesses ) {
           LOG.fatal( e, e );

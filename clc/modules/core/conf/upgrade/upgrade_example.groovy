@@ -21,13 +21,16 @@ class Example implements UpgradeScript {
     }
     StandalonePersistence.getConnection("eucalyptus_general").rows('SELECT * FROM COUNTERS').each{ 
       println "Found old system counters:  msg_count=${it.MSG_COUNT}"
-      EntityWrapper db = EntityWrapper.get( Counters.class );
+      EntityWrapper db = new EntityWrapper( "eucalyptus_general" ); 
       try {
         try {
-          c = db.getUnique( Counters.uninitialized() );
+          Counters s = new Counters();
+          s.setMessageId( null );
+          Counters c = db.getUnique(  );
           println "Found existing system counters: ${c.dump()}"
         } catch( Throwable t ) {
           Counters c = new Counters();
+          print c.class.getCanonicalName();
           c.setMessageId( it.MSG_COUNT );
           db.add( c );
         }

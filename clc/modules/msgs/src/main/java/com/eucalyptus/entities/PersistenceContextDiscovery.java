@@ -25,7 +25,6 @@ public class PersistenceContextDiscovery extends ServiceJarDiscovery {
       if ( !Ats.from( candidate ).has( PersistenceContext.class ) ) {
         throw BootstrapException.throwFatal( "Database entity does not have required @PersistenceContext annotation: " + candidate.getCanonicalName( ) );
       } else {
-        LOG.debug( "Trying to register class: " + candidate.getCanonicalName( ) );
         PersistenceContexts.addEntity( candidate );
         return true;
       }

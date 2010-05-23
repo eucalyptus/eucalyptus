@@ -76,6 +76,8 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
@@ -93,9 +95,9 @@ public class Counters extends AbstractPersistent implements Serializable {
         if ( singleton == null ) {
           EntityWrapper<Counters> db = new EntityWrapper<Counters>( "eucalyptus_general" );
           try {
-            singleton = db.getUnique( Counters.uninitialized( ) );
+            singleton = db.getUnique( new Counters() );
           } catch ( EucalyptusCloudException e ) {
-            singleton = new Counters();
+            singleton = new Counters( 0l );
             try {
               db.add( singleton );
               db.commit( );
@@ -115,12 +117,6 @@ public class Counters extends AbstractPersistent implements Serializable {
     return Crypto.getDigestBase64( Long.toString( Counters.getIdBlock( 1 ) ), Digest.SHA512, false ).replaceAll( "\\.", "" );
   }
   
-  class _this extends _anon<Counters> {
-    private _this( ) {
-      super( Counters.uninitialized( ) );
-    }
-  }
-  
   @Transient
   private static Long             period   = 1000l;
   @Transient
@@ -130,8 +126,9 @@ public class Counters extends AbstractPersistent implements Serializable {
   @Column( name = "msg_count" )
   private Long                    messageId;
   
-  public Counters( ) {
-    this.messageId = 0l;
+  public Counters( ) {}
+  public Counters( Long start ) { 
+    this.messageId = start;
   }
   
   public static Counters uninitialized( ) {
@@ -149,14 +146,12 @@ public class Counters extends AbstractPersistent implements Serializable {
       idStart = tempId.addAndGet( length );
       if ( ( idStart - lastSave.get( ) ) > 1000 ) {
         try {
-          new _this( ) {{
-              new _mutator( ) {
-                public void set( Counters c ) {
-                  c.setMessageId( idStart );
-                }
-              }.set( );
+          Transactions.one( Counters.uninitialized( ), new Tx<Counters>() {
+            @Override
+            public void fire( Counters t ) throws Throwable {
+              t.setMessageId( idStart );
             }
-          };
+          } );
         } catch ( EucalyptusCloudException e ) {
           LOG.debug( e, e );
         }
