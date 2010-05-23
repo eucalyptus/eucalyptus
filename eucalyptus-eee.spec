@@ -370,6 +370,9 @@ eucalyptus ALL=NOPASSWD: /usr/sbin/tgtadm
 EOF
 chmod +x /etc/udev/scripts/iscsidev.sh
 
+# set java home to location of SunJDK for EEE
+sed -i "s/.*CLOUD_OPTS=.*/CLOUD_OPTS=\"--java-home=\/opt\/packages\/jdk\"/" /etc/eucalyptus/eucalyptus.conf
+
 # we need a eucalyptus user
 if ! getent passwd eucalyptus > /dev/null ; then
 %if %is_suse
