@@ -1384,3 +1384,194 @@ long long file_size (const char * file_path)
     if (err<0) return (long long)err;
     return (long long)(mystat.st_size);
 }
+
+// tolower for strings (result must be freed by the caller)
+
+char * strduplc (const char * s)
+{
+	char * lc = strdup (s);
+	for (int i=0; i<strlen(s); i++) {
+		lc [i] = tolower(lc [i]);
+	}
+	return lc;
+}
+
+// some XML parsing routines
+
+// given a '\0'-terminated string in 'xml', finds the next complete <tag...>
+// and returns its name in a newly allocated string (which must be freed by
+// the caller) or returns NULL if no tag can be found or if the XML is not 
+// well formed; when not NULL, the following parameters are also returned:
+// 
+//     start   = index of the '<' character
+//     end     = index of the '>' character
+//     single  = 1 if this is a <..../> tag
+//     closing = 1 if this is a </....> tag
+
+static char * next_tag (const char * xml, int * start, int * end, int * single, int * closing)
+{
+    char * ret = NULL;
+
+    int name_start = -1;
+    int name_end = -1;
+    int tag_start = -1;
+
+    for (const char *p = xml; *p; p++) {
+        
+        if ( *p == '<' ) { // found a new tag
+            tag_start = (p - xml); // record the char so its offset can be returned
+
+            * closing = 0;
+            if (*(p+1) == '/' || *(p+1) == '?') {
+                if (*(p+1) == '/') // if followed by '/' then it is a "closing" tag
+                    * closing = 1;
+                name_start = (p - xml + 2); 
+                p++;
+            } else {
+                name_start = (p - xml + 1);
+            }
+            continue;
+        }
+
+        if ( *p == ' ' && name_start != -1 && name_end == -1 ) { // a name may be terminated by a space
+            name_end = (p - 1 - xml);
+            continue;
+        }
+
+        if ( *p == '>' ) {
+            if (name_start == -1) // never saw '<', error
+                break;
+            if (p < xml + 2) // tag is too short, error
+                break;
+            const char * last_ch = p-1;
+            if ( * last_ch == '/' || * last_ch == '?' ) {
+                * single = 1; // preceded by '/' then it is a "single" tag
+                last_ch--;
+            } else {
+                * single = 0;
+            }
+
+            if (name_start != -1 && name_end == -1) { // a name may be terminated by '/' or '>' or '?'
+                name_end = (last_ch - xml);
+            }
+
+            if ((name_end-name_start)>=0) { // we have a name rather than '<>'
+                ret = calloc (name_end-name_start+2, sizeof (char));
+                if (ret==NULL) break;
+                strncpy (ret, xml + name_start, name_end - name_start + 1);
+                * start = tag_start;
+                * end = p - xml;
+            }
+            break;
+        }
+    }
+
+    return ret;
+}
+
+// given a '\0'-terminated string in 'xml' and an 'xpath' of an XML
+// element, returns the "content" of that element in a newly allocated
+// string, which must be freed by the caller; for example, with XML:
+// 
+//   "<a><b>foo</b><c><d>bar</d><e>baz</e></c></a>"
+// 
+// the content returned for xpath "a/c/e" is "baz"
+
+static char * find_cont (const char * xml, char * xpath) 
+{
+    char * ret = NULL;
+
+    int tag_start;
+    int tag_end = -1;
+    int single;
+    int closing;
+    char * name;
+    #define _STK_SIZE 64
+    char       * n_stk [_STK_SIZE];
+    const char * c_stk [_STK_SIZE];
+    int stk_p = -1;
+    
+    // iterate over tags until the matching xpath is reached or
+    // until no more tags are found in the 'xml'
+    for (int xml_offset=0; 
+         (name = next_tag (xml + xml_offset, &tag_start, &tag_end, &single, &closing))!=NULL; 
+         xml_offset += tag_end + 1)
+    {
+        if (single) {
+            // not interested in singles because we are looking for content
+            
+        } else if (!closing) { // opening a tag
+            // put name and pointer to content onto the stack
+            stk_p++;   
+            if (stk_p==_STK_SIZE) // exceeding stack size, error
+                goto cleanup;
+            n_stk [stk_p] = strduplc (name); // put a lower-case-only copy onto stack
+            c_stk [stk_p] = xml + xml_offset + tag_end + 1;
+            
+        } else { // closing tag
+            // get the name in all lower-case, for consistency with xpath
+            char * name_lc = strduplc (name);
+            free (name);
+            name = name_lc;
+
+            // name doesn't match last seen opening tag, error
+            if (strcmp(n_stk[stk_p], name)!=0) 
+                goto cleanup;
+
+            // construct the xpath of the closing tag based on stack contents
+            char xpath_cur [MAX_PATH] = "";
+            for (int i=0; i<=stk_p; i++) {
+                if (i>0) strncat (xpath_cur, "/", MAX_PATH);
+                strncat (xpath_cur, n_stk[i], MAX_PATH);
+            }
+              
+            // pop the stack whether we have a match or not
+            if (stk_p<0) // past the bottom of the stack, error
+                goto cleanup; 
+            const char * contp = c_stk [stk_p];
+            int cont_len = xml + xml_offset + tag_start - contp;
+            free (n_stk [stk_p]);
+            stk_p--;
+
+            // see if current xpath matches the requested one
+            if (strcmp (xpath, xpath_cur)==0) {
+                char * cont = calloc (cont_len + 1, sizeof (char));
+                if (cont==NULL)
+                    goto cleanup;
+                strncpy (cont, contp, cont_len);
+                ret = cont;
+                break;
+            }
+        }
+        free (name);
+        name = NULL;
+    }
+
+cleanup:
+    if (name) free (name); // for exceptions
+    for (int i=0; i<=stk_p; i++)
+        free (n_stk [i]); // free everything on the stack
+    return ret;
+}
+
+// given a '\0'-terminated string in 'xml' and an 'xpath' of an XML
+// element, returns the "content" of that element in a newly allocated
+// string, which must be freed by the caller; for example, with XML:
+// 
+//   "<a><b>foo</b><c><d>bar</d><e>baz</e></c></a>"
+// 
+// the content returned for xpath "a/c/e" is "baz"
+
+char * xpath_content (const char * xml, const char * xpath)
+{
+    char * ret;
+
+    if (xml==NULL || xpath==NULL) return NULL;
+    char * xpath_l = strduplc (xpath); // lower-case copy of requested xpath
+    if (xpath_l != NULL) {
+        ret = find_cont (xml, xpath_l);
+        free (xpath_l);
+    }
+
+    return ret;
+}

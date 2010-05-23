@@ -18,7 +18,7 @@ test: test.c ipc.o misc.o
 	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o misc.o data.o -lpthread $(LIBS)
 
 .c.o: $@
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $<
 
 clean:
 	rm -rf *~ *.o test euca_rootwrap euca_mountwrap

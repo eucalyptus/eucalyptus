@@ -256,17 +256,6 @@ void print_req (imager_request * req)
 	}
 }
 
-// tolower for strings
-
-char * strduplc (const char * s)
-{
-	char * lc = strdup (s);
-	for (int i=0; i<strlen(s); i++) {
-		lc [i] = tolower(lc [i]);
-	}
-	return lc;
-}
-
 // turn a string into a boolean (returned as a char)
 
 char parse_boolean (const char * s)
