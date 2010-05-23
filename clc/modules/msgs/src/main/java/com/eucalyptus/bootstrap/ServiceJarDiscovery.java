@@ -110,7 +110,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   public void checkClass( Class candidate ) {
     try {
-      if ( this.processsClass( candidate ) ) {
+      if ( this.processClass( candidate ) ) {
         ServiceJarDiscovery.checkUniqueness( candidate );
         EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_LOADED_ENTRY, this.getClass( ).getSimpleName( ), candidate.getName( ) ).info( );
       }
@@ -128,7 +128,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
    * @return TODO
    * @throws Throwable
    */
-  public abstract boolean processsClass( Class candidate ) throws Throwable;
+  public abstract boolean processClass( Class candidate ) throws Throwable;
   
   public Double getDistinctPriority( ) {
     return this.getPriority( ) + ( .1d / this.getClass( ).hashCode( ) );

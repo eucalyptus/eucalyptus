@@ -57,7 +57,7 @@ public class SecurityContext extends Configuration {
     }
 
     @Override
-    public boolean processsClass( Class candidate ) throws Throwable {
+    public boolean processClass( Class candidate ) throws Throwable {
       if( LoginModule.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
         SecurityContext.registerLoginModule( candidate );
         return true;

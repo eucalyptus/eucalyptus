@@ -252,10 +252,11 @@ public class StandalonePersistence {
     for( ServiceJarDiscovery d : Lists.newArrayList( new PersistenceContextDiscovery( ), new UpgradeScriptDiscovery( ) ) ) {
       for ( Class c : classList ) {
         try {
-          d.checkClass( c );
+          d.processClass( c );
         } catch ( Throwable t ) {
           if( t instanceof ClassNotFoundException ) {
           } else {
+            t.printStackTrace( );
             LOG.debug( t, t );
           }
         }

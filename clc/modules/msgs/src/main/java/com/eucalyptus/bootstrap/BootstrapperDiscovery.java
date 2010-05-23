@@ -16,7 +16,7 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
   public BootstrapperDiscovery() {}
   
   @Override
-  public boolean processsClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Throwable {
     String bc = candidate.getCanonicalName( );
     Class bootstrapper = this.getBootstrapper( candidate );
     if ( !From( candidate ).has( RunDuring.class ) ) {
