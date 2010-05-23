@@ -24,14 +24,10 @@ class Example implements UpgradeScript {
       EntityWrapper db = new EntityWrapper( "eucalyptus_general" ); 
       try {
         try {
-          Counters s = new Counters();
-          s.setMessageId( null );
-          Counters c = db.getUnique(  );
-          println "Found existing system counters: ${c.dump()}"
+          db.getUnique( new Counters() );
+          println "Found existing system counters: msg_count=${c.getMessageId()}"
         } catch( Throwable t ) {
-          Counters c = new Counters();
-          print c.class.getCanonicalName();
-          c.setMessageId( it.MSG_COUNT );
+          Counters c = new Counters( it.MSG_COUNT );
           db.add( c );
         }
       } catch( Throwable t ) {
@@ -39,7 +35,6 @@ class Example implements UpgradeScript {
       } finally {
         db.commit();
       }
-      println "Added new system counters:  ${c.dump()}"
     }
   }
 }
