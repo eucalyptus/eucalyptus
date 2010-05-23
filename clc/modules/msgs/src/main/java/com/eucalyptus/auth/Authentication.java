@@ -119,7 +119,7 @@ public class Authentication {
       return 0.01d;
     }
     @Override
-    public boolean processsClass( Class candidate ) throws Throwable {
+    public boolean processClass( Class candidate ) throws Throwable {
       if( !Modifier.isInterface( candidate.getModifiers( ) ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && BaseSecurityProvider.class.isAssignableFrom( candidate ) ) {
         try {
           BaseSecurityProvider o = ( BaseSecurityProvider ) candidate.newInstance( );
