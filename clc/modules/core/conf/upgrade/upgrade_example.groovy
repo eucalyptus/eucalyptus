@@ -21,14 +21,13 @@ class Example implements UpgradeScript {
     }
     StandalonePersistence.getConnection("eucalyptus_general").rows('SELECT * FROM COUNTERS').each{ 
       println "Found old system counters:  msg_count=${it.MSG_COUNT}"
-      EntityWrapper db = EntityWrapper.get( Counters.class );
+      EntityWrapper db = new EntityWrapper( "eucalyptus_general" ); 
       try {
         try {
-          c = db.getUnique( Counters.uninitialized() );
-          println "Found existing system counters: ${c.dump()}"
+          db.getUnique( new Counters() );
+          println "Found existing system counters: msg_count=${c.getMessageId()}"
         } catch( Throwable t ) {
-          Counters c = new Counters();
-          c.setMessageId( it.MSG_COUNT );
+          Counters c = new Counters( it.MSG_COUNT );
           db.add( c );
         }
       } catch( Throwable t ) {
@@ -36,7 +35,6 @@ class Example implements UpgradeScript {
       } finally {
         db.commit();
       }
-      println "Added new system counters:  ${c.dump()}"
     }
   }
 }

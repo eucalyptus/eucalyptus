@@ -200,7 +200,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
                 Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
                 classList.add( candidate );
               } catch ( ClassNotFoundException e ) {
-                LOG.trace( e, e );
+//                LOG.trace( e, e );
               }
             }
           }
