@@ -175,6 +175,11 @@ public class BucketInfo {
 	public Date getCreationDate() {
 		return creationDate;
 	}
+	
+	public void setCreationDate(Date date){
+		this.creationDate = date;
+	}
+	
 	public boolean isGlobalRead() {
 		return globalRead;
 	}
