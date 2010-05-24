@@ -11,7 +11,7 @@ public class DispatcherFactoryDiscovery extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processsClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Throwable {
     if( DispatcherFactory.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
       DispatcherFactory.setFactory( ( DispatcherFactory ) candidate.newInstance( ) );
       return true;

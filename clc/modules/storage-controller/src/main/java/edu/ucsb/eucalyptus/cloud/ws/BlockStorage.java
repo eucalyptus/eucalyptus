@@ -845,7 +845,6 @@ public class BlockStorage {
 				blockManager.deleteVolume(volumeId);
 			} catch (EucalyptusCloudException e1) {
 				LOG.error(e1);
-				return;
 			}
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 			VolumeInfo foundVolume;

@@ -87,7 +87,7 @@ import com.google.common.collect.Lists;
 public class DatabaseAuthProvider implements UserProvider, GroupProvider, UserInfoProvider {
   private static Logger LOG = Logger.getLogger( DatabaseAuthProvider.class );
   
-  DatabaseAuthProvider( ) {}
+  public DatabaseAuthProvider( ) {}
   
   @Override
   public User addUser( String userName, Boolean isAdmin, Boolean isEnabled ) throws UserExistsException {

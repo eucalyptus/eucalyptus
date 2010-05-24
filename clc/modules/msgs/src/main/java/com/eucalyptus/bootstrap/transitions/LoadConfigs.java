@@ -24,7 +24,7 @@ public class LoadConfigs extends BootstrapTransition<Bootstrap.Stage> {
   }
   
   @Override
-  protected void commit( Bootstrap.Stage stage ) {
+  public void commit( Bootstrap.Stage stage ) {
     Enumeration<URL> p1;
     URI u = null;
     try {
@@ -43,6 +43,7 @@ public class LoadConfigs extends BootstrapTransition<Bootstrap.Stage> {
         } else {
           try {
             Components.create( name, u );
+            LOG.debug( "Loaded " + name + " from " + u );
           } catch ( ServiceRegistrationException e ) {
             LOG.debug( e, e );
             throw BootstrapException.throwFatal( "Error in component bootstrap: " + e.getMessage( ), e );

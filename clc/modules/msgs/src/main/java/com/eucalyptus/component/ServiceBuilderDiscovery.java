@@ -13,7 +13,7 @@ public class ServiceBuilderDiscovery extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processsClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Throwable {
     if( ServiceBuilder.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( DiscoverableServiceBuilder.class ) ) {
       DiscoverableServiceBuilder at = Ats.from( candidate ).get( DiscoverableServiceBuilder.class );
       for( Component c : at.value( ) ) {

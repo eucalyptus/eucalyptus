@@ -16,7 +16,7 @@ public class EventListenerDiscovery extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processsClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Throwable {
     Class listener = this.getEventListener( candidate );
     return true;
   }
