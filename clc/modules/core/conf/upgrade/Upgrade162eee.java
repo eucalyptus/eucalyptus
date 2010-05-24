@@ -1,9 +1,29 @@
+import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
+import edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
 import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
+import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.TorrentInfo;
+import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
+import edu.ucsb.eucalyptus.cloud.ws.Torrents;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
@@ -13,6 +33,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,10 +41,20 @@ import java.util.Set;
 
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.address.Address;
+import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
 import com.eucalyptus.util.WalrusProperties;
@@ -32,6 +63,7 @@ class UpgradeWalrus162eee implements UpgradeScript {
 	static final String FROM_VERSION = "1.6.2";
 	static final String TO_VERSION = "eee-2.0.0";
 	private static Logger LOG = Logger.getLogger( UpgradeWalrus162eee.class );
+	private static List<Class> entities = new ArrayList<Class>();
 	private static Map<String, Class> entityMap = new HashMap<String, Class>();
 
 	@Override
@@ -50,7 +82,8 @@ class UpgradeWalrus162eee implements UpgradeScript {
 			Sql conn = getConnection(contextName);
 			if (conn != null) {
 				Map<String, Method> setterMap = buildSetterMap(conn, entityKey);
-				doUpgrade(contextName, conn, entityKey, setterMap);
+				if(setterMap != null)
+					doUpgrade(contextName, conn, entityKey, setterMap);
 			}
 		}
 	}
@@ -128,6 +161,10 @@ class UpgradeWalrus162eee implements UpgradeScript {
 		Map<String, Method> setterMap = new HashMap<String, Method>();
 		try {
 			Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
+			if(firstRow == null) {
+				LOG.error("Unable to find table: " + entityKey);
+				return null;
+			}
 			if(firstRow instanceof Map) {
 				Set<String> columnNames = ((Map) firstRow).keySet();
 				Class definingClass = entityMap.get(entityKey);
@@ -166,12 +203,52 @@ class UpgradeWalrus162eee implements UpgradeScript {
 	}
 
 	private void buildEntityMap() {
-		entityMap.put("BUCKETS", BucketInfo.class);
-		entityMap.put("OBJECTS", ObjectInfo.class);
-		entityMap.put("GRANTS", GrantInfo.class);
-		entityMap.put("METADATA", MetaDataInfo.class);
-		entityMap.put("AOEVOLUMEINFO", AOEVolumeInfo.class);
-		entityMap.put("NSRECORDS", NSRecordInfo.class);
+		for (Class entity : entities) {
+			if (entity.isAnnotationPresent(Table.class)) {
+				Table annot = (Table)entity.getAnnotation(Table.class);
+				entityMap.put(annot.name(), entity);
+			}
+		}
+		//special cases
+		entityMap.put("SNAPSHOT", Snapshot.class);
+		entityMap.put("VOLUME", Volume.class);
 	}
 
+	static {
+		entities.add(BucketInfo.class);
+		entities.add(ObjectInfo.class);
+		entities.add(GrantInfo.class);
+		entities.add(MetaDataInfo.class);
+		entities.add(ImageCacheInfo.class);
+		entities.add(TorrentInfo.class);
+		entities.add(WalrusSnapshotInfo.class);
+		entities.add(WalrusInfo.class);
+		entities.add(WalrusStatsInfo.class);
+		
+		entities.add(VolumeInfo.class);
+		entities.add(SnapshotInfo.class);
+		entities.add(AOEMetaInfo.class);
+		entities.add(AOEVolumeInfo.class);
+		entities.add(ISCSIMetaInfo.class);
+		entities.add(ISCSIVolumeInfo.class);
+		entities.add(LVMVolumeInfo.class);
+		entities.add(StorageInfo.class);
+		entities.add(StorageStatsInfo.class);
+
+		entities.add(ARecordInfo.class);
+		entities.add(CNAMERecordInfo.class);
+		entities.add(SOARecordInfo.class);
+		entities.add(NSRecordInfo.class);
+		entities.add(ZoneInfo.class);
+		
+		entities.add(com.eucalyptus.config.System.class);
+		entities.add(ClusterConfiguration.class);
+		entities.add(StorageControllerConfiguration.class);
+		entities.add(WalrusConfiguration.class);
+		entities.add(SystemConfiguration.class);
+
+		entities.add(ImageInfo.class);
+		entities.add(Address.class);
+		entities.add(ClusterInfo.class);
+	}
 }
