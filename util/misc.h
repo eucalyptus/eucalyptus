@@ -198,5 +198,7 @@ int maxint(int a, int b);
 int minint(int a, int b);
 int copy_file (const char * src, const char * dst);
 long long file_size (const char * file_path);
+char * strduplc (const char * s);
+char * xpath_content (const char * xml, const char * xpath);
 
 #endif
