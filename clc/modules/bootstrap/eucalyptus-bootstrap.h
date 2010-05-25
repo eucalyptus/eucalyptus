@@ -109,8 +109,8 @@ typedef struct {
 } while(0)
 static char *jvm_default_opts[] = {
 	    "-Xbootclasspath/p:%1$s/usr/share/eucalyptus/openjdk-crypto.jar",
-	    "-Xmx512m",
-	    "-XX:MaxPermSize=128m",
+	    "-Xmx1024m",
+	    "-XX:MaxPermSize=256m",
 	    "-XX:+UseConcMarkSweepGC",
 	    "-Djava.net.preferIPv4Stack=true",
 	    "-Djava.security.policy=%1$s/etc/eucalyptus/cloud.d/security.policy",
