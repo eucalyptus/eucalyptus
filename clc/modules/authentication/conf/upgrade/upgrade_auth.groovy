@@ -1,7 +1,9 @@
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.UserEntity;
+import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
@@ -48,13 +50,25 @@ class UpgradeAuth implements UpgradeScript {
     println "----- eucalyptus_auth.AUTH_USERS -----";
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_USERS').each{
       println "ROW: ${it}";
-      Users.addUser( it.AUTH_USER_NAME, it.AUTH_USER_IS_ADMIN, it.AUTH_USER_IS_ENABLED );
-      Users.updateUser( it.AUTH_USER_NAME, new Tx<User>( ) {
-        public void fire( User user ) throws Throwable {
-          user.setQueryId( it.AUTH_USER_QUERY_ID );
-          user.setSecretKey( it.AUTH_USER_SECRETKEY );
-        }
-      });
+      try {
+        Users.addUser( it.AUTH_USER_NAME, it.AUTH_USER_IS_ADMIN, it.AUTH_USER_IS_ENABLED );
+      } catch ( UserExistsException e ) {
+        println "Failed to add user. User ${it.AUTH_USER_NAME} exists";
+        e.printStackTrace( );
+        return;
+      }
+      try {
+        Users.updateUser( it.AUTH_USER_NAME, new Tx<User>( ) {
+          public void fire( User user ) throws Throwable {
+            user.setQueryId( it.AUTH_USER_QUERY_ID );
+            user.setSecretKey( it.AUTH_USER_SECRETKEY );
+          }
+        });
+      } catch ( NoSuchUserException e ) {
+        println "Can not find user ${it.AUTH_USER_NAME}";
+        e.printStackTrace( );
+        return;
+      }
       userIdToUserName[it.ID] = it.AUTH_USER_NAME;
     }
     println "----- eucalyptus_auth.AUTH_USER_HAS_X509 -----"
@@ -107,27 +121,32 @@ class UpgradeAuth implements UpgradeScript {
     println "----- eucalyptus_general.USERS -----"
     StandalonePersistence.getConnection("eucalyptus_general").rows('SELECT * FROM USERS').each{
       println "ROW: ${it}";
-      Users.updateUser( it.USER_NAME , new Tx<User>( ) {
-        public void fire( User user ) throws Throwable {
-          user.setPassword( it.USER_B_CRYPTED_PASSWORD );
-          user.setEnabled( it.USER_IS_ENABLED );
-          ( ( UserEntity ) user ).setToken( it.USER_CERTIFICATE_CODE );
-        }
-      });
-      UserInfoStore.updateUserInfo( it.USER_NAME, new Tx<UserInfo>( ) {
-        public void fire( UserInfo userInfo ) throws Throwable {
-          userInfo.setConfirmationCode( it. USER_CONFIRMATION_CODE );
-          userInfo.setAffiliation( ifEmptyReplaceByBogus(it.USER_AFFILIATION ) );
-          userInfo.setEmail( ifEmptyReplaceByBogus(it.USER_EMAIL ) );
-          userInfo.setApproved( it.USER_IS_APPROVED );
-          userInfo.setConfirmed( it.USER_IS_CONFIRMED );
-          userInfo.setPasswordExpires( it.PASSWORD_EXPIRES );
-          userInfo.setProjectDescription( ifEmptyReplaceByBogus(it.USER_PROJECT_DESCRIPTION ) );
-          userInfo.setProjectPIName( ifEmptyReplaceByBogus(it.USER_PROJECT_PI_NAME ) );
-          userInfo.setRealName( ifEmptyReplaceByBogus(it.USER_REAL_NAME ) );
-          userInfo.setTelephoneNumber( ifEmptyReplaceByBogus(it.USER_TELEPHONE_NUMBER ) );
-        }
-      });
+      try {
+        Users.updateUser( it.USER_NAME , new Tx<User>( ) {
+          public void fire( User user ) throws Throwable {
+            user.setPassword( it.USER_B_CRYPTED_PASSWORD );
+            user.setEnabled( it.USER_IS_ENABLED );
+            ( ( UserEntity ) user ).setToken( it.USER_CERTIFICATE_CODE );
+          }
+        });
+        UserInfoStore.updateUserInfo( it.USER_NAME, new Tx<UserInfo>( ) {
+          public void fire( UserInfo userInfo ) throws Throwable {
+            userInfo.setConfirmationCode( it. USER_CONFIRMATION_CODE );
+            userInfo.setAffiliation( ifEmptyReplaceByBogus(it.USER_AFFILIATION ) );
+            userInfo.setEmail( ifEmptyReplaceByBogus(it.USER_EMAIL ) );
+            userInfo.setApproved( it.USER_IS_APPROVED );
+            userInfo.setConfirmed( it.USER_IS_CONFIRMED );
+            userInfo.setPasswordExpires( it.PASSWORD_EXPIRES );
+            userInfo.setProjectDescription( ifEmptyReplaceByBogus(it.USER_PROJECT_DESCRIPTION ) );
+            userInfo.setProjectPIName( ifEmptyReplaceByBogus(it.USER_PROJECT_PI_NAME ) );
+            userInfo.setRealName( ifEmptyReplaceByBogus(it.USER_REAL_NAME ) );
+            userInfo.setTelephoneNumber( ifEmptyReplaceByBogus(it.USER_TELEPHONE_NUMBER ) );
+          }
+        });
+      } catch ( NoSuchUserException e ) {
+        println "Failed to find user ${it.USER_NAME}";
+        e.printStackTrace( );
+      }
     }
   }
   
