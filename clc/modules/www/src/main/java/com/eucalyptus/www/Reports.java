@@ -43,25 +43,25 @@ public class Reports extends HttpServlet {
   enum Type {
     pdf {
       @Override
-      public JRExporter setup( HttpServletResponse res ) throws IOException {
+      public JRExporter setup( HttpServletResponse res, String name ) throws IOException {
         res.setContentType( "application/pdf" );
-        res.setHeader( "Content-Disposition", "file; filename=FIXME.pdf" );
+        res.setHeader( "Content-Disposition", "file; filename="+name+".pdf" );
         JRExporter exporter = new JRPdfExporter( );
         exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
         return exporter;        
       }
     }, csv {
       @Override
-      public JRExporter setup( HttpServletResponse res ) throws IOException {
+      public JRExporter setup( HttpServletResponse res, String name ) throws IOException {
         res.setContentType( "text/plain" );
-        res.setHeader( "Content-Disposition", "file; filename=FIXME.csv" );
+        res.setHeader( "Content-Disposition", "file; filename="+name+".csv" );
         JRExporter exporter = new JRCsvExporter( );
         exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
         return exporter;
       }
     }, html {
       @Override
-      public JRExporter setup( HttpServletResponse res ) throws IOException {
+      public JRExporter setup( HttpServletResponse res, String name ) throws IOException {
         PrintWriter out = res.getWriter( );
         res.setContentType( "text/html" );
         JRExporter exporter = new JRHtmlExporter( );
@@ -75,15 +75,15 @@ public class Reports extends HttpServlet {
       }
     }, xls {
       @Override
-      public JRExporter setup( HttpServletResponse res ) throws IOException {
+      public JRExporter setup( HttpServletResponse res, String name ) throws IOException {
         res.setContentType( "application/vnd.ms-excel" );
-        res.setHeader( "Content-Disposition", "file; filename=FIXME.xls" );
+        res.setHeader( "Content-Disposition", "file; filename="+name+".xls" );
         JRExporter exporter = new JRXlsExporter( );
         exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
         return exporter;
       }
     };
-    public abstract JRExporter setup( HttpServletResponse res ) throws IOException;
+    public abstract JRExporter setup( HttpServletResponse res, String name ) throws IOException;
     public void close( HttpServletResponse res ) throws IOException {
       res.getOutputStream( ).close( );
     }
@@ -95,7 +95,7 @@ public class Reports extends HttpServlet {
     String type = Param.type.get( req );
     String url = String.format( "%s_%s?createDatabaseIfNotExist=true", Component.db.getUri( ).toString( ), "records" );
     Type reportType = Type.valueOf( type );
-    final JRExporter exporter = reportType.setup( res );    
+    final JRExporter exporter = reportType.setup( res, name );    
     try {
       JasperDesign jasperDesign = JRXmlLoader.load( BaseDirectory.CONF.toString( ) + File.separator + name +".jrxml" );
       JasperReport jasperReport = JasperCompileManager.compileReport( jasperDesign );
