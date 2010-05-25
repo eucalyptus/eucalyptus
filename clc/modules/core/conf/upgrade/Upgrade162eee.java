@@ -1,17 +1,14 @@
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
-import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
-import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo;
-import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
@@ -23,7 +20,6 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
-import edu.ucsb.eucalyptus.cloud.ws.Torrents;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
@@ -39,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.Column;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -47,16 +44,15 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Volume;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
-import com.eucalyptus.util.WalrusProperties;
 
 class UpgradeWalrus162eee implements UpgradeScript {
 	static final String FROM_VERSION = "1.6.2";
@@ -85,22 +81,6 @@ class UpgradeWalrus162eee implements UpgradeScript {
 					doUpgrade(contextName, conn, entityKey, setterMap);
 			}
 		}
-		//special cases
-		/*LOG.info("Processing joins...");
-		try {
-			Sql walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
-			EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
-			List<BucketInfo> buckets = db.query(new BucketInfo());
-			for (BucketInfo bucket : buckets) {
-				List<GroovyRowResult> rowResults = walrus_conn.rows("SELECT g.* FROM bucket_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.bucket_name=" + bucket.getBucketName());
-				for(GroovyRowResult rowResult : rowResults) {
-					LOG.info(rowResult);
-				}
-			}
-			db.commit();
-		} catch (SQLException e) {
-			LOG.error(e);
-		}*/
 	}
 
 	private Sql getConnection(String contextName) {
@@ -184,37 +164,53 @@ class UpgradeWalrus162eee implements UpgradeScript {
 				Set<String> columnNames = ((Map) firstRow).keySet();
 				Class definingClass = entityMap.get(entityKey);
 				Field[] fields = definingClass.getDeclaredFields();
-				for(String column : columnNames) {
-					for(Field f : fields) {
-						if(f.isAnnotationPresent(Column.class)) {
-							Column annotClass = (Column)f.getAnnotation(Column.class);						
-							if(((String)column).toLowerCase().equals(annotClass.name().toLowerCase())) {
-								String baseMethodName = f.getName( ).substring( 0, 1 ).toUpperCase( ) + f.getName( ).substring( 1 );
-								try {
-									Class[] classes = new Class[1];
-									classes[0] = f.getType();
-									Method setMethod = definingClass.getDeclaredMethod( "set" + baseMethodName, classes );
-									setterMap.put(column, setMethod);
-								} catch (SecurityException e) {
-									LOG.error(e);
-								} catch (NoSuchMethodException e) {
-									LOG.error(e);
-								}
-								break;
-							}
-						}
-					}
-					if(setterMap.containsKey(column)) {
-						LOG.info(column + " is set by: " + setterMap.get(column).getName());
-					} else {
-						LOG.info("No corresponding field found for: " + column);
-					}
+				//special case. Do this better.
+				addToSetterMap(setterMap, columnNames, definingClass, fields);				
+				Class superClass = entityMap.get(entityKey).getSuperclass();				
+				while(superClass.isAnnotationPresent(MappedSuperclass.class)) {
+					superClass = entityMap.get(entityKey).getSuperclass();
+					Field[] superFields = superClass.getDeclaredFields();
+					addToSetterMap(setterMap, columnNames, superClass, superFields);
+					superClass = superClass.getSuperclass();
+					//nothing to see here (otherwise we loop forever).
+					if(superClass.equals(AbstractPersistent.class))
+						break;
 				}
 			}
 		} catch (SQLException e) {
 			LOG.error(e);
 		}
 		return setterMap;
+	}
+
+	private void addToSetterMap(Map<String, Method> setterMap,
+			Set<String> columnNames, Class definingClass, Field[] fields) {
+		for(String column : columnNames) {
+			for(Field f : fields) {
+				if(f.isAnnotationPresent(Column.class)) {
+					Column annotClass = (Column)f.getAnnotation(Column.class);						
+					if(((String)column).toLowerCase().equals(annotClass.name().toLowerCase())) {
+						String baseMethodName = f.getName( ).substring( 0, 1 ).toUpperCase( ) + f.getName( ).substring( 1 );
+						try {
+							Class[] classes = new Class[1];
+							classes[0] = f.getType();
+							Method setMethod = definingClass.getDeclaredMethod( "set" + baseMethodName, classes );
+							setterMap.put(column, setMethod);
+						} catch (SecurityException e) {
+							LOG.error(e);
+						} catch (NoSuchMethodException e) {
+							LOG.error(e);
+						}
+						break;
+					}
+				}
+			}
+			if(setterMap.containsKey(column)) {
+				LOG.info(column + " is set by: " + setterMap.get(column).getName());
+			} else {
+				LOG.info("No corresponding field found for: " + column + " in " + definingClass.getName());
+			}
+		}
 	}
 
 	private void buildEntityMap() {
