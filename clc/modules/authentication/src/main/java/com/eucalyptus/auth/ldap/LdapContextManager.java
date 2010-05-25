@@ -1,6 +1,7 @@
 package com.eucalyptus.auth.ldap;
 
 import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.ldap.LdapConfiguration;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import java.util.List;

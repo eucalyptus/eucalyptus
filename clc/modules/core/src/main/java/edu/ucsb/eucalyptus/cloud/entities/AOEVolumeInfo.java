@@ -74,8 +74,11 @@ import javax.persistence.*;
 @Entity
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AOEVolumeInfo extends LVMVolumeInfo {
-    private Integer vbladePid;
+    @Column(name="vbladepid")
+	private Integer vbladePid;
+    @Column(name="majornumber")
     private Integer majorNumber;
+    @Column(name="minornumber")
     private Integer minorNumber;
 
     public AOEVolumeInfo() {}

@@ -63,28 +63,34 @@
  */
 package com.eucalyptus.blockstorage;
 
-import com.eucalyptus.util.StorageProperties;
-import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
-import edu.ucsb.eucalyptus.cloud.state.State;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Lob;
+import javax.persistence.PersistenceContext;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.Lob;
-import javax.persistence.PersistenceContext;
+import com.eucalyptus.util.StorageProperties;
+
+import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
+import edu.ucsb.eucalyptus.cloud.state.State;
 
 @Entity
 @PersistenceContext(name="eucalyptus_images")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Volume extends AbstractIsomorph {
 
+  @Column(name="size")
   private Integer size;
+  @Column(name="cluster")
   private String cluster;
+  @Column(name="parentsnapshot")
   private String parentSnapshot;
-  @Lob
+  @Column(name="remotedevice")
+  @Lob  
   private String remoteDevice;
+  @Column(name="localdevice")
   private String localDevice;
 
   public Volume() {

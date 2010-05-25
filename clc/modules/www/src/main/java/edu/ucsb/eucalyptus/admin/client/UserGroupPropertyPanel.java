@@ -238,7 +238,7 @@ public class UserGroupPropertyPanel extends VerticalPanel {
 
 	public Grid showUser(UserInfoWeb user) {
 		this.cleanup();
-		setHeaderText("User: " + user.getRealName());		
+		setHeaderText("User: " + user.getUserName());		
 		HorizontalPanel action = addActionBar();
 		action.add(new EucaButton("Edit", "Edit user " + user.getUserName(), new ClickHandler() {
 			public void onClick(ClickEvent event) {

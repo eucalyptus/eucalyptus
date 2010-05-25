@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.ldap;
+package com.eucalyptus.ldap;
 
 /**
  * LDAP configurations for Eucalyptus.

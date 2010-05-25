@@ -427,6 +427,7 @@ public class EquallogicProvider implements SANProvider {
 						enabled = true;
 					}
 				}
+				returnValue = execCommand("stty hardwrap off\rcli-settings confirmation off\r");
 			} catch (EucalyptusCloudException e) {
 				LOG.error(e);
 			}
@@ -459,6 +460,15 @@ public class EquallogicProvider implements SANProvider {
 		String returnValue = execCommand("stty hardwrap off\rvolume show " + volumeId + " \r");
 		if((returnValue.split(VOLUME_SHOW_PATTERN.toString()).length > 1) && returnValue.contains(volumeId)) {
 			return true;
+		}
+		EntityWrapper<EquallogicVolumeInfo> db = StorageProperties.getEntityWrapper();
+		EquallogicVolumeInfo searchVolumeInfo = new EquallogicVolumeInfo(volumeId);
+		try {
+			EquallogicVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
+			db.delete(volumeInfo);
+		} catch (EucalyptusCloudException ex) {			
+		} finally {
+			db.commit();
 		}
 		return false;
 	}

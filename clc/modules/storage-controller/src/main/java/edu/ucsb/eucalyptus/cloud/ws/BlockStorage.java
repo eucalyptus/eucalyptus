@@ -553,6 +553,7 @@ public class BlockStorage {
 	public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
 		ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
 		String provider = request.getOriginalProvider();
+		provider = "com.eucalyptus.storage." + provider;
 		if(!blockManager.getClass().getName().equals(provider)) {
 			//different backend provider. Try upgrade
 			try {
@@ -844,7 +845,6 @@ public class BlockStorage {
 				blockManager.deleteVolume(volumeId);
 			} catch (EucalyptusCloudException e1) {
 				LOG.error(e1);
-				return;
 			}
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 			VolumeInfo foundVolume;

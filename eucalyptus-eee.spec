@@ -18,6 +18,7 @@
 %global euca_iscsi_client open-iscsi
 %global euca_iscsi_server tgt
 %global euca_build_req vlan
+%global euca_fuse libfuse2
 %endif
 %if %is_centos
 %global euca_libvirt libvirt >= 0.6
@@ -26,6 +27,7 @@
 %global euca_java    java-sdk >= 1.6.0
 %global euca_iscsi_client iscsi-initiator-utils
 %global euca_iscsi_server scsi-target-utils
+%global euca_fuse fuse-libs
 %endif
 %if %is_fedora
 %global euca_libvirt libvirt
@@ -38,9 +40,9 @@
 BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 %endif
 Summary:       Elastic Utility Computing Architecture
-Name:          eucalyptus-eee
-Version:       1.0
-Release:       0.1319
+Name:          eucalyptus
+Version:       2.0.0eee
+Release:       0.1436
 License:       Eucalyptus EEE Software License
 Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
@@ -61,7 +63,7 @@ them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     %{name} = %{version}, %{euca_java}, lvm2
+Requires:     %{name} = %{version}, %{euca_java}, lvm2, %{euca_fuse}
 Group:        Applications/System
 
 %description common-java
@@ -303,7 +305,7 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 if [ "$1" = "2" ]; 
 then
 	# let's see where we installed
-	EUCADIRS="/ /opt/eucalyptus/"
+	EUCADIRS="/"
 	for i in $EUCADIRS
 	do
 	    if [ -e $i/etc/eucalyptus/eucalyptus-version ]; then
@@ -368,6 +370,9 @@ eucalyptus ALL=NOPASSWD: /usr/sbin/tgtadm
 EOF
 chmod +x /etc/udev/scripts/iscsidev.sh
 
+# set java home to location of SunJDK for EEE
+sed -i "s/.*CLOUD_OPTS=.*/CLOUD_OPTS=\"--java-home=\/opt\/packages\/jdk\"/" /etc/eucalyptus/eucalyptus.conf
+
 # we need a eucalyptus user
 if ! getent passwd eucalyptus > /dev/null ; then
 %if %is_suse
@@ -393,7 +398,8 @@ then
 	if [ -f /tmp/eucaback.dir ]; then
 	    BACKDIR=`cat /tmp/eucaback.dir`
 	    if [ -d "$BACKDIR" ]; then
-		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+#		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+		echo "**NOTICE** If you are upgrading to EEE, you will need to perform the upgrade process manually.  Your previous Eucalyptus data is backed up in $BACKDIR."
 		/usr/sbin/euca_conf -setup
 	    fi
 	fi
@@ -409,7 +415,8 @@ then
 	BACKDIR=`cat /tmp/eucaback.dir`
 	if [ -d "$BACKDIR" ]; then
 	    /usr/sbin/euca_conf -setup
-	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+#	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+	    echo "**NOTICE** If you are upgrading to EEE, you will need to perform the upgrade process manually.  Your previous Eucalyptus data is backed up in $BACKDIR."
 	    /usr/sbin/euca_conf -setup
 	fi
     fi

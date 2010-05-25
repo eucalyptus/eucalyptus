@@ -210,11 +210,16 @@ int download_requirements (imager_request * req)
 			logprintfl (EUCAERROR, "error: failed to download or process Walrus manifest '%s'\n", state->in);
 			return ERROR;
 		}
-		size = str2longlong (walrus_digest, "<size>", "</size>");
-		digest = str2str (walrus_digest, "<digest algorithm=\"SHA1\">", "</digest>");
+		char * size_s = xpath_content (walrus_digest, "manifest/image/size");
+        size = atoll (size_s);
+        free (size_s);
+        if (size==0) {
+			logprintfl (EUCAWARN, "warning: size not found in Walrus manifest '%s'\n", state->in);
+        }
+		digest = xpath_content (walrus_digest, "manifest/image/digest");
 		if (digest==NULL) {
 			logprintfl (EUCAWARN, "warning: no digest found in Walrus manifest '%s'\n", state->in);
-			digest = "N/A";
+			digest = strdup ("N/A"); // because digest will get freed
 		}
 		free (walrus_digest);
 		break;
@@ -302,6 +307,7 @@ int download_cleanup (imager_request * req)
 	download_params * state = (download_params *) req->internal;
 
 	logprintfl (EUCAINFO, "cleaning up for '%s'...\n", req->cmd->name);
+    rm_workfile (state->out);
 	free (state);
 
 	return 0;

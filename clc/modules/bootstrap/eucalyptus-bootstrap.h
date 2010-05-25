@@ -109,19 +109,20 @@ typedef struct {
 } while(0)
 static char *jvm_default_opts[] = {
 	    "-Xbootclasspath/p:%1$s/usr/share/eucalyptus/openjdk-crypto.jar",
-	    "-Xmx512m",
-	    "-XX:MaxPermSize=128m",
+	    "-Xmx1024m",
+	    "-XX:MaxPermSize=256m",
 	    "-XX:+UseConcMarkSweepGC",
 	    "-Djava.net.preferIPv4Stack=true",
 	    "-Djava.security.policy=%1$s/etc/eucalyptus/cloud.d/security.policy",
 	    "-Djava.library.path=%1$s/usr/lib/eucalyptus",
+	    "-Djava.awt.headless=true",
 	    "-Dsun.java.command=Eucalyptus",
 	    "-Deuca.home=%1$s/",
 	    "-Deuca.var.dir=%1$s/var/lib/eucalyptus",
 	    "-Deuca.lib.dir=%1$s/usr/share/eucalyptus",
 	    "-Deuca.conf.dir=%1$s/etc/eucalyptus/cloud.d",
 	    "-Deuca.log.dir=%1$s/var/log/eucalyptus",
-	    "-Deuca.version=eee",
+	    "-Deuca.version=eee-2.0.0",
 	    NULL,
 };
 static char *libjvm_paths[ ] = {

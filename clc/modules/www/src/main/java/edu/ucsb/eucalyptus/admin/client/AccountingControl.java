@@ -10,7 +10,11 @@ import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.Widget;
 
+
 public class AccountingControl implements ContentControl {
+  public static String  PARAMETER_KEYNAME  = "keyName";
+  public static String  PARAMETER_CODE     = "code";
+
   private String sessionId;
   private ReportInfo currentReport = null;
   //static list of report types

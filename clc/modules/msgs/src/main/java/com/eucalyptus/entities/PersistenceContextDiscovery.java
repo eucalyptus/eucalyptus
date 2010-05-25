@@ -1,5 +1,6 @@
 package com.eucalyptus.entities;
 
+import java.io.File;
 import javax.persistence.Embeddable;
 import javax.persistence.Entity;
 import javax.persistence.MappedSuperclass;
@@ -8,6 +9,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.system.BaseDirectory;
+import com.google.common.collect.Multimap;
 
 public class PersistenceContextDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( PersistenceContextDiscovery.class );

@@ -201,13 +201,16 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 		i++; // next row
 		g.setWidget( i, 0, new Label( "Host:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox hb = new TextBox();
-		hb.addChangeListener (new ChangeCallback (this, row));
-		hb.setVisibleLength( 20 );
-		hb.setText( clusterInfo.getHost() );
-		hb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget ( i, 1, hb );
-
+		if (clusterInfo.isCommitted()) {
+			g.setWidget(i, 1, new Label(clusterInfo.getHost()));	
+		} else {
+			final TextBox hb = new TextBox();
+			hb.addChangeListener (new ChangeCallback (this, row));
+			hb.setVisibleLength( 20 );
+			hb.setText( clusterInfo.getHost() );
+			hb.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+			g.setWidget ( i, 1, hb );
+		}
 		i++; // next row
 		/*		g.setWidget( i, 0, new Label( "Port:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
@@ -295,13 +298,16 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 		i++; // next row
 		g.setWidget( i, 0, new Label( "Host:" ) );
 		g.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-		final TextBox hs = new TextBox();
-		hs.addChangeListener (new ChangeCallback (this, row));
-		hs.setVisibleLength( 20 );
-		hs.setText( storageInfo.getHost() );
-		hs.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
-		g.setWidget ( i, 1, hs );
-
+		if (storageInfo.isCommitted()) {
+			g.setWidget(i, 1, new Label(storageInfo.getHost()));	
+		} else {
+			final TextBox hs = new TextBox();
+			hs.addChangeListener (new ChangeCallback (this, row));
+			hs.setVisibleLength( 20 );
+			hs.setText( storageInfo.getHost() );
+			hs.addFocusListener (new FocusHandler (this.hint, this.warningMessage));
+			g.setWidget ( i, 1, hs );
+		}
 		for(int paramidx = 0; paramidx < numStorageParams; ++paramidx) {
 			i++; // next row
 			if ("KEYVALUE".equals(storageParams.get(4 * paramidx))) {
@@ -384,7 +390,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 		}
 
 		// CC section
-		cluster.setHost (((TextBox)g.getWidget(2, 1)).getText());
+		if (g.getWidget(2,1) instanceof TextBox) {
+			cluster.setHost (((TextBox)g.getWidget(2, 1)).getText());
+		}
 		//cluster.setPort (Integer.parseInt(((TextBox)g.getWidget(3, 1)).getText()));
 		p = (HorizontalPanel)g.getWidget(4, 1);
 		systemConfig.setSystemReservedPublicAddresses(Integer.parseInt(((TextBox)p.getWidget(0)).getText()));
@@ -395,7 +403,10 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 		cluster.setMaxVlans(Integer.parseInt(((TextBox)p.getWidget(2)).getText()));
 		//7 is SC label
 		// SC section
-		int widgetStartIndex = 8;
+		if(g.getWidget(8, 1) instanceof TextBox) {
+			storage.setHost (((TextBox)g.getWidget(8, 1)).getText());
+		}
+		int widgetStartIndex = 9;
 		ArrayList<String> storageParams = storage.getStorageParams();
 		for(int i = 0; i < numStorageParams; ++i) {
 			if(storageParams.get(4*i).startsWith("KEYVALUE"))
@@ -407,6 +418,9 @@ public class ClusterInfoTable extends VerticalPanel implements ClickHandler {
 	{
 		for ( ClusterInfoWeb cluster : this.clusterList ) {
 			cluster.setCommitted ();
+		}
+		for ( StorageInfoWeb storage : this.storageList ) {
+			storage.setCommitted ();
 		}
 	}
 

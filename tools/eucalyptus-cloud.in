@@ -213,6 +213,9 @@ do_start() {
 		local CLOUD_OPTS="--log-level=DEBUG"
 	fi
 
+	# increase max permgen size
+	CLOUD_OPTS="$CLOUD_OPTS -XX:MaxPermSize=256m"
+
 	# basic checks
 	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
 		echo "Some eucalyptus components are missing"
@@ -280,6 +283,7 @@ do_start() {
 	fi
 
     # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
+	ulimit -n 4096
 	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -L console-log >/dev/null 2>&1
 
 	return $?

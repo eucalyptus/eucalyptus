@@ -3,7 +3,6 @@ package com.eucalyptus.auth;
 import com.eucalyptus.auth.ldap.EntryExistsException;
 import com.eucalyptus.auth.EucaLdapHelper;
 import com.eucalyptus.auth.ldap.LdapAttributes;
-import com.eucalyptus.auth.ldap.LdapConfiguration;
 import com.eucalyptus.auth.ldap.LdapContextManager;
 import com.eucalyptus.auth.ldap.LdapException;
 import com.eucalyptus.auth.principal.User;
@@ -15,6 +14,7 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.ldap.LdapConfiguration;
 import org.apache.log4j.Logger;
 
 @Provides( Component.bootstrap )
