@@ -93,7 +93,6 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
       LOG.info( "Initializing system credentials for " + c.name( ) );
       SystemCredentialProvider.init( c );
     }
-    System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
     return true;
   }
 

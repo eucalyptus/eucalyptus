@@ -559,8 +559,6 @@ int java_init(euca_opts *args, java_home_t *data) {
     }
     JVM_ARG(opt[++x],"-Deuca.log.level=%1$s",GETARG(args,log_level));
     JVM_ARG(opt[++x],"-Deuca.log.appender=%1$s",GETARG(args,log_appender));
-    JVM_ARG(opt[++x],"-Deuca.db.port=%1$d",9001);//TODO: add cli parameter
-    JVM_ARG(opt[++x],"-Deuca.db.host=%1$s",GETARG(args,cloud_host));
     JVM_ARG(opt[++x],"-Deuca.walrus.host=%1$s",GETARG(args,walrus_host));
     if(args->disable_dns_flag) {
     	JVM_ARG(opt[++x],"-Deuca.disable.dns=true");
