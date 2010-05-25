@@ -3,6 +3,7 @@ import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
+import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
@@ -20,6 +21,8 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
+import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
+import edu.ucsb.eucalyptus.cloud.state.State;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
@@ -132,6 +135,9 @@ class UpgradeWalrus162eee implements UpgradeScript {
 						Object o = rowResult.get(column);
 						if(o != null) {
 							try {
+								if(dest instanceof AbstractIsomorph && (setter.getName().equals("setState"))) {
+									o = State.valueOf((String)o);
+								}
 								setter.invoke(dest, o);
 							} catch (IllegalArgumentException e) {
 								LOG.error(dest.getClass().getName()  + " " + column + " " + e);
@@ -226,6 +232,7 @@ class UpgradeWalrus162eee implements UpgradeScript {
 		//special cases
 		entityMap.put("SNAPSHOT", Snapshot.class);
 		entityMap.put("VOLUME", Volume.class);
+		entityMap.put("STORAGE_INFO", DirectStorageInfo.class);
 	}
 
 	static {
