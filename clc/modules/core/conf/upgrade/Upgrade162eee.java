@@ -24,7 +24,6 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
 import edu.ucsb.eucalyptus.cloud.ws.Torrents;
-import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
@@ -86,6 +85,22 @@ class UpgradeWalrus162eee implements UpgradeScript {
 					doUpgrade(contextName, conn, entityKey, setterMap);
 			}
 		}
+		//special cases
+		/*LOG.info("Processing joins...");
+		try {
+			Sql walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
+			EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+			List<BucketInfo> buckets = db.query(new BucketInfo());
+			for (BucketInfo bucket : buckets) {
+				List<GroovyRowResult> rowResults = walrus_conn.rows("SELECT g.* FROM bucket_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.bucket_name=" + bucket.getBucketName());
+				for(GroovyRowResult rowResult : rowResults) {
+					LOG.info(rowResult);
+				}
+			}
+			db.commit();
+		} catch (SQLException e) {
+			LOG.error(e);
+		}*/
 	}
 
 	private Sql getConnection(String contextName) {
@@ -162,7 +177,7 @@ class UpgradeWalrus162eee implements UpgradeScript {
 		try {
 			Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
 			if(firstRow == null) {
-				LOG.error("Unable to find table: " + entityKey);
+				LOG.error("Unable to find anything in table: " + entityKey);
 				return null;
 			}
 			if(firstRow instanceof Map) {
@@ -215,16 +230,18 @@ class UpgradeWalrus162eee implements UpgradeScript {
 	}
 
 	static {
-		entities.add(BucketInfo.class);
-		entities.add(ObjectInfo.class);
-		entities.add(GrantInfo.class);
+		//this is added by hand because there are special cases/entities that other upgrade scripts will process.
+		//In the future, this should be discovered.
+		//entities.add(BucketInfo.class);
+		//entities.add(ObjectInfo.class);
+		//entities.add(GrantInfo.class);
 		entities.add(MetaDataInfo.class);
 		entities.add(ImageCacheInfo.class);
 		entities.add(TorrentInfo.class);
 		entities.add(WalrusSnapshotInfo.class);
 		entities.add(WalrusInfo.class);
 		entities.add(WalrusStatsInfo.class);
-		
+
 		entities.add(VolumeInfo.class);
 		entities.add(SnapshotInfo.class);
 		entities.add(AOEMetaInfo.class);
@@ -240,7 +257,7 @@ class UpgradeWalrus162eee implements UpgradeScript {
 		entities.add(SOARecordInfo.class);
 		entities.add(NSRecordInfo.class);
 		entities.add(ZoneInfo.class);
-		
+
 		entities.add(com.eucalyptus.config.System.class);
 		entities.add(ClusterConfiguration.class);
 		entities.add(StorageControllerConfiguration.class);
@@ -250,5 +267,7 @@ class UpgradeWalrus162eee implements UpgradeScript {
 		entities.add(ImageInfo.class);
 		entities.add(Address.class);
 		entities.add(ClusterInfo.class);
+
+		entities.add(Counters.class);
 	}
 }
