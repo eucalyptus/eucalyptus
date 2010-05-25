@@ -63,22 +63,25 @@
  */
 package com.eucalyptus.blockstorage;
 
-import com.eucalyptus.util.StorageProperties;
-import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
-import edu.ucsb.eucalyptus.cloud.state.State;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
+import com.eucalyptus.util.StorageProperties;
+
+import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
+import edu.ucsb.eucalyptus.cloud.state.State;
 
 @Entity
 @PersistenceContext(name="eucalyptus_images")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Snapshot extends AbstractIsomorph {
+  @Column(name="parentvolume")
   private String parentVolume;
+  @Column(name="cluster")
   private String cluster;
 
   public Snapshot() {

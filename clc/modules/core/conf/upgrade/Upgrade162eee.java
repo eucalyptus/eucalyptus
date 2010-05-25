@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.Column;
+import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -133,11 +134,11 @@ class UpgradeWalrus162eee implements UpgradeScript {
 							try {
 								setter.invoke(dest, o);
 							} catch (IllegalArgumentException e) {
-								LOG.error(e);
+								LOG.error(dest.getClass().getName()  + " " + column + " " + e);
 							} catch (IllegalAccessException e) {
-								LOG.error(e);
+								LOG.error(dest.getClass().getName()  + " " + column + " " + e);
 							} catch (InvocationTargetException e) {
-								LOG.error(e);
+								LOG.error(dest.getClass().getName()  + " " + column + " " + e);
 							}
 						}
 					}
@@ -168,13 +169,17 @@ class UpgradeWalrus162eee implements UpgradeScript {
 				addToSetterMap(setterMap, columnNames, definingClass, fields);				
 				Class superClass = entityMap.get(entityKey).getSuperclass();				
 				while(superClass.isAnnotationPresent(MappedSuperclass.class)) {
-					superClass = entityMap.get(entityKey).getSuperclass();
 					Field[] superFields = superClass.getDeclaredFields();
 					addToSetterMap(setterMap, columnNames, superClass, superFields);
-					superClass = superClass.getSuperclass();
 					//nothing to see here (otherwise we loop forever).
 					if(superClass.equals(AbstractPersistent.class))
 						break;
+					superClass = superClass.getSuperclass();
+				}
+				for (String column : columnNames) {
+					if(!setterMap.containsKey(column)) {
+						LOG.warn("No corresponding field for column: " + column + " found");
+					}
 				}
 			}
 		} catch (SQLException e) {
@@ -187,8 +192,8 @@ class UpgradeWalrus162eee implements UpgradeScript {
 			Set<String> columnNames, Class definingClass, Field[] fields) {
 		for(String column : columnNames) {
 			for(Field f : fields) {
-				if(f.isAnnotationPresent(Column.class)) {
-					Column annotClass = (Column)f.getAnnotation(Column.class);						
+				if(f.isAnnotationPresent(Column.class) && !f.isAnnotationPresent(Id.class)) {
+					Column annotClass = (Column)f.getAnnotation(Column.class);
 					if(((String)column).toLowerCase().equals(annotClass.name().toLowerCase())) {
 						String baseMethodName = f.getName( ).substring( 0, 1 ).toUpperCase( ) + f.getName( ).substring( 1 );
 						try {
@@ -207,9 +212,7 @@ class UpgradeWalrus162eee implements UpgradeScript {
 			}
 			if(setterMap.containsKey(column)) {
 				LOG.info(column + " is set by: " + setterMap.get(column).getName());
-			} else {
-				LOG.info("No corresponding field found for: " + column + " in " + definingClass.getName());
-			}
+			} 
 		}
 	}
 

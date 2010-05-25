@@ -224,7 +224,9 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
   @Transient
   private static String INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
+  @Column(name="minvlan")
   Integer minVlan;
+  @Column(name="maxvlan")
   Integer maxVlan;
   
   public ClusterConfiguration( ) {}
