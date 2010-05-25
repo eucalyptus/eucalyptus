@@ -180,7 +180,7 @@ public class VmInstance implements HasName {
   }
   
   public void updatePublicAddress( String publicAddr ) {
-    if ( VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) && !VmInstance.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr )
+    if ( !VmInstance.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr )
          && publicAddr != null ) {
       this.getNetworkConfig( ).setIgnoredPublicIp( publicAddr );
     }
