@@ -398,7 +398,8 @@ then
 	if [ -f /tmp/eucaback.dir ]; then
 	    BACKDIR=`cat /tmp/eucaback.dir`
 	    if [ -d "$BACKDIR" ]; then
-		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+#		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+		echo "**NOTICE** If you are upgrading to EEE, you will need to perform the upgrade process manually.  Your previous Eucalyptus data is backed up in $BACKDIR."
 		/usr/sbin/euca_conf -setup
 	    fi
 	fi
@@ -414,7 +415,8 @@ then
 	BACKDIR=`cat /tmp/eucaback.dir`
 	if [ -d "$BACKDIR" ]; then
 	    /usr/sbin/euca_conf -setup
-	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+#	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+	    echo "**NOTICE** If you are upgrading to EEE, you will need to perform the upgrade process manually.  Your previous Eucalyptus data is backed up in $BACKDIR."
 	    /usr/sbin/euca_conf -setup
 	fi
     fi
