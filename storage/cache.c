@@ -48,7 +48,10 @@ static char cache_path [EUCA_MAX_PATH] = "./euca-imager-cache"; // default cache
 
 int set_cache_limit (long long size)
 {
-	cache_limit = size;
+    if (size<0)
+        cache_limit = EUCA_SIZE_UNLIMITED;
+    else 
+        cache_limit = size;
 	return 0;
 }
 
@@ -352,7 +355,10 @@ static char work_path [EUCA_MAX_PATH] = "."; // cwd is default work dir
 
 int set_work_limit (long long size)
 {
-  work_limit = size;
+    if(size<0) 
+        work_limit = EUCA_SIZE_UNLIMITED;
+    else 
+        work_limit = size;
   return 0;
 }
 

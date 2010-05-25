@@ -6,6 +6,7 @@
 #define _IMAGER_H_
 
 #include <sys/stat.h> // mode_t
+#include "misc.h"
 #include "map.h"
 
 struct _imager_command;
@@ -27,7 +28,7 @@ typedef struct _imager_command {
 	int (* validate) (imager_request *); // verifies parameters, returning 0 if all is well
 	int (* requirements) (imager_request *); // checks on inputs, records outputs
 	int (* execute) (imager_request *); // executes the request
-	int (* cleanup) (imager_request *);
+	int (* cleanup) (imager_request *, boolean);
 } imager_command;
 
 // common functions used by commands

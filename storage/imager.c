@@ -241,7 +241,7 @@ int main (int argc, char * argv[])
 	// invoke the cleaners for each command to tidy up disk space and memory allocations
 	for (int i=0; i<ncmds; i++)
 		if (reqs[i].cmd->cleanup!=NULL)
-			reqs[i].cmd->cleanup (&reqs[i]);
+			reqs[i].cmd->cleanup (&reqs[i], (i==(ncmds-1))?(TRUE):(FALSE));
 
 	exit (ret);
 }

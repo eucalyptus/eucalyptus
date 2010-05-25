@@ -163,7 +163,7 @@ int df_format (diskfile * df, const int part, const enum diskpart_t format)
 	int ret = OK;
 	char part_str [50] = "partition";
 
-	if (part<0 || part>=df->nparts) {
+	if (part<0 || (df->mbr!=MBR_NONE && part>=df->nparts)) {
 		logprintfl (EUCAERROR, "error: internal error: invalid args to df_format(): part=%d nparts=%d\n", part, df->nparts);
 		return ERROR;
 	}

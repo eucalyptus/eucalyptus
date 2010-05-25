@@ -13,37 +13,37 @@ char ** download_parameters ();
 int download_validate (imager_request *);
 int download_requirements (imager_request *);
 int download_execute (imager_request *);
-int download_cleanup (imager_request *);
+int download_cleanup (imager_request *, boolean);
 
 char ** create_parameters ();
 int create_validate (imager_request *);
 int create_requirements (imager_request *);
 int create_execute (imager_request *);
-int create_cleanup (imager_request *);
+int create_cleanup (imager_request *, boolean);
 
 char ** convert_parameters ();
 int convert_validate (imager_request *);
 int convert_requirements (imager_request *);
 int convert_execute (imager_request *);
-int convert_cleanup (imager_request *);
+int convert_cleanup (imager_request *, boolean);
 
 char ** inject_parameters ();
 int inject_validate (imager_request *);
 int inject_requirements (imager_request *);
 int inject_execute (imager_request *);
-int inject_cleanup (imager_request *);
+int inject_cleanup (imager_request *, boolean);
 
 char ** upload_parameters ();
 int upload_validate (imager_request *);
 int upload_requirements (imager_request *);
 int upload_execute (imager_request *);
-int upload_cleanup (imager_request *);
+int upload_cleanup (imager_request *, boolean);
 
 char ** bundle_parameters ();
 int bundle_validate (imager_request *);
 int bundle_requirements (imager_request *);
 int bundle_execute (imager_request *);
-int bundle_cleanup (imager_request *);
+int bundle_cleanup (imager_request *, boolean);
 
 static imager_command known_cmds [] = {
 	{ "fsck", fsck_parameters, fsck_validate, NULL, fsck_execute, NULL },

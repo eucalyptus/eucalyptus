@@ -58,20 +58,20 @@ typedef struct _create_params {
 
 static int verify_part (struct _part_type * p, const int n)
 {
-	if (p->content) {
+	if (p->content) { // partition with content to be copied into
 		if (p->size > 0)
 			err ("in partition %d, 'size' is not needed with 'content'", n);
 		if (p->format == PFORMAT_UNKNOWN) {
 			logprintfl (EUCAWARN, "warning: assuming '%s' as format for partition %d\n", enum_format_as_string (PFORMAT_DEFAULT), n);
 			p->format = PFORMAT_DEFAULT;
 		}
-	} else if (p->format != PFORMAT_UNKNOWN) {
-		if (p->size < 1)
+	} else if (p->format != PFORMAT_UNKNOWN) { // this partition is to be formatted
+		if (p->size == 0)
 			err ("in partition %d, 'size' is needed with 'format'", n);
 		long long min = get_min_size (pformat_to_diskpart_t (p->format)); // argh, is type checking of enums too much to ask for?
-		if (p->size < min)
+		if (p->size > 0 && p->size < min)
 			err ("in partition %d, of type '%s', 'size' must be at least %lld bytes", n, enum_format_as_string (p->format), min);
-	} else if (p->size > 0) {
+	} else if (p->size > 0) { // only have size, not format
 		err ("in partition %d, 'format' is needed with 'size'", n);
 	} else {
 		return 0;
@@ -129,7 +129,9 @@ int create_validate (imager_request * req)
 				have_partitions = TRUE;
 			} else if ((part = parse_part (p->key, "-size"))>=0) {
 				long long size = atoll (p->val);
-				if (size<1) { // TODO: what's a reasonable minimum for object?
+				if (size<0) { // a negative size means "as big as will fit into overall size"
+                    size = -1;
+                } else if (size<5) { // TODO: what's a reasonable minimum for object?
 					err ("in partition %d, invalid size spec (%lld)", part, size);
 				}
 				state->parts [part].size = size;
@@ -157,11 +159,19 @@ int create_validate (imager_request * req)
 
 	} else { // if creating a disk
 		if (have_partitions) {
+            boolean unsized_part = FALSE;
 			boolean no_prev = FALSE;
 			for (int i=0; i<_MAX_PARTS; i++) { // verify all partition specs
 				if (verify_part (&(state->parts [i]), i)) {
 					if (no_prev == TRUE)  // ensure they are contiguous
 						err ("partition %d follows unspecified partition %d", i, i-1);
+                    if (state->parts[i].size < 0) {
+                        if (unsized_part) 
+                            err ("only one unsized partition (size==-1) is allowed");
+                        unsized_part = TRUE;
+                        if (state->size < 1)
+                            err ("overall disk size must be specified with an unsized partition");
+                    }
 					state->nparts++;
 				} else {
 					no_prev = TRUE;
@@ -198,6 +208,8 @@ int create_requirements (imager_request * req)
 	
 	if (state->disk) { // creating a disk, which may have external inputs
 		_SET_ATTR("type", "disk");
+        long long known_size;
+        int unsized_part = -1;
 
 		// run through specified partitions, if any
 		for (int i=0; i<state->nparts; i++) {
@@ -224,8 +236,35 @@ int create_requirements (imager_request * req)
 				part_size = p->size;
 			}
 			_SET_ATTR("includes-partition", format);
-			size += round_up_sec (part_size);
+            if (part_size > 0) {
+                known_size += round_up_sec (part_size);
+            } else {
+                if (unsized_part>=0)
+                    err ("error: internal: multiple unsized partitions in create_requirements()\n");
+                unsized_part = i;
+            }
 		} 
+
+        if (unsized_part>=0) {
+            if (state->size < 1) 
+                err ("error: internal: unsized partition and no overall size in create_requirements()\n");
+            long long min = get_min_size (pformat_to_diskpart_t (state->parts [unsized_part].format));
+            size = round_down_sec (state->size);
+            if ((size - known_size) < min) {
+                logprintfl (EUCAERROR, "error: insufficient space for partition %d given disk limit %lld and sum of other partitions %lld\n", unsized_part, size, known_size);
+                return ERROR;
+            }
+            state->parts [unsized_part].size = size - known_size;
+            logprintfl (EUCAINFO, "calculated size %lld for partition %d\n", state->parts [unsized_part].size, unsized_part);
+        } else {
+            size = known_size;
+            if (state->size > 0) {
+                long long req_size = round_down_sec (state->size);
+                if (req_size != size) {
+                    logprintfl (EUCAWARN, "warning: ignoring requested disk size (%lld) in favor of the sum of partitions (%lld)\n", req_size, size);
+                }
+            }
+        }
 		
 	} else { // creating a partition doesn't take external inputs
 		_SET_ATTR("type", "partition");
@@ -360,12 +399,13 @@ cleanup:
 	return ret;
 }
 
-int create_cleanup (imager_request * req)
+int create_cleanup (imager_request * req, boolean last)
 {
 	create_params * state = (create_params *) req->internal;
 
 	logprintfl (EUCAINFO, "cleaning up for '%s'...\n", req->cmd->name);
-    rm_workfile (state->out);
+    if (!last)
+        rm_workfile (state->out);
 	free (state);
 
 	return 0;
