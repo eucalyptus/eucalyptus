@@ -2,10 +2,11 @@ package edu.ucsb.eucalyptus.admin.client.reports;
 
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.rpc.IsSerializable;
 import edu.ucsb.eucalyptus.admin.client.AccountingControl;
 import edu.ucsb.eucalyptus.admin.client.EucaButton;
 
-public class ReportInfo {
+public class ReportInfo implements IsSerializable {
   private AccountingControl parent;
   private Integer           length;
   private EucaButton        button;
