@@ -7,8 +7,8 @@ import edu.ucsb.eucalyptus.admin.client.AccountingControl;
 import edu.ucsb.eucalyptus.admin.client.EucaButton;
 
 public class ReportInfo implements IsSerializable {
-  private AccountingControl parent;
-  private EucaButton        button;
+  private transient AccountingControl parent;
+  private transient EucaButton        button;
   private Integer           length;
   private String            name;
   private String            fileName;
