@@ -16,8 +16,6 @@ class Property():
     self.property_description = property_description
     self.property_old_value = property_old_value
     self.euca = EucaAdmin(path=SERVICE_PATH)
-    self.parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    self.parser.add_option("-v","--verbose",dest="verbose",action="store_true",help="Show property descriptions.")
 
           
   def __repr__(self):
@@ -42,31 +40,47 @@ class Property():
     elif name == 'euca:description':
       self.property_description = value
     else:
-
       setattr(self, name, value)
-  def parse_global(self):
+
+  def get_parser(self):
     global VERBOSE
-    (options,args) = self.parser.parse_args()
+    parser = OptionParser("usage: %prog [PROPERTY...]",version="Eucalyptus %prog VERSION")
+    parser.add_option("-v","--verbose",dest="verbose",action="store_true",help="Show property descriptions.")
+    return parser
+        
+  def parse_describe(self):
+    (options,args) = self.get_parser().parse_args()  
     if options.verbose:
       VERBOSE = True
     return (options,args)
 
-  def parse_describe(self):
-    return self.parse_global()
+  def cli_describe(self):
+    (options,args) = self.parse_describe()
+    self.describe(args)
 
-  def parse_modify(self):
-    self.parser.add_option("-p","--property",dest="props",action="append",help="Modify KEY to be VALUE.  Can be given multiple times.",metavar="KEY=VALUE")
-    (options,args) = self.parse_global()
-    return (options,args)
-  
-  def describe(self):
+  def describe(self,props=None):
+    params = {}
+    if props:
+      self.euca.connection.build_list_params(params,props,'Properties')
     try:
-      list = self.euca.connection.get_list('DescribeProperties', {}, [('euca:item', Property)])
+      list = self.euca.connection.get_list('DescribeProperties', params, [('euca:item', Property)])
       for i in list:
         print i
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
+  def get_parse_modify(self):
+    self.get_parser.add_option("-p","--property",dest="props",action="append",help="Modify KEY to be VALUE.  Can be given multiple times.",metavar="KEY=VALUE")
+    (options,args) = self.parse_global()
+    return (options,args)
+
+  def cli_modify(self):
+    (options,args) = self.get_parse_modify()
+    if not len(props) > 1:
+      print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
+      sys.exit(1)
+    else:
+      self.modify(props)
 
   def modify(self,modify_list):
     for i in modify_list:
