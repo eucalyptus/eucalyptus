@@ -66,7 +66,7 @@ int help_mbr (const char * path, const char * type)
 	int ret = OK;
 	char * output;
 
-    output = pruntf ("%s --script %s mklabel %s", helpers_path[PARTED], path, type);
+    output = pruntf ("LD_PRELOAD='' %s --script %s mklabel %s", helpers_path[PARTED], path, type);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot create an MBR\n");
         ret = ERROR;
