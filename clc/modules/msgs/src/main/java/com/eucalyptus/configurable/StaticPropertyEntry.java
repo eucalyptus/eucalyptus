@@ -30,6 +30,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
     try {
       Object o = super.getTypeParser( ).parse( s );
       this.field.set( null, o );
+      this.fireChange( );
       LOG.info( "Set configurable property: " + super.getQualifiedName( ) + " to " + s );
     } catch ( Throwable t ) {
       LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + t.getMessage( ) );
