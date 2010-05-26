@@ -90,14 +90,15 @@ static int parse_part (char * key, char * subpar)
 {
 	if (key [0] != 'p') return -1;
 	char * hyphen = strstr (key, subpar);
-    len = hyphen - key - 1;
+	if (hyphen == NULL) return -1;
+    int len = hyphen - key - 1;
 	char buf [10];
-	if (hyphen == NULL || len < 1 || len > (sizeof(buf)-1)) return -1;
+    if (len < 1 || len > (sizeof(buf)-1)) return -1;
 	memcpy (buf, key + 1, len);
     buf [len] = '\0';
 	int part = -1;
     part = (int) strtol(buf, (char **)NULL, 10);
-	if (part>=_MAX_PARTS || part == -1 || errno) 
+	if (part>=_MAX_PARTS || part == -1) 
 		err ("partition %d is outside of the range of supported values: [0-%d]", part, _MAX_PARTS-1);
 	return part;
 }
