@@ -38,19 +38,6 @@ public class AccountingControl implements ContentControl {
     this.firstPage = new Label( "1" );
     this.lastPage = new Label( "--" );
     this.currentPage = 1;
-    this.currentPageText = new TextBox( );
-    this.currentPageText.setText( "1" );
-    this.currentPageText.setWidth( "100" );
-    this.currentPageText.addValueChangeHandler( new ValueChangeHandler<String>( ) {
-      @Override
-      public void onValueChange( ValueChangeEvent<String> event ) {
-        String newValue = event.getValue( );
-        try {
-          Integer newPage = new Integer( newValue );
-          AccountingControl.this.setCurrentPage( newPage );
-        } catch ( NumberFormatException e ) {}
-      }
-    } );
     EucalyptusWebBackend.App.getInstance( ).getReports( AccountingControl.this.sessionId, new AsyncCallback<List<ReportInfo>>( ) {
       public void onSuccess( List<ReportInfo> result ) {
         AccountingControl.this.reports.clear( );
@@ -100,6 +87,21 @@ public class AccountingControl implements ContentControl {
     return reportBar;
   }
   
+  public Integer setCurrentPage( String currentPage ) {
+    Integer newPage;
+    try {
+      newPage = new Integer( currentPage );
+      if( newPage >= 0 && newPage < this.currentReport.getLength( ) ) {
+        return this.setCurrentPage( newPage );
+      } else if( newPage < 0 ){
+        return this.setCurrentPage( 0 );
+      } else {
+        return this.setCurrentPage( this.currentReport.getLength( ) );        
+      }
+    } catch ( NumberFormatException e ) {
+      return this.currentPage;
+    }
+  }
   public Integer setCurrentPage( Integer currentPage ) {
     this.currentPage = currentPage;
     this.display( );
