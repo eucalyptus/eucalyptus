@@ -96,24 +96,28 @@
       </Arg>
     </Call>
     <Set name="handler">
-        <New id="Handlers" class="org.mortbay.jetty.handler.HandlerCollection">
-            <Set name="handlers">
-                <Array type="org.mortbay.jetty.Handler">
-                    <Item>
-                        <New id="Contexts" class="org.mortbay.jetty.handler.ContextHandlerCollection"/>
-                    </Item>
-                    <Item>
-                        <New id="DefaultHandler" class="org.mortbay.jetty.handler.DefaultHandler">
-                            <Set name="serveIcon">false</Set>
-                        </New>
-                    </Item>
-                    <Item>
-                        <New id="RequestLog" class="org.mortbay.jetty.handler.RequestLogHandler"/>
-                    </Item>
-                </Array>
-            </Set>
-        </New>
-    </Set>
+    <New id="Handlers" class="org.mortbay.jetty.handler.rewrite.RewriteHandler">
+        <Set name="rules">
+            <Array type="org.mortbay.jetty.handler.rewrite.Rule">
+                <Item>
+                  <New id="redirecedHttps" class="com.eucalyptus.www.Redirect"/>
+                </Item>
+            </Array>
+        </Set>
+        <Set name="handler">
+            <New id="Handlers" class="org.mortbay.jetty.handler.HandlerCollection">
+                <Set name="handlers">
+                    <Array type="org.mortbay.jetty.Handler">
+                        <Item><Ref id="Contexts"/></Item>
+                        <Item><New id="DefaultHandler" class="org.mortbay.jetty.handler.DefaultHandler"/></Item>
+                        <Item><New id="RequestLog" class="org.mortbay.jetty.handler.RequestLogHandler"/></Item>
+                    </Array>
+                </Set>
+            </New>
+        </Set>
+    </New>
+</Set>
+
     <Call name="addLifeCycle">
         <Arg>
             <New class="org.mortbay.jetty.deployer.ContextDeployer">

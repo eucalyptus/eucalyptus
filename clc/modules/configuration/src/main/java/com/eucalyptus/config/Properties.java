@@ -33,8 +33,19 @@ public class Properties {
         if ( request.getProperties( ).contains( entry.getQualifiedName( ) ) ) {
           String value = "********";
           if (!entry.getWidgetType().equals(ConfigurableFieldType.KEYVALUEHIDDEN))
-        	value = entry.getValue();
+          value = entry.getValue();
           props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
+        }
+      }
+      for ( String entrySetName : PropertyDirectory.getPropertyEntrySetNames( ) ) {
+        if ( request.getProperties( ).contains( entrySetName ) ) {
+          String value = "********";
+          for( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( entrySetName ) ) {
+            if (!entry.getWidgetType().equals(ConfigurableFieldType.KEYVALUEHIDDEN)) {
+              value = entry.getValue();
+            }
+            props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
+          }
         }
       }
     }
