@@ -8,10 +8,10 @@
 	<style name="SubTitle" isDefault="false" forecolor="#666666" fontName="Arial" fontSize="18"/>
 	<style name="Column header" isDefault="false" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
 	<style name="Detail" isDefault="false" fontName="Arial" fontSize="12"/>
-	<style name="alternating" isDefault="false" forecolor="#F5F5F5" markup="none" fontName="Verdana" fontSize="12">
+	<style name="alternating" isDefault="false" style="Detail" backcolor="#FFFFFF" markup="none" fontSize="10">
 		<conditionalStyle>
 			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue() % 2 == 0 )]]></conditionExpression>
-			<style isDefault="false" style="alternating" backcolor="#F5F562" markup="none"/>
+			<style isDefault="false" style="alternating" backcolor="#4C4C4C" markup="none"/>
 		</conditionalStyle>
 	</style>
 	<subDataset name="dataset1"/>
@@ -75,7 +75,7 @@
 		<band height="24">
 			<elementGroup/>
 			<staticText>
-				<reportElement x="0" y="0" width="700" height="24"/>
+				<reportElement x="199" y="0" width="301" height="24"/>
 				<box>
 					<bottomPen lineWidth="0.25"/>
 				</box>

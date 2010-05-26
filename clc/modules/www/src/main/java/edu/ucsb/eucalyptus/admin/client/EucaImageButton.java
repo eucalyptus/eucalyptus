@@ -85,7 +85,7 @@ public class EucaImageButton extends com.google.gwt.user.client.ui.PushButton {
   private String              baseStyleName;
   
   public EucaImageButton( String html, String tooltip, String baseStyleName, String imageFileName, ClickHandler handler ) {
-    super( new Image("themes/active/img/"+imageFileName), handler );
+    super(new Image("themes/active/img/"+imageFileName) , handler );
     this.tooltip = tooltip;
     this.baseStyleName = baseStyleName;
     this.addStyleName( this.baseStyleName );

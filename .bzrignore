@@ -4,6 +4,11 @@ clc/deps
 clc/lib
 clc/.classpath
 *.class
+*/generated/
+clc/modules/component/build/
+clc/modules/ldap/build/
+clc/modules/mysql/build/
+clc/modules/vmware-broker/build/
 clc/modules/authentication/build
 clc/modules/bootstrap/eucalyptus-cloud
 clc/modules/cloud/build
@@ -20,11 +25,14 @@ clc/modules/msgs/build
 clc/modules/msgs/src/main/resources/msgs-binding.xml
 clc/modules/storage-common/build
 clc/modules/storage-controller/build
-clc/modules/storage-controller/include
+clc/modules/storage-controller/lib
+clc/modules/storage-controller/lib/*.so
+clc/modules/storage-controller/include/*.h
 clc/modules/walrus/build
 clc/modules/wsstack/build
 clc/modules/www/build
 clc/modules/www/build-war
+clc/modules/www/webapps/
 Makedefs
 config.log
 config.status
@@ -38,3 +46,6 @@ tools/eucalyptus-cc
 clc/bind.log
 clc/modules/www/conf/eucalyptus-web.properties
 clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes/active
+gatherlog/GLclient
+storage/Wclient
+storage/euca_imager

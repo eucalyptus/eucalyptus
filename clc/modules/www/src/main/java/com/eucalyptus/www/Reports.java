@@ -131,6 +131,7 @@ public class Reports extends HttpServlet {
     String sessionId = Param.session.get( req );
     String name = Param.name.get( req );
     String type = Param.type.get( req );
+    String pageStr = Param.page.get( req );
     SessionInfo session;
     try {
       session = EucalyptusWebBackendImpl.verifySession( sessionId );
@@ -150,7 +151,7 @@ public class Reports extends HttpServlet {
       hasError( "Error obtaining session info.", res );
       return;
     }
-    LOG.debug( "Got request for " + name + " of type " + type );
+    LOG.debug( "Got request for " + name + " page number " + pageStr + " of type " + type );
     Type reportType = Type.valueOf( type );
     final JRExporter exporter = reportType.setup( req, res, name );
     try {

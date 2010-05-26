@@ -22,19 +22,25 @@ public class AccountingControl implements ContentControl {
   private final List<ReportInfo> reports            = new ArrayList<ReportInfo>( );
   private Integer                currentPage;
   private Boolean                forceFlush         = Boolean.FALSE;
-  private ReportInfo             currentReport      = null;    
+  private ReportInfo             currentReport      = null;
   private VerticalPanel          root;
   private HorizontalPanel        reportBar;
-  private HorizontalPanel        buttonBar;
+  private HorizontalPanel        actionBar;
   private Frame                  report;
-  private TextBox                currentPageText    = new TextBox( );
+  private Label                  firstPage, lastPage;
+  private TextBox                currentPageText;
   
   public AccountingControl( String sessionId ) {
     this.sessionId = sessionId;
     this.root = new VerticalPanel( );
     this.root.addStyleName( "acct-root" );
     this.root.add( new Label( "Loading report list..." ) );
-    this.currentPage = 0;
+    this.firstPage = new Label( "1" );
+    this.lastPage = new Label( "--" );
+    this.currentPage = 1;
+    this.currentPageText = new TextBox( );
+    this.currentPageText.setText( "1" );
+    this.currentPageText.setWidth( "100" );
     this.currentPageText.addValueChangeHandler( new ValueChangeHandler<String>( ) {
       @Override
       public void onValueChange( ValueChangeEvent<String> event ) {
@@ -68,10 +74,12 @@ public class AccountingControl implements ContentControl {
     for ( final ReportAction a : ReportAction.values( ) ) {
       actionBar.add( a.makeImageButton( this ) );
     }
-    AccountingControl.this.buttonBar.add( AccountingControl.this.currentPageText );
+    actionBar.add( AccountingControl.this.currentPageText );
     for ( final ReportType r : ReportType.values( ) ) {
       actionBar.add( r.makeImageButton( this ) );
     }
+    AccountingControl.this.actionBar = actionBar;
+    AccountingControl.this.root.add( AccountingControl.this.actionBar );
     return actionBar;
   }
   
@@ -86,13 +94,16 @@ public class AccountingControl implements ContentControl {
       this.reports.add( info );
       reportBar.add( info.getButton( ) );
     }
-    AccountingControl.this.root.add( AccountingControl.this.reportBar = reportBar );
-    AccountingControl.this.currentReport = null;
+    AccountingControl.this.reportBar = reportBar;
+    AccountingControl.this.root.add( AccountingControl.this.reportBar );
+    AccountingControl.this.currentReport = this.reports.get( 0 );
     return reportBar;
   }
   
   public Integer setCurrentPage( Integer currentPage ) {
-    return this.currentPage = currentPage;
+    this.currentPage = currentPage;
+    this.display( );
+    return this.currentPage;
   }
   
   @Override
@@ -106,7 +117,7 @@ public class AccountingControl implements ContentControl {
   }
   
   public void setCurrentReport( ReportInfo currentReport ) {
-    this.currentPage = 0;
+    this.currentPage = 1;
     this.currentReport = currentReport;
     this.display( );
   }

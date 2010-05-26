@@ -67,6 +67,17 @@
   <security-constraint>
     <web-resource-collection>
       <web-resource-name>Secured area</web-resource-name>
+      <url-pattern>/index.html</url-pattern>
+      <url-pattern>/redirect</url-pattern>
+    </web-resource-collection>
+    <user-data-constraint>
+      <transport-guarantee>NONE</transport-guarantee>
+    </user-data-constraint>
+  </security-constraint>
+
+  <security-constraint>
+    <web-resource-collection>
+      <web-resource-name>Secured area</web-resource-name>
       <url-pattern>/*</url-pattern>
     </web-resource-collection>
     <user-data-constraint>
@@ -79,6 +90,14 @@
     <display-name>EucalyptusWebBackend</display-name>
     <servlet-name>EucalyptusWebBackendImpl</servlet-name>
     <servlet-class>edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+
+  <servlet>
+    <description></description>
+    <display-name>HttpsRedirect</display-name>
+    <servlet-name>HttpsRedirect</servlet-name>
+    <servlet-class>com.eucalyptus.www.Redirect</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
 
@@ -124,6 +143,11 @@
   <servlet-mapping>
     <servlet-name>CloudRegistration</servlet-name>
     <url-pattern>/register</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>HttpsRedirect</servlet-name>
+    <url-pattern>/redirect</url-pattern>
   </servlet-mapping>
 
 
