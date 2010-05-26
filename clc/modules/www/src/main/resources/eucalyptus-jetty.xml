@@ -67,7 +67,7 @@
         <Arg>
             <New class="org.mortbay.jetty.security.SslSelectChannelConnector">
                 <Set name="Port">
-                    <SystemProperty name="euca.www.port" default="8443"/>
+                  <SystemProperty name="euca.https.port" default="8443"/>
                 </Set>
                 <Set name="maxIdleTime">30000</Set>
                 <Set name="keystoreType">pkcs12</Set>
@@ -89,6 +89,13 @@
                 </Set>
             </New>
         </Arg>
+    </Call>
+    <Call name="addConnector">
+      <Arg>
+          <New class="org.mortbay.jetty.nio.SelectChannelConnector">
+              <SystemProperty name="euca.http.port" default="8080"/>
+          </New>
+      </Arg>
     </Call>
     <Set name="handler">
         <New id="Handlers" class="org.mortbay.jetty.handler.HandlerCollection">
