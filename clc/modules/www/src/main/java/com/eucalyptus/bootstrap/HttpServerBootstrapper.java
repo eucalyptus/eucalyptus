@@ -77,44 +77,17 @@ import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 @Provides( Component.jetty )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
 @DependsLocal( Component.eucalyptus )
-@ConfigurableClass(root="www",description="Parameters controlling the web UI's http server.")
-public class HttpServerBootstrapper extends Bootstrapper {
-  private static class PortChangeListener extends PassiveEventListener<ConfigurableProperty> {
-    @Override
-    public void firingEvent( ConfigurableProperty t ) {
-      LOG.info( "Change occurred to property " + t.getQualifiedName( ) + " which requires restarting the web server." );
-    }
-  }
-  private static Logger   LOG        = Logger.getLogger( HttpServerBootstrapper.class );
-  @ConfigurableField(description="Listen to HTTPs on this port.",initial=""+8443,changeListener=PortChangeListener.class)
-  public static Integer   HTTPS_PORT = 8443;
-  @ConfigurableField(description="Listen to HTTP on this port.",initial=""+8080,changeListener=PortChangeListener.class)
-  public static Integer   HTTP_PORT  = 8080;
-  private static Server   jettyServer;
+@ConfigurableClass( root = "www", description = "Parameters controlling the web UI's http server." )
+public class HttpServerBootstrapper extends Bootstrapper {  
+  private static Logger LOG        = Logger.getLogger( HttpServerBootstrapper.class );
+  @ConfigurableField( description = "Listen to HTTPs on this port.", initial = "" + 8443, changeListener = PortChangeListener.class )
+  public static Integer HTTPS_PORT = 8443;
+  @ConfigurableField( description = "Listen to HTTP on this port.", initial = "" + 8080, changeListener = PortChangeListener.class )
+  public static Integer HTTP_PORT  = 8080;
+  private static Server jettyServer;
   private static Thread serverThread;
   
-  public static void fireChange() {
-    try {
-      jettyServer.stop( );
-      for(int i = 0; i < 10 && !jettyServer.isStopped( ) && jettyServer.isStopping( ); i++ ) {
-        try {
-          TimeUnit.MILLISECONDS.sleep( 500 );
-        } catch ( InterruptedException e ) {
-        }
-      }
-      jettyServer.destroy( );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-    }
-    try {
-      setupJettyServer( );
-      startJettyServer( );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-    }
-  }
-
-  private static Server setupJettyServer() throws Exception {
+  private static Server setupJettyServer( ) throws Exception {
     jettyServer = new org.mortbay.jetty.Server( );
     System.setProperty( "euca.http.port", "" + HTTP_PORT );
     System.setProperty( "euca.https.port", "" + HTTPS_PORT );
@@ -123,8 +96,8 @@ public class HttpServerBootstrapper extends Bootstrapper {
     jettyConfig.configure( jettyServer );
     return jettyServer;
   }
-
-  private static Thread startJettyServer() {
+  
+  private static Thread startJettyServer( ) {
     serverThread = Threads.newThread( new Runnable( ) {
       @Override
       public void run( ) {
@@ -140,7 +113,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   
   @Override
   public boolean load( Stage current ) throws Exception {
-    setupJettyServer();
+    setupJettyServer( );
     return true;
   }
   
@@ -149,5 +122,32 @@ public class HttpServerBootstrapper extends Bootstrapper {
     LOG.info( "Starting admin interface." );
     return true;
   }
-  
+  private static class PortChangeListener extends PassiveEventListener<ConfigurableProperty> {
+    @Override
+    public void firingEvent( ConfigurableProperty t ) {
+      LOG.info( "Change occurred to property " + t.getQualifiedName( ) + " which requires restarting the web server." );
+      if ( jettyServer == null ) {
+        return;
+      } else if ( jettyServer.isRunning( ) ) {
+        try {
+          jettyServer.stop( );
+          for ( int i = 0; i < 10 && !jettyServer.isStopped( ) && jettyServer.isStopping( ); i++ ) {
+            try {
+              TimeUnit.MILLISECONDS.sleep( 500 );
+            } catch ( InterruptedException e ) {}
+          }
+          jettyServer.destroy( );
+        } catch ( Exception e ) {
+          LOG.debug( e, e );
+        }
+        try {
+          setupJettyServer( );
+          startJettyServer( );
+        } catch ( Exception e ) {
+          LOG.debug( e, e );
+        }
+      }
+    }
+  }
+
 }
