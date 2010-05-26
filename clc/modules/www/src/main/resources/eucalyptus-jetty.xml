@@ -90,7 +90,9 @@
     </Call>
     <Call name="addConnector">
       <Arg>
-          <New class="org.mortbay.jetty.nio.SelectChannelConnector"><SystemProperty name="euca.http.port" default="8080"/></New>
+          <New class="org.mortbay.jetty.nio.SelectChannelConnector">
+            <Set name="Port"><SystemProperty name="euca.http.port" default="8080"/></Set>
+          </New>
       </Arg>
     </Call>
     <Set name="handler">
