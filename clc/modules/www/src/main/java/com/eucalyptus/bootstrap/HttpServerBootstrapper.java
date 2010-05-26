@@ -87,17 +87,16 @@ public class HttpServerBootstrapper extends Bootstrapper {
   private static Server jettyServer;
   private static Thread serverThread;
   
-  private static Server setupJettyServer( ) throws Exception {
+  private static void setupJettyServer( ) throws Exception {
     jettyServer = new org.mortbay.jetty.Server( );
     System.setProperty( "euca.http.port", "" + HTTP_PORT );
     System.setProperty( "euca.https.port", "" + HTTPS_PORT );
     URL defaultConfig = ClassLoader.getSystemResource( "eucalyptus-jetty.xml" );
     XmlConfiguration jettyConfig = new XmlConfiguration( defaultConfig );
     jettyConfig.configure( jettyServer );
-    return jettyServer;
   }
   
-  private static Thread startJettyServer( ) {
+  private static void startJettyServer( ) {
     serverThread = Threads.newThread( new Runnable( ) {
       @Override
       public void run( ) {
@@ -108,7 +107,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
         }
       }
     }, "jetty" );
-    return serverThread;
+    serverThread.start( );
   }
   
   @Override
