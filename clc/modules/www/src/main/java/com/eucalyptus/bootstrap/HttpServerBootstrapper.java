@@ -120,6 +120,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     LOG.info( "Starting admin interface." );
+    startJettyServer( );
     return true;
   }
   private static class PortChangeListener extends PassiveEventListener<ConfigurableProperty> {
