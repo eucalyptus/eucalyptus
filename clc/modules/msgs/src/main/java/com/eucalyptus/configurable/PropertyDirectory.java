@@ -31,7 +31,15 @@ public class PropertyDirectory {
   public static ConfigurableProperty buildPropertyEntry( Class c, Field field ) {
     for ( ConfigurablePropertyBuilder b : builders ) {
       try {
-        ConfigurableProperty prop = b.buildProperty( c, field );
+        ConfigurableProperty prop = null;
+        try {
+          prop = b.buildProperty( c, field );
+        } catch ( ConfigurablePropertyException e ) {
+          throw e;
+        } catch ( Throwable t ) {
+          LOG.error( "Failed to prepare configurable field: " + c.getCanonicalName( ) + "." + field.getName( ) );
+          System.exit( 1 );
+        }
         if ( prop != null ) {
           ConfigurableClass configurableAnnot = (ConfigurableClass) c.getAnnotation(ConfigurableClass.class);
           if ( configurableAnnot.deferred() ) {
