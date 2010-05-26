@@ -14,7 +14,9 @@ import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Component;
@@ -41,6 +43,7 @@ import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.ImmutableList;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
@@ -179,7 +182,13 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     } catch ( EventVetoedException e ) {
       LOG.error( e, e );
     }
-
+    for( Group g : Groups.listAllGroups( ) ) {
+      for( Authorization auth : g.getAuthorizations( ) ) {
+        if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {
+          g.removeAuthorization( auth );
+        }
+      }
+    }
     super.fireStop( config );
   }
   
