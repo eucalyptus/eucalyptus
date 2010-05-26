@@ -1,4 +1,4 @@
-import boto,sys,euca_admin
+import boto,sys,euca_admin,re
 from boto.exception import EC2ResponseError
 from euca_admin.generic import BooleanResponse
 from euca_admin import EucaAdmin
@@ -20,11 +20,11 @@ class Property():
           
   def __repr__(self):
     global VERBOSE
-    str = 'PROPERTY %s %s' % (self.property_name, self.property_value)
+    str = 'PROPERTY\t%s\t%s' % (self.property_name, self.property_value)
     if self.property_old_value is not None:
       str = '%s was %s' % (str, self.property_old_value)
     elif VERBOSE:
-      str = '%s\nDESCRIPTION %s' % (str, self.property_description) 
+      str = '%s\nDESCRIPTION\t%s\t%s' % (str, self.property_name, self.property_description) 
     return str
 
   def startElement(self, name, attrs, connection):
@@ -43,12 +43,12 @@ class Property():
       setattr(self, name, value)
 
   def get_parser(self):
-    global VERBOSE
     parser = OptionParser("usage: %prog [PROPERTY...]",version="Eucalyptus %prog VERSION")
     parser.add_option("-v","--verbose",dest="verbose",action="store_true",help="Show property descriptions.")
     return parser
         
   def parse_describe(self):
+    global VERBOSE
     (options,args) = self.get_parser().parse_args()  
     if options.verbose:
       VERBOSE = True
@@ -70,17 +70,27 @@ class Property():
       self.euca.handle_error(ex)
 
   def get_parse_modify(self):
-    self.get_parser.add_option("-p","--property",dest="props",action="append",help="Modify KEY to be VALUE.  Can be given multiple times.",metavar="KEY=VALUE")
-    (options,args) = self.parse_global()
+    parser = self.get_parser()
+    parser.add_option("-p","--property",dest="props",action="append",help="Modify KEY to be VALUE.  Can be given multiple times.",metavar="KEY=VALUE")
+    global VERBOSE
+    (options,args) = parser.parse_args()
+    if options.verbose:
+      VERBOSE = True
+    if not options.props:
+      print "ERROR No options were specified."
+      parser.print_help()
+      sys.exit(1)
+    else:
+      for i in options.props:
+        if not re.match("^[\w.]+=[\w\.]+$",i):
+          print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
+          parser.print_help()
+          sys.exit(1)
     return (options,args)
 
   def cli_modify(self):
     (options,args) = self.get_parse_modify()
-    if not len(props) > 1:
-      print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
-      sys.exit(1)
-    else:
-      self.modify(props)
+    self.modify(options.props)
 
   def modify(self,modify_list):
     for i in modify_list:

@@ -15,7 +15,7 @@ class StorageController():
 
           
   def __repr__(self):
-      return 'CLUSTER %s %s' % (self.storage_name, self.host_name) 
+      return 'STORAGE\t%s\t%s' % (self.storage_name, self.host_name) 
 
   def startElement(self, name, attrs, connection):
       return None
