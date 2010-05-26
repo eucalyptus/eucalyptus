@@ -278,7 +278,7 @@ public class VmInstance implements HasName {
         } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
           this.state.set( newState, false );
         }
-        EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE,  this.getOwnerId( ), this.getInstanceId( ), this.state.getReference( ).name( ), this.reasonDetails.toString( )  ).info();
+        EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE,  "user="+this.getOwnerId( ), "instance="+this.getInstanceId( ), "type="+this.getVmTypeInfo( ).getName( ), "state="+ this.state.getReference( ).name( ), "details="+this.reasonDetails.toString( )  ).info();
       } else {
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       }
