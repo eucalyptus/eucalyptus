@@ -66,11 +66,13 @@ public class RecordProcessor extends Bootstrapper implements Runnable {
   }
 
   public static void flush() {
-    thread.interrupt( );
-    try {
-      thread.run( );
-    } catch ( Throwable t ) {
-      LOG.trace( "Not saving the shutdown event:  database already stopped: " + t.getMessage( ) );
+    if( thread != null ) {
+      thread.interrupt( );
+      try {
+        thread.run( );
+      } catch ( Throwable t ) {
+        LOG.trace( "Not saving the shutdown event:  database already stopped: " + t.getMessage( ) );
+      }
     }
   }
   
