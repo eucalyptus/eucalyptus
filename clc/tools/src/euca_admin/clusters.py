@@ -28,24 +28,40 @@ class Cluster():
     else:
       setattr(self, name, value)
   
-  def describe(self):
-    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    (options, args) = parser.parse_args()
+  def get_describe_parser(self):
+    parser = OptionParser("usage: %prog [CLUSTERS...]",version="Eucalyptus %prog VERSION")
+    return parser.parse_args()
+  
+  def cli_describe(self):
+    (options, args) = self.get_describe_parser()
+    self.cluster_describe(args)
+    
+  def cluster_describe(self,clusters=None):
+    params = {}
+    if clusters:
+      self.euca.connection.build_list_params(params,clusters,'Name')
     try:
-      list = self.euca.connection.get_list('DescribeClusters', {}, [('euca:item', Cluster)])
+      list = self.euca.connection.get_list('DescribeClusters', params, [('euca:item', Cluster)])
       for i in list:
         print i
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
-
   def get_register_parser(self):
     parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-n","--name",dest="cc_name",help="Name of the cluster.")
     parser.add_option("-H","--host",dest="cc_host",help="Hostname of the cluster.")
     parser.add_option("-p","--port",dest="cc_port",type="int",default=8774,help="Port for the cluster.")
-    return parser
+    (options,args) = parser.parse_args()    
+    if len(args) != 1:
+      print "ERROR  Required argument CLUSTERNAME is missing or malformed."
+      parser.print_help()
+      sys.exit(1)
+    else:
+      return (options,args)  
 
+  def cli_register(self):
+    (options,args) = self.get_register_parser()
+    self.register(args[0],options.cc_host,options.cc_port)
 
   def register(self, cc_name, cc_host, cc_port=8773):
     try:
@@ -54,11 +70,21 @@ class Cluster():
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
+
   def get_deregister_parser(self):
-    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-n","--name",dest="cc_name",help="Name of the cluster.")
-    return parser
+    parser = OptionParser("usage: %prog [options] CLUSTERNAME",version="Eucalyptus %prog VERSION")
+    (options,args) = parser.parse_args()    
+    if len(args) != 1:
+      print "ERROR  Required argument CLUSTERNAME is missing or malformed."
+      parser.print_help()
+      sys.exit(1)
+    else:
+      return (options,args)  
             
+  def cli_deregister(self):
+    (options,args) = self.get_deregister_parser()
+    self.deregister(args[0])
+
   def deregister(self, cc_name):
     try:
       reply = self.euca.connection.get_object('DeregisterCluster', {'Name':cc_name},BooleanResponse)

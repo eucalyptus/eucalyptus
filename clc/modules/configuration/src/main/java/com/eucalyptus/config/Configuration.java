@@ -133,8 +133,8 @@ public class Configuration {
     try {
       conf = builder.lookupByName( request.getName( ) );
       builder.fireStop( conf );
-      builder.remove( conf );
       builder.getComponent( ).removeService( conf );
+      builder.remove( conf );
       reply.set_return( true );
     } catch( EucalyptusCloudException e ) {
       LOG.debug( e, e );

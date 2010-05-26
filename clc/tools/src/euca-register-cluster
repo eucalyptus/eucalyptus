@@ -6,10 +6,7 @@ from euca_admin.clusters import Cluster
 from optparse import OptionParser
 
 def main():
-  c = Cluster()
-  parser = c.get_register_parser()
-  (options, args) = parser.parse_args()
-  c.register(options.cc_name,options.cc_host,options.cc_port)
+  c = Cluster().cli_register()
   sys.exit()
 
 if __name__ == "__main__":

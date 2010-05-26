@@ -4,9 +4,7 @@ from boto.ec2.regioninfo import RegionInfo
 from euca_admin.properties import Property
 
 def main():
-  c = Property()
-  (options, args) = c.parse_modify()
-  c.modify(options.props)
+  c = Property().modify()
   sys.exit()
 
 if __name__ == "__main__":

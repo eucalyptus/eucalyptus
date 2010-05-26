@@ -6,10 +6,7 @@ from optparse import OptionParser
 from euca_admin.groups import Group
 
 def main():
-  c = Group()
-  parser = c.get_add_parser()
-  (options, args) = parser.parse_args()
-  c.add(options.groupName)
+  c = Group().cli_add()
   sys.exit()
 
 if __name__ == "__main__":

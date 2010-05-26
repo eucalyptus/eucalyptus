@@ -61,7 +61,6 @@ public class Component implements ComponentInformation, Nameable<Component> {
     this.enabled = false;
     Service service = this.services.remove( config.getName( ) );
     Components.deregister( service );
-    this.builder.fireStop( config );
     EventRecord.caller( Component.class, config.isLocal( ) ? EventType.COMPONENT_SERVICE_STOP : EventType.COMPONENT_SERVICE_STOP_REMOTE, this.getName( ),
                         service.getName( ), service.getUri( ).toString( ) ).info( );
   }
