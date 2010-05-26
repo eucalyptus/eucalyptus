@@ -208,7 +208,7 @@ int create_requirements (imager_request * req)
 	
 	if (state->disk) { // creating a disk, which may have external inputs
 		_SET_ATTR("type", "disk");
-        long long known_size;
+        long long known_size = 0L;
         int unsized_part = -1;
 
 		// run through specified partitions, if any
