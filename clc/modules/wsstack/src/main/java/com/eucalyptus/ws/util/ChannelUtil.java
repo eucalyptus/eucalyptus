@@ -37,12 +37,12 @@ import com.eucalyptus.ws.server.NioServerHandler;
 @ConfigurableClass( root = "ws", description = "Parameters controlling the web services endpoint." )
 public class ChannelUtil {
   private static Logger       LOG                               = Logger.getLogger( ChannelUtil.class );
-  private static final int    CHANNEL_CONNECT_TIMEOUT           = 500;
-  public static final boolean SERVER_CHANNEL_REUSE_ADDRESS      = true;
-  public static final boolean SERVER_CHANNEL_NODELAY            = true;
-  public static final boolean CHANNEL_REUSE_ADDRESS             = true;
-  public static final boolean CHANNEL_KEEP_ALIVE                = true;
-  public static final boolean CHANNEL_NODELAY                   = true;
+  private static final Integer    CHANNEL_CONNECT_TIMEOUT           = 500;
+  public static final Boolean SERVER_CHANNEL_REUSE_ADDRESS      = true;
+  public static final Boolean SERVER_CHANNEL_NODELAY            = true;
+  public static final Boolean CHANNEL_REUSE_ADDRESS             = true;
+  public static final Boolean CHANNEL_KEEP_ALIVE                = true;
+  public static final Boolean CHANNEL_NODELAY                   = true;
   @ConfigurableField( initial = "" + 17, description = "Server worker thread pool max." )
   public static Integer           SERVER_POOL_MAX_THREADS           = Runtime.getRuntime( ).availableProcessors( ) * 2 + 1;
   @ConfigurableField( initial = "" + 17, description = "Server max worker memory per connection." )
