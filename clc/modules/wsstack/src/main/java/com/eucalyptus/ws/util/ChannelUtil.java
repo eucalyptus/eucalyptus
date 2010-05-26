@@ -45,20 +45,20 @@ public class ChannelUtil {
   public static final Boolean CHANNEL_NODELAY                   = true;
   @ConfigurableField( initial = "" + 17, description = "Server worker thread pool max." )
   public static Integer           SERVER_POOL_MAX_THREADS           = Runtime.getRuntime( ).availableProcessors( ) * 2 + 1;
-  @ConfigurableField( initial = "" + 17, description = "Server max worker memory per connection." )
+  @ConfigurableField( initial = "" + 1048576l, description = "Server max worker memory per connection." )
   public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 1048576l;
-  @ConfigurableField( initial = "" + 17, description = "Server max worker memory total." )
+  @ConfigurableField( initial = "" + 100 * 1024 * 1024l, description = "Server max worker memory total." )
   public static Long          SERVER_POOL_TOTAL_MEM             = 100 * 1024 * 1024l;
   public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500l;
   @ConfigurableField( initial = "" + 17, description = "Server selector thread pool max." )
   public static Integer           SERVER_BOSS_POOL_MAX_THREADS      = Runtime.getRuntime( ).availableProcessors( ) + 1;
-  @ConfigurableField( initial = "" + 17, description = "Server max selector memory per connection." )
+  @ConfigurableField( initial = "" + 1048576l, description = "Server max selector memory per connection." )
   public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 1048576l;
   @ConfigurableField( initial = "" + 17, description = "Server max selector memory total." )
   public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024l;
   public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500l;
   @ConfigurableField( initial = "" + 8773, description = "Web services port." )
-  public static Integer           PORT                              = Integer.parseInt( System.getProperty( "euca.ws.port" ) );
+  public static Integer           PORT                              = 8773;
   public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 4 * 60l;
   public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 4 * 60l;
   public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000l;
