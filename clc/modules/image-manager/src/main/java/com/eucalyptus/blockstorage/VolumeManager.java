@@ -165,7 +165,7 @@ public class VolumeManager {
       req.setEffectiveUserId( request.getEffectiveUserId( ) );
       StorageUtil.send( sc.getName( ), req );
       EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_CREATE, "user=" + newVol.getUserName( ), "volume=" + newVol.getDisplayName( ),
-                        "size=" + newVol.getSize( ), "cluster=" + newVol.getCluster( ), "snapshot=" + vol.getParentSnapshotinfo( ) ).info( );
+                        "size=" + newVol.getSize( ), "cluster=" + newVol.getCluster( ), "snapshot=" + newVol.getParentSnapshot( ) ).info( );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       try {
@@ -211,7 +211,7 @@ public class VolumeManager {
         vol.setState( State.ANNIHILATING );
         db.commit( );
         EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE, "user=" + vol.getUserName( ), "volume=" + vol.getDisplayName( ),
-                          "size=" + vol.getSize( ), "cluster=" + vol.getCluster( ), "snapshot=" + vol.getParentSnapshotinfo( ) ).info( );
+                          "size=" + vol.getSize( ), "cluster=" + vol.getCluster( ), "snapshot=" + vol.getParentSnapshot( ) ).info( );
       } else {
         reallyFailed = true;
         throw new EucalyptusCloudException( "Storage Controller returned false:  Contact the administrator to report the problem." );
