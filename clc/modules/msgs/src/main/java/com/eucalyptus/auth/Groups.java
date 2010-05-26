@@ -5,6 +5,9 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.GroupProvider;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.records.EventClass;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.google.common.collect.Lists;
 
 public class Groups {
@@ -41,10 +44,12 @@ public class Groups {
   }
   
   public static Group addGroup( String name ) throws GroupExistsException {
+    EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_ADDED, name ).info();
     return Groups.getGroupProvider( ).addGroup( name );
   }
   
   public static void deleteGroup( String groupName ) throws NoSuchGroupException {
+    EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_DELETED, groupName ).info();
     Groups.getGroupProvider( ).deleteGroup( groupName );
   }
   

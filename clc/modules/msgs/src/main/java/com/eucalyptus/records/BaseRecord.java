@@ -3,7 +3,8 @@ package com.eucalyptus.records;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
@@ -24,10 +25,6 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.util.TransactionException;
-import com.eucalyptus.util.Transactions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 @Entity
@@ -52,7 +49,7 @@ public class BaseRecord implements Serializable, Record {
   private EventType           type;
   @Column( name = "record_class" )
   @Enumerated( EnumType.STRING )
-  private EventClass          clazz;
+  private EventClass          eventClass;
   @Column( name = "record_creator" )
   private String              creator;
   @Column( name = "record_code_location" )
@@ -77,10 +74,21 @@ public class BaseRecord implements Serializable, Record {
   private transient String    lead;
   @Transient
   private Class               realCreator;
-  
+  @Transient
+  private static BlockingQueue<EventRecord> trace = new LinkedBlockingDeque<EventRecord>( );
+  @Transient
+  private static BlockingQueue<EventRecord> debug = new LinkedBlockingDeque<EventRecord>( );
+  @Transient
+  private static BlockingQueue<EventRecord> info = new LinkedBlockingDeque<EventRecord>( );
+  @Transient
+  private static BlockingQueue<EventRecord> warn = new LinkedBlockingDeque<EventRecord>( );
+  @Transient
+  private static BlockingQueue<EventRecord> error = new LinkedBlockingDeque<EventRecord>( );
+  @Transient
+  private static BlockingQueue<EventRecord> fatal = new LinkedBlockingDeque<EventRecord>( );
   public BaseRecord( EventType type, EventClass clazz, Class creator, StackTraceElement codeLocation, String userId, String correlationId, String other ) {
     this.type = type;
-    this.clazz = clazz;
+    this.eventClass = clazz;
     this.realCreator = creator;
     this.creator = creator.getSimpleName( );
     this.codeLocation = codeLocation.toString( );
@@ -99,9 +107,9 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record info( ) {
     this.level = RecordLevel.INFO;
-    Record newThis = this.maybeSave();
+    this.maybeSave();
     Logger.getLogger( this.realCreator ).info( this );
-    return newThis;
+    return this;
   }
   
   /**
@@ -110,9 +118,9 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record error( ) {
     this.level = RecordLevel.ERROR;
-    Record newThis = this.maybeSave();
+    this.maybeSave();
     Logger.getLogger( this.realCreator ).error( this );
-    return newThis;
+    return this;
   }
   
   /**
@@ -121,6 +129,7 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record trace( ) {
     this.level = RecordLevel.TRACE;
+    this.maybeSave();
     Logger.getLogger( this.realCreator ).trace( this );
     return this;
   }
@@ -131,6 +140,7 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record debug( ) {
     this.level = RecordLevel.DEBUG;
+    this.maybeSave();
     Logger.getLogger( this.realCreator ).debug( this );
     return this;
   }
@@ -141,28 +151,13 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record warn( ) {
     this.level = RecordLevel.WARN;
-    Record newThis = this.maybeSave();
+    this.maybeSave();
     Logger.getLogger( this.realCreator ).warn( this );
-    return newThis;
+    return this;
   }
-  private static List<String> storePrefixes = Lists.newArrayList( "MSG_", "VM_", "ADDRESS_" );
-  private BaseRecord maybeSave() {
-    BaseRecord newThis = this;
+  private void maybeSave() {
     if( this.type != null && Bootstrap.isFinished( ) ) {
-      final EventType check = this.type;
-      boolean save = Iterables.any( storePrefixes, new Predicate<String>() {
-        @Override
-        public boolean apply( String arg0 ) {
-          return check.name().startsWith( arg0 );
-        }} );
-      try {
-        newThis = Transactions.save( this );
-      } catch ( TransactionException e1 ) {
-        LOG.debug( e1, e1 );
-      }
-      return newThis;
-    } else {
-      return newThis;
+      this.level.enqueue( this );
     }
   }
   
@@ -254,12 +249,12 @@ public class BaseRecord implements Serializable, Record {
     this.type = type;
   }
   
-  public EventClass getClazz( ) {
-    return this.clazz;
+  public EventClass getEventClass( ) {
+    return this.eventClass;
   }
   
   public void setClazz( EventClass clazz ) {
-    this.clazz = clazz;
+    this.eventClass = clazz;
   }
   
   public String getCreator( ) {
@@ -310,7 +305,7 @@ public class BaseRecord implements Serializable, Record {
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.clazz == null ) ? 0 : this.clazz.hashCode( ) );
+    result = prime * result + ( ( this.eventClass == null ) ? 0 : this.eventClass.hashCode( ) );
     result = prime * result + ( ( this.codeLocation == null ) ? 0 : this.codeLocation.hashCode( ) );
     result = prime * result + ( ( this.correlationId == null ) ? 0 : this.correlationId.hashCode( ) );
     result = prime * result + ( ( this.creator == null ) ? 0 : this.creator.hashCode( ) );
@@ -326,9 +321,9 @@ public class BaseRecord implements Serializable, Record {
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
     BaseRecord other = ( BaseRecord ) obj;
-    if ( this.clazz == null ) {
-      if ( other.clazz != null ) return false;
-    } else if ( !this.clazz.equals( other.clazz ) ) return false;
+    if ( this.eventClass == null ) {
+      if ( other.eventClass != null ) return false;
+    } else if ( !this.eventClass.equals( other.eventClass ) ) return false;
     if ( this.codeLocation == null ) {
       if ( other.codeLocation != null ) return false;
     } else if ( !this.codeLocation.equals( other.codeLocation ) ) return false;

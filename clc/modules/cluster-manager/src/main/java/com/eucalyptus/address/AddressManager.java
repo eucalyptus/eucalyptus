@@ -79,6 +79,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesType;
 import edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.DisassociateAddressType;
+import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.ReleaseAddressResponseType;
@@ -94,7 +95,7 @@ public class AddressManager {
     Address address;
     try {
       address = Addresses.allocate( userId, request.isAdministrator( ) );
-      EventRecord.here( AddressManager.class, EventType.ADDRESS_ALLOCATE, address.toString( ) ).info( );
+      EventRecord.here( AddressManager.class, EventClass.ADDRESS, EventType.ADDRESS_ALLOCATE, request.getUserId( ), address.getName( ) ).info( );
     } catch ( NotEnoughResourcesAvailable e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
@@ -108,12 +109,12 @@ public class AddressManager {
     reply.set_return( false );
     Addresses.updateAddressingMode( );
     Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
-    EventRecord.here( AddressManager.class, EventType.ADDRESS_RELEASE, address.toString( ) ).info( );
+    EventRecord.here( AddressManager.class, EventClass.ADDRESS, EventType.ADDRESS_RELEASE, request.getUserId( ), address.getName( ) ).info( );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
   }
-
+  
   public DescribeAddressesResponseType DescribeAddresses( DescribeAddressesType request ) throws EucalyptusCloudException {
     DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
     Addresses.updateAddressingMode( );
@@ -125,31 +126,32 @@ public class AddressManager {
     }
     if ( isAdmin ) {
       for ( Address address : Addresses.getInstance( ).listDisabledValues( ) ) {
-        reply.getAddressesSet( ).add( new DescribeAddressesResponseItemType( address.getName( ),
-          Address.UNALLOCATED_USERID ) );
+        reply.getAddressesSet( ).add( new DescribeAddressesResponseItemType( address.getName( ), Address.UNALLOCATED_USERID ) );
       }
     }
     return reply;
   }
-
-  @SuppressWarnings( "unchecked" ) public AssociateAddressResponseType AssociateAddress( AssociateAddressType request ) throws Exception {
+  
+  @SuppressWarnings( "unchecked" )
+  public AssociateAddressResponseType AssociateAddress( final AssociateAddressType request ) throws Exception {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
     final Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );//TODO: test should throw error.
     final VmInstance vm = VmInstances.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getInstanceId( ) );
-    EventRecord.here( AddressManager.class, EventType.ADDRESS_ASSIGNING, address.toString( ), vm.toString( ) ).info( );
+    EventRecord.here( AddressManager.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING, request.getUserId( ), address.getName( ), vm.getPrivateAddress( ),
+                      vm.getInstanceId( ) ).info( );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean oldAddrSystem = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
     reply.set_return( true );
-
+    
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
       public void apply( ) {
-        EventRecord.here( AddressManager.class, EventType.ADDRESS_ASSIGNING, address.toString( ), vm.toString( ) ).info( );
+        EventRecord.here( AddressManager.class, EventType.ADDRESS_ASSIGNING, request.getUserId( ), address.toString( ), vm.toString( ) ).info( );
         AddressCategory.assign( address, vm ).dispatch( address.getCluster( ) );
         if ( oldAddrSystem ) {
-          EventRecord.here( AddressManager.class, EventType.ADDRESS_RELEASE, oldAddr.toString( ) ).info( );
+          EventRecord.here( AddressManager.class, EventClass.ADDRESS, EventType.ADDRESS_RELEASE, request.getUserId( ), oldAddr.getName( ), "SYSTEM" ).info( );
           Addresses.getAddressManager( ).releaseSystemAddress( oldAddr );
         }
         if ( oldVm != null ) {
@@ -161,32 +163,35 @@ public class AddressManager {
     final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
       public void apply( ) {
         if ( oldAddr != null ) {
-          EventRecord.here( AddressManager.class, EventType.ADDRESS_UNASSIGNING, oldAddr.toString( ) ).info( );
+          EventRecord.here( AddressManager.class, EventType.ADDRESS_UNASSIGNING, request.getUserId( ), oldAddr.getUserId( ), oldAddr.getName( ) ).info( );
           AddressCategory.unassign( oldAddr ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
         } else {
-          assignTarget.apply();
+          assignTarget.apply( );
         }
       }
     };
     if ( address.isAssigned( ) ) {
-        address.unassign( ).getCallback( ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
+      address.unassign( ).getCallback( ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
     } else {
-      unassignBystander.apply();
+      unassignBystander.apply( );
     }
     return reply;
   }
+  
   private Address findVmExistingAddress( final VmInstance vm ) {
     Address oldAddr = null;
     if ( vm.hasPublicAddress( ) ) {
       try {
         oldAddr = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
-        EventRecord.here( AddressManager.class, EventType.ADDRESS_UNASSIGN, oldAddr.toString( ), vm.toString( ) ).info( );
+        EventRecord.here( AddressManager.class, EventType.ADDRESS_UNASSIGN, vm.getOwnerId( ), oldAddr.getUserId( ), oldAddr.getName( ), vm.getInstanceId( ) )
+                   .info( );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
     }
     return oldAddr;
   }
+  
   private VmInstance findCurrentAssignedVm( Address address ) {
     VmInstance oldVm = null;
     if ( address.isAssigned( ) && !address.isPending( ) ) {
@@ -199,6 +204,7 @@ public class AddressManager {
     }
     return oldVm;
   }
+  
   public DisassociateAddressResponseType DisassociateAddress( DisassociateAddressType request ) throws EucalyptusCloudException {
     DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
@@ -207,8 +213,7 @@ public class AddressManager {
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
     if ( address.isSystemOwned( ) && !request.isAdministrator( ) ) {
-      throw new EucalyptusCloudException( "Only administrators can unassign system owned addresses: "
-                                          + address.toString( ) );
+      throw new EucalyptusCloudException( "Only administrators can unassign system owned addresses: " + address.toString( ) );
     } else {
       try {
         EventRecord.here( AddressManager.class, EventType.ADDRESS_UNASSIGNING, address.toString( ) ).info( );
@@ -225,7 +230,8 @@ public class AddressManager {
           } ).dispatch( address.getCluster( ) );
         } else {
           AddressCategory.unassign( address ).then( new UnconditionalCallback( ) {
-            @Override public void apply( ) {
+            @Override
+            public void apply( ) {
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
               } catch ( Exception e ) {

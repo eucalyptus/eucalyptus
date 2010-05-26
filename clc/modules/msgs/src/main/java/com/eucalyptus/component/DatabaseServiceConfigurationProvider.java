@@ -3,6 +3,9 @@ package com.eucalyptus.component;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.records.EventClass;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
@@ -49,6 +52,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
       db.add( t );
       t = db.getUnique( t );
       db.commit( );
+      EventRecord.here( Configurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED,  t.getComponent( ).name( ), t.getName( ), t.getHostName( )  ).info();
     } catch ( Exception e ) {
       db.rollback( );
       LOG.error( e, e );
@@ -66,6 +70,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
       T exists = db.getUnique( searchConfig );
       db.delete( exists );
       db.commit( );
+      EventRecord.here( Configurations.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED,  t.getComponent( ).name( ), t.getName( ), t.getHostName( )  ).info();
     } catch ( Exception e ) {
       db.rollback( );
       LOG.error( e, e );

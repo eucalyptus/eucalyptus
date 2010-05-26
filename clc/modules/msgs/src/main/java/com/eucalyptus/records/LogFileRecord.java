@@ -20,13 +20,9 @@ public class LogFileRecord extends BaseRecord {
   public LogFileRecord( ) {
     super( );
   }
-  
-  public LogFileRecord( EventType type, Class creator, StackTraceElement callerStack, String userId, String correlationId, String other ) {
-    this( type, EventClass.ORPHAN, creator, callerStack, userId, correlationId, other );
-  }
-  
-  public LogFileRecord( EventType type, EventClass clazz, Class creator, StackTraceElement callerStack, String userId, String correlationId, String other ) {
-    super( type, clazz, creator, callerStack, userId, correlationId, other );
+
+  public LogFileRecord( EventClass eventClass, EventType type, Class creator, StackTraceElement callerStack, String userId, String correlationId, String other ) {
+    super( type, eventClass, creator, callerStack, userId, correlationId, other );
     if ( LogLevels.DEBUG ) {
       if ( callerStack != null && callerStack.getFileName( ) != null ) {
         this.caller = String.format( "%s.%s.%s", callerStack.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), callerStack.getMethodName( ), callerStack.getLineNumber( ) );
