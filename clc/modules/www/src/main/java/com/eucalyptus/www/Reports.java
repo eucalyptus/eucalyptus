@@ -274,7 +274,7 @@ public class Reports extends HttpServlet {
           
           @Override
           public JasperPrint call( ) throws Exception {
-            String url = String.format( "%s_%s", Component.db.getUri( ).toString( ), "records" );
+            String url = String.format( "jdbc:%s_%s", Component.db.getUri( ).toString( ), "records" );
             JasperReport jasperReport = JasperCompileManager.compileReport( jasperDesign );
             Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
             JasperPrint jasperPrint = JasperFillManager.fillReport( jasperReport, null, jdbcConnection );
