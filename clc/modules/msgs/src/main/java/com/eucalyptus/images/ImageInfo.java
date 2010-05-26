@@ -64,6 +64,7 @@
 
 package com.eucalyptus.images;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.CascadeType;
@@ -78,13 +79,18 @@ import javax.persistence.ManyToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TransactionException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
@@ -93,6 +99,8 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
 @Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ImageInfo implements Image {
+  @Transient
+  private static Logger LOG = Logger.getLogger( ImageInfo.class );
   @Transient
   public static ImageInfo ALL = new ImageInfo();
   @Id
@@ -129,14 +137,14 @@ public class ImageInfo implements Image {
   public void setPlatform( String platform ) {
     this.platform = platform;
   }
-//  @ManyToMany( cascade = CascadeType.PERSIST )
-//  @JoinTable(
-//      name = "image_has_groups",
-//      joinColumns = { @JoinColumn( name = "image_id" ) },
-//      inverseJoinColumns = @JoinColumn( name = "user_group_id" )
-//  )
-//  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-//  private List<Group> userGroups = new ArrayList<Group>();
+  @ManyToMany( cascade = CascadeType.PERSIST )
+  @JoinTable(
+      name = "image_has_groups",
+      joinColumns = { @JoinColumn( name = "image_id" ) },
+      inverseJoinColumns = @JoinColumn( name = "user_group_id" )
+  )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private List<ImageAuthorization> userGroups = new ArrayList<ImageAuthorization>();
   @ManyToMany()
   @JoinTable(
       name = "image_has_perms",
@@ -144,7 +152,7 @@ public class ImageInfo implements Image {
       inverseJoinColumns = @JoinColumn( name = "user_id" )
   )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<UserInfo> permissions = new ArrayList<UserInfo>();
+  private List<ImageAuthorization> permissions = new ArrayList<ImageAuthorization>();
   @ManyToMany( cascade = CascadeType.PERSIST )
   @JoinTable(
       name = "image_has_product_codes",
@@ -355,22 +363,76 @@ public class ImageInfo implements Image {
     this.signature = signature;
   }
 
-//  public List<UserGroupEntity> getUserGroups() {
-//    return userGroups;
-//  }
-//
-//  public void setUserGroups( final List<UserGroupEntity> userGroups ) {
-//    this.userGroups = userGroups;
-//  }
+  public List<ImageAuthorization> getUserGroups() {
+    return userGroups;
+  }
 
-  public List<UserInfo> getPermissions() {
+  public void setUserGroups( final List<ImageAuthorization> userGroups ) {
+    this.userGroups = userGroups;
+  }
+
+  public List<ImageAuthorization> getPermissions() {
     return permissions;
   }
 
-  public void setPermissions( final List<UserInfo> permissions ) {
+  public void setPermissions( final List<ImageAuthorization> permissions ) {
     this.permissions = permissions;
   }
+  
+  public ImageInfo grantPermission( final Principal user ) {
+    try {
+      Transactions.one( new ImageInfo( this.imageId ), new Tx<ImageInfo>() {
+        @Override
+        public void fire( ImageInfo t ) throws Throwable {
+          ImageAuthorization imgAuth = new ImageAuthorization( user.getName( ) );
+          if( !t.getPermissions( ).contains( imgAuth ) ) {
+            t.getPermissions( ).add( imgAuth );
+            if( t.getPermissions( ).contains( new ImageAuthorization("all" ) ) ) {
+              t.setImagePublic( true );
+            }
+          }
+        }
+      });
+    } catch ( TransactionException e ) {
+      LOG.debug( e, e );
+    }
+    return this;
+  }
 
+  public boolean checkPermission( final Principal user ) throws EucalyptusCloudException {
+    final boolean[] result = { false };
+    try {
+      Transactions.one( new ImageInfo( this.imageId ), new Tx<ImageInfo>() {
+        @Override
+        public void fire( ImageInfo t ) throws Throwable {
+          result[0] = t.getPermissions( ).contains( new ImageAuthorization( user.getName( ) ) );
+        }
+      });
+    } catch ( TransactionException e ) {
+      return false;
+    }
+    return result[0];
+  }
+
+  public ImageInfo revokePermission( final Principal user ) {
+    try {
+      Transactions.one( new ImageInfo( this.imageId ), new Tx<ImageInfo>() {
+        @Override
+        public void fire( ImageInfo t ) throws Throwable {
+          ImageAuthorization imgAuth = new ImageAuthorization( user.getName( ) );
+          t.getPermissions( ).remove( imgAuth );
+          if( !t.getPermissions( ).contains( new ImageAuthorization("all" ) ) ) {
+            t.setImagePublic( false );
+          }
+        }
+      });
+    } catch ( TransactionException e ) {
+      LOG.debug( e, e );
+    }
+    return this;
+  }
+
+  
   /**
    * @see com.eucalyptus.images.Image#getAsImageDetails()
    * @return

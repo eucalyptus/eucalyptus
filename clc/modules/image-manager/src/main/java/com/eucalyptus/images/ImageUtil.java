@@ -79,6 +79,8 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
@@ -350,38 +352,26 @@ public class ImageUtil {
   public static void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo, final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
     for ( LaunchPermissionItemType perm : changeList ) {
       if ( perm.isGroup( ) ) {
-//        UserGroupEntity target = new UserGroupEntity( perm.getGroup( ) );
-//        if ( adding && !imgInfo.getUserGroups( ).contains( target ) ) {
-//          EntityWrapper<UserGroupEntity> dbGroup = db.recast( UserGroupEntity.class );
-//          try {
-//            target = dbGroup.getUnique( target );
-//          } catch ( EucalyptusCloudException e ) {} finally {
-//            imgInfo.getUserGroups( ).add( target );
-//            if ( "all".equals( target.getName( ) ) ) imgInfo.setPublic( true );
-//          }
-//        } else if ( !adding && imgInfo.getUserGroups( ).contains( target ) ) {
-//          if ( "all".equals( target.getName( ) ) ) imgInfo.setPublic( false );
-//          imgInfo.getUserGroups().remove(target);
-//        } else if ( !adding ) {
-//          throw new EucalyptusCloudException( "image attribute: cant remove nonexistant permission." );
-//        }
-      } else if ( perm.isUser( ) ) {
-        UserInfo target = new UserInfo( perm.getUserId( ) );
-        if ( adding && !imgInfo.getPermissions( ).contains( target ) ) {
-          try {
-            target = UserInfoStore.getUserInfo( target );
-          } catch ( NoSuchUserException e ) {
-            throw new EucalyptusCloudException( "image attribute: invalid user id." );
-          } finally {
-            // TODO (wenye): database schema needs to change to make this work when UserInfo is not in database.
-            if ( !LdapConfiguration.ENABLE_LDAP ) {
-              imgInfo.getPermissions( ).add( target );
-            }
+        try {
+          if( adding ) {
+            imgInfo.grantPermission( Groups.lookupGroup( perm.getGroup( ) ) );
+          } else {
+            imgInfo.revokePermission( Groups.lookupGroup( perm.getGroup( ) ) );
           }
-        } else if ( !adding && imgInfo.getPermissions( ).contains( target ) ) {
-          imgInfo.getPermissions( ).remove( target );
-        } else if ( !adding ) {
-          throw new EucalyptusCloudException( "image attribute: cant remove nonexistant permission." );
+        } catch ( NoSuchGroupException e ) {
+          LOG.debug( e, e );
+          throw new EucalyptusCloudException( "Modify image attribute failed because of: " + e.getMessage( ) );
+        }
+      } else if ( perm.isUser( ) ) {
+        try {
+          if( adding ) {
+            imgInfo.grantPermission( Users.lookupUser( perm.getUserId( ) ) );
+          } else {
+            imgInfo.revokePermission( Users.lookupUser( perm.getUserId( ) ) );
+          }
+        } catch ( NoSuchUserException e ) {
+          LOG.debug( e, e );
+          throw new EucalyptusCloudException( "Modify image attribute failed because of: " + e.getMessage( ) );
         }
       }
     }
