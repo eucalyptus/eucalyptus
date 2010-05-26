@@ -1,6 +1,8 @@
 package com.eucalyptus.configurable;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
+import com.eucalyptus.event.PassiveEventListener;
 
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {
 
@@ -16,7 +18,12 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   protected String displayName;
   protected ConfigurableFieldType widgetType;
   protected String alias;
+  private PassiveEventListener<ConfigurableProperty> changeListener;
   
+  public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PassiveEventListener changeListener ) {
+    this( definingClass, entrySetName, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
+    this.changeListener = changeListener;
+  }
   public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
     this.definingClass = definingClass;
     this.entrySetName = entrySetName.toLowerCase( );
@@ -29,6 +36,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     this.displayName = displayName;
     this.widgetType = widgetType;
     this.alias = alias;
+    this.changeListener = NoopEventListener.NOOP;
   }
 
   public String getFieldName( ) {
@@ -77,5 +85,11 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   
   public String getAlias() {
 	return this.alias;
+  }
+  
+  public void fireChange() {
+    if( !NoopEventListener.class.equals( this.changeListener.getClass( ) ) ) {
+      this.changeListener.firedEvent( this );
+    }
   }
 }

@@ -1,15 +1,14 @@
 package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import com.eucalyptus.event.PassiveEventListener;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 public class PropertyDirectory {
@@ -23,6 +22,11 @@ public class PropertyDirectory {
                                                                                           new SingletonDatabasePropertyEntry.DatabasePropertyBuilder( ),
                                                                                           new MultiDatabasePropertyEntry.DatabasePropertyBuilder( )); //FIXME: make this dynamic kkthx.
                                                                                                                                                   
+  public static class NoopEventListener extends PassiveEventListener<ConfigurableProperty> {
+    public static NoopEventListener NOOP = new NoopEventListener( );
+    @Override
+    protected void firingEvent( ConfigurableProperty t ) {}
+  }
   @SuppressWarnings( { "unchecked" } )
   public static ConfigurableProperty buildPropertyEntry( Class c, Field field ) {
     for ( ConfigurablePropertyBuilder b : builders ) {
