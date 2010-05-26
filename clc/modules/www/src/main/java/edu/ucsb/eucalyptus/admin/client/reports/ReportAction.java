@@ -8,6 +8,7 @@ import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
 import edu.ucsb.eucalyptus.admin.client.AccountingControl;
+import edu.ucsb.eucalyptus.admin.client.EucaButton;
 import edu.ucsb.eucalyptus.admin.client.EucaImageButton;
 
 public enum ReportAction {
@@ -21,7 +22,7 @@ public enum ReportAction {
     @Override
     public Integer apply( AccountingControl parent ) {
       Integer current = parent.getCurrentPage( );
-      return parent.setCurrentPage( current > 1 ? current - 1 : 1 );
+      return parent.setCurrentPage( current > 0 ? current - 1 : 0 );
     }
   },
   FIRST_PAGE{
@@ -33,7 +34,7 @@ public enum ReportAction {
 
     @Override
     public Widget makeImageButton( AccountingControl parent ) {
-      return new Label( "1" );
+      return new EucaButton( "1" , "First Page", "acct-noop", AccountingControl.DO_NOTHING );
     }    
   },
   PAGE_INFO{
@@ -70,7 +71,7 @@ public enum ReportAction {
 
     @Override
     public Widget makeImageButton( AccountingControl parent ) {
-      return new Label( parent.getCurrentReport( ).getLength( ) + "" );
+      return new EucaButton( parent.getCurrentReport( ).getLength( ) + "" , "Last Page", "acct-noop", AccountingControl.DO_NOTHING );
     }    
   },
   NEXT {

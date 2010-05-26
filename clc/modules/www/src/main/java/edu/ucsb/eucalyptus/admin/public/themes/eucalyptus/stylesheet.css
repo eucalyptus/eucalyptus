@@ -500,10 +500,14 @@ button {
 
 .acct-root {
   width: 100%;
+  margin: 0px;
+  padding: 0px;
+  height: 100%;
 }
 
 .acct-report-bar {
 	width: 100%;
+	padding: 5px 0px 5px 0px;
 }
 
 .acct-Button-Action {
@@ -548,3 +552,15 @@ button {
 .acct-Button-Report-down {
 	background: #D4D4D4 none repeat scroll 0 0
 }
+.acct-noop {
+  border-style: solid;
+  border-width: 1px;
+  border-color: #CCCCCC #999999 #999999 #CCCCCC;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  background: #F6F6F6 none repeat scroll 0 0;
+  padding: 3px 5px 3px 5px;
+}
+.acct-noop-down {}
+.acct-noop-over {}

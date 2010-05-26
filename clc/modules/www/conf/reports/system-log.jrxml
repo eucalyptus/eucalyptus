@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Created using an evaluation version of JasperAssistant (http://www.jasperassistant.com) -->
-<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="System Event" language="groovy" pageWidth="1024" pageHeight="595" orientation="Landscape" columnWidth="984" leftMargin="20" rightMargin="20" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty">
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="System Event" language="groovy" pageWidth="1024" pageHeight="600" columnWidth="984" leftMargin="20" rightMargin="20" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty">
 	<property name="ireport.zoom" value="1.0"/>
 	<property name="ireport.x" value="56"/>
 	<property name="ireport.y" value="0"/>
@@ -16,6 +16,9 @@
 		</conditionalStyle>
 	</style>
 	<subDataset name="dataset1"/>
+	<parameter name="EUCA_HEIGHT" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[756]]></defaultValueExpression>
+	</parameter>
 	<queryString>
 		<![CDATA[SELECT record_timestamp,record_type,record_creator,REPLACE(record_extra,':',' ') AS record_extra FROM eucalyptus_records.records_logs WHERE (record_class LIKE 'SYSTEM' OR record_class LIKE 'COMPONENT' OR record_class LIKE 'GROUP' OR record_class LIKE 'USER') ORDER BY record_timestamp DESC;]]>
 	</queryString>
@@ -90,7 +93,7 @@
 	<detail>
 		<band height="19">
 			<textField isStretchWithOverflow="true" hyperlinkType="None">
-				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="0" y="0" width="139" height="19"/>
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="0" y="0" width="139" height="19" forecolor="#000000"/>
 				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
 					<topPen lineStyle="Solid"/>
 					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
@@ -103,7 +106,7 @@
 				<textFieldExpression class="java.util.Date"><![CDATA[$F{record_timestamp}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true" hyperlinkType="None">
-				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="139" y="0" width="163" height="19"/>
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="139" y="0" width="163" height="19" forecolor="#000000"/>
 				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
 					<topPen lineStyle="Solid"/>
 					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
@@ -116,7 +119,7 @@
 				<textFieldExpression class="java.lang.String"><![CDATA[$F{record_type}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="false" hyperlinkType="None">
-				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="302" y="0" width="177" height="19" backcolor="#E2E2E2"/>
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="302" y="0" width="177" height="19" forecolor="#000000" backcolor="#E2E2E2"/>
 				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
 					<topPen lineStyle="Solid"/>
 					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
@@ -129,7 +132,7 @@
 				<textFieldExpression class="java.lang.String"><![CDATA[$F{record_creator}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true" hyperlinkType="None">
-				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="479" y="0" width="505" height="19"/>
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="479" y="0" width="505" height="19" forecolor="#000000"/>
 				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
 					<topPen lineStyle="Solid"/>
 					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>

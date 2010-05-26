@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Created using an evaluation version of JasperAssistant (http://www.jasperassistant.com) -->
-<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Message Log" language="groovy" pageWidth="800" pageHeight="800" columnWidth="700" leftMargin="50" rightMargin="50" topMargin="50" bottomMargin="50" whenResourceMissingType="Empty">
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Message Log" language="groovy" pageWidth="1024" pageHeight="600" columnWidth="924" leftMargin="50" rightMargin="50" topMargin="50" bottomMargin="50" whenResourceMissingType="Empty">
 	<property name="ireport.zoom" value="1.0"/>
 	<property name="ireport.x" value="0"/>
 	<property name="ireport.y" value="0"/>
@@ -58,7 +58,7 @@
 					<text><![CDATA[Message Type]]></text>
 				</staticText>
 				<staticText>
-					<reportElement style="Title" mode="Opaque" x="570" y="0" width="130" height="19" backcolor="#DCDAD5"/>
+					<reportElement style="Title" mode="Opaque" x="570" y="0" width="343" height="19" backcolor="#DCDAD5"/>
 					<box topPadding="0" bottomPadding="0">
 						<bottomPen lineWidth="0.25"/>
 						<rightPen lineWidth="1.0"/>
@@ -75,7 +75,7 @@
 		<band height="24">
 			<elementGroup/>
 			<staticText>
-				<reportElement x="199" y="0" width="301" height="24"/>
+				<reportElement x="311" y="0" width="301" height="24"/>
 				<box>
 					<bottomPen lineWidth="0.25"/>
 				</box>
@@ -128,7 +128,7 @@
 				<textFieldExpression class="java.lang.String"><![CDATA[$F{record_creator}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true" hyperlinkType="None">
-				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="570" y="0" width="130" height="19"/>
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="570" y="0" width="343" height="19"/>
 				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
 					<topPen lineStyle="Solid"/>
 					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>

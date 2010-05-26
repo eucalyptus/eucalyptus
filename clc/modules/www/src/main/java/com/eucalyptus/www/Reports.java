@@ -51,7 +51,7 @@ public class Reports extends HttpServlet {
   private static Logger LOG               = Logger.getLogger( Reports.class );
   
   enum Param {
-    name, type, session, page;
+    name, type, session, page, flush, width, height;
     public String get( HttpServletRequest req ) throws IllegalArgumentException {
       if ( req.getParameter( this.name( ) ) == null ) {
         throw new IllegalArgumentException( "'" + this.name( ) + "' is a required argument." );
