@@ -567,7 +567,13 @@ int java_init(euca_opts *args, java_home_t *data) {
     	JVM_ARG(opt[++x],"-Deuca.disable.storage=true");
     }
     if(args->disable_cloud_flag) {
+    	//TODO: this should be replaced by a runtime dependency computation based on @Provides @Depends
      	JVM_ARG(opt[++x],"-Deuca.disable.eucalyptus=true");
+     	JVM_ARG(opt[++x],"-Deuca.disable.jetty=true");
+     	JVM_ARG(opt[++x],"-Deuca.disable.db=true");
+     	JVM_ARG(opt[++x],"-Deuca.disable.configuration=true");
+     	JVM_ARG(opt[++x],"-Deuca.disable.component=true");
+     	JVM_ARG(opt[++x],"-Deuca.disable.ldap=true");
     }
     if(args->disable_walrus_flag) {
      	JVM_ARG(opt[++x],"-Deuca.disable.walrus=true");
