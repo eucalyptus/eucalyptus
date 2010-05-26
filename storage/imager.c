@@ -243,6 +243,9 @@ int main (int argc, char * argv[])
 		if (reqs[i].cmd->cleanup!=NULL)
 			reqs[i].cmd->cleanup (&reqs[i], (i==(ncmds-1))?(TRUE):(FALSE));
 
+    // if work dir was created and is now empty, it will be deleted
+    clean_work_dir();
+
 	exit (ret);
 }
 
@@ -342,7 +345,7 @@ int ensure_path_exists (const char * path, mode_t mode)
 		
 		if ( try_it ) {
 			if ( stat (path_copy, &buf) == -1 ) {
-				logprintfl (EUCAINFO, "trying to create path %s\n", path_copy);
+				logprintfl (EUCAINFO, "creating path %s\n", path_copy);
 				
 				if ( mkdir (path_copy, mode) == -1) {
 					logprintfl (EUCAERROR, "error: failed to create path %s: %s\n", path_copy, strerror (errno));
