@@ -8,15 +8,18 @@ import edu.ucsb.eucalyptus.admin.client.EucaButton;
 
 public class ReportInfo implements IsSerializable {
   private AccountingControl parent;
-  private Integer           length;
   private EucaButton        button;
+  private Integer           length;
   private String            name;
   private String            fileName;
   
-  public ReportInfo( ) {}
+  public ReportInfo( ) {
+    this( "Loading", "Loading", 0 );
+    this.parent = null;
+    this.button = null;
+  }
   
   public ReportInfo( String name, String fileName, Integer length ) {
-    super( );
     this.length = length;
     this.name = name;
     this.fileName = fileName;
@@ -24,10 +27,8 @@ public class ReportInfo implements IsSerializable {
 
   public String getUrl( ReportType type ) {
     return "/reports?name=" + this.parent.getCurrentReport( ).fileName + "&type=" + type.name( ).toLowerCase( ) + "&session="
-           + this.parent.getSessionid( ) + "&page=" + this.parent.getCurrentPage( );
+           + this.parent.getSessionid( ) + "&page=" + this.parent.getCurrentPage( ) + "&flush=" + this.parent.getForceFlush();
   }
-
-  
   
   public Integer getLength( ) {
     return this.length;

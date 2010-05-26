@@ -16,20 +16,18 @@ import edu.ucsb.eucalyptus.admin.client.reports.ReportInfo;
 import edu.ucsb.eucalyptus.admin.client.reports.ReportType;
 
 public class AccountingControl implements ContentControl {
-  public static final String ACCT_REPORT_BUTTON = "acct-Button-Report";
-  public static final String ACCT_ACTION_BUTTON = "acct-Button-Action";
-  private String             sessionId;
-  private ReportInfo         currentReport      = null;
-  
-  private final List<ReportInfo> reports = new ArrayList<ReportInfo>( );
-  
-  
-  private VerticalPanel   root;
-  private HorizontalPanel reportBar;
-  private HorizontalPanel buttonBar;
-  private Frame           report;
-  private TextBox         currentPageText = new TextBox( );
-  private Integer         currentPage;
+  public static final String     ACCT_REPORT_BUTTON = "acct-Button-Report";
+  public static final String     ACCT_ACTION_BUTTON = "acct-Button-Action";
+  private String                 sessionId;
+  private final List<ReportInfo> reports            = new ArrayList<ReportInfo>( );
+  private Integer                currentPage;
+  private Boolean                forceFlush         = Boolean.FALSE;
+  private ReportInfo             currentReport      = null;    
+  private VerticalPanel          root;
+  private HorizontalPanel        reportBar;
+  private HorizontalPanel        buttonBar;
+  private Frame                  report;
+  private TextBox                currentPageText    = new TextBox( );
   
   public AccountingControl( String sessionId ) {
     this.sessionId = sessionId;
@@ -123,6 +121,10 @@ public class AccountingControl implements ContentControl {
   
   public Integer getCurrentPage( ) {
     return this.currentPage;
+  }
+  
+  public Boolean getForceFlush( ) {
+    return forceFlush;
   }
   
 }
