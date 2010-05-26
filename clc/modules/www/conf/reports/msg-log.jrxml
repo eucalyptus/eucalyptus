@@ -1,39 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="report2" language="groovy" pageWidth="1024" pageHeight="10000" columnWidth="984" leftMargin="20" rightMargin="20" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty">
+<!-- Created using an evaluation version of JasperAssistant (http://www.jasperassistant.com) -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Message Log" language="groovy" pageWidth="800" pageHeight="800" columnWidth="700" leftMargin="50" rightMargin="50" topMargin="50" bottomMargin="50" whenResourceMissingType="Empty">
 	<property name="ireport.zoom" value="1.0"/>
-	<property name="ireport.x" value="26"/>
+	<property name="ireport.x" value="0"/>
 	<property name="ireport.y" value="0"/>
 	<style name="Title" isDefault="false" fontName="Arial" fontSize="26" isBold="true" pdfFontName="Helvetica-Bold"/>
 	<style name="SubTitle" isDefault="false" forecolor="#666666" fontName="Arial" fontSize="18"/>
 	<style name="Column header" isDefault="false" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
 	<style name="Detail" isDefault="false" fontName="Arial" fontSize="12"/>
+	<style name="alternating" isDefault="false" forecolor="#F5F5F5" markup="none" fontName="Verdana" fontSize="12">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue() % 2 == 0 )]]></conditionExpression>
+			<style isDefault="false" style="alternating" backcolor="#F5F562" markup="none"/>
+		</conditionalStyle>
+	</style>
+	<subDataset name="dataset1"/>
 	<queryString>
-		<![CDATA[select record_timestamp,record_type,record_user_id,record_extra from eucalyptus_records.records_logs where record_level not like 'TRACE' and record_type like 'MSG_%' and record_user_id != 'NULL';
-]]>
+		<![CDATA[SELECT record_timestamp,record_creator,record_user_id,REPLACE(record_extra,':',' ') AS record_extra,record_correlation_id FROM eucalyptus_records.records_logs WHERE record_class LIKE 'MESSAGE' AND record_correlation_id IS NOT NULL ORDER BY record_timestamp DESC;]]>
 	</queryString>
 	<field name="record_extra" class="java.lang.String"/>
-	<field name="record_timestamp" class="java.util.Date"/>
-	<field name="record_type" class="java.lang.String"/>
+	<field name="record_timestamp" class="java.sql.Timestamp"/>
 	<field name="record_user_id" class="java.lang.String"/>
+	<field name="record_creator" class="java.lang.String"/>
 	<group name="Group1">
-		<groupExpression><![CDATA[(int)($V{REPORT_COUNT}/15)]]></groupExpression>
-	</group>
-	<group name="Group2" keepTogether="true">
-		<groupExpression><![CDATA[(int)($P{REPORT_MAX_COUNT})]]></groupExpression>
+		<groupExpression><![CDATA[(int)($V{REPORT_COUNT}/100)]]></groupExpression>
 		<groupHeader>
 			<band height="19">
 				<staticText>
-					<reportElement style="Title" mode="Opaque" x="119" y="0" width="163" height="19" backcolor="#DCDAD5"/>
+					<reportElement style="Title" mode="Opaque" x="139" y="0" width="189" height="19" backcolor="#DCDAD5"/>
 					<box topPadding="0" bottomPadding="0">
 						<bottomPen lineWidth="0.25"/>
 					</box>
 					<textElement textAlignment="Center" verticalAlignment="Middle">
 						<font fontName="Verdana" size="12"/>
 					</textElement>
-					<text><![CDATA[Event Type]]></text>
+					<text><![CDATA[User ID]]></text>
 				</staticText>
 				<staticText>
-					<reportElement style="Title" mode="Opaque" x="0" y="0" width="119" height="19" backcolor="#DCDAD5"/>
+					<reportElement style="Title" mode="Opaque" x="0" y="0" width="139" height="19" backcolor="#DCDAD5"/>
 					<box topPadding="0" bottomPadding="0">
 						<leftPen lineWidth="1.0"/>
 						<bottomPen lineWidth="0.25"/>
@@ -44,17 +48,17 @@
 					<text><![CDATA[Timestamp]]></text>
 				</staticText>
 				<staticText>
-					<reportElement style="Title" mode="Opaque" x="282" y="0" width="177" height="19" backcolor="#DCDAD5"/>
+					<reportElement style="Title" mode="Opaque" x="328" y="0" width="242" height="19" backcolor="#DCDAD5"/>
 					<box topPadding="0" bottomPadding="0">
 						<bottomPen lineWidth="0.25"/>
 					</box>
 					<textElement textAlignment="Center" verticalAlignment="Middle">
 						<font fontName="Verdana" size="12"/>
 					</textElement>
-					<text><![CDATA[User]]></text>
+					<text><![CDATA[Message Type]]></text>
 				</staticText>
 				<staticText>
-					<reportElement style="Title" mode="Opaque" x="459" y="0" width="525" height="19" backcolor="#DCDAD5"/>
+					<reportElement style="Title" mode="Opaque" x="570" y="0" width="130" height="19" backcolor="#DCDAD5"/>
 					<box topPadding="0" bottomPadding="0">
 						<bottomPen lineWidth="0.25"/>
 						<rightPen lineWidth="1.0"/>
@@ -67,13 +71,11 @@
 			</band>
 		</groupHeader>
 	</group>
-	<background>
-		<band splitType="Stretch"/>
-	</background>
 	<title>
-		<band height="24" splitType="Stretch">
+		<band height="24">
+			<elementGroup/>
 			<staticText>
-				<reportElement x="0" y="0" width="984" height="24"/>
+				<reportElement x="0" y="0" width="700" height="24"/>
 				<box>
 					<bottomPen lineWidth="0.25"/>
 				</box>
@@ -86,8 +88,8 @@
 	</title>
 	<detail>
 		<band height="19">
-			<textField isStretchWithOverflow="true">
-				<reportElement stretchType="RelativeToTallestObject" x="0" y="0" width="119" height="19"/>
+			<textField isStretchWithOverflow="true" hyperlinkType="None">
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="0" y="0" width="139" height="19"/>
 				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
 					<topPen lineStyle="Solid"/>
 					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
@@ -99,21 +101,8 @@
 				</textElement>
 				<textFieldExpression class="java.util.Date"><![CDATA[$F{record_timestamp}]]></textFieldExpression>
 			</textField>
-			<textField isStretchWithOverflow="true">
-				<reportElement stretchType="RelativeToTallestObject" x="119" y="0" width="163" height="19"/>
-				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
-					<topPen lineStyle="Solid"/>
-					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
-					<bottomPen lineWidth="0.5"/>
-					<rightPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
-				</box>
-				<textElement verticalAlignment="Middle" markup="html">
-					<font fontName="Verdana" size="12" pdfFontName="Courier" isPdfEmbedded="true"/>
-				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{record_type}]]></textFieldExpression>
-			</textField>
-			<textField isStretchWithOverflow="true" isBlankWhenNull="false">
-				<reportElement stretchType="RelativeToTallestObject" x="282" y="0" width="177" height="19" backcolor="#E2E2E2"/>
+			<textField isStretchWithOverflow="true" hyperlinkType="None">
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="139" y="0" width="189" height="19"/>
 				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
 					<topPen lineStyle="Solid"/>
 					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
@@ -125,8 +114,21 @@
 				</textElement>
 				<textFieldExpression class="java.lang.String"><![CDATA[$F{record_user_id}]]></textFieldExpression>
 			</textField>
-			<textField isStretchWithOverflow="true">
-				<reportElement stretchType="RelativeToTallestObject" x="459" y="0" width="525" height="19"/>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="false" hyperlinkType="None">
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="328" y="0" width="242" height="19" backcolor="#E2E2E2"/>
+				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
+					<topPen lineStyle="Solid"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+				</box>
+				<textElement verticalAlignment="Middle" markup="html">
+					<font fontName="Verdana" size="12" pdfFontName="Courier" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{record_creator}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" hyperlinkType="None">
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="570" y="0" width="130" height="19"/>
 				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
 					<topPen lineStyle="Solid"/>
 					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
