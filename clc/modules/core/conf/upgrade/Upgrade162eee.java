@@ -1,10 +1,28 @@
+import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
-import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
+import edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
+import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
+import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo;
 import edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo;
-import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
-import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
+import edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.entities.TorrentInfo;
+import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
+import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
+import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
+import edu.ucsb.eucalyptus.cloud.state.State;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
@@ -13,25 +31,38 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.Column;
+import javax.persistence.Id;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.address.Address;
+import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
-import com.eucalyptus.util.WalrusProperties;
 
 class UpgradeWalrus162eee implements UpgradeScript {
 	static final String FROM_VERSION = "1.6.2";
 	static final String TO_VERSION = "eee-2.0.0";
 	private static Logger LOG = Logger.getLogger( UpgradeWalrus162eee.class );
+	private static List<Class> entities = new ArrayList<Class>();
 	private static Map<String, Class> entityMap = new HashMap<String, Class>();
 
 	@Override
@@ -50,7 +81,8 @@ class UpgradeWalrus162eee implements UpgradeScript {
 			Sql conn = getConnection(contextName);
 			if (conn != null) {
 				Map<String, Method> setterMap = buildSetterMap(conn, entityKey);
-				doUpgrade(contextName, conn, entityKey, setterMap);
+				if(setterMap != null)
+					doUpgrade(contextName, conn, entityKey, setterMap);
 			}
 		}
 	}
@@ -103,13 +135,16 @@ class UpgradeWalrus162eee implements UpgradeScript {
 						Object o = rowResult.get(column);
 						if(o != null) {
 							try {
+								if(dest instanceof AbstractIsomorph && (setter.getName().equals("setState"))) {
+									o = State.valueOf((String)o);
+								}
 								setter.invoke(dest, o);
 							} catch (IllegalArgumentException e) {
-								LOG.error(e);
+								LOG.error(dest.getClass().getName()  + " " + column + " " + e);
 							} catch (IllegalAccessException e) {
-								LOG.error(e);
+								LOG.error(dest.getClass().getName()  + " " + column + " " + e);
 							} catch (InvocationTargetException e) {
-								LOG.error(e);
+								LOG.error(dest.getClass().getName()  + " " + column + " " + e);
 							}
 						}
 					}
@@ -128,34 +163,28 @@ class UpgradeWalrus162eee implements UpgradeScript {
 		Map<String, Method> setterMap = new HashMap<String, Method>();
 		try {
 			Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
+			if(firstRow == null) {
+				LOG.error("Unable to find anything in table: " + entityKey);
+				return null;
+			}
 			if(firstRow instanceof Map) {
 				Set<String> columnNames = ((Map) firstRow).keySet();
 				Class definingClass = entityMap.get(entityKey);
 				Field[] fields = definingClass.getDeclaredFields();
-				for(String column : columnNames) {
-					for(Field f : fields) {
-						if(f.isAnnotationPresent(Column.class)) {
-							Column annotClass = (Column)f.getAnnotation(Column.class);						
-							if(((String)column).toLowerCase().equals(annotClass.name().toLowerCase())) {
-								String baseMethodName = f.getName( ).substring( 0, 1 ).toUpperCase( ) + f.getName( ).substring( 1 );
-								try {
-									Class[] classes = new Class[1];
-									classes[0] = f.getType();
-									Method setMethod = definingClass.getDeclaredMethod( "set" + baseMethodName, classes );
-									setterMap.put(column, setMethod);
-								} catch (SecurityException e) {
-									LOG.error(e);
-								} catch (NoSuchMethodException e) {
-									LOG.error(e);
-								}
-								break;
-							}
-						}
-					}
-					if(setterMap.containsKey(column)) {
-						LOG.info(column + " is set by: " + setterMap.get(column).getName());
-					} else {
-						LOG.info("No corresponding field found for: " + column);
+				//special case. Do this better.
+				addToSetterMap(setterMap, columnNames, definingClass, fields);				
+				Class superClass = entityMap.get(entityKey).getSuperclass();				
+				while(superClass.isAnnotationPresent(MappedSuperclass.class)) {
+					Field[] superFields = superClass.getDeclaredFields();
+					addToSetterMap(setterMap, columnNames, superClass, superFields);
+					//nothing to see here (otherwise we loop forever).
+					if(superClass.equals(AbstractPersistent.class))
+						break;
+					superClass = superClass.getSuperclass();
+				}
+				for (String column : columnNames) {
+					if(!setterMap.containsKey(column)) {
+						LOG.warn("No corresponding field for column: " + column + " found");
 					}
 				}
 			}
@@ -165,13 +194,86 @@ class UpgradeWalrus162eee implements UpgradeScript {
 		return setterMap;
 	}
 
-	private void buildEntityMap() {
-		entityMap.put("BUCKETS", BucketInfo.class);
-		entityMap.put("OBJECTS", ObjectInfo.class);
-		entityMap.put("GRANTS", GrantInfo.class);
-		entityMap.put("METADATA", MetaDataInfo.class);
-		entityMap.put("AOEVOLUMEINFO", AOEVolumeInfo.class);
-		entityMap.put("NSRECORDS", NSRecordInfo.class);
+	private void addToSetterMap(Map<String, Method> setterMap,
+			Set<String> columnNames, Class definingClass, Field[] fields) {
+		for(String column : columnNames) {
+			for(Field f : fields) {
+				if(f.isAnnotationPresent(Column.class) && !f.isAnnotationPresent(Id.class)) {
+					Column annotClass = (Column)f.getAnnotation(Column.class);
+					if(((String)column).toLowerCase().equals(annotClass.name().toLowerCase())) {
+						String baseMethodName = f.getName( ).substring( 0, 1 ).toUpperCase( ) + f.getName( ).substring( 1 );
+						try {
+							Class[] classes = new Class[1];
+							classes[0] = f.getType();
+							Method setMethod = definingClass.getDeclaredMethod( "set" + baseMethodName, classes );
+							setterMap.put(column, setMethod);
+						} catch (SecurityException e) {
+							LOG.error(e);
+						} catch (NoSuchMethodException e) {
+							LOG.error(e);
+						}
+						break;
+					}
+				}
+			}
+			if(setterMap.containsKey(column)) {
+				LOG.info(column + " is set by: " + setterMap.get(column).getName());
+			} 
+		}
 	}
 
+	private void buildEntityMap() {
+		for (Class entity : entities) {
+			if (entity.isAnnotationPresent(Table.class)) {
+				Table annot = (Table)entity.getAnnotation(Table.class);
+				entityMap.put(annot.name(), entity);
+			}
+		}
+		//special cases
+		entityMap.put("SNAPSHOT", Snapshot.class);
+		entityMap.put("VOLUME", Volume.class);
+		entityMap.put("STORAGE_INFO", DirectStorageInfo.class);
+	}
+
+	static {
+		//this is added by hand because there are special cases/entities that other upgrade scripts will process.
+		//In the future, this should be discovered.
+		//entities.add(BucketInfo.class);
+		//entities.add(ObjectInfo.class);
+		//entities.add(GrantInfo.class);
+		entities.add(MetaDataInfo.class);
+		entities.add(ImageCacheInfo.class);
+		entities.add(TorrentInfo.class);
+		entities.add(WalrusSnapshotInfo.class);
+		entities.add(WalrusInfo.class);
+		entities.add(WalrusStatsInfo.class);
+
+		entities.add(VolumeInfo.class);
+		entities.add(SnapshotInfo.class);
+		entities.add(AOEMetaInfo.class);
+		entities.add(AOEVolumeInfo.class);
+		entities.add(ISCSIMetaInfo.class);
+		entities.add(ISCSIVolumeInfo.class);
+		entities.add(LVMVolumeInfo.class);
+		entities.add(StorageInfo.class);
+		entities.add(StorageStatsInfo.class);
+
+		entities.add(ARecordInfo.class);
+		entities.add(CNAMERecordInfo.class);
+		entities.add(SOARecordInfo.class);
+		entities.add(NSRecordInfo.class);
+		entities.add(ZoneInfo.class);
+
+		entities.add(com.eucalyptus.config.System.class);
+		entities.add(ClusterConfiguration.class);
+		entities.add(StorageControllerConfiguration.class);
+		entities.add(WalrusConfiguration.class);
+		entities.add(SystemConfiguration.class);
+
+		entities.add(ImageInfo.class);
+		entities.add(Address.class);
+		entities.add(ClusterInfo.class);
+
+		entities.add(Counters.class);
+	}
 }
