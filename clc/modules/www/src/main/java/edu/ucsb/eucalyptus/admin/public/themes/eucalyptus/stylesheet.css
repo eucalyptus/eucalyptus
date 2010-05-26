@@ -554,12 +554,12 @@ button {
 }
 .acct-noop {
   border-style: solid;
-  border-width: 1px;
-  border-color: #CCCCCC #999999 #999999 #CCCCCC;
+  border-width: 0px;
+  border-color: #CCCCCC #000000 #000000 #CCCCCC;
   -webkit-border-radius: 3px;
   -moz-border-radius: 3px;
   border-radius: 3px;
-  background: #F6F6F6 none repeat scroll 0 0;
+  background: #FFFFFF none repeat scroll 0 0;
   padding: 3px 5px 3px 5px;
 }
 .acct-noop-down {}

@@ -18,12 +18,25 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.event.PassiveEventListener;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
+@ConfigurableClass( root="system", description="Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
   private static Logger                        LOG = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
+  @ConfigurableField( initial="false", description="Do a soft reset.", changeListener=HupListener.class)
+  public static Boolean HUP = Boolean.FALSE;
+  public static class HupListener extends PassiveEventListener<ConfigurableProperty> {
+    @Override
+    public void firingEvent( ConfigurableProperty t ) {
+      System.exit( 123 );
+    }
+  }
   private static AtomicReference<MuleContext> context = new AtomicReference<MuleContext>( null );
     
   public static void buildContext( List<ConfigResource> configs ) {

@@ -57,7 +57,7 @@ public class ChannelUtil {
   @ConfigurableField( initial = "" + 17, description = "Server max selector memory total." )
   public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024l;
   public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500l;
-  @ConfigurableField( initial = "" + 8773, description = "Web services port." )
+  @ConfigurableField( initial = "" + 8773, description = "Web services port.", readonly=true )
   public static Integer           PORT                              = 8773;
   public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 4 * 60l;
   public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 4 * 60l;

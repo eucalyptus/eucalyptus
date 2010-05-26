@@ -59,10 +59,14 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         ConfigurableProperty entry = null;
         Class<? extends PassiveEventListener> changeListenerClass = annote.changeListener( );
         PassiveEventListener changeListener;
-        try {
-          changeListener = changeListenerClass.newInstance( );
-        } catch ( Throwable e ) {
-          changeListener = NoopEventListener.NOOP;
+        if( !changeListenerClass.equals( NoopEventListener.class ) ) {
+          try {
+            changeListener = changeListenerClass.newInstance( );
+          } catch ( Throwable e ) {
+            changeListener = NoopEventListener.NOOP;
+          }          
+        } else {
+          changeListener = NoopEventListener.NOOP; 
         }
         int modifiers = field.getModifiers( );
         if ( Modifier.isPublic( modifiers ) && Modifier.isStatic( modifiers ) ) {

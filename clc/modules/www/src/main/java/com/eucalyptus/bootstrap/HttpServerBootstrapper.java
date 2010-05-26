@@ -80,9 +80,9 @@ import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 @ConfigurableClass( root = "www", description = "Parameters controlling the web UI's http server." )
 public class HttpServerBootstrapper extends Bootstrapper {  
   private static Logger LOG        = Logger.getLogger( HttpServerBootstrapper.class );
-  @ConfigurableField( description = "Listen to HTTPs on this port.", initial = "" + 8443, changeListener = PortChangeListener.class )
+  @ConfigurableField( description = "Listen to HTTPs on this port.", initial = "" + 8443, changeListener = PortChangeListener.class, displayName="euca.https.port" )
   public static Integer HTTPS_PORT = 8443;
-  @ConfigurableField( description = "Listen to HTTP on this port.", initial = "" + 8080, changeListener = PortChangeListener.class )
+  @ConfigurableField( description = "Listen to HTTP on this port.", initial = "" + 8080, changeListener = PortChangeListener.class, displayName="euca.http.port" )
   public static Integer HTTP_PORT  = 8080;
   private static Server jettyServer;
   private static Thread serverThread;
@@ -122,7 +122,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
     startJettyServer( );
     return true;
   }
-  private static class PortChangeListener extends PassiveEventListener<ConfigurableProperty> {
+  public static class PortChangeListener extends PassiveEventListener<ConfigurableProperty> {
     @Override
     public void firingEvent( ConfigurableProperty t ) {
       LOG.info( "Change occurred to property " + t.getQualifiedName( ) + " which requires restarting the web server." );
@@ -141,6 +141,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
           LOG.debug( e, e );
         }
         try {
+          System.setProperty( t.getDisplayName( ), t.getValue( ) );
           setupJettyServer( );
           startJettyServer( );
         } catch ( Exception e ) {

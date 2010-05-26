@@ -11,6 +11,8 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Record;
 import com.eucalyptus.util.Nameable;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.eucalyptus.records.EventRecord;
@@ -57,9 +59,14 @@ public class Component implements ComponentInformation, Nameable<Component> {
     this.builder = new DefaultServiceBuilder( this );
   }
   
-  public void removeService( ServiceConfiguration config ) throws ServiceRegistrationException {
+  public void removeService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     this.enabled = false;
-    Service service = this.services.remove( config.getName( ) );
+    Service remove = Iterables.find( this.services.values(), new Predicate<Service>() {
+      @Override
+      public boolean apply( Service arg0 ) {
+        return arg0.getHost( ).equals( config.getHostName( ) );
+      }} );
+    Service service = this.services.remove( remove.getName( ) );
     Components.deregister( service );
     EventRecord.caller( Component.class, config.isLocal( ) ? EventType.COMPONENT_SERVICE_STOP : EventType.COMPONENT_SERVICE_STOP_REMOTE, this.getName( ),
                         service.getName( ), service.getUri( ).toString( ) ).info( );
