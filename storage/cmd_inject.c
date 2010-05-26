@@ -347,12 +347,13 @@ cleanup:
 	return ret;
 }
 
-int inject_cleanup (imager_request * req)
+int inject_cleanup (imager_request * req, boolean last)
 {
 	inject_params * state = (inject_params *) req->internal;
 
 	logprintfl (EUCAINFO, "cleaning up for '%s'...\n", req->cmd->name);
-    rm_workfile (state->out);
+    if (!last)
+        rm_workfile (state->out);
 	free (state);
 
 	return 0;
