@@ -25,7 +25,7 @@ public class PropertyDirectory {
   public static class NoopEventListener extends PassiveEventListener<ConfigurableProperty> {
     public static NoopEventListener NOOP = new NoopEventListener( );
     @Override
-    protected void firingEvent( ConfigurableProperty t ) {}
+    public void firingEvent( ConfigurableProperty t ) {}
   }
   @SuppressWarnings( { "unchecked" } )
   public static ConfigurableProperty buildPropertyEntry( Class c, Field field ) {

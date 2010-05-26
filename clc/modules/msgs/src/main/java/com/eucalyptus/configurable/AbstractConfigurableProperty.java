@@ -89,7 +89,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   
   public void fireChange() {
     if( !NoopEventListener.class.equals( this.changeListener.getClass( ) ) ) {
-      this.changeListener.firedEvent( this );
+      this.changeListener.firingEvent( this );
     }
   }
 }

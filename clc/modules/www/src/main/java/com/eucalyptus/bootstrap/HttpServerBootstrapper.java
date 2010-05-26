@@ -71,6 +71,8 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.event.PassiveEventListener;
+import com.eucalyptus.system.Threads;
+import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 @Provides( Component.jetty )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
@@ -89,28 +91,41 @@ public class HttpServerBootstrapper extends Bootstrapper {
   @ConfigurableField(description="Listen to HTTP on this port.",initial=""+8080,changeListener=PortChangeListener.class)
   public static Integer   HTTP_PORT  = 8080;
   private static Server   jettyServer;
-  private ExecutorService exec;
+  private static Thread serverThread;
   
   public static void fireChange() {
-    
+    try {
+      jettyServer.stop( );
+      for(int i = 0; i < 10 && !jettyServer.isStopped( ) && jettyServer.isStopping( ); i++ ) {
+        try {
+          TimeUnit.MILLISECONDS.sleep( 500 );
+        } catch ( InterruptedException e ) {
+        }
+      }
+      jettyServer.destroy( );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }
+    try {
+      setupJettyServer( );
+      startJettyServer( );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }
   }
-  
-  @Override
-  public boolean load( Stage current ) throws Exception {
+
+  private static Server setupJettyServer() throws Exception {
     jettyServer = new org.mortbay.jetty.Server( );
     System.setProperty( "euca.http.port", "" + HTTP_PORT );
     System.setProperty( "euca.https.port", "" + HTTPS_PORT );
     URL defaultConfig = ClassLoader.getSystemResource( "eucalyptus-jetty.xml" );
     XmlConfiguration jettyConfig = new XmlConfiguration( defaultConfig );
     jettyConfig.configure( jettyServer );
-    return true;
+    return jettyServer;
   }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    LOG.info( "Starting admin interface." );
-    exec = Executors.newFixedThreadPool( 1 );
-    exec.execute( new Runnable( ) {
+
+  private static Thread startJettyServer() {
+    serverThread = Threads.newThread( new Runnable( ) {
       @Override
       public void run( ) {
         try {
@@ -119,7 +134,19 @@ public class HttpServerBootstrapper extends Bootstrapper {
           LOG.debug( e, e );
         }
       }
-    } );
+    }, "jetty" );
+    return serverThread;
+  }
+  
+  @Override
+  public boolean load( Stage current ) throws Exception {
+    setupJettyServer();
+    return true;
+  }
+  
+  @Override
+  public boolean start( ) throws Exception {
+    LOG.info( "Starting admin interface." );
     return true;
   }
   
