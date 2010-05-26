@@ -352,6 +352,7 @@ long long scan_cache (void)
 static long long work_used = 0L;
 static long long work_limit = EUCA_SIZE_UNLIMITED; // size limit for work space
 static char work_path [EUCA_MAX_PATH] = "."; // cwd is default work dir
+static boolean work_was_created = FALSE;
 
 int set_work_limit (long long size)
 {
@@ -369,6 +370,11 @@ long long get_work_limit (void)
 
 int set_work_dir (const char * path)
 {
+    struct stat mystat;
+
+    if (stat (path, &mystat)) { 
+        work_was_created = TRUE; // remember that work directory had to be created
+    }
   if (ensure_path_exists(path, 0700)) {
     logprintfl (EUCAERROR, "failed to set work directory to '%s'\n", path);
     return 1;
@@ -380,6 +386,14 @@ int set_work_dir (const char * path)
 char * get_work_dir (void)
 {
   return work_path;
+}
+
+int clean_work_dir (void)
+{
+    if (work_was_created)
+        return rmdir (work_path);
+    else
+        return 0;
 }
 
 int reserve_work_path (long long size)
@@ -810,11 +824,11 @@ void postprocess_output_path (output_file * o, boolean success)
 	if (success) {
 		// copy to or from cache directory, as needed
 		if (o->do_work && o->in_cache && !o->in_work) {
-			logprintfl (EUCAINFO, "copying image '%s' from work to cache space\n", o->id);
+			logprintfl (EUCAINFO, "copying image '%s' from cache to work space\n", o->id);
 			copy_disk_item (o->cache_copy, o->work_copy);
 			
 		} else if (o->in_work && o->to_cache) {
-			logprintfl (EUCAINFO, "copying image '%s' from cache to work space\n", o->id);
+			logprintfl (EUCAINFO, "copying image '%s' from work to cache space\n", o->id);
 			copy_disk_item (o->work_copy, o->cache_copy);
 		}
 	} else {
