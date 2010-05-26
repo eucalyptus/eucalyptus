@@ -29,12 +29,14 @@ import com.google.common.collect.Lists;
 public class ServiceContext {
   private static Logger                        LOG = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
-  @ConfigurableField( initial="false", description="Do a soft reset.", changeListener=HupListener.class)
-  public static Boolean HUP = Boolean.FALSE;
+  @ConfigurableField( initial="0", description="Do a soft reset.", changeListener=HupListener.class)
+  public static Integer HUP = 0;
   public static class HupListener extends PassiveEventListener<ConfigurableProperty> {
     @Override
     public void firingEvent( ConfigurableProperty t ) {
-      System.exit( 123 );
+      if( ++HUP > 4 ) {
+        System.exit( 123 );
+      }
     }
   }
   private static AtomicReference<MuleContext> context = new AtomicReference<MuleContext>( null );
