@@ -9,7 +9,7 @@ import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.upgrade.UpgradeScript;
+import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -18,7 +18,12 @@ import com.eucalyptus.auth.util.AuthBootstrapHelper;
 
 import groovy.sql.Sql;
 
-class UpgradeAuth implements UpgradeScript {
+class UpgradeAuth extends AbstractUpgradeScript {
+	
+  public UpgradeAuth() {
+	  super(3);
+  }
+  
   public Boolean accepts( String from, String to ) {
     return true;
   }
