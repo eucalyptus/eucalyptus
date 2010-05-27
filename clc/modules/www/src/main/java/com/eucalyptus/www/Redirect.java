@@ -16,12 +16,12 @@ public class Redirect extends Rule {
   public String matchAndApply( String target, HttpServletRequest req, HttpServletResponse resp ) throws IOException {
     String urlStr = req.getRequestURL( ).toString( );
     URL url = new URL( urlStr );
-    if ( !req.getRequestURL( ).toString( ).startsWith( "https" ) ) {
+    if ( !urlStr.startsWith( "https" ) ) {
       resp.sendRedirect( String.format( "https://%s:%d/%s", url.getHost( ), HttpServerBootstrapper.HTTPS_PORT,
                                         url.getPath( ) + ( ( req.getQueryString( ) != null ) ? "?" + req.getQueryString( ) : "" ) ) );
       return target;
     } else {
-      return null;
+      return target;
     }
   }
   

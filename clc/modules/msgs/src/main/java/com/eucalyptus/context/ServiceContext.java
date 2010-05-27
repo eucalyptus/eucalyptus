@@ -34,7 +34,7 @@ public class ServiceContext {
   public static class HupListener extends PassiveEventListener<ConfigurableProperty> {
     @Override
     public void firingEvent( ConfigurableProperty t ) {
-      if( ++HUP > 4 ) {
+      if( "123".equals( t.getValue( ) ) ) {
         System.exit( 123 );
       }
     }
