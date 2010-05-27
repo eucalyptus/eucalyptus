@@ -9,6 +9,9 @@ import com.eucalyptus.auth.principal.BaseAuthorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.records.EventClass;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FinalReturn;
 import com.eucalyptus.util.TransactionException;
@@ -46,6 +49,7 @@ public class DatabaseWrappedGroup implements Group {
       if ( !g.isMember( user ) ) {
         g.addMember( user );
         db.commit( );
+        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_ADDED, this.getName( ), user.getName( ) ).info();
         return true;
       } else {
         db.rollback( );
@@ -103,6 +107,7 @@ public class DatabaseWrappedGroup implements Group {
       if ( g.isMember( userInfo ) ) {
         g.removeMember( userInfo );
         db.commit( );
+        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_REMOVED, this.getName( ), userInfo.getName( ) ).info();
         return true;
       } else {
         db.rollback( );
@@ -147,6 +152,7 @@ public class DatabaseWrappedGroup implements Group {
         db.recast( GroupEntity.class ).merge( g );
         this.group = g;
         db.commit( );
+        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_GRANTED, this.getName( ), auth.getDisplayName( ), auth.getValue( ) ).info();
       } catch ( Throwable e ) {
         ret = false;
         LOG.debug( e, e );
@@ -200,6 +206,7 @@ public class DatabaseWrappedGroup implements Group {
         @Override
         public void fire( GroupEntity t ) throws Throwable {
            ret.set( t.removeAuthorization( auth ) );
+           EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_REVOKED, t.getName( ), auth.getDisplayName( ), auth.getValue( ) ).info();
         }
       } );
     } catch ( TransactionException e ) {

@@ -72,6 +72,9 @@ import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.records.EventClass;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
@@ -109,19 +112,21 @@ public class SnapshotManager {
       sc = Configuration.getStorageControllerConfiguration( vol.getCluster( ) );
     } catch ( Exception e ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find the storage controller information for volume: " 
-                                          + vol.getDisplayName( ) + " at " + vol.getCluster( ), e );
+      throw new EucalyptusCloudException(
+                                          "Failed to find the storage controller information for volume: " + vol.getDisplayName( ) + " at " + vol.getCluster( ),
+                                          e );
     }
     
-    if( !vol.isReady( ) ) {
+    if ( !vol.isReady( ) ) {
       //temporary workaround to update the volume state.
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
-        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) ).send( descVols, DescribeStorageVolumesResponseType.class );
+        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) )
+                                                                       .send( descVols, DescribeStorageVolumesResponseType.class );
         if ( !volState.getVolumeSet( ).isEmpty( ) ) {
           vol.setMappedState( volState.getVolumeSet( ).get( 0 ).getStatus( ) );
         } else {
-          throw new EucalyptusCloudException( "Failed to update the volume state " + request.getVolumeId( ) + " not yet ready" );          
+          throw new EucalyptusCloudException( "Failed to update the volume state " + request.getVolumeId( ) + " not yet ready" );
         }
       } catch ( Exception e1 ) {
         LOG.debug( e1, e1 );
@@ -133,7 +138,6 @@ public class SnapshotManager {
         throw new EucalyptusCloudException( "Volume " + request.getVolumeId( ) + " not yet ready" );
       }
     }
-    
     
     String newId = null;
     Snapshot snap = null;
@@ -160,6 +164,8 @@ public class SnapshotManager {
       throw new EucalyptusCloudException( "Error calling CreateStorageSnapshot:" + e.getMessage( ) );
     }
     db.commit( );
+    EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE, "user=" + snap.getUserName( ), "snapshot=" + snap.getDisplayName( ),
+                      "volume=" + snap.getParentVolume( ) ).info( );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
@@ -181,6 +187,7 @@ public class SnapshotManager {
       db.getSession( ).flush( );
       StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
       db.commit( );
+      EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getUserName( ), "snapshot=" + snap.getDisplayName( ) ).info( );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback( );

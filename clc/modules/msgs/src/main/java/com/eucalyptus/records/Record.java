@@ -19,5 +19,9 @@ public interface Record {
   public abstract String toString( );
   
   public abstract int hashCode( );
+
+  public abstract EventType getType( );
+
+  public abstract EventClass getEventClass( );
   
 }

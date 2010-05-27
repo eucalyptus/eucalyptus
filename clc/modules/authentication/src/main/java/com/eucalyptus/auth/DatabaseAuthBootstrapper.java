@@ -16,7 +16,6 @@ import com.eucalyptus.ldap.LdapConfiguration;
 
 @Provides( Component.bootstrap )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
-@DependsLocal( Component.eucalyptus )
 public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
   

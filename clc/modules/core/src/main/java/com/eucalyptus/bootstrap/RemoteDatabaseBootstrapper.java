@@ -75,10 +75,7 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
   private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
   @Override
   public boolean load( Stage current ) throws Exception {
-    LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
-    LOG.info( "-> database host: " + System.getProperty("euca.db.host") );
-    LOG.info( "-> database port: " + System.getProperty("euca.db.port") );
-    System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
+    LOG.trace( "Initializing SSL just in case: " + SslSetup.class );
     return true;
   }
 

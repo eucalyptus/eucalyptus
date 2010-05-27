@@ -67,11 +67,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;
@@ -130,8 +133,8 @@ public class Configuration {
     try {
       conf = builder.lookupByName( request.getName( ) );
       builder.fireStop( conf );
-      builder.remove( conf );
       builder.getComponent( ).removeService( conf );
+      builder.remove( conf );
       reply.set_return( true );
     } catch( EucalyptusCloudException e ) {
       LOG.debug( e, e );

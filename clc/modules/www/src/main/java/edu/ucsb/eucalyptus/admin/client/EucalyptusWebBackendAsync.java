@@ -66,9 +66,11 @@
 package edu.ucsb.eucalyptus.admin.client;
 
 import com.google.gwt.user.client.rpc.AsyncCallback;
+import edu.ucsb.eucalyptus.admin.client.reports.ReportInfo;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by IntelliJ IDEA.
@@ -193,6 +195,8 @@ public interface EucalyptusWebBackendAsync {
 	void approveUsers(String sessionId, List<String> userNames, final AsyncCallback<Void> async)
 	;
 	
-	void getZones(String sessionId, final AsyncCallback<List<String>> async)
-	;
+  void getZones(String sessionId, final AsyncCallback<List<String>> async)
+  ;
+  void getReports(String sessionId, final AsyncCallback<List<ReportInfo>> async)
+  ;
 }

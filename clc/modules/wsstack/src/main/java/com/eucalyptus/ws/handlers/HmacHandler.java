@@ -109,7 +109,7 @@ public class HmacHandler extends MessageStackHandler {
       String sigVersion = parameters.get( RequiredQueryParams.SignatureVersion.toString( ) );
       String sigMethod = parameters.get( SecurityParameter.SignatureMethod.toString( ) );
       String verb = httpRequest.getMethod( ).getName( );
-      sigMethod = ( ( sigMethod == null ) ? "HMACSHA" : sigMethod );
+      sigMethod = ( ( sigMethod == null ) ? "HMACSHA1" : sigMethod );
       Hmac hmac = Hmac.valueOf( "HmacSHA" + sigMethod.substring( 7 ) );
       String headerHost = httpRequest.getHeader( "Host" );
       String servicePath = httpRequest.getServicePath( );

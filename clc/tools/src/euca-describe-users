@@ -4,10 +4,7 @@ from boto.ec2.regioninfo import RegionInfo
 from euca_admin.users import User
 
 def main():
-  c = User()
-  parser = c.get_describe_parser()
-  (options, args) = parser.parse_args()
-  c.describe()
+  c = User().cli_describe()
   sys.exit()
 
 if __name__ == "__main__":

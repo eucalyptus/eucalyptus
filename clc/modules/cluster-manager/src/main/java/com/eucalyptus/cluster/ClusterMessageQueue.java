@@ -75,32 +75,36 @@ import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 
+@ConfigurableClass( root = "cluster", description = "Parameters controlling communication with cluster controllers." )
 public class ClusterMessageQueue implements Runnable {
   
-  private static Logger                    LOG                 = Logger.getLogger( ClusterMessageQueue.class );
+  private static Logger                    LOG           = Logger.getLogger( ClusterMessageQueue.class );
   private final BlockingQueue<QueuedEvent> msgQueue;
-  private final int                        offerInterval       = 500;
-  private final int                        pollInterval        = 500;
+  private final int                        offerInterval = 500;
+  private final int                        pollInterval  = 500;
   private final AtomicBoolean              finished;
   private final String                     clusterName;
-  public static int                        CLUSTER_NUM_WORKERS = 8;
+  @ConfigurableField( initial = "8", description = "Maximum number of concurrent messages sent to a single CC at a time." )
+  public static Integer                    NUM_WORKERS   = 8;
   private final ThreadFactory              threadFactory;
   private final ExecutorService            workers;
-    
+  
   public ClusterMessageQueue( final String clusterName ) {
     this.finished = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedEvent>( );
     this.clusterName = clusterName;
     this.threadFactory = ClusterThreadFactory.getThreadFactory( clusterName );
-    this.workers = Executors.newFixedThreadPool( CLUSTER_NUM_WORKERS, this.threadFactory );
+    this.workers = Executors.newFixedThreadPool( NUM_WORKERS, this.threadFactory );
   }
   
   public void start( ) {
-    for ( int i = 0; i < ClusterMessageQueue.CLUSTER_NUM_WORKERS; i++ ) {
+    for ( int i = 0; i < ClusterMessageQueue.NUM_WORKERS; i++ ) {
       this.workers.execute( this );
     }
   }
@@ -121,9 +125,9 @@ public class ClusterMessageQueue implements Runnable {
   }
   
   private boolean checkDuplicates( final QueuedEvent event ) {
-    if( event.getCallback( ) instanceof QueuedEventCallback.NOOP ) {
+    if ( event.getCallback( ) instanceof QueuedEventCallback.NOOP ) {
       RuntimeException ex = new RuntimeException( "Operation returning a NOOP." );
-      LOG.debug( ex, ex );      
+      LOG.debug( ex, ex );
       return true;
     }
     for ( final QueuedEvent e : this.msgQueue ) {
@@ -132,7 +136,7 @@ public class ClusterMessageQueue implements Runnable {
         final StopNetworkCallback existing = ( StopNetworkCallback ) e.getCallback( );
         if ( incoming.getRequest( ).getNetName( ).equals( existing.getRequest( ).getNetName( ) ) ) {
           EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.MSG_REJECTED.toString( ),
-                                         EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ).debug( );
+                              EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ).debug( );
           return true;
         }
       } else if ( ( event.getCallback( ) instanceof TerminateCallback ) && ( e.getCallback( ) instanceof TerminateCallback ) ) {
@@ -140,7 +144,7 @@ public class ClusterMessageQueue implements Runnable {
         final TerminateCallback existing = ( TerminateCallback ) e.getCallback( );
         if ( existing.getRequest( ).getInstancesSet( ).containsAll( incoming.getRequest( ).getInstancesSet( ) ) ) {
           EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.MSG_REJECTED.toString( ),
-                                         EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ).debug( );
+                              EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ).debug( );
           return true;
         }
       } else if ( ( event.getCallback( ) instanceof UnassignAddressCallback ) && ( e.getCallback( ) instanceof UnassignAddressCallback ) ) {
@@ -149,7 +153,7 @@ public class ClusterMessageQueue implements Runnable {
         if ( incoming.getRequest( ).getSource( ).equals( existing.getRequest( ).getSource( ) )
              && incoming.getRequest( ).getDestination( ).equals( existing.getRequest( ).getDestination( ) ) ) {
           EventRecord.caller( event.getCallback( ).getClass( ), EventType.QUEUE, this.clusterName, EventType.MSG_REJECTED.toString( ),
-                                         EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ).debug();
+                              EventType.QUEUE_LENGTH.name( ), Long.toString( this.msgQueue.size( ) ) ).debug( );
           return true;
         }
       }
@@ -176,10 +180,10 @@ public class ClusterMessageQueue implements Runnable {
           } catch ( final Throwable e ) {
             LOG.debug( e, e );
           }
-          LOG.info( EventRecord.here( ClusterMessageQueue.class, EventType.QUEUE, this.clusterName, event.getCallback( ).getClass( ).getSimpleName( ), EventType.QUEUE_TIME.name( ),
-                                       Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ),
-                                       Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ),
-                                       Long.toString( this.msgQueue.size( ) ) ) );
+          LOG.info( EventRecord.here( ClusterMessageQueue.class, EventType.QUEUE, this.clusterName, event.getCallback( ).getClass( ).getSimpleName( ),
+                                      EventType.QUEUE_TIME.name( ), Long.toString( start - event.getStartTime( ) ), EventType.SERVICE_TIME.name( ),
+                                      Long.toString( System.currentTimeMillis( ) - start ), EventType.QUEUE_LENGTH.name( ),
+                                      Long.toString( this.msgQueue.size( ) ) ) );
         }
       } catch ( final Throwable e ) {
         LOG.error( e, e );

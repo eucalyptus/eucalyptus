@@ -9,6 +9,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.crypto.Hmacs;
 
 public class HsqldbSource implements DatabaseSource {
   private static Logger     LOG      = Logger.getLogger( HsqldbSource.class );
@@ -40,7 +41,7 @@ public class HsqldbSource implements DatabaseSource {
         if ( props == null ) {
           props = new Properties( );
           props.setProperty( "user", "sa" );
-          props.setProperty( "password", System.getProperty( "euca.db.password" ) );
+          props.setProperty( "password", Hmacs.generateSystemSignature( ) );
         }
       }
     }

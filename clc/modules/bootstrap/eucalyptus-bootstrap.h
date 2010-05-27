@@ -115,6 +115,7 @@ static char *jvm_default_opts[] = {
 	    "-Djava.net.preferIPv4Stack=true",
 	    "-Djava.security.policy=%1$s/etc/eucalyptus/cloud.d/security.policy",
 	    "-Djava.library.path=%1$s/usr/lib/eucalyptus",
+	    "-Djava.awt.headless=true",
 	    "-Dsun.java.command=Eucalyptus",
 	    "-Deuca.home=%1$s/",
 	    "-Deuca.var.dir=%1$s/var/lib/eucalyptus",

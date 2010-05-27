@@ -179,11 +179,6 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
         stage.updateBootstrapDependencies( );
       }
-      System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
-      //TODO: FIXME: this is a temporary fix
-      System.setProperty( "euca.db.url", String.format( "jdbc:mysql://%s:%d/eucalyptus", addr.getAddress( ).getHostAddress( ), 8777 ) );
-      System.setProperty( "euca.db.host", addr.getAddress( ).getHostAddress( ) );
-      System.setProperty( "euca.db.port", "8777" );
       try {
         GroovyUtil.evaluateScript( "after_database.groovy" );
       } catch ( ScriptExecutionFailedException e1 ) {

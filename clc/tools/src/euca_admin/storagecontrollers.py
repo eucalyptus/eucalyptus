@@ -15,7 +15,7 @@ class StorageController():
 
           
   def __repr__(self):
-      return 'CLUSTER %s %s' % (self.storage_name, self.host_name) 
+      return 'STORAGE\t%s\t%s' % (self.storage_name, self.host_name) 
 
   def startElement(self, name, attrs, connection):
       return None
@@ -28,11 +28,20 @@ class StorageController():
     else:
       setattr(self, name, value)
   
-  def describe(self):
-    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    (options, args) = parser.parse_args()
+  def get_describe_parser(self):
+    parser = OptionParser("usage: %prog [SCNAME...]",version="Eucalyptus %prog VERSION")
+    return parser.parse_args()
+
+  def cli_describe(self):
+    (options, args) = self.get_describe_parser()
+    self.describe(args)
+
+  def describe(self,scs=None):
+    params = {}
+    if scs:
+			self.euca.connection.build_list_params(params,groups,'Names')
     try:
-      list = self.euca.connection.get_list('DescribeStorageControllers', {}, [('euca:item', StorageController)])
+      list = self.euca.connection.get_list('DescribeStorageControllers', params, [('euca:item', StorageController)])
       for i in list:
         print i
     except EC2ResponseError, ex:
@@ -40,12 +49,20 @@ class StorageController():
 
 
   def get_register_parser(self):
-    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-n","--name",dest="sc_name",help="Name of the storage controller.")
+    parser = OptionParser("usage: %prog [options] SCNAME",version="Eucalyptus %prog VERSION")
     parser.add_option("-H","--host",dest="sc_host",help="Hostname of the storage.")
     parser.add_option("-p","--port",dest="sc_port",type="int",default=8773,help="Port for the storage.")
-    return parser
+    (options,args) = parser.parse_args()    
+    if len(args) != 1:
+      print "ERROR  Required argument SCNAME is missing or malformed."
+      parser.print_help()
+      sys.exit(1)
+    else:
+      return (options,args)  
 
+  def cli_register(self):
+    (options, args) = self.get_register_parser()
+    self.register(args[0],options.sc_host,options.sc_port)
 
   def register(self, sc_name, sc_host, sc_port=8773):
     try:
@@ -56,8 +73,17 @@ class StorageController():
 
   def get_deregister_parser(self):
     parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-n","--name",dest="sc_name",help="Name of the storage controller.")
-    return parser
+    (options,args) = parser.parse_args()    
+    if len(args) != 1:
+      print "ERROR  Required argument SCNAME is missing or malformed."
+      parser.print_help()
+      sys.exit(1)
+    else:
+      return (options,args)  
+
+  def cli_deregister(self):
+    (options, args) = self.get_deregister_parser()
+    self.deregister(args[0])
             
   def deregister(self, sc_name):
     try:

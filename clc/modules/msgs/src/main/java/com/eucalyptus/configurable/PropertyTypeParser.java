@@ -60,7 +60,6 @@ public abstract class PropertyTypeParser<T> {
     if( !typeParsers.containsKey( c ) || typeParsers.get( c ) == null ) {
       RuntimeException r = new RuntimeException("Invalid configurable type: " + c );
       LOG.fatal( r, r );
-      System.exit( 1 );
       throw r;
     } else {
       return typeParsers.get( c );      

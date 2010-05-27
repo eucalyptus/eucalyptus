@@ -102,7 +102,7 @@ public class ReplyQueue {
       Channels.write( channel, reply );
       Contexts.clear(context);
     } catch ( NoSuchContextException e ) {
-      LOG.debug( e, e );
+      LOG.trace( e, e );
     }
   }
   
