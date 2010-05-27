@@ -93,7 +93,7 @@ int help_part (const char * path, char * part_type, const char * fs_type, const 
 	return ret;
 }
 
-int help_loop (const char * path, const long long offset, const long long len, char * lodev, int lodev_size) 
+int help_loop (const char * path, const long long offset, char * lodev, int lodev_size) 
 {
 	int done = 0;
 	int ret = OK;
@@ -114,7 +114,7 @@ int help_loop (const char * path, const long long offset, const long long len, c
 	}
 	if (done) {
 		logprintfl (EUCADEBUG, "attaching to loop device '%s' at offset '%lld' file %s\n", lodev, offset, path);
-		output = pruntf ("%s %s -o %lld --sizelimit %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, len, lodev, path); // TODO: some versions have --size-limit?
+		output = pruntf ("%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
 		if (!output) {
 			logprintfl (EUCAINFO, "ERROR: cannot attach %s to loop device %s\n", path, lodev);
 			ret = ERROR;
@@ -149,12 +149,12 @@ int help_unloop (const char * lodev)
 	return ret;
 }
 
-int help_mkswap (const char * lodev)
+int help_mkswap (const char * lodev, const long long size_bytes)
 {
 	int ret = OK;
 	char * output;
-
-    output = pruntf ("%s %s %s", helpers_path[ROOTWRAP], helpers_path[MKSWAP], lodev);
+    
+    output = pruntf ("%s %s %s %lld", helpers_path[ROOTWRAP], helpers_path[MKSWAP], lodev, size_bytes/1024);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot format partition on '%s' as swap\n", lodev);
         ret = ERROR;
@@ -165,12 +165,13 @@ int help_mkswap (const char * lodev)
 	return ret;
 }
 
-int help_mkfs (const char * lodev)
+int help_mkfs (const char * lodev, const long long size_bytes)
 {
 	int ret = OK;
 	char * output;
+    int block_size = 4096;
 
-    output = pruntf ("%s %s %s", helpers_path[ROOTWRAP], helpers_path[MKEXT3], lodev);
+    output = pruntf ("%s %s -b %d %s %lld", helpers_path[ROOTWRAP], helpers_path[MKEXT3], block_size, lodev, size_bytes/block_size);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot format partition on '%s' as ext3\n", lodev);
         ret = ERROR;

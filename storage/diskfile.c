@@ -180,10 +180,9 @@ int df_format (diskfile * df, const int part, const enum diskpart_t format)
 		p->first_sector = 0; // should be 0 already
 		p->last_sector = df->size_sectors-1;
 	}
-	
+	long long size_bytes = (p->last_sector - p->first_sector + 1) * SECTOR_SIZE;
 	if (help_loop (df->path, 
-				  p->first_sector * SECTOR_SIZE, 
-				  (p->last_sector - p->first_sector + 1) * SECTOR_SIZE, 
+				  p->first_sector * SECTOR_SIZE,
 				  p->lodev, 
 				  sizeof (p->lodev))!=OK) {
 		logprintfl (EUCAERROR, "error: failed to mount partition on loopback\n");
@@ -193,7 +192,7 @@ int df_format (diskfile * df, const int part, const enum diskpart_t format)
 	logprintfl (EUCAINFO, "formating %s as '%s' on '%s'\n", part_str, enum_format_as_string (format), df->path);
 	switch (format) {
 	case PFORMAT_SWAP:
-		if (help_mkswap (p->lodev)!=OK) {
+		if (help_mkswap (p->lodev, size_bytes)!=OK) {
 			logprintfl (EUCAERROR, "error: failed to make swap space\n");
 			ret = ERROR;
 			goto unloop;
@@ -201,7 +200,7 @@ int df_format (diskfile * df, const int part, const enum diskpart_t format)
         break;
 
 	case PFORMAT_EXT3:
-		if (help_mkfs (p->lodev)!=OK) {
+		if (help_mkfs (p->lodev, size_bytes)!=OK) {
 			logprintfl (EUCAERROR, "error: failed to make swap space\n");
 			ret = ERROR;
 			goto unloop;
@@ -244,7 +243,6 @@ int df_dd (diskfile * df, const int part, const char * path)
 	
 	if (help_loop (df->path, 
 				  p->first_sector * SECTOR_SIZE, 
-				  (p->last_sector - p->first_sector + 1) * SECTOR_SIZE, 
 				  p->lodev, 
 				  sizeof (p->lodev))!=OK) {
 		logprintfl (EUCAERROR, "error: failed to mount partition on loopback\n");
@@ -287,7 +285,6 @@ int df_mount (diskfile * df, const int part, const char * path)
 	
 	if (help_loop (df->path, 
 				  p->first_sector * SECTOR_SIZE, 
-				  (p->last_sector - p->first_sector + 1) * SECTOR_SIZE, 
 				  p->lodev, 
 				  sizeof (p->lodev))!=OK) {
 		logprintfl (EUCAERROR, "error: failed to mount partition on loopback\n");
