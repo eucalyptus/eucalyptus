@@ -7,6 +7,30 @@ import com.eucalyptus.entities.EntityWrapper;
 public class Transactions {
   private static Logger LOG = Logger.getLogger( Transactions.class );
   
+  public static <T> T one( T search, JoinTx<T>... txs ) throws TransactionException {
+    if ( search == null ) {
+      TransactionException ex = new TransactionException( "A search object must be supplied" );
+      LOG.warn( ex.getMessage( ), ex );
+      throw ex;
+    }
+    EntityWrapper<T> db = EntityWrapper.get( search );
+    try {
+      T entity = db.getUnique( search );
+      for ( JoinTx<T> c : txs ) {
+        c.fire( db, entity );
+      }
+      db.commit( );
+      return entity;
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new TransactionException( e.getMessage( ), e );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new TransactionFireException( e.getMessage( ), e );
+    }
+  }
+  
   public static <T> T one( T search, Tx<T> c ) throws TransactionException {
     if ( search == null ) {
       TransactionException ex = new TransactionException( "A search object must be supplied" );

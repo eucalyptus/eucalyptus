@@ -18,7 +18,7 @@ public class Redirect extends Rule {
     URL url = new URL( urlStr );
     if ( !urlStr.startsWith( "https" ) ) {
       resp.sendRedirect( String.format( "https://%s:%d/%s", url.getHost( ), HttpServerBootstrapper.HTTPS_PORT,
-                                        url.getPath( ) + ( ( req.getQueryString( ) != null ) ? "?" + req.getQueryString( ) : "" ) ) );
+                                        url.getPath( ) + ( ( req.getQueryString( ) != null ) ? "?" + req.getQueryString( ) : "" ) ).replaceAll("//","/") );
       return target;
     } else {
       return target;

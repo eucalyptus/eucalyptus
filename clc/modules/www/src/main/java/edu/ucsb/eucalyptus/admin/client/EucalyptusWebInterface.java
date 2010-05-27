@@ -1293,6 +1293,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     };
 
     public static HorizontalPanel messageBox;
+    @SuppressWarnings( "deprecation" )
     public void displayBarAndTabs(String message)
     {
         /* top bar */
@@ -1382,7 +1383,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         RootPanel.get().clear();
         RootPanel.get().add( top_bar );
         RootPanel.get().add( allTabs );
-        RootPanel.get().add( messageBox );
+//        RootPanel.get().add( messageBox );
         RootPanel.get().add( wrapper );
         allTabs.selectTab(currentTabIndex);
     }

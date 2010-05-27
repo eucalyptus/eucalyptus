@@ -5,12 +5,15 @@ import java.util.List;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.DockPanel;
 import com.google.gwt.user.client.ui.Frame;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.Widget;
+import edu.ucsb.eucalyptus.admin.client.reports.AccountingPanel;
 import edu.ucsb.eucalyptus.admin.client.reports.ReportAction;
 import edu.ucsb.eucalyptus.admin.client.reports.ReportInfo;
 import edu.ucsb.eucalyptus.admin.client.reports.ReportType;
@@ -32,9 +35,11 @@ public class AccountingControl implements ContentControl {
   private HorizontalPanel        actionBar;
   private Frame                  report;
   
+  private AccountingPanel rootPanel;
+
   public AccountingControl( String sessionId ) {
     this.sessionId = sessionId;
-    RootPanel.get( ).remove( EucalyptusWebInterface.messageBox );
+    this.rootPanel = new AccountingPanel( this );
     this.root = new VerticalPanel( );
     this.root.addStyleName( "acct-root" );
     this.root.add( new Label( "Loading report list..." ) );
@@ -110,7 +115,7 @@ public class AccountingControl implements ContentControl {
   
   @Override
   public Widget getRootWidget( ) {
-    return this.root;
+    return this.rootPanel;
   }
   
   @Override

@@ -36,40 +36,40 @@ import com.eucalyptus.ws.server.NioServerHandler;
 
 @ConfigurableClass( root = "ws", description = "Parameters controlling the web services endpoint." )
 public class ChannelUtil {
-  private static Logger       LOG                               = Logger.getLogger( ChannelUtil.class );
-  private static final Integer    CHANNEL_CONNECT_TIMEOUT           = 500;
-  public static final Boolean SERVER_CHANNEL_REUSE_ADDRESS      = true;
-  public static final Boolean SERVER_CHANNEL_NODELAY            = true;
-  public static final Boolean CHANNEL_REUSE_ADDRESS             = true;
-  public static final Boolean CHANNEL_KEEP_ALIVE                = true;
-  public static final Boolean CHANNEL_NODELAY                   = true;
+  private static Logger        LOG                               = Logger.getLogger( ChannelUtil.class );
+  private static final Integer CHANNEL_CONNECT_TIMEOUT           = 500;
+  public static final Boolean  SERVER_CHANNEL_REUSE_ADDRESS      = true;
+  public static final Boolean  SERVER_CHANNEL_NODELAY            = true;
+  public static final Boolean  CHANNEL_REUSE_ADDRESS             = true;
+  public static final Boolean  CHANNEL_KEEP_ALIVE                = true;
+  public static final Boolean  CHANNEL_NODELAY                   = true;
   @ConfigurableField( initial = "" + 17, description = "Server worker thread pool max." )
-  public static Integer           SERVER_POOL_MAX_THREADS           = Runtime.getRuntime( ).availableProcessors( ) * 2 + 1;
+  public static Integer        SERVER_POOL_MAX_THREADS           = Runtime.getRuntime( ).availableProcessors( ) * 2 + 1;
   @ConfigurableField( initial = "" + 1048576l, description = "Server max worker memory per connection." )
-  public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 1048576l;
+  public static Long           SERVER_POOL_MAX_MEM_PER_CONN      = 1048576l;
   @ConfigurableField( initial = "" + 100 * 1024 * 1024l, description = "Server max worker memory total." )
-  public static Long          SERVER_POOL_TOTAL_MEM             = 100 * 1024 * 1024l;
-  public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500l;
+  public static Long           SERVER_POOL_TOTAL_MEM             = 100 * 1024 * 1024l;
+  public static Long           SERVER_POOL_TIMEOUT_MILLIS        = 500l;
   @ConfigurableField( initial = "" + 17, description = "Server selector thread pool max." )
-  public static Integer           SERVER_BOSS_POOL_MAX_THREADS      = Runtime.getRuntime( ).availableProcessors( ) + 1;
+  public static Integer        SERVER_BOSS_POOL_MAX_THREADS      = Runtime.getRuntime( ).availableProcessors( ) + 1;
   @ConfigurableField( initial = "" + 1048576l, description = "Server max selector memory per connection." )
-  public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 1048576l;
+  public static Long           SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 1048576l;
   @ConfigurableField( initial = "" + 17, description = "Server max selector memory total." )
-  public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024l;
-  public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500l;
-  @ConfigurableField( initial = "" + 8773, description = "Web services port.", readonly=true )
-  public static Integer           PORT                              = 8773;
-  public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 4 * 60l;
-  public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 4 * 60l;
-  public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000l;
+  public static Long           SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024l;
+  public static Long           SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500l;
+  @ConfigurableField( initial = "" + 8773, description = "Web services port.", readonly = true )
+  public static Integer        PORT                              = 8773;
+  public static Long           CLIENT_IDLE_TIMEOUT_SECS          = 4 * 60l;
+  public static Long           CLUSTER_IDLE_TIMEOUT_SECS         = 4 * 60l;
+  public static Long           CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000l;
   @ConfigurableField( initial = "" + 20, description = "Server socket read time-out." )
-  public static Long          PIPELINE_READ_TIMEOUT_SECONDS     = 20l;
+  public static Long           PIPELINE_READ_TIMEOUT_SECONDS     = 20l;
   @ConfigurableField( initial = "" + 20, description = "Server socket write time-out." )
-  public static Long          PIPELINE_WRITE_TIMEOUT_SECONDS    = 20l;
-  public static Integer           CLIENT_POOL_MAX_THREADS           = 40;
-  public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 1048576l;
-  public static Long          CLIENT_POOL_TOTAL_MEM             = 20 * 1024 * 1024l;
-  public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
+  public static Long           PIPELINE_WRITE_TIMEOUT_SECONDS    = 20l;
+  public static Integer        CLIENT_POOL_MAX_THREADS           = 40;
+  public static Long           CLIENT_POOL_MAX_MEM_PER_CONN      = 1048576l;
+  public static Long           CLIENT_POOL_TOTAL_MEM             = 20 * 1024 * 1024l;
+  public static Long           CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
   
   static class NioServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline( ) throws Exception {
@@ -107,7 +107,7 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( systemThreadFactory == null ) {
-        System.setProperty( "euca.ws.port", ""+PORT );
+        System.setProperty( "euca.ws.port", "" + PORT );
         systemThreadFactory = ChannelUtil.getSystemThreadFactory( );
         serverPipelineFactory = ChannelUtil.getServerPipeline( );
         serverBossThreadPool = ChannelUtil.getServerBossThreadPool( );
