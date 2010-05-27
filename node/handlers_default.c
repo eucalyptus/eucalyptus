@@ -572,7 +572,7 @@ static void * bundling_thread (void *arg)
 		
 		pid = fork();
 		if (!pid) {
-		  logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s -i %s -d %s -b %s --euca-auth'\n", params->ncBundleUploadCmd, dstDiskPath, params->workPath, params->bucketName);
+		  logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", params->ncBundleUploadCmd, dstDiskPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
 		  exit(execl(params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", dstDiskPath, "-d", params->workPath, "-b", params->bucketName, "--euca-auth", NULL));
 		} else {
 		  instance->bundlePid = pid;
@@ -608,14 +608,18 @@ doBundleInstance(
 	char *bucketName,
 	char *filePrefix,
 	char *walrusURL,
-	char *userPublicKey)
+	char *userPublicKey,
+	char *S3Policy, 
+	char *S3PolicySig)
 {
 	// sanity checking
 	if (instanceId==NULL
 		|| bucketName==NULL
 		|| filePrefix==NULL
 		|| walrusURL==NULL
-		|| userPublicKey==NULL) {
+		|| userPublicKey==NULL
+	        || S3Policy == NULL
+	        || S3PolicySig == NULL) {
 		logprintfl (EUCAERROR, "doBundleInstance: bundling instance called with invalid parameters\n");
 		return ERROR;
 	}
@@ -638,6 +642,8 @@ doBundleInstance(
 	params->filePrefix = strdup (filePrefix);
 	params->walrusURL = strdup (walrusURL);
 	params->userPublicKey = strdup (userPublicKey);
+	params->S3Policy = strdup(S3Policy);
+	params->S3PolicySig = strdup(S3PolicySig);
 	params->eucalyptusHomePath = strdup (nc->home);
 	params->ncBundleUploadCmd = strdup (nc->ncBundleUploadCmd);
 	params->ncCheckBucketCmd = strdup (nc->ncCheckBucketCmd);

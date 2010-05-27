@@ -208,6 +208,8 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="walrusURL" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="S3Policy" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="S3PolicySig" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

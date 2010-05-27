@@ -375,7 +375,7 @@ int main (int argc, char **argv)
         /***********************************************************/
 	} else if (!strcmp(command, "bundleInstance")) {
         CHECK_PARAM(instance_id, "instance id");
-		int rc = ncBundleInstanceStub (stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo");
+	int rc = ncBundleInstanceStub (stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig");
 		printf ("ncBundleInstanceStub = %d\n", rc);
 
     } else if (!strcmp(command, "powerDown")) {
