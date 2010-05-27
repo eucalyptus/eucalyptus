@@ -54,6 +54,7 @@ import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
@@ -275,5 +276,7 @@ class UpgradeWalrus162eee implements UpgradeScript {
 		entities.add(ClusterInfo.class);
 
 		entities.add(Counters.class);
+		
+		entities.add(SshKeyPair.class);
 	}
 }
