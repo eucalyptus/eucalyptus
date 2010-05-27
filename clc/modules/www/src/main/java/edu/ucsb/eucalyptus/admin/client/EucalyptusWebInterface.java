@@ -1292,6 +1292,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         }
     };
 
+    public static HorizontalPanel messageBox;
     public void displayBarAndTabs(String message)
     {
         /* top bar */
@@ -1322,7 +1323,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         top_bar.setCellHorizontalAlignment(upanel, HorizontalPanel.ALIGN_RIGHT);
         top_bar.setCellVerticalAlignment(upanel, HorizontalPanel.ALIGN_TOP);
 
-        final HorizontalPanel messageBox = new HorizontalPanel();
+        messageBox = new HorizontalPanel();
         messageBox.setStyleName("euca-message-bar");
         messageBox.setSpacing(3);
         messageBox.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_RIGHT);

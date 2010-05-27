@@ -6,7 +6,7 @@ from optparse import OptionParser
 from euca_admin.groups import Group
 
 def main():
-  Group().grant_authorize()
+  Group().cli_grant_permission()
   sys.exit()
 
 if __name__ == "__main__":

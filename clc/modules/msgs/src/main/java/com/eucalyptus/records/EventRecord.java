@@ -8,21 +8,29 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 public class EventRecord extends EucalyptusMessage {
   private static Logger            LOG   = Logger.getLogger( EventRecord.class );
   
-  private static Record create( final Class component, final EventType eventName, final String other, int dist ) {
+  private static Record create( final Class component, final EventClass eventClass, final EventType eventName, final String other, int dist ) {
     EucalyptusMessage msg = tryForMessage( );
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
-    return new LogFileRecord( eventName, component, ste, msg.getUserId( ), msg.getCorrelationId( ), other );
+    return new LogFileRecord( eventClass, eventName, component, ste, msg.getUserId( ), msg.getCorrelationId( ), other );
+  }
+
+  public static Record here( final Class component, final EventClass eventClass, final EventType eventName, final String... other ) {
+    return create( component, eventClass, eventName, getMessageString( other ), 1 );
+  }
+    
+  public static Record caller( final Class component, final EventClass eventClass, final EventType eventName, final Object... other ) {
+    return create( component, eventClass, eventName, getMessageString( other ), 2 );
   }
 
   public static Record here( final Class component, final EventType eventName, final String... other ) {
-    return create( component, eventName, getMessageString( other ), 1 );
+    return create( component, EventClass.ORPHAN, eventName, getMessageString( other ), 1 );
   }
     
   public static Record caller( final Class component, final EventType eventName, final Object... other ) {
-    return create( component, eventName, getMessageString( other ), 2 );
+    return create( component, EventClass.ORPHAN, eventName, getMessageString( other ), 2 );
   }
-  
+
   private static String getMessageString( final Object[] other ) {
     StringBuffer last = new StringBuffer( );
     for ( Object x : other ) {
@@ -48,6 +56,10 @@ public class EventRecord extends EucalyptusMessage {
       }
     }
     return msg == null ? BOGUS : msg;
+  }
+
+  public static void flush( ) {
+    RecordProcessor.flush( );
   }
 
   

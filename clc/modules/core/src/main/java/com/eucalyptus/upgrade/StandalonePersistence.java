@@ -160,7 +160,6 @@ public class StandalonePersistence {
       throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
     }
     new SystemCredentialProvider( ).load( Bootstrap.Stage.Anonymous );
-    System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
     DispatcherFactory.setFactory( ( DispatcherFactory ) ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.ws.client.DefaultDispatcherFactory" ).newInstance( ) );
     LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.SslSetup" ) );
     LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.Hashes" ) );

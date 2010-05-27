@@ -29,7 +29,7 @@ public class AvailabilityZonePermission extends BaseAuthorization<HasName> imple
 
   @Override
   public boolean check( HasName t ) {
-    return this.getValue( ).equals( t.getName( ) ) && /* TODO: FIXME: */ "Cluster".equals( t.getClass( ).getSimpleName( ) );
+    return this.getValue( ).equals( t.getName( ) ) && "Cluster".equals( t.getClass( ).getSimpleName( ) );
   }
 
 }

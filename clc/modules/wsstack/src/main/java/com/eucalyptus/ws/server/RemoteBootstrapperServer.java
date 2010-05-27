@@ -108,6 +108,7 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
   
   public RemoteBootstrapperServer( ) {
     this.port = ChannelUtil.PORT;
+    ChannelUtil.setupServer( );
     this.bootstrap = ChannelUtil.getServerBootstrap( );
     this.bootstrap.setPipelineFactory( this );
   }

@@ -45,26 +45,33 @@ public class NodeResourceAllocator implements ResourceAllocator {
       } ) ) {
         return cluster;
       } else {
-        throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName );
+        if( Clusters.getInstance( ).contains( clusterName ) ) {
+          throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName );
+        } else {
+          throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName );
+        }
       }
     } else {
-//      Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-//        @Override
-//        public boolean apply( final Cluster c ) {
-//          return Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
-//            @Override
-//            public boolean apply( Authorization arg0 ) {
-//              return arg0.check( c );
-//            }
-//          } );
-//        }
-//      } );
-      List<Cluster> authorizedClusters = Lists.newArrayList( Clusters.getInstance( ).listValues( ) );
+      Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+        @Override
+        public boolean apply( final Cluster c ) {
+          return Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
+            @Override
+            public boolean apply( Authorization arg0 ) {
+              return arg0.check( c );
+            }
+          } );
+        }
+      } );
       NavigableMap<VmTypeAvailability, Cluster> sorted = Maps.newTreeMap( );
       for ( Cluster c : authorizedClusters ) {
         sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
       }
-      return sorted.firstEntry( ).getValue( );
+      if( sorted.isEmpty( ) ) {
+        throw new NotEnoughResourcesAvailable( "Not enough resources: no cluster is available on which you have permissions to run instances." );
+      } else {
+        return sorted.firstEntry( ).getValue( );
+      }
     }
   }
   

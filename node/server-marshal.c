@@ -684,13 +684,14 @@ adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t*
     axis2_char_t * filePrefix = adb_ncBundleInstanceType_get_filePrefix(input, env);
     axis2_char_t * walrusURL = adb_ncBundleInstanceType_get_walrusURL(input, env);
     axis2_char_t * userPublicKey = adb_ncBundleInstanceType_get_userPublicKey(input, env);
-
+    axis2_char_t * S3Policy = adb_ncBundleInstanceType_get_S3Policy(input, env);
+    axis2_char_t * S3PolicySig = adb_ncBundleInstanceType_get_S3PolicySig(input, env);
 
     eventlog("NC", userId, correlationId, "BundleInstance", "begin");
     { // do it
         ncMetadata meta = { correlationId, userId };
 
-        int error = doBundleInstance (&meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
+        int error = doBundleInstance (&meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
     
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doBundleInstance() failed error=%d\n", error);

@@ -6,10 +6,7 @@ from euca_admin.storagecontrollers import StorageController
 from optparse import OptionParser
 
 def main():
-  c = StorageController()
-  parser = c.get_register_parser()
-  (options, args) = parser.parse_args()
-  c.register(options.sc_name,options.sc_host,options.sc_port)
+  c = StorageController().cli_register()
   sys.exit()
 
 if __name__ == "__main__":

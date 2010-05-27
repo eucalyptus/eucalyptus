@@ -77,15 +77,20 @@ import com.google.gwt.user.client.ui.Widget;
 public class EucaButton extends com.google.gwt.user.client.ui.Button {
 	
 	private static final String MAIN_STYLE_NAME = "euca-Button";
-	private static final String MOUSE_OVER_STYLE_NAME = "euca-Button-over";
-	private static final String MOUSE_DOWN_STYLE_NAME = "euca-Button-down";
+	private static final String MOUSE_OVER_STYLE_NAME = "-over";
+	private static final String MOUSE_DOWN_STYLE_NAME = "-down";
 
 	private String tooltip;
+	private final String baseStyleName;
 	
-	public EucaButton(String html, String tooltip, ClickHandler handler) {
+  public EucaButton(String html, String tooltip, ClickHandler handler) {
+    this(html,tooltip,MAIN_STYLE_NAME,handler);
+  }
+	public EucaButton(String html, String tooltip, String baseStyleName, ClickHandler handler) {
 		super(html, handler);
 		this.tooltip = tooltip;		
-		this.addStyleName(MAIN_STYLE_NAME);		
+		this.baseStyleName = baseStyleName;
+		this.addStyleName(this.baseStyleName);		
 		setEventHandler();
 	}
 	
@@ -96,6 +101,7 @@ public class EucaButton extends com.google.gwt.user.client.ui.Button {
 	public EucaButton(String html) {
 	  super(html);
 	  this.tooltip = null;
+	  this.baseStyleName = MAIN_STYLE_NAME;
 	  this.addStyleName(MAIN_STYLE_NAME);
 	  setEventHandler();
 	}
@@ -104,24 +110,24 @@ public class EucaButton extends com.google.gwt.user.client.ui.Button {
 		sinkEvents(Event.ONMOUSEOVER | Event.ONMOUSEOUT | Event.ONMOUSEMOVE | Event.ONMOUSEUP | Event.ONMOUSEDOWN);
 		this.addHandler(new MouseOutHandler() {
 			public void onMouseOut(MouseOutEvent event) {
-				removeStyleName(MOUSE_OVER_STYLE_NAME);
-				removeStyleName(MOUSE_DOWN_STYLE_NAME);
+				removeStyleName(EucaButton.this.baseStyleName+MOUSE_OVER_STYLE_NAME);
+				removeStyleName(EucaButton.this.baseStyleName+MOUSE_DOWN_STYLE_NAME);
 				Tooltip.getInstance().hide();
 			}
 		}, MouseOutEvent.getType());
 		this.addHandler(new MouseOverHandler() {
 			public void onMouseOver(MouseOverEvent event) {
-				addStyleName(MOUSE_OVER_STYLE_NAME);
+				addStyleName(EucaButton.this.baseStyleName+MOUSE_OVER_STYLE_NAME);
 			}
 		}, MouseOverEvent.getType());
 		this.addHandler(new MouseUpHandler() {
 			public void onMouseUp(MouseUpEvent event) {
-				removeStyleName(MOUSE_DOWN_STYLE_NAME);
+				removeStyleName(EucaButton.this.baseStyleName+MOUSE_DOWN_STYLE_NAME);
 			}
 		}, MouseUpEvent.getType());
 		this.addHandler(new MouseDownHandler() {
 			public void onMouseDown(MouseDownEvent event) {
-				addStyleName(MOUSE_DOWN_STYLE_NAME);
+				addStyleName(EucaButton.this.baseStyleName+MOUSE_DOWN_STYLE_NAME);
 			}
 		}, MouseDownEvent.getType());
 		if (this.tooltip != null) {

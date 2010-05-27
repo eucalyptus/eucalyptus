@@ -883,7 +883,7 @@ public class BlockStorage {
 				volumes.addAll(volumeInfos);
 
 				SnapshotInfo snapInfo = new SnapshotInfo();
-				snapInfo.setStatus(StorageProperties.Status.completed.toString());
+				snapInfo.setStatus(StorageProperties.Status.available.toString());
 				EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);
 				List<SnapshotInfo> snapshotInfos = dbSnap.query(snapInfo);
 				List<SnapshotInfo> snapshots = new ArrayList<SnapshotInfo>();
@@ -894,10 +894,12 @@ public class BlockStorage {
 				for(VolumeInfo volume : volumes) {
 					try {
 						String volumeId = volume.getVolumeId();
+						LOG.info("Converting volume: " + volumeId);
 						String volumePath = fromBlockManager.getVolumePath(volumeId);
 						blockManager.importVolume(volumeId, volumePath, volume.getSize());
 						fromBlockManager.finishVolume(volumeId);
-					} catch (EucalyptusCloudException ex) {
+						LOG.info("Done converting volume: " + volumeId);
+					} catch (Exception ex) {
 						LOG.error(ex);
 						//this one failed, continue processing the rest
 					}
@@ -906,16 +908,18 @@ public class BlockStorage {
 				for(SnapshotInfo snap : snapshots) {
 					try {
 						String snapshotId = snap.getSnapshotId();
+						LOG.info("Converting snapshot: " + snapshotId);
 						String snapPath = fromBlockManager.getSnapshotPath(snapshotId);
 						int size = fromBlockManager.getSnapshotSize(snapshotId);
 						blockManager.importSnapshot(snapshotId, snap.getVolumeId(), snapPath, size);
 						fromBlockManager.finishVolume(snapshotId);
-					} catch (EucalyptusCloudException ex) {
+						LOG.info("Done converting snapshot: " + snapshotId);
+					} catch (Exception ex) {
 						LOG.error(ex);
 						//this one failed, continue processing the rest
 					}
 				}
-
+				LOG.info("Conversion complete");
 				StorageProperties.enableStorage = StorageProperties.enableSnapshots = true;
 			}
 		}

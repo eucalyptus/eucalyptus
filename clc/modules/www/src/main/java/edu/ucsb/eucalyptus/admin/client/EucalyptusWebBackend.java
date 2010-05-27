@@ -69,9 +69,11 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.user.client.rpc.RemoteService;
 import com.google.gwt.user.client.rpc.SerializableException;
 import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import edu.ucsb.eucalyptus.admin.client.reports.ReportInfo;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by IntelliJ IDEA.
@@ -175,7 +177,9 @@ public interface EucalyptusWebBackend extends RemoteService {
 	
 	public void removeUsersFromGroups(String sessionId, List<String> userNames, List<String> groupNames) throws Exception;
 	
-	public List<String> getZones(String sessionId) throws Exception;
+  public List<String> getZones(String sessionId) throws Exception;
+  
+  public List<ReportInfo> getReports(String sessionId) throws Exception;
 	
 	/**
 	 * Utility/Convenience class.

@@ -64,32 +64,6 @@
 
 package com.eucalyptus.cluster;
 
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.callback.BundleCallback;
-import com.eucalyptus.cluster.callback.QueuedEventCallback;
-import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.VmState;
-import com.eucalyptus.vm.SystemState.Reason;
-import com.eucalyptus.records.EventType;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import edu.emory.mathcs.backport.java.util.Arrays;
-import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.VmImageInfo;
-import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.BundleTask;
-import com.eucalyptus.records.EventRecord;
-import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
-import org.apache.commons.lang.time.StopWatch;
-import org.apache.log4j.Logger;
-import org.jboss.util.collection.ConcurrentSet;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -98,8 +72,32 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import org.apache.commons.lang.time.StopWatch;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.callback.BundleCallback;
+import com.eucalyptus.component.Configurations;
+import com.eucalyptus.records.EventClass;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.vm.SystemState;
+import com.eucalyptus.vm.VmState;
+import com.eucalyptus.vm.SystemState.Reason;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.VmImageInfo;
+import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.BundleTask;
+import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmInstance implements HasName {
   private static Logger LOG          = Logger.getLogger( VmInstance.class );
@@ -280,6 +278,7 @@ public class VmInstance implements HasName {
         } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
           this.state.set( newState, false );
         }
+        EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE,  "user="+this.getOwnerId( ), "instance="+this.getInstanceId( ), "type="+this.getVmTypeInfo( ).getName( ), "state="+ this.state.getReference( ).name( ), "details="+this.reasonDetails.toString( )  ).info();
       } else {
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       }

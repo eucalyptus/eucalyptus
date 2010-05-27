@@ -132,7 +132,7 @@
     <servlet-name>imageStoreService</servlet-name>
     <servlet-class>edu.ucsb.eucalyptus.admin.server.extensions.store.ImageStoreServiceImpl</servlet-class>
   </servlet>
-  
+
   <servlet-mapping>
     <servlet-name>imageStoreService</servlet-name>
     <url-pattern>/ImageStoreService</url-pattern>

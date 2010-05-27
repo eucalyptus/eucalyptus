@@ -4,8 +4,7 @@ from boto.ec2.regioninfo import RegionInfo
 from euca_admin.storagecontrollers import StorageController
 
 def main():
-  c = StorageController()
-  c.describe()
+  c = StorageController().cli_describe()
   sys.exit()
 
 if __name__ == "__main__":

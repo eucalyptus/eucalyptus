@@ -179,6 +179,7 @@ public class Accounts {
   public GrantGroupAuthorizationResponseType authorize( GrantGroupAuthorizationType request ) throws EucalyptusCloudException {
     GrantGroupAuthorizationResponseType reply = request.getReply( );
     try {
+      //TODO: RELEASE: fix checking that the cluster exists!
       Groups.lookupGroup( request.getGroupName( ) ).addAuthorization( new AvailabilityZonePermission( request.getZoneName( ) ) );
       reply.set_return( true );
     } catch ( NoSuchGroupException e ) {

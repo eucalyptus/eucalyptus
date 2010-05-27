@@ -68,11 +68,16 @@ package edu.ucsb.eucalyptus.admin.server;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.www.Reports;
+import com.eucalyptus.www.Reports.ReportCache;
 import com.google.gwt.user.client.rpc.SerializableException;
+import com.google.gwt.user.client.rpc.SerializationException;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 import com.google.gwt.user.server.rpc.UnexpectedException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
@@ -85,13 +90,20 @@ import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.reports.ReportInfo;
 
+import net.sf.jasperreports.engine.JasperPrint;
+import net.sf.jasperreports.engine.JasperReport;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.InputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -101,8 +113,14 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
 
 public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements EucalyptusWebBackend {
 
@@ -345,7 +363,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	}
 
 	/* ensure the sessionId is (still) valid */
-	private static SessionInfo verifySession (String sessionId)
+	public static SessionInfo verifySession (String sessionId)
 	throws SerializableException
 	{
 		if (sessionId==null) {
@@ -1117,11 +1135,49 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	
 	@Override
 	public List<String> getZones(final String sessionId) throws Exception {
-		// TODO: get zone list when chris is ready
 		List<String> zones = new ArrayList<String>();
 		for ( ClusterConfiguration cluster : Configuration.getClusterConfigurations( ) ) {
 		  zones.add( cluster.getName( ) );
 		}
 		return zones;
 	}
+
+	@Override
+  public List<ReportInfo> getReports(final String sessionId) throws Exception {
+    SessionInfo session = verifySession (sessionId);
+    UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+    if (!reqUser.isAdministrator()) {
+      throw new Exception("Only admin can view reports.");
+    }
+    List<ReportInfo> reports = new ArrayList<ReportInfo>();
+    for( File report : SubDirectory.REPORTS.getFile( ).listFiles( new FilenameFilter() {
+      @Override
+      public boolean accept( File arg0, String arg1 ) {
+        return arg1.endsWith( ".jrxml" );
+      }} ) ) {
+      String reportName = report.getName( ).replaceAll( ".jrxml", "" );
+      try {
+        ReportCache reportCache = Reports.getReportManager( reportName );
+        Integer lastPage = reportCache.getLength( );
+        reports.add( new ReportInfo( reportCache.getReportName( ), reportName, lastPage ) );
+      }
+      catch ( Throwable e ) {
+        LOG.error( e, e );
+        LOG.error( "Failed to read report file: " + report.getCanonicalPath( ) + " because of: " + e.getMessage( ) );
+      }
+    }
+    return reports;
+  }
+
+  @Override
+  public String processCall( String payload ) throws SerializationException {
+    try {
+      return super.processCall( payload );
+    } catch ( Throwable e ) {
+      LOG.error( e, e );
+      throw new SerializationException( e );
+    }
+  }
+
+	
 }

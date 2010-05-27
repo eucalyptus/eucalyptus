@@ -79,6 +79,7 @@ public enum SubDirectory {
   KEYS( BaseDirectory.VAR, "keys" ),
   SCRIPTS( BaseDirectory.CONF, "scripts" ),
   UPGRADE( BaseDirectory.CONF, "upgrade" ),
+  REPORTS( BaseDirectory.CONF, "reports" ),
   CONF( BaseDirectory.CONF, "conf" ),
   LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" );
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
