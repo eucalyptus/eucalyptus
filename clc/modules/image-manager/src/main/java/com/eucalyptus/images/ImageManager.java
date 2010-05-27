@@ -344,17 +344,21 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
       db.add( imageInfo );
-      imageInfo.grantPermission( Users.lookupUser( request.getUserId( ) ) );
-      try {
-        imageInfo.grantPermission( Groups.lookupGroup( "all" ) );
-      } catch ( NoSuchGroupException e ) {
-        LOG.error( e, e );
-      }
       db.commit( );
       LOG.info( "Registering image pk=" + imageInfo.getId( ) + " ownerId=" + request.getUserId( ) );
-    } catch ( NoSuchUserException e ) {
+    } catch ( Exception e ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "can not find user info" );
+      throw new EucalyptusCloudException( "failed to register image." );
+    }
+    try {
+      imageInfo.grantPermission( Users.lookupUser( request.getUserId( ) ) );
+    } catch ( NoSuchUserException e ) {
+      LOG.debug( e, e );
+    }
+    try {
+      imageInfo.grantPermission( Groups.lookupGroup( "all" ) );
+    } catch ( NoSuchGroupException e ) {
+      LOG.error( e, e );
     }
     
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId( ) );
