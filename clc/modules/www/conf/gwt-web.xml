@@ -126,11 +126,6 @@
     <url-pattern>/register</url-pattern>
   </servlet-mapping>
 
-  <servlet-mapping>
-    <servlet-name>HttpsRedirect</servlet-name>
-    <url-pattern>/redirect</url-pattern>
-  </servlet-mapping>
-
 
   <!-- store -->
   <servlet>
