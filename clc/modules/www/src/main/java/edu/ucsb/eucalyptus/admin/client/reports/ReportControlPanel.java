@@ -1,7 +1,7 @@
 package edu.ucsb.eucalyptus.admin.client.reports;
 
+import java.util.ArrayList;
 import java.util.List;
-import com.google.common.collect.Lists;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.KeyCodes;
@@ -31,12 +31,12 @@ public class ReportControlPanel extends VerticalPanel {
   public static final String DERAULT_USER_HEADER = "Users";
   
   private static final String HEADER_STYLE_NAME = "euca-UserGroupTabPanel-header";
-  private static final String ACTION_BAR_STYLE_NAME = "euca-ReportparentPanel-action";
-  private static final String FILTER_STYLE_NAME = "euca-ReportparentPanel-filter";
-  private static final String SCROLL_STYLE_NAME = "euca-ReportparentPanel-scroll";
-  private static final String LIST_HEADER_STYLE_NAME = "euca-ReportparentPanel-list-header";
-  private static final String ANCHOR_STYLE_NAME = "euca-ReportparentPanel-anchor";
-  private static final String MAIN_STYLE_NAME = "euca-ReportparentPanel";
+  private static final String ACTION_BAR_STYLE_NAME = "euca-UserGroupTabPanel-action";
+  private static final String FILTER_STYLE_NAME = "euca-UserGroupTabPanel-filter";
+  private static final String SCROLL_STYLE_NAME = "euca-UserGroupTabPanel-scroll";
+  private static final String LIST_HEADER_STYLE_NAME = "euca-UserGroupTabPanel-list-header";
+  private static final String ANCHOR_STYLE_NAME = "euca-UserGroupTabPanel-anchor";
+  private static final String MAIN_STYLE_NAME = "euca-UserGroupTabPanel";
   
   private String name;
   
@@ -59,7 +59,7 @@ public class ReportControlPanel extends VerticalPanel {
       @Override
       public void onClick( ClickEvent clickevent ) {}
     };
-    List<String> cols = Lists.newArrayList( "yhalothar", "kkthxbye" );
+    List<String> cols = new ArrayList() {{add( "yhalothar" ); add( "kkthxbye" ); }};
     this.name = name;
     this.parent = parent;
     this.columns = cols;
