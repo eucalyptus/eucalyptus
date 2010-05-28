@@ -8,26 +8,69 @@ import edu.ucsb.eucalyptus.admin.client.util.XHTML;
 
 public class ReportList extends DecoratedStackPanel implements Observer {
   private final AccountingControl controller;
-  private VerticalPanel           reports;
+  private VerticalPanel           systemReports;
+  private VerticalPanel           resourceReports;
+  private VerticalPanel           zoneReports;
   
   public ReportList( AccountingControl controller ) {
     this.ensureDebugId( "ReportList" );
     this.controller = controller;
-    this.reports = new VerticalPanel( );
+    this.systemReports = new VerticalPanel( ) {
+      {
+        ensureDebugId( "systemReports" );
+      }
+    };
+    this.resourceReports = new VerticalPanel( ) {
+      {
+        ensureDebugId( "resourceReports" );
+      }
+    };
+    this.zoneReports = new VerticalPanel( ) {
+      {
+        ensureDebugId( "zoneReports" );
+      }
+    };
   }
   
   public void redraw( ) {
     this.clear( );
     this.setWidth( "200px" );
-    this.add( this.reports,  XHTML.headerWithImage( "REPORTS", AccountingControl.RESOURCES.test( ), AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
+    this.add( this.systemReports, XHTML.headerWithImage( "System Events", AccountingControl.RESOURCES.systemReports( ), AccountingControl.RESOURCES.REPORT_BAR_STYLE ),
+              true );
+    this.add( this.resourceReports, XHTML.headerWithImage( "Users, Groups & Resources", AccountingControl.RESOURCES.resourceReports( ),
+                                                           AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
+    this.add( this.zoneReports, XHTML.headerWithImage( "Service Status & Logs", AccountingControl.RESOURCES.serviceReports( ),
+                                                         AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
   }
   
   @Override
   public void update( ) {
-    this.reports.clear( );
-    this.reports.setStyleName( AccountingControl.RESOURCES.REPORT_BAR_STYLE );
-    for ( ReportInfo info : ReportList.this.controller.getReports( ) ) {
-      this.reports.add( info.getButton( ) );
+    this.updateSystemReports( );
+    this.updateZoneReports( );
+    this.updateResourceReports( );
+  }
+  
+  private void updateZoneReports( ) {
+    this.zoneReports.clear( );
+    this.zoneReports.setStyleName( AccountingControl.RESOURCES.REPORT_BAR_STYLE );
+    for ( ReportInfo info : ReportList.this.controller.getZoneReports( ) ) {
+      this.zoneReports.add( info.getButton( ) );
+    }
+  }
+  
+  private void updateResourceReports( ) {
+    this.resourceReports.clear( );
+    this.resourceReports.setStyleName( AccountingControl.RESOURCES.REPORT_BAR_STYLE );
+    for ( ReportInfo info : ReportList.this.controller.getResourceReports( ) ) {
+      this.resourceReports.add( info.getButton( ) );
+    }
+  }
+  
+  private void updateSystemReports( ) {
+    this.systemReports.clear( );
+    this.systemReports.setStyleName( AccountingControl.RESOURCES.REPORT_BAR_STYLE );
+    for ( ReportInfo info : ReportList.this.controller.getSystemReports( ) ) {
+      this.systemReports.add( info.getButton( ) );
     }
   }
   

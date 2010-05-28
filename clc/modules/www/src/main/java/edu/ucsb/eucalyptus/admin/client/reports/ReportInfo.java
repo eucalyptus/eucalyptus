@@ -7,7 +7,6 @@ import edu.ucsb.eucalyptus.admin.client.AccountingControl;
 import edu.ucsb.eucalyptus.admin.client.EucaButton;
 
 public class ReportInfo implements IsSerializable {
-  public static final String ACCT_REPORT_BUTTON = "acct-Button-Report";
   private static final ReportInfo BOGUS = new ReportInfo( "System Log", "system-log", 0 );
 
   private transient AccountingControl controller;
@@ -51,7 +50,7 @@ public class ReportInfo implements IsSerializable {
 
   public void setParent( AccountingControl parent ) {
     this.controller = parent;
-    this.button = new EucaButton( this.getName( ), "View " + this.getName( ) + " Report.", ACCT_REPORT_BUTTON, new ClickHandler( ) {
+    this.button = new EucaButton( this.getName( ), "View " + this.getName( ) + " Report.", AccountingControl.RESOURCES.ACCT_REPORT_BUTTON, new ClickHandler( ) {
       @Override
       public void onClick( ClickEvent arg0 ) {
         ReportInfo.this.controller.setCurrentReport( ReportInfo.this );

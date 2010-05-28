@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Created using an evaluation version of JasperAssistant (http://www.jasperassistant.com) -->
-<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Resource Log" language="groovy" pageWidth="1024" pageHeight="600" columnWidth="924" leftMargin="50" rightMargin="50" topMargin="50" bottomMargin="50" whenResourceMissingType="Empty">
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Error Log" language="groovy" pageWidth="1024" pageHeight="600" columnWidth="924" leftMargin="50" rightMargin="50" topMargin="50" bottomMargin="50" whenResourceMissingType="Empty">
 	<property name="ireport.zoom" value="1.0"/>
 	<property name="ireport.x" value="0"/>
 	<property name="ireport.y" value="0"/>
@@ -82,7 +82,7 @@
 				<textElement textAlignment="Center" verticalAlignment="Middle">
 					<font fontName="Verdana" size="16" isBold="true"/>
 				</textElement>
-				<text><![CDATA[Resource Log]]></text>
+				<text><![CDATA[Error Log]]></text>
 			</staticText>
 		</band>
 	</title>

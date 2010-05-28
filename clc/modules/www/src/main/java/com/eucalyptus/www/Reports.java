@@ -39,6 +39,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
+import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusManagement;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
@@ -152,20 +153,25 @@ public class Reports extends HttpServlet {
       return;
     }
     LOG.debug( "Got request for " + name + " page number " + pageStr + " of type " + type );
-    Type reportType = Type.valueOf( type );
-    final JRExporter exporter = reportType.setup( req, res, name );
-    try {
-      ReportCache reportCache = getReportManager( name );
-      JasperPrint jasperPrint = reportCache.getPendingPrint( );
-      exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
-      exporter.exportReport( );
-    } catch ( Throwable ex ) {
-      LOG.error( ex, ex );
+    if( Lists.newArrayList( "user", "service" ).contains( name ) ) {
       res.setContentType( "text/plain" );
-      LOG.error( "Could not create the report stream " + ex.getMessage( ) + " " + ex.getLocalizedMessage( ) );
-      ex.printStackTrace( res.getWriter( ) );
-    } finally {
-      reportType.close( res );
+      res.getWriter( ).println( "PENDING." );
+    } else {
+      Type reportType = Type.valueOf( type );
+      final JRExporter exporter = reportType.setup( req, res, name );
+      try {
+        ReportCache reportCache = getReportManager( name );
+        JasperPrint jasperPrint = reportCache.getPendingPrint( );
+        exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
+        exporter.exportReport( );
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
+        res.setContentType( "text/plain" );
+        LOG.error( "Could not create the report stream " + ex.getMessage( ) + " " + ex.getLocalizedMessage( ) );
+        ex.printStackTrace( res.getWriter( ) );
+      } finally {
+        reportType.close( res );
+      }
     }
   }
   
@@ -182,7 +188,7 @@ public class Reports extends HttpServlet {
       this.name = name;
       this.reportName = reportName;
       this.pendingPrint = pendingPrint;
-      this.length = 1;
+      this.length = 0;
       if ( this.pendingPrint.isDone( ) ) {
         try {
           this.jasperPrint = this.pendingPrint.get( );
@@ -238,10 +244,10 @@ public class Reports extends HttpServlet {
         return this.pendingPrint.get( );
       } catch ( ExecutionException e ) {
         LOG.error( e, e );
-        this.length = 1;
+        this.length = 0;
         throw e;
       } catch ( InterruptedException e ) {
-        this.length = 1;
+        this.length = 0;
         throw e;
       }        
     }
