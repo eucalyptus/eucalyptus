@@ -56,16 +56,21 @@ import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
 
-class UpgradeWalrus162eee implements UpgradeScript {
+class Upgrade162eee extends AbstractUpgradeScript {
 	static final String FROM_VERSION = "1.6.2";
 	static final String TO_VERSION = "eee-2.0.0";
-	private static Logger LOG = Logger.getLogger( UpgradeWalrus162eee.class );
+	private static Logger LOG = Logger.getLogger( Upgrade162eee.class );
 	private static List<Class> entities = new ArrayList<Class>();
 	private static Map<String, Class> entityMap = new HashMap<String, Class>();
 
+	public Upgrade162eee() {
+		super(1);		
+	}
+	
 	@Override
 	public Boolean accepts( String from, String to ) {
 		if(FROM_VERSION.equals(from) && TO_VERSION.equals(to))

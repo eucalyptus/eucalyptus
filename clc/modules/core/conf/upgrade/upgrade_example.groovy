@@ -1,11 +1,16 @@
 import groovy.sql.Sql;
-import com.eucalyptus.upgrade.UpgradeScript;
+import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 
-class Example implements UpgradeScript {
+class Example extends AbstractUpgradeScript {
+	
+  public Example() {
+	  super(0);
+  }
+  
   public Boolean accepts( String from, String to ) {
     return true;
   }
@@ -19,7 +24,7 @@ class Example implements UpgradeScript {
     StandalonePersistence.listConnections().each{ Sql conn ->
       println "Found jdbc connection:      ${conn.getConnection( ).getMetaData( ).getURL( )}"
     }
-    StandalonePersistence.getConnection("eucalyptus_general").rows('SELECT * FROM COUNTERS').each{ 
+  /*  StandalonePersistence.getConnection("eucalyptus_general").rows('SELECT * FROM COUNTERS').each{ 
       println "Found old system counters:  msg_count=${it.MSG_COUNT}"
       EntityWrapper db = new EntityWrapper( "eucalyptus_general" ); 
       try {
@@ -35,6 +40,6 @@ class Example implements UpgradeScript {
       } finally {
         db.commit();
       }
-    }
+    }*/
   }
 }

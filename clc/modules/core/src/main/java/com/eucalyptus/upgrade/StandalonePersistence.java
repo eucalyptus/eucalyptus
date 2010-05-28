@@ -1,5 +1,6 @@
 package com.eucalyptus.upgrade;
 
+import edu.emory.mathcs.backport.java.util.Collections;
 import groovy.sql.Sql;
 import java.io.File;
 import java.io.IOException;
@@ -87,6 +88,7 @@ public class StandalonePersistence {
   }
   
   public static void runUpgrade( ) {
+	Collections.sort(upgradeScripts);
     LOG.info( upgradeScripts );
     for( UpgradeScript up : upgradeScripts ) {
       try {

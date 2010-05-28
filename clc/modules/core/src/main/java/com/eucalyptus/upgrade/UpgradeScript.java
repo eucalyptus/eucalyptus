@@ -25,4 +25,6 @@ public interface UpgradeScript {
    * @param newEucaHome
    */
   public void upgrade( File oldEucaHome, File newEucaHome );
+  
+  public int getPriority();
 }
