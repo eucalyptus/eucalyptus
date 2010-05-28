@@ -132,8 +132,8 @@
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleLeft {
-	background: #FFCC33 url(images/hborder.png) repeat-x 0px -989px;
-	border-left: 2px solid #FFCC33;
+	background: #FFFFCC;
+	border-left: 2px solid #FFFFCC;
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleLeftInner,.gwt-DecoratedStackPanel .stackItemMiddleRightInner
@@ -143,14 +143,14 @@
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleRight {
-	background: #FFCC33 url(images/hborder.png) repeat-x 0px -989px;
-	border-right: 2px solid #FFCC33;
+  background: #FFFFCC;
+  border-right: 2px solid #FFFFCC;
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleCenter {
 	font-weight: bold;
 	font-size: 1.3em;
-	background: #FFCC33 url(images/hborder.png) repeat-x 0px -989px;
+	background: #FFFFCC url(images/hborder.png) repeat-x 0px -989px;
 }
 
 .gwt-DecoratedStackPanel .gwt-StackPanelItem-first .stackItemTopRight,.gwt-DecoratedStackPanel .gwt-StackPanelItem-first .stackItemTopLeft
