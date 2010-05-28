@@ -88,11 +88,25 @@
 }
 
 .gwt-DecoratedStackPanel .stackItemTopLeft,.gwt-DecoratedStackPanel .stackItemTopRight, .gwt-DecoratedStackPanel .stackItemTopCenter
-	{
+  {
   background: #FFCC33;
-	height: 6px;
-	width: 6px;
-	zoom: 1;
+  height: 0px;
+  width: 0px;
+  zoom: 1;
+}
+.gwt-DecoratedStackPanel .stackPanelItem-Below-Selected .stackItemTopLeft,.gwt-DecoratedStackPanel  .stackPanelItem-Below-Selected .stackItemTopRight, .gwt-DecoratedStackPanel .stackPanelItem-Below-Selected .stackItemTopCenter
+  {
+  background: #FFCC33;
+  height: 0px;
+  width: 0px;
+  zoom: 1;
+}
+.gwt-DecoratedStackPanel .stackPanelItemFirst .stackItemTopLeft,.gwt-DecoratedStackPanel .stackItemTopRight, .gwt-DecoratedStackPanel .stackItemTopCenter
+  {
+  background: #FFCC33;
+  height: 0px;
+  width: 0px;
+  zoom: 1;
 }
 
 .gwt-DecoratedStackPanel .stackItemTopLeft {
