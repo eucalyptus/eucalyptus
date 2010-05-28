@@ -1,20 +1,24 @@
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.UserEntity;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.util.AuthBootstrapHelper;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Tx;
-import com.eucalyptus.auth.util.AuthBootstrapHelper;
 
 import groovy.sql.Sql;
 
@@ -152,6 +156,10 @@ class UpgradeAuth extends AbstractUpgradeScript {
         println "Failed to find user ${it.USER_NAME}";
         e.printStackTrace( );
       }
+    }
+    println "Making sure default group has all the availability zones"
+    for ( ClusterConfiguration cluster : Configuration.getClusterConfigurations( ) ) {
+      Groups.DEFAULT.addAuthorization( new AvailabilityZonePermission( cluster.getName( ) ) );
     }
   }
   
