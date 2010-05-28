@@ -1,3 +1,5 @@
+import javax.persistence.Column;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +41,6 @@ class upgrade_walrus_162_eee extends AbstractUpgradeScript {
 			EntityWrapper<BucketInfo> dbBucket = WalrusControl.getEntityWrapper();
 			try {
 				BucketInfo b = new BucketInfo(it.OWNER_ID,it.BUCKET_NAME,it.BUCKET_CREATION_DATE);
-				b.setOwnerId(it.OWNER_ID);
 				b.setLocation(it.BUCKET_LOCATION);
 				b.setGlobalRead(it.GLOBAL_READ);
 				b.setGlobalWrite(it.GLOBAL_WRITE);
@@ -47,6 +48,9 @@ class upgrade_walrus_162_eee extends AbstractUpgradeScript {
 				b.setGlobalWriteACP(it.GLOBAL_WRITE_ACP);
 				b.setBucketSize(it.BUCKET_SIZE);
 				b.setHidden(false);
+				b.setLoggingEnabled(it.LOGGING_ENABLED);
+				b.setTargetBucket(it.TARGET_BUCKET);
+				b.setTargetPrefix(it.TARGET_PREFIX);
 				walrus_conn.rows("SELECT g.* FROM bucket_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.bucket_id=${ it.BUCKET_ID }").each{  grant ->
 					println "--> grant: ${it.BUCKET_NAME}/${grant.USER_ID}"
 					GrantInfo grantInfo = new GrantInfo();
@@ -82,6 +86,9 @@ class upgrade_walrus_162_eee extends AbstractUpgradeScript {
 				objectInfo.setStorageClass(it.STORAGE_CLASS);
 				objectInfo.setContentType(it.CONTENT_TYPE);
 				objectInfo.setContentDisposition(it.CONTENT_DISPOSITION);
+				objectInfo.setDeleted(false);
+				objectInfo.setVersionId("null");
+				objectInfo.setLast(true);
 				walrus_conn.rows("SELECT g.* FROM object_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.object_id=${ it.OBJECT_ID }").each{  grant ->
 					println "--> grant: ${it.OBJECT_NAME}/${grant.USER_ID}"
 					GrantInfo grantInfo = new GrantInfo();
