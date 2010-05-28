@@ -170,7 +170,7 @@ class Upgrade162eee extends AbstractUpgradeScript {
 		try {
 			Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
 			if(firstRow == null) {
-				LOG.error("Unable to find anything in table: " + entityKey);
+				LOG.warn("Unable to find anything in table: " + entityKey);
 				return null;
 			}
 			if(firstRow instanceof Map) {
