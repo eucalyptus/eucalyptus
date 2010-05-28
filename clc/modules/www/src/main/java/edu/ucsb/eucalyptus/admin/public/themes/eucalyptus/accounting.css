@@ -226,7 +226,12 @@ html>body .gwt-DecoratedStackPanel {
 	width: 100%;
 	height: 100%;
 }
+
 .acct-ReportList {
 	width: 100%;
 	height: 100%;
+}
+
+.acct-ReportPage {
+  margin-top: 3px; 
 }

@@ -24,12 +24,13 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     public final static String ROOT_PANEL_STYLE    = "acct-AccountingPanel";
     public final static String DISPLAY_PANEL_STYLE = "acct-ReportDisplay";
     public final static String LIST_PANEL_STYLE    = "acct-ReportList";
-    public final static String BUTTON_STYLE        = "acct-Button ";
+    public final static String BUTTON_STYLE        = "acct-Button-Action";
     public final static String STACK_HEADER_STYLE  = "acct-StackPanelHeader";
     public final static String REPORT_BAR_STYLE    = "acct-report-bar";
     public final static String REPORT_FRAME_STYLE  = "acct-Frame";
     public static final String ACCT_REPORT_BUTTON  = "acct-Button-Report";
     public static final String DISPLAY_BAR_STYLE = STACK_HEADER_STYLE;
+    public static final String ACCT_REPORT_PAGE_TEXTBOX = "acct-ReportPageNum";
     
     @NotStrict
     @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/accounting.css" )

@@ -11,13 +11,14 @@ public class ReportButton extends EucaImageButton implements Observer {
   private final ReportAction      action;
   
   public ReportButton( final ReportAction action, final AccountingControl controller ) {
-    super( action.name( ), "Go to page " + action.name( ).toLowerCase( ) + ".", AccountingControl.RESOURCES.BUTTON_STYLE, action.getImageName( ),
+    super( action.getImageText( controller ), "Go to page " + action.name( ).toLowerCase( ) + ".", AccountingControl.RESOURCES.BUTTON_STYLE, action.getImageName( ),
            new ClickHandler( ) {
              @Override
              public void onClick( ClickEvent clickevent ) {
                action.apply( controller );
              }
            } );
+    this.setWidth( "200px" );
     this.action = action;
     this.controller = controller;
   }
@@ -26,6 +27,8 @@ public class ReportButton extends EucaImageButton implements Observer {
   public void redraw( ) {}
   
   @Override
-  public void update( ) {}
+  public void update( ) {
+    this.setText( this.action.getImageText( controller ) );
+  }
   
 }

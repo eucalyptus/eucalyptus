@@ -38,24 +38,34 @@ public enum ReportAction {
     public Integer apply( AccountingControl parent ) {
       return parent.getCurrentPage( );
     }
+
     
     @Override
+    public String getImageText( AccountingControl parent ) {
+      return super.getImageText( parent );
+    }
+
+
+    @Override
     public Widget makeImageButton( final AccountingControl parent ) {
-      TextBox currentPageText = new TextBox( ) {
+      final TextBox currentPageText = new TextBox( ) {
         {
           setText( "" + parent.getCurrentPage( ) );
-          addValueChangeHandler( new ValueChangeHandler<String>( ) {
-            @Override
-            public void onValueChange( ValueChangeEvent<String> event ) {
-              try {
-                Integer newPage = Integer.parseInt( event.getValue( ) );
-                parent.changePage( -1 * MAX_DELTA );
-                parent.changePage( newPage );
-              } catch ( NumberFormatException e ) {}
-            }
-          } );
+          setStyleName( AccountingControl.RESOURCES.ACCT_REPORT_PAGE_TEXTBOX );
         }
       };
+      ValueChangeHandler handler = new ValueChangeHandler<String>( ) {
+        @Override
+        public void onValueChange( ValueChangeEvent<String> event ) {
+          try {
+            Integer newPage = Integer.parseInt( event.getValue( ) );
+            parent.changePage( -1 * MAX_DELTA );
+            parent.changePage( newPage );
+            currentPageText.setText( "" + parent.getCurrentPage( ) );
+          } catch ( NumberFormatException e ) {}
+        }
+      };
+      currentPageText.setText( this.getImageText( parent) );
       return currentPageText;
     }
   },
@@ -66,8 +76,13 @@ public enum ReportAction {
     }
     
     @Override
+    public String getImageText( AccountingControl parent ) {
+      return parent.lastPage( ) + 1 + "";
+    }
+
+    @Override
     public Widget makeImageButton( AccountingControl parent ) {
-      return new EucaButton( parent.lastPage( ) + 1 + "", "Last Page", Buttons.STYLE_NOOP, Events.DO_NOTHING );
+      return new EucaButton( this.getImageText( parent ), "Last Page", Buttons.STYLE_NOOP, Events.DO_NOTHING );
     }
   },
   NEXT {
@@ -84,6 +99,10 @@ public enum ReportAction {
   };
   private static final int MAX_DELTA = 100000000;
   
+  public String getImageText( final AccountingControl parent ) {
+    return this.name( );
+  }
+
   public Widget makeImageButton( final AccountingControl parent ) {
     return new ReportButton( this, parent );
   }
