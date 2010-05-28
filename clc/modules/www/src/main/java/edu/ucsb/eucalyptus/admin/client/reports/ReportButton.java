@@ -18,7 +18,6 @@ public class ReportButton extends EucaImageButton implements Observer {
                action.apply( controller );
              }
            } );
-    this.setWidth( "200px" );
     this.action = action;
     this.controller = controller;
   }
