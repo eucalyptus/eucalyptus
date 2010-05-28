@@ -44,7 +44,7 @@
 	border-radius: 0px;
 	background: #FFFFFF none repeat scroll 0 0;
 	padding: 3px 5px 3px 5px;
-	margin: 1px;
+	margin: 0px;
 	width: 100%;
 }
 
@@ -96,13 +96,13 @@
 }
 
 .gwt-DecoratedStackPanel .stackItemTopLeft {
-	border-left: 0px solid #FFCC33;
+	border-left: 6px solid #FFCC33;
 	background: #FFCC33;
 	-background: #FFCC33;
 }
 
 .gwt-DecoratedStackPanel .stackItemTopRight {
-	border-right: 0px solid #FFCC33;
+	border-right: 6px solid #FFCC33;
 	background: #FFCC33;
 	-background: #FFCC33;
 }

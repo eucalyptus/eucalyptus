@@ -1165,7 +1165,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   }
   
   private static ReportInfo makeReportInfo( Service s ) {
-    String name = s.getServiceConfiguration( ).getName( ) + ": " + s.getServiceConfiguration( ).getComponent( ).name( ) + "@" + s.getServiceConfiguration( ).getHostName( );
+    String name = (s.getServiceConfiguration( ).getName( )!=null?s.getServiceConfiguration( ).getName( ) + ": ":"")+ s.getServiceConfiguration( ).getComponent( ).name( ) + "@" + s.getServiceConfiguration( ).getHostName( );
     return new ReportInfo( name, "service", 0 );
   }
   

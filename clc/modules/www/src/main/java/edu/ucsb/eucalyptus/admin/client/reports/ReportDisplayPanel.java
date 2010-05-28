@@ -21,7 +21,7 @@ public class ReportDisplayPanel extends VerticalPanel implements Observer {
     this.setStyleName( AccountingControl.RESOURCES.DISPLAY_PANEL_STYLE );
     this.controller = controller;
     this.topBar = new HorizontalPanel();
-    this.topBar.setStyleName( AccountingControl.RESOURCES.DISPLAY_BAR_STYLE );
+    this.topBar.setStyleName( AccountingControl.RESOURCES.REPORT_BAR_STYLE );
     this.leftBar = new HorizontalPanel();
     this.leftBar.setHorizontalAlignment( ALIGN_LEFT );
     this.rightBar = new HorizontalPanel();
