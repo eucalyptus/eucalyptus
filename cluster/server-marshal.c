@@ -180,7 +180,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *instanceId, *bucketName, *filePrefix, *walrusURL, *userPublicKey, *cid, *S3Policy, S3PolicySig;
+  char *instanceId, *bucketName, *filePrefix, *walrusURL, *userPublicKey, *cid, *S3Policy, *S3PolicySig;
   ncMetadata ccMeta;
   
   bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
