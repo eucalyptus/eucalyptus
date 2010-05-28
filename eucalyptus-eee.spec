@@ -603,7 +603,7 @@ then
 fi
 
 %changelog
-* Tues Jun 1 2010 Eucalyptus Systems (support@eucalyptus.com)
+* Tue Jun 1 2010 Eucalyptus Systems (support@eucalyptus.com)
 - Version 2.0 of Eucalyptus Enterprise Cloud
   - Windows VM Support
   - User/Group Management 
