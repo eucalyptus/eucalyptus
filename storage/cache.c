@@ -673,7 +673,7 @@ void free_artifacts_spec (artifacts_spec * spec)
 // reserves space if necessary, locks the cache entry (must be released with postprocess_output_path)
 output_file * preprocess_output_path (const char * id, artifacts_spec * spec, boolean use_work, boolean use_cache, artifacts_spec * prev_spec) 
 {
-	int ret;
+	int ret = OK;
 
 	output_file * o = calloc (1, sizeof (output_file)); // all pointers are NULL, all booleans are FALSE
 	if (o==NULL) {
