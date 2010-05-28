@@ -64,21 +64,22 @@
 
 <project name="eucalyptus-www" basedir=".">
 	<import file="../module-inc.xml" />
-	<condition property="osMask" value="linux" else="mac">
-		<os family="mac" />
-	</condition>
 	<property environment="localenv"/>
-	<property name="DESTDIR.0" value="${localenv.DESTDIR}"/>
-	<condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
-	  <contains string="${DESTDIR.0}" substring="localenv"/>
-	</condition>
+  <property name="DESTDIR.0" value="${localenv.DESTDIR}"/>
+  <condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
+    <contains string="${DESTDIR.0}" substring="localenv"/>
+  </condition>
 
 	<!--================================== BUILD TARGET ==================================-->
   <property name="builder.suffix" value="gwt" />
   <target name="build-gwt">
+  	<echo message="gwtDebug=${gwtDebug}"/>
     <antcall target="compile-src" />
     <antcall target="jar" />
-    <antcall target="compile-gwt" />
+    <condition property="gwtBuildType" value="debug" else="normal" >
+      <isset property="gwtDebug"/>
+    </condition>
+  	<antcall target="compile-gwt-${gwtBuildType}" />
 	</target>
 	<!--================================== GWT-ONLY TARGET ==================================-->
 	<property environment="env" />
@@ -128,7 +129,20 @@
 	</target>
 
 
-	<target name="compile-gwt" depends="check-src" unless="gwtc.notRequired">
+  <target name="compile-gwt-normal" depends="check-src" unless="gwtc.notRequired">
+    <delete dir="${gwt.war.build.dir}" />
+    <mkdir dir="${gwt.war.build.dir}" />
+    <mkdir dir="${gwt.war.dir}" />
+    <java classpathref="gwtcompilerclasspath" fork="true" failonerror="true" classname="com.google.gwt.dev.Compiler">
+      <jvmarg value="-Xmx1024m" />
+      <jvmarg value="-Xss1024k" />
+      <arg line="-war ${gwt.war.build.dir}" />
+      <arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
+    </java>
+    <war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module}/" />
+  </target>
+
+  <target name="compile-gwt-debug" depends="check-src" unless="gwtc.notRequired">
 		<delete dir="${gwt.war.build.dir}" />
 		<mkdir dir="${gwt.war.build.dir}" />
 		<mkdir dir="${gwt.war.dir}" />
@@ -136,7 +150,8 @@
 			<jvmarg value="-Xmx1024m" />
 			<jvmarg value="-Xss1024k" />
 			<arg line="-war ${gwt.war.build.dir}" />
-			<!-- arg line="-style PRETTY" /--> <!-- PRETTY for non-obfuscated Javascript -->
+			<arg line="-draftCompile"/>
+			<arg line="-style PRETTY"/> <!-- PRETTY for non-obfuscated Javascript -->
 			<arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
 		</java>
 		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module}/" />

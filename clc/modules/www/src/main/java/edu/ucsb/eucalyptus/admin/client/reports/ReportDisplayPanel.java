@@ -1,76 +1,58 @@
 package edu.ucsb.eucalyptus.admin.client.reports;
 
-import com.google.gwt.user.client.Timer;
-import com.google.gwt.user.client.ui.HTML;
+import com.google.gwt.user.client.ui.Frame;
+import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
-import com.google.gwt.user.client.ui.ScrollPanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.Widget;
 import edu.ucsb.eucalyptus.admin.client.AccountingControl;
+import edu.ucsb.eucalyptus.admin.client.util.Observer;
 
-public class ReportDisplayPanel extends VerticalPanel {
-  public static final String  DEFAULT_HEADER                  = "Property";
+public class ReportDisplayPanel extends VerticalPanel implements Observer {
+  private final AccountingControl controller;
+  private HorizontalPanel         actionBar;
+  private final Frame             report;
   
-  private static final String HEADER_STYLE_NAME               = "euca-AccountingTabPanel-header";
-  private static final String SCROLL_STYLE_NAME               = "euca-AccountingPropertyPanel-scroll";
-  private static final String CONTENT_STYLE_NAME              = "euca-AccountingPropertyPanel-content";
-  private static final String CONTENT_TITLE_STYLE_NAME        = "euca-AccountingPropertyPanel-content-title";
-  private static final String CONTENT_SUBTITLE_STYLE_NAME     = "euca-AccountingPropertyPanel-content-subtitle";
-  private static final String CONTENT_DETAIL_STYLE_NAME       = "euca-AccountingPropertyPanel-content-detail";
-  private static final String CONTENT_STATUS_STYLE_NAME       = "euca-AccountingPropertyPanel-status";
-  private static final String CONTENT_STATUS_ERROR_STYLE_NAME = "euca-AccountingPropertyPanel-status-error";
-  private static final String ACTION_BAR_STYLE_NAME           = "euca-AccountingPropertyPanel-action";
-  private static final String DATA_STYLE_NAME                 = "euca-AccountingPropertyPanel-data";
-  private static final String DATA_NAME_STYLE_NAME            = "euca-AccountingPropertyPanel-data-name";
-  private static final String DATA_ALT_BG_STYLE_NAME          = "euca-AccountingPropertyPanel-data-altbg";
-  private static final String DATA_VALUE_STYLE_NAME           = "euca-AccountingPropertyPanel-data-value";
-  private static final String DATA_TEXT_STYLE_NAME            = "euca-AccountingPropertyPanel-data-text";
-  private static final String DATA_LIST_STYLE_NAME            = "euca-AccountingPropertyPanel-data-list";
-  private static final String MAIN_STYLE_NAME                 = "euca-AccountingPropertyPanel";
-  
-  private static final int    MAX_GROUP_DISPLAY_SIZE          = 64;
-  private static final int    MAX_USER_DISPLAY_SIZE           = 64;
-  // Time to show status bar
-  private static final int    STATUS_DELAY_IN_MILLIS          = 10000;
-  private Label header;
-  private VerticalPanel content;
-
-  private Label status;
-  private Timer statusTimer;
-
-  private HTML subtitle;
-  private AccountingControl control;
-
-  ReportDisplayPanel(AccountingControl control) {
-    super();
-
-    this.control = control;
-
-    header = new Label();
-    header.addStyleName(HEADER_STYLE_NAME);
-    this.add(header);
-    // Tightening the header space
-    this.setCellHeight(header, "20px");
-
-    this.status = new Label();
-    this.status.addStyleName(CONTENT_STATUS_STYLE_NAME);
-    this.statusTimer = new Timer() {
-      public void run() {
-        content.remove(status);
-      }
-    };
-
-    ScrollPanel scroll = new ScrollPanel();
-    scroll.addStyleName(SCROLL_STYLE_NAME);
-    content = new VerticalPanel();
-    //content.setBorderWidth(2);
-    content.addStyleName(CONTENT_STYLE_NAME);
-    scroll.add(content);
-    this.add(scroll);
-
-    this.setSpacing(0);
-    //this.setBorderWidth(2);
-    this.addStyleName(MAIN_STYLE_NAME);
+  ReportDisplayPanel( AccountingControl controller ) {
+    this.ensureDebugId( "ReportDisplayPanel" );
+    this.setStyleName( AccountingControl.RESOURCES.DISPLAY_PANEL_STYLE );
+    this.controller = controller;
+    this.report = new Frame( );
+    this.report.setStyleName( AccountingControl.RESOURCES.REPORT_FRAME_STYLE );
   }
   
-
+  public void update( ) {
+    if ( this.controller.isReady( ) ) {
+      this.report.setUrl( this.controller.getCurrentUrl( ReportType.HTML ) );
+      if( this.actionBar != null ) {
+        for( Widget w : this.actionBar ) {
+          if( w instanceof Observer ) {
+            ( ( Observer ) w ).update();
+          }
+        }
+      }
+    }
+  }
+  
+  public void redraw( ) {
+    this.clear( );
+    this.actionBar = new HorizontalPanel( ) {
+      {
+        for ( final ReportAction a : ReportAction.values( ) ) {
+          add( a.makeImageButton( ReportDisplayPanel.this.controller ) );
+        }
+        add( new Label("") {{
+          setWidth( "100%" );
+          setHeight( "0px" );
+        }});
+        for ( final ReportType r : ReportType.values( ) ) {
+          add( r.makeImageButton( ReportDisplayPanel.this.controller ) );
+        }
+      }
+    };
+    this.add( this.actionBar );
+    this.add( this.report );
+    this.update( );
+  }
+  
 }

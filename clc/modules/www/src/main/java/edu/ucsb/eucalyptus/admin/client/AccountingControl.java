@@ -2,129 +2,141 @@ package edu.ucsb.eucalyptus.admin.client;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.google.gwt.event.dom.client.ClickEvent;
-import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.CssResource;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.resources.client.CssResource.NotStrict;
 import com.google.gwt.user.client.rpc.AsyncCallback;
-import com.google.gwt.user.client.ui.Frame;
-import com.google.gwt.user.client.ui.HorizontalPanel;
-import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.Widget;
-import edu.ucsb.eucalyptus.admin.client.reports.ReportAction;
+import edu.ucsb.eucalyptus.admin.client.reports.AccountingPanel;
 import edu.ucsb.eucalyptus.admin.client.reports.ReportInfo;
 import edu.ucsb.eucalyptus.admin.client.reports.ReportType;
+import edu.ucsb.eucalyptus.admin.client.util.Buttons;
+import edu.ucsb.eucalyptus.admin.client.util.Observer;
 
-public class AccountingControl implements ContentControl {
-  public static final String     ACCT_REPORT_BUTTON = "acct-Button-Report";
-  public static final String     ACCT_ACTION_BUTTON = "acct-Button-Action";
-  public static ClickHandler     DO_NOTHING         = new ClickHandler( ) {
-                                                      @Override
-                                                      public void onClick( ClickEvent arg0 ) {}
-                                                    };
-  private String                 sessionId;
-  private final List<ReportInfo> reports            = new ArrayList<ReportInfo>( );
-  private Integer                currentPage;
-  private Boolean                forceFlush         = Boolean.FALSE;
-  private ReportInfo             currentReport      = null;
-  private VerticalPanel          rootPanel;
-  private HorizontalPanel        reportBar;
-  private HorizontalPanel        actionBar;
-  private Frame                  report;
+public class AccountingControl extends VerticalPanel implements ContentControl, Observer {
+  public final static ResourceBundle RESOURCES = GWT.create( ResourceBundle.class );
   
-  @SuppressWarnings( "deprecation" )
+  public interface ResourceBundle extends ClientBundle {
+    public final static String TAB_ROOT_STYLE     = "acct-root";
+    public final static String ROOT_PANEL_STYLE   = "acct-AccountingPanel";
+    public final static String DISPLAY_PANEL_STYLE   = "acct-ReportDisplay";
+    public final static String LIST_PANEL_STYLE   = "acct-ReportList";
+    public final static String BUTTON_STYLE       = "acct-Button ";
+    public final static String STACK_HEADER_STYLE = "acct-StackPanelHeader";
+    public final static String REPORT_BAR_STYLE   = "acct-report-bar";
+    public final static String REPORT_FRAME_STYLE     = "acct-Frame";
+    
+    @NotStrict
+    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/accounting.css" )
+    public CssResource css( );
+    
+    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/go-previous.png" )
+    public ImageResource test( );
+    
+    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/go-next.png" )
+    public ImageResource test2( );
+  }
+  
+  private final String           sessionId;
+  private final List<ReportInfo> reports       = new ArrayList<ReportInfo>( );
+  private final AccountingPanel  accountingPanel;
+  private Integer                currentPage   = 0;
+  private Boolean                ready         = Boolean.FALSE;
+  private Boolean                forceFlush    = Boolean.FALSE;
+  private ReportInfo             currentReport = null;
+  private EucaButton             errorButton   = null;
+  public final ReportInfo bogus; 
   public AccountingControl( String sessionId ) {
+    this.ensureDebugId( "AccountingControl" );
+    RESOURCES.css( ).ensureInjected( );
+    GWT.setUncaughtExceptionHandler( new GWT.UncaughtExceptionHandler( ) {
+      @Override
+      public void onUncaughtException( Throwable arg0 ) {
+        AccountingControl.this.displayError( arg0 );
+      }
+    });
     this.sessionId = sessionId;
-    this.rootPanel.addStyleName( "acct-root" );
-    this.rootPanel.add( new Label( "Loading report list..." ) );
-    this.currentPage = 0;
-    EucalyptusWebBackend.App.getInstance( ).getReports( AccountingControl.this.sessionId, new AsyncCallback<List<ReportInfo>>( ) {
+    this.accountingPanel = new AccountingPanel( this );
+    this.errorButton = Buttons.HIDDEN;
+    this.bogus = new ReportInfo( "System Log", "system-log", 0 ) {{
+      setParent( AccountingControl.this );
+    }};    
+    this.currentReport = this.bogus;
+    EucalyptusWebBackend.App.getInstance( ).getReports( this.getSessionid( ), new AsyncCallback<List<ReportInfo>>( ) {
+      @Override
       public void onSuccess( List<ReportInfo> result ) {
-        AccountingControl.this.reports.clear( );
-        AccountingControl.this.rootPanel.clear( );
-        AccountingControl.this.makeReportBar( result );
-        AccountingControl.this.makeActionBar( );
-        AccountingControl.this.rootPanel.add( AccountingControl.this.report = new Frame( ) );
-        AccountingControl.this.display( );
+        AccountingControl.this.setReports( result );
       }
       
-      public void onFailure( final Throwable caught ) {
-        AccountingControl.this.rootPanel.clear( );
-        AccountingControl.this.rootPanel.add( new Label( "Loading report list failed because of: " + caught.getMessage( ) ) );
+      @Override
+      public void onFailure( Throwable arg0 ) {
+        AccountingControl.this.displayError( arg0 );
       }
     } );
-    
   }
   
-  protected HorizontalPanel makeActionBar( ) {
-    HorizontalPanel actionBar = new HorizontalPanel( );
-    for ( final ReportAction a : ReportAction.values( ) ) {
-      actionBar.add( a.makeImageButton( this ) );
-    }
-    for ( final ReportType r : ReportType.values( ) ) {
-      actionBar.add( r.makeImageButton( this ) );
-    }
-    AccountingControl.this.actionBar = actionBar;
-    AccountingControl.this.rootPanel.add( AccountingControl.this.actionBar );
-    return actionBar;
+  protected void displayError( Throwable arg0 ) {
+    this.errorButton = Buttons.errorButton( arg0 );
+    this.redraw( );
   }
-  
-  private HorizontalPanel makeReportBar( List<ReportInfo> result ) {
-    HorizontalPanel reportBar = new HorizontalPanel( );
-    reportBar.setStyleName( "acct-report-bar" );
-    for ( ReportInfo info : result ) {
-      info.setParent( AccountingControl.this );
-      if ( this.currentReport == null ) {
-        this.currentReport = info;
+
+  protected void setReports( List<ReportInfo> result ) {
+    this.reports.clear( );
+    this.reports.addAll( result );
+    if( !this.reports.isEmpty( ) ) {
+      for( ReportInfo r : this.reports ) {
+        r.setParent( this );
       }
-      this.reports.add( info );
-      reportBar.add( info.getButton( ) );
+      this.setCurrentReport( this.reports.get( 0 ) );
+    } else {
+      this.setCurrentReport( this.bogus );
     }
-    AccountingControl.this.reportBar = reportBar;
-    AccountingControl.this.rootPanel.add( AccountingControl.this.reportBar );
-    AccountingControl.this.currentReport = this.reports.get( 0 );
-    return reportBar;
-  }
-  
-  public Integer setCurrentPage( String currentPage ) {
-    Integer newPage;
-    try {
-      newPage = new Integer( currentPage );
-      if ( newPage >= 0 && newPage < this.currentReport.getLength( ) ) {
-        return this.setCurrentPage( newPage - 1 );
-      } else if ( newPage < 0 ) {
-        return this.setCurrentPage( 0 );
-      } else {
-        return this.setCurrentPage( this.currentReport.getLength( ) );
-      }
-    } catch ( NumberFormatException e ) {
-      return this.currentPage;
-    }
-  }
-  
-  public Integer setCurrentPage( Integer currentPage ) {
-    this.currentPage = currentPage;
-    this.display( );
-    return this.currentPage;
+    this.redraw( );
   }
   
   @Override
   public Widget getRootWidget( ) {
-    return this.rootPanel;
+    return this;
   }
   
   @Override
-  public void display( ) {
-    AccountingControl.this.report.setUrl( AccountingControl.this.currentReport.getUrl( ReportType.HTML ) );
+  public void update( ) {
+    this.accountingPanel.update( );
   }
-  
-  public void setCurrentReport( ReportInfo currentReport ) {
-    this.currentPage = 0;
-    this.currentReport = currentReport;
+
+  @Override
+  public void display( ) {
+    this.update( );
+  }
+
+  @Override
+  public void redraw( ) {
+    this.clear( );
+    this.addStyleName( RESOURCES.ROOT_PANEL_STYLE );
+    this.add( this.errorButton );
+    this.add( this.accountingPanel );
+    this.accountingPanel.redraw( );
     this.display( );
   }
   
+
+  public Boolean isReady( ) {
+    return this.currentReport != null;
+  }
+  
+  public void setCurrentReport( ReportInfo newReport ) {
+    if( newReport != null && !newReport.equals( this.currentReport ) ) {
+      this.currentPage = 0;
+      this.currentReport = newReport;
+      this.display( );
+    }
+  }
+  
   public ReportInfo getCurrentReport( ) {
-    return currentReport;
+    return this.currentReport;
   }
   
   public String getSessionid( ) {
@@ -139,4 +151,44 @@ public class AccountingControl implements ContentControl {
     return forceFlush;
   }
   
+  public List<ReportInfo> getReports( ) {
+    return this.reports;
+  }
+  
+  public Integer changePage( Integer delta ) {
+    if( this.currentPage + delta < 0 ) {
+      this.currentPage = 0;
+    } else if( this.currentReport != null && (this.currentPage >= this.currentReport.getLength( ))) {
+      this.currentPage = this.currentReport.getLength( );
+    } else {
+      this.currentPage += delta;
+    }
+    this.update( );
+    return this.currentPage;
+  }
+
+  public Integer lastPage( ) {
+    if( this.currentReport != null ) {
+      return this.currentReport.getLength( );
+    } else {
+      return 0;
+    }
+  }
+
+  public String getCurrentUrl( ReportType html ) {
+    if( this.currentReport != null ) {
+      return this.currentReport.getUrl( html );
+    } else {
+      return "#";
+    }
+  }
+
+  public String getCurrentFileName( ) {
+    if( this.currentReport != null ) {
+      return this.currentReport.getFileName( );
+    } else {
+      return "#";
+    }
+  }
+
 }

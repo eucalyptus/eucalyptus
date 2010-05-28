@@ -65,6 +65,7 @@
 <module>
 	<!-- Inherit the core Web Toolkit stuff. -->
     <inherits name='com.google.gwt.user.User'/>
+    <inherits name="com.google.gwt.resources.Resources" />
     <!-- <set-property name='user.agent' value='gecko1_8' /> -->
 	<!-- Inherit internationalization support. -->
 	<!-- <inherits name='com.google.gwt.i18n.I18N'/> -->

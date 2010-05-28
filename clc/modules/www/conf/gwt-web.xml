@@ -62,7 +62,7 @@
   ~ Author: Dmitrii Zagorodnov dmitrii@cs.ucsb.edu
   -->
 
-<web-app>
+<web-app><!--
 
   <security-constraint>
     <web-resource-collection>
@@ -74,7 +74,7 @@
     </user-data-constraint>
   </security-constraint>
 
-  <servlet>
+  --><servlet>
     <description></description>
     <display-name>EucalyptusWebBackend</display-name>
     <servlet-name>EucalyptusWebBackendImpl</servlet-name>

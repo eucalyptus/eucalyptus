@@ -1348,7 +1348,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         if (loggedInUser.isAdministrator().booleanValue()) {
 			//allTabs.addTab ("Users"); usrTabIndex = nTabs++;
 			allTabs.addTab ("Users and Groups"); usrgrpTabIndex = nTabs++;
-			allTabs.addTab ("Accounting"); accountingTabIndex = nTabs++;
+			allTabs.addTab ("Reports"); accountingTabIndex = nTabs++;
 			allTabs.addTab ("Configuration"); confTabIndex = nTabs++;
             allTabs.addTab ("Extras"); downTabIndex = nTabs++;
             if (extensions!=null && extensions.contains ("store") ) {
