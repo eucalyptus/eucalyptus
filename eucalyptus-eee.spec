@@ -166,7 +166,7 @@ This package contains the internal log service of eucalyptus.
 
 %package broker
 Summary:      Elastic Utility Computing Architecture - vmware broker
-Requires:     %{name}-common-java = %{version}, %{euca_java}
+Requires:     %{name}-common-java = %{version}, %{name}-cc, %{euca_java}
 AutoReqProv:  no
 Group:        Applications/System
 
@@ -300,6 +300,7 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 %files broker
 /usr/share/eucalyptus/euca_vmware
 /usr/lib/eucalyptus/euca_imager
+/usr/lib/eucalyptus/_euca_imager
 
 %pre
 if [ "$1" = "2" ]; 
@@ -322,7 +323,7 @@ then
 	fi
 	if [ -x etc/init.d/eucalyptus-cc ]; 
 	then
-		 etc/init.d/eucalyptus-cc stop
+		 etc/init.d/eucalyptus-cc cleanstop
 	fi
 	if [ -x etc/init.d/eucalyptus-nc ]; 
 	then
@@ -335,7 +336,7 @@ then
 	mkdir -p /root/eucalyptus.backup.$DATESTR
 	cd /root/eucalyptus.backup.$DATESTR
 	EUCABACKUPS=""
-	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version
+	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version $EUCADIR/usr/
 	do
 	    if [ -e $i ]; then
 		EUCABACKUPS="$EUCABACKUPS $i"
@@ -441,7 +442,11 @@ fi
 /usr/sbin/euca_conf --enable walrus
 
 %post sc
-#/usr/bin/killall -9 vblade
+/usr/bin/killall -9 vblade >/dev/null 2>&1
+if [ -e /etc/init.d/tgtd ]; then
+    chkconfig --add tgtd
+    /etc/init.d/tgtd start
+fi
 /usr/sbin/euca_conf --enable sc
 
 %post cc
@@ -457,12 +462,16 @@ fi
 %endif
 
 %post nc
+if [ -e /etc/init.d/libvirtd ]; then
+    chkconfig --add libvirtd
+    /etc/init.d/libvirtd restart
+fi
 chkconfig --add eucalyptus-nc
-	sed -i "s/.*NC_BUNDLE_UPLOAD_PATH=.*/NC_BUNDLE_UPLOAD_PATH=\"\/usr\/bin\/euca-bundle-upload\"/" /etc/eucalyptus/eucalyptus.conf
-	sed -i "s/.*NC_CHECK_BUCKET_PATH=.*/NC_CHECK_BUCKET_PATH=\"\/usr\/bin\/euca-check-bucket\"/" /etc/eucalyptus/eucalyptus.conf
-	sed -i "s/.*NC_DELETE_BUNDLE_PATH=.*/NC_DELETE_BUNDLE_PATH=\"\/usr\/bin\/euca-delete-bundle\"/" /etc/eucalyptus/eucalyptus.conf
+sed -i "s/.*NC_BUNDLE_UPLOAD_PATH=.*/NC_BUNDLE_UPLOAD_PATH=\"\/usr\/bin\/euca-bundle-upload\"/" /etc/eucalyptus/eucalyptus.conf
+sed -i "s/.*NC_CHECK_BUCKET_PATH=.*/NC_CHECK_BUCKET_PATH=\"\/usr\/bin\/euca-check-bucket\"/" /etc/eucalyptus/eucalyptus.conf
+sed -i "s/.*NC_DELETE_BUNDLE_PATH=.*/NC_DELETE_BUNDLE_PATH=\"\/usr\/bin\/euca-delete-bundle\"/" /etc/eucalyptus/eucalyptus.conf
 %if %is_fedora
-	usermod -G kvm eucalyptus
+usermod -G kvm eucalyptus
 %endif
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
@@ -485,16 +494,19 @@ fi
 
 %post broker
 /usr/sbin/euca_conf --enable vmwarebroker
-sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/services\/VMwareBroker\"/" /etc/eucalyptus/eucalyptus.conf
-sed -i "s/NC_PORT=.*/NC_PORT=\"8773\"/" /etc/eucalyptus/eucalyptus.conf
-echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus/eucalyptus.conf
+if [ -e /etc/eucalyptus/init.d/eucalyptus-cc -a /etc/eucalyptus/eucalyptus.conf ]; then
+    sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/services\/VMwareBroker\"/" /etc/eucalyptus/eucalyptus.conf
+    sed -i "s/NC_PORT=.*/NC_PORT=\"8773\"/" /etc/eucalyptus/eucalyptus.conf
+    echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus/eucalyptus.conf
+    /etc/init.d/eucalyptus-cc cleanrestart
+fi
 
 %postun
 # in case of removal let's try to clean up the best we can
 if [ "$1" = "0" ];
 then
 	rm -rf /var/log/eucalyptus
-	rm -rf /etc/eucalyptus/http*
+	rm -rf /etc/eucalyptus/http-*
 fi
 
 %preun cloud
@@ -508,7 +520,7 @@ then
 	fi
 %endif
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
-	if [ -e /etc/init.d/eucalyptus-cloud -a /etc/eucalyptus/eucalyptus.conf ];
+	if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
 	then 
 		/etc/init.d/eucalyptus-cloud restart || true
 	fi
@@ -519,7 +531,7 @@ fi
 if [ "$1" = "0" ];
 then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable walrus
-	if [ -e /etc/init.d/eucalyptus-cloud ];
+	if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
 	then 
 		/etc/init.d/eucalyptus-cloud restart || true
 	fi
@@ -529,9 +541,24 @@ fi
 if [ "$1" = "0" ];
 then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
-	if [ -e /etc/init.d/eucalyptus-cloud -a /etc/eucalyptus/eucalyptus.conf ];
+	if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
 	then 
 		/etc/init.d/eucalyptus-cloud restart || true
+	fi
+fi
+
+%preun broker
+if [ "$1" = "0" ];
+then
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable vmwarebroker
+	if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
+	then 
+	    /etc/init.d/eucalyptus-cloud restart || true
+	fi
+	if [ -e /etc/init.d/eucalyptus-cc -a -e /etc/eucalyptus/eucalyptus.conf ]; then
+	    sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/axis2\/services\/EucalyptusNC\"/" /etc/eucalyptus/eucalyptus.conf
+	    sed -i "s/NC_PORT=.*/NC_PORT=\"8775\"/" /etc/eucalyptus/eucalyptus.conf
+	    /etc/init.d/eucalyptus-cc cleanrestart
 	fi
 fi
 
@@ -576,74 +603,9 @@ then
 fi
 
 %changelog
-* Fri Feb 12 2010 Eucalyptus Systems <support@open.eucalyptus.com>
-- 1.6.2
-- Thanks to Garrett Holmstrom and cloud@lists.fedoraproject.org for
-  helping with the RPM pacakging
-- Re-worked upgrade path for RPM install
-- Re-worked spec file to honor DESTDIR
-
-* Thu Nov 5 2009 Eucalyptus Systems <support@open.eucalyptus.com>
-- 1.6.1
-- install in / instead of /opt/eucalyptus
-
-* Mon Jun 15 2009 eucalyptus systems <support@open.eucalyptus.com>
-- 1.5.2
-
-* Thu Apr 16 2009 mayhem group <support@open.eucalyptus.com>
-- 1.5.1
-- Elastic Block Store (EBS) support (volumes & snapshots) 
-- Better Java installation checking
-- New command-line administration: euca_conf -addcluster ... -addnode ...
-- Non-root user deployment of Eucalyptus
-- Binary packages for more distributions (Ubuntu et al) 
-- Cloud registration with Rightscale (from admin's 'Credentials' tab)
-- New configuration options for Walrus
-- Better screening of usernames
-- Fixed account confirmation glitches 
-
-* Mon Jan  5 2009 mayhem group <support@open.eucalyptus.com>
-- 1.4
-- Added new networking subsystem that no longer depends on VDE
-- Added support for elastic IP assignment and security using the 'MANAGED' 
-  networking mode
-- Added Walrus: a Amazon S3 interface compatible storage manager. Walrus
-  handles storage of user data as well as filesystem images, kernels, and
-  ramdisks.
-- Support for new operations: reboot instance and get console output.
-- Revamped logging throughout, with five levels a la log4j.
-
-* Thu Aug 28 2008 mayhem group <support@open.eucalyptus.com>
-- 1.3
-
-* Mon Jul 28 2008 mayhem group <support@open.eucalyptus.com>
-- 1.2
-- Removed cloud, cluster controller and node controller and created their
-  own packages.
-- Added the possibility of installing Eucalyptus from RPMs (without ROCKS).
-- Added WS-security for internal communication
-- Added URL Query Interface for interacting with Eucalyptus
-- Cluster Controller improvements:
-   - Instance caching added to improve performance under
-     certain conditions
-   - Thread locks removed to improve performance
-   - NC resource information gathered asynchronously to
-     improve scheduler performance
-- Network control improvements:
-   - Added ability to configure 'public' instance interface
-     network parameters (instead of hardcoded 10. network)
-   - Lots of reliability changes
-- Cloud Controller improvements:
-   - Pure in-memory database
-   - Image registration over WS interface
-   - Improved build procedure
-- Web interface improvements:
-    - For all users (query interface credentials, listing of
-      available images)
-    - For the administrator (addition, approval, disabling,
-      and deletion of users; disabling of images)
-- Numerous bug fixes, improving stability and performance.
-   In particular, but not limited to:
-   - Recovering Cloud Controller system state
-   - Timeout-related error reporting
-   - Slimmer log files, with timestamps
+* Tue Jun 1 2010 Eucalyptus Systems (support@eucalyptus.com)
+- Version 2.0 of Eucalyptus Enterprise Cloud
+  - Windows VM Support
+  - User/Group Management 
+  - SAN Integration
+  - VMWare Hypervisor Support
