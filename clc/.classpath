@@ -24,6 +24,7 @@
 	<classpathentry kind="src" output="modules/ldap/build" path="modules/ldap/src/main/java"/>
 	<classpathentry kind="src" path="modules/core/conf/upgrade"/>
 	<classpathentry kind="src" path="modules/core/conf/scripts"/>
+	<classpathentry kind="src" path="modules/www/conf/reports"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>

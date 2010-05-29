@@ -1,14 +1,24 @@
-for( int i = 0; i < 20; i++ ) {
+import com.eucalyptus.auth.*;
+import com.eucalyptus.auth.principal.*;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.images.ImageInfo;
+
+EntityWrapper db;
+Users.listAllUsers().each{ User user ->
   def u = new UserReportInfo() {{
-          userName = "test-${i}" 
-          imageCount = i
-        }};
+      userName = user.getName() 
+      imageCount = 0
+    }
+  };
+  (db = new EntityWrapper<ImageInfo>( )).query( ImageInfo.byOwnerId( user.getName() ) ).each{ ImageInfo image ->
+    u.imageCount++
+  }
+  db?.commit()
   results.add( u )
 }
-println "HELLOOOO ${results}"
-
+results.each{  println "HELLOOOO ${it.dump()}" }
 def class UserReportInfo {
   String userName;
-  Integer imageCount;
+  Integer imageCount = 0;
 }
 
