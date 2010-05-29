@@ -70,7 +70,7 @@ class Upgrade162eee extends AbstractUpgradeScript {
 	public Upgrade162eee() {
 		super(1);		
 	}
-	
+
 	@Override
 	public Boolean accepts( String from, String to ) {
 		if(FROM_VERSION.equals(from) && TO_VERSION.equals(to))
@@ -144,7 +144,11 @@ class Upgrade162eee extends AbstractUpgradeScript {
 								if(dest instanceof AbstractIsomorph && (setter.getName().equals("setState"))) {
 									o = State.valueOf((String)o);
 								}
-								setter.invoke(dest, o);
+								if(dest instanceof Volume && (setter.getName().equals("setRemoteDevice"))) {
+									((Volume)dest).setRemoteDevice(null);
+								} else {
+									setter.invoke(dest, o);
+								}
 							} catch (IllegalArgumentException e) {
 								LOG.error(dest.getClass().getName()  + " " + column + " " + e);
 							} catch (IllegalAccessException e) {
@@ -281,7 +285,7 @@ class Upgrade162eee extends AbstractUpgradeScript {
 		entities.add(ClusterInfo.class);
 
 		entities.add(Counters.class);
-		
+
 		entities.add(SshKeyPair.class);
 	}
 }
