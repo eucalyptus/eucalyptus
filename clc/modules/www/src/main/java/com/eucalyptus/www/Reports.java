@@ -298,7 +298,11 @@ public class Reports extends HttpServlet {
                 Binding binding = new Binding( new HashMap() {{
                   put("results", results );
                 }} );
-                makeScriptEngine( ).run( name + ".groovy", binding );
+                try {
+                  makeScriptEngine( ).run( name + ".groovy", binding );
+                } catch ( Exception e ) {
+                  LOG.debug( e, e );
+                }
                 JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
                 jasperPrint = JasperFillManager.fillReport( jasperReport, null, data );
               } catch ( Throwable e ) {

@@ -15,7 +15,9 @@ public class ReportDisplayPanel extends VerticalPanel implements Observer {
   private final Frame             report;
   private final HorizontalPanel rightBar;
   private final HorizontalPanel leftBar;
+  private final HorizontalPanel dateBar;
   private final HorizontalPanel topBar;
+
   
   ReportDisplayPanel( AccountingControl controller ) {
     this.ensureDebugId( "ReportDisplayPanel" );
@@ -25,6 +27,8 @@ public class ReportDisplayPanel extends VerticalPanel implements Observer {
     this.topBar.setStyleName( AccountingControl.RESOURCES.REPORT_BAR_STYLE );
     this.leftBar = new HorizontalPanel();
     this.leftBar.setHorizontalAlignment( ALIGN_LEFT );
+    this.dateBar = new HorizontalPanel();
+    this.dateBar.setHorizontalAlignment( ALIGN_LEFT );
     this.rightBar = new HorizontalPanel();
     this.rightBar.setHorizontalAlignment( ALIGN_RIGHT );
     this.report = new Frame( );

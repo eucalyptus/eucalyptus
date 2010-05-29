@@ -102,8 +102,8 @@ import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 @Entity
-@PersistenceContext( name = "eucalyptus_images" )
-@Table( name = "images" )
+@PersistenceContext( name = "eucalyptus_general" )
+@Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ImageInfo implements Image {
   @Transient
