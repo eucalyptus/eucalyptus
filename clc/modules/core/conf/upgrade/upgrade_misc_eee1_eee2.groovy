@@ -1,3 +1,6 @@
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.VMwareBrokerConfiguration;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -5,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.mortbay.log.Log;
 
 import groovy.sql.Sql;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
@@ -25,7 +29,7 @@ import com.eucalyptus.auth.Groups;
 class upgrade_misc_eee1_eee2 extends AbstractUpgradeScript {
 	static final String FROM_VERSION = "1.6-devel-vmware-broker";
 	static final String TO_VERSION = "eee-2.0.0";
-	
+
 	public upgrade_misc_eee1_eee2() {
 		super(4);
 	}
@@ -52,6 +56,19 @@ class upgrade_misc_eee1_eee2 extends AbstractUpgradeScript {
 			db.rollback( );
 		}
 		
+		//vmware broker config
+		EntityWrapper dbConfig = new EntityWrapper("eucalyptus_config");
+		try {
+			for (ClusterConfiguration clusterConfig: dbConfig.query(new ClusterConfiguration())) {
+				VMwareBrokerConfiguration vmwareBrokerConfig = new VMwareBrokerConfiguration(clusterConfig.getName(), clusterConfig.getHostName(), 8773);
+				println "Adding VMwareBroker: " + vmwareBrokerConfig.getHostName();
+				dbConfig.add(vmwareBrokerConfig);
+			}
+			dbConfig.commit();
+		} catch( Throwable e ) {
+			e.printStackTrace();
+			db.rollback( );
+		}
 		//Network rules
 		def gen_conn = StandalonePersistence.getConnection("eucalyptus_general");
 		gen_conn.rows('SELECT * FROM metadata_network_group').each{
@@ -67,7 +84,7 @@ class upgrade_misc_eee1_eee2 extends AbstractUpgradeScript {
 						println "IP Range: ${iprange.metadata_network_rule_ip_range_value}";
 					}
 					gen_conn.rows("SELECT peer.* FROM metadata_network_rule_has_peer_network has_stuff LEFT OUTER JOIN network_rule_peer_network peer on peer.network_rule_peer_network_id=has_stuff.metadata_network_rule_peer_network_id WHERE has_stuff.metadata_network_rule_id=${ rule.metadata_network_rule_id }").each{  peer ->
-					    NetworkPeer networkPeer = new NetworkPeer(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
+						NetworkPeer networkPeer = new NetworkPeer(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
 						networkRule.getNetworkPeers().add(networkPeer);
 						println "Peer: " + networkPeer;
 					}					
