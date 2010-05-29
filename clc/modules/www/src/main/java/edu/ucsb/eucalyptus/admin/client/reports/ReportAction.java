@@ -42,7 +42,7 @@ public enum ReportAction {
     
     @Override
     public String getImageText( AccountingControl parent ) {
-      return super.getImageText( parent );
+      return ""+parent.getCurrentPage( );
     }
 
 
@@ -50,7 +50,7 @@ public enum ReportAction {
     public Widget makeImageButton( final AccountingControl parent ) {
       final TextBox currentPageText = new TextBox( ) {
         {
-          setText( "" + parent.getCurrentPage( ) );
+          setText( PAGE_INFO.getImageText( parent ) );
           setStyleName( AccountingControl.RESOURCES.ACCT_REPORT_PAGE_TEXTBOX );
         }
       };

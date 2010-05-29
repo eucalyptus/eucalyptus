@@ -1,32 +1,150 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="user-report" language="groovy" pageWidth="612" pageHeight="792" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Resource Usage by User" language="groovy" pageWidth="984" pageHeight="600" columnWidth="984" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty" isIgnorePagination="true">
 	<property name="ireport.zoom" value="1.0"/>
 	<property name="ireport.x" value="0"/>
 	<property name="ireport.y" value="0"/>
-	<field name="userName" class="java.lang.String"/>
+	<style name="Title" isDefault="false" fontName="Verdana" fontSize="26" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="SubTitle" isDefault="false" forecolor="#666666" fontName="Verdana" fontSize="18"/>
+	<style name="Column header" isDefault="false" forecolor="#666666" fontName="Verdana" fontSize="12" isBold="true"/>
+	<style name="Detail" isDefault="false" fontName="Verdana" fontSize="12"/>
+	<style name="alternating" isDefault="false" forecolor="#F5F5F5" fontName="Verdana" fontSize="12">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue() % 2 == 0 )]]></conditionExpression>
+			<style isDefault="false" style="alternating" backcolor="#F5F562"/>
+		</conditionalStyle>
+	</style>
+	<style name="table" isDefault="false" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="16">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TH" isDefault="false" mode="Opaque" backcolor="#FFD700" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="14" isBold="true">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_CH" isDefault="false" mode="Opaque" backcolor="#FFFBE6" hAlign="Center" vAlign="Middle" fontName="Verdana">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TD" isDefault="false" mode="Opaque" backcolor="#FFFFFF" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="10">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+		<conditionalStyle>
+			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue()%2==0)]]></conditionExpression>
+			<style isDefault="false" style="table_TD" backcolor="#FFFEF8"/>
+		</conditionalStyle>
+	</style>
+	<subDataset name="Table Dataset 1">
+		<field name="imageCount" class="java.lang.Integer"/>
+		<field name="userName" class="java.lang.String"/>
+	</subDataset>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
 	<field name="imageCount" class="java.lang.Integer"/>
-	<background>
-		<band splitType="Stretch"/>
-	</background>
+	<field name="userName" class="java.lang.String"/>
 	<title>
-		<band height="79" splitType="Stretch"/>
+		<band height="32">
+			<elementGroup/>
+			<staticText>
+				<reportElement x="0" y="0" width="984" height="32"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Verdana" size="16" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Resource Usage by User]]></text>
+			</staticText>
+		</band>
 	</title>
-	<pageHeader>
-		<band height="35" splitType="Stretch"/>
-	</pageHeader>
-	<columnHeader>
-		<band height="61" splitType="Stretch"/>
-	</columnHeader>
 	<detail>
-		<band height="125" splitType="Stretch"/>
+		<band height="600">
+			<componentElement>
+				<reportElement key="table" style="table" x="0" y="0" width="984" height="600"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="Table Dataset 1"/>
+					<jr:column width="90">
+						<jr:tableFooter style="table_TH" height="60" rowSpan="1"/>
+						<jr:columnHeader style="table_CH" height="90" rowSpan="2">
+							<staticText>
+								<reportElement style="table_TH" x="0" y="0" width="90" height="90"/>
+								<textElement/>
+								<text><![CDATA[User]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:columnFooter style="table_CH" height="60" rowSpan="1"/>
+						<jr:detailCell style="table_TD" height="30" rowSpan="1">
+							<textField>
+								<reportElement x="0" y="0" width="90" height="30"/>
+								<textElement/>
+								<textFieldExpression class="java.lang.String"><![CDATA[$F{userName}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:columnGroup width="270">
+						<jr:columnGroup width="270">
+							<jr:columnHeader height="30" rowSpan="1">
+								<staticText>
+									<reportElement style="table_TH" x="0" y="0" width="270" height="30"/>
+									<textElement>
+										<font isBold="true"/>
+									</textElement>
+									<text><![CDATA[Registered Images]]></text>
+								</staticText>
+							</jr:columnHeader>
+							<jr:column width="90">
+								<jr:tableFooter style="table_TH" height="60" rowSpan="1"/>
+								<jr:columnHeader style="table_CH" height="60" rowSpan="1">
+									<staticText>
+										<reportElement style="table_CH" x="0" y="0" width="90" height="60"/>
+										<textElement/>
+										<text><![CDATA[Machine]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:columnFooter style="table_CH" height="60" rowSpan="1"/>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageCount}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:tableFooter style="table_TH" height="60" rowSpan="1"/>
+								<jr:columnHeader style="table_CH" height="60" rowSpan="1">
+									<staticText>
+										<reportElement style="table_CH" x="0" y="0" width="90" height="60"/>
+										<textElement/>
+										<text><![CDATA[Kernel]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:columnFooter style="table_CH" height="60" rowSpan="1"/>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1"/>
+							</jr:column>
+							<jr:column width="90">
+								<jr:tableFooter style="table_TH" height="60" rowSpan="1"/>
+								<jr:columnHeader style="table_CH" height="60" rowSpan="1">
+									<staticText>
+										<reportElement style="table_CH" x="0" y="0" width="90" height="60"/>
+										<textElement/>
+										<text><![CDATA[Ramdisk]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:columnFooter style="table_CH" height="60" rowSpan="1"/>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1"/>
+							</jr:column>
+						</jr:columnGroup>
+					</jr:columnGroup>
+				</jr:table>
+			</componentElement>
+		</band>
 	</detail>
-	<columnFooter>
-		<band height="45" splitType="Stretch"/>
-	</columnFooter>
-	<pageFooter>
-		<band height="54" splitType="Stretch"/>
-	</pageFooter>
-	<summary>
-		<band height="42" splitType="Stretch"/>
-	</summary>
 </jasperReport>

@@ -5,18 +5,18 @@ import com.eucalyptus.images.ImageInfo;
 
 EntityWrapper db;
 Users.listAllUsers().each{ User user ->
+  println "HELLOOOO ${user.dump()}"
   def u = new UserReportInfo() {{
       userName = user.getName() 
       imageCount = 0
     }
   };
-  (db = new EntityWrapper<ImageInfo>( )).query( ImageInfo.byOwnerId( user.getName() ) ).each{ ImageInfo image ->
+  (db = EntityWrapper.get( ImageInfo.class )).query( ImageInfo.byOwnerId( user.getName() ) ).each{ ImageInfo image ->
     u.imageCount++
   }
   db?.commit()
   results.add( u )
 }
-results.each{  println "HELLOOOO ${it.dump()}" }
 def class UserReportInfo {
   String userName;
   Integer imageCount = 0;

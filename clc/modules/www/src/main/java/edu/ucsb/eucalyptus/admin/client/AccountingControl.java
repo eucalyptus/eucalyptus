@@ -1,6 +1,7 @@
 package edu.ucsb.eucalyptus.admin.client;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.resources.client.ClientBundle;
@@ -20,16 +21,16 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
   public final static ResourceBundle RESOURCES = GWT.create( ResourceBundle.class );
   
   public interface ResourceBundle extends ClientBundle {
-    public final static String TAB_ROOT_STYLE      = "acct-root";
-    public final static String ROOT_PANEL_STYLE    = "acct-AccountingPanel";
-    public final static String DISPLAY_PANEL_STYLE = "acct-ReportDisplay";
-    public final static String LIST_PANEL_STYLE    = "acct-ReportList";
-    public final static String BUTTON_STYLE        = "acct-Button-Action";
-    public final static String STACK_HEADER_STYLE  = "acct-StackPanelHeader";
-    public final static String REPORT_BAR_STYLE    = "acct-report-bar";
-    public final static String REPORT_FRAME_STYLE  = "acct-Frame";
-    public static final String ACCT_REPORT_BUTTON  = "acct-Button-Report";
-    public static final String DISPLAY_BAR_STYLE = STACK_HEADER_STYLE;
+    public final static String TAB_ROOT_STYLE           = "acct-root";
+    public final static String ROOT_PANEL_STYLE         = "acct-AccountingPanel";
+    public final static String DISPLAY_PANEL_STYLE      = "acct-ReportDisplay";
+    public final static String LIST_PANEL_STYLE         = "acct-ReportList";
+    public final static String BUTTON_STYLE             = "acct-Button-Action";
+    public final static String STACK_HEADER_STYLE       = "acct-StackPanelHeader";
+    public final static String REPORT_BAR_STYLE         = "acct-report-bar";
+    public final static String REPORT_FRAME_STYLE       = "acct-Frame";
+    public static final String ACCT_REPORT_BUTTON       = "acct-Button-Report";
+    public static final String DISPLAY_BAR_STYLE        = STACK_HEADER_STYLE;
     public static final String ACCT_REPORT_PAGE_TEXTBOX = "acct-ReportPageNum";
     
     @NotStrict
@@ -38,8 +39,10 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     
     @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/system-logs.png" )
     public ImageResource systemReports( );
+    
     @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/user-logs.png" )
     public ImageResource resourceReports( );
+    
     @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/service-logs.png" )
     public ImageResource serviceReports( );
     
@@ -57,6 +60,8 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
   private Boolean                forceFlush      = Boolean.FALSE;
   private ReportInfo             currentReport   = null;
   private EucaButton             errorButton     = null;
+  private Long                   startMillis;
+  private Long                   endMillis;
   public final ReportInfo        bogus;
   
   public AccountingControl( String sessionId ) {
@@ -71,6 +76,9 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     this.sessionId = sessionId;
     this.accountingPanel = new AccountingPanel( this );
     this.errorButton = Buttons.HIDDEN;
+    Date now = new Date( );
+    this.endMillis = now.getTime( );
+    this.startMillis = ( this.endMillis - ( 1000l * 60 * 24 * 7 ) );
     this.bogus = new ReportInfo( "System Log", "system-log", 0 ) {
       {
         setParent( AccountingControl.this );
@@ -252,6 +260,50 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     } else {
       return "#";
     }
+  }
+  
+  public Long getStartMillis( ) {
+    return this.startMillis;
+  }
+  
+  public Long getEndMillis( ) {
+    return this.endMillis;
+  }
+  
+  public Long changeStartMillis( Long millis ) {
+    Long currentTime = new Date( ).getTime( );
+    if ( millis > this.endMillis ) {
+      this.startMillis = this.endMillis;
+    } else if ( ( millis > currentTime ) ) {
+      this.startMillis = this.endMillis;
+    } else if ( millis < 0 ) {
+      this.startMillis = this.startMillis;
+    } else {
+      this.startMillis = millis;
+    }
+    return this.startMillis;
+  }
+  
+  public Long changeEndMillis( Long millis ) {
+    Long currentTime = new Date( ).getTime( );
+    if ( millis < this.startMillis ) {
+      this.endMillis = this.startMillis;
+    } else if ( ( millis > currentTime ) ) {
+      this.endMillis = currentTime;
+    } else if ( millis < 0 ) {
+      this.endMillis = this.startMillis;
+    } else {
+      this.endMillis = millis;
+    }
+    return this.endMillis;
+  }
+  
+  public Date getStartTime( ) {
+    return new Date( this.startMillis );
+  }
+  
+  public Date getEndTime( ) {
+    return new Date( this.endMillis );
   }
   
 }
