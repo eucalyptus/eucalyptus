@@ -5,6 +5,7 @@ import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.datepicker.client.DatePicker;
 import edu.ucsb.eucalyptus.admin.client.AccountingControl;
 import edu.ucsb.eucalyptus.admin.client.EucaImageButton;
 import edu.ucsb.eucalyptus.admin.client.util.Observer;
@@ -53,6 +54,7 @@ public class ReportDisplayPanel extends VerticalPanel implements Observer {
     for ( final ReportAction a : ReportAction.values( ) ) {
       this.leftBar.add( a.makeImageButton( ReportDisplayPanel.this.controller ) );
     }
+    this.leftBar.add( new DatePicker( ) );
     this.topBar.add( this.rightBar );
     for ( final ReportType r : ReportType.values( ) ) {
       EucaImageButton button = r.makeImageButton( ReportDisplayPanel.this.controller );

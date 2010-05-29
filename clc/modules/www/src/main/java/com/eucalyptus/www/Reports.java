@@ -1,11 +1,15 @@
 package com.eucalyptus.www;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,6 +26,7 @@ import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperFillManager;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReport;
+import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.design.JasperDesign;
 import net.sf.jasperreports.engine.export.JRCsvExporter;
 import net.sf.jasperreports.engine.export.JRHtmlExporter;
@@ -36,14 +41,14 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
-import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusManagement;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
 import edu.ucsb.eucalyptus.admin.server.SessionInfo;
+import groovy.lang.Binding;
+import groovy.util.GroovyScriptEngine;
 
 @ConfigurableClass( root = "reporting", description = "Parameters controlling the generation of system reports." )
 public class Reports extends HttpServlet {
@@ -153,25 +158,20 @@ public class Reports extends HttpServlet {
       return;
     }
     LOG.debug( "Got request for " + name + " page number " + pageStr + " of type " + type );
-    if( Lists.newArrayList( "user", "service" ).contains( name ) ) {
+    Type reportType = Type.valueOf( type );
+    final JRExporter exporter = reportType.setup( req, res, name );
+    try {
+      ReportCache reportCache = getReportManager( name );
+      JasperPrint jasperPrint = reportCache.getPendingPrint( );
+      exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
+      exporter.exportReport( );
+    } catch ( Throwable ex ) {
+      LOG.error( ex, ex );
       res.setContentType( "text/plain" );
-      res.getWriter( ).println( "PENDING." );
-    } else {
-      Type reportType = Type.valueOf( type );
-      final JRExporter exporter = reportType.setup( req, res, name );
-      try {
-        ReportCache reportCache = getReportManager( name );
-        JasperPrint jasperPrint = reportCache.getPendingPrint( );
-        exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
-        exporter.exportReport( );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-        res.setContentType( "text/plain" );
-        LOG.error( "Could not create the report stream " + ex.getMessage( ) + " " + ex.getLocalizedMessage( ) );
-        ex.printStackTrace( res.getWriter( ) );
-      } finally {
-        reportType.close( res );
-      }
+      LOG.error( "Could not create the report stream " + ex.getMessage( ) + " " + ex.getLocalizedMessage( ) );
+      ex.printStackTrace( res.getWriter( ) );
+    } finally {
+      reportType.close( res );
     }
   }
   
@@ -269,21 +269,49 @@ public class Reports extends HttpServlet {
   
   private static Map<String, ReportCache> reportCache = new ConcurrentHashMap<String, ReportCache>( );
   
-  public static ReportCache getReportManager( String name ) throws JRException, SQLException {
+  private static GroovyScriptEngine gse = makeScriptEngine();
+
+  public static ReportCache getReportManager( final String name ) throws JRException, SQLException {
     try {
+      final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + name + ".groovy"  ).exists( ) );
       if ( reportCache.containsKey( name ) && !reportCache.get( name ).isExpired( ) ) {
         return reportCache.get( name );
       } else {
         reportCache.remove( name );
         final JasperDesign jasperDesign = JRXmlLoader.load( SubDirectory.REPORTS.toString( ) + File.separator + name + ".jrxml" );
-        Future<JasperPrint> pendingPrint = Threads.getThreadPool( "reporting" ).submit( new Callable<JasperPrint>( ) {
-          
+        Future<JasperPrint> pendingPrint = Threads.getThreadPool( "reporting" ).submit( new Callable<JasperPrint>( ) {            
           @Override
           public JasperPrint call( ) throws Exception {
             String url = String.format( "jdbc:%s_%s", Component.db.getUri( ).toString( ), "records" );
             JasperReport jasperReport = JasperCompileManager.compileReport( jasperDesign );
-            Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
-            JasperPrint jasperPrint = JasperFillManager.fillReport( jasperReport, null, jdbcConnection );
+            JasperPrint jasperPrint;
+            if( jdbc ) {
+              Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
+              jasperPrint = JasperFillManager.fillReport( jasperReport, null, jdbcConnection );
+            } else {
+              FileReader fileReader = null;
+              try {
+                final List results = new ArrayList();
+                fileReader = new FileReader( SubDirectory.REPORTS + File.separator + name + ".groovy" );
+                Binding binding = new Binding( new HashMap() {{
+                  put("results", results );
+                }} );
+                makeScriptEngine( ).run( name + ".groovy", binding );
+                JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
+                jasperPrint = JasperFillManager.fillReport( jasperReport, null, data );
+              } catch ( Throwable e ) {
+                LOG.debug( e, e );
+                throw new RuntimeException( e );
+              } finally {
+                if(fileReader != null)
+                try {
+                  fileReader.close();
+                } catch (IOException e) {
+                  LOG.error(e,e);
+                  throw e;
+                }
+              }
+            }
             return jasperPrint;
           }
         } );
@@ -296,6 +324,25 @@ public class Reports extends HttpServlet {
     }
   }
   
+  private static GroovyScriptEngine makeScriptEngine( ) {
+    if( gse != null ) {
+      return gse;
+    } else {
+      synchronized(Reports.class) {
+        if( gse != null ) {
+          return gse;
+        } else {
+          try {
+            return gse = new GroovyScriptEngine( SubDirectory.REPORTS.toString( ) );
+          } catch ( IOException e ) {
+            LOG.debug( e, e );
+            throw new RuntimeException( e );
+          }
+        }
+      }
+    }
+  }
+
   public static void hasError( String message, HttpServletResponse response ) {
     try {
       response.getWriter( ).print( EucalyptusManagement.getError( message ) );
