@@ -69,7 +69,9 @@
 			<componentElement>
 				<reportElement key="table" style="table" x="0" y="0" width="984" height="600"/>
 				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
-					<datasetRun subDataset="Table Dataset 1"/>
+					<datasetRun subDataset="Table Dataset 1">
+						<dataSourceExpression><![CDATA[$P{REPORT_DATA_SOURCE}]]></dataSourceExpression>
+					</datasetRun>
 					<jr:column width="90">
 						<jr:tableFooter style="table_TH" height="60" rowSpan="1"/>
 						<jr:columnHeader style="table_CH" height="90" rowSpan="2">
