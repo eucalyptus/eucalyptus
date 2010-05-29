@@ -4,9 +4,9 @@
 	<property name="ireport.x" value="0"/>
 	<property name="ireport.y" value="0"/>
 	<style name="Title" isDefault="false" fontName="Verdana" fontSize="26" isBold="true" pdfFontName="Helvetica-Bold"/>
-	<style name="SubTitle" isDefault="false" forecolor="#666666" fontName="Verdana" fontSize="18"/>
-	<style name="Column header" isDefault="false" forecolor="#666666" fontName="Verdana" fontSize="12" isBold="true"/>
-	<style name="Detail" isDefault="false" fontName="Verdana" fontSize="12"/>
+	<style name="SubTitle" isDefault="false" mode="Transparent" forecolor="#323232" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="18"/>
+	<style name="Column header" isDefault="false" forecolor="#666666" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="12" isBold="true"/>
+	<style name="Detail" isDefault="false" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="12"/>
 	<style name="alternating" isDefault="false" forecolor="#F5F5F5" fontName="Verdana" fontSize="12">
 		<conditionalStyle>
 			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue() % 2 == 0 )]]></conditionExpression>
@@ -15,7 +15,11 @@
 	</style>
 	<style name="table" isDefault="false" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="16">
 		<box>
-			<pen lineWidth="1.0" lineColor="#000000"/>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+			<topPen lineWidth="0.0"/>
+			<leftPen lineWidth="0.0"/>
+			<bottomPen lineWidth="0.0"/>
+			<rightPen lineWidth="0.0"/>
 		</box>
 	</style>
 	<style name="table_TH" isDefault="false" mode="Opaque" backcolor="#FFD700" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="14" isBold="true">
@@ -31,6 +35,10 @@
 	<style name="table_TD" isDefault="false" mode="Opaque" backcolor="#FFFFFF" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="10">
 		<box>
 			<pen lineWidth="0.5" lineColor="#000000"/>
+			<topPen lineWidth="0.0" lineStyle="Solid"/>
+			<leftPen lineWidth="1.0" lineStyle="Solid"/>
+			<bottomPen lineWidth="0.5" lineStyle="Solid"/>
+			<rightPen lineWidth="1.0" lineStyle="Solid"/>
 		</box>
 		<conditionalStyle>
 			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue()%2==0)]]></conditionExpression>
@@ -40,30 +48,18 @@
 	<subDataset name="Table Dataset 1">
 		<field name="imageCount" class="java.lang.Integer"/>
 		<field name="userName" class="java.lang.String"/>
+		<field name="imageKernel" class="java.lang.Integer"/>
+		<field name="imageMachine" class="java.lang.Integer"/>
+		<field name="imageRamdisk" class="java.lang.Integer"/>
 	</subDataset>
 	<queryString>
 		<![CDATA[]]>
 	</queryString>
 	<field name="imageCount" class="java.lang.Integer"/>
 	<field name="userName" class="java.lang.String"/>
-	<title>
-		<band height="32">
-			<elementGroup/>
-			<staticText>
-				<reportElement x="0" y="0" width="984" height="32"/>
-				<box>
-					<topPen lineWidth="0.5"/>
-					<leftPen lineWidth="0.5"/>
-					<bottomPen lineWidth="0.5"/>
-					<rightPen lineWidth="0.5"/>
-				</box>
-				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font fontName="Verdana" size="16" isBold="true"/>
-				</textElement>
-				<text><![CDATA[Resource Usage by User]]></text>
-			</staticText>
-		</band>
-	</title>
+	<field name="imageKernel" class="java.lang.Integer"/>
+	<field name="imageMachine" class="java.lang.Integer"/>
+	<field name="imageRamdisk" class="java.lang.Integer"/>
 	<detail>
 		<band height="600">
 			<componentElement>
@@ -73,18 +69,19 @@
 						<dataSourceExpression><![CDATA[$P{REPORT_DATA_SOURCE}]]></dataSourceExpression>
 					</datasetRun>
 					<jr:column width="90">
-						<jr:tableFooter style="table_TH" height="60" rowSpan="1"/>
-						<jr:columnHeader style="table_CH" height="90" rowSpan="2">
+						<jr:columnHeader style="table_TH" height="55" rowSpan="2">
 							<staticText>
-								<reportElement style="table_TH" x="0" y="0" width="90" height="90"/>
-								<textElement/>
+								<reportElement style="SubTitle" mode="Transparent" x="0" y="0" width="90" height="55"/>
+								<textElement>
+									<font isBold="true"/>
+								</textElement>
 								<text><![CDATA[User]]></text>
 							</staticText>
 						</jr:columnHeader>
-						<jr:columnFooter style="table_CH" height="60" rowSpan="1"/>
+						<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
 						<jr:detailCell style="table_TD" height="30" rowSpan="1">
 							<textField>
-								<reportElement x="0" y="0" width="90" height="30"/>
+								<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
 								<textElement/>
 								<textFieldExpression class="java.lang.String"><![CDATA[$F{userName}]]></textFieldExpression>
 							</textField>
@@ -92,9 +89,9 @@
 					</jr:column>
 					<jr:columnGroup width="270">
 						<jr:columnGroup width="270">
-							<jr:columnHeader height="30" rowSpan="1">
+							<jr:columnHeader style="table_TH" height="30" rowSpan="1">
 								<staticText>
-									<reportElement style="table_TH" x="0" y="0" width="270" height="30"/>
+									<reportElement style="SubTitle" x="0" y="0" width="270" height="30"/>
 									<textElement>
 										<font isBold="true"/>
 									</textElement>
@@ -102,46 +99,195 @@
 								</staticText>
 							</jr:columnHeader>
 							<jr:column width="90">
-								<jr:tableFooter style="table_TH" height="60" rowSpan="1"/>
-								<jr:columnHeader style="table_CH" height="60" rowSpan="1">
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
 									<staticText>
-										<reportElement style="table_CH" x="0" y="0" width="90" height="60"/>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
 										<textElement/>
 										<text><![CDATA[Machine]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:columnFooter style="table_CH" height="60" rowSpan="1"/>
+								<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
 								<jr:detailCell style="table_TD" height="30" rowSpan="1">
 									<textField>
-										<reportElement x="0" y="0" width="90" height="30"/>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
 										<textElement/>
-										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageCount}]]></textFieldExpression>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageMachine}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>
 							<jr:column width="90">
-								<jr:tableFooter style="table_TH" height="60" rowSpan="1"/>
-								<jr:columnHeader style="table_CH" height="60" rowSpan="1">
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
 									<staticText>
-										<reportElement style="table_CH" x="0" y="0" width="90" height="60"/>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
 										<textElement/>
 										<text><![CDATA[Kernel]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:columnFooter style="table_CH" height="60" rowSpan="1"/>
-								<jr:detailCell style="table_TD" height="30" rowSpan="1"/>
+								<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageKernel}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
 							</jr:column>
 							<jr:column width="90">
-								<jr:tableFooter style="table_TH" height="60" rowSpan="1"/>
-								<jr:columnHeader style="table_CH" height="60" rowSpan="1">
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
 									<staticText>
-										<reportElement style="table_CH" x="0" y="0" width="90" height="60"/>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
 										<textElement/>
 										<text><![CDATA[Ramdisk]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:columnFooter style="table_CH" height="60" rowSpan="1"/>
-								<jr:detailCell style="table_TD" height="30" rowSpan="1"/>
+								<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageRamdisk}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+						</jr:columnGroup>
+					</jr:columnGroup>
+					<jr:columnGroup width="180">
+						<jr:columnGroup width="180">
+							<jr:columnHeader style="table_TH" height="30" rowSpan="1">
+								<staticText>
+									<reportElement style="SubTitle" x="0" y="0" width="180" height="30"/>
+									<textElement>
+										<font isBold="true"/>
+									</textElement>
+									<text><![CDATA[Block Storage]]></text>
+								</staticText>
+							</jr:columnHeader>
+							<jr:column width="90">
+								<jr:tableHeader height="0" rowSpan="1"/>
+								<jr:tableFooter style="table_CH" height="0" rowSpan="1"/>
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[Volumes]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
+								<jr:detailCell height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageRamdisk}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:tableHeader height="0" rowSpan="1"/>
+								<jr:tableFooter height="0" rowSpan="1"/>
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[Snapshots]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
+								<jr:detailCell height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageRamdisk}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+						</jr:columnGroup>
+					</jr:columnGroup>
+					<jr:columnGroup width="360">
+						<jr:columnGroup width="360">
+							<jr:columnHeader style="table_TH" height="30" rowSpan="1">
+								<staticText>
+									<reportElement style="SubTitle" x="0" y="0" width="360" height="30"/>
+									<textElement>
+										<font isBold="true"/>
+									</textElement>
+									<text><![CDATA[Security Groups]]></text>
+								</staticText>
+							</jr:columnHeader>
+							<jr:column width="90">
+								<jr:tableHeader height="0" rowSpan="1"/>
+								<jr:tableFooter style="table_CH" height="0" rowSpan="1"/>
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[Groups]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
+								<jr:detailCell height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageRamdisk}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:tableHeader height="0" rowSpan="1"/>
+								<jr:tableFooter style="table_CH" height="0" rowSpan="1"/>
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[TCP Rules]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
+								<jr:detailCell height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageRamdisk}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:tableHeader height="0" rowSpan="1"/>
+								<jr:tableFooter height="0" rowSpan="1"/>
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[UDP Rules]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
+								<jr:detailCell height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageRamdisk}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:tableHeader height="0" rowSpan="1"/>
+								<jr:tableFooter height="0" rowSpan="1"/>
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[ICMP Rules]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:columnFooter style="table_CH" height="30" rowSpan="1"/>
+								<jr:detailCell height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageRamdisk}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
 							</jr:column>
 						</jr:columnGroup>
 					</jr:columnGroup>

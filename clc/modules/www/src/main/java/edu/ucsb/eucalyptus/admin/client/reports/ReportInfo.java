@@ -7,7 +7,7 @@ import edu.ucsb.eucalyptus.admin.client.AccountingControl;
 import edu.ucsb.eucalyptus.admin.client.EucaButton;
 
 public class ReportInfo implements IsSerializable {
-  private static final ReportInfo BOGUS = new ReportInfo( "System Log", "system-log", 0 );
+  private static final ReportInfo BOGUS = new ReportInfo( "System Log", "system", 0 );
 
   private transient AccountingControl controller;
   private transient EucaButton        button;
@@ -30,7 +30,8 @@ public class ReportInfo implements IsSerializable {
   public String getUrl( ReportType type ) {
     if( this.controller != null ) {
       return "/reports?name=" + this.controller.getCurrentFileName( ) + "&type=" + type.name( ).toLowerCase( ) + "&session="
-           + this.controller.getSessionid( ) + "&page=" + this.controller.getCurrentPage( ) + "&flush=" + this.controller.getForceFlush();
+           + this.controller.getSessionid( ) + "&page=" + this.controller.getCurrentPage( ) + "&flush=" + this.controller.getForceFlush() 
+           + "&start="+this.controller.getStartMillis( ) + "&end=" + this.controller.getEndMillis( );
     } else {
       return BOGUS.getUrl( type );
     }

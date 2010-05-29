@@ -6,14 +6,21 @@
 }
 
 .acct-report-bar {
-	width: 100%;
-	padding: 1px 0px 1px 0px;
-	background-color: transparent;
+  width: 100%;
+  padding: 0px;
+  background-color: transparent;
+}
+.acct-Report-Set {
+  width: 100%;
+  padding: 0px;
+  padding-left: 7px;
+  background-color: transparent;
 }
 
 .acct-Button-Action {
 	padding: 3px;
 	margin: 1px;
+	width: 22px;
 }
 
 .acct-Button-Action-over {
@@ -23,8 +30,8 @@
 	-moz-border-radius: 3px;
 	border-radius: 3px;
 	border-color: #999999 #CCCCCC #CCCCCC #999999;
-	padding: 2px;
-	margin: 1px;
+	padding: 3px;
+	margin: 0px;
 }
 
 .acct-Button-Action-down {
@@ -34,28 +41,46 @@
 	-moz-border-radius: 3px;
 	border-radius: 3px;
 	background: #D4D4D4 none repeat scroll 0 0; 
-	padding :   2px;
+	padding : 3px;
 	margin: 0px;
 }
 
-.acct-Button-Report {
+.acct-Button-Report-Active {
 	border-style: solid;
-	border-width: 0px;
-	border-color: #CCCCCC #999999 #999999 #CCCCCC;
+  border-width: 0px 1px 0px 0px;
+  border-color: #00FF00 #FFFF66 #FFFF66 #FFFF66;
+  background: #FFFFFF;
+  padding: 3px 2px 3px 3px;
+  margin: 0px;
+  width: 100%;
+}
+
+.acct-Button-Report-Active-over {}
+.acct-Button-Report-Active-down {}
+
+
+.acct-Button-Report {
+	border-style: dotted;
+	border-width: 0px 1px 0px 1px;
+	border-color: #000000 #ECBF3C #000000 #ECBF3C;
 	-webkit-border-radius: 0px;
 	-moz-border-radius: 0px;
 	border-radius: 0px;
 	background: #FFFFFF none repeat scroll 0 0;
-	padding: 3px 5px 3px 5px;
+	padding: 3px 15px 3px 15px;
 	margin: 0px;
 	width: 100%;
 }
 
 .acct-Button-Report-over {
-	background-color: #FFFF66;
+	border-style: solid;
+  background: #FFCC33 none repeat scroll 0 0;
+	border-color: #66FF66;
+	bordaer-width: 3px;
 }
 
 .acct-Button-Report-down {
+	border-style: solid;
 	background: #ECBF3C none repeat scroll 0 0;
 }
 
@@ -68,7 +93,7 @@
 
 .gwt-DecoratedStackPanel {
   border: solid;
-  border-width: 1px;
+  border-width: 2px 0px 2px 1px;
   border-color: #FFCC33;
   width: 200px;
   -webkit-border-top-left-radius: 5px;
@@ -80,8 +105,8 @@
 }
 
 .gwt-DecoratedStackPanel .gwt-StackPanelContent {
-  border-top: 1px solid #FFCC33;
-  border-bottom: 1px solid #FFCC33;
+  border-bottom: 1px dashed #FFCC33;
+  border-right: 1px dashed #FFCC33;
   background: #FFCC33;
 	padding: 0;
 }
@@ -136,8 +161,8 @@
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleLeft {
-	background: #FFFF66;
-	border-left: 2px solid #FFFF66;
+	background: #FFCC33;
+	border-left: 2px solid #FFCC33;
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleLeftInner,.gwt-DecoratedStackPanel .stackItemMiddleRightInner
@@ -147,15 +172,16 @@
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleRight {
-  background: #FFFF66;
-  border-right: 2px solid #FFFF66;
+  background: #FFCC33;
+  border-right: 2px solid #FFCC33;
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleCenter {
 	font-weight: bold;
 	font-size: 1.3em;
-	background: #FFFF66 url(images/hborder.png) repeat-x 0px -989px;
+	background: #FFCC33 url(images/hborder.png) repeat-x 0px -989px;
 	padding: 2px;
+	padding-left: 5px;
 	width: 100%;
 }
 
@@ -226,6 +252,7 @@ html>body .gwt-DecoratedStackPanel {
 .acct-Frame {
 	width: 100%;
 	height: 800px;
+	border: 0px;
 }
 
 .acct-ReportDisplay {
@@ -237,7 +264,9 @@ html>body .gwt-DecoratedStackPanel {
 	width: 100%;
 	height: 100%;
 }
-
+.acct-ReportPageNum{
+  width: 25px;
+}
 .acct-ReportPage {
   margin-top: 3px; 
 }

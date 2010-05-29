@@ -1158,7 +1158,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     List<ReportInfo> reports = new ArrayList<ReportInfo>();
     for( Component c : Components.list( ) ) {
       for( Service s : c.getServices( ) ) {
-        reports.add( makeReportInfo( s ) );
+        if( !s.getServiceConfiguration( ).getComponent( ).isSingleton( ) || com.eucalyptus.bootstrap.Component.walrus.equals( s.getServiceConfiguration( ).getComponent( ) ) ) {
+          reports.add( makeReportInfo( s ) );
+        }
       }
     }
     return reports;
