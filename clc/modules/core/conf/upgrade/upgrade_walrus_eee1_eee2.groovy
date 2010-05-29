@@ -48,6 +48,7 @@ class upgrade_walrus_eee1_eee2 extends AbstractUpgradeScript {
 				b.setGlobalWriteACP(it.GLOBAL_WRITE_ACP);
 				b.setBucketSize(it.BUCKET_SIZE);
 				b.setHidden(false);
+				b.setLoggingEnabled(false);
 				walrus_conn.rows("SELECT g.* FROM bucket_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.bucket_id=${ it.BUCKET_ID }").each{  grant ->
 					println "--> grant: ${it.BUCKET_NAME}/${grant.USER_ID}"
 					GrantInfo grantInfo = new GrantInfo();
