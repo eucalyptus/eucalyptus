@@ -3,9 +3,10 @@ import com.eucalyptus.auth.principal.*;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
 
+println "HELLOOOO"
 EntityWrapper db;
 Users.listAllUsers().each{ User user ->
-  println "HELLOOOO ${user.dump()}"
+  println "HELLOOOO ${user.name}"
   def u = new UserReportInfo() {{
       userName = user.getName() 
       imageCount = 0

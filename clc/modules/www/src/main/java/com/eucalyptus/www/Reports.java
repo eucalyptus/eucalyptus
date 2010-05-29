@@ -159,7 +159,7 @@ public class Reports extends HttpServlet {
       hasError( "Error obtaining session info.", res );
       return;
     }
-    LOG.debug( "Got request for " + name + " page number " + pageStr + " of type " + type );
+    LOG.debug( "Got request for " + name + " page number " + pageStr + " of type " + type + " flush=" + doFlush );
     Type reportType = Type.valueOf( type );
     final JRExporter exporter = reportType.setup( req, res, name );
     try {
@@ -183,7 +183,7 @@ public class Reports extends HttpServlet {
     private final String              reportName;
     private Integer                   length;
     private final Future<JasperPrint> pendingPrint;
-    private JasperPrint jasperPrint = null;
+    private JasperPrint               jasperPrint = null;
     
     public ReportCache( String name, String reportName, Future<JasperPrint> pendingPrint ) {
       this.timestamp = System.currentTimeMillis( ) / 1000;
@@ -235,7 +235,7 @@ public class Reports extends HttpServlet {
     }
     
     public Integer getLength( ) {
-      if( this.jasperPrint != null ) {
+      if ( this.jasperPrint != null ) {
         this.length = this.jasperPrint.getPages( ).size( ) - 1;
       }
       return this.length;
@@ -251,15 +251,14 @@ public class Reports extends HttpServlet {
       } catch ( InterruptedException e ) {
         this.length = 0;
         throw e;
-      }        
+      }
     }
+    
     public JasperPrint getJasperPrint( ) {
-      if( this.pendingPrint.isDone( ) ) {
+      if ( this.pendingPrint.isDone( ) ) {
         try {
-          this.jasperPrint  = this.getPendingPrint( );
-        } catch ( InterruptedException e ) {
-        } catch ( ExecutionException e ) {
-        }
+          this.jasperPrint = this.getPendingPrint( );
+        } catch ( InterruptedException e ) {} catch ( ExecutionException e ) {}
       }
       return this.jasperPrint;
     }
@@ -271,33 +270,35 @@ public class Reports extends HttpServlet {
   
   private static Map<String, ReportCache> reportCache = new ConcurrentHashMap<String, ReportCache>( );
   
-  private static GroovyScriptEngine gse = makeScriptEngine();
-
+  private static GroovyScriptEngine       gse         = makeScriptEngine( );
+  
   public static ReportCache getReportManager( final String name, boolean flush ) throws JRException, SQLException {
     try {
-      final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + name + ".groovy"  ).exists( ) );
+      final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + name + ".groovy" ).exists( ) );
       if ( !flush && reportCache.containsKey( name ) && !reportCache.get( name ).isExpired( ) ) {
         return reportCache.get( name );
       } else {
         reportCache.remove( name );
         final JasperDesign jasperDesign = JRXmlLoader.load( SubDirectory.REPORTS.toString( ) + File.separator + name + ".jrxml" );
-        Future<JasperPrint> pendingPrint = Threads.getThreadPool( "reporting" ).submit( new Callable<JasperPrint>( ) {            
+        Future<JasperPrint> pendingPrint = Threads.getThreadPool( "reporting" ).submit( new Callable<JasperPrint>( ) {
           @Override
           public JasperPrint call( ) throws Exception {
             String url = String.format( "jdbc:%s_%s", Component.db.getUri( ).toString( ), "records" );
             JasperReport jasperReport = JasperCompileManager.compileReport( jasperDesign );
             JasperPrint jasperPrint;
-            if( jdbc ) {
+            if ( jdbc ) {
               Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
               jasperPrint = JasperFillManager.fillReport( jasperReport, null, jdbcConnection );
             } else {
               FileReader fileReader = null;
               try {
-                final List results = new ArrayList();
+                final List results = new ArrayList( );
                 fileReader = new FileReader( SubDirectory.REPORTS + File.separator + name + ".groovy" );
-                Binding binding = new Binding( new HashMap() {{
-                  put("results", results );
-                }} );
+                Binding binding = new Binding( new HashMap( ) {
+                  {
+                    put( "results", results );
+                  }
+                } );
                 try {
                   makeScriptEngine( ).run( name + ".groovy", binding );
                 } catch ( Exception e ) {
@@ -309,11 +310,10 @@ public class Reports extends HttpServlet {
                 LOG.debug( e, e );
                 throw new RuntimeException( e );
               } finally {
-                if(fileReader != null)
-                try {
-                  fileReader.close();
-                } catch (IOException e) {
-                  LOG.error(e,e);
+                if ( fileReader != null ) try {
+                  fileReader.close( );
+                } catch ( IOException e ) {
+                  LOG.error( e, e );
                   throw e;
                 }
               }
@@ -321,6 +321,9 @@ public class Reports extends HttpServlet {
             return jasperPrint;
           }
         } );
+        if ( flush ) {
+          pendingPrint.get( );
+        }
         reportCache.put( name, new ReportCache( name, jasperDesign.getName( ), pendingPrint ) );
       }
       return reportCache.get( name );
@@ -331,11 +334,11 @@ public class Reports extends HttpServlet {
   }
   
   private static GroovyScriptEngine makeScriptEngine( ) {
-    if( gse != null ) {
+    if ( gse != null ) {
       return gse;
     } else {
-      synchronized(Reports.class) {
-        if( gse != null ) {
+      synchronized ( Reports.class ) {
+        if ( gse != null ) {
           return gse;
         } else {
           try {
@@ -348,7 +351,7 @@ public class Reports extends HttpServlet {
       }
     }
   }
-
+  
   public static void hasError( String message, HttpServletResponse response ) {
     try {
       response.getWriter( ).print( EucalyptusManagement.getError( message ) );
