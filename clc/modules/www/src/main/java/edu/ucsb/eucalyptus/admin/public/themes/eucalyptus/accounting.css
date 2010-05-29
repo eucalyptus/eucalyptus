@@ -1,0 +1,238 @@
+.acct-root {
+	width: 100%;
+	margin: 0px;
+	padding: 0px;
+	height: 100%;
+}
+
+.acct-report-bar {
+	width: 100%;
+	padding: 5px 0px 5px 0px;
+	background-color: transparent;
+}
+
+.acct-Button-Action {
+	padding: 3px;
+}
+
+.acct-Button-Action-over {
+	border-style: solid;
+	border-width: 1px;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
+	border-color: #999999 #CCCCCC #CCCCCC #999999;
+	padding: 2px;
+}
+
+.acct-Button-Action-down {
+	border-style: solid;
+	border-width: 1px;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
+	background: #D4D4D4 none repeat scroll 0 0; 
+	padding :   3px;
+}
+
+.acct-Button-Report {
+	border-style: solid;
+	border-width: 0px;
+	border-color: #CCCCCC #999999 #999999 #CCCCCC;
+	-webkit-border-radius: 0px;
+	-moz-border-radius: 0px;
+	border-radius: 0px;
+	background: #FFFFFF none repeat scroll 0 0;
+	padding: 3px 5px 3px 5px;
+	margin: 0px;
+	width: 100%;
+}
+
+.acct-Button-Report-over {
+	background-color: #F5F562;
+}
+
+.acct-Button-Report-down {
+	background: #ECBF3C none repeat scroll 0 0;
+}
+
+
+.acct-StackPanelHeader {
+	padding-left: 7px;
+	font-weight: bold;
+	font-size: 1.4em;
+}
+
+.gwt-DecoratedStackPanel {
+  border: solid;
+  border-width: 3px;
+  border-color: #FFCC33;
+  width: 200px;
+  -webkit-border-top-left-radius: 5px;
+  -webkit-border-top-right-radius: 5px;
+  -moz-border-radius-topleft: 5px;
+  -moz-border-radius-topright: 5px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+.gwt-DecoratedStackPanel .gwt-StackPanelContent {
+	border: 0px solid #FFCC33;
+	background: #FFCC33;
+	padding: 0;
+}
+
+.gwt-DecoratedStackPanel .gwt-StackPanelItem {
+	cursor: pointer;
+	cursor: hand;
+}
+
+.gwt-DecoratedStackPanel .stackItemTopLeft,.gwt-DecoratedStackPanel .stackItemTopRight, .gwt-DecoratedStackPanel .stackItemTopCenter
+  {
+  background: #FFCC33;
+  height: 0px;
+  width: 0px;
+  zoom: 1;
+}
+.gwt-DecoratedStackPanel .stackPanelItem-Below-Selected .stackItemTopLeft,.gwt-DecoratedStackPanel  .stackPanelItem-Below-Selected .stackItemTopRight, .gwt-DecoratedStackPanel .stackPanelItem-Below-Selected .stackItemTopCenter
+  {
+  background: #FFCC33;
+  height: 0px;
+  width: 0px;
+  zoom: 1;
+}
+.gwt-DecoratedStackPanel .stackPanelItemFirst .stackItemTopLeft,.gwt-DecoratedStackPanel .stackItemTopRight, .gwt-DecoratedStackPanel .stackItemTopCenter
+  {
+  background: #FFCC33;
+  height: 0px;
+  width: 0px;
+  zoom: 1;
+}
+
+.gwt-DecoratedStackPanel .stackItemTopLeft {
+	border-left: 6px solid #FFCC33;
+	background: #FFCC33;
+	-background: #FFCC33;
+}
+
+.gwt-DecoratedStackPanel .stackItemTopRight {
+	border-right: 6px solid #FFCC33;
+	background: #FFCC33;
+	-background: #FFCC33;
+}
+
+.gwt-DecoratedStackPanel .stackItemTopLeftInner,.gwt-DecoratedStackPanel .stackItemTopRightInner
+	{
+	width: 1px;
+	height: 0px;
+}
+
+.gwt-DecoratedStackPanel .stackItemTopCenter {
+	background: #FFCC33 url(images/corner.png) no-repeat;
+}
+
+.gwt-DecoratedStackPanel .stackItemMiddleLeft {
+	background: #FFFFCC;
+	border-left: 2px solid #FFFFCC;
+}
+
+.gwt-DecoratedStackPanel .stackItemMiddleLeftInner,.gwt-DecoratedStackPanel .stackItemMiddleRightInner
+	{
+	width: 1px;
+	height: 0px;
+}
+
+.gwt-DecoratedStackPanel .stackItemMiddleRight {
+  background: #FFFFCC;
+  border-right: 2px solid #FFFFCC;
+}
+
+.gwt-DecoratedStackPanel .stackItemMiddleCenter {
+	font-weight: bold;
+	font-size: 1.3em;
+	background: #FFFFCC url(images/hborder.png) repeat-x 0px -989px;
+	padding: 2px;
+}
+
+.gwt-DecoratedStackPanel .gwt-StackPanelItem-first .stackItemTopRight,.gwt-DecoratedStackPanel .gwt-StackPanelItem-first .stackItemTopLeft
+	{
+	border: 0px;
+  background: #FFFFCC;
+}
+
+.gwt-DecoratedStackPanel .gwt-StackPanelItem-below-selected .stackItemTopLeft,.gwt-DecoratedStackPanel .gwt-StackPanelItem-below-selected .stackItemTopRight
+	{
+  background: #FFFFCC;
+}
+
+html>body .gwt-DecoratedStackPanel {
+	
+}
+
+* html .gwt-DecoratedStackPanel .stackItemTopLeftInner,* html .gwt-DecoratedStackPanel .stackItemTopRightInner
+{
+	width: 6px;
+	height: 6px;
+	overflow: hidden;
+}
+
+.acct-AccountingPanel-anchor {
+	color: #555555;
+	font-family: serif;
+}
+
+.acct-AccountingPanel-action {
+	width: 100%;
+	font-size: smaller;
+	background: #FFFFCC;
+	text-align: center;
+	vertical-align: middle;
+	padding: 0px 1px 0px 5px;
+	height: 32px;
+}
+
+.acct-AccountingPanel-filter {
+	width: 100%;
+	border-style: solid;
+	border-width: 0px;
+	border-color: #CCCCCC #999999 #999999 #CCCCCC;
+	padding-top: 3px;
+	padding-bottom: 3px;
+}
+
+.acct-AccountingPanel-scroll {
+	width: 100%;
+	height: 573px;
+}
+
+.acct-AccountingPanel {
+	border: solid;
+	border-width: 0px;
+	border-color: #FFCC33;
+	width: 100%;
+	-webkit-border-top-left-radius: 5px;
+	-webkit-border-top-right-radius: 5px;
+	-moz-border-radius-topleft: 5px;
+	-moz-border-radius-topright: 5px;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+}
+
+.acct-Frame {
+	width: 100%;
+	height: 800px;
+}
+
+.acct-ReportDisplay {
+	width: 100%;
+	height: 100%;
+}
+
+.acct-ReportList {
+	width: 100%;
+	height: 100%;
+}
+
+.acct-ReportPage {
+  margin-top: 3px; 
+}

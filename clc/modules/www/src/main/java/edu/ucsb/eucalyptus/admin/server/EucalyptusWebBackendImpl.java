@@ -68,7 +68,13 @@ package edu.ucsb.eucalyptus.admin.server;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.system.BaseDirectory;
@@ -1142,8 +1148,42 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		return zones;
 	}
 
+  @Override
+  public List<ReportInfo> getZoneReports(final String sessionId) throws Exception {
+    SessionInfo session = verifySession (sessionId);
+    UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+    if (!reqUser.isAdministrator()) {
+      throw new Exception("Only admin can view reports.");
+    }
+    List<ReportInfo> reports = new ArrayList<ReportInfo>();
+    for( Component c : Components.list( ) ) {
+      for( Service s : c.getServices( ) ) {
+        reports.add( makeReportInfo( s ) );
+      }
+    }
+    return reports;
+  }
+  
+  private static ReportInfo makeReportInfo( Service s ) {
+    String name = (s.getServiceConfiguration( ).getName( )!=null?s.getServiceConfiguration( ).getName( ) + ": ":"")+ s.getServiceConfiguration( ).getComponent( ).name( ) + "@" + s.getServiceConfiguration( ).getHostName( );
+    return new ReportInfo( name, "service", 0 );
+  }
+  
+  @Override
+  public List<ReportInfo> getResourceReports(final String sessionId) throws Exception {
+    SessionInfo session = verifySession (sessionId);
+    UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+    if (!reqUser.isAdministrator()) {
+      throw new Exception("Only admin can view reports.");
+    }
+    List<ReportInfo> reports = new ArrayList<ReportInfo>();
+    for( User u : Users.listAllUsers( ) ) {
+      reports.add( new ReportInfo( u.getName( ), "user", 0 ) );
+    }
+    return reports;
+  }
 	@Override
-  public List<ReportInfo> getReports(final String sessionId) throws Exception {
+  public List<ReportInfo> getSystemReports(final String sessionId) throws Exception {
     SessionInfo session = verifySession (sessionId);
     UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
     if (!reqUser.isAdministrator()) {
@@ -1157,7 +1197,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
       }} ) ) {
       String reportName = report.getName( ).replaceAll( ".jrxml", "" );
       try {
-        ReportCache reportCache = Reports.getReportManager( reportName );
+        ReportCache reportCache = Reports.getReportManager( reportName, false );
         Integer lastPage = reportCache.getLength( );
         reports.add( new ReportInfo( reportCache.getReportName( ), reportName, lastPage ) );
       }

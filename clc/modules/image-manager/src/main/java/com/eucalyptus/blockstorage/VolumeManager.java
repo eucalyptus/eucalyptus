@@ -86,6 +86,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
@@ -304,6 +305,9 @@ public class VolumeManager {
     Volume volume = null;
     try {
       volume = db.getUnique( Volume.named( userName, request.getVolumeId( ) ) );
+      if ( volume.getRemoteDevice( ) == null ) {
+        StorageUtil.getVolumeReply( new HashMap<String,AttachedVolume>(), Lists.newArrayList( volume ) );
+      }
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );

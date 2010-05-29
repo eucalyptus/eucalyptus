@@ -10,33 +10,39 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 @Entity
-@PersistenceContext(name="eucalyptus_general")
-@Table( name = "image_product_code" )
+@PersistenceContext( name = "eucalyptus_images" )
+@Table( name = "image_authorization" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ImageAuthorization {
   @Id
   @GeneratedValue
   @Column( name = "image_auth_id" )
-  private Long id = -1l;
+  private Long   id = -1l;
   @Column( name = "image_auth_name" )
   private String value;
-  public ImageAuthorization( ) {
-  }
+  
+  public ImageAuthorization( ) {}
+  
   public ImageAuthorization( String value ) {
     this.value = value;
   }
+  
   public Long getId( ) {
     return this.id;
   }
+  
   public void setId( Long id ) {
     this.id = id;
   }
+  
   public String getValue( ) {
     return this.value;
   }
+  
   public void setValue( String value ) {
     this.value = value;
   }
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -44,6 +50,7 @@ public class ImageAuthorization {
     result = prime * result + ( ( this.value == null ) ? 0 : this.value.hashCode( ) );
     return result;
   }
+
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) return true;
@@ -55,5 +62,7 @@ public class ImageAuthorization {
     } else if ( !this.value.equals( other.value ) ) return false;
     return true;
   }
+  
+  
   
 }

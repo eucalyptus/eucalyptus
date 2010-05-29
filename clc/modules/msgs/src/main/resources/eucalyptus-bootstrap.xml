@@ -70,21 +70,14 @@
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
-  <mule:configuration>
-    <mule:default-threading-profile doThreading="true" maxThreadsActive="16" poolExhaustedAction="RUN" />
-  </mule:configuration>
   <euca:connector name="eucaws" />
-  <vm:connector name="internal-async" queueEvents="false" >
-    <vm:queueProfile persistent="false" maxOutstandingMessages="16"/>
-  </vm:connector> 
-  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" connector-ref="internal-async"/>  
-  <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <endpoint name="VMwareBrokerRequestQueueEndpoint" address="vm://VMwareBrokerRequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <endpoint name="ComponentRequestQueueEndpoint" address="vm://ComponentRequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <!--exception-strategy className="com.eucalyptus.ws.ExceptionTrap"/-->
+  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />  
+  <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" />
+  <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" />
+  <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" />
+  <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" />
+  <endpoint name="VMwareBrokerRequestQueueEndpoint" address="vm://VMwareBrokerRequestQueue" synchronous="false" />
+  <endpoint name="ComponentRequestQueueEndpoint" address="vm://ComponentRequestQueue" synchronous="false" />
   <model name="eucalyptus-bootstrap">
     <default-service-exception-strategy>
       <outbound-endpoint ref="ReplyQueueEndpoint" />

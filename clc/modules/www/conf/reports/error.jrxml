@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created using an evaluation version of JasperAssistant (http://www.jasperassistant.com) -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Error Log" language="groovy" pageWidth="1024" pageHeight="600" columnWidth="924" leftMargin="50" rightMargin="50" topMargin="50" bottomMargin="50" whenResourceMissingType="Empty">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" isDefault="false" fontName="Arial" fontSize="26" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="SubTitle" isDefault="false" forecolor="#666666" fontName="Arial" fontSize="18"/>
+	<style name="Column header" isDefault="false" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Detail" isDefault="false" fontName="Arial" fontSize="12"/>
+	<style name="alternating" isDefault="false" style="Detail" backcolor="#FFFFFF" markup="none" fontSize="10">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue() % 2 == 0 )]]></conditionExpression>
+			<style isDefault="false" style="alternating" backcolor="#4C4C4C" markup="none"/>
+		</conditionalStyle>
+	</style>
+	<subDataset name="dataset1"/>
+	<queryString>
+		<![CDATA[SELECT record_timestamp,record_creator,record_user_id,REPLACE(record_extra,':',' ') AS record_extra,record_correlation_id FROM eucalyptus_records.records_logs WHERE record_class LIKE 'MESSAGE' AND record_correlation_id IS NOT NULL ORDER BY record_timestamp DESC;]]>
+	</queryString>
+	<field name="record_extra" class="java.lang.String"/>
+	<field name="record_timestamp" class="java.sql.Timestamp"/>
+	<field name="record_user_id" class="java.lang.String"/>
+	<field name="record_creator" class="java.lang.String"/>
+	<group name="Group1">
+		<groupExpression><![CDATA[(int)($V{REPORT_COUNT}/100)]]></groupExpression>
+		<groupHeader>
+			<band height="19">
+				<staticText>
+					<reportElement style="Title" mode="Opaque" x="139" y="0" width="189" height="19" backcolor="#DCDAD5"/>
+					<box topPadding="0" bottomPadding="0">
+						<bottomPen lineWidth="0.25"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Verdana" size="12"/>
+					</textElement>
+					<text><![CDATA[User ID]]></text>
+				</staticText>
+				<staticText>
+					<reportElement style="Title" mode="Opaque" x="0" y="0" width="139" height="19" backcolor="#DCDAD5"/>
+					<box topPadding="0" bottomPadding="0">
+						<leftPen lineWidth="1.0"/>
+						<bottomPen lineWidth="0.25"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Verdana" size="12"/>
+					</textElement>
+					<text><![CDATA[Timestamp]]></text>
+				</staticText>
+				<staticText>
+					<reportElement style="Title" mode="Opaque" x="328" y="0" width="242" height="19" backcolor="#DCDAD5"/>
+					<box topPadding="0" bottomPadding="0">
+						<bottomPen lineWidth="0.25"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Verdana" size="12"/>
+					</textElement>
+					<text><![CDATA[Message Type]]></text>
+				</staticText>
+				<staticText>
+					<reportElement style="Title" mode="Opaque" x="570" y="0" width="343" height="19" backcolor="#DCDAD5"/>
+					<box topPadding="0" bottomPadding="0">
+						<bottomPen lineWidth="0.25"/>
+						<rightPen lineWidth="1.0"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Verdana" size="12"/>
+					</textElement>
+					<text><![CDATA[Message]]></text>
+				</staticText>
+			</band>
+		</groupHeader>
+	</group>
+	<title>
+		<band height="24">
+			<elementGroup/>
+			<staticText>
+				<reportElement x="311" y="0" width="301" height="24"/>
+				<box>
+					<bottomPen lineWidth="0.25"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Verdana" size="16" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Error Log]]></text>
+			</staticText>
+		</band>
+	</title>
+	<detail>
+		<band height="19">
+			<textField isStretchWithOverflow="true" hyperlinkType="None">
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="0" y="0" width="139" height="19"/>
+				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
+					<topPen lineStyle="Solid"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+				</box>
+				<textElement verticalAlignment="Middle" markup="html">
+					<font fontName="Verdana" size="12" pdfFontName="Courier" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression class="java.util.Date"><![CDATA[$F{record_timestamp}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" hyperlinkType="None">
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="139" y="0" width="189" height="19"/>
+				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
+					<topPen lineStyle="Solid"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+				</box>
+				<textElement verticalAlignment="Middle" markup="html">
+					<font fontName="Verdana" size="12" pdfFontName="Courier" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{record_user_id}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="false" hyperlinkType="None">
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="328" y="0" width="242" height="19" backcolor="#E2E2E2"/>
+				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
+					<topPen lineStyle="Solid"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+				</box>
+				<textElement verticalAlignment="Middle" markup="html">
+					<font fontName="Verdana" size="12" pdfFontName="Courier" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{record_creator}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" hyperlinkType="None">
+				<reportElement style="alternating" stretchType="RelativeToTallestObject" x="570" y="0" width="343" height="19"/>
+				<box topPadding="0" leftPadding="8" bottomPadding="0" rightPadding="5">
+					<topPen lineStyle="Solid"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted" lineColor="#AAAAAA"/>
+				</box>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Verdana" size="12" pdfFontName="Courier"/>
+				</textElement>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{record_extra}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>
