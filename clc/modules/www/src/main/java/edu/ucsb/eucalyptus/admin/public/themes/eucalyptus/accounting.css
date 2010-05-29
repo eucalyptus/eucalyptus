@@ -79,7 +79,7 @@
 .gwt-DecoratedStackPanel .gwt-StackPanelContent {
 	border: 0px solid #FFCC33;
 	background: #FFCC33;
-	padding: 2px 2px 2px 2px;
+	padding: 0;
 }
 
 .gwt-DecoratedStackPanel .gwt-StackPanelItem {
@@ -151,6 +151,7 @@
 	font-weight: bold;
 	font-size: 1.3em;
 	background: #FFFFCC url(images/hborder.png) repeat-x 0px -989px;
+	padding: 2px;
 }
 
 .gwt-DecoratedStackPanel .gwt-StackPanelItem-first .stackItemTopRight,.gwt-DecoratedStackPanel .gwt-StackPanelItem-first .stackItemTopLeft

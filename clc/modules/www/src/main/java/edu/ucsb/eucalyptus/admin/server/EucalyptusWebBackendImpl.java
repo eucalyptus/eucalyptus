@@ -1197,7 +1197,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
       }} ) ) {
       String reportName = report.getName( ).replaceAll( ".jrxml", "" );
       try {
-        ReportCache reportCache = Reports.getReportManager( reportName );
+        ReportCache reportCache = Reports.getReportManager( reportName, false );
         Integer lastPage = reportCache.getLength( );
         reports.add( new ReportInfo( reportCache.getReportName( ), reportName, lastPage ) );
       }

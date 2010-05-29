@@ -138,6 +138,8 @@ public class Reports extends HttpServlet {
     String name = Param.name.get( req );
     String type = Param.type.get( req );
     String pageStr = Param.page.get( req );
+    String flush = Param.page.get( req );
+    Boolean doFlush = Boolean.parseBoolean( flush );
     SessionInfo session;
     try {
       session = EucalyptusWebBackendImpl.verifySession( sessionId );
@@ -161,7 +163,7 @@ public class Reports extends HttpServlet {
     Type reportType = Type.valueOf( type );
     final JRExporter exporter = reportType.setup( req, res, name );
     try {
-      ReportCache reportCache = getReportManager( name );
+      ReportCache reportCache = getReportManager( name, doFlush );
       JasperPrint jasperPrint = reportCache.getPendingPrint( );
       exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
       exporter.exportReport( );
@@ -271,10 +273,10 @@ public class Reports extends HttpServlet {
   
   private static GroovyScriptEngine gse = makeScriptEngine();
 
-  public static ReportCache getReportManager( final String name ) throws JRException, SQLException {
+  public static ReportCache getReportManager( final String name, boolean flush ) throws JRException, SQLException {
     try {
       final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + name + ".groovy"  ).exists( ) );
-      if ( reportCache.containsKey( name ) && !reportCache.get( name ).isExpired( ) ) {
+      if ( !flush && reportCache.containsKey( name ) && !reportCache.get( name ).isExpired( ) ) {
         return reportCache.get( name );
       } else {
         reportCache.remove( name );
