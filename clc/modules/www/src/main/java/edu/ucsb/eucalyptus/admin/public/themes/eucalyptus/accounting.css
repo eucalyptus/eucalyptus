@@ -52,7 +52,7 @@
 }
 
 .acct-Button-Report-over {
-	background-color: #F5F562;
+	background-color: #FFFF66;
 }
 
 .acct-Button-Report-down {
@@ -136,8 +136,8 @@
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleLeft {
-	background: #F5F562;
-	border-left: 2px solid #F5F562;
+	background: #FFFF66;
+	border-left: 2px solid #FFFF66;
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleLeftInner,.gwt-DecoratedStackPanel .stackItemMiddleRightInner
@@ -147,14 +147,14 @@
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleRight {
-  background: #F5F562;
-  border-right: 2px solid #F5F562;
+  background: #FFFF66;
+  border-right: 2px solid #FFFF66;
 }
 
 .gwt-DecoratedStackPanel .stackItemMiddleCenter {
 	font-weight: bold;
 	font-size: 1.3em;
-	background: #F5F562 url(images/hborder.png) repeat-x 0px -989px;
+	background: #FFFF66 url(images/hborder.png) repeat-x 0px -989px;
 	padding: 2px;
 	width: 100%;
 }
@@ -162,12 +162,12 @@
 .gwt-DecoratedStackPanel .gwt-StackPanelItem-first .stackItemTopRight,.gwt-DecoratedStackPanel .gwt-StackPanelItem-first .stackItemTopLeft
 	{
 	border: 0px;
-  background: #F5F562;
+  background: #FFFF66;
 }
 
 .gwt-DecoratedStackPanel .gwt-StackPanelItem-below-selected .stackItemTopLeft,.gwt-DecoratedStackPanel .gwt-StackPanelItem-below-selected .stackItemTopRight
 	{
-  background: #F5F562;
+  background: #FFFF66;
 }
 
 html>body .gwt-DecoratedStackPanel {
@@ -189,7 +189,7 @@ html>body .gwt-DecoratedStackPanel {
 .acct-AccountingPanel-action {
 	width: 100%;
 	font-size: smaller;
-	background: #F5F562;
+	background: #FFFF66;
 	text-align: center;
 	vertical-align: middle;
 	padding: 0px 1px 0px 5px;
