@@ -3,6 +3,7 @@
 #define __USE_GNU /* strnlen */
 #include <string.h>
 #include <sys/types.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -65,7 +66,7 @@ int decryptWindowsPassword(char *encpass, int encsize, char *pkfile, char **out)
 
 int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize) {
   char *sshkey_dec, *modbuf, *exponentbuf;
-  char *ptr, *tmp, hexstr[2], *enc64;
+  char *ptr, *tmp, hexstr[4], *enc64;
   char *dec64, encpassword[512];
 
   uint32_t len, exponent;
@@ -81,7 +82,7 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize) {
   if (!sshkey_dec) {
     return(1);
   }
-  
+
   ptr = sshkey_dec;
   memcpy(&len, ptr, 4);
   len = htonl(len);
@@ -121,15 +122,16 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize) {
     tmp = strndup(ptr, 1);
     if (tmp) {
       len = *tmp;
-      sprintf(hexstr, "%02X", (len<<24)>>24);
+      bzero(hexstr, sizeof(char) * 4);
+      snprintf(hexstr, 3, "%02X", (len<<24)>>24);
       strcat(modbuf, hexstr);
-      ptr++;
+      ptr+=1;
       free(tmp);
     }
   }
-  //  printf("MOD: |%s|\n", modbuf);
-  //  printf("EXPONENT: |%s|\n", exponentbuf);
-    
+  //printf("MOD: |%s|\n", modbuf);
+  //printf("EXPONENT: |%s|\n", exponentbuf);
+
   r = RSA_new();
   if (!r) {
     if (sshkey_dec) free(sshkey_dec);
@@ -184,7 +186,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
 
   bzero(password, sizeof(char)*16);
   for (i=0; i<8; i++) {
-    char c[2];
+    char c[4];
     snprintf(c, 2, "%c", RANDALPHANUM);
     strcat(password, c);
   }

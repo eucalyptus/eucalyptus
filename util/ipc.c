@@ -61,6 +61,7 @@ permission notice:
 #include <stdlib.h>
 #include <sys/types.h>
 #include <semaphore.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>

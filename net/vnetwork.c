@@ -65,11 +65,11 @@ permission notice:
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <pthread.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <ifaddrs.h>
