@@ -342,6 +342,10 @@ then
 		EUCABACKUPS="$EUCABACKUPS $i"
 	    fi
 	done
+	if [ -e etc/eucalyptus/eucalyptus.conf ]; then
+	    sed -i "s/DISABLE_EBS=.*/#DISABLE_EBS=\"N\"/" etc/eucalyptus/eucalyptus.conf
+	fi
+	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
 	tar cf -  $EUCABACKUPS 2>/dev/null | tar xf - 2>/dev/null
 	cd $EUCADIR
 fi
