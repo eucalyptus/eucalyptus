@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <pthread.h>
 #include <sys/vfs.h> /* statfs */

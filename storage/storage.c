@@ -62,6 +62,7 @@ permission notice:
 #define __USE_GNU /* strnlen */
 #include <string.h>
 #include <sys/types.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
