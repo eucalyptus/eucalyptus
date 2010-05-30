@@ -179,9 +179,7 @@ public interface EucalyptusWebBackend extends RemoteService {
 	
   public List<String> getZones(String sessionId) throws Exception;
   
-  public List<ReportInfo> getSystemReports(String sessionId) throws Exception;
-  public List<ReportInfo> getZoneReports(String sessionId) throws Exception;
-  public List<ReportInfo> getResourceReports(String sessionId) throws Exception;
+  public List<ReportInfo> getReports(String sessionId) throws Exception;
 	
 	/**
 	 * Utility/Convenience class.
@@ -201,4 +199,5 @@ public interface EucalyptusWebBackend extends RemoteService {
 			return ourInstance;
 		}
 	}
+
 }

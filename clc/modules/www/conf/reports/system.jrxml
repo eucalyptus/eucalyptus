@@ -4,6 +4,7 @@
 	<property name="ireport.zoom" value="1.0"/>
 	<property name="ireport.x" value="56"/>
 	<property name="ireport.y" value="0"/>
+  <property name="euca.report.group" value="system"/>
 	<property name="com.jasperassistant.designer.VGuides.Detail" value="9"/>
 	<style name="Title" isDefault="false" fontName="Arial" fontSize="26" isBold="true" pdfFontName="Helvetica-Bold"/>
 	<style name="SubTitle" isDefault="false" forecolor="#666666" fontName="Arial" fontSize="18"/>

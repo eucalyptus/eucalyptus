@@ -12,13 +12,16 @@ public class XHTML {
       {
         setSpacing( 0 );
         setVerticalAlignment( HasVerticalAlignment.ALIGN_MIDDLE );
-        add( new Image( image ) );
+        Image img = new Image( image );
+        add( img );
+        setCellWidth( img, "32px" );
         HTML headerText = new HTML( text ) {
           {
             setStyleName( style );
           }
         };
         add( headerText );
+        setCellHorizontalAlignment( headerText, ALIGN_CENTER );
       }
     }.getElement( ).getString( );
   }

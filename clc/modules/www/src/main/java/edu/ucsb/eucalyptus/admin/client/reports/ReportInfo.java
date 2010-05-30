@@ -7,48 +7,47 @@ import edu.ucsb.eucalyptus.admin.client.AccountingControl;
 import edu.ucsb.eucalyptus.admin.client.EucaButton;
 
 public class ReportInfo implements IsSerializable {
-  private static final ReportInfo BOGUS = new ReportInfo( "System Log", "system", 0 );
-
+  public static final ReportInfo     BOGUS = new ReportInfo( "system", "System Log", "system", 0 );
+  
   private transient AccountingControl controller;
   private transient EucaButton        button;
-  private Integer           length;
-  private String            name;
-  private String            fileName;
+  private String                      group;
+
+  private Integer                     length;
+  private String                      name;
+  private String                      fileName;
   
   public ReportInfo( ) {
-    this( "Loading", "Loading", 0 );
+    this( "Loading", "Loading", "Loading", 0 );
     this.controller = null;
     this.button = null;
   }
   
-  public ReportInfo( String name, String fileName, Integer length ) {
+  public ReportInfo( String group, String name, String fileName, Integer length ) {
+    this.group = group;
     this.length = length;
     this.name = name;
     this.fileName = fileName;
   }
-
+  
   public String getUrl( ReportType type ) {
-    if( this.controller != null ) {
-      return "/reports?name=" + this.controller.getCurrentFileName( ) + "&type=" + type.name( ).toLowerCase( ) + "&session="
-           + this.controller.getSessionid( ) + "&page=" + this.controller.getCurrentPage( ) + "&flush=" + this.controller.getForceFlush() 
-           + "&start="+this.controller.getStartMillis( ) + "&end=" + this.controller.getEndMillis( );
-    } else {
-      return BOGUS.getUrl( type );
-    }
+    return "/reports?name=" + this.controller.getCurrentFileName( ) + "&type=" + type.name( ).toLowerCase( ) + "&session=" + this.controller.getSessionid( )
+           + "&page=" + this.controller.getCurrentPage( ) + "&flush=" + this.controller.getForceFlush( ) + "&start=" + this.controller.getStartMillis( )
+           + "&end=" + this.controller.getEndMillis( );
   }
   
   public Integer getLength( ) {
     return this.length;
   }
-
+  
   public String getName( ) {
     return this.name;
   }
-
+  
   public String getFileName( ) {
     return this.fileName;
   }
-
+  
   public void setParent( AccountingControl parent ) {
     this.controller = parent;
     this.button = new EucaButton( this.getName( ), "View " + this.getName( ) + " Report.", AccountingControl.RESOURCES.ACCT_REPORT_BUTTON, new ClickHandler( ) {
@@ -58,9 +57,22 @@ public class ReportInfo implements IsSerializable {
       }
     } );
   }
-
+  
   public EucaButton getButton( ) {
     return this.button;
+  }
+  
+  public String getGroup( ) {
+    return this.group;
+  }
+
+  public void setGroup( String group ) {
+    this.group = group;
+  }
+
+  
+  public void setLength( Integer length ) {
+    this.length = length;
   }
 
   @Override
@@ -70,7 +82,7 @@ public class ReportInfo implements IsSerializable {
     result = prime * result + ( ( this.name == null ) ? 0 : this.name.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) return true;
@@ -82,5 +94,5 @@ public class ReportInfo implements IsSerializable {
     } else if ( !this.name.equals( other.name ) ) return false;
     return true;
   }
-
+  
 }

@@ -2,7 +2,9 @@ package edu.ucsb.eucalyptus.admin.client;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
@@ -39,36 +41,35 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/accounting.css" )
     public CssResource css( );
     
-    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/system-logs.png" )
+    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/reports/system-logs.png" )
     public ImageResource systemReports( );
     
-    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/user-logs.png" )
+    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/reports/user-logs.png" )
     public ImageResource resourceReports( );
     
-    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/service-logs.png" )
+    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/reports/service-logs.png" )
     public ImageResource serviceReports( );
     
-    @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/img/go-next.png" )
-    public ImageResource test2( );
   }
   
-  private final String           sessionId;
-  private final List<ReportInfo> systemReports   = new ArrayList<ReportInfo>( );
-  private final List<ReportInfo> zoneReports     = new ArrayList<ReportInfo>( );
-  private final List<ReportInfo> resourceReports = new ArrayList<ReportInfo>( );
-  private final AccountingPanel  accountingPanel;
-  private Integer                currentPage     = 0;
-  private Boolean                ready           = Boolean.FALSE;
-  private Boolean                forceFlush      = Boolean.FALSE;
-  private ReportInfo             currentReport   = null;
-  private EucaButton             errorButton     = null;
-  private Long                   startMillis;
-  private Long                   endMillis;
-  public final ReportInfo        bogus;
+  private final String                     sessionId;
+  private final AccountingPanel            accountingPanel;
+  private Integer                          currentPage     = 0;
+  private Boolean                          ready           = Boolean.FALSE;
+  private Boolean                          forceFlush      = Boolean.FALSE;
+  private ReportInfo                       currentReport   = null;
+  private EucaButton                       errorButton     = null;
+  private Long                             startMillis;
+  private Long                             endMillis;
+  private final Map<String, List<ReportInfo>> groupMap;
   
   public AccountingControl( String sessionId ) {
     this.ensureDebugId( "AccountingControl" );
     RESOURCES.css( ).ensureInjected( );
+    this.groupMap = new HashMap<String, List<ReportInfo>>( );
+    Date now = new Date( );
+    this.endMillis = now.getTime( );
+    this.startMillis = ( this.endMillis - ( 1000l * 60 * 24 * 7 ) );
     GWT.setUncaughtExceptionHandler( new GWT.UncaughtExceptionHandler( ) {
       @Override
       public void onUncaughtException( Throwable arg0 ) {
@@ -78,41 +79,12 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     this.sessionId = sessionId;
     this.accountingPanel = new AccountingPanel( this );
     this.errorButton = Buttons.HIDDEN;
-    Date now = new Date( );
-    this.endMillis = now.getTime( );
-    this.startMillis = ( this.endMillis - ( 1000l * 60 * 24 * 7 ) );
-    this.bogus = new ReportInfo( "System Log", "system-log", 0 ) {
-      {
-        setParent( AccountingControl.this );
-      }
-    };
-    this.currentReport = this.bogus;
-    EucalyptusWebBackend.App.getInstance( ).getSystemReports( this.getSessionid( ), new AsyncCallback<List<ReportInfo>>( ) {
+    this.currentReport = ReportInfo.BOGUS;
+    this.currentReport.setParent( this );
+    EucalyptusWebBackend.App.getInstance( ).getReports( this.getSessionid( ), new AsyncCallback<List<ReportInfo>>( ) {
       @Override
       public void onSuccess( List<ReportInfo> result ) {
-        AccountingControl.this.setSystemReports( result );
-      }
-      
-      @Override
-      public void onFailure( Throwable arg0 ) {
-        AccountingControl.this.displayError( arg0 );
-      }
-    } );
-    EucalyptusWebBackend.App.getInstance( ).getZoneReports( this.getSessionid( ), new AsyncCallback<List<ReportInfo>>( ) {
-      @Override
-      public void onSuccess( List<ReportInfo> result ) {
-        AccountingControl.this.setZoneReports( result );
-      }
-      
-      @Override
-      public void onFailure( Throwable arg0 ) {
-        AccountingControl.this.displayError( arg0 );
-      }
-    } );
-    EucalyptusWebBackend.App.getInstance( ).getResourceReports( this.getSessionid( ), new AsyncCallback<List<ReportInfo>>( ) {
-      @Override
-      public void onSuccess( List<ReportInfo> result ) {
-        AccountingControl.this.setResourceReports( result );
+        AccountingControl.this.setReports( result );
       }
       
       @Override
@@ -127,42 +99,23 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     this.redraw( );
   }
   
-  protected void setSystemReports( List<ReportInfo> result ) {
-    this.systemReports.clear( );
-    this.systemReports.addAll( result );
-    if ( !this.systemReports.isEmpty( ) ) {
-      for ( ReportInfo r : this.systemReports ) {
-        r.setParent( this );
+  protected void setReports( List<ReportInfo> result ) {
+    this.groupMap.clear( );
+    for( ReportInfo r : result ) {
+      if( !this.groupMap.containsKey( r.getGroup( ) ) ) {
+        this.groupMap.put( r.getGroup( ), new ArrayList<ReportInfo>() );
       }
-      this.setCurrentReport( this.systemReports.get( 0 ) );
-    } else {
-      this.setCurrentReport( this.bogus );
+      this.groupMap.get( r.getGroup( ) ).add( r );
+      r.setParent( this );
     }
+//    if ( !this.groupMap.isEmpty( ) ) {
+//      this.setCurrentReport( this.groupMap.get( "system" ).get( 0 ) );
+//    } else {
+//    }
+    this.setCurrentReport( ReportInfo.BOGUS );
     this.redraw( );
   }
-  
-  protected void setZoneReports( List<ReportInfo> result ) {
-    this.zoneReports.clear( );
-    this.zoneReports.addAll( result );
-    if ( !this.zoneReports.isEmpty( ) ) {
-      for ( ReportInfo r : this.zoneReports ) {
-        r.setParent( this );
-      }
-    }
-    this.redraw( );
-  }
-  
-  protected void setResourceReports( List<ReportInfo> result ) {
-    this.resourceReports.clear( );
-    this.resourceReports.addAll( result );
-    if ( !this.resourceReports.isEmpty( ) ) {
-      for ( ReportInfo r : this.resourceReports ) {
-        r.setParent( this );
-      }
-    }
-    this.redraw( );
-  }
-  
+    
   @Override
   public Widget getRootWidget( ) {
     return this;
@@ -217,15 +170,19 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
   }
   
   public List<ReportInfo> getSystemReports( ) {
-    return this.systemReports;
+    return this.groupMap.get( "system" );
   }
   
   public List<ReportInfo> getZoneReports( ) {
-    return this.zoneReports;
+    return this.groupMap.get( "service" );
   }
   
+  public Map<String, List<ReportInfo>> getGroupMap( ) {
+    return this.groupMap;
+  }
+
   public List<ReportInfo> getResourceReports( ) {
-    return this.resourceReports;
+    return this.groupMap.get( "user" );
   }
   
   public Integer changePage( Integer delta ) {
@@ -249,19 +206,11 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
   }
   
   public String getCurrentUrl( ReportType html ) {
-    if ( this.currentReport != null ) {
-      return this.currentReport.getUrl( html );
-    } else {
-      return "#";
-    }
+    return this.currentReport.getUrl( html );
   }
   
   public String getCurrentFileName( ) {
-    if ( this.currentReport != null ) {
-      return this.currentReport.getFileName( );
-    } else {
-      return "#";
-    }
+    return this.currentReport.getFileName( );
   }
   
   public Long getStartMillis( ) {
@@ -273,7 +222,8 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
   }
   
   public Long changeStartMillis( Long millis ) {
-    Long currentTime = new Date( ).getTime( );
+    Date now = new Date( );
+    Long currentTime = now.getTime( );
     if ( millis > this.endMillis ) {
       this.startMillis = this.endMillis;
     } else if ( ( millis > currentTime ) ) {
@@ -287,7 +237,8 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
   }
   
   public Long changeEndMillis( Long millis ) {
-    Long currentTime = new Date( ).getTime( );
+    Date now = new Date( );
+    Long currentTime = now.getTime( );
     if ( millis < this.startMillis ) {
       this.endMillis = this.startMillis;
     } else if ( ( millis > currentTime ) ) {

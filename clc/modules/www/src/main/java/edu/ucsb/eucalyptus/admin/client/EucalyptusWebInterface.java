@@ -1364,6 +1364,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 String error = "This tab is not implemented yet, sorry!";
                 statusMessage.setText("");
                 wrapper.clear();
+                wrapper.setStyleName( "euca-tab-contents" );
                 currentTabIndex = tabIndex;
                 if (tabIndex==credsTabIndex) { displayCredentialsTab(wrapper); }
                 else if (tabIndex==imgTabIndex) { displayImagesTab(wrapper); }
@@ -2003,6 +2004,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     public void displayAccountingTab(final VerticalPanel parent) {
     	History.newItem("accounting");
     	parent.clear();
+    	parent.setStyleName( "acct-tab-contents" );
     	AccountingControl control = new AccountingControl(sessionId);
     	parent.add(control.getRootWidget());
     	control.display();

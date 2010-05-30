@@ -58,7 +58,7 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.admin.client;
+package edu.ucsb.eucalyptus.admin.client.reports;
 
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.MouseDownEvent;
@@ -71,22 +71,49 @@ import com.google.gwt.event.dom.client.MouseOverEvent;
 import com.google.gwt.event.dom.client.MouseOverHandler;
 import com.google.gwt.event.dom.client.MouseUpEvent;
 import com.google.gwt.event.dom.client.MouseUpHandler;
+import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Widget;
+import edu.ucsb.eucalyptus.admin.client.Tooltip;
 
-public class EucaImageButton extends com.google.gwt.user.client.ui.PushButton {
+public class IconButton extends com.google.gwt.user.client.ui.PushButton {
   
-  private static final String MAIN_STYLE_NAME       = "euca-Button";
+  private static final String MAIN_STYLE_NAME       = "acct-Button";
   private static final String MOUSE_OVER_STYLE_NAME = "-over";
   private static final String MOUSE_DOWN_STYLE_NAME = "-down";
   
   private String              tooltip;
   private String              baseStyleName;
   
-  public EucaImageButton( String html, String tooltip, String baseStyleName, String imageFileName, ClickHandler handler ) {
-    super( new Image( "themes/active/img/" + imageFileName ), handler );
+  public IconButton( Image img, ClickHandler handler ) {
+    super( img, handler );
+    img.setStylePrimaryName( MAIN_STYLE_NAME );
+    this.setStyleName( MAIN_STYLE_NAME );
+  }
+  
+  public IconButton( String tooltip, Image imageFileName, ClickHandler handler ) {
+    this( imageFileName, handler );
     this.tooltip = tooltip;
+  }
+  
+  public IconButton( String tooltip, String imageFileName, ClickHandler handler ) {
+    this( tooltip, new Image( "themes/active/img/" + imageFileName ), handler );
+  }
+  
+  public IconButton( String tooltip, ImageResource imageResource, ClickHandler handler ) {
+    this( tooltip, new Image( imageResource ), handler );
+  }
+  
+  public IconButton( String tooltip, String baseStyleName, ImageResource imageResoure, ClickHandler handler ) {
+    this( tooltip, new Image( imageResoure ), handler );
+    this.baseStyleName = baseStyleName;
+    this.addStyleName( this.baseStyleName );
+    setEventHandler( );
+  }
+  
+  public IconButton( String tooltip, String baseStyleName, String imageFileName, ClickHandler handler ) {
+    this( tooltip, new Image( "themes/active/img/" + imageFileName ), handler );
     this.baseStyleName = baseStyleName;
     this.addStyleName( this.baseStyleName );
     setEventHandler( );
@@ -96,24 +123,24 @@ public class EucaImageButton extends com.google.gwt.user.client.ui.PushButton {
     sinkEvents( Event.ONMOUSEOVER | Event.ONMOUSEOUT | Event.ONMOUSEMOVE | Event.ONMOUSEUP | Event.ONMOUSEDOWN );
     this.addHandler( new MouseOutHandler( ) {
       public void onMouseOut( MouseOutEvent event ) {
-        removeStyleName( EucaImageButton.this.baseStyleName + MOUSE_OVER_STYLE_NAME );
-        removeStyleName( EucaImageButton.this.baseStyleName + MOUSE_DOWN_STYLE_NAME );
+        removeStyleName( IconButton.this.baseStyleName + MOUSE_OVER_STYLE_NAME );
+        removeStyleName( IconButton.this.baseStyleName + MOUSE_DOWN_STYLE_NAME );
         Tooltip.getInstance( ).hide( );
       }
     }, MouseOutEvent.getType( ) );
     this.addHandler( new MouseOverHandler( ) {
       public void onMouseOver( MouseOverEvent event ) {
-        addStyleName( EucaImageButton.this.baseStyleName + MOUSE_OVER_STYLE_NAME );
+        addStyleName( IconButton.this.baseStyleName + MOUSE_OVER_STYLE_NAME );
       }
     }, MouseOverEvent.getType( ) );
     this.addHandler( new MouseUpHandler( ) {
       public void onMouseUp( MouseUpEvent event ) {
-        removeStyleName( EucaImageButton.this.baseStyleName + MOUSE_DOWN_STYLE_NAME );
+        removeStyleName( IconButton.this.baseStyleName + MOUSE_DOWN_STYLE_NAME );
       }
     }, MouseUpEvent.getType( ) );
     this.addHandler( new MouseDownHandler( ) {
       public void onMouseDown( MouseDownEvent event ) {
-        addStyleName( EucaImageButton.this.baseStyleName + MOUSE_DOWN_STYLE_NAME );
+        addStyleName( IconButton.this.baseStyleName + MOUSE_DOWN_STYLE_NAME );
       }
     }, MouseDownEvent.getType( ) );
     if ( this.tooltip != null ) {

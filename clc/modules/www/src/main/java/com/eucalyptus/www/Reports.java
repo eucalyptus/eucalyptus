@@ -4,10 +4,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.ref.Reference;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,89 +59,127 @@ public class Reports extends HttpServlet {
   private static Logger LOG               = Logger.getLogger( Reports.class );
   
   enum Param {
-    name, type, session, page, flush, width, height;
+    name, type, session, page, flush(false), width(false), height(false), startTime(false), endTime(false);
+    private String  value = null;
+    private Boolean required = Boolean.TRUE;
+    
+    public Boolean isRequired( ) {
+      return this.required;
+    }
+
+    private Param( String value, Boolean required ) {
+      this.value = value;
+      this.required = required;
+    }
+    
+    private Param( ) {}
+    
+    private Param( Boolean required ) {
+      this.required = required;
+    }
+    
+    public String get( ) throws NoSuchFieldException {
+      if ( this.value == null ) {
+        throw new NoSuchFieldException( );
+      } else {
+        return this.value;
+      }
+    }
+    
     public String get( HttpServletRequest req ) throws IllegalArgumentException {
       if ( req.getParameter( this.name( ) ) == null ) {
         throw new IllegalArgumentException( "'" + this.name( ) + "' is a required argument." );
       } else {
-        String res = req.getParameter( this.name( ) );
-        LOG.debug( "Found parameter: " + this.name( ) + "=" + res );
-        return res;
+        this.value = req.getParameter( this.name( ) );
+        LOG.debug( "Found parameter: " + this.name( ) + "=" + this.value );
+        return this.value;
       }
-    }
-  }
-  
-  enum Type {
-    pdf {
-      @Override
-      public JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException {
-        res.setContentType( "application/pdf" );
-        res.setHeader( "Content-Disposition", "file; filename=" + name + ".pdf" );
-        JRExporter exporter = new JRPdfExporter( );
-        exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
-        return exporter;
-      }
-    },
-    csv {
-      @Override
-      public JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException {
-        res.setContentType( "text/plain" );
-        res.setHeader( "Content-Disposition", "file; filename=" + name + ".csv" );
-        JRExporter exporter = new JRCsvExporter( );
-        exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
-        return exporter;
-      }
-    },
-    html {
-      @Override
-      public JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException {
-        PrintWriter out = res.getWriter( );
-        res.setContentType( "text/html" );
-        JRExporter exporter = new JRHtmlExporter( );
-        exporter.setParameter( new JRExporterParameter( "EUCA_WWW_DIR" ) {}, "/" );
-        String pageStr = Param.page.get( request );
-        if ( pageStr != null ) {
-          try {
-            Integer currentPage = new Integer( pageStr );
-            exporter.setParameter( JRExporterParameter.PAGE_INDEX, currentPage );
-          } catch ( NumberFormatException e ) {}
-        }
-        exporter.setParameter( JRExporterParameter.OUTPUT_WRITER, res.getWriter( ) );
-        exporter.setParameter( JRHtmlExporterParameter.IS_REMOVE_EMPTY_SPACE_BETWEEN_ROWS, Boolean.TRUE );
-        exporter.setParameter( JRHtmlExporterParameter.IS_USING_IMAGES_TO_ALIGN, Boolean.FALSE );
-        return exporter;
-      }
-      
-      @Override
-      public void close( HttpServletResponse res ) throws IOException {
-        res.getWriter( ).close( );
-      }
-    },
-    xls {
-      @Override
-      public JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException {
-        res.setContentType( "application/vnd.ms-excel" );
-        res.setHeader( "Content-Disposition", "file; filename=" + name + ".xls" );
-        JRExporter exporter = new JRXlsExporter( );
-        exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
-        return exporter;
-      }
-    };
-    public abstract JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException;
-    
-    public void close( HttpServletResponse res ) throws IOException {
-      res.getOutputStream( ).close( );
     }
   }
   
   @Override
   protected void doGet( HttpServletRequest req, HttpServletResponse res ) throws ServletException, IOException {
-    String sessionId = Param.session.get( req );
-    String name = Param.name.get( req );
-    String type = Param.type.get( req );
-    String pageStr = Param.page.get( req );
-    String flush = Param.page.get( req );
-    Boolean doFlush = Boolean.parseBoolean( flush );
+    for ( Param p : Param.values( ) ) {
+      try {
+        p.get( req );
+      } catch ( IllegalArgumentException e ) {
+        if( p.isRequired( ) ) {
+          LOG.debug( e, e );
+          throw new RuntimeException( e );
+        }
+      }
+    }
+
+    try {
+      this.verifyUser( Param.session.get( ) );
+    } catch ( NoSuchFieldException e ) {
+      LOG.debug( e, e );
+      throw new RuntimeException( e );
+    }
+    Date startTime = this.parseTime( Param.startTime );
+    Date endTime = this.parseTime( Param.endTime );
+    for ( Param p : Param.values( ) ) {
+      try {
+        LOG.debug( String.format( "REPORT: %10.10s=%s", p.name(), p.get( ) ) );
+      } catch ( NoSuchFieldException e1 ) {
+        LOG.debug( String.format( "REPORT: %10.10s=%s", p.name(), e1.getMessage( ) ) );
+      }
+    }    
+    this.exportReport( req, res );
+  }
+
+  private void exportReport( HttpServletRequest req, HttpServletResponse res ) {
+    try {
+      Type reportType = Type.valueOf( Param.type.get( ) );    
+      try {
+        Boolean doFlush = this.doFlush( );
+        final JRExporter exporter = reportType.setup( req, res, Param.name.get( ) );
+        ReportCache reportCache = getReportManager( Param.name.get( ), doFlush );
+        JasperPrint jasperPrint = reportCache.getPendingPrint( );
+        exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
+        exporter.exportReport( );
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
+        res.setContentType( "text/plain" );
+        LOG.error( "Could not create the report stream " + ex.getMessage( ) + " " + ex.getLocalizedMessage( ) );
+        ex.printStackTrace( res.getWriter( ) );
+      } finally {
+        reportType.close( res );
+      }
+    } catch ( NoSuchFieldException e ) {
+      LOG.debug( e, e );
+      this.hasError( "Failed to generate report: " + e.getMessage( ), res );
+    } catch ( IOException e ) {
+      LOG.debug( e, e );
+      this.hasError( "Failed to generate report: " + e.getMessage( ), res );
+    }
+  }
+
+  private Date parseTime( Param p ) {
+    Date time = new Date();
+    try {
+      String str = p.get( );
+      time = new Date( Long.parseLong( str ) );
+    } catch ( IllegalArgumentException e ) {
+      LOG.debug( e, e );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }
+    return time;
+  }
+
+  private Boolean doFlush( ) {
+    try {
+      return Boolean.parseBoolean( Param.flush.get( ) );
+    } catch ( IllegalArgumentException e ) {
+      LOG.debug( e, e );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+    }
+    return Boolean.FALSE;
+  }
+  
+  private void verifyUser( String sessionId ) {
     SessionInfo session;
     try {
       session = EucalyptusWebBackendImpl.verifySession( sessionId );
@@ -147,48 +187,31 @@ public class Reports extends HttpServlet {
       try {
         user = Users.lookupUser( session.getUserId( ) );
       } catch ( Exception e ) {
-        hasError( "User does not exist", res );
-        return;
+        throw new RuntimeException( "User does not exist" );
       }
       if ( !user.isAdministrator( ) ) {
-        hasError( "Only administrators can view reports.", res );
-        return;
+        throw new RuntimeException( "Only administrators can view reports." );
       }
     } catch ( SerializableException e1 ) {
-      LOG.debug( e1, e1 );
-      hasError( "Error obtaining session info.", res );
-      return;
+      throw new RuntimeException( "Error obtaining session info." );
     }
-    LOG.debug( "Got request for " + name + " page number " + pageStr + " of type " + type + " flush=" + doFlush );
-    Type reportType = Type.valueOf( type );
-    final JRExporter exporter = reportType.setup( req, res, name );
-    try {
-      ReportCache reportCache = getReportManager( name, doFlush );
-      JasperPrint jasperPrint = reportCache.getPendingPrint( );
-      exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
-      exporter.exportReport( );
-    } catch ( Throwable ex ) {
-      LOG.error( ex, ex );
-      res.setContentType( "text/plain" );
-      LOG.error( "Could not create the report stream " + ex.getMessage( ) + " " + ex.getLocalizedMessage( ) );
-      ex.printStackTrace( res.getWriter( ) );
-    } finally {
-      reportType.close( res );
-    }
+    session.setLastAccessed( System.currentTimeMillis( ) );
   }
   
   public static class ReportCache {
     private final long                timestamp;
     private final String              name;
     private final String              reportName;
+    private final String reportGroup;
     private Integer                   length;
     private final Future<JasperPrint> pendingPrint;
     private JasperPrint               jasperPrint = null;
     
-    public ReportCache( String name, String reportName, Future<JasperPrint> pendingPrint ) {
+    public ReportCache( String name, String reportName, String reportGroup, Future<JasperPrint> pendingPrint ) {
       this.timestamp = System.currentTimeMillis( ) / 1000;
       this.name = name;
       this.reportName = reportName;
+      this.reportGroup = reportGroup;
       this.pendingPrint = pendingPrint;
       this.length = 0;
       if ( this.pendingPrint.isDone( ) ) {
@@ -202,6 +225,10 @@ public class Reports extends HttpServlet {
       }
     }
     
+    public String getReportGroup( ) {
+      return this.reportGroup;
+    }
+
     @Override
     public int hashCode( ) {
       final int prime = 31;
@@ -324,7 +351,7 @@ public class Reports extends HttpServlet {
         if ( flush ) {
           pendingPrint.get( );
         }
-        reportCache.put( name, new ReportCache( name, jasperDesign.getName( ), pendingPrint ) );
+        reportCache.put( name, new ReportCache( name, jasperDesign.getName( ), jasperDesign.getProperty( "euca.report.group" ), pendingPrint ) );
       }
       return reportCache.get( name );
     } catch ( Throwable t ) {
@@ -358,6 +385,69 @@ public class Reports extends HttpServlet {
       response.getWriter( ).flush( );
     } catch ( IOException e ) {
       e.printStackTrace( );
+    }
+  }
+  
+  enum Type {
+    pdf {
+      @Override
+      public JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException {
+        res.setContentType( "application/pdf" );
+        res.setHeader( "Content-Disposition", "file; filename=" + name + ".pdf" );
+        JRExporter exporter = new JRPdfExporter( );
+        exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
+        return exporter;
+      }
+    },
+    csv {
+      @Override
+      public JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException {
+        res.setContentType( "text/plain" );
+        res.setHeader( "Content-Disposition", "file; filename=" + name + ".csv" );
+        JRExporter exporter = new JRCsvExporter( );
+        exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
+        return exporter;
+      }
+    },
+    html {
+      @Override
+      public JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException {
+        PrintWriter out = res.getWriter( );
+        res.setContentType( "text/html" );
+        JRExporter exporter = new JRHtmlExporter( );
+        exporter.setParameter( new JRExporterParameter( "EUCA_WWW_DIR" ) {}, "/" );
+        String pageStr = Param.page.get( request );
+        if ( pageStr != null ) {
+          try {
+            Integer currentPage = new Integer( pageStr );
+            exporter.setParameter( JRExporterParameter.PAGE_INDEX, currentPage );
+          } catch ( NumberFormatException e ) {}
+        }
+        exporter.setParameter( JRExporterParameter.OUTPUT_WRITER, res.getWriter( ) );
+        exporter.setParameter( JRHtmlExporterParameter.IS_REMOVE_EMPTY_SPACE_BETWEEN_ROWS, Boolean.TRUE );
+        exporter.setParameter( JRHtmlExporterParameter.IS_USING_IMAGES_TO_ALIGN, Boolean.FALSE );
+        return exporter;
+      }
+      
+      @Override
+      public void close( HttpServletResponse res ) throws IOException {
+        res.getWriter( ).close( );
+      }
+    },
+    xls {
+      @Override
+      public JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException {
+        res.setContentType( "application/vnd.ms-excel" );
+        res.setHeader( "Content-Disposition", "file; filename=" + name + ".xls" );
+        JRExporter exporter = new JRXlsExporter( );
+        exporter.setParameter( JRExporterParameter.OUTPUT_STREAM, res.getOutputStream( ) );
+        return exporter;
+      }
+    };
+    public abstract JRExporter setup( HttpServletRequest request, HttpServletResponse res, String name ) throws IOException;
+    
+    public void close( HttpServletResponse res ) throws IOException {
+      res.getOutputStream( ).close( );
     }
   }
   

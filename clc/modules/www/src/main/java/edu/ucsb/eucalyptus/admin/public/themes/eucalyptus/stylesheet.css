@@ -100,11 +100,18 @@ button {
 }
 
 .euca-tab-contents {
-	vertical-align: middle;
-	padding-left: 20px;
-	padding-right: 20px;
-	margin-top: 15px;
-	width: 100%;
+  vertical-align: middle;
+  padding-left: 20px;
+  padding-right: 20px;
+  margin-top: 15px;
+  width: 100%;
+}
+.acct-tab-contents {
+  vertical-align: top;
+  padding-left: 00px;
+  padding-right: 20px;
+  margin-top: 15px;
+  width: 100%;
 }
 
 .euca-message-bar {
