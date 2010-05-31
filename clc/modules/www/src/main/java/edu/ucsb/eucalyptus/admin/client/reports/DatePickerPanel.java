@@ -21,7 +21,9 @@ public class DatePickerPanel extends HorizontalPanel {
     this.ensureDebugId( "dateRange" + labelText );
     this.setHorizontalAlignment( HorizontalPanel.ALIGN_CENTER );
     this.setWidth( "100%" );
-    this.labelText = new HTML( labelText );
+    this.labelText = new HTML( labelText ) {{
+      setStyleName( "acct-HTML" );
+    }};
     this.setCellHorizontalAlignment( this.labelText, HorizontalPanel.ALIGN_LEFT );
     DatePicker datePicker = new DatePicker( ) {
       {
@@ -43,6 +45,7 @@ public class DatePickerPanel extends HorizontalPanel {
     this.add( this.labelText );
     this.setCellHorizontalAlignment( this.labelText, HorizontalPanel.ALIGN_RIGHT );
     this.setCellVerticalAlignment( this.labelText, HorizontalPanel.ALIGN_MIDDLE );
+    this.setCellWidth( this.labelText, "100%" );
     this.add( this.dateBox );
     this.setCellHorizontalAlignment( this.dateBox, HorizontalPanel.ALIGN_RIGHT );
     this.setCellVerticalAlignment( this.dateBox, HorizontalPanel.ALIGN_MIDDLE );

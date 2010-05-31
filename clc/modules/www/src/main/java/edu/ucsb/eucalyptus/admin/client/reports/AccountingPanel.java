@@ -1,8 +1,10 @@
 package edu.ucsb.eucalyptus.admin.client.reports;
 
 import com.google.gwt.user.client.ui.DockPanel;
+import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.Widget;
 import edu.ucsb.eucalyptus.admin.client.AccountingControl;
 import edu.ucsb.eucalyptus.admin.client.util.Observer;
 
@@ -22,24 +24,24 @@ public class AccountingPanel extends DockPanel implements Observer {
       {
         ensureDebugId( "pagingPanel" );
         setHorizontalAlignment( HorizontalPanel.ALIGN_CENTER );
-        setVerticalAlignment( HorizontalPanel.ALIGN_TOP );
-        setStyleName( "acct-pager" );
+        setVerticalAlignment( HorizontalPanel.ALIGN_MIDDLE );
+        setStyleName( "acct-ReportControl" );
       }
     };
     this.dateRange = new DateRange( controller ) {
       {
         ensureDebugId( "dateRange" );
         setHorizontalAlignment( HorizontalPanel.ALIGN_CENTER );
-        setVerticalAlignment( HorizontalPanel.ALIGN_TOP );
-        setStyleName( "acct-date-picker" );
+        setVerticalAlignment( HorizontalPanel.ALIGN_MIDDLE );
+        setStyleName( "acct-ReportControl" );
       }
     };
     this.exportPanel = new HorizontalPanel( ) {
       {
         ensureDebugId( "exportPanel" );
         setHorizontalAlignment( HorizontalPanel.ALIGN_CENTER );
-        setVerticalAlignment( HorizontalPanel.ALIGN_TOP );
-        setStyleName( "acct-exporter" );
+        setVerticalAlignment( HorizontalPanel.ALIGN_MIDDLE );
+        setStyleName( "acct-ReportControl" );
       }
     };
     this.reportList = new ReportList( this.controller );
@@ -77,8 +79,17 @@ public class AccountingPanel extends DockPanel implements Observer {
     VerticalPanel leftPane = new VerticalPanel( ) {
       {
         setVerticalAlignment( VerticalPanel.ALIGN_TOP );
+        add( new HTML( "Change Page" ) {{
+          setStyleName( "acct-ReportControlHeader" );
+        }} );
         add( AccountingPanel.this.pagingPanel );
+        add( new HTML( "Export Report" ) {{
+          setStyleName( "acct-ReportControlHeader" );
+        }} );
         add( AccountingPanel.this.exportPanel );
+        add( new HTML( "Change Time Period" ) {{
+          setStyleName( "acct-ReportControlHeader" );
+        }} );
         add( AccountingPanel.this.dateRange );
         add( AccountingPanel.this.reportList );
         setCellHeight( AccountingPanel.this.reportList, "100%" );

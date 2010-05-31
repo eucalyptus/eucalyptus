@@ -22,6 +22,7 @@ public class XHTML {
         };
         add( headerText );
         setCellHorizontalAlignment( headerText, ALIGN_CENTER );
+        setCellWidth( headerText, "100%" );
       }
     }.getElement( ).getString( );
   }

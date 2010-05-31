@@ -35,7 +35,7 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     public static final String ACCT_REPORT_BUTTON         = "acct-Button-Report";
     public static final String ACCT_REPORT_CURRENT_BUTTON = "acct-Button-Report-Active";
     public static final String DISPLAY_BAR_STYLE          = STACK_HEADER_STYLE;
-    public static final String ACCT_REPORT_PAGE_TEXTBOX   = "acct-ReportPageNum";
+    public static final String ACCT_REPORT_PAGE_TEXTBOX   = "euca-noop";
     
     @NotStrict
     @Source( "edu/ucsb/eucalyptus/admin/public/themes/active/accounting.css" )

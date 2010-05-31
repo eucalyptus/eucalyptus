@@ -52,7 +52,14 @@ public class ReportList extends DecoratedStackPanel implements Observer {
   
   @Override
   public void update( ) {
-    for( String group : this.groupMap.keySet( ) ) {
+    for( final String group : this.controller.getGroupMap( ).keySet( ) ) {
+      if( !this.groupMap.containsKey( group ) ) {
+        this.groupMap.put( group, new VerticalPanel( ){
+          {
+            ensureDebugId( group + "Reports" );
+          }
+        } );
+      }
       VerticalPanel groupPanel = this.groupMap.get( group );
       groupPanel.clear( );
       groupPanel.setStyleName( AccountingControl.RESOURCES.REPORT_BAR_STYLE );
