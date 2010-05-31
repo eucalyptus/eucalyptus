@@ -96,7 +96,6 @@ class UpgradeEEE1EEE2 extends AbstractUpgradeScript {
 	private Sql getConnection(String contextName) {
 		try {
 			Sql conn = StandalonePersistence.getConnection(contextName);
-			LOG.info("Getting context: " + contextName);
 			return conn;
 		} catch (SQLException e) {
 			LOG.error(e);
@@ -159,7 +158,7 @@ class UpgradeEEE1EEE2 extends AbstractUpgradeScript {
 						}
 					}
 				}
-				LOG.info("Upgraded: " + dest.getClass().getName());
+				LOG.debug("Upgraded: " + dest.getClass().getName());
 				db.add(dest);
 			}
 			db.commit();
@@ -226,9 +225,9 @@ class UpgradeEEE1EEE2 extends AbstractUpgradeScript {
 					}
 				}
 			}
-			if(setterMap.containsKey(column)) {
+			/*if(setterMap.containsKey(column)) {
 				LOG.info(column + " is set by: " + setterMap.get(column).getName());
-			} 
+			}*/ 
 		}
 	}
 

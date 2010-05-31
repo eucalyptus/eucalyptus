@@ -96,7 +96,6 @@ class Upgrade162eee extends AbstractUpgradeScript {
 	private Sql getConnection(String contextName) {
 		try {
 			Sql conn = StandalonePersistence.getConnection(contextName);
-			LOG.info("Getting context: " + contextName);
 			return conn;
 		} catch (SQLException e) {
 			LOG.error(e);
@@ -159,7 +158,7 @@ class Upgrade162eee extends AbstractUpgradeScript {
 						}
 					}
 				}
-				LOG.info("Upgraded: " + dest.getClass().getName());
+				LOG.debug("Upgraded: " + dest.getClass().getName());
 				db.add(dest);
 			}
 			db.commit();
@@ -192,11 +191,11 @@ class Upgrade162eee extends AbstractUpgradeScript {
 						break;
 					superClass = superClass.getSuperclass();
 				}
-				for (String column : columnNames) {
+				/*for (String column : columnNames) {
 					if(!setterMap.containsKey(column)) {
 						LOG.warn("No corresponding field for column: " + column + " found");
 					}
-				}
+				}*/
 			}
 		} catch (SQLException e) {
 			LOG.error(e);
@@ -226,9 +225,9 @@ class Upgrade162eee extends AbstractUpgradeScript {
 					}
 				}
 			}
-			if(setterMap.containsKey(column)) {
-				LOG.info(column + " is set by: " + setterMap.get(column).getName());
-			} 
+			/*if(setterMap.containsKey(column)) {
+				LOG.debug(column + " is set by: " + setterMap.get(column).getName());
+			}*/ 
 		}
 	}
 
