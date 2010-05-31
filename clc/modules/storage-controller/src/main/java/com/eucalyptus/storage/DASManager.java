@@ -363,7 +363,7 @@ public class DASManager implements LogicalStorageManager {
 		} else {
 			lvmVolumeInfo = new ISCSIVolumeInfo();
 		}
-
+		volumeManager.finish();
 		//create file and attach to loopback device
 		try {
 			//create logical volume
@@ -381,14 +381,15 @@ public class DASManager implements LogicalStorageManager {
 			lvmVolumeInfo.setLvName(lvName);
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize(size);
+			volumeManager = new VolumeEntityWrapperManager();
+			volumeManager.add(lvmVolumeInfo);
+			volumeManager.finish();
 		} catch(ExecutionException ex) {
 			String error = "Unable to run command: " + ex.getMessage();
 			volumeManager.abort();
 			LOG.error(error);
 			throw new EucalyptusCloudException(error);
 		}
-		volumeManager.add(lvmVolumeInfo);
-		volumeManager.finish();
 	}
 
 	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException {
@@ -401,15 +402,18 @@ public class DASManager implements LogicalStorageManager {
 			if(status.equals(StorageProperties.Status.available.toString())) {
 				String lvName = "lv-" + Hashes.getRandom(4);
 				LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
+				String snapId = foundSnapshotInfo.getVolumeId();
+				String loFileName = foundSnapshotInfo.getLoFileName();
+				volumeManager.finish();
 				try {
-					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + foundSnapshotInfo.getVolumeId());
+					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
 					assert(snapshotFile.exists());
 					size = (int)(snapshotFile.length() / StorageProperties.GB);
 					//create physical volume, volume group and logical volume
 					createLogicalVolume(lvName, size);
 					//duplicate snapshot volume
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + lvName;
-					duplicateLogicalVolume(foundSnapshotInfo.getLoFileName(), absoluteLVName);
+					duplicateLogicalVolume(loFileName, absoluteLVName);
 					//export logical volume
 					try {
 						volumeManager.exportVolume(lvmVolumeInfo, volumeGroup, lvName);
@@ -421,6 +425,7 @@ public class DASManager implements LogicalStorageManager {
 					lvmVolumeInfo.setLvName(lvName);
 					lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 					lvmVolumeInfo.setSize(size);
+					volumeManager = new VolumeEntityWrapperManager();
 					volumeManager.add(lvmVolumeInfo);
 					volumeManager.finish();
 				}  catch(ExecutionException ex) {
@@ -498,6 +503,8 @@ public class DASManager implements LogicalStorageManager {
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + foundLVMVolumeInfo.getLvName();
 
 			int size = foundLVMVolumeInfo.getSize();
+			volumeManager.finish();
+			volumeManager = null;
 			try {
 				//create physical volume, volume group and logical volume
 				String returnValue = createSnapshotLogicalVolume(absoluteLVName, lvName, size);
@@ -516,11 +523,13 @@ public class DASManager implements LogicalStorageManager {
 				snapshotInfo.setLoFileName(snapRawFileName);
 				snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 				snapshotInfo.setSize(size);
+				volumeManager = new VolumeEntityWrapperManager();
 				volumeManager.add(snapshotInfo);
 				returnValues.add(snapRawFileName);
 				returnValues.add(String.valueOf(size * WalrusProperties.G));
 			} catch(ExecutionException ex) {
-				volumeManager.abort();
+				if(volumeManager != null)
+					volumeManager.abort();
 				String error = "Unable to run command: " + ex.getMessage();
 				LOG.error(error);
 				throw new EucalyptusCloudException(error);
