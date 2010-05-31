@@ -55,6 +55,13 @@
 		<field name="imageMachine" class="java.lang.Integer"/>
 		<field name="imageRamdisk" class="java.lang.Integer"/>
 	</subDataset>
+	<subDataset name="Table Dataset 1_1">
+		<field name="imageCount" class="java.lang.Integer"/>
+		<field name="userName" class="java.lang.String"/>
+		<field name="imageKernel" class="java.lang.Integer"/>
+		<field name="imageMachine" class="java.lang.Integer"/>
+		<field name="imageRamdisk" class="java.lang.Integer"/>
+	</subDataset>
 	<queryString>
 		<![CDATA[]]>
 	</queryString>
@@ -291,7 +298,7 @@
 			<componentElement>
 				<reportElement key="table" style="table" x="0" y="0" width="984" height="50"/>
 				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
-					<datasetRun subDataset="Table Dataset 1">
+					<datasetRun subDataset="Table Dataset 1_1">
 						<dataSourceExpression><![CDATA[$P{REPORT_DATA_SOURCE}]]></dataSourceExpression>
 					</datasetRun>
 					<jr:column width="80">
