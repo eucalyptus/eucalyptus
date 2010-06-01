@@ -148,7 +148,7 @@ public class Reports extends HttpServlet {
           out.println( "Sending request to: " + c.getUri( ) );
           try {
             NodeLogInfo logInfo = c.getLastLog( );
-            if ( logInfo != null && logInfo.getCcLog( ) != null ) {
+            if ( logInfo != null && logInfo.getCcLog( ) != null && !"".equals( logInfo.getCcLog( ) ) ) {
               String log = new String( Base64.decode( logInfo.getCcLog( ) ) );
               String printLog = (log.length( )>1024*64)?log.substring( log.length() - 1024*64 ):log;
               out.write( printLog );
@@ -166,7 +166,7 @@ public class Reports extends HttpServlet {
           out.println( "Sending request to: " + host );
           try {
             NodeLogInfo logInfo = c.getNodeLog( host );
-            if ( logInfo != null && logInfo.getCcLog( ) != null ) {
+            if ( logInfo != null && logInfo.getCcLog( ) != null && !"".equals( logInfo.getCcLog( ) ) ) {
               String log = new String( Base64.decode( logInfo.getCcLog( ) ) );
               String printLog = (log.length( )>1024*64)?log.substring( log.length() - 1024*64 ):log;
               out.write( printLog );
@@ -490,6 +490,7 @@ public class Reports extends HttpServlet {
         exporter.setParameter( JRExporterParameter.OUTPUT_WRITER, res.getWriter( ) );
         exporter.setParameter( JRHtmlExporterParameter.IS_REMOVE_EMPTY_SPACE_BETWEEN_ROWS, Boolean.TRUE );
         exporter.setParameter( JRHtmlExporterParameter.IS_USING_IMAGES_TO_ALIGN, Boolean.FALSE );
+        exporter.setParameter( JRHtmlExporterParameter.IGNORE_PAGE_MARGINS, Boolean.TRUE );
         return exporter;
       }
       
