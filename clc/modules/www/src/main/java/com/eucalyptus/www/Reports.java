@@ -187,7 +187,7 @@ public class Reports extends HttpServlet {
         Boolean doFlush = this.doFlush( );
         final JRExporter exporter = reportType.setup( req, res, Param.name.get( req ) );
         ReportCache reportCache = getReportManager( Param.name.get( req ), doFlush );
-        JasperPrint jasperPrint = reportCache.getJasperPrint( );
+        JasperPrint jasperPrint = reportCache.getJasperPrint( req );
         exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
         //        exporter.setParameter( JRExporterParameter.PAGE_INDEX, new Integer( Param.page.get( ) ) );
         exporter.exportReport( );
@@ -264,7 +264,7 @@ public class Reports extends HttpServlet {
     private final JasperDesign    jasperDesign;
     private final JasperReport    jasperReport;
     
-    private Callable<JasperPrint> async;
+//    private Callable<JasperPrint> async;
     
     public ReportCache( String name, JasperDesign jasperDesign ) throws JRException {
       this.timestamp = System.currentTimeMillis( ) / 1000;
@@ -272,20 +272,20 @@ public class Reports extends HttpServlet {
       this.jasperDesign = jasperDesign;
       this.reportGroup = jasperDesign.getProperty( "euca.report.group" );
       this.name = name;
-      this.async = new Callable<JasperPrint>( ) {
-        @Override
-        public JasperPrint call( ) throws Exception {
-          try {
-            ReportCache.this.jasperPrint = prepareReport( ReportCache.this );
-            return ReportCache.this.jasperPrint;
-          } catch ( Exception e ) {
-            LOG.error( e, e );
-            throw e;
-          } finally {
-            ReportCache.this.pending.set( false );
-          }
-        }
-      };
+//      this.async = new Callable<JasperPrint>( ) {
+//        @Override
+//        public JasperPrint call( ) throws Exception {
+//          try {
+//            ReportCache.this.jasperPrint = prepareReport( ReportCache.this );
+//            return ReportCache.this.jasperPrint;
+//          } catch ( Exception e ) {
+//            LOG.error( e, e );
+//            throw e;
+//          } finally {
+//            ReportCache.this.pending.set( false );
+//          }
+//        }
+//      };
       try {
         this.jasperReport = JasperCompileManager.compileReport( jasperDesign );
       } catch ( JRException e1 ) {
@@ -330,27 +330,12 @@ public class Reports extends HttpServlet {
       return this.name;
     }
     
-    public void rerun( ) {
-      try {
-        if( this.pending.compareAndSet( false, true ) ) {
-//          this.pendingPrint = Threads.lookup( "reporting" ).limitTo( 1 ).getPool( ).submit( this.async );
-          this.jasperPrint = this.async.call();
-          
-        }
-      } catch ( Exception e ) {
-        LOG.debug( e, e );
-      }
-    }
-    
     public boolean isDone( ) {
       return this.jasperPrint != null || ( !this.pending.get() && this.pendingPrint != null && this.pendingPrint.isDone( ) );
     }
     
-    public JasperPrint getJasperPrint( ) {
-      if( this.jasperPrint == null ) {
-        this.rerun( );
-      }
-      return this.jasperPrint;
+    public JasperPrint getJasperPrint(HttpServletRequest req ) throws JRException, SQLException, IOException {
+      return this.jasperPrint = prepareReport( this, req );
     }
     
     public boolean isExpired( ) {
@@ -375,9 +360,7 @@ public class Reports extends HttpServlet {
       if ( !flush && reportCache.containsKey( name ) && !reportCache.get( name ).isExpired( ) ) {
         return reportCache.get( name );
       } else if ( reportCache.containsKey( name ) && ( reportCache.get( name ).isExpired( ) || flush ) ) {
-        ReportCache r = reportCache.get( name );
-        r.rerun( );
-        return r;
+        return reportCache.get( name );
       } else {
         ReportCache r = reportCache.get( name );
         final JasperDesign jasperDesign = JRXmlLoader.load( SubDirectory.REPORTS.toString( ) + File.separator + name + ".jrxml" );
@@ -390,13 +373,16 @@ public class Reports extends HttpServlet {
     }
   }
   
-  private static JasperPrint prepareReport( final ReportCache reportCache ) throws JRException, SQLException, IOException {
+  private static JasperPrint r( final ReportCache reportCache, final HttpServletRequest req ) throws JRException, SQLException, IOException {
     JasperPrint jasperPrint;
     final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + reportCache.getName( ) + ".groovy" ).exists( ) );
     if ( jdbc ) {
       String url = String.format( "jdbc:%s_%s", Component.db.getUri( ).toString( ), "records" );
       Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
-      jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), null, jdbcConnection );
+      jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
+        put( "EUCA_NOT_BEFORE", Param.start.get( req ) );
+        put( "EUCA_NOT_AFTER", Param.end.get( req ) );
+      }}, jdbcConnection );
     } else {
       FileReader fileReader = null;
       try {
@@ -405,6 +391,8 @@ public class Reports extends HttpServlet {
         Binding binding = new Binding( new HashMap( ) {
           {
             put( "results", results );
+            put( "notBefore", Param.start.get( req ) );
+            put( "notAfter", Param.end.get( req ) );
           }
         } );
         try {
