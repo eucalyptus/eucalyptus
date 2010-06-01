@@ -513,7 +513,7 @@ public class SANManager implements LogicalStorageManager {
 			} finally {
 				connectionManager.disconnectTarget(iqn);
 			}
-			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(volumeId, iqn, size);
+			EquallogicVolumeInfo volumeInfo = new EquallogicVolumeInfo(snapshotId, iqn, size);
 			volumeInfo.setSnapshotOf(volumeId);
 			db = StorageProperties.getEntityWrapper();
 			db.add(volumeInfo);

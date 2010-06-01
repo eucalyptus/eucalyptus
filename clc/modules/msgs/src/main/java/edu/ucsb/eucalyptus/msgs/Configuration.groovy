@@ -145,7 +145,8 @@ public class DeregisterVMwareBrokerResponseType extends DeregisterComponentRespo
 public class DescribeVMwareBrokersType extends DescribeComponentsType {}
 public class DescribeVMwareBrokersResponseType extends DescribeComponentsResponseType {}
 
-
+public class GetComponentLogsType extends DescribeComponentsType {}
+public class GetComponentLogsResponseType extends DescribeComponentsResponseType {}
 
 
 

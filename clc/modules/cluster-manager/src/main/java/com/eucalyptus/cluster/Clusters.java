@@ -107,5 +107,5 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       hostOrdered.add( c.getConfiguration( ).getHostName( ) );
     return Lists.newArrayList( hostOrdered );
   }
-    
+  
 }

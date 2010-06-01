@@ -92,6 +92,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
@@ -1146,15 +1147,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     List<ReportInfo> reports = new ArrayList<ReportInfo>();
     for( Component c : Components.list( ) ) {
       for( Service s : c.getServices( ) ) {
-        if( !s.getServiceConfiguration( ).getComponent( ).isSingleton( ) || com.eucalyptus.bootstrap.Component.walrus.equals( s.getServiceConfiguration( ).getComponent( ) ) ) {
-          reports.add( new ReportInfo( "service", s.getServiceConfiguration( ).getName( )+"-"+s.getServiceConfiguration( ).getComponent( ).name( ), "service-"+s.getServiceConfiguration( ).getComponent( ).name( ) + "@" + s.getServiceConfiguration( ).getHostName( ), 1 ) );
-          if( com.eucalyptus.bootstrap.Component.cluster.equals( s.getServiceConfiguration( ).getComponent( ) ) ) {
-            Cluster cluster = Clusters.getInstance( ).lookup( s.getServiceConfiguration( ).getName( ) );
-            for( String nodeTag : cluster.getNodeTags( ) ) {
-              reports.add( new ReportInfo( "service", s.getServiceConfiguration( ).getName( ) + "-nc", "service-nc@"+URI.create( nodeTag ).getHost( ), 1 ) );
-            }
-          }
-        }
+        reports.addAll( EucalyptusWebBackendImpl.getServiceLogInfo( s ) );
       }
     }
     for( File report : SubDirectory.REPORTS.getFile( ).listFiles( new FilenameFilter() {
@@ -1165,8 +1158,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
       String reportName = report.getName( ).replaceAll( ".jrxml", "" );
       try {
         ReportCache reportCache = Reports.getReportManager( reportName, false );
-        Integer lastPage = reportCache.getLength( );
-        reports.add( new ReportInfo( reportCache.getReportGroup( ), reportCache.getReportName( ), reportName, lastPage ) );
+        reports.add( new ReportInfo( reportCache.getReportGroup( ), reportCache.getReportName( ), reportName, 1 ) );
       }
       catch ( Throwable e ) {
         LOG.error( e, e );
@@ -1186,5 +1178,28 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     }
   }
 
-	
+  private static String SERVICE_GROUP = "service";
+  public static List<ReportInfo> getServiceLogInfo( Service s ) {
+    List<ReportInfo> reports = new ArrayList<ReportInfo>();
+    ServiceConfiguration conf = s.getServiceConfiguration( );
+    com.eucalyptus.bootstrap.Component c = conf.getComponent( );
+    if( c.walrus.equals( c ) ) {
+      String serviceFq = "Walrus @ "+conf.getHostName( );
+      reports.add( new ReportInfo( SERVICE_GROUP, serviceFq, SERVICE_GROUP, 1, c.name( ), conf.getName( ), conf.getHostName( ) ) );
+    } else if( c.cluster.equals( c ) ) {
+      reports.add( new ReportInfo( SERVICE_GROUP, "CC @ "+conf.getHostName( ), SERVICE_GROUP, 1, c.name( ), conf.getName( ), conf.getHostName( ) ) );
+      Cluster cluster = Clusters.getInstance( ).lookup( s.getServiceConfiguration( ).getName( ) );
+      for( String nodeTag : cluster.getNodeTags( ) ) {
+        URI uri = URI.create( nodeTag );
+        reports.add( new ReportInfo( SERVICE_GROUP, "NC @ " + uri.getHost( ), SERVICE_GROUP, 1, "node", conf.getName( ), uri.getHost( ) ) );
+      }
+      try {
+        ServiceConfiguration scConfig = Configuration.getStorageControllerConfiguration( cluster.getName( ) );
+        reports.add( new ReportInfo( SERVICE_GROUP, "SC @ " + scConfig.getHostName( ), SERVICE_GROUP, 1, scConfig.getComponent( ).name( ), scConfig.getName( ), scConfig.getHostName( ) ) );        
+      } catch ( EucalyptusCloudException e ) {
+      }
+    }
+    return reports;
+  }
+
 }

@@ -7,13 +7,15 @@ include ../Makedefs
 STORAGE_LIBS = -lcurl -lssl
 IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_bundle.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o helpers.o
 VDDK_FLAGS = -L${VDDK_HOME}/lib -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
+IMAGER_WRAPPER=euca_imager
+IMAGER=_euca_imager
 
-all: storage.o storage-windows.o walrus.o Wclient euca_imager
+all: storage.o storage-windows.o walrus.o Wclient $(IMAGER)
 
 build: all
 
-euca_imager: Makefile imager.c imager.h cmd.h $(IMAGER_LIBS)
-	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o euca_imager $(IMAGER_LIBS) $(VDDK_FLAGS) -lcurl -lrt -lssl
+$(IMAGER): Makefile imager.c imager.h cmd.h $(IMAGER_LIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o $(IMAGER) $(IMAGER_LIBS) $(VDDK_FLAGS) -lcurl -lrt -lssl
 
 Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
 	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o http.o $(STORAGE_LIBS)
@@ -46,14 +48,16 @@ test_url: http.c
 	make -C ../util
 
 clean:
-	rm -rf *~ *.o Wclient euca_imager test test_url
+	rm -rf *~ *.o Wclient $(IMAGER) test test_url
 
 distclean:
 
-install:
-	@$(INSTALL) -m 0755 euca_imager $(DESTDIR)$(usrdir)/lib/eucalyptus
+install: $(IMAGER) $(IMAGER_WRAPPER)
+	@$(INSTALL) -m 0755 $(IMAGER_WRAPPER) $(DESTDIR)$(usrdir)/lib/eucalyptus
+	@$(INSTALL) -m 0755 $(IMAGER) $(DESTDIR)$(usrdir)/lib/eucalyptus
 deploy:
 
 uninstall:
-	@$(RM) -f $(usrdir)/lib/eucalyptus/euca_imager
+	@$(RM) -f $(usrdir)/lib/eucalyptus/$(IMAGER_WRAPPER)
+	@$(RM) -f $(usrdir)/lib/eucalyptus/$(IMAGER)
 

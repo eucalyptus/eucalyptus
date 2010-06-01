@@ -60,14 +60,14 @@ import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
 
-class Upgrade162eee extends AbstractUpgradeScript {
-	static final String FROM_VERSION = "1.6.2";
+class UpgradeEEE1EEE2 extends AbstractUpgradeScript {
+	static final String FROM_VERSION = "1.6-devel-vmware-broker";
 	static final String TO_VERSION = "eee-2.0.0";
-	private static Logger LOG = Logger.getLogger( Upgrade162eee.class );
+	private static Logger LOG = Logger.getLogger( UpgradeEEE1EEE2.class );
 	private static List<Class> entities = new ArrayList<Class>();
 	private static Map<String, Class> entityMap = new HashMap<String, Class>();
 
-	public Upgrade162eee() {
+	public UpgradeEEE1EEE2() {
 		super(1);		
 	}
 
@@ -191,11 +191,11 @@ class Upgrade162eee extends AbstractUpgradeScript {
 						break;
 					superClass = superClass.getSuperclass();
 				}
-				/*for (String column : columnNames) {
+				for (String column : columnNames) {
 					if(!setterMap.containsKey(column)) {
 						LOG.warn("No corresponding field for column: " + column + " found");
 					}
-				}*/
+				}
 			}
 		} catch (SQLException e) {
 			LOG.error(e);
@@ -226,7 +226,7 @@ class Upgrade162eee extends AbstractUpgradeScript {
 				}
 			}
 			/*if(setterMap.containsKey(column)) {
-				LOG.debug(column + " is set by: " + setterMap.get(column).getName());
+				LOG.info(column + " is set by: " + setterMap.get(column).getName());
 			}*/ 
 		}
 	}
@@ -238,10 +238,6 @@ class Upgrade162eee extends AbstractUpgradeScript {
 				entityMap.put(annot.name(), entity);
 			}
 		}
-		//special cases
-		entityMap.put("SNAPSHOT", Snapshot.class);
-		entityMap.put("VOLUME", Volume.class);
-		entityMap.put("STORAGE_INFO", DirectStorageInfo.class);
 	}
 
 	static {
@@ -256,16 +252,6 @@ class Upgrade162eee extends AbstractUpgradeScript {
 		entities.add(WalrusSnapshotInfo.class);
 		entities.add(WalrusInfo.class);
 		entities.add(WalrusStatsInfo.class);
-
-		entities.add(VolumeInfo.class);
-		entities.add(SnapshotInfo.class);
-		entities.add(AOEMetaInfo.class);
-		entities.add(AOEVolumeInfo.class);
-		entities.add(ISCSIMetaInfo.class);
-		entities.add(ISCSIVolumeInfo.class);
-		entities.add(LVMVolumeInfo.class);
-		entities.add(StorageInfo.class);
-		entities.add(StorageStatsInfo.class);
 
 		entities.add(ARecordInfo.class);
 		entities.add(CNAMERecordInfo.class);

@@ -16,6 +16,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -36,12 +37,13 @@ import net.sf.jasperreports.engine.export.JRPdfExporter;
 import net.sf.jasperreports.engine.export.JRXlsExporter;
 import net.sf.jasperreports.engine.xml.JRXmlLoader;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.callback.LogDataCallback;
-import com.eucalyptus.cluster.callback.QueuedEventCallback;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -53,26 +55,25 @@ import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusManagement;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
 import edu.ucsb.eucalyptus.admin.server.SessionInfo;
-import edu.ucsb.eucalyptus.msgs.GetLogsResponseType;
-import edu.ucsb.eucalyptus.msgs.GetLogsType;
+import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import groovy.lang.Binding;
 import groovy.util.GroovyScriptEngine;
 
 @ConfigurableClass( root = "reporting", description = "Parameters controlling the generation of system reports." )
 public class Reports extends HttpServlet {
   @ConfigurableField( description = "The number of seconds which a generated report should be cached.", initial = "60" )
-  public static Integer REPORT_CACHE_SECS = 500;
+  public static Integer REPORT_CACHE_SECS = 1200;
   private static Logger LOG               = Logger.getLogger( Reports.class );
   
   enum Param {
-    name, type, session, page, flush(false), startTime(false), endTime(false);
-    private String  value = null;
+    name, type, session, /*page,*/flush( false ), start( false ), end( false );
+    private String  value    = null;
     private Boolean required = Boolean.TRUE;
     
     public Boolean isRequired( ) {
       return this.required;
     }
-
+    
     private Param( String value, Boolean required ) {
       this.value = value;
       this.required = required;
@@ -109,13 +110,13 @@ public class Reports extends HttpServlet {
       try {
         p.get( req );
       } catch ( IllegalArgumentException e ) {
-        if( p.isRequired( ) ) {
+        if ( p.isRequired( ) ) {
           LOG.debug( e, e );
           throw new RuntimeException( e );
         }
       }
     }
-
+    
     try {
       this.verifyUser( Param.session.get( ) );
     } catch ( NoSuchFieldException e ) {
@@ -123,51 +124,62 @@ public class Reports extends HttpServlet {
       throw new RuntimeException( e );
     }
     try {
-      if( Param.name.get().startsWith("service-" ) ) {
+      if ( Param.name.get( ).startsWith( "service-" ) ) {
         this.exportLogs( req, res );
       } else {
-        Date startTime = this.parseTime( Param.startTime );
-        Date endTime = this.parseTime( Param.endTime );
+        Date startTime = this.parseTime( Param.start );
+        Date endTime = this.parseTime( Param.end );
         for ( Param p : Param.values( ) ) {
           try {
-            LOG.debug( String.format( "REPORT: %10.10s=%s", p.name(), p.get( ) ) );
+            LOG.debug( String.format( "REPORT: %10.10s=%s", p.name( ), p.get( ) ) );
           } catch ( NoSuchFieldException e1 ) {
-            LOG.debug( String.format( "REPORT: %10.10s=%s", p.name(), e1.getMessage( ) ) );
+            LOG.debug( String.format( "REPORT: %10.10s=%s", p.name( ), e1.getMessage( ) ) );
           }
-        }    
+        }
         this.exportReport( req, res );
       }
     } catch ( NoSuchFieldException e ) {
       LOG.debug( e, e );
     }
   }
-
-  private void exportLogs( HttpServletRequest req, HttpServletResponse res )  {
+  
+  private void exportLogs( HttpServletRequest req, HttpServletResponse res ) {
     try {
       String serviceFq = Param.name.get( req ).replaceAll( "service-", "" );
       String type = serviceFq.replaceAll( "@.*", "" );
       String host = serviceFq.replaceAll( ".*@", "" );
-      LOG.debug( "LOG:  serviceFq=%s  type=%s  host=%s" );
-      PrintWriter out = res.getWriter( );
+      LOG.debug( String.format( "LOG:  serviceFq=%s  type=%s  host=%s", serviceFq, type, host ) );
+      final PrintWriter out = res.getWriter( );
       try {
         res.setContentType( "text/plain" );
-        for( ClusterConfiguration c : Configuration.getClusterConfigurations( ) ) {
+        for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) ) {
           out.println( "Looking for CC info: " + c.toString( ) );
-          if( c.getHostName( ).equals( host ) ) {
+          if ( c.getHostName( ).equals( host ) ) {
+            Cluster cluster = Clusters.getInstance( ).lookup( c.getName( ) );
             out.println( "Sending request to: " + c.toString( ) );
-            LogDataCallback cb = new LogDataCallback( );
-            GetLogsResponseType reply = cb.send( c.getName( ) );
-            out.println( "Reposnse: " + reply.getLogs( ) );
-            return;
+            try {
+              NodeLogInfo logInfo = cluster.getLastLog( );
+              if ( logInfo != null ) {
+                out.write( new String( Base64.decode( logInfo.getCcLog( ) ) ) );
+                out.flush( );
+              } else {
+                out.println( "ERROR getting log information for " + host );
+                out.println( logInfo.toString( ) );
+              }
+            } catch ( Exception e ) {
+              LOG.debug( e, e );
+              e.printStackTrace( out );
+            }
           }
         }
+        out.close( );
       } catch ( EucalyptusCloudException e ) {
         LOG.debug( e, e );
         e.printStackTrace( out );
+        out.close( );
       } catch ( Exception e ) {
         LOG.debug( e, e );
         e.printStackTrace( out );
-      } finally {
         out.close( );
       }
     } catch ( IllegalArgumentException e ) {
@@ -176,16 +188,17 @@ public class Reports extends HttpServlet {
       LOG.debug( e, e );
     }
   }
-
+  
   private void exportReport( HttpServletRequest req, HttpServletResponse res ) {
     try {
-      Type reportType = Type.valueOf( Param.type.get( ) );    
+      Type reportType = Type.valueOf( Param.type.get( ) );
       try {
         Boolean doFlush = this.doFlush( );
         final JRExporter exporter = reportType.setup( req, res, Param.name.get( ) );
-        ReportCache reportCache = getReportManager( Param.name.get( ), doFlush );
-        JasperPrint jasperPrint = reportCache.getPendingPrint( );
+        ReportCache reportCache = getReportManager( Param.name.get( req ), doFlush );
+        JasperPrint jasperPrint = reportCache.getJasperPrint( );
         exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
+        //        exporter.setParameter( JRExporterParameter.PAGE_INDEX, new Integer( Param.page.get( ) ) );
         exporter.exportReport( );
       } catch ( Throwable ex ) {
         LOG.error( ex, ex );
@@ -203,20 +216,22 @@ public class Reports extends HttpServlet {
       this.hasError( "Failed to generate report: " + e.getMessage( ), res );
     }
   }
-
+  
   private Date parseTime( Param p ) {
-    Date time = new Date();
+    Date time = new Date( );
     try {
       String str = p.get( );
       time = new Date( Long.parseLong( str ) );
     } catch ( IllegalArgumentException e ) {
-      LOG.debug( e, e );
+      LOG.error( e, e );
+    } catch ( NoSuchFieldException e ) {
+      LOG.error( e, e );
     } catch ( Exception e ) {
       LOG.debug( e, e );
     }
     return time;
   }
-
+  
   private Boolean doFlush( ) {
     try {
       return Boolean.parseBoolean( Param.flush.get( ) );
@@ -248,36 +263,50 @@ public class Reports extends HttpServlet {
   }
   
   public static class ReportCache {
-    private final long                timestamp;
-    private final String              name;
-    private final String              reportName;
-    private final String reportGroup;
-    private Integer                   length;
-    private final Future<JasperPrint> pendingPrint;
-    private JasperPrint               jasperPrint = null;
+    private final long            timestamp;
+    private final String          name;
+    private final String          reportName;
+    private final String          reportGroup;
+    private final AtomicBoolean         pending     = new AtomicBoolean( false );
+    private Future<JasperPrint>   pendingPrint;
+    private JasperPrint           jasperPrint = null;
+    private final JasperDesign    jasperDesign;
+    private final JasperReport    jasperReport;
     
-    public ReportCache( String name, String reportName, String reportGroup, Future<JasperPrint> pendingPrint ) {
+    private Callable<JasperPrint> async;
+    
+    public ReportCache( String name, JasperDesign jasperDesign ) throws JRException {
       this.timestamp = System.currentTimeMillis( ) / 1000;
+      this.reportName = jasperDesign.getName( );
+      this.jasperDesign = jasperDesign;
+      this.reportGroup = jasperDesign.getProperty( "euca.report.group" );
       this.name = name;
-      this.reportName = reportName;
-      this.reportGroup = reportGroup;
-      this.pendingPrint = pendingPrint;
-      this.length = 0;
-      if ( this.pendingPrint.isDone( ) ) {
-        try {
-          this.getPendingPrint( );
-        } catch ( ExecutionException e ) {
-          LOG.error( e, e );
-        } catch ( Exception e ) {
-          LOG.debug( e, e );
+      this.async = new Callable<JasperPrint>( ) {
+        @Override
+        public JasperPrint call( ) throws Exception {
+          try {
+            ReportCache.this.jasperPrint = prepareReport( ReportCache.this );
+            return ReportCache.this.jasperPrint;
+          } catch ( Exception e ) {
+            LOG.error( e, e );
+            throw e;
+          } finally {
+            ReportCache.this.pending.set( false );
+          }
         }
+      };
+      try {
+        this.jasperReport = JasperCompileManager.compileReport( jasperDesign );
+      } catch ( JRException e1 ) {
+        LOG.debug( e1, e1 );
+        throw e1;
       }
     }
     
     public String getReportGroup( ) {
       return this.reportGroup;
     }
-
+    
     @Override
     public int hashCode( ) {
       final int prime = 31;
@@ -310,44 +339,39 @@ public class Reports extends HttpServlet {
       return this.name;
     }
     
-    public Integer getLength( ) {
-      if ( this.pendingPrint.isDone( ) ) {
-        try {
-          this.getPendingPrint( );
-        } catch ( InterruptedException e ) {} catch ( ExecutionException e ) {}
+    public void rerun( ) {
+      try {
+        if( this.pending.compareAndSet( false, true ) ) {
+//          this.pendingPrint = Threads.lookup( "reporting" ).limitTo( 1 ).getPool( ).submit( this.async );
+          this.jasperPrint = this.pendingPrint.get( );
+          
+        }
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
       }
-      return this.jasperPrint != null ? this.jasperPrint.getPages( ).size( ) - 1 : 1;
     }
     
-    public JasperPrint getPendingPrint( ) throws InterruptedException, ExecutionException {
-      if( this.jasperPrint != null ) {
-        return this.jasperPrint;
-      } else {
-        try {
-          this.jasperPrint = this.pendingPrint.get( );
-          return this.jasperPrint;
-        } catch ( ExecutionException e ) {
-          LOG.error( e, e );
-          this.length = 0;
-          throw e;
-        } catch ( InterruptedException e ) {
-          this.length = 0;
-          throw e;
-        }
-      }
+    public boolean isDone( ) {
+      return this.jasperPrint != null || ( !this.pending.get() && this.pendingPrint != null && this.pendingPrint.isDone( ) );
     }
     
     public JasperPrint getJasperPrint( ) {
-      if ( this.pendingPrint.isDone( ) ) {
-        try {
-          this.getPendingPrint( );
-        } catch ( InterruptedException e ) {} catch ( ExecutionException e ) {}
+      if( this.jasperPrint == null ) {
+        this.rerun( );
       }
       return this.jasperPrint;
     }
     
     public boolean isExpired( ) {
       return ( System.currentTimeMillis( ) / 1000l ) - this.timestamp > REPORT_CACHE_SECS;
+    }
+    
+    public JasperDesign getJasperDesign( ) {
+      return this.jasperDesign;
+    }
+    
+    public JasperReport getJasperReport( ) {
+      return this.jasperReport;
     }
   }
   
@@ -357,63 +381,61 @@ public class Reports extends HttpServlet {
   
   public static ReportCache getReportManager( final String name, boolean flush ) throws JRException, SQLException {
     try {
-      final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + name + ".groovy" ).exists( ) );
       if ( !flush && reportCache.containsKey( name ) && !reportCache.get( name ).isExpired( ) ) {
         return reportCache.get( name );
+      } else if ( reportCache.containsKey( name ) && ( reportCache.get( name ).isExpired( ) || flush ) ) {
+        ReportCache r = reportCache.get( name );
+        r.rerun( );
+        return r;
       } else {
-        reportCache.remove( name );
+        ReportCache r = reportCache.get( name );
         final JasperDesign jasperDesign = JRXmlLoader.load( SubDirectory.REPORTS.toString( ) + File.separator + name + ".jrxml" );
-        Future<JasperPrint> pendingPrint = Threads.getThreadPool( "reporting" ).submit( new Callable<JasperPrint>( ) {
-          @Override
-          public JasperPrint call( ) throws Exception {
-            String url = String.format( "jdbc:%s_%s", Component.db.getUri( ).toString( ), "records" );
-            JasperReport jasperReport = JasperCompileManager.compileReport( jasperDesign );
-            JasperPrint jasperPrint;
-            if ( jdbc ) {
-              Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
-              jasperPrint = JasperFillManager.fillReport( jasperReport, null, jdbcConnection );
-            } else {
-              FileReader fileReader = null;
-              try {
-                final List results = new ArrayList( );
-                fileReader = new FileReader( SubDirectory.REPORTS + File.separator + name + ".groovy" );
-                Binding binding = new Binding( new HashMap( ) {
-                  {
-                    put( "results", results );
-                  }
-                } );
-                try {
-                  makeScriptEngine( ).run( name + ".groovy", binding );
-                } catch ( Exception e ) {
-                  LOG.debug( e, e );
-                }
-                JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
-                jasperPrint = JasperFillManager.fillReport( jasperReport, null, data );
-              } catch ( Throwable e ) {
-                LOG.debug( e, e );
-                throw new RuntimeException( e );
-              } finally {
-                if ( fileReader != null ) try {
-                  fileReader.close( );
-                } catch ( IOException e ) {
-                  LOG.error( e, e );
-                  throw e;
-                }
-              }
-            }
-            return jasperPrint;
-          }
-        } );
-        if ( flush ) {
-          pendingPrint.get( );
-        }
-        reportCache.put( name, new ReportCache( name, jasperDesign.getName( ), jasperDesign.getProperty( "euca.report.group" ), pendingPrint ) );
+        reportCache.put( name, new ReportCache( name, jasperDesign ) );
       }
       return reportCache.get( name );
     } catch ( Throwable t ) {
       LOG.error( t, t );
       throw new JRException( t );
     }
+  }
+  
+  private static JasperPrint prepareReport( final ReportCache reportCache ) throws JRException, SQLException, IOException {
+    JasperPrint jasperPrint;
+    final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + reportCache.getName( ) + ".groovy" ).exists( ) );
+    if ( jdbc ) {
+      String url = String.format( "jdbc:%s_%s", Component.db.getUri( ).toString( ), "records" );
+      Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
+      jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), null, jdbcConnection );
+    } else {
+      FileReader fileReader = null;
+      try {
+        final List results = new ArrayList( );
+        fileReader = new FileReader( SubDirectory.REPORTS + File.separator + reportCache.getName( ) + ".groovy" );
+        Binding binding = new Binding( new HashMap( ) {
+          {
+            put( "results", results );
+          }
+        } );
+        try {
+          makeScriptEngine( ).run( reportCache.getName( ) + ".groovy", binding );
+        } catch ( Exception e ) {
+          LOG.debug( e, e );
+        }
+        JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
+        jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), null, data );
+      } catch ( Throwable e ) {
+        LOG.debug( e, e );
+        throw new RuntimeException( e );
+      } finally {
+        if ( fileReader != null ) try {
+          fileReader.close( );
+        } catch ( IOException e ) {
+          LOG.error( e, e );
+          throw e;
+        }
+      }
+    }
+    return jasperPrint;
   }
   
   private static GroovyScriptEngine makeScriptEngine( ) {
@@ -472,13 +494,6 @@ public class Reports extends HttpServlet {
         res.setContentType( "text/html" );
         JRExporter exporter = new JRHtmlExporter( );
         exporter.setParameter( new JRExporterParameter( "EUCA_WWW_DIR" ) {}, "/" );
-        String pageStr = Param.page.get( request );
-        if ( pageStr != null ) {
-          try {
-            Integer currentPage = new Integer( pageStr );
-            exporter.setParameter( JRExporterParameter.PAGE_INDEX, currentPage );
-          } catch ( NumberFormatException e ) {}
-        }
         exporter.setParameter( JRExporterParameter.OUTPUT_WRITER, res.getWriter( ) );
         exporter.setParameter( JRHtmlExporterParameter.IS_REMOVE_EMPTY_SPACE_BETWEEN_ROWS, Boolean.TRUE );
         exporter.setParameter( JRHtmlExporterParameter.IS_USING_IMAGES_TO_ALIGN, Boolean.FALSE );

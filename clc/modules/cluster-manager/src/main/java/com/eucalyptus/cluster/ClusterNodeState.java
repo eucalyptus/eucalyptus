@@ -71,9 +71,12 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 
+import com.eucalyptus.cluster.callback.LogDataCallback;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
@@ -82,6 +85,7 @@ import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.records.EventRecord;
+import edu.ucsb.eucalyptus.msgs.GetLogsResponseType;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 

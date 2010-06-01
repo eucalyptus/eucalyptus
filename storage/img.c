@@ -30,7 +30,9 @@ int parse_img_spec (img_loc * loc, const char * str)
 #   define _SIZE 512
     char low [_SIZE];
     int i;
-    
+
+    bzero (loc, sizeof (img_loc)); // so all strings are null-terminated
+
     for (i=0; i<_SIZE && i<strlen(str); i++) {
         low [i] = tolower (str[i]);
     }
@@ -129,13 +131,12 @@ int parse_img_spec (img_loc * loc, const char * str)
             }
 
 			char s[1];
-			char port [_SIZE];
-			char path [_SIZE];
+			char port [_SIZE]; bzero (port, sizeof (port));
 			strnsub (s,                   str, pmatch[1].rm_so, pmatch[1].rm_eo, sizeof (s));
 			if (s[0]=='s' ) loc->type = HTTPS;
             strncpy (loc->url,            str, sizeof (loc->url));
             strnsub (loc->host,           str, pmatch[2].rm_so, pmatch[2].rm_eo, sizeof (loc->host));
-			strnsub (port,                str, pmatch[4].rm_so, pmatch[4].rm_eo, sizeof (port));
+			strnsub (port,                str, pmatch[4].rm_so, pmatch[4].rm_eo, sizeof (port) - 1);
 			loc->port = atoi (port);
             strnsub (loc->path,           str, pmatch[5].rm_so, pmatch[5].rm_eo, sizeof (loc->path));
             strnsub (loc->params,         str, pmatch[7].rm_so, pmatch[7].rm_eo, sizeof (loc->params));

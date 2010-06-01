@@ -17,6 +17,7 @@ import com.google.common.collect.Lists;
 @Provides( Component.any )
 @RunDuring( Bootstrap.Stage.DatabaseInit )
 public class RecordProcessor extends Bootstrapper implements Runnable {
+  private static final int RECORD_QUEUE_FLUSH_INTERVAL = 30000;
   private static Logger          LOG       = Logger.getLogger( RecordProcessor.class );
   private static boolean         finished  = false;
   private static RecordProcessor singleton = new RecordProcessor( );
@@ -33,7 +34,7 @@ public class RecordProcessor extends Bootstrapper implements Runnable {
       String msg = "";
       int total = 0;
       try {
-        TimeUnit.MILLISECONDS.sleep( 5000 );
+        TimeUnit.MILLISECONDS.sleep( RECORD_QUEUE_FLUSH_INTERVAL );
         List<Record> savedRecords = Lists.newArrayList( );
         for ( RecordLevel level : RecordLevel.values( ) ) {
           List<Record> records = level.drain( );
@@ -57,7 +58,7 @@ public class RecordProcessor extends Bootstrapper implements Runnable {
             LOG.error( e, e );
           }
         } else {
-          LOG.debug( "Found nothing to save from the event record queues." );
+          LOG.trace( "Found nothing to save from the event record queues." );
         }
       } catch ( InterruptedException e ) {
       }

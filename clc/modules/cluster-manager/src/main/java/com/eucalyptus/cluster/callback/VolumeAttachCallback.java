@@ -110,6 +110,15 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType,A
   public void fail( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
+    LOG.debug( "Trying to remove invalid volume attachment " + this.getRequest().getVolumeId( ) + " from instance " + this.getRequest().getInstanceId( ) );
+    try {
+      VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
+      AttachedVolume failVol = new AttachedVolume( this.getRequest().getVolumeId( ) );
+      vm.getVolumes( ).remove( failVol );
+      LOG.debug( "Removed failed attachment: " + failVol.getVolumeId( ) + " -> " + vm.getInstanceId( ) );
+      LOG.debug( "Final volume attachments for " + vm.getInstanceId( ) + " " + vm.getVolumes( ) );
+    } catch ( NoSuchElementException e1 ) {
+    }
   }
 
 }

@@ -17,11 +17,11 @@ import com.eucalyptus.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 
-class upgrade_walrus_162_eee extends AbstractUpgradeScript {
-	static final String FROM_VERSION = "1.6.2";
+class upgrade_walrus_eee1_eee2 extends AbstractUpgradeScript {
+	static final String FROM_VERSION = "1.6-devel-vmware-broker";
 	static final String TO_VERSION = "eee-2.0.0";
 	
-	public upgrade_walrus_162_eee() {
+	public upgrade_walrus_eee1_eee2() {
 		super(2);
 	}
 	
@@ -48,9 +48,7 @@ class upgrade_walrus_162_eee extends AbstractUpgradeScript {
 				b.setGlobalWriteACP(it.GLOBAL_WRITE_ACP);
 				b.setBucketSize(it.BUCKET_SIZE);
 				b.setHidden(false);
-				b.setLoggingEnabled(it.LOGGING_ENABLED);
-				b.setTargetBucket(it.TARGET_BUCKET);
-				b.setTargetPrefix(it.TARGET_PREFIX);
+				b.setLoggingEnabled(false);
 				walrus_conn.rows("SELECT g.* FROM bucket_has_grants has_thing LEFT OUTER JOIN grants g on g.grant_id=has_thing.grant_id WHERE has_thing.bucket_id=${ it.BUCKET_ID }").each{  grant ->
 					println "--> grant: ${it.BUCKET_NAME}/${grant.USER_ID}"
 					GrantInfo grantInfo = new GrantInfo();

@@ -180,7 +180,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *instanceId, *bucketName, *filePrefix, *walrusURL, *userPublicKey, *cid;
+  char *instanceId, *bucketName, *filePrefix, *walrusURL, *userPublicKey, *cid, *S3Policy, *S3PolicySig;
   ncMetadata ccMeta;
   
   bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
@@ -193,10 +193,12 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
   filePrefix = adb_bundleInstanceType_get_filePrefix(bit, env);
   walrusURL = adb_bundleInstanceType_get_walrusURL(bit, env);
   userPublicKey = adb_bundleInstanceType_get_userPublicKey(bit, env);
+  S3Policy = adb_bundleInstanceType_get_S3Policy(bit, env);
+  S3PolicySig = adb_bundleInstanceType_get_S3PolicySig(bit, env);
   
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey);
+    rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
     if (rc) {
       logprintf("ERROR: doBundleInstance() returned FAIL\n");
       status = AXIS2_FALSE;

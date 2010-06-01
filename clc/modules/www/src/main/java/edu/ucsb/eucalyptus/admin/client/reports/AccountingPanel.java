@@ -4,7 +4,6 @@ import com.google.gwt.user.client.ui.DockPanel;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
-import com.google.gwt.user.client.ui.Widget;
 import edu.ucsb.eucalyptus.admin.client.AccountingControl;
 import edu.ucsb.eucalyptus.admin.client.util.Observer;
 
@@ -12,7 +11,7 @@ public class AccountingPanel extends DockPanel implements Observer {
   private final AccountingControl  controller;
   private final ReportList         reportList;
   private final ReportDisplayPanel reportPanel;
-  private HorizontalPanel          pagingPanel;
+//  private HorizontalPanel          pagingPanel;
   private HorizontalPanel          exportPanel;
   private DateRange                dateRange;
   
@@ -20,14 +19,14 @@ public class AccountingPanel extends DockPanel implements Observer {
     this.ensureDebugId( "AccountingPanel" );
     this.setStyleName( "acct-AccountingPanel" );
     this.controller = controller;
-    this.pagingPanel = new HorizontalPanel( ) {
-      {
-        ensureDebugId( "pagingPanel" );
-        setHorizontalAlignment( HorizontalPanel.ALIGN_CENTER );
-        setVerticalAlignment( HorizontalPanel.ALIGN_MIDDLE );
-        setStyleName( "acct-ReportControl" );
-      }
-    };
+//    this.pagingPanel = new HorizontalPanel( ) {
+//      {
+//        ensureDebugId( "pagingPanel" );
+//        setHorizontalAlignment( HorizontalPanel.ALIGN_CENTER );
+//        setVerticalAlignment( HorizontalPanel.ALIGN_MIDDLE );
+//        setStyleName( "acct-ReportControl" );
+//      }
+//    };
     this.dateRange = new DateRange( controller ) {
       {
         ensureDebugId( "dateRange" );
@@ -64,10 +63,10 @@ public class AccountingPanel extends DockPanel implements Observer {
   }
   
   private void updatePagingPanel( ) {
-    this.pagingPanel.clear( );
-    for ( final ReportAction a : ReportAction.values( ) ) {
-      this.pagingPanel.add( a.makeImageButton( this.controller ) );
-    }
+//    this.pagingPanel.clear( );
+//    for ( final ReportAction a : ReportAction.values( ) ) {
+//      this.pagingPanel.add( a.makeImageButton( this.controller ) );
+//    }
   }
   
   public void redraw( ) {
@@ -78,11 +77,11 @@ public class AccountingPanel extends DockPanel implements Observer {
     this.setStyleName( AccountingControl.RESOURCES.ROOT_PANEL_STYLE );
     VerticalPanel leftPane = new VerticalPanel( ) {
       {
-        setVerticalAlignment( VerticalPanel.ALIGN_TOP );
-        add( new HTML( "Change Page" ) {{
-          setStyleName( "acct-ReportControlHeader" );
-        }} );
-        add( AccountingPanel.this.pagingPanel );
+//        setVerticalAlignment( VerticalPanel.ALIGN_TOP );
+//        add( new HTML( "Change Page" ) {{
+//          setStyleName( "acct-ReportControlHeader" );
+//        }} );
+//        add( AccountingPanel.this.pagingPanel );
         add( new HTML( "Export Report" ) {{
           setStyleName( "acct-ReportControlHeader" );
         }} );

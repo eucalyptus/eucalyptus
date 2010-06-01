@@ -400,6 +400,8 @@ public class EucalyptusNCNcBundleInstanceType extends VMwareBrokerRequestType {
     String walrusURL;
     String userPublicKey;
     String cloudPublicKey;
+    String S3Policy;
+    String S3PolicySig;
     
     def EucalyptusNCNcBundleInstanceType() {}
 

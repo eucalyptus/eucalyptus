@@ -1,24 +1,33 @@
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.UserEntity;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.util.AuthBootstrapHelper;
 import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.upgrade.UpgradeScript;
+import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Tx;
-import com.eucalyptus.auth.util.AuthBootstrapHelper;
 
 import groovy.sql.Sql;
 
-class UpgradeAuth implements UpgradeScript {
+class UpgradeAuth extends AbstractUpgradeScript {
+	
+  public UpgradeAuth() {
+	  super(3);
+  }
+  
   public Boolean accepts( String from, String to ) {
     return true;
   }
@@ -32,9 +41,9 @@ class UpgradeAuth implements UpgradeScript {
     
     AuthBootstrapHelper.ensureStandardGroupsExists( );
 
-    println "----- eucalyptus_auth.AUTH_CLUSTERS -----";
+    //println "----- eucalyptus_auth.AUTH_CLUSTERS -----";
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_CLUSTERS').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       EntityWrapper<ClusterCredentials> db = Authentication.getEntityWrapper( );
       try {
         db.add( new ClusterCredentials( it.AUTH_CLUSTER_NAME ) );
@@ -47,9 +56,9 @@ class UpgradeAuth implements UpgradeScript {
         e.printStackTrace( );
       }
     }       
-    println "----- eucalyptus_auth.AUTH_USERS -----";
+    //println "----- eucalyptus_auth.AUTH_USERS -----";
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_USERS').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       try {
         Users.addUser( it.AUTH_USER_NAME, it.AUTH_USER_IS_ADMIN, it.AUTH_USER_IS_ENABLED );
       } catch ( UserExistsException e ) {
@@ -71,17 +80,17 @@ class UpgradeAuth implements UpgradeScript {
       }
       userIdToUserName[it.ID] = it.AUTH_USER_NAME;
     }
-    println "----- eucalyptus_auth.AUTH_USER_HAS_X509 -----"
+    //println "----- eucalyptus_auth.AUTH_USER_HAS_X509 -----"
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_USER_HAS_X509').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       userName = userIdToUserName[it.AUTH_USER_ID];
       if ( userName != null ) {
         certIdToUserName[it.AUTH_X509_ID] = userName;
       }
     }
-    println "----- eucalyptus_auth.AUTH_X509 -----"
+    //println "----- eucalyptus_auth.AUTH_X509 -----"
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_X509').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       def cert = new X509Cert( );
       cert.setAlias( it.AUTH_X509_ALIAS );
       cert.setPemCertificate( it.AUTH_X509_PEM_CERTIFICATE );
@@ -118,9 +127,9 @@ class UpgradeAuth implements UpgradeScript {
         }
       }
     }
-    println "----- eucalyptus_general.USERS -----"
+    //println "----- eucalyptus_general.USERS -----"
     StandalonePersistence.getConnection("eucalyptus_general").rows('SELECT * FROM USERS').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       try {
         Users.updateUser( it.USER_NAME , new Tx<User>( ) {
           public void fire( User user ) throws Throwable {
@@ -147,6 +156,10 @@ class UpgradeAuth implements UpgradeScript {
         println "Failed to find user ${it.USER_NAME}";
         e.printStackTrace( );
       }
+    }
+    println "Making sure default group has all the availability zones"
+    for ( ClusterConfiguration cluster : Configuration.getClusterConfigurations( ) ) {
+      Groups.DEFAULT.addAuthorization( new AvailabilityZonePermission( cluster.getName( ) ) );
     }
   }
   

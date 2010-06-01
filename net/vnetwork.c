@@ -65,11 +65,11 @@ permission notice:
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <pthread.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <ifaddrs.h>
@@ -2207,10 +2207,17 @@ void hex2mac(unsigned char in[6], char **out) {
 }
 
 void mac2hex(char *in, unsigned char out[6]) {
+  unsigned int tmp[6];
   if (in == NULL) {
     return;
   }
-  sscanf(in, "%X:%X:%X:%X:%X:%X", (unsigned int *)&out[0], (unsigned int *)&out[1], (unsigned int *)&out[2], (unsigned int *)&out[3], (unsigned int *)&out[4], (unsigned int *)&out[5]);
+  sscanf(in, "%X:%X:%X:%X:%X:%X", (unsigned int *)&tmp[0], (unsigned int *)&tmp[1], (unsigned int *)&tmp[2], (unsigned int *)&tmp[3], (unsigned int *)&tmp[4], (unsigned int *)&tmp[5]);
+  out[0] = (unsigned char)tmp[0];
+  out[1] = (unsigned char)tmp[1];
+  out[2] = (unsigned char)tmp[2];
+  out[3] = (unsigned char)tmp[3];
+  out[4] = (unsigned char)tmp[4];
+  out[5] = (unsigned char)tmp[5];
   return;
 }
 

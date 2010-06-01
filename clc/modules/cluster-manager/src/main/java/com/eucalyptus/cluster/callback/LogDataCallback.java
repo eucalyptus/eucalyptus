@@ -23,12 +23,21 @@ public class LogDataCallback extends QueuedEventCallback<GetLogsType, GetLogsRes
   
   public LogDataCallback( String node ) {
     this.node = node;
-    this.setRequest( new GetLogsType( node ) );
+    super.setRequest( new GetLogsType( node ) );
   }
   
+  
+  
+  @Override
+  public void prepare( GetLogsType msg ) throws Exception {}
+  
+  @Override
+  public void fail( Throwable t ) {
+    LOG.error( t, t );
+  }
+
   @Override
   public void verify( GetLogsResponseType msg ) throws Exception {
-    LOG.debug( "Got reponse: " + msg );
   }
   
   public void fire( final String hostname, final int port, final String servicePath ) {
@@ -49,7 +58,7 @@ public class LogDataCallback extends QueuedEventCallback<GetLogsType, GetLogsRes
         LOG.debug( e1, e1 );
       }
       this.failCallback.failure( this, e );
-      this.queueResponse( e );
+      super.queueResponse( e );
       this.connectFuture.addListener( ChannelFutureListener.CLOSE );
     }
   }

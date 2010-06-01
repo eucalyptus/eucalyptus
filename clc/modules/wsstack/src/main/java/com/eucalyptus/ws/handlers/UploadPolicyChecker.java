@@ -146,8 +146,7 @@ public class UploadPolicyChecker {
 			} catch(Exception ex) {
 				//rethrow
 				LOG.warn(ex);
-				if(ex instanceof AuthenticationException)
-					throw (AuthenticationException)ex;
+				throw new AuthenticationException(ex);
 			}
 			//all form uploads without a policy are anonymous
 			if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString())) {

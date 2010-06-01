@@ -2,7 +2,11 @@ package edu.ucsb.eucalyptus.admin.client.reports;
 
 import java.util.HashMap;
 import java.util.Map;
+import com.google.gwt.event.logical.shared.OpenEvent;
+import com.google.gwt.event.logical.shared.OpenHandler;
 import com.google.gwt.user.client.ui.DecoratedStackPanel;
+import com.google.gwt.user.client.ui.Tree;
+import com.google.gwt.user.client.ui.TreeItem;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import edu.ucsb.eucalyptus.admin.client.AccountingControl;
 import edu.ucsb.eucalyptus.admin.client.util.Observer;
@@ -12,7 +16,7 @@ public class ReportList extends DecoratedStackPanel implements Observer {
   private final AccountingControl    controller;
   private VerticalPanel              systemReports;
   private VerticalPanel              resourceReports;
-  private VerticalPanel              zoneReports;
+  private VerticalPanel              serviceReports;
   private Map<String, VerticalPanel> groupMap;
   
   public ReportList( AccountingControl controller ) {
@@ -28,16 +32,18 @@ public class ReportList extends DecoratedStackPanel implements Observer {
         ensureDebugId( "resourceReports" );
       }
     };
-    this.zoneReports = new VerticalPanel( ) {
+    this.serviceReports = new VerticalPanel( ) {
       {
-        ensureDebugId( "zoneReports" );
+        ensureDebugId( "serviceReports" );
       }
     };
-    this.groupMap = new HashMap<String, VerticalPanel>( ) {{
-      put( "system", ReportList.this.systemReports );
-      put( "user", ReportList.this.resourceReports );
-      put( "service", ReportList.this.zoneReports );
-    }};
+    this.groupMap = new HashMap<String, VerticalPanel>( ) {
+      {
+        put( "system", ReportList.this.systemReports );
+        put( "user", ReportList.this.resourceReports );
+        put( "service", ReportList.this.serviceReports );
+      }
+    };
   }
   
   public void redraw( ) {
@@ -46,8 +52,8 @@ public class ReportList extends DecoratedStackPanel implements Observer {
                                                          AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
     this.add( this.resourceReports, XHTML.headerWithImage( "Users, Groups & Resources", AccountingControl.RESOURCES.resourceReports( ),
                                                            AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
-    this.add( this.zoneReports, XHTML.headerWithImage( "Service Status & Logs", AccountingControl.RESOURCES.serviceReports( ),
-                                                       AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
+    this.add( this.serviceReports, XHTML.headerWithImage( "Service Status & Logs", AccountingControl.RESOURCES.serviceReports( ),
+                                                          AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
   }
   
   @Override
@@ -63,16 +69,84 @@ public class ReportList extends DecoratedStackPanel implements Observer {
       VerticalPanel groupPanel = this.groupMap.get( group );
       groupPanel.clear( );
       groupPanel.setStyleName( AccountingControl.RESOURCES.REPORT_BAR_STYLE );
-      for ( ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
-        if ( info.equals( this.controller.getCurrentReport( ) ) ) {
-          info.getButton( ).setStyleName( AccountingControl.RESOURCES.ACCT_REPORT_CURRENT_BUTTON );
-        } else {
-          info.getButton( ).setStyleName( AccountingControl.RESOURCES.ACCT_REPORT_BUTTON );
+      if( "service".equals( group ) ) {
+        Tree serviceTree = new Tree( ) {{
+          setAnimationEnabled( true );
+        }};
+        for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
+          if( "walrus".equals( info.getComponent( ) ) ) {
+            TreeItem walrusItem = serviceTree.addItem( info.getDisplayName( ) );
+            walrusItem.setUserObject( info );
+            serviceTree.addOpenHandler(new OpenHandler<TreeItem>() {
+              public void onOpen(OpenEvent<TreeItem> event) {
+                TreeItem item = event.getTarget();
+                if( item.getUserObject( ) != null ) {
+                  ReportInfo r = (ReportInfo)item.getUserObject( );
+                  ReportList.this.controller.setCurrentReport( r );
+                }
+              }
+            });            
+          }
         }
-        groupPanel.add( info.getButton( ) );
+        Map<String,TreeItem> clusterItems = new HashMap<String,TreeItem>();
+        for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
+          if( "cluster".equals( info.getComponent( ) ) ) {
+            TreeItem clusterRoot = serviceTree.addItem( info.getClusterName( ) );
+            clusterItems.put( info.getClusterName( ), clusterRoot );
+            TreeItem clusterItem = clusterRoot.addItem( info.getDisplayName( ) );
+            clusterItem.setUserObject( info );
+            serviceTree.addOpenHandler(new OpenHandler<TreeItem>() {
+              public void onOpen(OpenEvent<TreeItem> event) {
+                TreeItem item = event.getTarget();
+                if( item.getUserObject( ) != null ) {
+                  ReportInfo r = (ReportInfo)item.getUserObject( );
+                  ReportList.this.controller.setCurrentReport( r );
+                }
+              }
+            });
+          }
+        }
+        for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
+          if( "storage".equals( info.getComponent( ) ) && clusterItems.containsKey( info.getClusterName( ) ) ) {
+            TreeItem scItem = clusterItems.get( info.getClusterName( ) ).addItem( info.getDisplayName( ) );
+            scItem.setUserObject( info );
+            serviceTree.addOpenHandler(new OpenHandler<TreeItem>() {
+              public void onOpen(OpenEvent<TreeItem> event) {
+                TreeItem item = event.getTarget();
+                if( item.getUserObject( ) != null ) {
+                  ReportInfo r = (ReportInfo)item.getUserObject( );
+                  ReportList.this.controller.setCurrentReport( r );
+                }
+              }
+            });
+          }
+        }
+        for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
+          if( "node".equals( info.getComponent( ) ) && clusterItems.containsKey( info.getClusterName( ) ) ) {
+            TreeItem scItem = clusterItems.get( info.getClusterName( ) ).addItem( info.getDisplayName( ) );
+            scItem.setUserObject( info );
+            serviceTree.addOpenHandler(new OpenHandler<TreeItem>() {
+              public void onOpen(OpenEvent<TreeItem> event) {
+                TreeItem item = event.getTarget();
+                if( item.getUserObject( ) != null ) {
+                  ReportInfo r = (ReportInfo)item.getUserObject( );
+                  ReportList.this.controller.setCurrentReport( r );
+                }
+              }
+            });
+          }
+        }
+        groupPanel.add( serviceTree );
+      } else {
+        for ( ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
+          if ( info.equals( this.controller.getCurrentReport( ) ) ) {
+            info.getButton( ).setStyleName( AccountingControl.RESOURCES.ACCT_REPORT_CURRENT_BUTTON );
+          } else {
+            info.getButton( ).setStyleName( AccountingControl.RESOURCES.ACCT_REPORT_BUTTON );
+          }
+          groupPanel.add( info.getButton( ) );
+        }
       }
-
     }
   }
-  
 }
