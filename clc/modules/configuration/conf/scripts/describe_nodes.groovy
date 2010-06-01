@@ -4,8 +4,8 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
 
 List<NodeComponentInfoType> nodeInfoList = Lists.newArrayList( );

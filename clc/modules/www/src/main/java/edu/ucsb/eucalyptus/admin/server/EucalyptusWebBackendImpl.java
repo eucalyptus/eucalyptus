@@ -71,6 +71,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -86,11 +87,14 @@ import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -1143,8 +1147,13 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     for( Component c : Components.list( ) ) {
       for( Service s : c.getServices( ) ) {
         if( !s.getServiceConfiguration( ).getComponent( ).isSingleton( ) || com.eucalyptus.bootstrap.Component.walrus.equals( s.getServiceConfiguration( ).getComponent( ) ) ) {
-          String name = (s.getServiceConfiguration( ).getName( )!=null?s.getServiceConfiguration( ).getName( ) + ": ":"")+ s.getServiceConfiguration( ).getComponent( ).name( ) + "@" + s.getServiceConfiguration( ).getHostName( );
-          reports.add( new ReportInfo( "service", name, "service", 0 ) );
+          reports.add( new ReportInfo( "service", s.getServiceConfiguration( ).getName( )+"-"+s.getServiceConfiguration( ).getComponent( ).name( ), "service-"+s.getServiceConfiguration( ).getComponent( ).name( ) + "@" + s.getServiceConfiguration( ).getHostName( ), 1 ) );
+          if( com.eucalyptus.bootstrap.Component.cluster.equals( s.getServiceConfiguration( ).getComponent( ) ) ) {
+            Cluster cluster = Clusters.getInstance( ).lookup( s.getServiceConfiguration( ).getName( ) );
+            for( String nodeTag : cluster.getNodeTags( ) ) {
+              reports.add( new ReportInfo( "service", s.getServiceConfiguration( ).getName( ) + "-nc", "service-nc@"+URI.create( nodeTag ).getHost( ), 1 ) );
+            }
+          }
         }
       }
     }

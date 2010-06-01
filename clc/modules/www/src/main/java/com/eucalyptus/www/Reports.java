@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.ref.Reference;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -41,14 +40,21 @@ import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.callback.LogDataCallback;
+import com.eucalyptus.cluster.callback.QueuedEventCallback;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusManagement;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
 import edu.ucsb.eucalyptus.admin.server.SessionInfo;
+import edu.ucsb.eucalyptus.msgs.GetLogsResponseType;
+import edu.ucsb.eucalyptus.msgs.GetLogsType;
 import groovy.lang.Binding;
 import groovy.util.GroovyScriptEngine;
 
@@ -59,7 +65,7 @@ public class Reports extends HttpServlet {
   private static Logger LOG               = Logger.getLogger( Reports.class );
   
   enum Param {
-    name, type, session, page, flush(false), width(false), height(false), startTime(false), endTime(false);
+    name, type, session, page, flush(false), startTime(false), endTime(false);
     private String  value = null;
     private Boolean required = Boolean.TRUE;
     
@@ -116,16 +122,59 @@ public class Reports extends HttpServlet {
       LOG.debug( e, e );
       throw new RuntimeException( e );
     }
-    Date startTime = this.parseTime( Param.startTime );
-    Date endTime = this.parseTime( Param.endTime );
-    for ( Param p : Param.values( ) ) {
-      try {
-        LOG.debug( String.format( "REPORT: %10.10s=%s", p.name(), p.get( ) ) );
-      } catch ( NoSuchFieldException e1 ) {
-        LOG.debug( String.format( "REPORT: %10.10s=%s", p.name(), e1.getMessage( ) ) );
+    try {
+      if( Param.name.get().startsWith("service-" ) ) {
+        this.exportLogs( req, res );
+      } else {
+        Date startTime = this.parseTime( Param.startTime );
+        Date endTime = this.parseTime( Param.endTime );
+        for ( Param p : Param.values( ) ) {
+          try {
+            LOG.debug( String.format( "REPORT: %10.10s=%s", p.name(), p.get( ) ) );
+          } catch ( NoSuchFieldException e1 ) {
+            LOG.debug( String.format( "REPORT: %10.10s=%s", p.name(), e1.getMessage( ) ) );
+          }
+        }    
+        this.exportReport( req, res );
       }
-    }    
-    this.exportReport( req, res );
+    } catch ( NoSuchFieldException e ) {
+      LOG.debug( e, e );
+    }
+  }
+
+  private void exportLogs( HttpServletRequest req, HttpServletResponse res )  {
+    try {
+      String serviceFq = Param.name.get( req ).replaceAll( "service-", "" );
+      String type = serviceFq.replaceAll( "@.*", "" );
+      String host = serviceFq.replaceAll( ".*@", "" );
+      LOG.debug( "LOG:  serviceFq=%s  type=%s  host=%s" );
+      PrintWriter out = res.getWriter( );
+      try {
+        res.setContentType( "text/plain" );
+        for( ClusterConfiguration c : Configuration.getClusterConfigurations( ) ) {
+          out.println( "Looking for CC info: " + c.toString( ) );
+          if( c.getHostName( ).equals( host ) ) {
+            out.println( "Sending request to: " + c.toString( ) );
+            LogDataCallback cb = new LogDataCallback( );
+            GetLogsResponseType reply = cb.send( c.getName( ) );
+            out.println( "Reposnse: " + reply.getLogs( ) );
+            return;
+          }
+        }
+      } catch ( EucalyptusCloudException e ) {
+        LOG.debug( e, e );
+        e.printStackTrace( out );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+        e.printStackTrace( out );
+      } finally {
+        out.close( );
+      }
+    } catch ( IllegalArgumentException e ) {
+      LOG.debug( e, e );
+    } catch ( IOException e ) {
+      LOG.debug( e, e );
+    }
   }
 
   private void exportReport( HttpServletRequest req, HttpServletResponse res ) {
@@ -216,7 +265,7 @@ public class Reports extends HttpServlet {
       this.length = 0;
       if ( this.pendingPrint.isDone( ) ) {
         try {
-          this.jasperPrint = this.pendingPrint.get( );
+          this.getPendingPrint( );
         } catch ( ExecutionException e ) {
           LOG.error( e, e );
         } catch ( Exception e ) {
@@ -262,29 +311,36 @@ public class Reports extends HttpServlet {
     }
     
     public Integer getLength( ) {
-      if ( this.jasperPrint != null ) {
-        this.length = this.jasperPrint.getPages( ).size( ) - 1;
+      if ( this.pendingPrint.isDone( ) ) {
+        try {
+          this.getPendingPrint( );
+        } catch ( InterruptedException e ) {} catch ( ExecutionException e ) {}
       }
-      return this.length;
+      return this.jasperPrint != null ? this.jasperPrint.getPages( ).size( ) - 1 : 1;
     }
     
     public JasperPrint getPendingPrint( ) throws InterruptedException, ExecutionException {
-      try {
-        return this.pendingPrint.get( );
-      } catch ( ExecutionException e ) {
-        LOG.error( e, e );
-        this.length = 0;
-        throw e;
-      } catch ( InterruptedException e ) {
-        this.length = 0;
-        throw e;
+      if( this.jasperPrint != null ) {
+        return this.jasperPrint;
+      } else {
+        try {
+          this.jasperPrint = this.pendingPrint.get( );
+          return this.jasperPrint;
+        } catch ( ExecutionException e ) {
+          LOG.error( e, e );
+          this.length = 0;
+          throw e;
+        } catch ( InterruptedException e ) {
+          this.length = 0;
+          throw e;
+        }
       }
     }
     
     public JasperPrint getJasperPrint( ) {
       if ( this.pendingPrint.isDone( ) ) {
         try {
-          this.jasperPrint = this.getPendingPrint( );
+          this.getPendingPrint( );
         } catch ( InterruptedException e ) {} catch ( ExecutionException e ) {}
       }
       return this.jasperPrint;

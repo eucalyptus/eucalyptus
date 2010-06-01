@@ -136,11 +136,11 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   }
   
   private AtomicReference<TYPE>        request         = new AtomicReference<TYPE>( null );
-  private ChannelFuture                connectFuture;
-  private NioBootstrap                 clientBootstrap;
+  protected ChannelFuture                connectFuture;
+  protected NioBootstrap                 clientBootstrap;
   @SuppressWarnings( "unchecked" )
   private SuccessCallback              successCallback = SuccessCallback.NOOP;
-  private FailureCallback<TYPE, RTYPE> failCallback    = FailureCallback.NOOP;
+  protected FailureCallback<TYPE, RTYPE> failCallback    = FailureCallback.NOOP;
   
   public QueuedEventCallback<TYPE, RTYPE> then( UnconditionalCallback c ) {
     this.successCallback = c;
@@ -329,12 +329,11 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
       if (this.response.get( ) != null) {
 	  return true;
       } else {
-	  ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
-	  EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ).debug( );
+        ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
+        EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ).debug( );
       }
     } catch ( InterruptedException e ) {
       LOG.debug( e, e );
-      Thread.currentThread( ).interrupt( );
     } finally {
       this.canHas.unlock( );
     }
@@ -349,8 +348,9 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
       this.canHas.unlock( );
     }
   }
+ 
   
-  public void fire( final String hostname, final int port, final String servicePath ) {
+  protected void fire( final String hostname, final int port, final String servicePath ) {
     try {
       NioClientPipeline clientPipeline = new ClusterClientPipeline( this );
       this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
