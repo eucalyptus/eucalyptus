@@ -389,7 +389,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     if ( !this.writeComplete ) {
       this.queueResponse( new EucalyptusClusterException( "Channel was closed before the write operation could be completed: "
                                                           + LogUtil.dumpObject( this.getRequest( ) ) ) );
-    } else if ( writeComplete && this.getRequest( ) == null ) {
+    } else if ( writeComplete && this.response.get( ) == null ) {
       this.queueResponse( new EucalyptusClusterException( "Channel was closed before the read operation could be completed: "
                                                           + LogUtil.dumpObject( this.getRequest( ) ) ) );
     }
