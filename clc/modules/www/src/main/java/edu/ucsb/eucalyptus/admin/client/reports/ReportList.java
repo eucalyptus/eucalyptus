@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import com.google.gwt.event.logical.shared.OpenEvent;
 import com.google.gwt.event.logical.shared.OpenHandler;
+import com.google.gwt.event.logical.shared.SelectionEvent;
+import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.user.client.ui.DecoratedStackPanel;
 import com.google.gwt.user.client.ui.Tree;
 import com.google.gwt.user.client.ui.TreeItem;
@@ -77,9 +79,10 @@ public class ReportList extends DecoratedStackPanel implements Observer {
           if( "walrus".equals( info.getComponent( ) ) ) {
             TreeItem walrusItem = serviceTree.addItem( info.getDisplayName( ) );
             walrusItem.setUserObject( info );
-            serviceTree.addOpenHandler(new OpenHandler<TreeItem>() {
-              public void onOpen(OpenEvent<TreeItem> event) {
-                TreeItem item = event.getTarget();
+            serviceTree.addSelectionHandler(new SelectionHandler<TreeItem>() {
+              @Override
+              public void onSelection( SelectionEvent<TreeItem> event ) {
+                TreeItem item = event.getSelectedItem( );
                 if( item.getUserObject( ) != null ) {
                   ReportInfo r = (ReportInfo)item.getUserObject( );
                   ReportList.this.controller.setCurrentReport( r );
@@ -95,45 +98,48 @@ public class ReportList extends DecoratedStackPanel implements Observer {
             clusterItems.put( info.getClusterName( ), clusterRoot );
             TreeItem clusterItem = clusterRoot.addItem( info.getDisplayName( ) );
             clusterItem.setUserObject( info );
-            serviceTree.addOpenHandler(new OpenHandler<TreeItem>() {
-              public void onOpen(OpenEvent<TreeItem> event) {
-                TreeItem item = event.getTarget();
+            serviceTree.addSelectionHandler(new SelectionHandler<TreeItem>() {
+              @Override
+              public void onSelection( SelectionEvent<TreeItem> event ) {
+                TreeItem item = event.getSelectedItem( );
                 if( item.getUserObject( ) != null ) {
                   ReportInfo r = (ReportInfo)item.getUserObject( );
                   ReportList.this.controller.setCurrentReport( r );
                 }
               }
-            });
+            });            
           }
         }
         for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
           if( "storage".equals( info.getComponent( ) ) && clusterItems.containsKey( info.getClusterName( ) ) ) {
             TreeItem scItem = clusterItems.get( info.getClusterName( ) ).addItem( info.getDisplayName( ) );
             scItem.setUserObject( info );
-            serviceTree.addOpenHandler(new OpenHandler<TreeItem>() {
-              public void onOpen(OpenEvent<TreeItem> event) {
-                TreeItem item = event.getTarget();
+            serviceTree.addSelectionHandler(new SelectionHandler<TreeItem>() {
+              @Override
+              public void onSelection( SelectionEvent<TreeItem> event ) {
+                TreeItem item = event.getSelectedItem( );
                 if( item.getUserObject( ) != null ) {
                   ReportInfo r = (ReportInfo)item.getUserObject( );
                   ReportList.this.controller.setCurrentReport( r );
                 }
               }
-            });
+            });            
           }
         }
         for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
           if( "node".equals( info.getComponent( ) ) && clusterItems.containsKey( info.getClusterName( ) ) ) {
             TreeItem ncItem = clusterItems.get( info.getClusterName( ) ).addItem( info.getDisplayName( ) );
             ncItem.setUserObject( info );
-            serviceTree.addOpenHandler(new OpenHandler<TreeItem>() {
-              public void onOpen(OpenEvent<TreeItem> event) {
-                TreeItem item = event.getTarget();
+            serviceTree.addSelectionHandler(new SelectionHandler<TreeItem>() {
+              @Override
+              public void onSelection( SelectionEvent<TreeItem> event ) {
+                TreeItem item = event.getSelectedItem( );
                 if( item.getUserObject( ) != null ) {
                   ReportInfo r = (ReportInfo)item.getUserObject( );
                   ReportList.this.controller.setCurrentReport( r );
                 }
               }
-            });
+            });            
           }
         }
         groupPanel.add( serviceTree );
