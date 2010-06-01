@@ -66,7 +66,7 @@ public class Reports extends HttpServlet {
   private static Logger LOG               = Logger.getLogger( Reports.class );
   
   enum Param {
-    name, type, session, /*page,*/flush( false ), start( false ), end( false );
+    name, type, session, /*page,*/flush( false ), start( false ), end( false ), component( false ), cluster( false ), host( false );
     private String  value    = null;
     private Boolean required = Boolean.TRUE;
     
@@ -123,59 +123,48 @@ public class Reports extends HttpServlet {
       LOG.debug( e, e );
       throw new RuntimeException( e );
     }
-    try {
-      if ( Param.name.get( ).startsWith( "service-" ) ) {
-        this.exportLogs( req, res );
-      } else {
-        Date startTime = this.parseTime( Param.start );
-        Date endTime = this.parseTime( Param.end );
-        for ( Param p : Param.values( ) ) {
-          try {
-            LOG.debug( String.format( "REPORT: %10.10s=%s", p.name( ), p.get( ) ) );
-          } catch ( NoSuchFieldException e1 ) {
-            LOG.debug( String.format( "REPORT: %10.10s=%s", p.name( ), e1.getMessage( ) ) );
-          }
+    if ( Param.name.get( req ).startsWith( "service" ) ) {
+      this.exportLogs( req, res );
+    } else {
+      Date startTime = this.parseTime( Param.start );
+      Date endTime = this.parseTime( Param.end );
+      for ( Param p : Param.values( ) ) {
+        try {
+          LOG.debug( String.format( "REPORT: %10.10s=%s", p.name( ), p.get( ) ) );
+        } catch ( NoSuchFieldException e1 ) {
+          LOG.debug( String.format( "REPORT: %10.10s=%s", p.name( ), e1.getMessage( ) ) );
         }
-        this.exportReport( req, res );
       }
-    } catch ( NoSuchFieldException e ) {
-      LOG.debug( e, e );
+      this.exportReport( req, res );
     }
   }
   
   private void exportLogs( HttpServletRequest req, HttpServletResponse res ) {
     try {
-      String serviceFq = Param.name.get( req ).replaceAll( "service-", "" );
-      String type = serviceFq.replaceAll( "@.*", "" );
-      String host = serviceFq.replaceAll( ".*@", "" );
-      LOG.debug( String.format( "LOG:  serviceFq=%s  type=%s  host=%s", serviceFq, type, host ) );
+      String component = Param.component.get( req );
+      String cluster = Param.cluster.get( req );
+      String host = Param.host.get( req );
+      LOG.debug( String.format( "LOG:  component=%s  cluster=%s  host=%s", component, cluster, host ) );
       final PrintWriter out = res.getWriter( );
       try {
         res.setContentType( "text/plain" );
-        for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) ) {
-          out.println( "Looking for CC info: " + c.toString( ) );
-          if ( c.getHostName( ).equals( host ) ) {
-            Cluster cluster = Clusters.getInstance( ).lookup( c.getName( ) );
-            out.println( "Sending request to: " + c.toString( ) );
-            try {
-              NodeLogInfo logInfo = cluster.getLastLog( );
-              if ( logInfo != null ) {
-                out.write( new String( Base64.decode( logInfo.getCcLog( ) ) ) );
-                out.flush( );
-              } else {
-                out.println( "ERROR getting log information for " + host );
-                out.println( logInfo.toString( ) );
-              }
-            } catch ( Exception e ) {
-              LOG.debug( e, e );
-              e.printStackTrace( out );
+        if( "cluster".equals( component ) ) {
+          Cluster c = Clusters.getInstance( ).lookup( cluster );
+          out.println( "Sending request to: " + c.getUri( ) );
+          try {
+            NodeLogInfo logInfo = c.getLastLog( );
+            if ( logInfo != null ) {
+              out.write( new String( Base64.decode( logInfo.getCcLog( ) ) ) );
+              out.flush( );
+            } else {
+              out.println( "ERROR getting log information for " + host );
+              out.println( logInfo.toString( ) );
             }
+          } catch ( Exception e ) {
+            LOG.debug( e, e );
+            e.printStackTrace( out );
           }
         }
-        out.close( );
-      } catch ( EucalyptusCloudException e ) {
-        LOG.debug( e, e );
-        e.printStackTrace( out );
         out.close( );
       } catch ( Exception e ) {
         LOG.debug( e, e );
@@ -194,7 +183,7 @@ public class Reports extends HttpServlet {
       Type reportType = Type.valueOf( Param.type.get( ) );
       try {
         Boolean doFlush = this.doFlush( );
-        final JRExporter exporter = reportType.setup( req, res, Param.name.get( ) );
+        final JRExporter exporter = reportType.setup( req, res, Param.name.get( req ) );
         ReportCache reportCache = getReportManager( Param.name.get( req ), doFlush );
         JasperPrint jasperPrint = reportCache.getJasperPrint( );
         exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
