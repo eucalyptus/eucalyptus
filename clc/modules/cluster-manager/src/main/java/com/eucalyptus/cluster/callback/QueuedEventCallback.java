@@ -192,8 +192,13 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   }
   
   public RTYPE send( Cluster cluster ) throws Exception {
-    this.fire( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ) );
+    this.fire( cluster );
     return this.getResponse( );
+  }
+
+  public QueuedEventCallback fire( Cluster cluster ) {
+    this.fire( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ) );
+    return this;
   }
   
   @SuppressWarnings( "unchecked" )
