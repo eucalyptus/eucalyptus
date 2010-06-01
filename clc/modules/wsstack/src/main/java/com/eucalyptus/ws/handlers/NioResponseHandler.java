@@ -176,11 +176,12 @@ public class NioResponseHandler extends SimpleChannelHandler implements Response
       while( this.response.get( ) == null ) {
         this.canHas.lock( );
         try {
-          this.ready.await( 10000, TimeUnit.MILLISECONDS );
+          this.ready.await( 1000, TimeUnit.MILLISECONDS );
           LOG.debug( "Waiting for response." );
         } catch ( InterruptedException e ) {
           LOG.debug( e, e );
-          Thread.currentThread( ).interrupt( );
+          return;
+//          Thread.currentThread( ).interrupt( );
         } finally {
           this.canHas.unlock( );
         }

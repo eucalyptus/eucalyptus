@@ -249,7 +249,6 @@ public class Cluster implements HasName {
             try {
               self.lastLog = msg.getLogs( );
               String ccLog = new String( Base64.decode( msg.getLogs( ).getCcLog( ) ) ).replaceFirst(".*\b","");
-              self.logUpdate.set( false );
               LOG.debug( "Got CC Log: " + ccLog.substring( 0, 1000 ) );
             } catch ( Throwable e ) {
               LOG.error( e, e );
@@ -258,13 +257,14 @@ public class Cluster implements HasName {
 
           @Override
           public void fail( Throwable t ) {
-            self.logUpdate.set( false );
             LOG.error( t, t );
           }
           
         }.send( self );
       } catch ( Throwable t ) {
         LOG.error( t, t );
+      } finally {
+        this.logUpdate.set( false );
       }
     } 
     return this.lastLog;

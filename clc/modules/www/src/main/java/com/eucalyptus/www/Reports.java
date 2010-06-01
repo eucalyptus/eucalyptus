@@ -343,7 +343,7 @@ public class Reports extends HttpServlet {
       try {
         if( this.pending.compareAndSet( false, true ) ) {
 //          this.pendingPrint = Threads.lookup( "reporting" ).limitTo( 1 ).getPool( ).submit( this.async );
-          this.jasperPrint = this.pendingPrint.get( );
+          this.jasperPrint = this.async.call();
           
         }
       } catch ( Exception e ) {
