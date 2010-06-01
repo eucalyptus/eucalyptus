@@ -86,6 +86,7 @@ public class ReportList extends DecoratedStackPanel implements Observer {
                 if( item.getUserObject( ) != null ) {
                   ReportInfo r = (ReportInfo)item.getUserObject( );
                   ReportList.this.controller.setCurrentReport( r );
+                  item.setState( true, false );
                 }
               }
             });            
@@ -105,6 +106,7 @@ public class ReportList extends DecoratedStackPanel implements Observer {
                 if( item.getUserObject( ) != null ) {
                   ReportInfo r = (ReportInfo)item.getUserObject( );
                   ReportList.this.controller.setCurrentReport( r );
+                  item.setState( true, false );
                 }
               }
             });            
@@ -121,6 +123,7 @@ public class ReportList extends DecoratedStackPanel implements Observer {
                 if( item.getUserObject( ) != null ) {
                   ReportInfo r = (ReportInfo)item.getUserObject( );
                   ReportList.this.controller.setCurrentReport( r );
+                  item.setState( true, false );
                 }
               }
             });            
@@ -137,6 +140,7 @@ public class ReportList extends DecoratedStackPanel implements Observer {
                 if( item.getUserObject( ) != null ) {
                   ReportInfo r = (ReportInfo)item.getUserObject( );
                   ReportList.this.controller.setCurrentReport( r );
+                  item.setState( true, false );
                 }
               }
             });            

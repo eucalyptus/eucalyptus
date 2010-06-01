@@ -154,19 +154,21 @@ public class Reports extends HttpServlet {
           try {
             NodeLogInfo logInfo = c.getLastLog( );
             if ( logInfo != null ) {
-              out.write( new String( Base64.decode( logInfo.getCcLog( ) ) ) );
+              String log = new String( Base64.decode( logInfo.getCcLog( ) ) );
+              String printLog = (log.length( )>1024*64)?log.substring( log.length() - 1024*64 ):log;
+              out.write( printLog );
               out.flush( );
             } else {
               out.println( "ERROR getting log information for " + host );
               out.println( logInfo.toString( ) );
             }
-          } catch ( Exception e ) {
+          } catch ( Throwable e ) {
             LOG.debug( e, e );
             e.printStackTrace( out );
           }
         }
         out.close( );
-      } catch ( Exception e ) {
+      } catch ( Throwable e ) {
         LOG.debug( e, e );
         e.printStackTrace( out );
         out.close( );
