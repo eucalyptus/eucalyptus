@@ -62,8 +62,10 @@
 		<field name="record_creator" class="java.lang.String"/>
 		<field name="record_correlation_id" class="java.lang.String"/>
 	</subDataset>
+	<parameter name="EUCA_NOT_BEFORE" class="java.lang.Long"/>
+	<parameter name="EUCA_NOT_AFTER" class="java.lang.Long"/>
 	<queryString>
-		<![CDATA[SELECT record_timestamp,REPLACE(record_creator,'ResponseType','')as record_creator,record_user_id,REPLACE(record_extra,':',' ') AS record_extra,record_correlation_id FROM eucalyptus_records.records_logs WHERE record_class LIKE 'MESSAGE' AND record_correlation_id IS NOT NULL ORDER BY record_timestamp DESC;]]>
+		<![CDATA[SELECT record_timestamp,REPLACE(record_creator,'ResponseType','')as record_creator,record_user_id,REPLACE(record_extra,':',' ') AS record_extra,record_correlation_id FROM eucalyptus_records.records_logs WHERE record_class LIKE 'MESSAGE' AND record_correlation_id IS NOT NULL AND UNIX_TIMESTAMP(record_timestamp)*1000 > $P{EUCA_NOT_BEFORE} AND UNIX_TIMESTAMP(record_timestamp)*1000 < $P{EUCA_NOT_AFTER} ORDER BY record_timestamp DESC;]]>
 	</queryString>
 	<field name="record_extra" class="java.lang.String"/>
 	<field name="record_timestamp" class="java.sql.Timestamp"/>

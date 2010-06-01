@@ -55,11 +55,10 @@
 		<field name="record_type" class="java.lang.String"/>
 		<field name="record_creator" class="java.lang.String"/>
 	</subDataset>
-	<parameter name="EUCA_HEIGHT" class="java.lang.Integer">
-		<defaultValueExpression><![CDATA[756]]></defaultValueExpression>
-	</parameter>
+	<parameter name="EUCA_NOT_BEFORE" class="java.lang.Long"/>
+	<parameter name="EUCA_NOT_AFTER" class="java.lang.Long"/>
 	<queryString>
-		<![CDATA[SELECT record_timestamp,record_type,record_creator,REPLACE(record_extra,':',' ') AS record_extra FROM eucalyptus_records.records_logs WHERE (record_class LIKE 'SYSTEM' OR record_class LIKE 'COMPONENT' OR record_class LIKE 'GROUP' OR record_class LIKE 'USER') ORDER BY record_timestamp DESC;]]>
+		<![CDATA[SELECT record_timestamp,record_type,record_creator,REPLACE(record_extra,':',' ') AS record_extra FROM eucalyptus_records.records_logs WHERE (record_class LIKE 'SYSTEM' OR record_class LIKE 'COMPONENT' OR record_class LIKE 'GROUP' OR record_class LIKE 'USER') AND UNIX_TIMESTAMP(record_timestamp)*1000 > $P{EUCA_NOT_BEFORE} AND UNIX_TIMESTAMP(record_timestamp)*1000 < $P{EUCA_NOT_AFTER} ORDER BY record_timestamp DESC;]]>
 	</queryString>
 	<field name="record_extra" class="java.lang.String"/>
 	<field name="record_timestamp" class="java.sql.Timestamp"/>
