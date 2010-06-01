@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -88,9 +89,9 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.FailureCallback;
 import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.cluster.UnconditionalCallback;
+import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
@@ -102,6 +103,7 @@ import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import com.eucalyptus.records.EventRecord;
 
 @SuppressWarnings( "unchecked" )
 public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extends BaseMessage> extends SimpleChannelHandler implements ResponseHandler {
@@ -112,12 +114,11 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   protected BlockingQueue<EucalyptusMessage> requestQueue = new LinkedBlockingQueue<EucalyptusMessage>( );
   
   public static class NOOP extends QueuedEventCallback {
-    public NOOP( ) {
+    public NOOP() {
       RuntimeException ex = new RuntimeException( "Operation returning a NOOP." );
       LOG.debug( ex, ex );
-      this.setRequest( new EucalyptusMessage( ) );
+      this.setRequest( new EucalyptusMessage() );
     }
-    
     public void fail( Throwable throwable ) {}
     
     public void verify( BaseMessage msg ) throws Exception {}
@@ -135,12 +136,12 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     return this;
   }
   
-  private AtomicReference<TYPE>          request         = new AtomicReference<TYPE>( null );
-  protected ChannelFuture                connectFuture;
-  protected NioBootstrap                 clientBootstrap;
+  private AtomicReference<TYPE>        request         = new AtomicReference<TYPE>( null );
+  private ChannelFuture                connectFuture;
+  private NioBootstrap                 clientBootstrap;
   @SuppressWarnings( "unchecked" )
-  private SuccessCallback                successCallback = SuccessCallback.NOOP;
-  protected FailureCallback<TYPE, RTYPE> failCallback    = FailureCallback.NOOP;
+  private SuccessCallback              successCallback = SuccessCallback.NOOP;
+  private FailureCallback<TYPE, RTYPE> failCallback    = FailureCallback.NOOP;
   
   public QueuedEventCallback<TYPE, RTYPE> then( UnconditionalCallback c ) {
     this.successCallback = c;
@@ -165,7 +166,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   }
   
   public void prepare( TYPE msg ) throws Exception {
-    LOG.debug( this.getClass( ).getCanonicalName( ) + " should implement: prepare( TYPE t ) to check any preconditions!" );
+    LOG.debug( this.getClass( ).getCanonicalName( ) + " should implement: prepare( TYPE t ) to check any preconditions!" );    
   }
   
   public abstract void verify( RTYPE msg ) throws Exception;
@@ -192,69 +193,57 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   }
   
   public RTYPE send( Cluster cluster ) throws Exception {
-    this.fire( cluster );
-    return this.getResponse( );
-  }
-
-  public QueuedEventCallback fire( Cluster cluster ) {
     this.fire( cluster.getHostName( ), cluster.getPort( ), cluster.getServicePath( ) );
-    return this;
+    return this.getResponse( );
   }
   
   @SuppressWarnings( "unchecked" )
   @Override
-  public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws EucalyptusClusterException {
-    Exception ex;
-    try {
-      if ( e.getMessage( ) instanceof MappingHttpResponse ) {
-        MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
+  public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
+    if ( e.getMessage( ) instanceof MappingHttpResponse ) {
+      MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
+      try {
+        RTYPE msg = ( RTYPE ) response.getMessage( );
+        if ( !msg.get_return( ) ) {
+          throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
+        }
+        this.verify( msg );
         try {
-          RTYPE msg = ( RTYPE ) response.getMessage( );
-          if ( !msg.get_return( ) ) {
-            throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
-          } else {
-            this.verify( msg );
-            try {
-              this.successCallback.apply( msg );
-              this.queueResponse( msg );
-            } catch ( Throwable e1 ) {
-              LOG.debug( e1, e1 );
-              try {
-                this.failCallback.failure( this, e1 );
-              } catch ( Throwable e2 ) {
-                LOG.debug( e2, e2 );
-              }
-              this.queueResponse( e1 );
-            }
-          }
+          this.successCallback.apply( msg );
         } catch ( Throwable e1 ) {
+          LOG.debug( e1, e1 );
+          this.failCallback.failure( this, e1 );
+        }
+      } catch ( Throwable e1 ) {
+        try {
+          this.fail( e1 );
+        } catch ( Throwable e3 ) {
+          LOG.error( e3, e3 );
+        } finally {
           try {
-            this.fail( e1 );
-          } catch ( Throwable e3 ) {
-            LOG.error( e3, e3 );
-          } finally {
-            try {
-              this.failCallback.failure( this, e1 );
-            } catch ( Throwable e2 ) {
-              LOG.debug( e2, e2 );
-            }
-          }
-          this.queueResponse( e1 );
-          if ( e1 instanceof EucalyptusClusterException ) {
-            throw ( EucalyptusClusterException ) e1;
-          } else {
-            throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
+            this.failCallback.failure( this, e1 );
+          } catch ( Throwable e2 ) {
+            LOG.debug( e2, e2 );
           }
         }
+        this.queueResponse( e1 );
+        e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+        if ( e1 instanceof EucalyptusClusterException ) {
+          throw ( EucalyptusClusterException ) e1;
+        } else {
+          throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
+        }
       }
-    } finally {
-      ctx.getChannel( ).close( );
     }
+    final MappingHttpMessage httpResponse = ( MappingHttpMessage ) e.getMessage( );
+    final EucalyptusMessage reply = ( EucalyptusMessage ) httpResponse.getMessage( );
+    this.queueResponse( reply );
+    ctx.getChannel( ).close( );
   }
   
   public void queueResponse( Object o ) {
     EventRecord.here( this.getClass( ), EventType.MSG_REPLY, LogUtil.dumpObject( o ) );
-    
+
     if ( o instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) o;
       if ( httpResponse.getMessage( ) != null ) {
@@ -262,9 +251,6 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
       } else {
         o = new EucalyptusClusterException( httpResponse.getMessageString( ) );
       }
-    }
-    if( o == null ) {
-      return;
     }
     this.canHas.lock( );
     try {
@@ -281,7 +267,6 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
           LOG.debug( this.getClass( ).getSimpleName( ) + " Got response of: " + LogUtil.dumpObject( o ) );
         }
       }
-      LOG.debug( "Setting value of response to be: " + this.response.get( ) );
       this.ready.signalAll( );
     } finally {
       this.canHas.unlock( );
@@ -298,7 +283,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     return this.request.get( );
   }
   
-  protected boolean setRequest( TYPE request ) {
+  public boolean setRequest( TYPE request ) {
     return this.request.compareAndSet( null, request );
   }
   
@@ -317,13 +302,13 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     if ( !this.pollForResponse( waitMillis ) ) {
       return null;
     } else {
-      EventRecord.here( this.getClass( ), EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ).debug( );
+      EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ).debug( );
       return this.checkedResponse( );
     }
   }
   
   private RTYPE checkedResponse( ) throws Exception {
-    if ( this.response.get( ) instanceof BaseMessage ) {
+    if ( this.response.get( ) instanceof EucalyptusMessage ) {
       return ( RTYPE ) this.response.get( );
     } else if ( this.response.get( ) instanceof Throwable ) {
       throw new EucalyptusClusterException( "Exception in NIO request.", ( Throwable ) this.response.get( ) );
@@ -334,46 +319,45 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   @Override
   public RTYPE getResponse( ) throws Exception {
     this.waitForResponse( );
-    EventRecord.here( this.getClass( ), EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ).debug( );
+    EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get( ).getClass( ).toString( ) ).debug( );
     return this.checkedResponse( );
   }
   
-  public boolean pollForResponse( Long waitMillis ) throws InterruptedException {
+  public boolean pollForResponse( Long waitMillis ) {
     boolean ret = false;
-    if ( this.response.get( ) != null ) {
-      ret = true;
-    } else {
-      this.canHas.lock( );
-      try {
-        ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
-        ret |= this.response.get( ) != null;
-        EventRecord.here( this.getClass( ), EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ).debug( );
-      } catch ( InterruptedException e ) {
-        throw e;
-      } finally {
-        this.canHas.unlock( );
+    this.canHas.lock( );
+    try {
+      if (this.response.get( ) != null) {
+	  return true;
+      } else {
+	  ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
+	  EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ).debug( );
       }
+    } catch ( InterruptedException e ) {
+      LOG.debug( e, e );
+      Thread.currentThread( ).interrupt( );
+    } finally {
+      this.canHas.unlock( );
     }
-    LOG.debug( "Current value of response is: " + this.response.get( ) );
     return ret;
   }
   
   public void waitForResponse( ) {
     this.canHas.lock( );
     try {
-      for( int i = 0; i < 60 && this.response.get() == null; i++ ) {
-        this.pollForResponse( 1000l );
-      }
-    } catch ( InterruptedException e ) {
-      LOG.debug( e, e );
+      while ( !this.pollForResponse( 100l ) );
     } finally {
       this.canHas.unlock( );
     }
   }
   
-  protected void fire( final String hostname, final int port, final String servicePath ) {
+  public NioClientPipeline getClientPipeline( ) throws Exception {
+    return new ClusterClientPipeline( this );
+  }
+  
+  public void fire( final String hostname, final int port, final String servicePath ) {
     try {
-      NioClientPipeline clientPipeline = new ClusterClientPipeline( this );
+      NioClientPipeline clientPipeline = this.getClientPipeline( );
       this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
       InetSocketAddress addr = new InetSocketAddress( hostname, port );
       this.connectFuture = this.clientBootstrap.connect( addr );
@@ -397,7 +381,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     if ( !this.writeComplete ) {
       this.queueResponse( new EucalyptusClusterException( "Channel was closed before the write operation could be completed: "
                                                           + LogUtil.dumpObject( this.getRequest( ) ) ) );
-    } else if ( writeComplete && this.response.get( ) == null ) {
+    } else if ( writeComplete && this.getRequest( ) == null ) {
       this.queueResponse( new EucalyptusClusterException( "Channel was closed before the read operation could be completed: "
                                                           + LogUtil.dumpObject( this.getRequest( ) ) ) );
     }

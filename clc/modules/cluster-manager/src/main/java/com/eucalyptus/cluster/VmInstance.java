@@ -161,6 +161,7 @@ public class VmInstance implements HasName {
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
     this.networkConfig.setNetworkIndex( Integer.parseInt( networkIndex ) );
+    EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE,  "user="+this.getOwnerId( ), "instance="+this.getInstanceId( ), "type="+this.getVmTypeInfo( ).getName( ), "state="+ this.state.getReference( ).name( ), "details="+this.reasonDetails.toString( )  ).info();
     this.stopWatch.start( );
     this.updateDns( );
   }

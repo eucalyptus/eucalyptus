@@ -77,7 +77,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
     while ( ( event = this.pendingEvents.poll( ) ) != null ) {
       try {
         while ( !event.pollForResponse( 100l ) );
-      } catch ( InterruptedException e ) {
+      } catch ( Exception e ) {
         LOG.debug( e, e );
       }
       try {

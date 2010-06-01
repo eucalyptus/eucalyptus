@@ -244,7 +244,7 @@ public class Cluster implements HasName {
     if( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;
       try {
-        new LogDataCallback( this, null ).fire( this ).waitForResponse( );
+        new LogDataCallback( this, null ).dispatch( this );
       } catch ( Throwable t ) {
         LOG.error( t, t );
       } finally {
@@ -270,7 +270,7 @@ public class Cluster implements HasName {
     if( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;
       try {
-        new LogDataCallback( this, nodeInfo ).fire ( this );
+        new LogDataCallback( this, nodeInfo ).dispatch( this );
       } catch ( Throwable t ) {
         LOG.debug( t, t );
       } finally {

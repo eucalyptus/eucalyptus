@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -147,7 +148,7 @@ public class Reports extends HttpServlet {
           out.println( "Sending request to: " + c.getUri( ) );
           try {
             NodeLogInfo logInfo = c.getLastLog( );
-            if ( logInfo != null ) {
+            if ( logInfo != null && logInfo.getCcLog( ) != null ) {
               String log = new String( Base64.decode( logInfo.getCcLog( ) ) );
               String printLog = (log.length( )>1024*64)?log.substring( log.length() - 1024*64 ):log;
               out.write( printLog );
@@ -160,6 +161,25 @@ public class Reports extends HttpServlet {
             LOG.debug( e, e );
             e.printStackTrace( out );
           }
+        } else if ( "node".equals( component ) ) {
+          Cluster c = Clusters.getInstance( ).lookup( cluster );
+          out.println( "Sending request to: " + host );
+          try {
+            NodeLogInfo logInfo = c.getNodeLog( host );
+            if ( logInfo != null && logInfo.getCcLog( ) != null ) {
+              String log = new String( Base64.decode( logInfo.getCcLog( ) ) );
+              String printLog = (log.length( )>1024*64)?log.substring( log.length() - 1024*64 ):log;
+              out.write( printLog );
+              out.flush( );
+            } else {
+              out.println( "ERROR getting log information for " + host );
+              out.println( logInfo.toString( ) );
+            }
+          } catch ( Throwable e ) {
+            LOG.debug( e, e );
+            e.printStackTrace( out );
+          }
+          
         }
         out.close( );
       } catch ( Throwable e ) {
