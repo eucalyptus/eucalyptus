@@ -69,7 +69,7 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     this.groupMap = new HashMap<String, List<ReportInfo>>( );
     Date now = new Date( );
     this.endMillis = now.getTime( );
-    this.startMillis = ( this.endMillis - ( 1000l * 60 * 24 * 7 ) );
+    this.startMillis = ( this.endMillis - ( 1000l * 60 * 60 * 24 * 7 ) );
     GWT.setUncaughtExceptionHandler( new GWT.UncaughtExceptionHandler( ) {
       @Override
       public void onUncaughtException( Throwable arg0 ) {
