@@ -335,7 +335,7 @@ public class Reports extends HttpServlet {
     }
     
     public JasperPrint getJasperPrint(HttpServletRequest req ) throws JRException, SQLException, IOException {
-      return this.jasperPrint = prepareReport( this, req );
+      return this.jasperPrint = Reports.prepareReport( this, req );
     }
     
     public boolean isExpired( ) {
@@ -373,7 +373,7 @@ public class Reports extends HttpServlet {
     }
   }
   
-  private static JasperPrint r( final ReportCache reportCache, final HttpServletRequest req ) throws JRException, SQLException, IOException {
+  public static JasperPrint prepareReport( final ReportCache reportCache, final HttpServletRequest req ) throws JRException, SQLException, IOException {
     JasperPrint jasperPrint;
     final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + reportCache.getName( ) + ".groovy" ).exists( ) );
     if ( jdbc ) {
