@@ -287,6 +287,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
       this.canHas.unlock( );
     }
     EventRecord.here( this.getClass( ), EventType.MSG_REPLY, LogUtil.dumpObject( this.response.get( ) ) );
+    this.clientBootstrap.releaseExternalResources( );
   }
   
   public Throwable getException( ) {

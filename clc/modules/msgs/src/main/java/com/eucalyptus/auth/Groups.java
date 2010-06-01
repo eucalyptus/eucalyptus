@@ -44,12 +44,12 @@ public class Groups {
   }
   
   public static Group addGroup( String name ) throws GroupExistsException {
-    EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_ADDED, name ).info();
+    EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_ADDED, "group=" + name ).info();
     return Groups.getGroupProvider( ).addGroup( name );
   }
   
   public static void deleteGroup( String groupName ) throws NoSuchGroupException {
-    EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_DELETED, groupName ).info();
+    EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_DELETED, "group=" + groupName ).info();
     Groups.getGroupProvider( ).deleteGroup( groupName );
   }
   

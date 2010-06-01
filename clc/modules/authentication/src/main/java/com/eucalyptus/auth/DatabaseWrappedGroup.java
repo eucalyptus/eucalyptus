@@ -49,7 +49,7 @@ public class DatabaseWrappedGroup implements Group {
       if ( !g.isMember( user ) ) {
         g.addMember( user );
         db.commit( );
-        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_ADDED, this.getName( ), user.getName( ) ).info();
+        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_ADDED, "group=" + this.getName( ), "user=" + user.getName( ) ).info();
         return true;
       } else {
         db.rollback( );
@@ -152,7 +152,7 @@ public class DatabaseWrappedGroup implements Group {
         db.recast( GroupEntity.class ).merge( g );
         this.group = g;
         db.commit( );
-        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_GRANTED, this.getName( ), auth.getDisplayName( ), auth.getValue( ) ).info();
+        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_GRANTED, "group=" + this.getName( ), "authorization=" + authorization.getDisplayName( ), "for=" + auth.getValue( ) ).info();
       } catch ( Throwable e ) {
         ret = false;
         LOG.debug( e, e );
