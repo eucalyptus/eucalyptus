@@ -224,30 +224,28 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
   public Long changeStartMillis( Long millis ) {
     Date now = new Date( );
     Long currentTime = now.getTime( );
-    if ( millis > this.endMillis ) {
-      this.startMillis = this.endMillis;
-    } else if ( ( millis > currentTime ) ) {
-      this.startMillis = this.endMillis;
+    if ( ( millis > currentTime ) ) {
+      this.startMillis = currentTime;
     } else if ( millis < 0 ) {
-      this.startMillis = this.startMillis;
+      this.startMillis = currentTime;
     } else {
       this.startMillis = millis;
     }
+    this.update( );
     return this.startMillis;
   }
   
   public Long changeEndMillis( Long millis ) {
     Date now = new Date( );
     Long currentTime = now.getTime( );
-    if ( millis < this.startMillis ) {
-      this.endMillis = this.startMillis;
-    } else if ( ( millis > currentTime ) ) {
+    if ( ( millis > currentTime ) ) {
       this.endMillis = currentTime;
     } else if ( millis < 0 ) {
-      this.endMillis = this.startMillis;
+      this.endMillis = currentTime;
     } else {
       this.endMillis = millis;
     }
+    this.update( );
     return this.endMillis;
   }
   
