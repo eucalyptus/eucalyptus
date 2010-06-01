@@ -41,37 +41,42 @@ public class LogDataCallback extends QueuedEventCallback<GetLogsType, GetLogsRes
   @Override
   public void fail( Throwable t ) {
     LOG.error( t, t );
+    this.queueResponse( t );
   }
 
   @Override
   public void verify( GetLogsResponseType msg ) throws Exception {
-    if( msg == null || msg.getLogs( ) == null ) {
-      throw new EucalyptusClusterException( "Failed to get log data from cluster." );
-    } else {
-      String log = "";
-      if( self ) {
-        cluster.setLastLog( msg.getLogs( ) );
-        try {
-          log = new String( Base64.decode( msg.getLogs( ).getCcLog( ) ) ).replaceFirst(".*\b","").substring( 0, 1000 );
-        } catch ( Throwable e ) {
-          LOG.debug( e, e );
-        }
+    try {
+      if ( msg == null || msg.getLogs( ) == null ) {
+        throw new EucalyptusClusterException( "Failed to get log data from cluster." );
       } else {
-        node.setLogs( msg.getLogs( ) );
-        try {
-          log = new String( Base64.decode( msg.getLogs( ).getNcLog( ) ) ).replaceFirst(".*\b","").substring( 0, 1000 );
-        } catch ( Throwable e ) {
-          LOG.debug( e, e );
-        }        
+        String log = "";
+        if ( self ) {
+          cluster.setLastLog( msg.getLogs( ) );
+          try {
+            log = new String( Base64.decode( msg.getLogs( ).getCcLog( ) ) ).replaceFirst( ".*\b", "" ).substring( 0, 1000 );
+          } catch ( Throwable e ) {
+            LOG.debug( e, e );
+          }
+        } else {
+          node.setLogs( msg.getLogs( ) );
+          try {
+            log = new String( Base64.decode( msg.getLogs( ).getNcLog( ) ) ).replaceFirst( ".*\b", "" ).substring( 0, 1000 );
+          } catch ( Throwable e ) {
+            LOG.debug( e, e );
+          }
+        }
+        LOG.debug( "LOG: " + log );
       }
-      LOG.debug( "LOG: " + log );
+    } finally {
+      this.queueResponse( msg );
     }
   }
   
   public void fire( final String hostname, final int port, final String servicePath ) {
     try {
       NioClientPipeline clientPipeline = new LogClientPipeline( this );
-      super.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
+      this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
       InetSocketAddress addr = new InetSocketAddress( hostname, port );
       this.connectFuture = this.clientBootstrap.connect( addr );
       String glServicePath = servicePath.replaceAll("EucalyptusCC","EucalyptusGL");

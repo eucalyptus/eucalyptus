@@ -215,6 +215,7 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
           this.verify( msg );
           try {
             this.successCallback.apply( msg );
+            this.queueResponse( msg );
           } catch ( Throwable e1 ) {
             LOG.debug( e1, e1 );
             try {
@@ -222,8 +223,8 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
             } catch ( Throwable e2 ) {
               LOG.debug( e2, e2 );
             }
+            this.queueResponse( e1 );
           }
-          this.queueResponse( msg );
         }
       } catch ( Throwable e1 ) {
         try {
