@@ -56,10 +56,6 @@ public class ReportList extends DecoratedStackPanel implements Observer {
                                                            AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
     this.add( this.serviceReports, XHTML.headerWithImage( "Service Status & Logs", AccountingControl.RESOURCES.serviceReports( ),
                                                           AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
-  }
-  
-  @Override
-  public void update( ) {
     for( final String group : this.controller.getGroupMap( ).keySet( ) ) {
       if( !this.groupMap.containsKey( group ) ) {
         this.groupMap.put( group, new VerticalPanel( ){
@@ -81,6 +77,7 @@ public class ReportList extends DecoratedStackPanel implements Observer {
               if( item.getUserObject( ) != null ) {
                 ReportInfo r = (ReportInfo)item.getUserObject( );
                 ReportList.this.controller.setCurrentReport( r );
+                item.setSelected( true );
                 item.setState( true, false );
               }
             }
@@ -125,5 +122,9 @@ public class ReportList extends DecoratedStackPanel implements Observer {
         }
       }
     }
+  }
+  
+  @Override
+  public void update( ) {
   }
 }
