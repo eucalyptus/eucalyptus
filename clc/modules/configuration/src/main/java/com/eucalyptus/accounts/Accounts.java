@@ -187,7 +187,7 @@ public class Accounts {
       public boolean apply( ServiceConfiguration arg0 ) {
         return arg0.getName( ).equals( request.getZoneName( ) );
       }} )) {
-      throw new EucalyptusCloudException( "No such cluster to add authorization for: " + request.getZoneName( ) + " for group " + request.getGroupName( ), e );      
+      throw new EucalyptusCloudException( "No such cluster to add authorization for: " + request.getZoneName( ) + " for group " + request.getGroupName( ) );      
     }
     try {
       Groups.lookupGroup( request.getGroupName( ) ).addAuthorization( new AvailabilityZonePermission( request.getZoneName( ) ) );
