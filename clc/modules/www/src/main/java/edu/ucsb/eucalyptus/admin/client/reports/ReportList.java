@@ -74,22 +74,22 @@ public class ReportList extends DecoratedStackPanel implements Observer {
       if( "service".equals( group ) ) {
         Tree serviceTree = new Tree( ) {{
           setAnimationEnabled( true );
+          addSelectionHandler(new SelectionHandler<TreeItem>() {
+            @Override
+            public void onSelection( SelectionEvent<TreeItem> event ) {
+              TreeItem item = event.getSelectedItem( );
+              if( item.getUserObject( ) != null ) {
+                ReportInfo r = (ReportInfo)item.getUserObject( );
+                ReportList.this.controller.setCurrentReport( r );
+                item.setState( true, false );
+              }
+            }
+          });
         }};
         for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
           if( "walrus".equals( info.getComponent( ) ) ) {
             TreeItem walrusItem = serviceTree.addItem( info.getDisplayName( ) );
             walrusItem.setUserObject( info );
-            serviceTree.addSelectionHandler(new SelectionHandler<TreeItem>() {
-              @Override
-              public void onSelection( SelectionEvent<TreeItem> event ) {
-                TreeItem item = event.getSelectedItem( );
-                if( item.getUserObject( ) != null ) {
-                  ReportInfo r = (ReportInfo)item.getUserObject( );
-                  ReportList.this.controller.setCurrentReport( r );
-                  item.setState( true, false );
-                }
-              }
-            });            
           }
         }
         Map<String,TreeItem> clusterItems = new HashMap<String,TreeItem>();
@@ -99,51 +99,18 @@ public class ReportList extends DecoratedStackPanel implements Observer {
             clusterItems.put( info.getClusterName( ), clusterRoot );
             TreeItem clusterItem = clusterRoot.addItem( info.getDisplayName( ) );
             clusterItem.setUserObject( info );
-            serviceTree.addSelectionHandler(new SelectionHandler<TreeItem>() {
-              @Override
-              public void onSelection( SelectionEvent<TreeItem> event ) {
-                TreeItem item = event.getSelectedItem( );
-                if( item.getUserObject( ) != null ) {
-                  ReportInfo r = (ReportInfo)item.getUserObject( );
-                  ReportList.this.controller.setCurrentReport( r );
-                  item.setState( true, false );
-                }
-              }
-            });            
           }
         }
         for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
           if( "storage".equals( info.getComponent( ) ) && clusterItems.containsKey( info.getClusterName( ) ) ) {
             TreeItem scItem = clusterItems.get( info.getClusterName( ) ).addItem( info.getDisplayName( ) );
             scItem.setUserObject( info );
-            serviceTree.addSelectionHandler(new SelectionHandler<TreeItem>() {
-              @Override
-              public void onSelection( SelectionEvent<TreeItem> event ) {
-                TreeItem item = event.getSelectedItem( );
-                if( item.getUserObject( ) != null ) {
-                  ReportInfo r = (ReportInfo)item.getUserObject( );
-                  ReportList.this.controller.setCurrentReport( r );
-                  item.setState( true, false );
-                }
-              }
-            });            
           }
         }
         for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
           if( "node".equals( info.getComponent( ) ) && clusterItems.containsKey( info.getClusterName( ) ) ) {
             TreeItem ncItem = clusterItems.get( info.getClusterName( ) ).addItem( info.getDisplayName( ) );
             ncItem.setUserObject( info );
-            serviceTree.addSelectionHandler(new SelectionHandler<TreeItem>() {
-              @Override
-              public void onSelection( SelectionEvent<TreeItem> event ) {
-                TreeItem item = event.getSelectedItem( );
-                if( item.getUserObject( ) != null ) {
-                  ReportInfo r = (ReportInfo)item.getUserObject( );
-                  ReportList.this.controller.setCurrentReport( r );
-                  item.setState( true, false );
-                }
-              }
-            });            
           }
         }
         groupPanel.add( serviceTree );
