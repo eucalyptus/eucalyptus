@@ -380,8 +380,8 @@ public class Reports extends HttpServlet {
       String url = String.format( "jdbc:%s_%s", Component.db.getUri( ).toString( ), "records" );
       Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
       jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
-        put( "EUCA_NOT_BEFORE", Param.start.get( req ) );
-        put( "EUCA_NOT_AFTER", Param.end.get( req ) );
+        put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );
+        put( "EUCA_NOT_AFTER", new Long( Param.end.get( req ) ) );
       }}, jdbcConnection );
     } else {
       FileReader fileReader = null;
