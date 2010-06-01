@@ -9,7 +9,6 @@ import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.datepicker.client.DateBox;
 import com.google.gwt.user.datepicker.client.DatePicker;
-import edu.ucsb.eucalyptus.admin.client.ContentControl;
 
 public class DatePickerPanel extends HorizontalPanel {
   private static final DateTimeFormat DATE_FORMAT = DateTimeFormat.getMediumDateFormat( );

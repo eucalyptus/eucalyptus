@@ -22,17 +22,13 @@ public class DateRange extends VerticalPanel implements Observer {
   public DateRange( AccountingControl controller, Integer days ) {
     this.controller = controller;
     this.days = days;
-    Integer absdays = Math.abs( this.days );
-    Date now = new Date( );
-    Long nowMillis = now.getTime( );
-    Date start = new Date( nowMillis - ( 1000l * 60 * 24 * absdays ) );
-    this.startDate = new DatePickerPanel( "From", start, new ValueChangeHandler<Date>( ) {
+    this.startDate = new DatePickerPanel( "From", controller.getStartTime( ), new ValueChangeHandler<Date>( ) {
       public void onValueChange( ValueChangeEvent<Date> event ) {
         Long newValue = DateRange.this.controller.changeStartMillis( event.getValue( ).getTime( ) );
         DateRange.this.startDate.setValue( new Date( newValue ) );
       }
     } );
-    this.endDate = new DatePickerPanel( "To", now, new ValueChangeHandler<Date>( ) {
+    this.endDate = new DatePickerPanel( "To", controller.getEndTime( ), new ValueChangeHandler<Date>( ) {
       public void onValueChange( ValueChangeEvent<Date> event ) {
         Long newValue = DateRange.this.controller.changeEndMillis( event.getValue( ).getTime( ) );
         DateRange.this.endDate.setValue( new Date( newValue ) );
@@ -43,12 +39,6 @@ public class DateRange extends VerticalPanel implements Observer {
   @Override
   public void redraw( ) {
     this.clear( );
-    //:: update time
-    Integer absdays = Math.abs( this.days );
-    Date now = new Date( );
-    Long nowMillis = now.getTime( );
-    this.controller.changeStartMillis( nowMillis - ( 1000l * 60 * 24 * absdays ) );
-    this.controller.changeEndMillis( nowMillis );
     this.add( this.startDate );
     this.add( this.endDate );
   }

@@ -205,49 +205,51 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws EucalyptusClusterException {
     Exception ex;
-    if ( e.getMessage( ) instanceof MappingHttpResponse ) {
-      MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
-      try {
-        RTYPE msg = ( RTYPE ) response.getMessage( );
-        if ( !msg.get_return( ) ) {
-          throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
-        } else {
-          this.verify( msg );
+    try {
+      if ( e.getMessage( ) instanceof MappingHttpResponse ) {
+        MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
+        try {
+          RTYPE msg = ( RTYPE ) response.getMessage( );
+          if ( !msg.get_return( ) ) {
+            throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
+          } else {
+            this.verify( msg );
+            try {
+              this.successCallback.apply( msg );
+              this.queueResponse( msg );
+            } catch ( Throwable e1 ) {
+              LOG.debug( e1, e1 );
+              try {
+                this.failCallback.failure( this, e1 );
+              } catch ( Throwable e2 ) {
+                LOG.debug( e2, e2 );
+              }
+              this.queueResponse( e1 );
+            }
+          }
+        } catch ( Throwable e1 ) {
           try {
-            this.successCallback.apply( msg );
-            this.queueResponse( msg );
-          } catch ( Throwable e1 ) {
-            LOG.debug( e1, e1 );
+            this.fail( e1 );
+          } catch ( Throwable e3 ) {
+            LOG.error( e3, e3 );
+          } finally {
             try {
               this.failCallback.failure( this, e1 );
             } catch ( Throwable e2 ) {
               LOG.debug( e2, e2 );
             }
-            this.queueResponse( e1 );
           }
-        }
-      } catch ( Throwable e1 ) {
-        try {
-          this.fail( e1 );
-        } catch ( Throwable e3 ) {
-          LOG.error( e3, e3 );
-        } finally {
-          try {
-            this.failCallback.failure( this, e1 );
-          } catch ( Throwable e2 ) {
-            LOG.debug( e2, e2 );
+          this.queueResponse( e1 );
+          if ( e1 instanceof EucalyptusClusterException ) {
+            throw ( EucalyptusClusterException ) e1;
+          } else {
+            throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
           }
-        }
-        this.queueResponse( e1 );
-        e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-        if ( e1 instanceof EucalyptusClusterException ) {
-          throw ( EucalyptusClusterException ) e1;
-        } else {
-          throw new EucalyptusClusterException( "Error in contacting the Cluster Controller: " + e1.getMessage( ), e1 );
         }
       }
+    } finally {
+      ctx.getChannel( ).close( );
     }
-    ctx.getChannel( ).close( );
   }
   
   public void queueResponse( Object o ) {
