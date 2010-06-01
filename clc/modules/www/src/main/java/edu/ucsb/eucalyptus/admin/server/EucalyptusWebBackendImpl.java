@@ -81,6 +81,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.SortedSet;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
@@ -1153,24 +1154,22 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
         reports.addAll( EucalyptusWebBackendImpl.getServiceLogInfo( s ) );
       }
     }
-    for( File report : Lists.sort( Arrays.asList( SubDirectory.REPORTS.getFile( ).listFiles( new FilenameFilter() {
+    SortedSet<String> sortedReports = new TreeSet<String>();
+    for( File report : SubDirectory.REPORTS.getFile( ).listFiles( new FilenameFilter() {
       @Override
       public boolean accept( File arg0, String arg1 ) {
         return arg1.endsWith( ".jrxml" );
-      }} ) ), new Comparator<File>() {
-
-        @Override
-        public int compare( File arg0, File arg1 ) {
-          return arg0.getName( ).replaceAll( "\\w*_", "" ).compareTo( arg1.getName( ).replaceAll( "\\w*_", "" ) );
-        }} ) ) {
-      String reportName = report.getName( ).replaceAll( ".jrxml", "" );
+      }} ) ) {
+      sortedReports.add( report.getName( ).replaceAll( ".jrxml", "" ) );
+    }
+    for( String reportName : sortedReports ) {
       try {
         ReportCache reportCache = Reports.getReportManager( reportName, false );
         reports.add( new ReportInfo( reportCache.getReportGroup( ), reportCache.getReportName( ), reportName, 1 ) );
       }
       catch ( Throwable e ) {
         LOG.error( e, e );
-        LOG.error( "Failed to read report file: " + report.getCanonicalPath( ) + " because of: " + e.getMessage( ) );
+        LOG.error( "Failed to read report file: " + reportName + " because of: " + e.getMessage( ) );
       }
     }
     return reports;
