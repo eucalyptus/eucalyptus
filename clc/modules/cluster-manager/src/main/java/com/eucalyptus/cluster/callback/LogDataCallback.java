@@ -51,12 +51,20 @@ public class LogDataCallback extends QueuedEventCallback<GetLogsType, GetLogsRes
       String log = "";
       if( self ) {
         cluster.setLastLog( msg.getLogs( ) );
-        log = new String( Base64.decode( msg.getLogs( ).getCcLog( ) ) ).replaceFirst(".*\b","").substring( 0, 1000 );
+        try {
+          log = new String( Base64.decode( msg.getLogs( ).getCcLog( ) ) ).replaceFirst(".*\b","").substring( 0, 1000 );
+        } catch ( Throwable e ) {
+          LOG.debug( e, e );
+        }
       } else {
         node.setLogs( msg.getLogs( ) );
-        log = new String( Base64.decode( msg.getLogs( ).getNcLog( ) ) ).replaceFirst(".*\b","").substring( 0, 1000 );        
+        try {
+          log = new String( Base64.decode( msg.getLogs( ).getNcLog( ) ) ).replaceFirst(".*\b","").substring( 0, 1000 );
+        } catch ( Throwable e ) {
+          LOG.debug( e, e );
+        }        
       }
-      LOG.debug( log );
+      LOG.debug( "LOG: " + log );
     }
   }
   
