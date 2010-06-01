@@ -1,38 +1,30 @@
 import com.eucalyptus.auth.*;
 import com.eucalyptus.auth.principal.*;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.address.Address;
 
-EntityWrapper db;
+EntityWrapper db = EntityWrapper.get( Address.class );
 Users.listAllUsers().each{ User user ->
   def u = new UserReportInfo() {{
-          userName = user.getName() 
-        }
-      };
-  (db = EntityWrapper.get( ImageInfo.class )).query( ImageInfo.byOwnerId( user.getName() ) ).each{ ImageInfo image ->
-    u.imageCount++
-    if("machine".equals( image.getImageType() ) ) {
-      u.imageMachine++
-    } else if("kernel".equals( image.getImageType() ) ) {
-      u.imageKernel++
-    } else if("machine".equals( image.getImageType() ) ) {
-      u.imageRamdisk++
+      userName = user.getName() 
+    }
+  };
+  Address a = new Address(  )
+  a.setOwnerId( user.getName() )
+  db.query(  ).each{ Address addr ->
+    u.addrCount++
+    if( addr.isSystemOwned() ) {
+      u.systemCount++
     }
   }
-  db?.commit()
   results.add( u )
 }
+db?.commit()
 def class UserReportInfo {
   String userName;
-  Integer imageCount = 0;
-  Integer imageKernel = 0;
-  Integer imageMachine = 0;
-  Integer imageRamdisk = 0;
-  Integer volumes = 0;
-  Integer snapshots;
-  Integer networks;
-  Integer tcpRules;
-  Integer udpRules;
-  Integer icmpRules;
+  Integer addrCount = 0;
+  Integer systemCount = 0;
+  Integer allocTime = 0;
+  Integer assignTime = 0;
 }
 

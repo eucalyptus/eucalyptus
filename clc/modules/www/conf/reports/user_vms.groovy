@@ -3,13 +3,13 @@ import com.eucalyptus.auth.principal.*;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
 
-EntityWrapper db;
+EntityWrapper db = EntityWrapper.get( ImageInfo.class );
 Users.listAllUsers().each{ User user ->
   def u = new UserReportInfo() {{
-          userName = user.getName() 
-        }
-      };
-  (db = EntityWrapper.get( ImageInfo.class )).query( ImageInfo.byOwnerId( user.getName() ) ).each{ ImageInfo image ->
+      userName = user.getName() 
+    }
+  };
+  db.query( ImageInfo.byOwnerId( user.getName() ) ).each{ ImageInfo image ->
     u.imageCount++
     if("machine".equals( image.getImageType() ) ) {
       u.imageMachine++
@@ -19,20 +19,21 @@ Users.listAllUsers().each{ User user ->
       u.imageRamdisk++
     }
   }
-  db?.commit()
   results.add( u )
 }
+db?.commit()
 def class UserReportInfo {
   String userName;
-  Integer imageCount = 0;
-  Integer imageKernel = 0;
-  Integer imageMachine = 0;
-  Integer imageRamdisk = 0;
-  Integer volumes = 0;
-  Integer snapshots;
-  Integer networks;
-  Integer tcpRules;
-  Integer udpRules;
-  Integer icmpRules;
+  Integer vmCount = 0;
+  Integer m1small = 0;
+  Integer c1medium = 0;
+  Integer m1large = 0;
+  Integer m1xlarge = 0;
+  Integer c1xlarge = 0;
+  Integer m1smallTime = 0;
+  Integer c1mediumTime = 0;
+  Integer m1largeTime = 0;
+  Integer m1xlargeTime = 0;
+  Integer c1xlargeTime = 0;
 }
 
