@@ -14,8 +14,12 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AddGroupMemberResponseType;
 import edu.ucsb.eucalyptus.msgs.AddGroupMemberType;
@@ -176,10 +180,16 @@ public class Accounts {
     return reply;    
   }
 
-  public GrantGroupAuthorizationResponseType authorize( GrantGroupAuthorizationType request ) throws EucalyptusCloudException {
+  public GrantGroupAuthorizationResponseType authorize( final GrantGroupAuthorizationType request ) throws EucalyptusCloudException {
     GrantGroupAuthorizationResponseType reply = request.getReply( );
+    if(!Iterables.any( Components.lookup( "cluster" ).list( ), new Predicate<ServiceConfiguration>() {
+      @Override
+      public boolean apply( ServiceConfiguration arg0 ) {
+        return arg0.getName( ).equals( request.getZoneName( ) );
+      }} )) {
+      throw new EucalyptusCloudException( "No such cluster to add authorization for: " + request.getZoneName( ) + " for group " + request.getGroupName( ), e );      
+    }
     try {
-      //TODO: RELEASE: fix checking that the cluster exists!
       Groups.lookupGroup( request.getGroupName( ) ).addAuthorization( new AvailabilityZonePermission( request.getZoneName( ) ) );
       reply.set_return( true );
     } catch ( NoSuchGroupException e ) {
