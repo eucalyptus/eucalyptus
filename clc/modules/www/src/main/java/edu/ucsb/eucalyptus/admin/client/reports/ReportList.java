@@ -123,8 +123,8 @@ public class ReportList extends DecoratedStackPanel implements Observer {
         }
         for ( final ReportInfo info : this.controller.getGroupMap( ).get( group ) ) {
           if( "node".equals( info.getComponent( ) ) && clusterItems.containsKey( info.getClusterName( ) ) ) {
-            TreeItem scItem = clusterItems.get( info.getClusterName( ) ).addItem( info.getDisplayName( ) );
-            scItem.setUserObject( info );
+            TreeItem ncItem = clusterItems.get( info.getClusterName( ) ).addItem( info.getDisplayName( ) );
+            ncItem.setUserObject( info );
             serviceTree.addOpenHandler(new OpenHandler<TreeItem>() {
               public void onOpen(OpenEvent<TreeItem> event) {
                 TreeItem item = event.getTarget();
