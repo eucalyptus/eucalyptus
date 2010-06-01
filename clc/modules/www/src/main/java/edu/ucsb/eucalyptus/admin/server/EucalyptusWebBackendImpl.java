@@ -73,6 +73,8 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -101,6 +103,7 @@ import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.www.Reports;
 import com.eucalyptus.www.Reports.ReportCache;
+import com.google.gwt.dev.util.collect.Lists;
 import com.google.gwt.user.client.rpc.SerializableException;
 import com.google.gwt.user.client.rpc.SerializationException;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
@@ -1150,11 +1153,16 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
         reports.addAll( EucalyptusWebBackendImpl.getServiceLogInfo( s ) );
       }
     }
-    for( File report : SubDirectory.REPORTS.getFile( ).listFiles( new FilenameFilter() {
+    for( File report : Lists.sort( Arrays.asList( SubDirectory.REPORTS.getFile( ).listFiles( new FilenameFilter() {
       @Override
       public boolean accept( File arg0, String arg1 ) {
         return arg1.endsWith( ".jrxml" );
-      }} ) ) {
+      }} ) ), new Comparator<File>() {
+
+        @Override
+        public int compare( File arg0, File arg1 ) {
+          return arg0.getName( ).replaceAll( "\\w*_", "" ).compareTo( arg1.getName( ).replaceAll( "\\w*_", "" ) );
+        }} ) ) {
       String reportName = report.getName( ).replaceAll( ".jrxml", "" );
       try {
         ReportCache reportCache = Reports.getReportManager( reportName, false );
