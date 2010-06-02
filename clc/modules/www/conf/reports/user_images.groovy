@@ -5,7 +5,7 @@ import com.eucalyptus.images.ImageInfo;
 
 EntityWrapper db = EntityWrapper.get( ImageInfo.class );
 Users.listAllUsers().each{ User user ->
-  def u = new UserReportInfo() {{
+  def u = new UserImageData() {{
           userName = user.getName() 
         }
       };
@@ -22,7 +22,7 @@ Users.listAllUsers().each{ User user ->
   results.add( u )
 }
 db?.commit()
-def class UserReportInfo {
+def class UserImageData {
   String userName;
   Integer imageCount = 0;
   Integer imageKernel = 0;

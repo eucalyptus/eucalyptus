@@ -5,7 +5,7 @@ import com.eucalyptus.blockstorage.Volume;
 
 EntityWrapper db = EntityWrapper.get( Volume.class );
 Users.listAllUsers().each{ User user ->
-  def u = new UserReportInfo() {{
+  def u = new UserStorageData() {{
       userName = user.getName() 
     }
   };
@@ -16,7 +16,7 @@ Users.listAllUsers().each{ User user ->
   results.add( u )
 }
 db?.commit()
-def class UserReportInfo {
+def class UserStorageData {
   String userName;
   Integer volumeCount = 0;
   Integer volumeGigabytes = 0;

@@ -5,13 +5,13 @@ import com.eucalyptus.address.Address;
 
 EntityWrapper db = EntityWrapper.get( Address.class );
 Users.listAllUsers().each{ User user ->
-  def u = new UserReportInfo() {{
+  def u = new UserAddressData() {{
       userName = user.getName() 
     }
   };
   Address a = new Address(  )
-  a.setOwnerId( user.getName() )
-  db.query(  ).each{ Address addr ->
+  a.setUserId( user.getName() )
+  db.query( a ).each{ Address addr ->
     u.addrCount++
     if( addr.isSystemOwned() ) {
       u.systemCount++
@@ -20,10 +20,12 @@ Users.listAllUsers().each{ User user ->
   results.add( u )
 }
 db?.commit()
-def class UserReportInfo {
+def class UserAddressData {
   String userName;
-  Integer addrCount = 0;
+  Integer allocCount = 0;
+  Integer assignCount = 0;
   Integer systemCount = 0;
+  Integer privateCount = 0;
   Integer allocTime = 0;
   Integer assignTime = 0;
 }

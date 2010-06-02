@@ -412,7 +412,7 @@ public class Reports extends HttpServlet {
         try {
           makeScriptEngine( ).run( reportCache.getName( ) + ".groovy", binding );
         } catch ( Exception e ) {
-          LOG.debug( e, e );
+          LOG.error( e, e );
         }
         JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
         jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), null, data );
@@ -432,22 +432,22 @@ public class Reports extends HttpServlet {
   }
   
   private static GroovyScriptEngine makeScriptEngine( ) {
-    if ( gse != null ) {
-      return gse;
-    } else {
-      synchronized ( Reports.class ) {
-        if ( gse != null ) {
-          return gse;
-        } else {
+//    if ( gse != null ) {
+//      return gse;
+//    } else {
+//      synchronized ( Reports.class ) {
+//        if ( gse != null ) {
+//          return gse;
+//        } else {
           try {
             return gse = new GroovyScriptEngine( SubDirectory.REPORTS.toString( ) );
           } catch ( IOException e ) {
             LOG.debug( e, e );
             throw new RuntimeException( e );
           }
-        }
-      }
-    }
+//        }
+//      }
+//    }
   }
   
   public static void hasError( String message, HttpServletResponse response ) {
