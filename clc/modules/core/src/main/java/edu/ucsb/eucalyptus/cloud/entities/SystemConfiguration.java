@@ -94,8 +94,8 @@ import com.eucalyptus.util.StorageProperties;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "system_info" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-@ConfigurableClass( alias = "config", description = "Basic system configuration." )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ConfigurableClass( root = "config", description = "Basic system configuration." )
 public class SystemConfiguration {
   private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
   @Id
@@ -120,8 +120,6 @@ public class SystemConfiguration {
   private Boolean doDynamicPublicAddresses;
   @Column( name = "system_reserved_public_addresses" )
   private Integer systemReservedPublicAddresses;
-  @Column( name = "zero_fill_volumes" )
-  private Boolean zeroFillVolumes;
   @ConfigurableField( description = "Domain name to use for DNS." )
   @Column( name = "dns_domain" )
   private String  dnsDomain;
@@ -130,11 +128,12 @@ public class SystemConfiguration {
   private String  nameserver;
   @Column( name = "ns_address" )
   private String  nameserverAddress;
-  
-  public SystemConfiguration( ) {}
-  
+
+  public SystemConfiguration( ) {
+  }
+
   public SystemConfiguration( final String defaultKernel, final String defaultRamdisk, final Integer maxUserPublicAddresses,
-                              final Boolean doDynamicPublicAddresses, final Integer systemReservedPublicAddresses, final Boolean zeroFillVolumes,
+                              final Boolean doDynamicPublicAddresses, final Integer systemReservedPublicAddresses,
                               final String dnsDomain, final String nameserver, final String nameserverAddress, final String cloudHost ) {
     this.defaultKernel = defaultKernel;
     this.defaultRamdisk = defaultRamdisk;
@@ -142,7 +141,6 @@ public class SystemConfiguration {
     this.doDynamicPublicAddresses = doDynamicPublicAddresses;
     this.systemReservedPublicAddresses = systemReservedPublicAddresses;
     this.dnsDomain = dnsDomain;
-    this.zeroFillVolumes = zeroFillVolumes;
     this.nameserver = nameserver;
     this.nameserverAddress = nameserverAddress;
     this.cloudHost = cloudHost;
@@ -224,14 +222,6 @@ public class SystemConfiguration {
     this.nameserverAddress = nameserverAddress;
   }
   
-  public Boolean getZeroFillVolumes( ) {
-    return zeroFillVolumes;
-  }
-  
-  public void setZeroFillVolumes( Boolean zeroFillVolumes ) {
-    this.zeroFillVolumes = zeroFillVolumes;
-  }
-  
   public String getCloudHost( ) {
     return cloudHost;
   }
@@ -270,6 +260,7 @@ public class SystemConfiguration {
   	}
   	catch ( EucalyptusCloudException e ) {
   	  LOG.warn("Failed to get system configuration. Loading defaults.");
+  	  LOG.error( e, e );
   		conf = SystemConfiguration.validateSystemConfiguration(null);
   		confDb.add(conf);
   		confDb.commit();
@@ -298,7 +289,7 @@ public class SystemConfiguration {
           cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
         } catch ( SocketException e ) {}
       }
-      return String.format( "http://%s:8773/services/Eucalyptus", cloudHost );
+      return String.format( "http://%s:"+System.getProperty("euca.ws.port")+"/services/Eucalyptus", cloudHost );
     } catch ( EucalyptusCloudException e ) {
       return "http://127.0.0.1:8773/services/Eucalyptus";
     }
@@ -402,9 +393,6 @@ public class SystemConfiguration {
     }
     if( sysConf.getSystemReservedPublicAddresses() == null ) {
       sysConf.setSystemReservedPublicAddresses( 10 );
-    }
-    if(sysConf.getZeroFillVolumes() == null) {
-      sysConf.setZeroFillVolumes(StorageProperties.zeroFillVolumes);
     }
     return sysConf;
   }
