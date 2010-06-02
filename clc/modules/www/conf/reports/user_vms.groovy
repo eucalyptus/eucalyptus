@@ -15,10 +15,10 @@ Users.listAllUsers().each{ User user ->
   +"WHERE record_class LIKE 'VM' AND record_extra LIKE 'user=${u.userName}:%:state=RUNNING:%' AND UNIX_TIMESTAMP(record_timestamp)*1000 < ${notAfter} " \
   +"GROUP BY record_extra ORDER BY min(record_timestamp) DESC;"
   def termQuery = "SELECT UNIX_TIMESTAMP(record_timestamp)*1000 as timestamp, record_extra as details FROM eucalyptus_records.records_logs " \
-  +"WHERE record_class LIKE 'VM' AND record_extra LIKE \"user=${u.userName}:%:state=TERMINATED:%\" AND UNIX_TIMESTAMP(record_timestamp)*1000 < ${notBefore} " \
+  +"WHERE record_class LIKE 'VM' AND record_extra LIKE \"user=${u.userName}:%:state=TERMINATED:%\" OR record_extra LIKE \"user=${u.userName}:%:state=TERMINATED:%\" AND UNIX_TIMESTAMP(record_timestamp)*1000 < ${notBefore} " \
   +"GROUP BY record_extra ORDER BY min(record_timestamp) DESC;"
-  println "${[ u.userName, notBefore, notAfter ]}"
-  println termQuery
+//  println "${[ u.userName, notBefore, notAfter ]}"
+//  println termQuery
   sql.rows( runQuery ).each{
       println it
         String[] details = it.details.split(":")

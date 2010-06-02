@@ -146,21 +146,21 @@ public class NioResponseHandler extends SimpleChannelHandler implements Response
         o = new EucalyptusClusterException( httpResponse.getMessageString( ) );
       }
     }
-    if( !this.response.compareAndSet( null, o ) ) {
-      if( !( o instanceof Throwable ) ) {
-        LOG.debug( LogUtil.subheader( "Received spurious second response: " + LogUtil.dumpObject( o ) ) );
-      }
-      o = this.response.getAndSet( o );
-      LOG.debug( LogUtil.subheader( "Previous response was: " + LogUtil.dumpObject( this.response.get( ) ) ) );
-    } else {
-      if( o instanceof Throwable ) {
-        LOG.error( "Caught exception in asynchronous response handler.", (Throwable) o );
-      } else {
-        LOG.debug( this.getClass( ).getSimpleName( ) + " Got response of: " + LogUtil.dumpObject( o ) );
-      }
-    }
     this.canHas.lock( );
     try {
+      if( !this.response.compareAndSet( null, o ) ) {
+        if( !( o instanceof Throwable ) ) {
+          LOG.debug( LogUtil.subheader( "Received spurious second response: " + LogUtil.dumpObject( o ) ) );
+        }
+        o = this.response.getAndSet( o );
+        LOG.debug( LogUtil.subheader( "Previous response was: " + LogUtil.dumpObject( this.response.get( ) ) ) );
+      } else {
+        if( o instanceof Throwable ) {
+          LOG.error( "Caught exception in asynchronous response handler.", (Throwable) o );
+        } else {
+          LOG.debug( this.getClass( ).getSimpleName( ) + " Got response of: " + LogUtil.dumpObject( o ) );
+        }
+      }
       this.ready.signalAll( );
     } finally {
       this.canHas.unlock( );
@@ -173,20 +173,21 @@ public class NioResponseHandler extends SimpleChannelHandler implements Response
   }
 
   public void waitForResponse( ) {
+    this.canHas.lock( );
+    try {
       while( this.response.get( ) == null ) {
-        this.canHas.lock( );
         try {
-          this.ready.await( 1000, TimeUnit.MILLISECONDS );
+          this.ready.await( 10000, TimeUnit.MILLISECONDS );
           LOG.debug( "Waiting for response." );
         } catch ( InterruptedException e ) {
           LOG.debug( e, e );
-          return;
-//          Thread.currentThread( ).interrupt( );
-        } finally {
-          this.canHas.unlock( );
+          Thread.currentThread( ).interrupt( );
         }
       }
       EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get().getClass( ).toString( ) ).debug( );
+    } finally {
+      this.canHas.unlock( );
+    }
   }
 
   @Override
