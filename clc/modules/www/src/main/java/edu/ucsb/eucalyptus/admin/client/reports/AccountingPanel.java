@@ -72,7 +72,7 @@ public class AccountingPanel extends DockPanel implements Observer {
   public void redraw( ) {
     this.clear( );
     this.setSpacing( 0 );
-    this.setHorizontalAlignment( DockPanel.ALIGN_CENTER );
+    this.setHorizontalAlignment( DockPanel.ALIGN_LEFT );
     this.setVerticalAlignment( DockPanel.ALIGN_TOP );
     this.setStyleName( AccountingControl.RESOURCES.ROOT_PANEL_STYLE );
     VerticalPanel leftPane = new VerticalPanel( ) {
