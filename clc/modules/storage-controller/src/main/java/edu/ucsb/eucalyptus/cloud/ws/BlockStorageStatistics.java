@@ -103,6 +103,20 @@ public class BlockStorageStatistics {
 		dump();
 	}
 
+	public void incrementVolumeCount(long bytes) {
+		totalSpaceUsed += bytes;
+		numberOfVolumes++;
+		updateStateInfo();
+		dump();
+	}
+
+	public void decrementVolumeCount(long bytes) {
+		totalSpaceUsed += bytes;
+		numberOfVolumes--;
+		updateStateInfo();
+		dump();
+	}
+
 	public void dump() {
 		LOG.info(StorageUsageStatsRecord.create(numberOfVolumes, totalSpaceUsed));
 	}

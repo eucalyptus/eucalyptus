@@ -66,6 +66,9 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -75,6 +78,7 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
+import org.mule.RequestContext;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
@@ -87,6 +91,7 @@ import com.eucalyptus.ws.util.Messaging;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
+import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
 import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
 import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
@@ -96,6 +101,8 @@ import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+import edu.ucsb.eucalyptus.msgs.ConvertVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.ConvertVolumesType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
@@ -183,7 +190,7 @@ public class BlockStorage {
 		}
 		if(request.getStorageParams() != null) {
 			for(ComponentProperty param : request.getStorageParams()) {
-				LOG.info("Storage Param: " + param.getDisplayName() + " Qname: " + param.getQualifiedName() + " Value: " + param.getValue());
+				LOG.debug("Storage Param: " + param.getDisplayName() + " Qname: " + param.getQualifiedName() + " Value: " + param.getValue());
 			}
 			blockManager.setStorageProps(request.getStorageParams());
 		}
@@ -249,7 +256,8 @@ public class BlockStorage {
 		volumeInfo.setVolumeId(volumeId);
 		List<VolumeInfo> volumeList = db.query(volumeInfo);
 
-		reply.set_return(Boolean.FALSE);
+		//always return true. 
+		reply.set_return(Boolean.TRUE);
 		if(volumeList.size() > 0) {
 			VolumeInfo foundVolume = volumeList.get(0);
 			//check its status
@@ -257,8 +265,7 @@ public class BlockStorage {
 			if(status.equals(StorageProperties.Status.available.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
 				VolumeDeleter volumeDeleter = new VolumeDeleter(volumeId);
 				volumeService.add(volumeDeleter);
-				reply.set_return(Boolean.TRUE);
-			}
+			} 
 		} 
 		db.commit();
 		return reply;
@@ -288,11 +295,16 @@ public class BlockStorage {
 					int volSize = foundVolumeInfo.getSize();
 					int totalSnapshotSize = 0;
 					SnapshotInfo snapInfo = new SnapshotInfo();
+					snapInfo.setStatus(StorageProperties.Status.available.toString());
 					EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);
 
 					List<SnapshotInfo> snapInfos = dbSnap.query(snapInfo);
 					for (SnapshotInfo sInfo : snapInfos) {
-						totalSnapshotSize += blockManager.getSnapshotSize(sInfo.getSnapshotId());
+						try {
+							totalSnapshotSize += blockManager.getSnapshotSize(sInfo.getSnapshotId());
+						} catch(EucalyptusCloudException e) {
+							LOG.error(e);
+						}
 					}
 					if((totalSnapshotSize + volSize) > WalrusInfo.getWalrusInfo().getStorageMaxTotalSnapshotSizeInGb()) {
 						db.rollback();
@@ -300,7 +312,7 @@ public class BlockStorage {
 					}
 				}
 				EntityWrapper<SnapshotInfo> db2 = StorageProperties.getEntityWrapper();
-				edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo snapshotInfo = new edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo(snapshotId);
+				SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 				snapshotInfo.setUserName(foundVolumeInfo.getUserName());
 				snapshotInfo.setVolumeId(volumeId);
 				Date startTime = new Date();
@@ -441,15 +453,23 @@ public class BlockStorage {
 			db.rollback();
 			throw new VolumeAlreadyExistsException(volumeId);
 		}
+		if(snapshotId != null) {
+			SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+			snapInfo.setStatus(StorageProperties.Status.available.toString());
+			EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);			
+			List<SnapshotInfo> snapInfos = dbSnap.query(snapInfo);
+			if(snapInfos.size() != 1) {
+				db.rollback();
+				throw new NoSuchEntityException("Snapshot " + snapshotId + " does not exist or is unavailable");
+			}
+			volumeInfo.setSnapshotId(snapshotId);
+			reply.setSnapshotId(snapshotId);
+		}
 		volumeInfo.setUserName(userId);
 		volumeInfo.setSize(sizeAsInt);
 		volumeInfo.setStatus(StorageProperties.Status.creating.toString());
 		Date creationDate = new Date();
 		volumeInfo.setCreateTime(creationDate);
-		if(snapshotId != null) {
-			volumeInfo.setSnapshotId(snapshotId);
-			reply.setSnapshotId(snapshotId);
-		}
 		db.add(volumeInfo);
 		reply.setVolumeId(volumeId);
 		reply.setCreateTime(DateUtils.format(creationDate.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
@@ -530,6 +550,30 @@ public class BlockStorage {
 		return reply;
 	}
 
+	public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
+		ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
+		String provider = request.getOriginalProvider();
+		provider = "com.eucalyptus.storage." + provider;
+		if(!blockManager.getClass().getName().equals(provider)) {
+			//different backend provider. Try upgrade
+			try {
+				LogicalStorageManager fromBlockManager = (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(provider).newInstance();
+				fromBlockManager.checkPreconditions();
+				//initialize fromBlockManager
+				new VolumesConvertor(fromBlockManager).start();
+			} catch(InstantiationException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} catch(ClassNotFoundException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} catch(IllegalAccessException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			}
+		}
+		return reply;
+	}
 
 	private StorageVolume convertVolumeInfo(VolumeInfo volInfo) throws EucalyptusCloudException {
 		StorageVolume volume = new StorageVolume();
@@ -579,8 +623,8 @@ public class BlockStorage {
 
 		@Override
 		public void run() {
+			EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
 			try {
-				EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
 				try {
 					semaphore.acquire();
 				} catch(InterruptedException ex) {
@@ -593,17 +637,64 @@ public class BlockStorage {
 				}
 				snapshotFileName = returnValues.get(0);
 				transferSnapshot(returnValues.get(1));
-				blockManager.finishSnapshot(snapshotId);
+				blockManager.finishVolume(snapshotId);
+				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
+				try {
+					SnapshotInfo snapshotInfo = db.getUnique(snapInfo);
+					snapshotInfo.setStatus(StorageProperties.Status.available.toString());
+				} catch(EucalyptusCloudException e) {
+					LOG.error(e);
+				} finally {
+					db.commit();
+				}
 			} catch(Exception ex) {
+				semaphore.release();
+				try {
+					blockManager.finishVolume(snapshotId);
+				} catch (EucalyptusCloudException e1) {
+					LOG.error(e1);
+				}
+				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
+				try {
+					SnapshotInfo snapshotInfo = db.getUnique(snapInfo);
+					snapshotInfo.setStatus(StorageProperties.Status.failed.toString());
+				} catch(EucalyptusCloudException e) {
+					LOG.error(e);
+				} finally {
+					db.commit();
+				}
 				LOG.error(ex);
 			}
 		}
 
-		private void transferSnapshot(String sizeAsString) {
+		private void transferSnapshot(String sizeAsString) throws EucalyptusCloudException {
 			long size = Long.parseLong(sizeAsString);
 
 			File snapshotFile = new File(snapshotFileName);
 			assert(snapshotFile.exists());
+			//do a little test to check if we can read from it
+			FileInputStream snapInStream = null;
+			try {
+				snapInStream = new FileInputStream(snapshotFile);
+				byte[] bytes = new byte[1024];
+				if(snapInStream.read(bytes) <= 0) {
+					throw new EucalyptusCloudException("Unable to read snapshot file");
+				}				
+			} catch (FileNotFoundException e) {
+				throw new EucalyptusCloudException(e);
+			} catch (IOException e) {
+				throw new EucalyptusCloudException(e);
+			} finally {
+				if(snapInStream != null) {
+					try {
+						snapInStream.close();
+					} catch (IOException e) {
+						throw new EucalyptusCloudException(e);
+					}
+				}
+			}
 			SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
 			Map<String, String> httpParamaters = new HashMap<String, String>();
 			HttpWriter httpWriter;
@@ -722,8 +813,7 @@ public class BlockStorage {
 						}
 						foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 						if(StorageProperties.trackUsageStatistics) {
-							blockStorageStatistics.incrementVolumeCount();
-							blockStorageStatistics.updateSpaceUsed((size * StorageProperties.GB));
+							blockStorageStatistics.incrementVolumeCount((size * StorageProperties.GB));
 						}
 					} else {
 						foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
@@ -755,7 +845,6 @@ public class BlockStorage {
 				blockManager.deleteVolume(volumeId);
 			} catch (EucalyptusCloudException e1) {
 				LOG.error(e1);
-				return;
 			}
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 			VolumeInfo foundVolume;
@@ -765,12 +854,73 @@ public class BlockStorage {
 				db.commit();
 				EucaSemaphoreDirectory.removeSemaphore(volumeId);
 				if(StorageProperties.trackUsageStatistics) { 
-					blockStorageStatistics.decrementVolumeCount();
-					blockStorageStatistics.updateSpaceUsed(-(foundVolume.getSize() * StorageProperties.GB));
+					blockStorageStatistics.decrementVolumeCount(-(foundVolume.getSize() * StorageProperties.GB));
 				}
 			} catch (EucalyptusCloudException e) {
 				db.rollback();
-				LOG.error(e);	
+			}
+		}
+	}
+
+	public class VolumesConvertor extends Thread {
+		private LogicalStorageManager fromBlockManager;
+
+		public VolumesConvertor(LogicalStorageManager fromBlockManager) {
+			this.fromBlockManager = fromBlockManager;
+		}
+
+		@Override
+		public void run() {
+			//This is a heavy weight operation. It must execute atomically.
+			//All other volume operations are forbidden when a conversion is in progress.
+			synchronized (blockManager) {
+				StorageProperties.enableStorage = StorageProperties.enableSnapshots = false;
+				EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+				VolumeInfo volumeInfo = new VolumeInfo();
+				volumeInfo.setStatus(StorageProperties.Status.available.toString());
+				List<VolumeInfo> volumeInfos = db.query(volumeInfo);
+				List<VolumeInfo> volumes = new ArrayList<VolumeInfo>();
+				volumes.addAll(volumeInfos);
+
+				SnapshotInfo snapInfo = new SnapshotInfo();
+				snapInfo.setStatus(StorageProperties.Status.available.toString());
+				EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);
+				List<SnapshotInfo> snapshotInfos = dbSnap.query(snapInfo);
+				List<SnapshotInfo> snapshots = new ArrayList<SnapshotInfo>();
+				snapshots.addAll(snapshotInfos);
+
+				db.commit();
+
+				for(VolumeInfo volume : volumes) {
+					try {
+						String volumeId = volume.getVolumeId();
+						LOG.info("Converting volume: " + volumeId);
+						String volumePath = fromBlockManager.getVolumePath(volumeId);
+						blockManager.importVolume(volumeId, volumePath, volume.getSize());
+						fromBlockManager.finishVolume(volumeId);
+						LOG.info("Done converting volume: " + volumeId);
+					} catch (Exception ex) {
+						LOG.error(ex);
+						//this one failed, continue processing the rest
+					}
+				}
+
+				for(SnapshotInfo snap : snapshots) {
+					try {
+						String snapshotId = snap.getSnapshotId();
+						LOG.info("Converting snapshot: " + snapshotId);
+						String snapPath = fromBlockManager.getSnapshotPath(snapshotId);
+						int size = fromBlockManager.getSnapshotSize(snapshotId);
+						blockManager.importSnapshot(snapshotId, snap.getVolumeId(), snapPath, size);
+						fromBlockManager.finishVolume(snapshotId);
+						LOG.info("Done converting snapshot: " + snapshotId);
+					} catch (Exception ex) {
+						LOG.error(ex);
+						//this one failed, continue processing the rest
+					}
+				}
+				LOG.info("Conversion complete");
+				StorageProperties.enableStorage = StorageProperties.enableSnapshots = true;
 			}
 		}
 	}

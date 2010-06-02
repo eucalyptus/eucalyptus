@@ -60,7 +60,7 @@
  *******************************************************************************/
 /*
  *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ * Author: Neil Soman neil@eucalyptus.com
  */
 
 package com.eucalyptus.storage;
@@ -75,6 +75,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.crypto.Cipher;
+import javax.persistence.EntityNotFoundException;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
@@ -97,24 +98,26 @@ import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
-public class LVM2Manager implements LogicalStorageManager {
+public class OverlayManager implements LogicalStorageManager {
 
 	public static final String lvmRootDirectory = "/dev";
 	public static final String PATH_SEPARATOR = File.separator;
 	public static boolean initialized = false;
 	public static final int MAX_LOOP_DEVICES = 256;
-	private  static final String blockSize = "1M";
-	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 	public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
-	private static Logger LOG = Logger.getLogger(LVM2Manager.class);
+	private static Logger LOG = Logger.getLogger(OverlayManager.class);
 	public static String eucaHome = System.getProperty("euca.home");
 	private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
 	public static StorageExportManager exportManager;
+
+	public static String iface = "eth0";
+	public static boolean zeroFillVolumes = false;
 
 	public void checkPreconditions() throws EucalyptusCloudException {
 		//check if binaries exist, commands can be executed, etc.
@@ -123,8 +126,8 @@ public class LVM2Manager implements LogicalStorageManager {
 			throw new EucalyptusCloudException("euca.home not set");
 		}
 		eucaHome = eucaHomeDir;
-		if(!new File(eucaHome + EUCA_ROOT_WRAPPER).exists()) {
-			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + eucaHome + EUCA_ROOT_WRAPPER);
+		if(!new File(eucaHome + StorageProperties.EUCA_ROOT_WRAPPER).exists()) {
+			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + eucaHome + StorageProperties.EUCA_ROOT_WRAPPER);
 		}
 		File varDir = new File(eucaHome + EUCA_VAR_RUN_PATH);
 		if(!varDir.exists()) {
@@ -151,66 +154,66 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	private String getLvmVersion() throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvm", "version"});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvm", "version"});
 	}
 
 	private String findFreeLoopback() throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
 	}
 
 	private  String getLoopback(String loDevName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", loDevName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "losetup", loDevName});
 	}
 
 	private String createPhysicalVolume(String loDevName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvcreate", loDevName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "pvcreate", loDevName});
 	}
 
 	private String createVolumeGroup(String pvName, String vgName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgcreate", vgName, pvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgcreate", vgName, pvName});
 	}
 
 	private String extendVolumeGroup(String pvName, String vgName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
 	}
 
 	private String createLogicalVolume(String vgName, String lvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-l", "100%FREE", vgName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-l", "100%FREE", vgName});
 	}
 
 	private String createSnapshotLogicalVolume(String lvName, String snapLvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-l", "100%FREE", lvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-l", "100%FREE", lvName});
 	}
 
 	private String removeLogicalVolume(String lvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
 	}
 
 	private String removeVolumeGroup(String vgName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgremove", vgName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgremove", vgName});
 	}
 
 	private String removePhysicalVolume(String loDevName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvremove", loDevName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "pvremove", loDevName});
 	}
 
 	private String removeLoopback(String loDevName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
 	}
 
 	private String reduceVolumeGroup(String vgName, String pvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
 	}
 
 	private String enableLogicalVolume(String lvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
 	}
 
 	private int losetup(String absoluteFileName, String loDevName) {
 		try
 		{
 			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", loDevName, absoluteFileName});
+			Process proc = rt.exec(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "losetup", loDevName, absoluteFileName});
 			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -228,14 +231,14 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	private String duplicateLogicalVolume(String oldLvName, String newLvName) throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + blockSize});
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createFile(String fileName, long size) throws ExecutionException {
 		if(!DirectStorageInfo.getStorageInfo().getZeroFillVolumes())
-			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + blockSize, "seek=" + (size -1)});
+			return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=1", "bs=" + StorageProperties.blockSize, "seek=" + (size -1)});
 		else
-			return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + blockSize});
+			return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=/dev/zero", "of=" + fileName, "count=" + size, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createEmptyFile(String fileName, int size) throws ExecutionException {
@@ -253,6 +256,12 @@ public class LVM2Manager implements LogicalStorageManager {
 		if(!initialized) {
 			System.loadLibrary("lvm2control");
 			registerSignals();
+			File storageRootDir = new File(getStorageRootDirectory());
+			if(!storageRootDir.exists()) {
+				if(!storageRootDir.mkdirs()) {
+					LOG.fatal("Unable to make volume root directory: " + getStorageRootDirectory());
+				}
+			}
 			initialized = true;
 		}
 	}
@@ -260,6 +269,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	public void configure() {
 		exportManager.configure();
 		//First call to StorageInfo.getStorageInfo will add entity if it does not exist
+		LOG.info(StorageInfo.getStorageInfo().getName());
 		checkVolumesDir();
 	}
 
@@ -444,7 +454,7 @@ public class LVM2Manager implements LogicalStorageManager {
 		} else {
 			lvmVolumeInfo = new ISCSIVolumeInfo();
 		}
-
+		volumeManager.finish();
 		String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
 		//create file and attach to loopback device
 		long absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
@@ -471,14 +481,15 @@ public class LVM2Manager implements LogicalStorageManager {
 			lvmVolumeInfo.setLvName(lvName);
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize(size);
+			volumeManager = new VolumeEntityWrapperManager();
+			volumeManager.add(lvmVolumeInfo);
+			volumeManager.finish();
 		} catch(ExecutionException ex) {
 			String error = "Unable to run command: " + ex.getMessage();
 			volumeManager.abort();
 			LOG.error(error);
 			throw new EucalyptusCloudException(error);
 		}
-		volumeManager.add(lvmVolumeInfo);
-		volumeManager.finish();
 	}
 
 	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException {
@@ -490,12 +501,14 @@ public class LVM2Manager implements LogicalStorageManager {
 			if(status.equals(StorageProperties.Status.available.toString())) {
 				String vgName = "vg-" + Hashes.getRandom(4);
 				String lvName = "lv-" + Hashes.getRandom(4);
+				String loFileName = foundSnapshotInfo.getLoFileName();
+				String snapId = foundSnapshotInfo.getVolumeId();
 				LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
-
+				volumeManager.finish();
 				try {
 					String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
 					//create file and attach to loopback device
-					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + foundSnapshotInfo.getVolumeId());
+					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
 					assert(snapshotFile.exists());
 					long absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
 					size = (int)(snapshotFile.length() / StorageProperties.GB);
@@ -504,7 +517,7 @@ public class LVM2Manager implements LogicalStorageManager {
 					createLogicalVolume(loDevName, vgName, lvName);
 					//duplicate snapshot volume
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-					duplicateLogicalVolume(foundSnapshotInfo.getLoFileName(), absoluteLVName);
+					duplicateLogicalVolume(loFileName, absoluteLVName);
 					//export logical volume
 					try {
 						volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
@@ -522,6 +535,7 @@ public class LVM2Manager implements LogicalStorageManager {
 					lvmVolumeInfo.setLvName(lvName);
 					lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 					lvmVolumeInfo.setSize(size);
+					volumeManager = new VolumeEntityWrapperManager();
 					volumeManager.add(lvmVolumeInfo);
 					volumeManager.finish();
 				}  catch(ExecutionException ex) {
@@ -554,52 +568,6 @@ public class LVM2Manager implements LogicalStorageManager {
 			throw new EucalyptusCloudException("Snapshot backing file does not exist for: " + snapshotId);
 		}
 	}
-
-	/*public void dupVolume(String volumeId, String dupVolumeId) throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-
-		LVMVolumeInfo foundVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-		if(foundVolumeInfo != null) {
-			String vgName = "vg-" + Hashes.getRandom(4);
-			String lvName = "lv-" + Hashes.getRandom(4);
-			LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
-
-			File volumeFile = new File(StorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + foundVolumeInfo.getVolumeId());
-
-			String rawFileName = StorageInfo.getStorageInfo().getVolumesDir() + "/" + dupVolumeId;
-			//create file and attach to loopback device
-			int size = (int)(volumeFile.length() / StorageProperties.GB);
-			try {
-				String loDevName = createLoopback(rawFileName, size);
-				//create physical volume, volume group and logical volume
-				createLogicalVolume(loDevName, vgName, lvName);
-				//duplicate snapshot volume
-				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				String absoluteVolumeLVName = lvmRootDirectory + PATH_SEPARATOR + foundVolumeInfo.getVgName() +
-				PATH_SEPARATOR + foundVolumeInfo.getLvName();
-				duplicateLogicalVolume(absoluteVolumeLVName, absoluteLVName);
-
-				lvmVolumeInfo.setVolumeId(dupVolumeId);
-				lvmVolumeInfo.setLoDevName(loDevName);
-				lvmVolumeInfo.setPvName(loDevName);
-				lvmVolumeInfo.setVgName(vgName);
-				lvmVolumeInfo.setLvName(lvName);
-				lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-				lvmVolumeInfo.setSize(size);
-				volumeManager.add(lvmVolumeInfo);
-				volumeManager.finish();
-			} catch(ExecutionException ex) {
-				volumeManager.abort();
-				String error = "Unable to run command: " + ex.getMessage();
-				LOG.error(error);
-				throw new EucalyptusCloudException(error);
-			}
-		} else {
-			volumeManager.abort();
-			throw new EucalyptusCloudException("Could not dup volume " + volumeId);
-		}
-
-	}*/
 
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -653,9 +621,6 @@ public class LVM2Manager implements LogicalStorageManager {
 		if(foundLVMVolumeInfo != null) {
 			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
 			snapshotInfo.setVolumeId(snapshotId);
-			File snapshotDir = new File(DirectStorageInfo.getStorageInfo().getVolumesDir());
-			snapshotDir.mkdirs();
-
 			String vgName = foundLVMVolumeInfo.getVgName();
 			String lvName = "lv-snap-" + Hashes.getRandom(4);
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + foundLVMVolumeInfo.getLvName();
@@ -664,6 +629,8 @@ public class LVM2Manager implements LogicalStorageManager {
 			long snapshotSize = (size * StorageProperties.GB) / 2;
 			String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId + Hashes.getRandom(6);
 			//create file and attach to loopback device
+			volumeManager.finish();
+			volumeManager = null;
 			try {
 				String loDevName = createLoopback(rawFileName, snapshotSize);
 				//create physical volume, volume group and logical volume
@@ -695,16 +662,17 @@ public class LVM2Manager implements LogicalStorageManager {
 				snapshotInfo.setSize(size);
 				returnValues.add(snapRawFileName);
 				returnValues.add(String.valueOf(size * WalrusProperties.G));
+				volumeManager = new VolumeEntityWrapperManager();
 				volumeManager.add(snapshotInfo);
+				volumeManager.finish();
 			} catch(ExecutionException ex) {
-				volumeManager.abort();
+				if(volumeManager != null)
+					volumeManager.abort();
 				String error = "Unable to run command: " + ex.getMessage();
 				LOG.error(error);
 				throw new EucalyptusCloudException(error);
 			}
-
 		}
-		volumeManager.finish();
 		return returnValues;
 	}
 
@@ -1054,7 +1022,7 @@ public class LVM2Manager implements LogicalStorageManager {
 					}
 				}
 				if(!success) {
-					throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + DirectStorageInfo.getStorageInfo().getStorageInterface() + " pid: " + pid + " returnValue: " + returnValue);
+					throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " StorageInfo.getStorageInfo().getStorageInterface(): " + DirectStorageInfo.getStorageInfo().getStorageInterface() + " pid: " + pid + " returnValue: " + returnValue);
 				}
 
 				File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
@@ -1088,7 +1056,7 @@ public class LVM2Manager implements LogicalStorageManager {
 	}
 
 	@Override
-	public void finishSnapshot(String snapshotId) throws EucalyptusCloudException{
+	public void finishVolume(String snapshotId) throws EucalyptusCloudException{
 		//Nothing to do here
 	}
 
@@ -1100,12 +1068,23 @@ public class LVM2Manager implements LogicalStorageManager {
 
 	@Override
 	public ArrayList<ComponentProperty> getStorageProps() {		
+		ArrayList<ComponentProperty> componentProperties = null;
 		ConfigurableClass configurableClass = StorageInfo.class.getAnnotation(ConfigurableClass.class);
 		if(configurableClass != null) {
-			String prefix = configurableClass.alias();
-			return (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix);
+			String root = configurableClass.root();
+			String alias = configurableClass.alias();
+			componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias);
 		}
-		return null;
+		configurableClass = DirectStorageInfo.class.getAnnotation(ConfigurableClass.class);
+		if(configurableClass != null) {
+			String root = configurableClass.root();
+			String alias = configurableClass.alias();
+			if(componentProperties == null)
+				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias);
+			else 
+				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias));
+		}			
+		return componentProperties;
 	}
 
 	@Override
@@ -1118,13 +1097,99 @@ public class LVM2Manager implements LogicalStorageManager {
 			} catch (IllegalAccessException e) {
 				LOG.error(e, e);
 			}
-
 		}
 		checkVolumesDir();		
 	}
-
 	@Override
 	public String getStorageRootDirectory() {
 		return DirectStorageInfo.getStorageInfo().getVolumesDir();
+	}
+
+	@Override
+	public String getVolumePath(String volumeId)
+	throws EucalyptusCloudException {
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+		if(volInfo != null) {
+			String volumePath = lvmRootDirectory + File.separator + volInfo.getVgName() + File.separator + volInfo.getLvName();
+			volumeManager.finish();
+			return volumePath;
+		} else {
+			volumeManager.abort();
+			throw new EntityNotFoundException("Unable to find volume with id: " + volumeId);
+		}
+	}
+
+	@Override
+	public void importVolume(String volumeId, String volumePath, int size)
+	throws EucalyptusCloudException {
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+		if(volInfo != null) {
+			volumeManager.finish();
+			throw new EucalyptusCloudException("Volume " + volumeId + " already exists. Import failed.");
+		}
+		volumeManager.finish();
+		createVolume(volumeId, size);
+		volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volumeInfo = volumeManager.getVolumeInfo(volumeId);
+		if(volumeInfo != null) {
+			try {
+				SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
+						"dd", "if=" + volumePath, 
+						"of=" + lvmRootDirectory + File.separator + volumeInfo.getVgName() + 
+						File.separator + volumeInfo.getLvName(), "bs=" + StorageProperties.blockSize});			
+			} catch (ExecutionException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			}
+		} else {
+			volumeManager.abort();
+			throw new EucalyptusCloudException("Unable to find volume with id: " + volumeId);
+		}
+	}
+
+	@Override
+	public String getSnapshotPath(String snapshotId)
+	throws EucalyptusCloudException {
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(snapshotId);
+		if(volInfo != null) {
+			String snapPath = volInfo.getLoFileName();
+			volumeManager.finish();
+			return snapPath;
+		} else {
+			volumeManager.abort();
+			throw new EntityNotFoundException("Unable to find snapshot with id: " + snapshotId);
+		}
+	}
+
+	@Override
+	public void importSnapshot(String snapshotId, String volumeId, String snapPath, int size)
+	throws EucalyptusCloudException {
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo snapInfo = volumeManager.getVolumeInfo(snapshotId);
+		if(snapInfo != null) {
+			volumeManager.finish();
+			throw new EucalyptusCloudException("Snapshot " + snapshotId + " already exists. Import failed.");
+		}
+		volumeManager.finish();
+		String snapFileName = getStorageRootDirectory() + File.separator + snapshotId;
+		try {
+			SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
+					"dd", "if=" + snapPath, 
+					"of=" + snapFileName, "bs=" + StorageProperties.blockSize});			
+		} catch (ExecutionException e) {
+			LOG.error(e);
+			throw new EucalyptusCloudException(e);
+		}
+		volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
+		snapshotInfo.setVolumeId(snapshotId);
+		snapshotInfo.setLoFileName(snapFileName);
+		snapshotInfo.setSize(size);
+		snapshotInfo.setSnapshotOf(volumeId);
+		volumeManager.add(snapshotInfo);
+		volumeManager.finish();
 	}
 }
