@@ -8,23 +8,32 @@ EntityWrapper db = EntityWrapper.get( BaseRecord.class );
 Sql sql = new Sql( db.getSession( ).connection( ) )
 Users.listAllUsers().each{ User user ->
   def u = new UserReportInfo() {{
-          userName = user.getName() 
-        }
-      };
-  sql.rows("SELECT UNIX_TIMESTAMP(record_timestamp)*1000 as timestamp, record_extra as details FROM eucalyptus_records.records_logs WHERE record_class LIKE 'VM' AND record_extra LIKE 'user=admin:%:state=RUNNING:%' AND UNIX_TIMESTAMP(record_timestamp)*1000 < ${notAfter} GROUP BY record_extra ORDER BY min(record_timestamp) DESC;").each{
-    String[] details = it.details.split(":")
-    Long timestamp = it.timestamp
-    String instanceId = details.replaceAll(".*=");
-    String type = details.replaceAll(".*=");
-    println "Found RUN for ${instanceId} ${type} ${timestamp}"
-  }
-  sql.rows("SELECT * FROM eucalyptus_records.records_logs WHERE record_class LIKE 'VM' AND record_extra LIKE 'user=admin:%' AND record_extra LIKE '%:state=TERMINATED:% AND UNIX_TIMESTAMP(record_timestamp)*1000 < ${notAfter} ORDER BY record_timestamp DESC;'").each{
-    String[] details = it.details.split(":")
-    Long timestamp = it.timestamp
-    String instanceId = details.replaceAll(".*=");
-    String type = details.replaceAll(".*=");
-    println "Found TERMINATE for ${instanceId} ${type} ${timestamp}"
-  }
+      userName = user.getName() 
+    }
+  };
+  def runQuery = "SELECT UNIX_TIMESTAMP(record_timestamp)*1000 as timestamp, record_extra as details FROM eucalyptus_records.records_logs " \
+  +"WHERE record_class LIKE 'VM' AND record_extra LIKE 'user=${u.userName}:%:state=RUNNING:%' AND UNIX_TIMESTAMP(record_timestamp)*1000 < ${notAfter} " \
+  +"GROUP BY record_extra ORDER BY min(record_timestamp) DESC;"
+  def termQuery = "SELECT UNIX_TIMESTAMP(record_timestamp)*1000 as timestamp, record_extra as details FROM eucalyptus_records.records_logs " \
+  +"WHERE record_class LIKE 'VM' AND record_extra LIKE \"user=${u.userName}:%:state=TERMINATED:%\" AND UNIX_TIMESTAMP(record_timestamp)*1000 < ${notBefore} " \
+  +"GROUP BY record_extra ORDER BY min(record_timestamp) DESC;"
+  println "${[ u.userName, notBefore, notAfter ]}"
+  println termQuery
+  sql.rows( runQuery ).each{
+      println it
+        String[] details = it.details.split(":")
+        Long timestamp = it.timestamp
+        String instanceId = details[1].replaceAll(".*=","");
+        String type = details[2].replaceAll(".*=","");
+        println "Found RUN for ${instanceId} ${type} ${timestamp}"
+      }
+  sql.rows( termQuery ).each{
+        String[] details = it.details.split(":")
+        Long timestamp = it.timestamp
+        String instanceId = details[1].replaceAll(".*=","");
+        String type = details[2].replaceAll(".*=","");
+        println "Found TERMINATE for ${instanceId} ${type} ${timestamp}"
+      }
   results.add( u )
 }
 db?.commit()
