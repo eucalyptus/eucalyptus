@@ -197,7 +197,5 @@ public interface EucalyptusWebBackendAsync {
 	
   void getZones(String sessionId, final AsyncCallback<List<String>> async)
   ;
-  void getSystemReports(String sessionId, final AsyncCallback<List<ReportInfo>> async);
-  void getZoneReports(String sessionId, final AsyncCallback<List<ReportInfo>> async);
-  void getResourceReports(String sessionId, final AsyncCallback<List<ReportInfo>> async);
+  void getReports(String sessionId, final AsyncCallback<List<ReportInfo>> async);
 }

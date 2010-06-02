@@ -10,6 +10,17 @@ import edu.ucsb.eucalyptus.admin.client.util.Buttons;
 import edu.ucsb.eucalyptus.admin.client.util.Events;
 
 public enum ReportAction {
+  FIRST_PAGE {
+    @Override
+    public Integer apply( AccountingControl parent ) {
+      return 1;
+    }
+    
+    @Override
+    public Widget makeImageButton( AccountingControl parent ) {
+      return new EucaButton( "1", "First Page", Buttons.STYLE_NOOP, Events.DO_NOTHING );
+    }
+  },
   FIRST {
     @Override
     public Integer apply( AccountingControl parent ) {
@@ -22,17 +33,6 @@ public enum ReportAction {
       return parent.changePage( -1 );
     }
   },
-  FIRST_PAGE {
-    @Override
-    public Integer apply( AccountingControl parent ) {
-      return 1;
-    }
-    
-    @Override
-    public Widget makeImageButton( AccountingControl parent ) {
-      return new EucaButton( "1", "First Page", Buttons.STYLE_NOOP, Events.DO_NOTHING );
-    }
-  },
   PAGE_INFO {
     @Override
     public Integer apply( AccountingControl parent ) {
@@ -42,7 +42,7 @@ public enum ReportAction {
     
     @Override
     public String getImageText( AccountingControl parent ) {
-      return super.getImageText( parent );
+      return ""+parent.getCurrentPage( );
     }
 
 
@@ -50,7 +50,7 @@ public enum ReportAction {
     public Widget makeImageButton( final AccountingControl parent ) {
       final TextBox currentPageText = new TextBox( ) {
         {
-          setText( "" + parent.getCurrentPage( ) );
+          setText( PAGE_INFO.getImageText( parent ) );
           setStyleName( AccountingControl.RESOURCES.ACCT_REPORT_PAGE_TEXTBOX );
         }
       };
@@ -69,6 +69,18 @@ public enum ReportAction {
       return currentPageText;
     }
   },
+  NEXT {
+    @Override
+    public Integer apply( AccountingControl parent ) {
+      return parent.changePage( 1 );
+    }
+  },
+  LAST {
+    @Override
+    public Integer apply( AccountingControl parent ) {
+      return parent.changePage( MAX_DELTA );
+    }
+  },
   LAST_PAGE {
     @Override
     public Integer apply( AccountingControl parent ) {
@@ -84,18 +96,6 @@ public enum ReportAction {
     public Widget makeImageButton( AccountingControl parent ) {
       return new EucaButton( this.getImageText( parent ), "Last Page", Buttons.STYLE_NOOP, Events.DO_NOTHING );
     }
-  },
-  NEXT {
-    @Override
-    public Integer apply( AccountingControl parent ) {
-      return parent.changePage( 1 );
-    }
-  },
-  LAST {
-    @Override
-    public Integer apply( AccountingControl parent ) {
-      return parent.changePage( MAX_DELTA );
-    }
   };
   private static final int MAX_DELTA = 100000000;
   
@@ -108,7 +108,7 @@ public enum ReportAction {
   }
   
   public String getImageName( ) {
-    return "go-" + this.name( ).toLowerCase( ) + ".png";
+    return "actions/go-" + this.name( ).toLowerCase( ) + ".png";
   }
   
   public abstract Integer apply( AccountingControl parent );

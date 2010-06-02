@@ -165,7 +165,7 @@ public class VolumeManager {
       req.setUserId( request.getUserId( ) );
       req.setEffectiveUserId( request.getEffectiveUserId( ) );
       StorageUtil.send( sc.getName( ), req );
-      EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_CREATE, "user=" + newVol.getUserName( ), "volume=" + newVol.getDisplayName( ),
+      EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_CREATE, "user=" + newVol.getUserName( ), "volume=" + newVol.getDisplayName( ),"size=" + newVol.getSize( ),
                         "size=" + newVol.getSize( ), "cluster=" + newVol.getCluster( ), "snapshot=" + newVol.getParentSnapshot( ) ).info( );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
@@ -211,7 +211,7 @@ public class VolumeManager {
       if ( scReply.get_return( ) ) {
         vol.setState( State.ANNIHILATING );
         db.commit( );
-        EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE, "user=" + vol.getUserName( ), "volume=" + vol.getDisplayName( ),
+        EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE, "user=" + vol.getUserName( ), "volume=" + vol.getDisplayName( ),"size=" + vol.getSize( ),
                           "size=" + vol.getSize( ), "cluster=" + vol.getCluster( ), "snapshot=" + vol.getParentSnapshot( ) ).info( );
       } else {
         reallyFailed = true;
@@ -326,7 +326,7 @@ public class VolumeManager {
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), volume.getRemoteDevice( ) );
     attachVol.setStatus( "attaching" );
     vm.getVolumes( ).add( attachVol );
-    EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH, "user=" + volume.getUserName( ), "volume=" + volume.getDisplayName( ),
+    EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH, "user=" + volume.getUserName( ), "volume=" + volume.getDisplayName( ), "size=" + volume.getSize( ),
                       "instance=" + vm.getInstanceId( ), "cluster=" + vm.getPlacement( ) ).info( );
     volume.setState( State.BUSY );
     reply.setAttachedVolume( attachVol );

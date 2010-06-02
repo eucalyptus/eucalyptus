@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -350,9 +351,13 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     }
   }
   
+  public NioClientPipeline getClientPipeline( ) throws Exception {
+    return new ClusterClientPipeline( this );
+  }
+  
   public void fire( final String hostname, final int port, final String servicePath ) {
     try {
-      NioClientPipeline clientPipeline = new ClusterClientPipeline( this );
+      NioClientPipeline clientPipeline = this.getClientPipeline( );
       this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
       InetSocketAddress addr = new InetSocketAddress( hostname, port );
       this.connectFuture = this.clientBootstrap.connect( addr );

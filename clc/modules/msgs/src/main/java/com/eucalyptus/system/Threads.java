@@ -43,6 +43,32 @@ public class Threads {
     private final ThreadGroup group;
     private final String      name;
     private ExecutorService   pool;
+    private Integer numThreads = -1;
+    
+    public ThreadPool limitTo( Integer numThreads ) {
+      if( this.numThreads.equals( numThreads ) ) {
+        return this;
+      } else {
+        synchronized ( this ) {
+          if( this.numThreads.equals( numThreads ) ) {
+            return this;
+          } else {          
+            this.numThreads = numThreads;
+            ExecutorService oldExec = this.pool;
+            this.pool = null;
+            if( oldExec != null ) {
+              oldExec.shutdown( );
+            }
+            if ( numThreads == -1 ) {
+              this.pool = Executors.newCachedThreadPool( this );
+            } else {
+              this.pool = Executors.newFixedThreadPool( this.numThreads );
+            }
+          }
+        }
+      }
+      return this;
+    }
     
     public ThreadGroup getGroup( ) {
       return this.group;
@@ -57,8 +83,10 @@ public class Threads {
         return this.pool;
       } else {
         synchronized ( this ) {
-          if ( this.pool == null ) {
+          if ( this.pool == null && numThreads == -1 ) {
             this.pool = Executors.newCachedThreadPool( this );
+          } else {
+            this.pool = Executors.newFixedThreadPool( this.numThreads );
           }
         }
         return this.pool;
@@ -71,6 +99,11 @@ public class Threads {
       }
     }
     
+    private ThreadPool( String groupPrefix, Integer threadCount ) {
+      this( groupPrefix );
+      this.numThreads = threadCount;
+    }
+
     private ThreadPool( String groupPrefix ) {
       this.name = "Eucalyptus." + groupPrefix;
       this.group = new ThreadGroup( this.name );
