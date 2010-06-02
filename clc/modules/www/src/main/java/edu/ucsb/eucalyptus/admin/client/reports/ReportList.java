@@ -56,7 +56,7 @@ public class ReportList extends DecoratedStackPanel implements Observer {
                                                            AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
 //    this.add( this.serviceReports, XHTML.headerWithImage( "Service Status & Logs", AccountingControl.RESOURCES.serviceReports( ),
 //                                                          AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
-    makeGroupPanel( );
+//    makeGroupPanel( );
   }
 
   private void makeGroupPanel( ) {
