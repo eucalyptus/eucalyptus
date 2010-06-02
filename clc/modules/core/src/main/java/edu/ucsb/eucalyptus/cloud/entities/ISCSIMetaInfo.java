@@ -73,7 +73,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "ISCSIMetadata" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ISCSIMetaInfo extends LVMMetaInfo {
     @Column(name = "store_prefix")
     private String store_prefix;

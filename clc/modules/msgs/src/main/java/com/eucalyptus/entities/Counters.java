@@ -80,7 +80,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "counters" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Counters extends AbstractPersistent implements Serializable {
   private static Logger   LOG = Logger.getLogger( Counters.class );
   private static Counters singleton;
