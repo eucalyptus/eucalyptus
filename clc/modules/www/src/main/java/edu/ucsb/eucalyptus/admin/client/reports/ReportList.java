@@ -2,8 +2,6 @@ package edu.ucsb.eucalyptus.admin.client.reports;
 
 import java.util.HashMap;
 import java.util.Map;
-import com.google.gwt.event.logical.shared.OpenEvent;
-import com.google.gwt.event.logical.shared.OpenHandler;
 import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.user.client.ui.DecoratedStackPanel;
@@ -54,9 +52,9 @@ public class ReportList extends DecoratedStackPanel implements Observer {
                                                          AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
     this.add( this.resourceReports, XHTML.headerWithImage( "Users, Groups & Resources", AccountingControl.RESOURCES.resourceReports( ),
                                                            AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
-//    this.add( this.serviceReports, XHTML.headerWithImage( "Service Status & Logs", AccountingControl.RESOURCES.serviceReports( ),
-//                                                          AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
-//    makeGroupPanel( );
+    this.add( this.serviceReports, XHTML.headerWithImage( "Service Status & Logs", AccountingControl.RESOURCES.serviceReports( ),
+                                                          AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
+    makeGroupPanel( );
   }
 
   private void makeGroupPanel( ) {
@@ -78,12 +76,12 @@ public class ReportList extends DecoratedStackPanel implements Observer {
             @Override
             public void onSelection( SelectionEvent<TreeItem> event ) {
               TreeItem item = event.getSelectedItem( );
-              if( item.getUserObject( ) != null ) {
-                ReportInfo r = (ReportInfo)item.getUserObject( );
-                ReportList.this.controller.setCurrentReport( r );
-                item.setSelected( true );
-                item.setState( true, false );
-              }
+//              if( item.getUserObject( ) != null ) {
+//                ReportInfo r = (ReportInfo)item.getUserObject( );
+//                ReportList.this.controller.setCurrentReport( r );
+//                item.setSelected( true );
+//                item.setState( true, false );
+//              }
             }
           });
         }};

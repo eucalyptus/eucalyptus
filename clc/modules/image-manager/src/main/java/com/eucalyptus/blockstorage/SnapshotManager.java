@@ -165,7 +165,7 @@ public class SnapshotManager {
     }
     db.commit( );
     EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE, "user=" + snap.getUserName( ), "snapshot=" + snap.getDisplayName( ),
-                      "volume=" + snap.getParentVolume( ) ).info( );
+                      "volume=" + vol.getDisplayName( ), "volumeSize=" + vol.getSize( ) ).info( );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );

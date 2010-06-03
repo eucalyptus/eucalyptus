@@ -9,9 +9,15 @@ Users.listAllUsers().each{ User user ->
       userName = user.getName() 
     }
   };
+  Date bc = new Date(notBefore)
+  Date ad = new Date(notAfter)
   db.query( Volume.ownedBy( user.getName() ) ).each{ Volume volume ->
     u.volumeCount++
     u.volumeGigabytes+=volume.getSize();
+    Date start = volume.getBirthDay();
+    if( bc.isAfter( volume.getBirthday() ) ) {
+      start = bc;
+    }
   }
   results.add( u )
 }

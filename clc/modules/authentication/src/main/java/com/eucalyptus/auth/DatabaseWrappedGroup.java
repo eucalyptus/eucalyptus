@@ -107,7 +107,7 @@ public class DatabaseWrappedGroup implements Group {
       if ( g.isMember( userInfo ) ) {
         g.removeMember( userInfo );
         db.commit( );
-        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_REMOVED, this.getName( ), userInfo.getName( ) ).info();
+        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_REMOVED, "group=" + this.getName( ), "user=" + userInfo.getName( ) ).info();
         return true;
       } else {
         db.rollback( );
@@ -206,7 +206,7 @@ public class DatabaseWrappedGroup implements Group {
         @Override
         public void fire( GroupEntity t ) throws Throwable {
            ret.set( t.removeAuthorization( auth ) );
-           EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_REVOKED, t.getName( ), auth.getDisplayName( ), auth.getValue( ) ).info();
+           EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_REVOKED, "group=" + t.getName( ), "authorization=" + auth.getDisplayName( ), "for=" + auth.getValue( ) ).info();
         }
       } );
     } catch ( TransactionException e ) {

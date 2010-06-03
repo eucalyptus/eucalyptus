@@ -249,6 +249,8 @@ public class VolumeManager {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
           describeVolumes.add( v );
         } else {
+          EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE, "user=" + v.getUserName( ), "volume=" + v.getDisplayName( ),"size=" + v.getSize( ),
+                            "size=" + v.getSize( ), "cluster=" + v.getCluster( ), "snapshot=" + v.getParentSnapshot( ) ).info( );
           db.delete( v );
         }
       }
