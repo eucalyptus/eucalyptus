@@ -84,7 +84,9 @@
 						<jr:detailCell style="table_TD" height="30" rowSpan="1">
 							<textField>
 								<reportElement style="Detail" x="0" y="0" width="80" height="30"/>
-								<textElement/>
+								<textElement>
+									<font isBold="true"/>
+								</textElement>
 								<textFieldExpression class="java.lang.String"><![CDATA[$F{userName}]]></textFieldExpression>
 							</textField>
 						</jr:detailCell>
