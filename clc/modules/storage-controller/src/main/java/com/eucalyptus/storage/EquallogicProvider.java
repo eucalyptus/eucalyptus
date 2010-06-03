@@ -418,7 +418,7 @@ public class EquallogicProvider implements SANProvider {
 					enabled = true;
 				} else {
 					returnValue = execCommand("stty hardwrap off\rchapuser show " + userName + "\r");
-					password = matchPattern(returnValue, USER_SHOW_PATTERN);
+					password = matchPattern(returnValue, USER_SHOW_PATTERN).trim();
 					if(password != null) {
 						db = StorageProperties.getEntityWrapper();
 						CHAPUserInfo userInfo = new CHAPUserInfo(userName, BlockStorageUtil.encryptSCTargetPassword(password));
