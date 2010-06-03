@@ -87,8 +87,8 @@ public class ClusterMessageQueue implements Runnable {
   
   private static Logger                    LOG           = Logger.getLogger( ClusterMessageQueue.class );
   private final BlockingQueue<QueuedEvent> msgQueue;
-  private final int                        offerInterval = 500;
-  private final int                        pollInterval  = 500;
+  private final int                        offerInterval = 5000;
+  private final int                        pollInterval  = 30000;
   private final AtomicBoolean              finished;
   private final String                     clusterName;
   @ConfigurableField( initial = "8", description = "Maximum number of concurrent messages sent to a single CC at a time." )
