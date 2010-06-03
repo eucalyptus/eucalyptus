@@ -110,14 +110,14 @@ class Group():
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
-  def cli_remove(self):
+  def cli_remove_membership(self):
     (options, args) = self.get_membership_parser()
     self.remove_membership(args[0], options.userName)
 
 
   def remove_membership(self,groupName,userName):
     try:
-      reply = self.euca.connection.get_object('AddGroupMember', {'GroupName':groupName,'UserName':userName},BooleanResponse)
+      reply = self.euca.connection.get_object('RemoveGroupMember', {'GroupName':groupName,'UserName':userName},BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)

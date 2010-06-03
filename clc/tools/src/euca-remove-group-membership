@@ -5,7 +5,7 @@ from euca_admin import EucaAdmin
 from euca_admin.groups import Group
 
 def main():
-  Group().remove_membership()
+  Group().cli_remove_membership()
   sys.exit()
 
 if __name__ == "__main__":
