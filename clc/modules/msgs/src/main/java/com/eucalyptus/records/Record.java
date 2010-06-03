@@ -15,6 +15,10 @@ public interface Record {
   public abstract Record next( );
   
   public abstract Record append( Object... obj );
+
+  public abstract Record withDetails( String key, String value );
+
+  public abstract Record withDetails( String userName, String primaryKey, String key, String value );
   
   public abstract String toString( );
   

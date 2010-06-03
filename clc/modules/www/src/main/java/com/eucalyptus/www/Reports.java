@@ -367,13 +367,13 @@ public class Reports extends HttpServlet {
   
   private static Map<String, ReportCache> reportCache = new ConcurrentHashMap<String, ReportCache>( );
   
-  private static GroovyScriptEngine       gse         = makeScriptEngine( );
-  
   public static ReportCache getReportManager( final String name, boolean flush ) throws JRException, SQLException {
     try {
       if ( !flush && reportCache.containsKey( name ) && !reportCache.get( name ).isExpired( ) ) {
         return reportCache.get( name );
       } else if ( reportCache.containsKey( name ) && ( reportCache.get( name ).isExpired( ) || flush ) ) {
+        final JasperDesign jasperDesign = JRXmlLoader.load( SubDirectory.REPORTS.toString( ) + File.separator + name + ".jrxml" );
+        reportCache.put( name, new ReportCache( name, jasperDesign ) );
         return reportCache.get( name );
       } else {
         ReportCache r = reportCache.get( name );
@@ -396,6 +396,8 @@ public class Reports extends HttpServlet {
       jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
         put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );
         put( "EUCA_NOT_AFTER", new Long( Param.end.get( req ) ) );
+        put( "EUCA_NOT_BEFORE_DATE", new Date( new Long( Param.start.get( req ) ) ) );
+        put( "EUCA_NOT_AFTER_DATE", new Date( new Long( Param.end.get( req ) ) ) );
       }}, jdbcConnection );
     } else {
       FileReader fileReader = null;
@@ -405,17 +407,24 @@ public class Reports extends HttpServlet {
         Binding binding = new Binding( new HashMap( ) {
           {
             put( "results", results );
-            put( "notBefore", Param.start.get( req ) );
-            put( "notAfter", Param.end.get( req ) );
+            put( "notBefore", new Long( Param.start.get( req ) ) );
+            put( "notAfter", new Long( Param.end.get( req ) ) );
+            put( "notBeforeDate", new Date( new Long( Param.start.get( req ) ) ) );
+            put( "notAfterDate", new Date( new Long( Param.end.get( req ) ) ) );
           }
         } );
         try {
-          makeScriptEngine( ).run( reportCache.getName( ) + ".groovy", binding );
+          new GroovyScriptEngine( SubDirectory.REPORTS.toString( ) ).run( reportCache.getName( ) + ".groovy", binding );
         } catch ( Exception e ) {
-          LOG.debug( e, e );
+          LOG.error( e, e );
         }
         JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
-        jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), null, data );
+        jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
+          put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );
+          put( "EUCA_NOT_AFTER", new Long( Param.end.get( req ) ) );
+          put( "EUCA_NOT_BEFORE_DATE", new Date( new Long( Param.start.get( req ) ) ) );
+          put( "EUCA_NOT_AFTER_DATE", new Date( new Long( Param.end.get( req ) ) ) );
+        }}, data );
       } catch ( Throwable e ) {
         LOG.debug( e, e );
         throw new RuntimeException( e );
@@ -430,26 +439,7 @@ public class Reports extends HttpServlet {
     }
     return jasperPrint;
   }
-  
-  private static GroovyScriptEngine makeScriptEngine( ) {
-    if ( gse != null ) {
-      return gse;
-    } else {
-      synchronized ( Reports.class ) {
-        if ( gse != null ) {
-          return gse;
-        } else {
-          try {
-            return gse = new GroovyScriptEngine( SubDirectory.REPORTS.toString( ) );
-          } catch ( IOException e ) {
-            LOG.debug( e, e );
-            throw new RuntimeException( e );
-          }
-        }
-      }
-    }
-  }
-  
+    
   public static void hasError( String message, HttpServletResponse response ) {
     try {
       response.getWriter( ).print( EucalyptusManagement.getError( message ) );

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Storage by User" language="groovy" pageWidth="984" pageHeight="600" columnWidth="984" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty" isIgnorePagination="true">
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Storage" language="groovy" pageWidth="984" pageHeight="600" columnWidth="984" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty" isIgnorePagination="true">
 	<property name="ireport.zoom" value="1.0"/>
 	<property name="ireport.x" value="0"/>
 	<property name="ireport.y" value="0"/>
@@ -49,20 +49,20 @@
 		</conditionalStyle>
 	</style>
 	<subDataset name="Table Dataset 1">
-		<field name="imageCount" class="java.lang.Integer"/>
 		<field name="userName" class="java.lang.String"/>
-		<field name="imageKernel" class="java.lang.Integer"/>
-		<field name="imageMachine" class="java.lang.Integer"/>
-		<field name="imageRamdisk" class="java.lang.Integer"/>
+		<field name="volumeCount" class="java.lang.Integer"/>
+		<field name="volumeGigabytes" class="java.lang.Integer"/>
+		<field name="snapshotCount" class="java.lang.Integer"/>
+		<field name="volumeTime" class="java.lang.Integer"/>
 	</subDataset>
 	<queryString>
 		<![CDATA[]]>
 	</queryString>
-	<field name="imageCount" class="java.lang.Integer"/>
 	<field name="userName" class="java.lang.String"/>
-	<field name="imageKernel" class="java.lang.Integer"/>
-	<field name="imageMachine" class="java.lang.Integer"/>
-	<field name="imageRamdisk" class="java.lang.Integer"/>
+	<field name="volumeCount" class="java.lang.Integer"/>
+	<field name="volumeGigabytes" class="java.lang.Integer"/>
+	<field name="volumeTime" class="java.lang.Integer"/>
+	<field name="snapshotCount" class="java.lang.Integer"/>
 	<detail>
 		<band height="50">
 			<componentElement>
@@ -84,16 +84,18 @@
 						<jr:detailCell style="table_TD" height="30" rowSpan="1">
 							<textField>
 								<reportElement style="Detail" x="0" y="0" width="80" height="30"/>
-								<textElement/>
+								<textElement>
+									<font isBold="true"/>
+								</textElement>
 								<textFieldExpression class="java.lang.String"><![CDATA[$F{userName}]]></textFieldExpression>
 							</textField>
 						</jr:detailCell>
 					</jr:column>
-					<jr:columnGroup width="150">
-						<jr:columnGroup width="150">
+					<jr:columnGroup width="330">
+						<jr:columnGroup width="330">
 							<jr:columnHeader style="table_TH" height="30" rowSpan="1">
 								<staticText>
-									<reportElement style="SubTitle" x="0" y="0" width="150" height="30"/>
+									<reportElement style="SubTitle" x="0" y="0" width="330" height="30"/>
 									<textElement>
 										<font isBold="true"/>
 									</textElement>
@@ -101,8 +103,6 @@
 								</staticText>
 							</jr:columnHeader>
 							<jr:column width="75">
-								<jr:tableHeader height="0" rowSpan="1"/>
-								<jr:tableFooter style="table_CH" height="0" rowSpan="1"/>
 								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
 									<staticText>
 										<reportElement style="Column header" x="0" y="0" width="75" height="25"/>
@@ -114,13 +114,43 @@
 									<textField>
 										<reportElement style="Detail" x="0" y="0" width="75" height="30"/>
 										<textElement/>
-										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageRamdisk}]]></textFieldExpression>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeCount}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[Gigabytes]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeGigabytes}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[GB-Hours]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeTime}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>
 							<jr:column width="75">
-								<jr:tableHeader height="0" rowSpan="1"/>
-								<jr:tableFooter height="0" rowSpan="1"/>
 								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
 									<staticText>
 										<reportElement style="Column header" x="0" y="0" width="75" height="25"/>
@@ -132,7 +162,7 @@
 									<textField>
 										<reportElement style="Detail" x="0" y="0" width="75" height="30"/>
 										<textElement/>
-										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{imageRamdisk}]]></textFieldExpression>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{snapshotCount}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>

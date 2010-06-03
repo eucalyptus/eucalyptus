@@ -49,13 +49,24 @@
 		</conditionalStyle>
 	</style>
 	<subDataset name="Table Dataset 1_1">
+		<parameter name="EUCA_NOT_BEFORE_DATE" class="java.util.Date"/>
+		<parameter name="EUCA_NOT_AFTER_DATE" class="java.util.Date"/>
 		<field name="userName" class="java.lang.String"/>
 		<field name="m1small" class="java.lang.Integer"/>
 		<field name="c1medium" class="java.lang.Integer"/>
 		<field name="m1large" class="java.lang.Integer"/>
 		<field name="m1xlarge" class="java.lang.Integer"/>
 		<field name="c1xlarge" class="java.lang.Integer"/>
+		<field name="m1smallTime" class="java.lang.Integer"/>
+		<field name="c1mediumTime" class="java.lang.Integer"/>
+		<field name="m1largeTime" class="java.lang.Integer"/>
+		<field name="m1xlargeTime" class="java.lang.Integer"/>
+		<field name="c1xlargeTime" class="java.lang.Integer"/>
 	</subDataset>
+	<parameter name="EUCA_NOT_BEFORE" class="java.lang.Long"/>
+	<parameter name="EUCA_NOT_AFTER" class="java.lang.Long"/>
+	<parameter name="EUCA_NOT_BEFORE_DATE" class="java.util.Date"/>
+	<parameter name="EUCA_NOT_AFTER_DATE" class="java.util.Date"/>
 	<queryString>
 		<![CDATA[]]>
 	</queryString>
@@ -65,6 +76,11 @@
 	<field name="m1large" class="java.lang.Integer"/>
 	<field name="m1xlarge" class="java.lang.Integer"/>
 	<field name="c1xlarge" class="java.lang.Integer"/>
+	<field name="m1smallTime" class="java.lang.Integer"/>
+	<field name="c1mediumTime" class="java.lang.Integer"/>
+	<field name="m1largeTime" class="java.lang.Integer"/>
+	<field name="m1xlargeTime" class="java.lang.Integer"/>
+	<field name="c1xlargeTime" class="java.lang.Integer"/>
 	<detail>
 		<band height="50">
 			<componentElement>
@@ -83,102 +99,184 @@
 								<text><![CDATA[User]]></text>
 							</staticText>
 						</jr:columnHeader>
-						<jr:detailCell style="table_TD" height="30" rowSpan="1">
+						<jr:detailCell style="table_TD" height="29" rowSpan="1">
 							<textField>
-								<reportElement style="Detail" x="0" y="0" width="80" height="30"/>
-								<textElement/>
+								<reportElement style="Detail" x="0" y="0" width="80" height="29"/>
+								<textElement>
+									<font isBold="true"/>
+								</textElement>
 								<textFieldExpression class="java.lang.String"><![CDATA[$F{userName}]]></textFieldExpression>
 							</textField>
 						</jr:detailCell>
 					</jr:column>
-					<jr:columnGroup width="405">
-						<jr:columnGroup width="405">
+					<jr:columnGroup width="551">
+						<jr:columnGroup width="551">
 							<jr:columnHeader style="table_TH" height="30" rowSpan="1">
 								<staticText>
-									<reportElement style="SubTitle" x="0" y="0" width="405" height="30"/>
+									<reportElement style="SubTitle" x="0" y="0" width="551" height="30"/>
 									<textElement>
 										<font isBold="true"/>
 									</textElement>
-									<text><![CDATA[Instances]]></text>
+									<text><![CDATA[Instance Counts and Durations]]></text>
 								</staticText>
 							</jr:columnHeader>
-							<jr:column width="75">
+							<jr:column width="55">
 								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
 									<staticText>
-										<reportElement style="Column header" x="0" y="0" width="75" height="30"/>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
 										<textElement/>
 										<text><![CDATA[m1.small]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
-										<reportElement style="Detail" x="0" y="0" width="75" height="30"/>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
 										<textElement/>
 										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{m1small}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>
-							<jr:column width="75">
+							<jr:column width="55">
 								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
 									<staticText>
-										<reportElement style="Column header" x="0" y="0" width="75" height="30"/>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[Hours]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{m1smallTime}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="55">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
 										<textElement/>
 										<text><![CDATA[c1.medium]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
-										<reportElement style="Detail" x="0" y="0" width="75" height="30"/>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
 										<textElement/>
 										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{c1medium}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>
-							<jr:column width="75">
+							<jr:column width="55">
 								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
 									<staticText>
-										<reportElement style="Column header" x="0" y="0" width="75" height="30"/>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[Hours]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{c1mediumTime}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="55">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
 										<textElement/>
 										<text><![CDATA[m1.large]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
-										<reportElement style="Detail" x="0" y="0" width="75" height="30"/>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
 										<textElement/>
 										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{m1large}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>
-							<jr:column width="90">
+							<jr:column width="55">
 								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
 									<staticText>
-										<reportElement style="Column header" x="0" y="0" width="90" height="30"/>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[Hours]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{m1largeTime}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="55">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
 										<textElement/>
 										<text><![CDATA[m1.xlarge]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
-										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
 										<textElement/>
 										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{m1xlarge}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>
-							<jr:column width="90">
+							<jr:column width="55">
 								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
 									<staticText>
-										<reportElement style="Column header" x="0" y="0" width="90" height="30"/>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[Hours]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{m1xlargeTime}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="56">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
 										<textElement/>
 										<text><![CDATA[c1.xlarge]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
-										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<reportElement style="Detail" x="0" y="0" width="56" height="29"/>
 										<textElement/>
 										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{c1xlarge}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="55">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[Hours]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{c1xlargeTime}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>

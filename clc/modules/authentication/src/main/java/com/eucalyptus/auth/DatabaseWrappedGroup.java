@@ -49,7 +49,7 @@ public class DatabaseWrappedGroup implements Group {
       if ( !g.isMember( user ) ) {
         g.addMember( user );
         db.commit( );
-        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_ADDED, "group=" + this.getName( ), "user=" + user.getName( ) ).info();
+        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_ADDED ).withDetails( this.getName( ), this.getName( ), "user", user.getName( ) );
         return true;
       } else {
         db.rollback( );
@@ -107,7 +107,7 @@ public class DatabaseWrappedGroup implements Group {
       if ( g.isMember( userInfo ) ) {
         g.removeMember( userInfo );
         db.commit( );
-        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_REMOVED, this.getName( ), userInfo.getName( ) ).info();
+        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_MEMBER_REMOVED ).withDetails( this.getName( ), this.getName( ), "user", userInfo.getName( ) );
         return true;
       } else {
         db.rollback( );
@@ -152,7 +152,7 @@ public class DatabaseWrappedGroup implements Group {
         db.recast( GroupEntity.class ).merge( g );
         this.group = g;
         db.commit( );
-        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_GRANTED, "group=" + this.getName( ), "authorization=" + authorization.getDisplayName( ), "for=" + auth.getValue( ) ).info();
+        EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_GRANTED ).withDetails( this.getName( ), authorization.getDisplayName( ), "target", auth.getValue( ) );
       } catch ( Throwable e ) {
         ret = false;
         LOG.debug( e, e );
@@ -206,7 +206,7 @@ public class DatabaseWrappedGroup implements Group {
         @Override
         public void fire( GroupEntity t ) throws Throwable {
            ret.set( t.removeAuthorization( auth ) );
-           EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_REVOKED, t.getName( ), auth.getDisplayName( ), auth.getValue( ) ).info();
+           EventRecord.here( Groups.class, EventClass.GROUP, EventType.GROUP_AUTH_REVOKED ).withDetails( t.getName( ), auth.getDisplayName( ), "target", auth.getValue( ) ).info();
         }
       } );
     } catch ( TransactionException e ) {

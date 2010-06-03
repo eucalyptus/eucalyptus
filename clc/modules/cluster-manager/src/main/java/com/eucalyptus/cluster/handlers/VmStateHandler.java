@@ -11,7 +11,10 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.entities.VmType;
+import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.SystemState;
@@ -64,11 +67,18 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
         if( this.init.addAndGet( 1 ) == 2 ) {
           try {
             ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
+            ListenerRegistry.getInstance( ).fireEvent( new ClockTick().setMessage( 1l ) );
           } catch ( Exception e1 ) {
             LOG.error( e1, e1 );
           }
           this.getCluster( ).start( );
           LOG.info( LogUtil.header( "Starting threads for cluster: " + this.getCluster( ) ) );   
+        } else if( this.init.get( ) < 2 ) {
+          try {
+            ListenerRegistry.getInstance( ).fireEvent( new ClockTick().setMessage( 1l ) );
+          } catch ( EventVetoedException e1 ) {
+            LOG.debug( e1, e1 );
+          }          
         }
       }      
     }

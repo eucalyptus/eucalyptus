@@ -109,7 +109,9 @@ public class ReplyCoordinator {
       {
         Thread.sleep( MAP_SUBMIT_SLEEP_MS );
       }
-      catch ( InterruptedException e ){}
+      catch ( InterruptedException e ){
+        Thread.currentThread( ).interrupted( );
+      }
 
     if( this.waitList.containsKey( msgCorId ) )
     {

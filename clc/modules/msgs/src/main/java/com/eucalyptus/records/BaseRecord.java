@@ -90,8 +90,8 @@ public class BaseRecord implements Serializable, Record {
     this.type = type;
     this.eventClass = clazz;
     this.realCreator = creator;
-    this.creator = creator.getSimpleName( );
-    this.codeLocation = codeLocation.toString( );
+    this.creator = creator != null ? creator.getSimpleName( ) : "";
+    this.codeLocation = codeLocation != null ? codeLocation.toString( ) : "";
     this.userId = userId;
     this.correlationId = correlationId;
     this.timestamp = new Date();
@@ -155,6 +155,7 @@ public class BaseRecord implements Serializable, Record {
     Logger.getLogger( this.realCreator ).warn( this );
     return this;
   }
+
   private void maybeSave() {
     if( this.type != null && Bootstrap.isFinished( ) ) {
       this.level.enqueue( this );
@@ -166,14 +167,14 @@ public class BaseRecord implements Serializable, Record {
    * @return
    */
   public Record next( ) {
-    this.others.add( NEXT );
     this.extra = "";
     for ( Object o : this.others ) {
       this.extra += ":" + o.toString( );
     }
-    return this;
+    Record newThis = new LogFileRecord( this.eventClass, this.type, this.realCreator, null, this.userId, this.correlationId, "" );
+    return newThis;
   }
-  
+    
   /**
    * @see com.eucalyptus.records.Record#append(java.lang.Object)
    * @param obj
@@ -297,6 +298,20 @@ public class BaseRecord implements Serializable, Record {
     this.correlationId = correlationId;
   }
   
+  public Record withDetails( String userId, String primaryInfo, String key, String value ) {
+    this.userId = userId;
+    this.correlationId = primaryInfo;
+    return this.withDetails( key, value );
+  }
+
+  public Record withDetails( String key, String value ) {
+    this.others.clear( );
+    this.others.add( key );
+    this.others.add( value );
+    this.info();
+    return this.next();
+  }
+
   /**
    * @see com.eucalyptus.records.Record#hashCode()
    * @return

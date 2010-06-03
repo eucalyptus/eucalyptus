@@ -22,6 +22,13 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
         clock = new SystemClock();
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy() );
         timer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: review selection of timer frequency
+        final Timer ref = timer;
+        Runtime.getRuntime( ).addShutdownHook( new Thread() {
+
+          @Override
+          public void run( ) {
+            timer.cancel( );
+          }} );
       }
     }
   }
