@@ -164,8 +164,8 @@ public class SnapshotManager {
       throw new EucalyptusCloudException( "Error calling CreateStorageSnapshot:" + e.getMessage( ) );
     }
     db.commit( );
-    EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE, "user=" + snap.getUserName( ), "snapshot=" + snap.getDisplayName( ),
-                      "volume=" + vol.getDisplayName( ), "volumeSize=" + vol.getSize( ) ).info( );
+    EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE ).withDetails(snap.getUserName( ), snap.getDisplayName( ), "volume", vol.getDisplayName( ) )
+    .withDetails( "volumeSize", vol.getSize( ).toString( ) );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );

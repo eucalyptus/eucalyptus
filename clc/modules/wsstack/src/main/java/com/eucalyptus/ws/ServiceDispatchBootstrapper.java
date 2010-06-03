@@ -75,8 +75,10 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import com.eucalyptus.records.EventRecord;
@@ -126,7 +128,9 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean start( ) throws Exception {
     boolean failed = false;
     for ( Component comp : Components.list( ) ) {
-      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
+      EventRecord.here( ServiceDispatchBootstrapper.class, EventClass.COMPONENT, EventType.COMPONENT_INFO )
+                 .withDetails( comp.getName( ), comp.getName( ), "addresses", NetworkUtil.getAllAddresses( ).toString( ) )
+                 .withDetails( "local", comp.isLocal( ).toString( ) ).withDetails( "enabled", comp.isEnabled( ).toString( ) );
       for ( ServiceConfiguration s : comp.list( ) ) {
         try {
           if ( comp.isEnabled( ) ) {

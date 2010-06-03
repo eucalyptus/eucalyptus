@@ -101,6 +101,9 @@ public class ClusterMessageQueue implements Runnable {
     this.clusterName = clusterName;
     this.threadFactory = ClusterThreadFactory.getThreadFactory( clusterName );
     this.workers = Executors.newFixedThreadPool( NUM_WORKERS, this.threadFactory );
+    Runtime.getRuntime( ).addShutdownHook( new Thread() {{
+      ClusterMessageQueue.this.workers.shutdownNow( );
+    }} );
   }
   
   public void start( ) {
@@ -119,7 +122,7 @@ public class ClusterMessageQueue implements Runnable {
         }
       } catch ( final InterruptedException e ) {
         LOG.debug( e, e );
-        Thread.currentThread( ).interrupt( );
+        Thread.currentThread( ).interrupted( );
       }
     }
   }

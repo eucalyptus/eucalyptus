@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.server;
 
+import java.net.InetSocketAddress;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 
@@ -87,7 +88,19 @@ public class NioServer {
   }
 
   public void start( ) {
-    this.serverChannel = ChannelUtil.getServerChannel();
+    if ( this.serverChannel == null ){
+      this.serverChannel = ChannelUtil.getServerChannel();
+    } else if( this.serverChannel != null && !this.serverChannel.isBound( ) ) {
+      this.serverChannel.bind( new InetSocketAddress( ChannelUtil.PORT ) );
+    } else {
+      LOG.info( "Ignoring second attempt to bind the same server port." );
+    } 
   }
 
+  public void stop( ) {
+    if( this.serverChannel != null && ( this.serverChannel.isConnected( ) || this.serverChannel.isOpen( ) || this.serverChannel.isBound( ) ) ) {
+      this.serverChannel.close( ).awaitUninterruptibly( );
+    }
+  }
+  
 }

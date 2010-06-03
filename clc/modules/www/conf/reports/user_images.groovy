@@ -15,7 +15,7 @@ Users.listAllUsers().each{ User user ->
       u.imageMachine++
     } else if("kernel".equals( image.getImageType() ) ) {
       u.imageKernel++
-    } else if("machine".equals( image.getImageType() ) ) {
+    } else if("ramdisk".equals( image.getImageType() ) ) {
       u.imageRamdisk++
     }
   }

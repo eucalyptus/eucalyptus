@@ -165,8 +165,9 @@ public class VolumeManager {
       req.setUserId( request.getUserId( ) );
       req.setEffectiveUserId( request.getEffectiveUserId( ) );
       StorageUtil.send( sc.getName( ), req );
-      EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_CREATE, "user=" + newVol.getUserName( ), "volume=" + newVol.getDisplayName( ),"size=" + newVol.getSize( ),
-                        "size=" + newVol.getSize( ), "cluster=" + newVol.getCluster( ), "snapshot=" + newVol.getParentSnapshot( ) ).info( );
+      EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_CREATE )
+                 .withDetails( newVol.getUserName( ), newVol.getDisplayName( ), "size", newVol.getSize( ).toString( ) )
+                 .withDetails( "cluster", newVol.getCluster( ) ).withDetails( "snapshot", newVol.getParentSnapshot( ) );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       try {
@@ -211,8 +212,8 @@ public class VolumeManager {
       if ( scReply.get_return( ) ) {
         vol.setState( State.ANNIHILATING );
         db.commit( );
-        EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE, "user=" + vol.getUserName( ), "volume=" + vol.getDisplayName( ),"size=" + vol.getSize( ),
-                          "size=" + vol.getSize( ), "cluster=" + vol.getCluster( ), "snapshot=" + vol.getParentSnapshot( ) ).info( );
+        EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE ).withDetails( vol.getUserName( ), vol.getDisplayName( ) , "size", vol.getSize( ).toString( ) )
+                          .withDetails( "cluster", vol.getCluster( ) ).withDetails( "snapshot", vol.getParentSnapshot( ) );
       } else {
         reallyFailed = true;
         throw new EucalyptusCloudException( "Storage Controller returned false:  Contact the administrator to report the problem." );
@@ -249,8 +250,9 @@ public class VolumeManager {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
           describeVolumes.add( v );
         } else {
-          EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE, "user=" + v.getUserName( ), "volume=" + v.getDisplayName( ),"size=" + v.getSize( ),
-                            "size=" + v.getSize( ), "cluster=" + v.getCluster( ), "snapshot=" + v.getParentSnapshot( ) ).info( );
+          EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE )
+                     .withDetails( v.getUserName( ), v.getDisplayName( ), "size", v.getSize( ).toString( ) ).withDetails( "cluster", v.getCluster( ) )
+                     .withDetails( "snapshot", v.getParentSnapshot( ) );
           db.delete( v );
         }
       }
@@ -328,8 +330,9 @@ public class VolumeManager {
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), volume.getRemoteDevice( ) );
     attachVol.setStatus( "attaching" );
     vm.getVolumes( ).add( attachVol );
-    EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH, "user=" + volume.getUserName( ), "volume=" + volume.getDisplayName( ), "size=" + volume.getSize( ),
-                      "instance=" + vm.getInstanceId( ), "cluster=" + vm.getPlacement( ) ).info( );
+    EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
+               .withDetails( volume.getUserName( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
+               .withDetails( "cluster", vm.getPlacement( ) );
     volume.setState( State.BUSY );
     reply.setAttachedVolume( attachVol );
     return reply;
@@ -382,8 +385,8 @@ public class VolumeManager {
     request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
     request.setInstanceId( vm.getInstanceId( ) );
     new VolumeDetachCallback( request ).dispatch( cluster );
-    EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH, "user=" + vm.getOwnerId( ), "volume=" + volume.getVolumeId( ),
-                      "instance=" + vm.getInstanceId( ), "cluster=" + vm.getPlacement( ) ).info( );
+    EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
+               .withDetails( vm.getOwnerId( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster", vm.getPlacement( ) );
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     return reply;

@@ -12,7 +12,7 @@ Users.listAllUsers().each{ User user ->
   Address a = new Address(  )
   a.setUserId( user.getName() )
   db.query( a ).each{ Address addr ->
-    u.addrCount++
+    u.allocCount++
     if( addr.isSystemOwned() ) {
       u.systemCount++
     }
@@ -20,6 +20,7 @@ Users.listAllUsers().each{ User user ->
   results.add( u )
 }
 db?.commit()
+println results
 def class UserAddressData {
   String userName;
   Integer allocCount = 0;

@@ -67,13 +67,13 @@ public class ServiceContext {
       if ( !ServiceContext.getContext( ).isInitialised( ) ) {
         ServiceContext.getContext( ).initialise( );
       }
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       LOG.error( e, e );
       throw new ServiceInitializationException( "Failed to initialize service context.", e );
     }
     try {
       ServiceContext.getContext( ).start( );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       LOG.error( e, e );
       throw new ServiceInitializationException( "Failed to start service context.", e );
     }
@@ -94,7 +94,8 @@ public class ServiceContext {
   public static void stopContext( ) {
     try {
       ServiceContext.getContext( ).stop( );
-    } catch ( MuleException e ) {
+      ServiceContext.getContext( ).dispose( );
+    } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
   }

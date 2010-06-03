@@ -50,9 +50,9 @@ public class ReportList extends DecoratedStackPanel implements Observer {
     this.clear( );
     this.add( this.systemReports, XHTML.headerWithImage( "System Events", AccountingControl.RESOURCES.systemReports( ),
                                                          AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
-    this.add( this.resourceReports, XHTML.headerWithImage( "Users, Groups & Resources", AccountingControl.RESOURCES.resourceReports( ),
+    this.add( this.resourceReports, XHTML.headerWithImage( "Resource Usage", AccountingControl.RESOURCES.resourceReports( ),
                                                            AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
-    this.add( this.serviceReports, XHTML.headerWithImage( "Service Status & Logs", AccountingControl.RESOURCES.serviceReports( ),
+    this.add( this.serviceReports, XHTML.headerWithImage( "Registered Components", AccountingControl.RESOURCES.serviceReports( ),
                                                           AccountingControl.RESOURCES.REPORT_BAR_STYLE ), true );
     makeGroupPanel( );
   }

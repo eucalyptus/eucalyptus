@@ -367,8 +367,6 @@ public class Reports extends HttpServlet {
   
   private static Map<String, ReportCache> reportCache = new ConcurrentHashMap<String, ReportCache>( );
   
-  private static GroovyScriptEngine       gse         = makeScriptEngine( );
-  
   public static ReportCache getReportManager( final String name, boolean flush ) throws JRException, SQLException {
     try {
       if ( !flush && reportCache.containsKey( name ) && !reportCache.get( name ).isExpired( ) ) {
@@ -410,7 +408,7 @@ public class Reports extends HttpServlet {
           }
         } );
         try {
-          makeScriptEngine( ).run( reportCache.getName( ) + ".groovy", binding );
+          new GroovyScriptEngine( SubDirectory.REPORTS.toString( ) ) .run( reportCache.getName( ) + ".groovy", binding );
         } catch ( Exception e ) {
           LOG.error( e, e );
         }
@@ -430,26 +428,7 @@ public class Reports extends HttpServlet {
     }
     return jasperPrint;
   }
-  
-  private static GroovyScriptEngine makeScriptEngine( ) {
-//    if ( gse != null ) {
-//      return gse;
-//    } else {
-//      synchronized ( Reports.class ) {
-//        if ( gse != null ) {
-//          return gse;
-//        } else {
-          try {
-            return gse = new GroovyScriptEngine( SubDirectory.REPORTS.toString( ) );
-          } catch ( IOException e ) {
-            LOG.debug( e, e );
-            throw new RuntimeException( e );
-          }
-//        }
-//      }
-//    }
-  }
-  
+    
   public static void hasError( String message, HttpServletResponse response ) {
     try {
       response.getWriter( ).print( EucalyptusManagement.getError( message ) );

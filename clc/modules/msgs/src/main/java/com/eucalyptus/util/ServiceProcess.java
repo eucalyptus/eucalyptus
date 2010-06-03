@@ -102,6 +102,10 @@ public class ServiceProcess implements Runnable {
             return;
           }
           LOG.debug( line );
+        } catch ( InterruptedException e ) {
+          Thread.currentThread( ).interrupted( );
+          LOG.debug( e, e );
+          this.finished.set( true );
         } catch ( Exception e ) {
           LOG.debug( e, e );
           this.finished.set( true );
