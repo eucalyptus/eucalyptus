@@ -67,7 +67,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
@@ -92,7 +91,7 @@ public class ConfigureNetworkCallback extends BroadcastCallback<ConfigureNetwork
   }
 
   @Override
-  public void verify( BaseMessage msg ) throws Exception {}
+  public void verify( ConfigureNetworkResponseType msg ) throws Exception {}
 
   @Override
   public void fail( Throwable e ) {
