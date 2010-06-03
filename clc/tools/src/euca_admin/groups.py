@@ -17,7 +17,7 @@ class Group():
     self.euca = EucaAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
-    r = 'GROUP      \t%s\t' % (self.group_groupName)
+    r = 'GROUP\t%s\t' % (self.group_groupName)
     r = '%s\nUSERS\t%s\t%s' % (r,self.group_groupName,self.group_users)
     r = '%s\nAUTH\t%s\t%s' % (r,self.group_groupName,self.group_auths)
     return r
