@@ -32,10 +32,12 @@ public class Threads {
   
   
   public static Thread newThread( Runnable r, String name ) {
+    LOG.debug( "CREATE new thread named: " + name + " using: " + r.getClass().getCanonicalName( ) );
     return new Thread( SYSTEM.getGroup( ), r, name );
   }
   
   public static Thread newThread( Runnable r ) {
+    LOG.debug( "CREATE new thread using: " + r.getClass().getCanonicalName( ) );
     return new Thread( SYSTEM.getGroup( ), r );
   }
   

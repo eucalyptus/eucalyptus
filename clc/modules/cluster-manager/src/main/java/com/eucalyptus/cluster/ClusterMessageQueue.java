@@ -68,6 +68,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
@@ -101,28 +102,33 @@ public class ClusterMessageQueue implements Runnable {
     this.clusterName = clusterName;
     this.threadFactory = ClusterThreadFactory.getThreadFactory( clusterName );
     this.workers = Executors.newFixedThreadPool( NUM_WORKERS, this.threadFactory );
-    Runtime.getRuntime( ).addShutdownHook( new Thread() {{
-      ClusterMessageQueue.this.workers.shutdownNow( );
-    }} );
+//    Runtime.getRuntime( ).addShutdownHook( new Thread() {{
+//      ClusterMessageQueue.this.workers.shutdownNow( );
+//    }} );
   }
   
   public void start( ) {
+    this.finished.set( false );
     for ( int i = 0; i < ClusterMessageQueue.NUM_WORKERS; i++ ) {
       this.workers.execute( this );
     }
   }
   
   public void enqueue( final QueuedEventCallback callback ) {
-    QueuedEvent event = QueuedEvent.make( callback );
-    EventRecord.caller( ClusterMessageQueue.class, EventType.MSG_PENDING, this.clusterName, event.getCallback( ).getClass( ).getSimpleName( ) ).info( );
-    if ( !this.checkDuplicates( event ) ) {
-      try {
-        while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) ) {
-          ;
+    if( this.finished.get( ) ) {
+      throw new RuntimeException( "Cluster is currently not operational." );
+    } else {
+      QueuedEvent event = QueuedEvent.make( callback );
+      EventRecord.caller( ClusterMessageQueue.class, EventType.MSG_PENDING, this.clusterName, event.getCallback( ).getClass( ).getSimpleName( ) ).info( );
+      if ( !this.checkDuplicates( event ) ) {
+        try {
+          while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) ) {
+            ;
+          }
+        } catch ( final InterruptedException e ) {
+          LOG.debug( e, e );
+          Thread.currentThread( ).interrupted( );
         }
-      } catch ( final InterruptedException e ) {
-        LOG.debug( e, e );
-        Thread.currentThread( ).interrupted( );
       }
     }
   }
@@ -196,7 +202,7 @@ public class ClusterMessageQueue implements Runnable {
   }
   
   public void stop( ) {
-    this.finished.lazySet( true );
+    this.finished.set( true );
     this.workers.shutdownNow( );
   }
   
