@@ -38,6 +38,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeUsersType;
 import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationResponseType;
 import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationType;
 import edu.ucsb.eucalyptus.msgs.GroupInfoType;
+import edu.ucsb.eucalyptus.msgs.RemoveGroupMemberResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveGroupMemberType;
 import edu.ucsb.eucalyptus.msgs.RevokeGroupAuthorizationResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeGroupAuthorizationType;
 import edu.ucsb.eucalyptus.msgs.UserInfoType;
@@ -176,6 +178,18 @@ public class Accounts {
       throw new EucalyptusCloudException( "Failed to add user to group: " + request.getUserName( ) + " to group " + request.getGroupName( ), e );
     } catch ( NoSuchUserException e ) {
       throw new EucalyptusCloudException( "Failed to add user to group: " + request.getUserName( ) + " to group " + request.getGroupName( ), e );
+    }
+    return reply;    
+  }
+  public RemoveGroupMemberResponseType removeMember( RemoveGroupMemberType request ) throws EucalyptusCloudException {
+    RemoveGroupMemberResponseType reply = request.getReply( );
+    try {
+      Groups.lookupGroup( request.getGroupName( ) ).removeMember( Users.lookupUser( request.getUserName( ) ) );
+      reply.set_return( true );
+    } catch ( NoSuchGroupException e ) {
+      throw new EucalyptusCloudException( "Failed to remove user to group: " + request.getUserName( ) + " to group " + request.getGroupName( ), e );
+    } catch ( NoSuchUserException e ) {
+      throw new EucalyptusCloudException( "Failed to remove user to group: " + request.getUserName( ) + " to group " + request.getGroupName( ), e );
     }
     return reply;    
   }

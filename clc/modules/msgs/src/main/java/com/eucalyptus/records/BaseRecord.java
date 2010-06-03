@@ -169,6 +169,7 @@ public class BaseRecord implements Serializable, Record {
   public Record next( ) {
     this.extra = "";
     for ( Object o : this.others ) {
+      if( o == null ) continue;
       this.extra += ":" + o.toString( );
     }
     Record newThis = new LogFileRecord( this.eventClass, this.type, this.realCreator, null, this.userId, this.correlationId, "" );
@@ -186,6 +187,7 @@ public class BaseRecord implements Serializable, Record {
     }
     this.extra = "";
     for ( Object o : this.others ) {
+      if( o == null ) continue;
       this.extra += ":" + o.toString( );
     }
     return this;
@@ -220,6 +222,7 @@ public class BaseRecord implements Serializable, Record {
   public String toString( ) {
     String ret = this.leadIn( );
     for ( Object o : this.others ) {
+      if( o == null ) continue;
       ret += ":" + o.toString( );
     }
     return ret.replaceAll( "::*", ":" ).replaceAll( NEXT, NEXT + this.leadIn( ) );
