@@ -624,7 +624,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
 
             if (request_project_leader) {
-                g2.setWidget( i, 0, new Label( "Project Leader:" ) );
+                g2.setWidget( i, 0, new Label( "Department:" ) );
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				projectPIName_box.setText (userToEdit.getProjectPIName());
                 projectPIName_box.setWidth("180");
@@ -632,7 +632,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
 
             if (request_affiliation) {
-                g2.setWidget( i, 0, new Label( "Affiliation:" ) );
+                g2.setWidget( i, 0, new Label( "Role:" ) );
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				affiliation_box.setText (userToEdit.getAffiliation());
                 affiliation_box.setWidth("360");
@@ -640,7 +640,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
 
             if (request_project_description) {
-                g2.setWidget( i, 0, new Label( "Project Description:" ) );
+                g2.setWidget( i, 0, new Label( "Notes:" ) );
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				projectDescription_box.setText (userToEdit.getProjectDescription());
                 projectDescription_box.setWidth("360");
