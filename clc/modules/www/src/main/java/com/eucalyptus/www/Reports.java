@@ -407,8 +407,10 @@ public class Reports extends HttpServlet {
         Binding binding = new Binding( new HashMap( ) {
           {
             put( "results", results );
-            put( "notBefore", Param.start.get( req ) );
-            put( "notAfter", Param.end.get( req ) );
+            put( "notBefore", new Long( Param.start.get( req ) ) );
+            put( "notAfter", new Long( Param.end.get( req ) ) );
+            put( "notBeforeDate", new Date( new Long( Param.start.get( req ) ) ) );
+            put( "notAfterDate", new Date( new Long( Param.end.get( req ) ) ) );
           }
         } );
         try {
@@ -418,6 +420,8 @@ public class Reports extends HttpServlet {
         }
         JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
         jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
+          put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );
+          put( "EUCA_NOT_AFTER", new Long( Param.end.get( req ) ) );
           put( "EUCA_NOT_BEFORE_DATE", new Date( new Long( Param.start.get( req ) ) ) );
           put( "EUCA_NOT_AFTER_DATE", new Date( new Long( Param.end.get( req ) ) ) );
         }}, data );

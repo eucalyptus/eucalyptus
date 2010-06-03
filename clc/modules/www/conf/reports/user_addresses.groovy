@@ -26,8 +26,8 @@ def class UserAddressData {
   Integer allocCount = 0;
   Integer assignCount = 0;
   Integer systemCount = 0;
-  Integer privateCount = 0;
   Integer allocTime = 0;
   Integer assignTime = 0;
+  Integer systemTime = 0;
 }
 

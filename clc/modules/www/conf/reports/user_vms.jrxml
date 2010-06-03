@@ -144,7 +144,7 @@
 										<text><![CDATA[Hours]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="Detail" height="29" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
 										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
 										<textElement/>
@@ -176,7 +176,7 @@
 										<text><![CDATA[Hours]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="Detail" height="29" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
 										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
 										<textElement/>
@@ -208,7 +208,7 @@
 										<text><![CDATA[Hours]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="Detail" height="29" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
 										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
 										<textElement/>
@@ -240,7 +240,7 @@
 										<text><![CDATA[Hours]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="Detail" height="29" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
 										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
 										<textElement/>
@@ -272,7 +272,7 @@
 										<text><![CDATA[Hours]]></text>
 									</staticText>
 								</jr:columnHeader>
-								<jr:detailCell style="Detail" height="29" rowSpan="1">
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
 									<textField>
 										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
 										<textElement/>

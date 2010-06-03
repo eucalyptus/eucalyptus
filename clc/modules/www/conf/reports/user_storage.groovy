@@ -26,5 +26,7 @@ def class UserStorageData {
   String userName;
   Integer volumeCount = 0;
   Integer volumeGigabytes = 0;
+  Integer volumeTime = 0;
+  Integer snapshotCount = 0;
 }
 

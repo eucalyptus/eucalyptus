@@ -72,6 +72,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Crypto;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -80,11 +81,14 @@ import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.cloud.state.State;
@@ -114,7 +118,7 @@ public class VolumeManager {
     return new EntityWrapper<Volume>( PERSISTENCE_CONTEXT );
   }
   
-  public CreateVolumeResponseType CreateVolume( CreateVolumeType request ) throws EucalyptusCloudException {
+  public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException {
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
@@ -122,6 +126,24 @@ public class VolumeManager {
       Configuration.getClusterConfiguration( request.getAvailabilityZone( ) );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Zone does not exist: " + request.getAvailabilityZone( ), e );
+    }
+    Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+      @Override
+      public boolean apply( final Cluster c ) {
+        return Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
+          @Override
+          public boolean apply( Authorization arg0 ) {
+            return arg0.check( c );
+          }
+        } );
+      }
+    } );
+    if( !Iterables.any( authorizedClusters, new Predicate<Cluster>() {
+      @Override
+      public boolean apply( Cluster arg0 ) {
+        return arg0.getName( ).equals( request.getAvailabilityZone( ) );
+      }} )) {
+      throw new EucalyptusCloudException( "You are not authorized to use the zone: " + request.getAvailabilityZone( ) );      
     }
     StorageControllerConfiguration sc;
     try {
