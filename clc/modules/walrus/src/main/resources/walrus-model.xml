@@ -57,59 +57,58 @@
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
 
-	<model name="walrus">
+    <model name="walrus">
 
-		<default-service-exception-strategy>
-			<outbound-endpoint ref="WalrusReplyQueueWS" />
-		</default-service-exception-strategy>
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="WalrusReplyQueueWS"/>
+        </default-service-exception-strategy>
 
-		<service name="WalrusRequestQueue">
-			<inbound>
-				<inbound-endpoint ref="WalrusRequestQueueEndpoint" />
-			</inbound>
-			<bridge-component />
-			<outbound>
-				<filtering-router>
-					<outbound-endpoint ref="BukkitWS" />
-					<payload-type-filter
-						expectedType="edu.ucsb.eucalyptus.msgs.WalrusComponentMessageType" />
-				</filtering-router>
-				<filtering-router>
-					<outbound-endpoint ref="BukkitWS" />
-					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.WalrusRequestType" />
-				</filtering-router>
-			</outbound>
-		</service>
+        <service name="WalrusRequestQueue">
+            <inbound>
+                <inbound-endpoint ref="WalrusRequestQueueEndpoint"/>
+            </inbound>
+            <bridge-component/>
+            <outbound>
+            	<filtering-router>
+		    <outbound-endpoint ref="BukkitWS" />
+		    <payload-type-filter
+			expectedType="edu.ucsb.eucalyptus.msgs.WalrusComponentMessageType" />
+		</filtering-router>
+	    	<filtering-router>
+                    <outbound-endpoint ref="BukkitWS"/>
+                    <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.WalrusRequestType"/>
+                </filtering-router>
+            </outbound>
+        </service>
 
-		<service name="Bukkit">
-			<inbound>
-				<inbound-endpoint ref="BukkitWS" />
-			</inbound>
-			<component class="edu.ucsb.eucalyptus.cloud.ws.WalrusControl" />
-			<outbound>
-				<outbound-pass-through-router>
-					<outbound-endpoint ref="WalrusReplyQueueWS" />
-				</outbound-pass-through-router>
-			</outbound>
-		</service>
+        <service name="Bukkit">
+            <inbound>
+                <inbound-endpoint ref="BukkitWS"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.WalrusControl"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="WalrusReplyQueueWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
 
-		<service name="WalrusReplyQueue">
-			<inbound>
-				<inbound-endpoint ref="WalrusReplyQueueWS" />
-			</inbound>
-			<component class="com.eucalyptus.ws.util.ReplyQueue" />
-		</service>
+        <service name="WalrusReplyQueue">
+            <inbound>
+                <inbound-endpoint ref="WalrusReplyQueueWS"/>
+            </inbound>
+            <component class="com.eucalyptus.ws.util.ReplyQueue"/>
+        </service>
 
-	</model>
-	<model name="WalrusInternal">
-		<service name="BukkitInternal">
-			<inbound>
-				<inbound-endpoint ref="BukkitInternalWS" />
-				<inbound-endpoint ref="BukkitInternalVM" />
-			</inbound>
-			<component class="edu.ucsb.eucalyptus.cloud.ws.WalrusControl" />
-		</service>
+    </model>
+    <model name="WalrusInternal">
+        <service name="BukkitInternal">
+            <inbound>
+                <inbound-endpoint ref="BukkitInternalWS"/>
+                <inbound-endpoint ref="BukkitInternalVM"/>
+            </inbound>
+            <component class="edu.ucsb.eucalyptus.cloud.ws.WalrusControl"/>
+        </service>
 
-	</model>
-
+    </model>
 </mule>

@@ -94,7 +94,7 @@ public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials>
 		if (authSig.equals(signature)) {
 			super.setCredential(credentials.getQueryId());
 			super.setPrincipal(user);
-			super.getGroups().addAll(Groups.lookupGroups( super.getPrincipal()));
+			super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
 			return true;	
 		}
 		return false;
