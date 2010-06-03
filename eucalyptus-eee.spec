@@ -42,7 +42,7 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       2.0.0eee
-Release:       0.1505
+Release:       1.1506
 License:       Eucalyptus EEE Software License
 Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
@@ -255,6 +255,7 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 /usr/sbin/euca-register-walrus
 /usr/sbin/euca-remove-group-membership
 /usr/sbin/euca-revoke-zone-permission
+/usr/sbin/euca-describe-nodes
 /usr/sbin/euca_admin
 /usr/share/eucalyptus/doc
 
