@@ -7,7 +7,7 @@ import groovy.sql.Sql;
 EntityWrapper db = EntityWrapper.get( BaseRecord.class );
 Sql sql = new Sql( db.getSession( ).connection( ) )
 Users.listAllUsers().each{ User user ->
-  def u = new UserReportInfo() {{
+  def u = new UserVmData() {{
       userName = user.getName() 
     }
   };
@@ -36,7 +36,7 @@ Users.listAllUsers().each{ User user ->
   results.add( u )
 }
 db?.commit()
-def class UserVmInfo {
+def class UserVmData {
   String userName;
   Integer vmCount = 0;
   Integer m1small = 0;
