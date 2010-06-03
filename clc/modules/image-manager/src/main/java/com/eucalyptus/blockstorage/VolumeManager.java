@@ -71,14 +71,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.context.Contexts;
@@ -122,34 +128,35 @@ public class VolumeManager {
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
+    ClusterConfiguration config;
     try {
-      Configuration.getClusterConfiguration( request.getAvailabilityZone( ) );
+      config = Configuration.getClusterConfiguration( request.getAvailabilityZone( ) );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Zone does not exist: " + request.getAvailabilityZone( ), e );
-    }
-    Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-      @Override
-      public boolean apply( final Cluster c ) {
-        return Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
-          @Override
-          public boolean apply( Authorization arg0 ) {
-            return arg0.check( c );
-          }
-        } );
-      }
-    } );
-    if( !Iterables.any( authorizedClusters, new Predicate<Cluster>() {
-      @Override
-      public boolean apply( Cluster arg0 ) {
-        return arg0.getName( ).equals( request.getAvailabilityZone( ) );
-      }} )) {
-      throw new EucalyptusCloudException( "You are not authorized to use the zone: " + request.getAvailabilityZone( ) );      
     }
     StorageControllerConfiguration sc;
     try {
       sc = Configuration.getStorageControllerConfiguration( request.getAvailabilityZone( ) );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone.", e );
+    }
+    try {
+      User u = Users.lookupUser( request.getUserId( ) );
+      List<Group> groups = Groups.lookupUserGroups( u );
+      if( ! Iterables.any( groups, new Predicate<Group>() {
+        @Override
+        public boolean apply( Group arg0 ) {
+          for( Authorization a : arg0.getAuthorizations( ) ) {
+            if( a.getValue( ).equals( request.getAvailabilityZone( ) ) ) {
+              return true;
+            }
+          }
+          return false;
+        }} ) ) {
+        throw new EucalyptusCloudException( "Permission denied when trying to use resource: " + request.getAvailabilityZone( ) );
+      }
+    } catch ( NoSuchUserException e ) {
+      throw new EucalyptusCloudException( "Failed to lookup your user information.", e );
     }
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper( );
     if ( request.getSnapshotId( ) != null ) {
