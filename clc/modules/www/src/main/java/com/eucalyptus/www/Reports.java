@@ -372,6 +372,8 @@ public class Reports extends HttpServlet {
       if ( !flush && reportCache.containsKey( name ) && !reportCache.get( name ).isExpired( ) ) {
         return reportCache.get( name );
       } else if ( reportCache.containsKey( name ) && ( reportCache.get( name ).isExpired( ) || flush ) ) {
+        final JasperDesign jasperDesign = JRXmlLoader.load( SubDirectory.REPORTS.toString( ) + File.separator + name + ".jrxml" );
+        reportCache.put( name, new ReportCache( name, jasperDesign ) );
         return reportCache.get( name );
       } else {
         ReportCache r = reportCache.get( name );
@@ -394,6 +396,8 @@ public class Reports extends HttpServlet {
       jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
         put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );
         put( "EUCA_NOT_AFTER", new Long( Param.end.get( req ) ) );
+        put( "EUCA_NOT_BEFORE_DATE", new Date( new Long( Param.start.get( req ) ) ) );
+        put( "EUCA_NOT_AFTER_DATE", new Date( new Long( Param.end.get( req ) ) ) );
       }}, jdbcConnection );
     } else {
       FileReader fileReader = null;
@@ -408,12 +412,15 @@ public class Reports extends HttpServlet {
           }
         } );
         try {
-          new GroovyScriptEngine( SubDirectory.REPORTS.toString( ) ) .run( reportCache.getName( ) + ".groovy", binding );
+          new GroovyScriptEngine( SubDirectory.REPORTS.toString( ) ).run( reportCache.getName( ) + ".groovy", binding );
         } catch ( Exception e ) {
           LOG.error( e, e );
         }
         JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
-        jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), null, data );
+        jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
+          put( "EUCA_NOT_BEFORE_DATE", new Date( new Long( Param.start.get( req ) ) ) );
+          put( "EUCA_NOT_AFTER_DATE", new Date( new Long( Param.end.get( req ) ) ) );
+        }}, data );
       } catch ( Throwable e ) {
         LOG.debug( e, e );
         throw new RuntimeException( e );

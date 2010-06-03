@@ -150,7 +150,7 @@
 								<textElement verticalAlignment="Middle" markup="html">
 									<font fontName="Verdana" pdfFontName="Courier" isPdfEmbedded="true"/>
 								</textElement>
-								<textFieldExpression class="java.lang.String"><![CDATA[$F{record_creator}]]></textFieldExpression>
+								<textFieldExpression class="java.lang.String"><![CDATA[$F{record_user_id}]]></textFieldExpression>
 							</textField>
 						</jr:detailCell>
 					</jr:column>

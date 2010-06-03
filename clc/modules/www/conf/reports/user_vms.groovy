@@ -35,6 +35,7 @@ Users.listAllUsers().each{ User user ->
       }
   results.add( u )
 }
+results.each{ println it.dump() }
 db?.commit()
 def class UserVmData {
   String userName;
