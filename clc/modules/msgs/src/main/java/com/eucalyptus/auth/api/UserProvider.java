@@ -6,6 +6,7 @@ import java.util.List;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.util.Tx;
 
 /**
  * @author decker
@@ -83,4 +84,12 @@ public interface UserProvider {
    */
   public abstract boolean checkRevokedCertificate( X509Certificate cert ) throws NoSuchCertificateException;
   
+  /**
+   * Update a user via an external callback.
+   * 
+   * @param userName
+   * @param userTx
+   * @throws NoSuchUserException
+   */
+  public abstract void updateUser( String userName, Tx<User> userTx ) throws NoSuchUserException;
 }

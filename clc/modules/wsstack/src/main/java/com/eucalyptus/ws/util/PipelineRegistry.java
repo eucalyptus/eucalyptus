@@ -75,8 +75,7 @@ import com.eucalyptus.ws.server.DuplicatePipelineException;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.server.NoAcceptingPipelineException;
 
-import edu.ucsb.eucalyptus.msgs.EventRecord;
-
+import com.eucalyptus.records.EventRecord;
 
 public class PipelineRegistry {
   private static PipelineRegistry registry;
@@ -105,7 +104,7 @@ public class PipelineRegistry {
         if( !LogLevels.DEBUG ) {
           return f;
         } else if ( candidate != null ) {
-          LOG.trace( EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getPipelineName( ), f.getClass( ).getSimpleName( ) ) );
+          EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getPipelineName( ), f.getClass( ).getSimpleName( ) ).trace( );
         } else {
           candidate = f;
         }

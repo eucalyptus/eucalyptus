@@ -134,7 +134,10 @@ public class ElasticFoxMangleHandler extends MessageStackHandler {
       if ( message.getMessage( ) instanceof DescribeImagesResponseType ) {
         DescribeImagesResponseType purify = ( DescribeImagesResponseType ) message.getMessage( );
         for ( ImageDetails img : purify.getImagesSet( ) ) {
-          img.setImageId( img.getImageId( ).replaceFirst( "^e", "a" ).toLowerCase( ) );
+          String imageId = img.getImageId( );
+          if ( imageId != null ) {
+		    img.setImageId( imageId.replaceFirst( "^e", "a" ).toLowerCase( ) );
+          }
           if ( img.getKernelId( ) != null ) img.setKernelId( img.getKernelId( ).replaceFirst( "^e", "a" ).toLowerCase( ) );
           if ( img.getRamdiskId( ) != null ) img.setRamdiskId( img.getRamdiskId( ).replaceFirst( "^e", "a" ).toLowerCase( ) );
         }

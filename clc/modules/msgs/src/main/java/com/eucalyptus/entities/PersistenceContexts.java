@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
@@ -16,7 +17,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import edu.emory.mathcs.backport.java.util.Collections;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
@@ -44,27 +45,33 @@ public class PersistenceContexts {
   }
   
   private static boolean isDuplicate( Class entity ) {
-    String ctxName = Ats.from( entity ).get( PersistenceContext.class ).name( );
-    if ( sharedEntities.contains( entity ) ) {
+    PersistenceContext ctx = Ats.from( entity ).get( PersistenceContext.class );
+    if( Ats.from( entity ).has( MappedSuperclass.class ) ) {
+      return false;
+    } else if ( ctx == null || ctx.name( ) == null ) {
+      RuntimeException ex = new RuntimeException( "Failed to register broken entity class: " + entity.getCanonicalName( ) + ".  Ensure that the class has a well-formed @PersistenceContext annotation.");
+      LOG.error( ex, ex );
+      return false;
+    } else if ( sharedEntities.contains( entity ) ) {
       Class old = sharedEntities.get( sharedEntities.indexOf( entity ) );
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       throw BootstrapException.throwFatal( "Duplicate entity definition in shared entities: " + entity.getCanonicalName( ) + ". See error logs for details." );
-    } else if ( entities.get( ctxName ).contains( entity ) ) {
-      List<Class> context = entities.get( ctxName );
+    } else if ( entities.get( ctx.name( ) ) != null && entities.get( ctx.name( ) ).contains( entity ) ) {
+      List<Class> context = entities.get( ctx.name( ) );
       Class old = context.get( context.indexOf( entity ) );
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
-      throw BootstrapException.throwFatal( "Duplicate entity definition in '" + ctxName + "': " + entity.getCanonicalName( ) + ". See error logs for details." );
+      throw BootstrapException.throwFatal( "Duplicate entity definition in '" + ctx.name( ) + "': " + entity.getCanonicalName( ) + ". See error logs for details." );
     } else {
       return false;
     }
   }
   
   public static EntityManagerFactoryImpl registerPersistenceContext( final String persistenceContext, final Ejb3Configuration config ) {
-    synchronized ( EntityWrapper.class ) {
+    synchronized ( PersistenceContexts.class ) {
       if ( illegalAccesses != null && !illegalAccesses.isEmpty( ) ) {
         for ( Exception e : illegalAccesses ) {
           LOG.fatal( e, e );
@@ -91,7 +98,6 @@ public class PersistenceContexts {
   }
   
   public static void handleConnectionError( Throwable cause ) {
-    //		DebugUtil.debug( );
     touchDatabase( );
   }
   
@@ -108,12 +114,24 @@ public class PersistenceContexts {
   @SuppressWarnings( "deprecation" )
   public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
     if ( !emf.containsKey( persistenceContext ) ) {
-      RuntimeException e = new RuntimeException( "Attempting to access an entity wrapper before the database has been configured: " + persistenceContext );
+      RuntimeException e = new RuntimeException( "Attempting to access an entity wrapper before the database has been configured: " + persistenceContext + ".  The available contexts are: " + emf.keySet( ));
       illegalAccesses = illegalAccesses == null ? Collections.synchronizedList( Lists.newArrayList( ) ) : illegalAccesses;
       illegalAccesses.add( e );
       throw e;
     }
     return emf.get( persistenceContext );
+  }
+
+  public static void shutdown() {
+    for( String ctx : emf.keySet( ) ) {
+      EntityManagerFactoryImpl em = emf.get( ctx );
+      if( em.isOpen( ) ) {
+        LOG.info( "Closing persistence context: " + ctx );
+        em.close( );
+      } else {
+        LOG.info( "Closing persistence context: " + ctx + " (found it closed already)" );
+      }
+    }
   }
   
 }

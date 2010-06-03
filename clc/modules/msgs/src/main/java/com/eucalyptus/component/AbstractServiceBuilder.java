@@ -1,7 +1,13 @@
 package com.eucalyptus.component;
 
+import java.util.List;
+
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
+import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.util.NetworkUtil;
@@ -31,6 +37,17 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     } catch ( EventVetoedException e1 ) {
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
+    
+    List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(config.getComponent().name());
+    for ( ConfigurableProperty prop : props ) {
+      ConfigurableProperty addProp = null;
+      if (prop instanceof SingletonDatabasePropertyEntry) {
+    	  addProp = prop;
+      } else if (prop instanceof MultiDatabasePropertyEntry) {
+    	  addProp = ((MultiDatabasePropertyEntry) prop).getClone(config.getName());
+      }
+  	  PropertyDirectory.addProperty(addProp);
+    }
   }
 
   @Override
@@ -45,6 +62,15 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
     } catch ( EventVetoedException e1 ) {
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
+    }
+    
+    List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet(config.getComponent().name());
+    for ( ConfigurableProperty prop : props ) {
+      if(prop instanceof SingletonDatabasePropertyEntry) {   	 
+      } else if ( prop instanceof MultiDatabasePropertyEntry) {
+    	 ((MultiDatabasePropertyEntry) prop).setIdentifierValue(config.getName());
+      }
+      PropertyDirectory.removeProperty(prop);	
     }
   }
 

@@ -74,7 +74,7 @@ import com.eucalyptus.auth.api.HmacProvider;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class Authentication {
   static String         DB_NAME = "eucalyptus_auth";
@@ -82,23 +82,25 @@ public class Authentication {
   private static CryptoProvider cryptoProvider;
   private static CertificateProvider certProvider;
   private static HmacProvider hmacProvider;
+  private static BaseSecurityProvider DUMMY = new BaseSecurityProvider( ) {};
+  private static ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<Class, BaseSecurityProvider>( );
   static {
-    //TODO FIXME TODO BROKEN FAIL: discover this at bootstrap time.
+    BaseSecurityProvider provider;
     try {
-      ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
-    } catch ( ClassNotFoundException e ) {
+      Class provClass = ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
+      provider = ( BaseSecurityProvider ) provClass.newInstance( );
+    } catch ( Throwable t ) {
+      LOG.debug( t, t );
+      provider = DUMMY;
     }
+    providers.put( CertificateProvider.class, provider );
+    providers.put( HmacProvider.class, provider );
+    providers.put( CryptoProvider.class, provider );
   }
   
   public static <T> EntityWrapper<T> getEntityWrapper( ) {
     return new EntityWrapper<T>( Authentication.DB_NAME );
   }
-  private static BaseSecurityProvider DUMMY = new BaseSecurityProvider() {};
-  private static ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<Class, BaseSecurityProvider>( ){{    
-    put( CertificateProvider.class, DUMMY );
-    put( HmacProvider.class, DUMMY );
-    put( CryptoProvider.class, DUMMY );
-  }};
   
   public static CertificateProvider getCertificateProvider( ) {
     return (CertificateProvider) providers.get( CertificateProvider.class );
@@ -117,7 +119,7 @@ public class Authentication {
       return 0.01d;
     }
     @Override
-    public boolean processsClass( Class candidate ) throws Throwable {
+    public boolean processClass( Class candidate ) throws Throwable {
       if( !Modifier.isInterface( candidate.getModifiers( ) ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && BaseSecurityProvider.class.isAssignableFrom( candidate ) ) {
         try {
           BaseSecurityProvider o = ( BaseSecurityProvider ) candidate.newInstance( );
@@ -125,14 +127,14 @@ public class Authentication {
             if( c.isAssignableFrom( candidate ) ) {
               Object curr = Authentication.providers.get( c );
               if( DUMMY.equals( curr ) ) {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, c.getSimpleName( ), candidate.getCanonicalName( ) ) );
+                EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, c.getSimpleName( ), candidate.getCanonicalName( ) ).info( );
                 Authentication.providers.put( c, o );
               } else if( !candidate.getSimpleName( ).startsWith( "Default" ) ) {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "current", curr.getClass( ).getCanonicalName( ) ) );
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "candidate", candidate.getCanonicalName( ) ) );
+                EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "current", curr.getClass( ).getCanonicalName( ) ).info( );
+                EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "candidate", candidate.getCanonicalName( ) ).info( );
                 Authentication.providers.put( c, o );
               } else {
-                LOG.info( EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, c.getSimpleName( ), candidate.getCanonicalName( ) ) );
+                EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, c.getSimpleName( ), candidate.getCanonicalName( ) ).info( );
                 return false;
               }
             }

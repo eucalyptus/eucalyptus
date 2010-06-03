@@ -109,24 +109,35 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class UserEntity extends AbstractPersistent implements Serializable, User {
   @Transient
   private static Logger LOG = Logger.getLogger( UserEntity.class );
+  
   @Column( name = "auth_user_name", unique=true )
   String name;
+  
   @Column( name = "auth_user_query_id" )
   String queryId;
+  
   @Column( name = "auth_user_secretkey" )
   String secretKey;
+  
   @Column( name = "auth_user_password" )
   String password;
+  
   @Column( name = "auth_user_is_admin" )
   Boolean administrator;
+  
   @Column( name = "auth_user_is_enabled" )
   Boolean enabled;
+  
   @Column( name = "auth_user_token" )
   String  token;
+  
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<X509Cert> certificates = []
+  List<X509Cert> certificates = [];
+  
+  @Transient
+  List<String> eucaGroupIds = [];
   
   public UserEntity(){
   }
@@ -172,6 +183,10 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
     return null;
   }
   
+  public boolean checkToken( String token ) {
+    return this.getToken( ).equals( token )
+  }
+  
   public void setX509Certificate( X509Certificate x509 ) {
     LOG.debug( "Setting new user certificate: " + x509.getSubjectX500Principal( ) + " " + x509.getSerialNumber( ) );
     this.getCertificates( ).add( X509Cert.fromCertificate( x509 ) );
@@ -202,7 +217,27 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
       if ( other.name != null ) return false;
     } else if ( !name.equals( other.name ) ) return false;
     return true;
-  }  
+  }
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "UserEntity [ ");
+    sb.append( "administrator = ").append( administrator == null ? "null" : administrator ).append( ", " );
+    sb.append( "enabled = ").append( enabled == null ? "null" : enabled ).append( ", " );
+    sb.append( "name = ").append( name == null ? "null" : name ).append( ", " );
+    sb.append( "password = ").append( password == null ? "null" : password ).append( ", " );
+    sb.append( "queryId = ").append( queryId == null ? "null" : queryId ).append( ", " );
+    sb.append( "secretKey = ").append( secretKey == null ? "null" : secretKey ).append( ", " );
+    sb.append( "token = ").append( token == null ? "null" : token ).append( ", " );
+    sb.append( "certificates = ");
+    for ( X509Cert certificate : getCertificates( ) ) {
+      sb.append( certificate.toString( ) ).append( ", " );
+    }
+    sb.append( "eucaGroupIds = " );
+    for ( String id : eucaGroupIds ) {
+      sb.append( id ).append( ", ");
+    }
+    sb.append( "]");
+  }
 }
 
 @Entity
@@ -252,6 +287,12 @@ public class X509Cert extends AbstractPersistent implements Serializable {
       if ( other.alias != null ) return false;
     } else if ( !alias.equals( other.alias ) ) return false;
     return true;
+  }
+  public String toString( ) {
+    return ( new StringBuilder( ) ).append( alias == null ? "null" : alias ).append( " " )
+                                   .append( revoked == null ? "null" : revoked ).append( " " )
+                                   .append( pemCertificate == null ? "null" : pemCertificate )
+                                   .toString( );
   }
 }
 

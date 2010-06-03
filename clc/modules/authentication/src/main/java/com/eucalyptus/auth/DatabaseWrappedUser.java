@@ -4,34 +4,29 @@ import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.crypto.Crypto;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities._anon;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
 
-public class UserProxy implements User {
+public class DatabaseWrappedUser implements User, WrappedUser {
   
-  public static Function<UserEntity, UserProxy> proxyFunction = new Function<UserEntity, UserProxy>( ) {
-                                                                public UserProxy apply( UserEntity arg0 ) {
-                                                                  return new UserProxy( arg0 );
-                                                                }
-                                                              };
+  public static Function<UserEntity, DatabaseWrappedUser> proxyFunction = new Function<UserEntity, DatabaseWrappedUser>( ) {
+                                                                          public DatabaseWrappedUser apply( UserEntity arg0 ) {
+                                                                            return new DatabaseWrappedUser( arg0 );
+                                                                          }
+                                                                        };
   
-  private static Logger                         LOG           = Logger.getLogger( UserProxy.class );
-  private final UserEntity                      searchUser;
-  private UserEntity                                  user;
+  private static Logger                                   LOG           = Logger.getLogger( DatabaseWrappedUser.class );
+  private final UserEntity                                searchUser;
+  private UserEntity                                      user;
   
-  public UserProxy( UserEntity user ) {
+  public DatabaseWrappedUser( UserEntity user ) {
     this.searchUser = new UserEntity( user.getName( ) );
     this.user = user;
-  }
-  
-  class _this extends _anon<UserEntity> {
-    private _this( ) {
-      super( UserProxy.this.searchUser );
-    }
   }
   
   @Override
@@ -147,11 +142,29 @@ public class UserProxy implements User {
   }
   
   /**
+   * Just to make CompositeHelper.goovy happy.
+   * 
+   * @return
+   */
+  public Boolean getAdministrator( ) {
+    return this.user.isAdministrator( );
+  }
+  
+  /**
    * @see com.eucalyptus.auth.principal.User#getIsEnabled()
    * @return
    */
   @Override
   public Boolean isEnabled( ) {
+    return this.user.isEnabled( );
+  }
+  
+  /**
+   * Just to make CompositeHelper.goovy happy.
+   * 
+   * @return
+   */
+  public Boolean getEnabled( ) {
     return this.user.isEnabled( );
   }
   
@@ -217,10 +230,67 @@ public class UserProxy implements User {
   public List<X509Certificate> getAllX509Certificates( ) {
     return this.user.getAllX509Certificates( );
   }
-
+  
   @Override
   public User getDelegate( ) {
     return this.user;
   }
   
+  @Override
+  public boolean checkToken( String testToken ) {
+    String token = this.user.getToken( );
+    boolean ret = token.equals( testToken );
+    try {
+      Transactions.one( this.searchUser, new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          t.setToken( Crypto.generateSessionToken( t.getName( ) ) );
+        }
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
+    }
+    return ret;
+  }
+  
+  @Override
+  public String getPassword( ) {
+    return this.user.getPassword( );
+  }
+  
+  @Override
+  public void setPassword( final String password ) {
+    try {
+      Transactions.one( this.searchUser, new Tx<User>( ) {
+        public void fire( User t ) throws Throwable {
+          t.setPassword( password );
+        }
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
+    }
+  }
+  
+  public void setToken( final String token ) {
+    try {
+      Transactions.one( this.searchUser, new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          t.setToken( token );
+        }
+      } );
+    } catch ( TransactionException e1 ) {
+      LOG.debug( e1, e1 );
+    }
+  }
+  
+  public UserInfo getUserInfo( ) throws NoSuchUserException {
+    return UserInfoStore.getUserInfo( new UserInfo( this.user.getName( ) ) );
+  }
+  
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "DatabaseWrappedUser [ " );
+    sb.append( "user = " ).append( user ).append( ", " );
+    sb.append( "]" );
+    return sb.toString( );
+  }
 }

@@ -1,7 +1,7 @@
 package com.eucalyptus.util;
 
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public abstract class SimpleTransition<O, T extends Comparable> extends Transition<O, T> {
   

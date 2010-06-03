@@ -3,7 +3,7 @@ package com.eucalyptus.component;
 import com.eucalyptus.component.Lifecycles.State;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Transition;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class DefaultTransition extends Transition<Component, Lifecycles.State> {
   

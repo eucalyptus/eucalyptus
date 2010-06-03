@@ -7,7 +7,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class BootstrapperDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( BootstrapperDiscovery.class );
@@ -16,7 +16,7 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
   public BootstrapperDiscovery() {}
   
   @Override
-  public boolean processsClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Throwable {
     String bc = candidate.getCanonicalName( );
     Class bootstrapper = this.getBootstrapper( candidate );
     if ( !From( candidate ).has( RunDuring.class ) ) {

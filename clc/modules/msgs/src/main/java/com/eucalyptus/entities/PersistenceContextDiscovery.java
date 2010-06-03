@@ -18,7 +18,7 @@ public class PersistenceContextDiscovery extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processsClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Throwable {
     if ( Ats.from( candidate ).has( Entity.class ) ) {
       if( !Ats.from( candidate ).has( PersistenceContext.class ) ) {
         throw BootstrapException.throwFatal( "Database entity does not have required @PersistenceContext annotation: " + candidate.getCanonicalName( ) );

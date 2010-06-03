@@ -1,16 +1,21 @@
 package com.eucalyptus.context;
 
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.api.MuleEvent;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventType;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class Context {
   private static Logger            LOG         = Logger.getLogger( Context.class );
@@ -30,7 +35,7 @@ public class Context {
     this.creationTime = System.nanoTime( );
     this.httpRequest = httpRequest;
     this.channel = channel;
-    LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ) );
+    EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug();
   }
   
   public Channel getChannel( ) {
@@ -51,7 +56,7 @@ public class Context {
   
   public void setRequest( BaseMessage msg ) {
     if ( msg != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_MSG, this.correlationId, msg.getClass( ).getSimpleName( ) ) );
+      EventRecord.caller( Context.class, EventType.CONTEXT_MSG, this.correlationId, msg.getClass( ).getSimpleName( ) ).debug( );
       this.request = msg;
     }
   }
@@ -62,7 +67,7 @@ public class Context {
   
   public void setUser( User user ) {
     if ( user != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getName( ) ) );
+      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getName( ) ).debug( );
       this.user = user;
     }
   }
@@ -71,9 +76,22 @@ public class Context {
     return check( this.user );
   }
   
+  public List<Group> getGroups( ) {
+    return Groups.lookupUserGroups( this.getUser( ) );
+  }
+
+  public List<Authorization> getAuthorizations( ) {
+    List<Authorization> auths = Lists.newArrayList( );
+    for( Group g : this.getGroups( ) ) {
+      auths.addAll( g.getAuthorizations( ) );
+    }
+    return auths;
+  }
+
+  
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_EVENT, this.correlationId, event ) );
+      EventRecord.caller( Context.class, EventType.CONTEXT_EVENT, this.correlationId, event.getId( ) ).debug( );
       this.muleEvent = new WeakReference<MuleEvent>( event );
     }
   }
@@ -93,13 +111,13 @@ public class Context {
   
   public void setSubject( Subject subject ) {
     if ( subject != null ) {
-      LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_SUBJECT, this.correlationId, subject.getPrincipals( ).toString( ) ) );
+      EventRecord.caller( Context.class, EventType.CONTEXT_SUBJECT, this.correlationId, subject.getPrincipals( ).toString( ) ).debug( );
       this.subject = subject;
     }
   }
   
   void clear( ) {
-    LOG.debug( EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ) );
+    EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ).debug( );
     this.channel = null;
     this.httpRequest = null;
     this.muleEvent.clear( );

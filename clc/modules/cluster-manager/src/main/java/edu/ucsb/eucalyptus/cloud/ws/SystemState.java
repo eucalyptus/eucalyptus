@@ -113,7 +113,7 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-@ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
+@ConfigurableClass( alias = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class SystemState {
   
   private static Logger      LOG                 = Logger.getLogger( SystemState.class );
