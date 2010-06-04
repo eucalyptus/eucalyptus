@@ -116,7 +116,6 @@ public class VmInstance implements HasName {
       return this.mappedState;
     }
   }
-  
   private final String                                reservationId;
   private final int                                   launchIndex;
   private final String                                instanceId;
@@ -134,6 +133,7 @@ public class VmInstance implements HasName {
   private final AtomicMarkableReference<BundleTask>   bundleTask    = new AtomicMarkableReference<BundleTask>( null, false );
   private final ConcurrentSkipListSet<AttachedVolume> volumes       = new ConcurrentSkipListSet<AttachedVolume>( );
   private final StopWatch                             stopWatch     = new StopWatch( );
+  private final StopWatch                             updateWatch     = new StopWatch( );
   
   private Date                                        launchTime    = new Date( );
   private String                                      serviceTag;
@@ -162,7 +162,9 @@ public class VmInstance implements HasName {
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
     this.networkConfig.setNetworkIndex( Integer.parseInt( networkIndex ) );
     this.stopWatch.start( );
+    this.updateWatch.start( );
     this.updateDns( );
+    this.store( );
   }
   
   public void updateNetworkIndex( Integer newIndex ) {
@@ -235,6 +237,13 @@ public class VmInstance implements HasName {
   }
   
   public void setState( final VmState newState, SystemState.Reason reason, String... extra ) {
+    this.updateWatch.split( );
+    if( this.updateWatch.getSplitTime( ) > 1000*60*60 ) {
+      this.store( );
+      this.updateWatch.unsplit( );
+    } else {
+      this.updateWatch.unsplit( );
+    }
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
@@ -278,7 +287,7 @@ public class VmInstance implements HasName {
         } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
           this.state.set( newState, false );
         }
-        EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE,  "user="+this.getOwnerId( ), "instance="+this.getInstanceId( ), "type="+this.getVmTypeInfo( ).getName( ), "state="+ this.state.getReference( ).name( ), "details="+this.reasonDetails.toString( )  ).info();
+        this.store( );
       } else {
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       }
@@ -286,6 +295,13 @@ public class VmInstance implements HasName {
         EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.ownerId, this.state.getReference( ).name( ), this.launchTime );
       }
     }
+  }
+
+  private void store( ) {
+    EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE )
+               .withDetails( this.getOwnerId( ), this.getInstanceId( ), "type", this.getVmTypeInfo( ).getName( ) )
+               .withDetails( "state", this.state.getReference( ).name( ) ).withDetails( "cluster", this.placement ).withDetails( "platform", this.platform )
+               .withDetails( "image", this.imageInfo.getImageId( ) ).withDetails( "started", this.launchTime.getTime( ) + "" ).info( );
   }
   
   public String getByKey( String path ) {

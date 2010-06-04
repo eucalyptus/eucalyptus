@@ -11,12 +11,15 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
 import com.eucalyptus.system.Threads;
 import com.google.common.collect.Lists;
 
 @Provides( Component.any )
 @RunDuring( Bootstrap.Stage.DatabaseInit )
-public class RecordProcessor extends Bootstrapper implements Runnable {
+public class RecordProcessor extends Bootstrapper implements Runnable, EventListener {
+  private static final int RECORD_QUEUE_FLUSH_INTERVAL = 10000;
   private static Logger          LOG       = Logger.getLogger( RecordProcessor.class );
   private static boolean         finished  = false;
   private static RecordProcessor singleton = new RecordProcessor( );
@@ -24,16 +27,11 @@ public class RecordProcessor extends Bootstrapper implements Runnable {
   
   @Override
   public void run( ) {
-    if( !finished ) {
-      LOG.info( "Started records storage thread." );
-      Record rec = EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_START,  "STARTED" );
-      RecordLevel.INFO.enqueue( rec );
-    }
-    do {
-      String msg = "";
-      int total = 0;
-      try {
-        TimeUnit.MILLISECONDS.sleep( 5000 );
+    try {
+      do {
+        String msg = "";
+        int total = 0;
+        TimeUnit.MILLISECONDS.sleep( RECORD_QUEUE_FLUSH_INTERVAL );
         List<Record> savedRecords = Lists.newArrayList( );
         for ( RecordLevel level : RecordLevel.values( ) ) {
           List<Record> records = level.drain( );
@@ -57,19 +55,23 @@ public class RecordProcessor extends Bootstrapper implements Runnable {
             LOG.error( e, e );
           }
         } else {
-          LOG.debug( "Found nothing to save from the event record queues." );
+          LOG.trace( "Found nothing to save from the event record queues." );
         }
-      } catch ( InterruptedException e ) {
-      }
-    } while ( !finished );
+      } while ( !finished );
+    } catch ( InterruptedException e ) {
+      finished = true;
+      Thread.currentThread( ).interrupted( );
+    }
     LOG.info( "Terminated records storage thread." );
   }
 
   public static void flush() {
-    if( thread != null ) {
-      thread.interrupt( );
+    Thread ref = thread;
+    finished = true;
+    if( ref != null ) {      
+      ref.interrupt( );
       try {
-        thread.run( );
+        ref.run( );
       } catch ( Throwable t ) {
         LOG.trace( "Not saving the shutdown event:  database already stopped: " + t.getMessage( ) );
       }
@@ -83,20 +85,31 @@ public class RecordProcessor extends Bootstrapper implements Runnable {
   
   @Override
   public boolean start( ) throws Exception {
+    LOG.info( "Started records storage thread." );
+    Record rec = EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_START,  "STARTED" );
+    RecordLevel.INFO.enqueue( rec );
     thread = Threads.newThread( singleton, "Records Storage" );
     thread.start( );
+    final Thread ref = thread;
     Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
-      
       @Override
       public void run( ) {
         finished = true;
-        if ( thread != null ) {
-          thread.interrupt( );
+        if ( ref != null && ref.isAlive( ) ) {
+          ref.interrupt( );
         }
       }
       
     } );
     return true;
+  }
+
+  @Override
+  public void advertiseEvent( Event event ) {}
+
+  @Override
+  public void fireEvent( Event event ) {
+    
   }
   
 }

@@ -324,12 +324,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
     List<String> registeredComponents = Lists.newArrayList( );
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
-      if ( !initializedComponents.contains( component.getComponent( ) ) ) {
+      if ( !initializedComponents.contains( component.getComponent( ) ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
         System.exit( 123 );//HUP
       }
       registeredComponents.add( component.getComponent( ) );
     }
-    if ( !registeredComponents.containsAll( initializedComponents ) ) {
+    if ( !registeredComponents.containsAll( initializedComponents ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
       System.exit( 123 );//HUP
     }
     //FIXME: end.

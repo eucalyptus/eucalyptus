@@ -75,7 +75,7 @@ public class ServiceProcess implements Runnable {
   }
   
   private static class IOMonitor implements Runnable {
-    private static Logger LOG = Logger.getLogger( ServiceProcess.IOMonitor.class );
+    private static Logger LOG = Logger.getLogger( ServiceProcess.class );
     private AtomicBoolean finished = new AtomicBoolean( false );
     private BufferedReader   in;
     
@@ -101,7 +101,11 @@ public class ServiceProcess implements Runnable {
             this.finished.set( true );
             return;
           }
-          LOG.info( line );
+          LOG.debug( line );
+        } catch ( InterruptedException e ) {
+          Thread.currentThread( ).interrupted( );
+          LOG.debug( e, e );
+          this.finished.set( true );
         } catch ( Exception e ) {
           LOG.debug( e, e );
           this.finished.set( true );

@@ -14,8 +14,12 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AddGroupMemberResponseType;
 import edu.ucsb.eucalyptus.msgs.AddGroupMemberType;
@@ -34,6 +38,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeUsersType;
 import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationResponseType;
 import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationType;
 import edu.ucsb.eucalyptus.msgs.GroupInfoType;
+import edu.ucsb.eucalyptus.msgs.RemoveGroupMemberResponseType;
+import edu.ucsb.eucalyptus.msgs.RemoveGroupMemberType;
 import edu.ucsb.eucalyptus.msgs.RevokeGroupAuthorizationResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeGroupAuthorizationType;
 import edu.ucsb.eucalyptus.msgs.UserInfoType;
@@ -175,11 +181,29 @@ public class Accounts {
     }
     return reply;    
   }
-
-  public GrantGroupAuthorizationResponseType authorize( GrantGroupAuthorizationType request ) throws EucalyptusCloudException {
-    GrantGroupAuthorizationResponseType reply = request.getReply( );
+  public RemoveGroupMemberResponseType removeMember( RemoveGroupMemberType request ) throws EucalyptusCloudException {
+    RemoveGroupMemberResponseType reply = request.getReply( );
     try {
-      //TODO: RELEASE: fix checking that the cluster exists!
+      Groups.lookupGroup( request.getGroupName( ) ).removeMember( Users.lookupUser( request.getUserName( ) ) );
+      reply.set_return( true );
+    } catch ( NoSuchGroupException e ) {
+      throw new EucalyptusCloudException( "Failed to remove user to group: " + request.getUserName( ) + " to group " + request.getGroupName( ), e );
+    } catch ( NoSuchUserException e ) {
+      throw new EucalyptusCloudException( "Failed to remove user to group: " + request.getUserName( ) + " to group " + request.getGroupName( ), e );
+    }
+    return reply;    
+  }
+
+  public GrantGroupAuthorizationResponseType authorize( final GrantGroupAuthorizationType request ) throws EucalyptusCloudException {
+    GrantGroupAuthorizationResponseType reply = request.getReply( );
+    if(!Iterables.any( Components.lookup( "cluster" ).list( ), new Predicate<ServiceConfiguration>() {
+      @Override
+      public boolean apply( ServiceConfiguration arg0 ) {
+        return arg0.getName( ).equals( request.getZoneName( ) );
+      }} )) {
+      throw new EucalyptusCloudException( "No such cluster to add authorization for: " + request.getZoneName( ) + " for group " + request.getGroupName( ) );      
+    }
+    try {
       Groups.lookupGroup( request.getGroupName( ) ).addAuthorization( new AvailabilityZonePermission( request.getZoneName( ) ) );
       reply.set_return( true );
     } catch ( NoSuchGroupException e ) {

@@ -65,17 +65,47 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
-import com.eucalyptus.auth.Debugging;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.ProxyHost;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.UserInfo;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.www.Reports;
 import com.eucalyptus.www.Reports.ReportCache;
+import com.google.gwt.dev.util.collect.Lists;
 import com.google.gwt.user.client.rpc.SerializableException;
 import com.google.gwt.user.client.rpc.SerializationException;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
@@ -85,42 +115,12 @@ import edu.ucsb.eucalyptus.admin.client.ClusterInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.DownloadsWeb;
 import edu.ucsb.eucalyptus.admin.client.EucalyptusWebBackend;
 import edu.ucsb.eucalyptus.admin.client.GroupInfoWeb;
-import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
+import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.reports.ReportInfo;
-
-import net.sf.jasperreports.engine.JasperPrint;
-import net.sf.jasperreports.engine.JasperReport;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.ProxyHost;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.InputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathFactory;
 
 public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements EucalyptusWebBackend {
 
@@ -1150,20 +1150,27 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
       throw new Exception("Only admin can view reports.");
     }
     List<ReportInfo> reports = new ArrayList<ReportInfo>();
+    for( Component c : Components.list( ) ) {
+      for( Service s : c.getServices( ) ) {
+        reports.addAll( EucalyptusWebBackendImpl.getServiceLogInfo( s ) );
+      }
+    }
+    SortedSet<String> sortedReports = new TreeSet<String>();
     for( File report : SubDirectory.REPORTS.getFile( ).listFiles( new FilenameFilter() {
       @Override
       public boolean accept( File arg0, String arg1 ) {
         return arg1.endsWith( ".jrxml" );
       }} ) ) {
-      String reportName = report.getName( ).replaceAll( ".jrxml", "" );
+      sortedReports.add( report.getName( ).replaceAll( ".jrxml", "" ) );
+    }
+    for( String reportName : sortedReports ) {
       try {
-        ReportCache reportCache = Reports.getReportManager( reportName );
-        Integer lastPage = reportCache.getLength( );
-        reports.add( new ReportInfo( reportCache.getReportName( ), reportName, lastPage ) );
+        ReportCache reportCache = Reports.getReportManager( reportName, false );
+        reports.add( new ReportInfo( reportCache.getReportGroup( ), reportCache.getReportName( ), reportName, 1 ) );
       }
       catch ( Throwable e ) {
         LOG.error( e, e );
-        LOG.error( "Failed to read report file: " + report.getCanonicalPath( ) + " because of: " + e.getMessage( ) );
+        LOG.error( "Failed to read report file: " + reportName + " because of: " + e.getMessage( ) );
       }
     }
     return reports;
@@ -1179,5 +1186,28 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     }
   }
 
-	
+  private static String SERVICE_GROUP = "service";
+  public static List<ReportInfo> getServiceLogInfo( Service s ) {
+    List<ReportInfo> reports = new ArrayList<ReportInfo>();
+    ServiceConfiguration conf = s.getServiceConfiguration( );
+    com.eucalyptus.bootstrap.Component c = conf.getComponent( );
+    if( c.walrus.equals( c ) ) {
+      String serviceFq = "Walrus @ "+conf.getHostName( );
+      reports.add( new ReportInfo( SERVICE_GROUP, serviceFq, SERVICE_GROUP, 1, c.name( ), conf.getName( ), conf.getHostName( ) ) );
+    } else if( c.cluster.equals( c ) ) {
+      reports.add( new ReportInfo( SERVICE_GROUP, "CC @ "+conf.getHostName( ), SERVICE_GROUP, 1, c.name( ), conf.getName( ), conf.getHostName( ) ) );
+      Cluster cluster = Clusters.getInstance( ).lookup( s.getServiceConfiguration( ).getName( ) );
+      for( String nodeTag : cluster.getNodeTags( ) ) {
+        URI uri = URI.create( nodeTag );
+        reports.add( new ReportInfo( SERVICE_GROUP, "NC @ " + uri.getHost( ), SERVICE_GROUP, 1, "node", conf.getName( ), uri.getHost( ) ) );
+      }
+      try {
+        ServiceConfiguration scConfig = Configuration.getStorageControllerConfiguration( cluster.getName( ) );
+        reports.add( new ReportInfo( SERVICE_GROUP, "SC @ " + scConfig.getHostName( ), SERVICE_GROUP, 1, scConfig.getComponent( ).name( ), scConfig.getName( ), scConfig.getHostName( ) ) );        
+      } catch ( EucalyptusCloudException e ) {
+      }
+    }
+    return reports;
+  }
+
 }

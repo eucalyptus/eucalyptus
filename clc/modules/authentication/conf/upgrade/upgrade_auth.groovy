@@ -41,9 +41,9 @@ class UpgradeAuth extends AbstractUpgradeScript {
     
     AuthBootstrapHelper.ensureStandardGroupsExists( );
 
-    println "----- eucalyptus_auth.AUTH_CLUSTERS -----";
+    //println "----- eucalyptus_auth.AUTH_CLUSTERS -----";
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_CLUSTERS').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       EntityWrapper<ClusterCredentials> db = Authentication.getEntityWrapper( );
       try {
         db.add( new ClusterCredentials( it.AUTH_CLUSTER_NAME ) );
@@ -56,9 +56,9 @@ class UpgradeAuth extends AbstractUpgradeScript {
         e.printStackTrace( );
       }
     }       
-    println "----- eucalyptus_auth.AUTH_USERS -----";
+    //println "----- eucalyptus_auth.AUTH_USERS -----";
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_USERS').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       try {
         Users.addUser( it.AUTH_USER_NAME, it.AUTH_USER_IS_ADMIN, it.AUTH_USER_IS_ENABLED );
       } catch ( UserExistsException e ) {
@@ -80,17 +80,17 @@ class UpgradeAuth extends AbstractUpgradeScript {
       }
       userIdToUserName[it.ID] = it.AUTH_USER_NAME;
     }
-    println "----- eucalyptus_auth.AUTH_USER_HAS_X509 -----"
+    //println "----- eucalyptus_auth.AUTH_USER_HAS_X509 -----"
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_USER_HAS_X509').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       userName = userIdToUserName[it.AUTH_USER_ID];
       if ( userName != null ) {
         certIdToUserName[it.AUTH_X509_ID] = userName;
       }
     }
-    println "----- eucalyptus_auth.AUTH_X509 -----"
+    //println "----- eucalyptus_auth.AUTH_X509 -----"
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_X509').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       def cert = new X509Cert( );
       cert.setAlias( it.AUTH_X509_ALIAS );
       cert.setPemCertificate( it.AUTH_X509_PEM_CERTIFICATE );
@@ -127,9 +127,9 @@ class UpgradeAuth extends AbstractUpgradeScript {
         }
       }
     }
-    println "----- eucalyptus_general.USERS -----"
+    //println "----- eucalyptus_general.USERS -----"
     StandalonePersistence.getConnection("eucalyptus_general").rows('SELECT * FROM USERS').each{
-      println "ROW: ${it}";
+      //println "ROW: ${it}";
       try {
         Users.updateUser( it.USER_NAME , new Tx<User>( ) {
           public void fire( User user ) throws Throwable {

@@ -91,11 +91,11 @@ public class AddGroupMemberType extends GroupManagementMessage {
   Boolean admin;
 }
 public class AddGroupMemberResponseType extends GroupManagementMessage {}
-public class DeleteGroupMemberType extends EucalyptusMessage {
+public class RemoveGroupMemberType extends EucalyptusMessage {
   String groupName;
   String userName;
 }
-public class DeleteGroupMemberResponseType extends GroupManagementMessage {}
+public class RemoveGroupMemberResponseType extends GroupManagementMessage {}
 
 public class GrantGroupAuthorizationType extends GroupManagementMessage {
   String groupName;

@@ -181,7 +181,7 @@ public class NioResponseHandler extends SimpleChannelHandler implements Response
           LOG.debug( "Waiting for response." );
         } catch ( InterruptedException e ) {
           LOG.debug( e, e );
-          Thread.currentThread( ).interrupt( );
+          Thread.currentThread( ).interrupted( );
         }
       }
       EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get().getClass( ).toString( ) ).debug( );

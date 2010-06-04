@@ -44,6 +44,7 @@ class upgrade_misc_162_eee extends AbstractUpgradeScript {
 			for( ImageInfo img : db.query( new ImageInfo() ) ) {
 				img.grantPermission( Users.lookupUser( img.getImageOwnerId( ) ) );
 				img.grantPermission( Groups.lookupGroup( "all" ) );
+				img.setPlatform("linux");
 			}
 			db.commit( );
 		} catch( Throwable e ) {

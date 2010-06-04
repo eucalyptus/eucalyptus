@@ -52,7 +52,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
       db.add( t );
       t = db.getUnique( t );
       db.commit( );
-      EventRecord.here( Configurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED,  t.getComponent( ).name( ), t.getName( ), t.getHostName( )  ).info();
+      EventRecord.here( Configurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED ).withDetails( t.getComponent( ).name( ), t.getName( ), "host", t.getHostName( ) );
     } catch ( Exception e ) {
       db.rollback( );
       LOG.error( e, e );
@@ -70,7 +70,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
       T exists = db.getUnique( searchConfig );
       db.delete( exists );
       db.commit( );
-      EventRecord.here( Configurations.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED,  t.getComponent( ).name( ), t.getName( ), t.getHostName( )  ).info();
+      EventRecord.here( Configurations.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED ).withDetails( t.getComponent( ).name( ), t.getName( ), "host", t.getHostName( )  );
     } catch ( Exception e ) {
       db.rollback( );
       LOG.error( e, e );

@@ -65,6 +65,7 @@ permission notice:
 #include "misc.h"
 #include <stdarg.h>
 #include <sys/types.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>

@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -322,19 +323,20 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     return this.checkedResponse( );
   }
   
-  public boolean pollForResponse( Long waitMillis ) {
+  public boolean pollForResponse( Long waitMillis ) throws InterruptedException {
     boolean ret = false;
     this.canHas.lock( );
     try {
       if (this.response.get( ) != null) {
-	  return true;
+        return true;
       } else {
-	  ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
-	  EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ).debug( );
+    	  ret = this.ready.await( waitMillis, TimeUnit.MILLISECONDS );
+    	  EventRecord.here( NioResponseHandler.class, EventType.MSG_AWAIT_RESPONSE, EventType.MSG_POLL_INTERNAL.toString( ), waitMillis.toString( ) ).debug( );
       }
     } catch ( InterruptedException e ) {
       LOG.debug( e, e );
-      Thread.currentThread( ).interrupt( );
+      Thread.currentThread( ).interrupted( );
+      throw e;
     } finally {
       this.canHas.unlock( );
     }
@@ -345,14 +347,19 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     this.canHas.lock( );
     try {
       while ( !this.pollForResponse( 100l ) );
+    } catch ( InterruptedException e ) {
     } finally {
       this.canHas.unlock( );
     }
   }
   
+  public NioClientPipeline getClientPipeline( ) throws Exception {
+    return new ClusterClientPipeline( this );
+  }
+  
   public void fire( final String hostname, final int port, final String servicePath ) {
     try {
-      NioClientPipeline clientPipeline = new ClusterClientPipeline( this );
+      NioClientPipeline clientPipeline = this.getClientPipeline( );
       this.clientBootstrap = ChannelUtil.getClientBootstrap( clientPipeline );
       InetSocketAddress addr = new InetSocketAddress( hostname, port );
       this.connectFuture = this.clientBootstrap.connect( addr );

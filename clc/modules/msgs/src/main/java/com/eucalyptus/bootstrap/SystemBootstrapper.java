@@ -69,6 +69,9 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Lifecycles;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.records.EventClass;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 
@@ -168,6 +171,9 @@ public class SystemBootstrapper {
   }
   
   public boolean stop( ) throws Exception {
+    LOG.warn( "Shutting down Eucalyptus." );
+    EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
+    EventRecord.flush( );
     ServiceContext.stopContext( );
     return true;
   }

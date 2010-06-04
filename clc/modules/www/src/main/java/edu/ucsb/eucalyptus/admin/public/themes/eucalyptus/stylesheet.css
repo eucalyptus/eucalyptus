@@ -100,11 +100,18 @@ button {
 }
 
 .euca-tab-contents {
-	vertical-align: middle;
-	padding-left: 20px;
-	padding-right: 20px;
-	margin-top: 15px;
-	width: 100%;
+  vertical-align: middle;
+  padding-left: 20px;
+  padding-right: 20px;
+  margin-top: 15px;
+  width: 100%;
+}
+.acct-tab-contents {
+  vertical-align: top;
+  padding-left: 00px;
+  padding-right: 20px;
+  margin-top: 10px;
+  width: 100%;
 }
 
 .euca-message-bar {
@@ -474,67 +481,6 @@ button {
 }
 
 .euca-Button {
-	border-style: solid;
-	border-width: 1px;
-	border-color: #CCCCCC #999999 #999999 #CCCCCC;
-	-webkit-border-radius: 3px;
-	-moz-border-radius: 3px;
-	border-radius: 3px;
-	background: #F6F6F6 none repeat scroll 0 0;
-	padding: 3px 5px 3px 5px;
-}
-
-.euca-Button-over {
-	border-color: #999999 #CCCCCC #CCCCCC #999999;
-}
-
-.euca-Button-down {
-	background: #D4D4D4 none repeat scroll 0 0
-}
-
-.gwt-Frame {
-	width: 100%;
-	height: 800px;
-	border: 0px solid #FFFFFF;
-}
-
-.acct-root {
-  width: 100%;
-  margin: 0px;
-  padding: 0px;
-  height: 100%;
-}
-
-.acct-report-bar {
-	width: 100%;
-	padding: 5px 0px 5px 0px;
-}
-
-.acct-Button-Action {
-  padding: 3px;  
-}
-
-.acct-Button-Action-over {
-  border-style: solid;
-  border-width: 1px;
-  -webkit-border-radius: 3px;
-  -moz-border-radius: 3px;
-  border-radius: 3px;
-	border-color: #999999 #CCCCCC #CCCCCC #999999;
-  padding: 2px;
-}
-
-.acct-Button-Action-down {
-  border-style: solid;
-  border-width: 1px;
-  -webkit-border-radius: 3px;
-  -moz-border-radius: 3px;
-  border-radius: 3px;
-	background: #D4D4D4 none repeat scroll 0 0
-  padding: 3px;
-}
-
-.acct-Button-Report {
   border-style: solid;
   border-width: 1px;
   border-color: #CCCCCC #999999 #999999 #CCCCCC;
@@ -545,22 +491,75 @@ button {
   padding: 3px 5px 3px 5px;
 }
 
-.acct-Button-Report-over {
+.euca-Button-over {
 	border-color: #999999 #CCCCCC #CCCCCC #999999;
 }
 
-.acct-Button-Report-down {
+.euca-Button-down {
 	background: #D4D4D4 none repeat scroll 0 0
 }
-.acct-noop {
-  border-style: solid;
+
+.euca-Blank-Button {
+  border-style: none;
   border-width: 0px;
+  border-color: #FFFFFF;
+  -webkit-border-radius: 0px;
+  -moz-border-radius: 0px;
+  border-radius: 0px;
+  background: #F6F6F6 none repeat scroll 0 0;
+  padding: 0px 0px 0px 0px;
+  margin: 0px;
+  height: 100px;
+}
+.euca-Blank-Button-down {
+}
+.euca-Blank-Button-over {
+}	
+
+.euca-hidden {
+  border-style: none;
+  border-width: 0px;
+  border-color: #FFFFFF;
+  -webkit-border-radius: 0px;
+  -moz-border-radius: 0px;
+  border-radius: 0px;
+  background: #FFFFFF none repeat scroll 0 0;
+  padding: 0px;
+  margin: 0px;
+  height: 0px;
+  width: 0px;
+  visibility: false;
+}
+
+.gwt-Frame {
+	width: 100%;
+	height: 800px;
+	border: 0px solid #FFFFFF;
+}
+
+.euca-error {
+  border-style: solid;
+  border-width: 3px;
   border-color: #CCCCCC #000000 #000000 #CCCCCC;
   -webkit-border-radius: 3px;
   -moz-border-radius: 3px;
   border-radius: 3px;
-  background: #FFFFFF none repeat scroll 0 0;
+  background: #EB2F2F none repeat scroll 0 0;
   padding: 3px 5px 3px 5px;
 }
-.acct-noop-down {}
-.acct-noop-over {}
+.euca-error-down {}
+.euca-error-over {}
+
+.euca-noop {
+	border-style: solid;
+	border-width: 1px;
+	width: 25px;
+	border-color: #CCCCCC #000000 #000000 #CCCCCC;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
+	background: #FFFFFF none repeat scroll 0 0;
+	padding: 3px 5px 3px 5px;
+}
+.euca-noop-down {}
+.euca-noop-over {}

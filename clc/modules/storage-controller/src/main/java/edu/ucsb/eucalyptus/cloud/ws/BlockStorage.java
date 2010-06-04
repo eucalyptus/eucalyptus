@@ -190,7 +190,7 @@ public class BlockStorage {
 		}
 		if(request.getStorageParams() != null) {
 			for(ComponentProperty param : request.getStorageParams()) {
-				LOG.info("Storage Param: " + param.getDisplayName() + " Qname: " + param.getQualifiedName() + " Value: " + param.getValue());
+				LOG.debug("Storage Param: " + param.getDisplayName() + " Qname: " + param.getQualifiedName() + " Value: " + param.getValue());
 			}
 			blockManager.setStorageProps(request.getStorageParams());
 		}

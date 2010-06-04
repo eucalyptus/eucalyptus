@@ -455,7 +455,7 @@ public class OverlayManager implements LogicalStorageManager {
 		} else {
 			lvmVolumeInfo = new ISCSIVolumeInfo();
 		}
-
+		volumeManager.finish();
 		String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
 		//create file and attach to loopback device
 		long absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
@@ -482,14 +482,15 @@ public class OverlayManager implements LogicalStorageManager {
 			lvmVolumeInfo.setLvName(lvName);
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize(size);
+			volumeManager = new VolumeEntityWrapperManager();
+			volumeManager.add(lvmVolumeInfo);
+			volumeManager.finish();
 		} catch(ExecutionException ex) {
 			String error = "Unable to run command: " + ex.getMessage();
 			volumeManager.abort();
 			LOG.error(error);
 			throw new EucalyptusCloudException(error);
 		}
-		volumeManager.add(lvmVolumeInfo);
-		volumeManager.finish();
 	}
 
 	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException {
@@ -501,12 +502,14 @@ public class OverlayManager implements LogicalStorageManager {
 			if(status.equals(StorageProperties.Status.available.toString())) {
 				String vgName = "vg-" + Hashes.getRandom(4);
 				String lvName = "lv-" + Hashes.getRandom(4);
+				String loFileName = foundSnapshotInfo.getLoFileName();
+				String snapId = foundSnapshotInfo.getVolumeId();
 				LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
-
+				volumeManager.finish();
 				try {
 					String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
 					//create file and attach to loopback device
-					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + foundSnapshotInfo.getVolumeId());
+					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
 					assert(snapshotFile.exists());
 					long absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
 					size = (int)(snapshotFile.length() / StorageProperties.GB);
@@ -515,7 +518,7 @@ public class OverlayManager implements LogicalStorageManager {
 					createLogicalVolume(loDevName, vgName, lvName);
 					//duplicate snapshot volume
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-					duplicateLogicalVolume(foundSnapshotInfo.getLoFileName(), absoluteLVName);
+					duplicateLogicalVolume(loFileName, absoluteLVName);
 					//export logical volume
 					try {
 						volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
@@ -533,6 +536,7 @@ public class OverlayManager implements LogicalStorageManager {
 					lvmVolumeInfo.setLvName(lvName);
 					lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 					lvmVolumeInfo.setSize(size);
+					volumeManager = new VolumeEntityWrapperManager();
 					volumeManager.add(lvmVolumeInfo);
 					volumeManager.finish();
 				}  catch(ExecutionException ex) {
@@ -626,6 +630,8 @@ public class OverlayManager implements LogicalStorageManager {
 			long snapshotSize = (size * StorageProperties.GB) / 2;
 			String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId + Hashes.getRandom(6);
 			//create file and attach to loopback device
+			volumeManager.finish();
+			volumeManager = null;
 			try {
 				String loDevName = createLoopback(rawFileName, snapshotSize);
 				//create physical volume, volume group and logical volume
@@ -657,15 +663,17 @@ public class OverlayManager implements LogicalStorageManager {
 				snapshotInfo.setSize(size);
 				returnValues.add(snapRawFileName);
 				returnValues.add(String.valueOf(size * WalrusProperties.G));
+				volumeManager = new VolumeEntityWrapperManager();
 				volumeManager.add(snapshotInfo);
+				volumeManager.finish();
 			} catch(ExecutionException ex) {
-				volumeManager.abort();
+				if(volumeManager != null)
+					volumeManager.abort();
 				String error = "Unable to run command: " + ex.getMessage();
 				LOG.error(error);
 				throw new EucalyptusCloudException(error);
 			}
 		}
-		volumeManager.finish();
 		return returnValues;
 	}
 

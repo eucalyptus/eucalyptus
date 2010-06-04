@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Component Log" language="groovy" pageWidth="800" pageHeight="500" columnWidth="800" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty" isIgnorePagination="true">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<property name="euca.report.group" value="system"/>
+	<style name="Title" isDefault="false" fontName="Verdana" fontSize="26" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="SubTitle" isDefault="false" mode="Transparent" forecolor="#000000" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="10"/>
+	<style name="Column header" isDefault="false" forecolor="#323232" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="8" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false"/>
+	<style name="Detail" isDefault="false" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false">
+		<box>
+			<topPen lineWidth="0.0" lineStyle="Solid"/>
+			<leftPen lineWidth="0.0" lineStyle="Solid"/>
+			<bottomPen lineWidth="0.0" lineStyle="Solid"/>
+			<rightPen lineWidth="0.0" lineStyle="Solid"/>
+		</box>
+	</style>
+	<style name="alternating" isDefault="false" forecolor="#F5F5F5" fontName="Verdana" fontSize="12">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue() % 2 == 0 )]]></conditionExpression>
+			<style isDefault="false" style="alternating" backcolor="#F5F562"/>
+		</conditionalStyle>
+	</style>
+	<style name="table" isDefault="false" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="16">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+			<topPen lineWidth="0.0"/>
+			<leftPen lineWidth="0.0"/>
+			<bottomPen lineWidth="0.0"/>
+			<rightPen lineWidth="0.0"/>
+		</box>
+	</style>
+	<style name="table_TH" isDefault="false" mode="Opaque" backcolor="#FFCC33" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="10" isBold="true">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_CH" isDefault="false" mode="Opaque" backcolor="#FFFF66" hAlign="Center" vAlign="Middle" fontName="Verdana">
+		<pen lineWidth="1.0"/>
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+			<bottomPen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TD" isDefault="false" mode="Opaque" backcolor="#FFFFFF" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="10">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+			<topPen lineWidth="0.0" lineStyle="Solid"/>
+			<leftPen lineWidth="1.0" lineStyle="Solid"/>
+			<bottomPen lineWidth="0.5" lineStyle="Solid"/>
+			<rightPen lineWidth="1.0" lineStyle="Solid"/>
+		</box>
+		<conditionalStyle>
+			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue()%2==0)]]></conditionExpression>
+			<style isDefault="false" style="table_TD" backcolor="#FFFEF8"/>
+		</conditionalStyle>
+	</style>
+	<subDataset name="dataset1">
+		<field name="record_extra" class="java.lang.String"/>
+		<field name="record_timestamp" class="java.sql.Timestamp"/>
+		<field name="record_user_id" class="java.lang.String"/>
+		<field name="record_creator" class="java.lang.String"/>
+		<field name="record_correlation_id" class="java.lang.String"/>
+		<field name="record_type" class="java.lang.String"/>
+	</subDataset>
+	<parameter name="EUCA_NOT_BEFORE" class="java.lang.Long"/>
+	<parameter name="EUCA_NOT_AFTER" class="java.lang.Long"/>
+	<queryString>
+		<![CDATA[SELECT record_timestamp,record_type,record_creator,record_user_id,TRIM(REPLACE(record_extra,':',' ')) as record_extra,record_correlation_id FROM eucalyptus_records.records_logs WHERE record_class LIKE 'COMPONENT' AND UNIX_TIMESTAMP(record_timestamp)*1000 > $P{EUCA_NOT_BEFORE} AND UNIX_TIMESTAMP(record_timestamp)*1000 < $P{EUCA_NOT_AFTER} ORDER BY record_timestamp DESC LIMIT 1000;]]>
+	</queryString>
+	<field name="record_extra" class="java.lang.String"/>
+	<field name="record_timestamp" class="java.sql.Timestamp"/>
+	<field name="record_user_id" class="java.lang.String"/>
+	<field name="record_creator" class="java.lang.String"/>
+	<field name="record_correlation_id" class="java.lang.String"/>
+	<field name="record_type" class="java.lang.String"/>
+	<detail>
+		<band height="19">
+			<componentElement>
+				<reportElement key="table" x="0" y="0" width="800" height="19"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="dataset1">
+						<dataSourceExpression><![CDATA[$P{REPORT_DATA_SOURCE}]]></dataSourceExpression>
+					</datasetRun>
+					<jr:column width="100">
+						<jr:tableHeader style="table_TH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement style="Column header" x="0" y="0" width="100" height="30"/>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font fontName="Verdana"/>
+								</textElement>
+								<text><![CDATA[Timestamp]]></text>
+							</staticText>
+						</jr:tableHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isStretchWithOverflow="true">
+								<reportElement style="Detail" stretchType="RelativeToTallestObject" mode="Transparent" x="0" y="0" width="100" height="20"/>
+								<textElement verticalAlignment="Middle" markup="html">
+									<font fontName="Verdana" pdfFontName="Courier" isPdfEmbedded="true"/>
+								</textElement>
+								<textFieldExpression class="java.util.Date"><![CDATA[$F{record_timestamp}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="195">
+						<jr:tableHeader style="table_TH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement style="Column header" mode="Transparent" x="0" y="0" width="195" height="30"/>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font fontName="Verdana"/>
+								</textElement>
+								<text><![CDATA[Event]]></text>
+							</staticText>
+						</jr:tableHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isStretchWithOverflow="true" isBlankWhenNull="false">
+								<reportElement style="Detail" stretchType="RelativeToTallestObject" mode="Transparent" x="0" y="0" width="195" height="20"/>
+								<textElement verticalAlignment="Middle" markup="html">
+									<font fontName="Verdana" pdfFontName="Courier" isPdfEmbedded="true"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$F{record_type}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="153">
+						<jr:tableHeader style="table_TH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement style="Column header" mode="Transparent" x="0" y="0" width="153" height="30"/>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font fontName="Verdana"/>
+								</textElement>
+								<text><![CDATA[Component Type]]></text>
+							</staticText>
+						</jr:tableHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isStretchWithOverflow="true" isBlankWhenNull="false">
+								<reportElement style="Detail" stretchType="RelativeToTallestObject" mode="Transparent" x="0" y="0" width="153" height="20"/>
+								<textElement verticalAlignment="Middle" markup="html">
+									<font fontName="Verdana" pdfFontName="Courier" isPdfEmbedded="true"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$F{record_user_id}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="200">
+						<jr:tableHeader style="table_TH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement style="Column header" mode="Transparent" x="0" y="0" width="200" height="30"/>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font fontName="Verdana"/>
+								</textElement>
+								<text><![CDATA[Component Name]]></text>
+							</staticText>
+						</jr:tableHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isStretchWithOverflow="true">
+								<reportElement style="Detail" stretchType="RelativeToTallestObject" mode="Transparent" x="0" y="0" width="200" height="20"/>
+								<textElement verticalAlignment="Middle" markup="html">
+									<font fontName="Verdana" pdfFontName="Courier" isPdfEmbedded="true"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$F{record_correlation_id}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="243">
+						<jr:tableHeader style="table_TH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement style="Column header" mode="Transparent" x="0" y="0" width="243" height="30"/>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font fontName="Verdana"/>
+								</textElement>
+								<text><![CDATA[Details]]></text>
+							</staticText>
+						</jr:tableHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isStretchWithOverflow="true">
+								<reportElement style="Detail" stretchType="RelativeToTallestObject" mode="Transparent" x="0" y="0" width="243" height="20"/>
+								<textElement verticalAlignment="Middle">
+									<font fontName="Verdana" pdfFontName="Courier"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$F{record_extra}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+		</band>
+	</detail>
+</jasperReport>

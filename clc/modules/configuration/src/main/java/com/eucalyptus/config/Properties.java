@@ -6,7 +6,10 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurationProperties;
 import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.DescribePropertiesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribePropertiesType;
 import edu.ucsb.eucalyptus.msgs.ModifyPropertyValueResponseType;
@@ -30,6 +33,12 @@ public class Properties {
       }
     } else {
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
+        String altValue = Iterables.find( request.getProperties( ), new Predicate<String>() {
+          @Override
+          public boolean apply( String arg0 ) {
+            return arg0.matches( "euca=\\w*" );
+          }});
+        if( altValue != null ) { props.add( new Property( (altValue = altValue.replaceAll( "euca=","") ), ""+GroovyUtil.eval( altValue ), altValue ) ); }
         if ( request.getProperties( ).contains( entry.getQualifiedName( ) ) ) {
           String value = "********";
           if (!entry.getWidgetType().equals(ConfigurableFieldType.KEYVALUEHIDDEN))

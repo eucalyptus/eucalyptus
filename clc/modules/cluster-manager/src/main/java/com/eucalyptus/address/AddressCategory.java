@@ -22,7 +22,10 @@ public class AddressCategory {
         public void apply( BaseMessage response ) {
           try {
             VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
-            EventRecord.here( AddressCategory.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING, "user="+vm.getOwnerId( ), "address="+addr.getName( ), "instanceid="+vm.getInstanceId( ), addr.isSystemOwned( ) ? "SYSTEM":"USER" ).info( );
+            EventRecord.here( AddressCategory.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
+               .withDetails( vm.getOwnerId( ), addr.getName( ), "instanceid", vm.getInstanceId( ) )
+               .withDetails( "type", addr.isSystemOwned( ) ? "SYSTEM" : "USER" )
+               .withDetails( "cluster", addr.getCluster( ) );
             Addresses.system( vm );
           } catch ( NoSuchElementException e ) {}
         }
@@ -35,7 +38,10 @@ public class AddressCategory {
   
   @SuppressWarnings( "unchecked" )
   public static QueuedEventCallback assign( final Address addr, final VmInstance vm ) {
-    EventRecord.here( AddressCategory.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING, "user="+vm.getOwnerId( ), "address="+addr.getName( ), "instanceid="+vm.getInstanceId( ), addr.isSystemOwned( ) ? "SYSTEM":"USER" ).info( );
+    EventRecord.here( AddressCategory.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING )
+               .withDetails( vm.getOwnerId( ), addr.getName( ), "instanceid", vm.getInstanceId( ) )
+               .withDetails( "type", addr.isSystemOwned( ) ? "SYSTEM" : "USER" )
+               .withDetails( "cluster", addr.getCluster( ) );
     return addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).getCallback( ).then( new SuccessCallback() {
       public void apply( BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );

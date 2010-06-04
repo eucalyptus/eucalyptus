@@ -199,4 +199,5 @@ public interface EucalyptusWebBackend extends RemoteService {
 			return ourInstance;
 		}
 	}
+
 }

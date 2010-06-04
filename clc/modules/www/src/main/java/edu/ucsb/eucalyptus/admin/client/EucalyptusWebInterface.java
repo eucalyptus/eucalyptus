@@ -624,7 +624,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
 
             if (request_project_leader) {
-                g2.setWidget( i, 0, new Label( "Project Leader:" ) );
+                g2.setWidget( i, 0, new Label( "Department:" ) );
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				projectPIName_box.setText (userToEdit.getProjectPIName());
                 projectPIName_box.setWidth("180");
@@ -632,7 +632,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
 
             if (request_affiliation) {
-                g2.setWidget( i, 0, new Label( "Affiliation:" ) );
+                g2.setWidget( i, 0, new Label( "Role:" ) );
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				affiliation_box.setText (userToEdit.getAffiliation());
                 affiliation_box.setWidth("360");
@@ -640,7 +640,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
 
             if (request_project_description) {
-                g2.setWidget( i, 0, new Label( "Project Description:" ) );
+                g2.setWidget( i, 0, new Label( "Notes:" ) );
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				projectDescription_box.setText (userToEdit.getProjectDescription());
                 projectDescription_box.setWidth("360");
@@ -1293,6 +1293,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     };
 
     public static HorizontalPanel messageBox;
+    @SuppressWarnings( "deprecation" )
     public void displayBarAndTabs(String message)
     {
         /* top bar */
@@ -1347,7 +1348,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         if (loggedInUser.isAdministrator().booleanValue()) {
 			//allTabs.addTab ("Users"); usrTabIndex = nTabs++;
 			allTabs.addTab ("Users and Groups"); usrgrpTabIndex = nTabs++;
-			allTabs.addTab ("Accounting"); accountingTabIndex = nTabs++;
+			allTabs.addTab ("Reports"); accountingTabIndex = nTabs++;
 			allTabs.addTab ("Configuration"); confTabIndex = nTabs++;
             allTabs.addTab ("Extras"); downTabIndex = nTabs++;
             if (extensions!=null && extensions.contains ("store") ) {
@@ -1363,6 +1364,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 String error = "This tab is not implemented yet, sorry!";
                 statusMessage.setText("");
                 wrapper.clear();
+                wrapper.setStyleName( "euca-tab-contents" );
                 currentTabIndex = tabIndex;
                 if (tabIndex==credsTabIndex) { displayCredentialsTab(wrapper); }
                 else if (tabIndex==imgTabIndex) { displayImagesTab(wrapper); }
@@ -1382,7 +1384,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         RootPanel.get().clear();
         RootPanel.get().add( top_bar );
         RootPanel.get().add( allTabs );
-        RootPanel.get().add( messageBox );
+//        RootPanel.get().add( messageBox );
         RootPanel.get().add( wrapper );
         allTabs.selectTab(currentTabIndex);
     }
@@ -2002,6 +2004,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     public void displayAccountingTab(final VerticalPanel parent) {
     	History.newItem("accounting");
     	parent.clear();
+    	parent.setStyleName( "acct-tab-contents" );
     	AccountingControl control = new AccountingControl(sessionId);
     	parent.add(control.getRootWidget());
     	control.display();

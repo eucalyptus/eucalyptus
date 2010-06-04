@@ -42,7 +42,7 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
 Version:       2.0.0eee
-Release:       0.1461
+Release:       1.1508
 License:       Eucalyptus EEE Software License
 Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
@@ -255,6 +255,7 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 /usr/sbin/euca-register-walrus
 /usr/sbin/euca-remove-group-membership
 /usr/sbin/euca-revoke-zone-permission
+/usr/sbin/euca-describe-nodes
 /usr/sbin/euca_admin
 /usr/share/eucalyptus/doc
 
@@ -336,12 +337,16 @@ then
 	mkdir -p /root/eucalyptus.backup.$DATESTR
 	cd /root/eucalyptus.backup.$DATESTR
 	EUCABACKUPS=""
-	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version $EUCADIR/usr/
+	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version $EUCADIR/usr/share/eucalyptus/
 	do
 	    if [ -e $i ]; then
 		EUCABACKUPS="$EUCABACKUPS $i"
 	    fi
 	done
+	if [ -e etc/eucalyptus/eucalyptus.conf ]; then
+	    sed -i "s/DISABLE_EBS=.*/#DISABLE_EBS=\"N\"/" etc/eucalyptus/eucalyptus.conf
+	fi
+	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
 	tar cf -  $EUCABACKUPS 2>/dev/null | tar xf - 2>/dev/null
 	cd $EUCADIR
 fi

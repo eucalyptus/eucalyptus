@@ -66,10 +66,13 @@ package com.eucalyptus.images;
 
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
@@ -87,8 +90,11 @@ import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.JoinTx;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
@@ -131,27 +137,18 @@ public class ImageInfo implements Image {
   private String          signature;
   @Column( name = "image_platform" )
   private String          platform;
-  
-  public String getPlatform( ) {
-    return this.platform;
-  }
-  
-  public void setPlatform( String platform ) {
-    this.platform = platform;
-  }
-  
   @OneToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "image_has_groups", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "user_group_id" ) )
+  @JoinTable( name = "image_has_group_auth", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<ImageAuthorization> userGroups   = new ArrayList<ImageAuthorization>( );
+  private Set<ImageAuthorization> userGroups   = new HashSet<ImageAuthorization>( );
   @OneToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "image_has_perms", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "user_id" ) )
+  @JoinTable( name = "image_has_user_auth", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<ImageAuthorization> permissions  = new ArrayList<ImageAuthorization>( );
-  @ManyToMany( cascade = CascadeType.ALL )
+  private Set<ImageAuthorization> permissions  = new HashSet<ImageAuthorization>( );
+  @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "image_has_product_codes", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_product_code_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<ProductCode>        productCodes = new ArrayList<ProductCode>( );
+  private Set<ProductCode>        productCodes = new HashSet<ProductCode>( );
   
   public static ImageInfo deregistered( ) {
     ImageInfo img = new ImageInfo( );
@@ -355,35 +352,52 @@ public class ImageInfo implements Image {
     this.signature = signature;
   }
   
-  public List<ImageAuthorization> getUserGroups( ) {
+  public Set<ImageAuthorization> getUserGroups( ) {
     return userGroups;
   }
   
-  public void setUserGroups( final List<ImageAuthorization> userGroups ) {
+  public void setUserGroups( final Set<ImageAuthorization> userGroups ) {
     this.userGroups = userGroups;
   }
   
-  public List<ImageAuthorization> getPermissions( ) {
+  public Set<ImageAuthorization> getPermissions( ) {
     return permissions;
   }
   
-  public void setPermissions( final List<ImageAuthorization> permissions ) {
+  public void setPermissions( final Set<ImageAuthorization> permissions ) {
     this.permissions = permissions;
   }
+
+  public String getPlatform( ) {
+    return this.platform;
+  }
   
-  public ImageInfo grantPermission( final Principal user ) {
+  public void setPlatform( String platform ) {
+    this.platform = platform;
+  }
+  
+
+  public ImageInfo grantPermission( final Principal prin ) {
     try {
       ImageInfo search = new ImageInfo( );
       search.setImageId( this.imageId );
-      Transactions.one( search, new Tx<ImageInfo>( ) {
+      Transactions.one( search, new JoinTx<ImageInfo>( ) {
         @Override
-        public void fire( ImageInfo t ) throws Throwable {
-          ImageAuthorization imgAuth = new ImageAuthorization( user.getName( ) );
-          if ( !t.getPermissions( ).contains( imgAuth ) ) {
-            t.getPermissions( ).add( imgAuth );
-            if ( t.getPermissions( ).contains( new ImageAuthorization( "all" ) ) ) {
-              t.setImagePublic( true );
+        public void fire( EntityWrapper<ImageInfo> db, ImageInfo t ) throws Throwable {
+          ImageAuthorization imgAuth = new ImageAuthorization( prin.getName( ) );
+          if( prin instanceof Group ) {
+            if ( !t.getUserGroups( ).contains( imgAuth ) ) {
+              db.recast( ImageAuthorization.class ).add( imgAuth );
+              t.getUserGroups( ).add( imgAuth );
             }
+          } else if( prin instanceof User ) {
+            if ( !t.getPermissions( ).contains( imgAuth ) ) {
+              db.recast( ImageAuthorization.class ).add( imgAuth );
+              t.getPermissions( ).add( imgAuth );
+            }
+          }
+          if ( t.getUserGroups( ).contains( new ImageAuthorization( "all" ) ) ) {
+            t.setImagePublic( true );
           }
         }
       } );
@@ -393,13 +407,19 @@ public class ImageInfo implements Image {
     return this;
   }
   
-  public boolean checkPermission( final Principal user ) throws EucalyptusCloudException {
+  public boolean checkPermission( final Principal prin ) throws EucalyptusCloudException {
     final boolean[] result = { false };
     try {
-      Transactions.one( new ImageInfo( this.imageId ), new Tx<ImageInfo>( ) {
+      ImageInfo search = new ImageInfo( );
+      search.setImageId( this.imageId );
+      Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
-          result[0] = t.getPermissions( ).contains( new ImageAuthorization( user.getName( ) ) );
+          if( prin instanceof Group ) {
+            result[0] = t.getUserGroups( ).contains( new ImageAuthorization( prin.getName( ) ) );
+          } else if ( prin instanceof User ) {
+            result[0] = t.getPermissions( ).contains( new ImageAuthorization( prin.getName( ) ) );
+          }
         }
       } );
     } catch ( TransactionException e ) {
@@ -408,15 +428,19 @@ public class ImageInfo implements Image {
     return result[0];
   }
   
-  public ImageInfo revokePermission( final Principal user ) {
+  public ImageInfo revokePermission( final Principal prin ) {
     try {
       ImageInfo search = new ImageInfo( );
       search.setImageId( this.imageId );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
-          ImageAuthorization imgAuth = new ImageAuthorization( user.getName( ) );
-          t.getPermissions( ).remove( imgAuth );
+          ImageAuthorization imgAuth = new ImageAuthorization( prin.getName( ) );
+          if( prin instanceof Group ) {
+            t.getUserGroups( ).remove( imgAuth );
+          } else if( prin instanceof User ) {
+            t.getPermissions( ).remove( imgAuth );
+          }
           if ( !t.getPermissions( ).contains( new ImageAuthorization( "all" ) ) ) {
             t.setImagePublic( false );
           }
@@ -451,7 +475,7 @@ public class ImageInfo implements Image {
    * @see com.eucalyptus.images.Image#getProductCodes()
    * @return
    */
-  public List<ProductCode> getProductCodes( ) {
+  public Set<ProductCode> getProductCodes( ) {
     return productCodes;
   }
   
@@ -459,7 +483,7 @@ public class ImageInfo implements Image {
    * @see com.eucalyptus.images.Image#setProductCodes(java.util.List)
    * @param productCodes
    */
-  public void setProductCodes( final List<ProductCode> productCodes ) {
+  public void setProductCodes( final Set<ProductCode> productCodes ) {
     this.productCodes = productCodes;
   }
   

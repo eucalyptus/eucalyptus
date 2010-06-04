@@ -75,7 +75,13 @@ public class StatefulMessageSet<E extends Enum<E>> {
     QueuedEventCallback event = null;
     E nextState = this.states[currentState.ordinal( ) + 1];
     while ( ( event = this.pendingEvents.poll( ) ) != null ) {
-      while ( !event.pollForResponse( 100l ) );
+      try {
+        while ( !event.pollForResponse( 100l ) );
+      } catch ( Throwable t ) {
+        LOG.error( t, t );
+        nextState = this.rollback( );
+        return nextState;
+      }
       try {
         Object o = event.pollResponse( 100l );
         if ( o != null ) {

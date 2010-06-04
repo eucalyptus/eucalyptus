@@ -510,6 +510,7 @@ public class WalrusImageManager {
 				return;
 			}
 		}
+		db.commit();
 		//unzip, untar image in the background
 		ImageCacher imageCacher = imageCachers.putIfAbsent(bucketName + manifestKey, new ImageCacher(bucketName, manifestKey, decryptedImageKey));
 		if(imageCacher == null) {
@@ -521,15 +522,14 @@ public class WalrusImageManager {
 				foundImageCacheInfo.setInCache(false);
 				foundImageCacheInfo.setUseCount(0);
 				foundImageCacheInfo.setSize(0L);
+				db = WalrusControl.getEntityWrapper();
 				db.add(foundImageCacheInfo);
+				db.commit();
 			}
-			db.commit();
 			imageCacher = imageCachers.get(bucketName + manifestKey);
 			imageCacher.setDecryptedImageKey(decryptedImageKey);
 			imageCacher.start();
-		} else {
-			db.commit();
-		}
+		} 
 	}
 
 	private void flushCachedImage (String bucketName, String objectKey) throws Exception {

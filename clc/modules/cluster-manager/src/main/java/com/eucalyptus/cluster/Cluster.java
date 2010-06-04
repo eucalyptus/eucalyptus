@@ -70,14 +70,23 @@ import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.cluster.callback.LogDataCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.HasName;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
+import edu.ucsb.eucalyptus.msgs.GetLogsResponseType;
+import edu.ucsb.eucalyptus.msgs.GetLogsType;
+import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Cluster implements HasName {
@@ -89,6 +98,7 @@ public class Cluster implements HasName {
   private ClusterState                             state;
   private ClusterNodeState                         nodeState;
   private ClusterCredentials                       credentials;
+  private NodeLogInfo lastLog = new NodeLogInfo( );
   
   public Cluster( ClusterConfiguration configuration, ClusterCredentials credentials ) {
     super( );
@@ -228,6 +238,50 @@ public class Cluster implements HasName {
   public String toString( ) {
     return String.format( "Cluster [configuration=%s, credentials=%s, mq=%s, nodeMap=%s, nodeState=%s, state=%s]", this.configuration, this.credentials,
                           this.mq, this.nodeMap, this.nodeState, this.state );
+  }
+  private final AtomicBoolean logUpdate = new AtomicBoolean( false );
+  public NodeLogInfo getLastLog( ) {
+    if( this.logUpdate.compareAndSet( false, true ) ) {
+      final Cluster self = this;
+      try {
+        new LogDataCallback( this, null ).dispatch( this );
+      } catch ( Throwable t ) {
+        LOG.error( t, t );
+      } finally {
+        this.logUpdate.set( false );
+      }
+    } 
+    return this.lastLog;
+  }
+
+  public void clearLogPending() {
+    this.logUpdate.set( false );
+  }
+  
+  public NodeLogInfo getNodeLog( final String nodeIp ) throws EucalyptusClusterException {
+    final NodeInfo nodeInfo = Iterables.find( this.nodeMap.values( ), new Predicate<NodeInfo>() {
+      @Override
+      public boolean apply( NodeInfo arg0 ) {
+        return nodeIp.equals( arg0.getName( ) );
+      }} );
+    if( nodeInfo == null ) {
+      throw new EucalyptusClusterException( "Error obtaining node log files for: " + nodeIp );
+    }
+    if( this.logUpdate.compareAndSet( false, true ) ) {
+      final Cluster self = this;
+      try {
+        new LogDataCallback( this, nodeInfo ).dispatch( this );
+      } catch ( Throwable t ) {
+        LOG.debug( t, t );
+      } finally {
+        this.logUpdate.set( false );
+      }
+    } 
+    return nodeInfo.getLogs( );
+  }
+
+  public void setLastLog( NodeLogInfo lastLog ) {
+    this.lastLog = lastLog;
   }
   
 }

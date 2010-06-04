@@ -11,8 +11,10 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.cluster.util.ClusterUtil;
+import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.GenericEvent;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.LogUtil;
 
@@ -84,6 +86,7 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );
+          ListenerRegistry.getInstance( ).fireEvent( new ClockTick().setMessage( 1l ) );
         } catch ( Exception e1 ) {
           LOG.error( e1, e1 );
         }
