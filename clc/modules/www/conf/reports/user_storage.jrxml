@@ -51,28 +51,164 @@
 	<subDataset name="Table Dataset 1">
 		<field name="userName" class="java.lang.String"/>
 		<field name="volumeCount" class="java.lang.Integer"/>
-		<field name="volumeGigabytes" class="java.lang.Integer"/>
-		<field name="snapshotCount" class="java.lang.Integer"/>
+		<field name="volumeGigabytesAllocated" class="java.lang.Integer"/>
+		<field name="volumeSnapshots" class="java.lang.Integer"/>
 		<field name="volumeTime" class="java.lang.Integer"/>
+		<field name="volumeGigabytesDeleted" class="java.lang.Integer"/>
+		<field name="volumeTimeSeconds" class="java.lang.Integer"/>
 	</subDataset>
+	<subDataset name="New Dataset 1">
+		<field name="groupName" class="java.lang.String"/>
+		<field name="volumeCount" class="java.lang.Integer"/>
+		<field name="volumeGigabytesAllocated" class="java.lang.Integer"/>
+		<field name="volumeSnapshots" class="java.lang.Integer"/>
+		<field name="volumeTime" class="java.lang.Integer"/>
+		<field name="volumeGigabytesDeleted" class="java.lang.Integer"/>
+		<field name="volumeTimeSeconds" class="java.lang.Integer"/>
+	</subDataset>
+	<parameter name="EUCA_USER_RESULTS" class="java.util.List"/>
+	<parameter name="EUCA_GROUP_RESULTS" class="java.util.List"/>
 	<queryString>
 		<![CDATA[]]>
 	</queryString>
-	<field name="userName" class="java.lang.String"/>
-	<field name="volumeCount" class="java.lang.Integer"/>
-	<field name="volumeGigabytes" class="java.lang.Integer"/>
-	<field name="volumeTime" class="java.lang.Integer"/>
-	<field name="snapshotCount" class="java.lang.Integer"/>
+	<title>
+		<band height="50">
+			<componentElement>
+				<reportElement key="table" style="table" x="0" y="0" width="984" height="50"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="New Dataset 1">
+						<dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{EUCA_GROUP_RESULTS})]]></dataSourceExpression>
+					</datasetRun>
+					<jr:column width="80">
+						<jr:columnHeader style="table_TH" height="56" rowSpan="2">
+							<staticText>
+								<reportElement style="SubTitle" mode="Transparent" x="0" y="0" width="80" height="55"/>
+								<textElement>
+									<font isBold="true"/>
+								</textElement>
+								<text><![CDATA[Group]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="30" rowSpan="1">
+							<textField>
+								<reportElement style="Detail" x="0" y="0" width="80" height="30"/>
+								<textElement>
+									<font isBold="true"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$F{groupName}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:columnGroup width="420">
+						<jr:columnGroup width="420">
+							<jr:columnHeader style="table_TH" height="30" rowSpan="1">
+								<staticText>
+									<reportElement style="SubTitle" x="0" y="0" width="420" height="30"/>
+									<textElement>
+										<font isBold="true"/>
+									</textElement>
+									<text><![CDATA[Block Storage]]></text>
+								</staticText>
+							</jr:columnHeader>
+							<jr:column width="75">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="75" height="25"/>
+										<textElement/>
+										<text><![CDATA[Volumes]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="75" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeCount}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[GB Allocated]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeGigabytesAllocated}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="26"/>
+										<textElement/>
+										<text><![CDATA[GB Deleted]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeGigabytesDeleted}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
+										<textElement/>
+										<text><![CDATA[GB-Hours]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeTime}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="75">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="75" height="25"/>
+										<textElement/>
+										<text><![CDATA[Snapshots]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="75" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeSnapshots}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+						</jr:columnGroup>
+					</jr:columnGroup>
+				</jr:table>
+			</componentElement>
+		</band>
+	</title>
 	<detail>
+		<band height="50"/>
+	</detail>
+	<summary>
 		<band height="50">
 			<componentElement>
 				<reportElement key="table" style="table" x="0" y="0" width="984" height="50"/>
 				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
 					<datasetRun subDataset="Table Dataset 1">
-						<dataSourceExpression><![CDATA[$P{REPORT_DATA_SOURCE}]]></dataSourceExpression>
+						<dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{EUCA_USER_RESULTS})]]></dataSourceExpression>
 					</datasetRun>
 					<jr:column width="80">
-						<jr:columnHeader style="table_TH" height="55" rowSpan="2">
+						<jr:columnHeader style="table_TH" height="56" rowSpan="2">
 							<staticText>
 								<reportElement style="SubTitle" mode="Transparent" x="0" y="0" width="80" height="55"/>
 								<textElement>
@@ -91,11 +227,11 @@
 							</textField>
 						</jr:detailCell>
 					</jr:column>
-					<jr:columnGroup width="330">
-						<jr:columnGroup width="330">
+					<jr:columnGroup width="420">
+						<jr:columnGroup width="420">
 							<jr:columnHeader style="table_TH" height="30" rowSpan="1">
 								<staticText>
-									<reportElement style="SubTitle" x="0" y="0" width="330" height="30"/>
+									<reportElement style="SubTitle" x="0" y="0" width="420" height="30"/>
 									<textElement>
 										<font isBold="true"/>
 									</textElement>
@@ -103,7 +239,7 @@
 								</staticText>
 							</jr:columnHeader>
 							<jr:column width="75">
-								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
 									<staticText>
 										<reportElement style="Column header" x="0" y="0" width="75" height="25"/>
 										<textElement/>
@@ -119,23 +255,39 @@
 								</jr:detailCell>
 							</jr:column>
 							<jr:column width="90">
-								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
 									<staticText>
 										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
 										<textElement/>
-										<text><![CDATA[Gigabytes]]></text>
+										<text><![CDATA[GB Allocated]]></text>
 									</staticText>
 								</jr:columnHeader>
 								<jr:detailCell style="table_TD" height="30" rowSpan="1">
 									<textField>
 										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
 										<textElement/>
-										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeGigabytes}]]></textFieldExpression>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeGigabytesAllocated}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>
 							<jr:column width="90">
-								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="90" height="26"/>
+										<textElement/>
+										<text><![CDATA[GB Deleted]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="30" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="90" height="30"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeGigabytesDeleted}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="90">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
 									<staticText>
 										<reportElement style="Column header" x="0" y="0" width="90" height="25"/>
 										<textElement/>
@@ -151,7 +303,7 @@
 								</jr:detailCell>
 							</jr:column>
 							<jr:column width="75">
-								<jr:columnHeader style="table_CH" height="25" rowSpan="1">
+								<jr:columnHeader style="table_CH" height="26" rowSpan="1">
 									<staticText>
 										<reportElement style="Column header" x="0" y="0" width="75" height="25"/>
 										<textElement/>
@@ -162,7 +314,7 @@
 									<textField>
 										<reportElement style="Detail" x="0" y="0" width="75" height="30"/>
 										<textElement/>
-										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{snapshotCount}]]></textFieldExpression>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{volumeSnapshots}]]></textFieldExpression>
 									</textField>
 								</jr:detailCell>
 							</jr:column>
@@ -171,5 +323,5 @@
 				</jr:table>
 			</componentElement>
 		</band>
-	</detail>
+	</summary>
 </jasperReport>

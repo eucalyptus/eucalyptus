@@ -403,10 +403,12 @@ public class Reports extends HttpServlet {
       FileReader fileReader = null;
       try {
         final List results = new ArrayList( );
+        final List groupResults = new ArrayList( );
         fileReader = new FileReader( SubDirectory.REPORTS + File.separator + reportCache.getName( ) + ".groovy" );
         Binding binding = new Binding( new HashMap( ) {
           {
             put( "results", results );
+            put( "groupResults", groupResults );
             put( "notBefore", new Long( Param.start.get( req ) ) );
             put( "notAfter", new Long( Param.end.get( req ) ) );
             put( "notBeforeDate", new Date( new Long( Param.start.get( req ) ) ) );
@@ -424,6 +426,8 @@ public class Reports extends HttpServlet {
           put( "EUCA_NOT_AFTER", new Long( Param.end.get( req ) ) );
           put( "EUCA_NOT_BEFORE_DATE", new Date( new Long( Param.start.get( req ) ) ) );
           put( "EUCA_NOT_AFTER_DATE", new Date( new Long( Param.end.get( req ) ) ) );
+          put( "EUCA_USER_RESULTS", results );
+          put( "EUCA_GROUP_RESULTS", groupResults );
         }}, data );
       } catch ( Throwable e ) {
         LOG.debug( e, e );
