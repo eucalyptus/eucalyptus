@@ -103,9 +103,12 @@ clean:
 distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#*
 
-install: deploy
-	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
-	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
+install: 
+	@echo DISABLED FOR NOW
+
+#install: deploy
+#	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
+#	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
 
 uninstall:
 	$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/nc-client-policy.xml
