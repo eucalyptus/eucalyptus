@@ -71,11 +71,19 @@ typedef struct ncMetadata_t {
     char *userId;
 } ncMetadata;
 
+typedef struct deviceMapping_t {
+	char deviceName[64];
+	char virtualName[64];
+	int size;
+	char format[64];
+} deviceMapping;
+
 typedef struct virtualMachine_t {
-  int mem, cores, disk;
-  char name[64];
+	int mem, cores, disk;
+	char name[64];
+	deviceMapping deviceMapping[EUCA_MAX_DEVMAPS];
 } virtualMachine;
-int allocate_virtualMachine(virtualMachine *out, int mem, int disk, int cores, char *name);
+int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in);
 
 typedef struct netConfig_t {
   int vlan, networkIndex;
@@ -105,14 +113,16 @@ typedef struct ncInstance_t {
     /* state as reported to CC & CLC */
     char stateName[CHAR_BUFFER_SIZE];  /* as string */
     int stateCode; /* as int */
+
     /* state as NC thinks of it */
-    int state;
-    
+    instance_states state;
+
     char keyName[CHAR_BUFFER_SIZE*4];
     char privateDnsName[CHAR_BUFFER_SIZE];
     char dnsName[CHAR_BUFFER_SIZE];
     int launchTime; // timestamp of RunInstances request arrival
     int bootTime; // timestamp of STAGING->BOOTING transition
+	int bundlingTime; // timestamp of ->BUNDLING transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
     virtualMachine params;

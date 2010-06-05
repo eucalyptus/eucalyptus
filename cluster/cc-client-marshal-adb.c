@@ -60,11 +60,13 @@ permission notice:
 #include <stdio.h>
 #include <time.h>
 #include <misc.h>
+#include <data.h>
 #include <cc-client-marshal.h>
 #include "axis2_stub_EucalyptusCC.h"
 #include <euca_auth.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "adb-helpers.h"
 
 int cc_killallInstances(axutil_env_t *env, axis2_stub_t *stub) {
   int rc, instIdsLen;
@@ -845,8 +847,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
   return 0;
 }
 
-
-int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, int num, int vlan, char *netName, axutil_env_t *env, axis2_stub_t *stub) {
+int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, int num, int vlan, char *netName, virtualMachine *vm_type, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   adb_RunInstances_t *riIn;
   adb_runInstancesType_t *rit;
@@ -854,16 +855,9 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
   adb_RunInstancesResponse_t *riOut;
   adb_runInstancesResponseType_t *rirt;
   
-  adb_virtualMachineType_t *vm;
-  //  char mac[32], meh[32];
+  adb_virtualMachineType_t *vm = copy_vm_type_to_adb (env, vm_type);
   
   srand(time(NULL));
-  
-  vm = adb_virtualMachineType_create(env);
-  adb_virtualMachineType_set_name(vm, env, "small");
-  adb_virtualMachineType_set_memory(vm, env, 128);
-  adb_virtualMachineType_set_cores(vm, env, 1);
-  adb_virtualMachineType_set_disk(vm, env, 10);
   
   rit = adb_runInstancesType_create(env);
   adb_runInstancesType_set_imageId(rit, env, amiId);

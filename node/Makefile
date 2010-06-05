@@ -15,7 +15,12 @@ CLIENT=NCclient
 NC_LIBS 		= $(LIBS) -lvirt -lcurl
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o
 
-all: server client clientlib test_nc test
+#this is the original, uncomment to continue port
+#all: server client clientlib test_nc test
+
+#this is the nerfed one, to allow system to build during port
+all: client-marshal-adb.o
+	@echo NOT MAKING NC FOR NOW - edit Makefile to change
 
 build: all
 

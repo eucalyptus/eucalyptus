@@ -377,11 +377,11 @@ static size_t write_data (void *buffer, size_t size, size_t nmemb, void *params)
 {
 	assert (params !=NULL);
 	FILE * fp = ((struct request *)params)->fp;
-	size_t wrote_items = fwrite (buffer, size, nmemb, fp);
-    ((struct request *)params)->total_wrote += wrote_items * size;
+	int wrote = fwrite (buffer, size, nmemb, fp);
+    ((struct request *)params)->total_wrote += wrote;
     ((struct request *)params)->total_calls++;
 
-	return wrote_items * size;
+	return wrote;
 }
 
 #if defined(CAN_GZIP)
