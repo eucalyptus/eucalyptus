@@ -60,104 +60,70 @@
  *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.client;
 
-import java.util.ArrayList;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.MouseDownEvent;
+import com.google.gwt.event.dom.client.MouseDownHandler;
+import com.google.gwt.event.dom.client.MouseMoveEvent;
+import com.google.gwt.event.dom.client.MouseMoveHandler;
+import com.google.gwt.event.dom.client.MouseOutEvent;
+import com.google.gwt.event.dom.client.MouseOutHandler;
+import com.google.gwt.event.dom.client.MouseOverEvent;
+import com.google.gwt.event.dom.client.MouseOverHandler;
+import com.google.gwt.event.dom.client.MouseUpEvent;
+import com.google.gwt.event.dom.client.MouseUpHandler;
+import com.google.gwt.user.client.Event;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Widget;
 
-import com.google.gwt.user.client.rpc.IsSerializable;
-
-
-public class StorageInfoWeb implements IsSerializable {
-	private String name;
-	private String host;
-	private Integer port;
-	private Boolean committed;	
-	private ArrayList<String> storageParams = new ArrayList<String>();
-	public StorageInfoWeb() { }
-	public StorageInfoWeb( final String name, final String host, final Integer port ) {
-		this.name = name;
-		this.host = host;
-		this.port = port;
-		this.committed = StorageInfoWeb.DEFAULT_SC.committed;
-		this.storageParams = new ArrayList<String>();
-	}
-
-	public StorageInfoWeb( final String name,
-			final String host,
-			final Integer port,
-			final ArrayList<String> storageParams) {
-		this.name = name;
-		this.host = host;
-		this.port = port;
-		this.committed = false;
-		this.storageParams = storageParams;
-	}
-
-
-	public final void setCommitted ()
-	{
-		this.committed = true;
-	}
-
-	public final Boolean isCommitted ()
-	{
-		return this.committed;
-	}
-
-	public final String getName() {
-		return name;
-	}
-
-	public final void setName(final String name) {
-		this.name = name;
-	}
-
-	public final String getHost() {
-		return host;
-	}
-
-	public final void setHost(final String host) {
-		this.host = host;
-	}
-
-	public final Integer getPort() {
-		return port;
-	}
-
-	public final void setPort(final Integer port) {
-		this.port = port;
-	}
-
-	public final ArrayList<String> getStorageParams() {
-		return storageParams;
-	}
-
-	public final void setStorageParams(final ArrayList<String> storageParams) {
-		this.storageParams = storageParams;
-	}
-
-	@Override
-	public final boolean equals( final Object o )
-	{
-		if ( this == o ) {
-			return true;
-		}
-		if ( o == null || getClass() != o.getClass() ) {
-			return false;
-		}
-
-		StorageInfoWeb that = ( StorageInfoWeb ) o;
-
-		if ( !name.equals( that.name ) ) {
-			return false;
-		}
-
-		return true;
-	}
-
-	@Override
-	public final int hashCode()
-	{
-		return name.hashCode();
-	}
-
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773 /** FIXME: DRAMATICALLY: URGENTLY **/, new ArrayList<String>());
+public class EucaImageButton extends com.google.gwt.user.client.ui.PushButton {
+  
+  private static final String MAIN_STYLE_NAME       = "euca-Button";
+  private static final String MOUSE_OVER_STYLE_NAME = "-over";
+  private static final String MOUSE_DOWN_STYLE_NAME = "-down";
+  
+  private String              tooltip;
+  private String              baseStyleName;
+  
+  public EucaImageButton( String html, String tooltip, String baseStyleName, String imageFileName, ClickHandler handler ) {
+    super( new Image( "themes/active/img/" + imageFileName ), handler );
+    this.tooltip = tooltip;
+    this.baseStyleName = baseStyleName;
+    this.addStyleName( this.baseStyleName );
+    setEventHandler( );
+  }
+  
+  private void setEventHandler( ) {
+    sinkEvents( Event.ONMOUSEOVER | Event.ONMOUSEOUT | Event.ONMOUSEMOVE | Event.ONMOUSEUP | Event.ONMOUSEDOWN );
+    this.addHandler( new MouseOutHandler( ) {
+      public void onMouseOut( MouseOutEvent event ) {
+        removeStyleName( EucaImageButton.this.baseStyleName + MOUSE_OVER_STYLE_NAME );
+        removeStyleName( EucaImageButton.this.baseStyleName + MOUSE_DOWN_STYLE_NAME );
+        Tooltip.getInstance( ).hide( );
+      }
+    }, MouseOutEvent.getType( ) );
+    this.addHandler( new MouseOverHandler( ) {
+      public void onMouseOver( MouseOverEvent event ) {
+        addStyleName( EucaImageButton.this.baseStyleName + MOUSE_OVER_STYLE_NAME );
+      }
+    }, MouseOverEvent.getType( ) );
+    this.addHandler( new MouseUpHandler( ) {
+      public void onMouseUp( MouseUpEvent event ) {
+        removeStyleName( EucaImageButton.this.baseStyleName + MOUSE_DOWN_STYLE_NAME );
+      }
+    }, MouseUpEvent.getType( ) );
+    this.addHandler( new MouseDownHandler( ) {
+      public void onMouseDown( MouseDownEvent event ) {
+        addStyleName( EucaImageButton.this.baseStyleName + MOUSE_DOWN_STYLE_NAME );
+      }
+    }, MouseDownEvent.getType( ) );
+    if ( this.tooltip != null ) {
+      this.addHandler( new MouseMoveHandler( ) {
+        public void onMouseMove( MouseMoveEvent event ) {
+          int x = ( ( Widget ) event.getSource( ) ).getAbsoluteLeft( ) + event.getX( ) + 10;
+          int y = ( ( Widget ) event.getSource( ) ).getAbsoluteTop( ) + event.getY( ) + 10;
+          Tooltip.getInstance( ).delayedShow( x, y, 0, tooltip );
+        }
+      }, MouseMoveEvent.getType( ) );
+    }
+  }
 }

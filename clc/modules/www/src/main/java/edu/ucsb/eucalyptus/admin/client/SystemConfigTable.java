@@ -68,6 +68,8 @@ package edu.ucsb.eucalyptus.admin.client;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 
@@ -109,7 +111,7 @@ public class SystemConfigTable extends VerticalPanel {
 		this.add ( c_hpanel );
 		HorizontalPanel c_hpanel2 = new HorizontalPanel ();
 		c_hpanel2.setSpacing (10);
-		c_hpanel2.add ( new Button( "Save Configuration", new SaveCallback( this ) ) );
+		c_hpanel2.add ( new EucaButton( "Save Configuration", new SaveCallback( this ) ) );
 		c_hpanel2.add ( this.c_status );
 		this.c_status.setText ("");
 		this.c_status.setStyleName ("euca-greeting-pending");
@@ -126,7 +128,7 @@ public class SystemConfigTable extends VerticalPanel {
 		this.add ( dns_hpanel );
 		HorizontalPanel dns_hpanel2 = new HorizontalPanel ();
 		dns_hpanel2.setSpacing (10);
-		dns_hpanel2.add ( new Button( "Save Configuration", new SaveCallback( this ) ) );
+		dns_hpanel2.add ( new EucaButton( "Save Configuration", new SaveCallback( this ) ) );
 		dns_hpanel2.add ( this.dns_status );
 		this.dns_status.setText ("");
 		this.dns_status.setStyleName ("euca-greeting-pending");
@@ -227,7 +229,7 @@ public class SystemConfigTable extends VerticalPanel {
 		this.SystemConfig.setNameserverAddress(this.nameserverAddress_box.getText());
 	}
 
-	class ChangeCallback implements ChangeListener, ClickListener {
+	class ChangeCallback implements ChangeListener, ClickHandler {
 		private SystemConfigTable parent;
 
 		ChangeCallback ( final SystemConfigTable parent )
@@ -244,7 +246,7 @@ public class SystemConfigTable extends VerticalPanel {
 			this.parent.dns_status.setStyleName ("euca-greeting-warning");            
 		}
 
-		public void onClick (Widget sender)
+		public void onClick (ClickEvent event)
 		{
 			this.parent.updateStruct ();
 			this.parent.c_status.setText ("Unsaved changes");
@@ -282,7 +284,7 @@ public class SystemConfigTable extends VerticalPanel {
 		}
 	}
 
-	class SaveCallback implements AsyncCallback, ClickListener {
+	class SaveCallback implements AsyncCallback, ClickHandler {
 
 		private SystemConfigTable parent;
 
@@ -291,7 +293,7 @@ public class SystemConfigTable extends VerticalPanel {
 			this.parent = parent;
 		}
 
-		public void onClick( final Widget widget )
+		public void onClick( ClickEvent event )
 		{
 			this.parent.c_status.setText ("Saving...");
 			this.parent.c_status.setStyleName ("euca-greeting-pending");
