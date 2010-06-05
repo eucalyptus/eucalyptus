@@ -58,7 +58,7 @@
 		<field name="systemTime" class="java.lang.Integer"/>
 	</subDataset>
 	<subDataset name="Table Dataset 1_1_1">
-		<field name="userName" class="java.lang.String"/>
+		<field name="groupName" class="java.lang.String"/>
 		<field name="allocCount" class="java.lang.Integer"/>
 		<field name="assignCount" class="java.lang.Integer"/>
 		<field name="systemCount" class="java.lang.Integer"/>
@@ -93,7 +93,7 @@
 								<textElement>
 									<font isBold="true"/>
 								</textElement>
-								<text><![CDATA[User]]></text>
+								<text><![CDATA[Group]]></text>
 							</staticText>
 						</jr:columnHeader>
 						<jr:detailCell style="table_TD" height="30" rowSpan="1">
@@ -102,7 +102,7 @@
 								<textElement>
 									<font isBold="true"/>
 								</textElement>
-								<textFieldExpression class="java.lang.String"><![CDATA[$F{userName}]]></textFieldExpression>
+								<textFieldExpression class="java.lang.String"><![CDATA[$F{groupName}]]></textFieldExpression>
 							</textField>
 						</jr:detailCell>
 					</jr:column>

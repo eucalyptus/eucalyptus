@@ -45,7 +45,7 @@ Users.listAllUsers().each{ User user ->
       groups.put( group.getName(), g );
       groupResults.add( g );
     }
-    g.metaClass.properties.findAll{ !it.name.startsWith("user") && it.name!="metaClass"&&it.name!="class" }.each {
+    g.metaClass.properties.findAll{ !it.name.startsWith("group") && it.name!="metaClass"&&it.name!="class" }.each {
       g[it.name]+=u[it.name]
     }
   }
