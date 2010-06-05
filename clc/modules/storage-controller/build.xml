@@ -64,20 +64,22 @@
 
 <project name="eucalyptus-storagecontroller" basedir=".">
 
-  <import file="../module-inc.xml"/>
-  <target name="builder" depends="init,build-java,build-jni,jar"/>
-    <!--================================== BUILD TARGETS ==================================-->
-    <target name="build-jni">
-        <mkdir dir="include"/>
-        <javah classpath="${build.dir}" destdir="include" force="yes">
-            <class name="com.eucalyptus.storage.OverlayManager"/>
-            <class name="com.eucalyptus.storage.AOEManager"/>
-        </javah>
-    </target>
+	<import file="../module-inc.xml" />
+	<!--================================== BUILD TARGETS ==================================-->
+  <property name="builder.suffix" value="jni" />
+	<target name="build-jni">
+		<antcall target="build-java" />
+    <antcall target="jar" />
+		<mkdir dir="include" />
+		<javah classpath="${build.dir}" destdir="include" force="yes">
+			<class name="com.eucalyptus.storage.OverlayManager" />
+			<class name="com.eucalyptus.storage.AOEManager" />
+		</javah>
+	</target>
 
-    <target name="clean-jni">
-        <delete dir="h"/>
-        <delete dir="include"/>
-    </target>
+	<target name="clean-jni">
+		<delete dir="h" />
+		<delete dir="include" />
+	</target>
 </project>
 
