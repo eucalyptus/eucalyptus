@@ -1,4 +1,4 @@
-import boto, os, sys
+import boto, os, sys, re
 from boto.ec2.regioninfo import RegionInfo
 from urlparse import urlparse
         
@@ -31,11 +31,15 @@ class EucaAdmin:
     return self.conn
 
   def handle_error(self,ex):
+    s = ""
     if ex.errors.__len__() != 0:
       for i in ex.errors:
-        print 'ERROR %s %s %s: %s' % (ex.status, ex.reason, i[0], i[1]) 
+        s = '%sERROR %s %s %s: %s\n' % (s,ex.status, ex.reason, i[0], i[1])
     else:
-      print 'ERROR %s %s %s' % (ex.status, ex.reason, ex) 
+      s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
+    while s.count("\n") != 3:
+      s = re.sub(".*Exception.*\n", ": ", s)
+    print s.replace("\n","")
     sys.exit(1)
     
 

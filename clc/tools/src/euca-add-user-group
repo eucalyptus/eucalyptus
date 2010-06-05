@@ -2,11 +2,11 @@
 import sys, os, boto
 from boto.ec2.regioninfo import RegionInfo
 from euca_admin import EucaAdmin
-from euca_admin.users import User
 from optparse import OptionParser
+from euca_admin.groups import Group
 
 def main():
-  c = User().cli_delete()
+  c = Group().cli_add()
   sys.exit()
 
 if __name__ == "__main__":

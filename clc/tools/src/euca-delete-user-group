@@ -6,10 +6,7 @@ from optparse import OptionParser
 from euca_admin.groups import Group
 
 def main():
-  c = Group()
-  parser = c.get_delete_parser()
-  (options, args) = parser.parse_args()
-  c.delete(options.groupName)
+  c = Group().cli_delete()
   sys.exit()
 
 if __name__ == "__main__":
