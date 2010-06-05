@@ -7,8 +7,8 @@ import groovy.sql.Sql;
 
 EntityWrapper db = EntityWrapper.get( BaseRecord.class );
 Sql sql = new Sql( db.getSession( ).connection( ) )
-def accountedFor = new TreeSet()
 def groups = [:]
+def accountedFor = new TreeSet()
 List userResults = new ArrayList()
 Users.listAllUsers().each{ User user ->
   def u = new UserStorageData() {{
