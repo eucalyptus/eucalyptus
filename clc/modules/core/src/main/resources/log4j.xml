@@ -253,7 +253,15 @@
     <priority value="INFO" />
     <appender-ref ref="sc-stats-log" />
   </category>
-
+  <logger name="org.apache.commons.httpclient">
+    <level value="ERROR"/>
+  </logger>
+  <logger name="httpclient.wire">
+    <level value="ERROR"/>
+  </logger>
+  <logger name="httpclient.wire.header">
+    <level value="ERROR"/>
+  </logger>
   <root>
     <appender-ref ref="${euca.log.appender}" />
     <appender-ref ref="errorlog" />
