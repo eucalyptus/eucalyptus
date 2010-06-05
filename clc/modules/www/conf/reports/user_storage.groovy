@@ -56,17 +56,15 @@ Users.listAllUsers().each{ User user ->
     }
   }
   for( Group group : Groups.lookupUserGroups( user ) ) {
-    def g = new GroupStorageData() {{
-            groupName = group.getName() 
-          }
-        };
+    def g = new GroupStorageData();
+    g.groupName = group.getName();
     if( groups.containsKey( group.getName() ) ) {
       g = groups.get( group.getName() );
     } else {
       groups.put( group.getName(), g );
       groupResults.add( g );
     }
-    g.metaClass.properties.findAll{ it.name.startsWith("volume") }.each {
+    g.metaClass.properties.findAll{ !it.name.startsWith("user") && it.name!="metaClass"&&it.name!="class"  }.each {
       g[it.name]+=u[it.name]
     }
   }

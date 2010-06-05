@@ -6,6 +6,8 @@ import groovy.sql.Sql;
 
 EntityWrapper db = EntityWrapper.get( BaseRecord.class );
 Sql sql = new Sql( db.getSession( ).connection( ) )
+def groups = [:]
+List userResults = new ArrayList()
 Users.listAllUsers().each{ User user ->
   def u = new UserVmData() {{
       userName = user.getName() 
@@ -33,10 +35,38 @@ Users.listAllUsers().each{ User user ->
         String type = details[2].replaceAll(".*=","");
         println "Found TERMINATE for ${instanceId} ${type} ${timestamp}"
       }
+  for( Group group : Groups.lookupUserGroups( user ) ) {
+    def g = new GroupVmData() ;
+    g.groupName = group.getName();
+    
+    if( groups.containsKey( group.getName() ) ) {
+      g = groups.get( group.getName() );
+    } else {
+      groups.put( group.getName(), g );
+      groupResults.add( g );
+    }
+    g.metaClass.properties.findAll{ !it.name.startsWith("user") && it.name!="metaClass"&&it.name!="class" }.each {
+      g[it.name]+=u[it.name]
+    }
+  }
   results.add( u )
 }
 results.each{ println it.dump() }
 db?.commit()
+def class GroupVmData {
+  String groupName;
+  Integer vmCount = 0;
+  Integer m1small = 0;
+  Integer c1medium = 0;
+  Integer m1large = 0;
+  Integer m1xlarge = 0;
+  Integer c1xlarge = 0;
+  Integer m1smallTime = 0;
+  Integer c1mediumTime = 0;
+  Integer m1largeTime = 0;
+  Integer m1xlargeTime = 0;
+  Integer c1xlargeTime = 0;
+}
 def class UserVmData {
   String userName;
   Integer vmCount = 0;

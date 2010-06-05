@@ -196,9 +196,6 @@
 			</componentElement>
 		</band>
 	</title>
-	<detail>
-		<band height="50"/>
-	</detail>
 	<summary>
 		<band height="50">
 			<componentElement>
