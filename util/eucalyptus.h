@@ -81,9 +81,6 @@ permission notice:
 #define EUCALYPTUS_CONNECT_ISCSI    "sudo %s/usr/share/eucalyptus/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI "sudo %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
 #define EUCALYPTUS_GET_ISCSI "sudo %s/usr/share/eucalyptus/get_iscsitarget.pl"
-#define EUCALYPTUS_NC_CHECK_BUCKET "/usr/local/bin/euca-check-bucket" // can be overriden from eucalyptus.conf
-#define EUCALYPTUS_NC_BUNDLE_UPLOAD "/usr/local/bin/euca-bundle-upload" // can be overriden from eucalyptus.conf
-#define EUCALYPTUS_NC_DELETE_BUNDLE "/usr/local/bin/euca-delete-bundle" // can be overriden from eucalyptus.conf
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
 #define CC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
@@ -110,9 +107,6 @@ permission notice:
 #define CONFIG_NC_SWAP_SIZE "SWAP_SIZE"
 #define CONFIG_SAVE_INSTANCES "MANUAL_INSTANCES_CLEANUP"
 #define CONFIG_CONCURRENT_DISK_OPS "CONCURRENT_DISK_OPS"
-#define CONFIG_NC_BUNDLE_UPLOAD "NC_BUNDLE_UPLOAD_PATH"
-#define CONFIG_NC_CHECK_BUCKET "NC_CHECK_BUCKET_PATH"
-#define CONFIG_NC_DELETE_BUNDLE "NC_DELETE_BUNDLE_PATH"
 
 /* name of the administrative user within Eucalyptus */
 #define EUCALYPTUS_ADMIN "eucalyptus"
