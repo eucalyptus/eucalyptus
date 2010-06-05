@@ -19,7 +19,7 @@ NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o
 #all: server client clientlib test_nc test
 
 #this is the nerfed one, to allow system to build during port
-all: client-marshal-adb.o
+all: generated/stubs client-marshal-adb.o
 	@echo NOT MAKING NC FOR NOW - edit Makefile to change
 
 build: all
