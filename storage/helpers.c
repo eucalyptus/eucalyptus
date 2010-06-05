@@ -382,7 +382,7 @@ int help_grub_mbr (const char * path, const int part)
 	char cmd [1024];
 	int rc = 1;
 
-    snprintf(cmd, sizeof (cmd), "%s --device-map=/dev/null --batch >/dev/null 2>&1", helpers_path[GRUB]);
+    snprintf(cmd, sizeof (cmd), "%s --batch >/dev/null 2>&1", helpers_path[GRUB]);
     logprintfl (EUCADEBUG, "running %s\n", cmd);
     FILE * fp = popen (cmd, "w");
 	if (fp!=NULL) {
