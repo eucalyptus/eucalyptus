@@ -65,9 +65,23 @@
 
 package edu.ucsb.eucalyptus.admin.server;
 
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.Configuration;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.gwt.user.client.rpc.SerializableException;
+import com.google.gwt.user.client.rpc.SerializationException;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 import com.google.gwt.user.server.rpc.UnexpectedException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
@@ -84,8 +98,12 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.InputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -93,16 +111,17 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
 
-/**
- * Created by IntelliJ IDEA.
- * User: dmitriizagorodnov
- * Date: May 3, 2008
- * Time: 2:57:31 PM
- * To change this template use File | Settings | File Templates.
- */
 public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements EucalyptusWebBackend {
 
 	private static Logger LOG = Logger.getLogger( EucalyptusWebBackendImpl.class );
@@ -344,7 +363,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	}
 
 	/* ensure the sessionId is (still) valid */
-	private static SessionInfo verifySession (String sessionId)
+	public static SessionInfo verifySession (String sessionId)
 	throws SerializableException
 	{
 		if (sessionId==null) {
@@ -398,7 +417,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 		if (verifyPasswordAge) {
 			if (isPasswordExpired(user) && 
-					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase(""))) { // first-time config will catch that
+					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY))) { // first-time config will catch that
 				throw new SerializableException("Password expired");
 			}
 		}
@@ -486,14 +505,18 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			String response;
 
 			if (action.equals("confirm")) {
-				user.setConfirmed(true);
+				if ( user != null ) {
+				  user.setConfirmed(true);
+				}
 				EucalyptusManagement.commitWebUser(user);
 				response = "Your account is now active.";
 			} else {
-				user.setPassword (user.getPassword());
-				long now = System.currentTimeMillis();
-				user.setPasswordExpires( new Long(now + pass_expiration_ms) );
-				EucalyptusManagement.commitWebUser(user);
+				if(user != null) {
+			      user.setPassword (user.getPassword());
+				  long now = System.currentTimeMillis();
+				  user.setPasswordExpires( new Long(now + pass_expiration_ms) );
+				  EucalyptusManagement.commitWebUser(user);
+				}
 				response = "Your password has been reset.";
 			}
 			return response;
@@ -678,7 +701,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 
 		// set expiration for admin setting password for the first time
-		if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase("")) {
+		if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY)) {
 			long now = System.currentTimeMillis();
 			oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
 		}
@@ -692,6 +715,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
 		oldRecord.setAdministrator(newRecord.isAdministrator());
+    oldRecord.setEnabled(newRecord.isEnabled( ));
 
 		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
 		if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {
@@ -896,4 +920,5 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			throw (RuntimeException)caught;
 		}
 	}
+
 }

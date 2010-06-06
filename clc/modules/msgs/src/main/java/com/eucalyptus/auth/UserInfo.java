@@ -84,37 +84,48 @@ public class UserInfo {
   @Id
   @GeneratedValue
   @Column( name = "user_id" )
-  private Long          id          = -1l;
+  Long          id          = -1l;
+  
   @Column( name = "user_name" )
-  private String        userName;
+  String        userName;
+  
   @Column( name = "user_email" )
-  private String        email;
+  String        email;
+  
   @Column( name = "user_real_name" )
-  private String        realName;
+  String        realName;
+  
   @Column( name = "user_telephone_number" )
-  private String        telephoneNumber;
+  String        telephoneNumber;
+  
   @Column( name = "user_affiliation" )
-  private String        affiliation;
+  String        affiliation;
+  
   @Column( name = "user_project_description" )
-  private String        projectDescription;
+  String        projectDescription;
+  
   @Column( name = "user_project_pi_name" )
-  private String        projectPIName;
+  String        projectPIName;
+  
   @Column( name = "user_is_approved" )
-  private Boolean       approved;
+  Boolean       approved;
+  
   @Column( name = "user_is_confirmed" )
-  private Boolean       confirmed;
+  Boolean       confirmed;
+  
   @Column( name = "password_expires" )
-  private Long          passwordExpires;
+  Long          passwordExpires;
+  
   @Column( name = "user_confirmation_code" )
-  private String        confirmationCode;
+  String        confirmationCode;
   
   @Transient
-  private static String BOGUS_ENTRY = "N/A";
+  public static String BOGUS_ENTRY = "n/a";
   
   public UserInfo( ) {}
   
   public UserInfo( String userName, String confirmationCode ) {
-    this( userName, "", confirmationCode );
+    this( userName, BOGUS_ENTRY, confirmationCode );
     this.approved = true;
     this.confirmed = true;
   }
@@ -128,7 +139,7 @@ public class UserInfo {
     this.userName = userName;
     this.email = email;
     
-    this.realName = BOGUS_ENTRY;
+    this.realName = userName;
     this.telephoneNumber = BOGUS_ENTRY;
     this.affiliation = BOGUS_ENTRY;
     this.projectDescription = BOGUS_ENTRY;
@@ -214,28 +225,27 @@ public class UserInfo {
   public void setEmail( String email ) {
     this.email = email;
   }
-
+  
   public Boolean getConfirmed( ) {
     return this.confirmed;
   }
-
+  
   public void setConfirmed( Boolean confirmed ) {
     this.confirmed = confirmed;
   }
-
+  
   public String getConfirmationCode( ) {
     return this.confirmationCode;
   }
-
+  
   public void setConfirmationCode( String confirmationCode ) {
     this.confirmationCode = confirmationCode;
   }
-
+  
   public Boolean getApproved( ) {
     return this.approved;
   }
-
-
+  
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
@@ -251,4 +261,20 @@ public class UserInfo {
     return userName.hashCode( );
   }
   
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "UserInfo [ ");
+    sb.append( "affiliation = ").append( affiliation == null ? "null" : affiliation ).append( ", " );
+    sb.append( "approved = ").append( approved == null ? "null" : approved ).append( ", " );
+    sb.append( "confirmationCode = ").append( confirmationCode == null ? "null" : confirmationCode ).append( ", " );
+    sb.append( "confirmed = ").append( confirmed == null ? "null" : confirmed ).append( ", " );
+    sb.append( "email = ").append( email == null ? "null" : email ).append( ", " );
+    sb.append( "passwordExpires = ").append( passwordExpires == null ? "null" : passwordExpires ).append( ", " );
+    sb.append( "projectDescription = ").append( projectDescription == null ? "null" : projectDescription ).append( ", " );
+    sb.append( "projectPIName = ").append( projectPIName == null ? "null" : projectPIName ).append( ", " );
+    sb.append( "realName = ").append( realName == null ? "null" : realName ).append( ", " );
+    sb.append( "telephoneNumber = ").append( telephoneNumber == null ? "null" : telephoneNumber ).append( ", " );
+    sb.append( "userName = ").append( userName == null ? "null" : userName ).append( " ]" );
+    return sb.toString( );
+  }
 }
