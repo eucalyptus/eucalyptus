@@ -416,7 +416,7 @@ public class Reports extends HttpServlet {
           }
         } );
         try {
-          new GroovyScriptEngine( SubDirectory.REPORTS.toString( ) ).run( reportCache.getName( ) + ".groovy", binding );
+          new GroovyScriptEngine( SubDirectory.REPORTS.toString( ), ClassLoader.getSystemClassLoader( ) ).run( reportCache.getName( ) + ".groovy", binding );
         } catch ( Exception e ) {
           LOG.error( e, e );
         }
