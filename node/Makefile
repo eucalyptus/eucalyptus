@@ -12,15 +12,10 @@ SERVICE_SO=libEucalyptusNC.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
-NC_LIBS 		= $(LIBS) -lvirt -lcurl
+NC_LIBS 		= $(LIBS) -lvirt -lcurl -lssl
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o
 
-#this is the original, uncomment to continue port
-#all: server client clientlib test_nc test
-
-#this is the nerfed one, to allow system to build during port
-all: generated/stubs client-marshal-adb.o
-	@echo NOT MAKING NC FOR NOW - edit Makefile to change
+all: server client clientlib test_nc test
 
 build: all
 
@@ -62,17 +57,17 @@ server: $(SERVICE_SO)
 	make -C ../util
 
 $(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
-	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/*.o ../net/*.o ../util/*.o
+	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/walrus.o ../storage/storage.o ../net/*.o ../util/*.o
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
 
 client: $(CLIENT) $(CLIENT)_local
 
 $(CLIENT): generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(AXIS2C_HOME)/lib/libaxutil.so $(CLIENT).c
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/*.o ../net/*.o $(CLIENT).c
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/storage.o ../storage/walrus.o ../net/*.o $(CLIENT).c
 
 $(CLIENT)_local: generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o
-	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/*.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
+	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/storage.o ../storage/walrus.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
 
 test: test.c ../util/misc.o ../util/data.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o
@@ -81,10 +76,8 @@ test_nc: test_nc.c ../util/misc.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o
 
 deploy:
-	@echo DISABLED FOR NOW
-#deploy:
-#	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
-#	$(INSTALL) $(SERVICE_SO) $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
+	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
+	$(INSTALL) $(SERVICE_SO) $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
 
 # no ws-sec
 	cat generated/services.xml | ../tools/add_wsdllocation.pl $(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(NCWSDLNAME) > $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_noWS.xml
@@ -105,12 +98,9 @@ clean:
 distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#*
 
-install: 
-	@echo DISABLED FOR NOW
-
-#install: deploy
-#	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
-#	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
+install: deploy
+	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
+	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
 
 uninstall:
 	$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/nc-client-policy.xml

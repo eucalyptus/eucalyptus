@@ -122,7 +122,6 @@ typedef struct ncInstance_t {
     char dnsName[CHAR_BUFFER_SIZE];
     int launchTime; // timestamp of RunInstances request arrival
     int bootTime; // timestamp of STAGING->BOOTING transition
-	int bundlingTime; // timestamp of ->BUNDLING transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
     virtualMachine params;

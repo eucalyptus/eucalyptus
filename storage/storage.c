@@ -1097,7 +1097,7 @@ int free_work_path (
 	return OK;
 }
 
-int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char *platform, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
+int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
 {
     char image_path   [BUFSIZE]; long long image_size_b = 0L;
     char kernel_path  [BUFSIZE]; long long kernel_size_b = 0L;
