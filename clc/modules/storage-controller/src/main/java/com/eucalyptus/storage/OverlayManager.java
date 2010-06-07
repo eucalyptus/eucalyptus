@@ -1023,7 +1023,7 @@ public class OverlayManager implements LogicalStorageManager {
 					}
 				}
 				if(!success) {
-					throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " StorageInfo.getStorageInfo().getStorageInterface(): " + DirectStorageInfo.getStorageInfo().getStorageInterface() + " pid: " + pid + " returnValue: " + returnValue);
+					throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + DirectStorageInfo.getStorageInfo().getStorageInterface() + " pid: " + pid + " returnValue: " + returnValue);
 				}
 
 				File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
