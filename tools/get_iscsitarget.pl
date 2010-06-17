@@ -15,7 +15,7 @@ if (!-x $ISCSIADM) {
 # check input params
 $dev_string = untaint(shift @ARGV);
 
-($ip, $store, $passwd) = parse_devstring($dev_string);
+($euca_home, $ip, $store, $passwd) = parse_devstring($dev_string);
 
 print get_device_name($store);
 
