@@ -95,35 +95,43 @@ int help_part (const char * path, char * part_type, const char * fs_type, const 
 
 int help_loop (const char * path, const long long offset, char * lodev, int lodev_size) 
 {
+    int found = 0;
 	int done = 0;
 	int ret = OK;
 	char * output;
 
-	for (int i=0; i<30 && !done; i++) {
+	for (int i=0; i<10; i++) {
 		output = pruntf ("%s %s -f", helpers_path[ROOTWRAP], helpers_path[LOSETUP]);
-		if (output==NULL) 
+		if (output==NULL) // there was a problem
 			break;
 		if (strstr (output, "/dev/loop")) {
 			strncpy (lodev, output, lodev_size);
 			char * ptr = strrchr (lodev, '\n');
-			if (ptr) *ptr = '\0';
-			done = 1;
+			if (ptr) {
+                *ptr = '\0';
+                found = 1;
+            }
 		}
 		free (output);
-		sleep (1);
-	}
-	if (done) {
-		logprintfl (EUCADEBUG, "attaching to loop device '%s' at offset '%lld' file %s\n", lodev, offset, path);
-		output = pruntf ("%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
-		if (!output) {
-			logprintfl (EUCAINFO, "ERROR: cannot attach %s to loop device %s\n", path, lodev);
-			ret = ERROR;
-		} else { 
-			free (output); 
-		}
-	} else {
-		logprintfl (EUCAINFO, "ERROR: cannot find free loop device\n");
-		ret = ERROR;
+
+        if (found) {
+            logprintfl (EUCADEBUG, "attaching to loop device '%s' at offset '%lld' file %s\n", lodev, offset, path);
+            output = pruntf ("%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
+            if (output==NULL) {
+                logprintfl (EUCAINFO, "WARNING: cannot attach %s to loop device %s (will retry)\n", path, lodev);
+            } else { 
+                free (output); 
+                done = 1;
+                break;
+            }
+        }
+
+        sleep (3);
+        found = 0;
+    }
+    if (!done) {
+        logprintfl (EUCAINFO, "ERROR: cannot find free loop device or attach to one\n");
+        ret = ERROR;
 	}
 
 	return ret;
