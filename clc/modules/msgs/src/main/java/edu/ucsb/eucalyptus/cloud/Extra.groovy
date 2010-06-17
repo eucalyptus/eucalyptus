@@ -76,6 +76,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ConcurrentSkipListSet
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.records.*;
 import com.google.common.collect.*;
 
 public class Pair {
@@ -95,10 +96,7 @@ public class Pair {
   }
   
 }
-public interface RequestTransactionScript extends Serializable {
-  public EucalyptusMessage getRequestMessage();
-}
-public class VmAllocationInfo implements RequestTransactionScript {
+public class VmAllocationInfo extends EucalyptusMessage {
   
   RunInstancesType request;
   RunInstancesResponseType reply;
@@ -121,6 +119,7 @@ public class VmAllocationInfo implements RequestTransactionScript {
   def VmAllocationInfo(final RunInstancesType request) {
     this.request = request;
     this.reply = request.getReply();
+    this.setCorrelationId( request.getCorrelationId() )
   }
   
   public EucalyptusMessage getRequestMessage() {
@@ -161,9 +160,8 @@ public class VmInfo extends EucalyptusData {
   String launchIndex;
   ArrayList<String> groupNames = new ArrayList<String>();
   ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
-  
   String placement;
-  
+    
   ArrayList<String> productCodes = new ArrayList<String>();
   
   @Override
@@ -183,7 +181,7 @@ public class VmRunType extends EucalyptusMessage {
   
   /** these are for more convenient binding later on but really should be done differently... sigh    **/
   
-  String reservationId, userData, platform;
+  String reservationId, userData;
   int min, max, vlan, launchIndex;
   
   VmImageInfo imageInfo;
@@ -194,7 +192,6 @@ public class VmRunType extends EucalyptusMessage {
   List<String> macAddresses = new ArrayList<String>();
   List<String> networkNames = new ArrayList<String>();
   ArrayList<String> networkIndexList = new ArrayList<String>();
-  
   
   def VmRunType() {
   }
@@ -360,7 +357,7 @@ public class Network implements HasName {
       this.availableNetworkIndexes.remove( index );
     } else {
       if( !this.assignedNetworkIndexes.contains( index ) && this.availableNetworkIndexes.remove( index ) ) {
-        LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_ALLOCATED, "network=${this.name}","cluster=${cluster}","networkIndex=${index}") );
+        EventRecord.caller( this.getClass( ), EventType.TOKEN_ALLOCATED, "network=${this.name}","cluster=${cluster}","networkIndex=${index}").debug( );
         this.assignedNetworkIndexes.add( index );
         NetworkToken token = this.getClusterToken( cluster );
         token.indexes.add( index );
@@ -392,11 +389,11 @@ public class Network implements HasName {
   public Integer allocateNetworkIndex( String cluster ) {
     Integer nextIndex = this.availableNetworkIndexes.pollFirst( );
     if( nextIndex == null ) { 
-      LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+      EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}").debug( );
     } else {
       this.assignedNetworkIndexes.add( nextIndex );
       this.getClusterToken( cluster )?.getIndexes().add( nextIndex );
-      LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}") );
+      EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "network=${this.name}","cluster=${cluster}","networkIndex=${nextIndex}").debug( );
     }
     return nextIndex;
   }
@@ -407,7 +404,7 @@ public class Network implements HasName {
   }
   
   public void returnNetworkIndex( Integer index ) {
-    LOG.debug( EventRecord.caller( this.getClass( ), EventType.TOKEN_RETURNED, "network=${this.name}","networkIndex=${index}") );
+    EventRecord.caller( this.getClass( ), EventType.TOKEN_RETURNED, "network=${this.name}","networkIndex=${index}").debug( );
     this.assignedNetworkIndexes.remove( index );
     this.clusterTokens.values().each { 
       it.getIndexes().remove( index );

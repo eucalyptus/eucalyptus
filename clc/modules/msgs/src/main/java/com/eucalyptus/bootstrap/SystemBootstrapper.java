@@ -100,6 +100,7 @@ public class SystemBootstrapper {
       Security.addProvider( new BouncyCastleProvider( ) );
       LogLevels.DEBUG = doDebug;
       LogLevels.TRACE = doDebug;
+      System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
       t.printStackTrace( );
       System.exit( 1 );
@@ -108,8 +109,10 @@ public class SystemBootstrapper {
       Bootstrap.initialize( );
       return true;
     } catch ( BootstrapException e ) {
+      e.printStackTrace( );
       throw e;
     } catch ( Throwable t ) {
+      t.printStackTrace( );
       LOG.fatal( t, t );
       System.exit( 1 );
       return false;
@@ -125,6 +128,7 @@ public class SystemBootstrapper {
     } catch ( BootstrapException e ) {
       throw e;
     } catch ( Throwable t ) {
+      t.printStackTrace( );
       LOG.fatal( t, t );
       System.exit( 1 );
       throw t;
@@ -140,6 +144,7 @@ public class SystemBootstrapper {
         stage.start( );
       } while( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( BootstrapException e ) {
+      e.printStackTrace( );
       throw e;
     } catch ( Throwable t ) {
       LOG.fatal( t, t );

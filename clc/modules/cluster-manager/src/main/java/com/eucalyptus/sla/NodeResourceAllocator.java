@@ -2,6 +2,7 @@ package com.eucalyptus.sla;
 
 import java.util.List;
 import java.util.NavigableMap;
+import java.util.NoSuchElementException;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -36,33 +37,14 @@ public class NodeResourceAllocator implements ResourceAllocator {
   
   private Cluster doPrivilegedLookup( String clusterName, String vmTypeName ) throws NotEnoughResourcesAvailable {
     if ( clusterName != null && !"default".equals( clusterName ) ) {
-      final Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-      if ( Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
-        @Override
-        public boolean apply( Authorization arg0 ) {
-          return arg0.check( cluster );
-        }
-      } ) ) {
+      try {
+        final Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
         return cluster;
-      } else {
-        if( Clusters.getInstance( ).contains( clusterName ) ) {
-          throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName );
-        } else {
-          throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName );
-        }
+      } catch ( NoSuchElementException e ) {
+        throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName );
       }
     } else {
-      Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-        @Override
-        public boolean apply( final Cluster c ) {
-          return Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
-            @Override
-            public boolean apply( Authorization arg0 ) {
-              return arg0.check( c );
-            }
-          } );
-        }
-      } );
+      Iterable<Cluster> authorizedClusters = Clusters.getInstance( ).listValues( );
       NavigableMap<VmTypeAvailability, Cluster> sorted = Maps.newTreeMap( );
       for ( Cluster c : authorizedClusters ) {
         sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );

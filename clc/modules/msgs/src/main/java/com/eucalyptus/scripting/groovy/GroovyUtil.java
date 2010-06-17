@@ -29,8 +29,8 @@ public class GroovyUtil {
       return groovyEngine;      
     }
   }
-  
-  public static Object newInstance( String fileName ) throws ScriptExecutionFailedException {
+
+  public static <T> T newInstance( String fileName ) throws ScriptExecutionFailedException {
     GroovyObject groovyObject = null;
     try {
       ClassLoader parent = ClassLoader.getSystemClassLoader( );
@@ -45,7 +45,12 @@ public class GroovyUtil {
     catch ( Exception e ) {
       throw new ScriptExecutionFailedException( e );
     }
-    return groovyObject;
+    try {
+      return ( T ) groovyObject;
+    } catch ( ClassCastException e ) {
+      LOG.debug( e, e );
+      throw new ScriptExecutionFailedException( e.getMessage( ), e );
+    }
   }
 
   public static Object evaluateScript( String fileName ) throws ScriptExecutionFailedException {
@@ -83,12 +88,12 @@ public class GroovyUtil {
       String conf = "import " + className;
       String line = null;
       try {
-	BufferedReader fileReader = new BufferedReader( new FileReader( confFile ) );
+        BufferedReader fileReader = new BufferedReader( new FileReader( confFile ) );
         for(;
             (line = fileReader.readLine( ))!=null;
-            conf += !line.matches("\\s*\\w+\\s*=[\\s\\w*\"']*;{0,1}")?"":"\n"+className+"."+line);
+            conf += !line.matches("\\s*\\w+\\s*=[\\s\\.\\w*\"']*;{0,1}")?"":"\n"+className+"."+line);
         LOG.debug( conf );
-	fileReader.close();
+        fileReader.close();
         try {
           getGroovyEngine( ).eval( conf );
         } catch ( ScriptException e ) {

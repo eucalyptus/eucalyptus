@@ -18,14 +18,33 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.event.PassiveEventListener;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
+@ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
-  private static Logger                        LOG = Logger.getLogger( ServiceContext.class );
+  private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
+  @ConfigurableField( initial = "16", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
+  public static Integer                        MAX_OUTSTANDING_MESSAGES = 16;
+  @ConfigurableField( initial = "0", description = "Do a soft reset.", changeListener = HupListener.class )
+  public static Integer                        HUP                      = 0;
+  
+  public static class HupListener extends PassiveEventListener<ConfigurableProperty> {
+    @Override
+    public void firingEvent( ConfigurableProperty t ) {
+      if ( "123".equals( t.getValue( ) ) ) {
+        System.exit( 123 );
+      }
+    }
+  }
+  
   private static AtomicReference<MuleContext> context = new AtomicReference<MuleContext>( null );
-    
+  
   public static void buildContext( List<ConfigResource> configs ) {
     ServiceContext.builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
   }
@@ -45,7 +64,7 @@ public class ServiceContext {
   
   public static void startContext( ) {
     try {
-      if( !ServiceContext.getContext( ).isInitialised( ) ) {
+      if ( !ServiceContext.getContext( ).isInitialised( ) ) {
         ServiceContext.getContext( ).initialise( );
       }
     } catch ( Exception e ) {
@@ -80,23 +99,23 @@ public class ServiceContext {
     }
   }
   
-  @Provides(Component.bootstrap)
-  @RunDuring(Bootstrap.Stage.CloudServiceInit)
+  @Provides( Component.bootstrap )
+  @RunDuring( Bootstrap.Stage.CloudServiceInit )
   public static class ServiceBootstrapper extends Bootstrapper {
     
     public ServiceBootstrapper( ) {}
-
+    
     @Override
     public boolean load( Stage current ) throws Exception {
       List<ConfigResource> configs = Lists.newArrayList( );
-      for( com.eucalyptus.component.Component comp : Components.list( ) ) {
-        if( comp.isEnabled( ) ) {
+      for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
+        if ( comp.isEnabled( ) ) {
           Resource rsc = comp.getConfiguration( ).getResource( );
           LOG.info( LogUtil.subheader( "Preparing configuration for: " + rsc ) );
-          configs.addAll( rsc.getConfigurations( ) );        
+          configs.addAll( rsc.getConfigurations( ) );
         }
       }
-      for( ConfigResource cfg : configs ) {
+      for ( ConfigResource cfg : configs ) {
         LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );
       }
       try {
@@ -107,11 +126,11 @@ public class ServiceContext {
       }
       return true;
     }
-
+    
     @Override
     public boolean start( ) throws Exception {
       try {
-        LOG.info( "Starting up system bus.");
+        LOG.info( "Starting up system bus." );
         ServiceContext.createContext( );
       } catch ( Exception e ) {
         LOG.fatal( "Failed to configure services.", e );
@@ -125,7 +144,7 @@ public class ServiceContext {
       }
       return true;
     }
-
+    
     @Override
     public boolean stop( ) throws Exception {
       ServiceContext.stopContext( );
@@ -133,5 +152,5 @@ public class ServiceContext {
     }
     
   }
-
+  
 }
