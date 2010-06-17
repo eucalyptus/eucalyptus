@@ -15,7 +15,7 @@ class Walrus():
 
           
   def __repr__(self):
-      return 'CLUSTER %s %s' % (self.walrus_name, self.host_name) 
+      return 'WALRUS\t%s\t%s' % (self.walrus_name, self.host_name) 
 
   def startElement(self, name, attrs, connection):
       return None

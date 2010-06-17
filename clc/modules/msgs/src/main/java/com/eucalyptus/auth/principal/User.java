@@ -75,5 +75,8 @@ public abstract interface User extends BasePrincipal, X509Principal, HmacPrincip
   public abstract Boolean isEnabled( );
   public abstract void setEnabled( Boolean enabled );
   public abstract String getToken( );
+  public abstract boolean checkToken( String testToken );
   public abstract User getDelegate( );
+  public abstract String getPassword( );
+  public abstract void setPassword( String password );
 }

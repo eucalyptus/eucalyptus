@@ -71,6 +71,8 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 
+import com.eucalyptus.configurable.ConfigurableIdentifier;
+
 import javax.persistence.*;
 
 @MappedSuperclass
@@ -81,48 +83,7 @@ public class LVMMetaInfo implements Serializable {
 	@Column( name = "id" )
 	String id;
 
-	@Column(name = "hostname")
-	protected String hostName;
-
 	public LVMMetaInfo() {
 		super();
 	}
-
-	public LVMMetaInfo(String hostName) {
-		this.hostName = hostName;
-	}
-
-	public String getHostName() {
-		return hostName;
-	}
-
-	public void setHostName(String hostName) {
-		this.hostName = hostName;
-	}
-
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-		+ ((hostName == null) ? 0 : hostName.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		LVMMetaInfo other = (LVMMetaInfo) obj;
-		if (hostName == null) {
-			if (other.hostName != null)
-				return false;
-		} else if (!hostName.equals(other.hostName))
-			return false;
-		return true;
-	} 
 }

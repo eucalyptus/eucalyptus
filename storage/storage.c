@@ -62,6 +62,7 @@ permission notice:
 #define __USE_GNU /* strnlen */
 #include <string.h>
 #include <sys/types.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -71,6 +72,7 @@ permission notice:
 #include <dirent.h> /* open|read|close dir */
 #include <time.h> /* time() */
 
+#include "eucalyptus.h"
 #include "ipc.h"
 #include "walrus.h"
 #include "euca_auth.h"
@@ -86,6 +88,8 @@ static char add_key_command_path [BUFSIZE] = "";
 static long long swap_size_mb = DEFAULT_SWAP_SIZE; /* default swap in MB, if not specified in config file */
 static long long cache_size_mb = DEFAULT_NC_CACHE_SIZE; /* in MB */
 static long long cache_free_mb = DEFAULT_NC_CACHE_SIZE;
+static long long work_size_mb = DEFAULT_NC_WORK_SIZE;
+static long long work_free_mb = DEFAULT_NC_WORK_SIZE;
 
 static char *sc_instance_path = "";
 static char disk_convert_command_path [BUFSIZE] = "";
@@ -137,6 +141,14 @@ int scInitConfig (void)
 	  cache_free_mb = cache_size_mb;
 	  free (s); 
         }
+
+        s = getConfString(configFiles, 2, CONFIG_NC_WORK_SIZE);
+        if (s) {
+			work_size_mb = atoll (s); 
+			work_free_mb = work_size_mb;
+			free (s); 
+        }
+
 
 	s = getConfString(configFiles, 2, CONFIG_NC_SWAP_SIZE);
         if (s){ 
@@ -568,6 +580,7 @@ long long scFSCK (bunchOfInstances ** instances)
     /*** run through all users ***/
 
     char * cache_path = NULL;
+    char * work_path = NULL;
     struct dirent * inst_dir_entry;
     while ((inst_dir_entry=readdir(insts_dir))!=NULL) {
         char * uname = inst_dir_entry->d_name;
@@ -597,12 +610,22 @@ long long scFSCK (bunchOfInstances ** instances)
             snprintf (instance_path, BUFSIZE, "%s/%s", user_path, iname);
 
             if (!strcmp("cache", iname) &&
-                	!strcmp(EUCALYPTUS_ADMIN, uname)) { /* cache is in admin's dir */
-		if (cache_path) {
+				!strcmp(EUCALYPTUS_ADMIN, uname)) { /* cache is in admin's dir */
+				if (cache_path) {
                     logprintfl (EUCADEBUG, "Found a second cache_path?\n");
-		    free(cache_path);
-		}
+					free(cache_path);
+				}
                 cache_path = strdup (instance_path);
+                continue;
+            }
+
+            if (!strcmp("work", iname) &&
+				!strcmp(EUCALYPTUS_ADMIN, uname)) { /* work is in admin's dir */
+				if (work_path) {
+                    logprintfl (EUCADEBUG, "Found a second work_path?\n");
+					free(work_path);
+				}
+                work_path = strdup (instance_path);
                 continue;
             }
 
@@ -633,9 +656,18 @@ long long scFSCK (bunchOfInstances ** instances)
     long long cache_bytes = init_cache (cache_path);
     free (cache_path);
     if (cache_bytes < 0) {
+      if (work_path) free(work_path);
         return -1;
     }
     
+	// clean up work directory
+	if (work_path) {
+		if (vrun ("rm -rf %s", work_path)) {
+			logprintfl (EUCAWARN, "warning: failed to clean work directory %s\n", work_path);
+		}
+		free (work_path);
+	}
+
     return total_size + cache_bytes;
 }
 
@@ -980,8 +1012,92 @@ retry:
     return 0L;
 }
 
+char * get_disk_path (
+	const char * instanceId, 
+	const char * userId)
+{
+	char file_path [MAX_PATH_SIZE];
+	struct stat mystat;
 
-int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
+	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/disk", sc_instance_path, userId, instanceId);
+	if (stat (file_path, &mystat)!=0) {
+        	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/root", sc_instance_path, userId, instanceId);
+                if (stat (file_path, &mystat) !=0) {
+		  logprintfl (EUCAERROR, "failed to stat disk %s\n", file_path);
+		  return NULL;
+                }
+	}
+	return strdup (file_path);
+}
+
+long long get_bundling_size (
+	const char * instanceId, 
+	const char * userId)
+{
+	char file_path [MAX_PATH_SIZE];
+	struct stat mystat;
+
+	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/disk", sc_instance_path, userId, instanceId);
+	if (stat (file_path, &mystat)!=0) {
+        	snprintf (file_path, MAX_PATH_SIZE, "%s/%s/%s/root", sc_instance_path, userId, instanceId);
+                if (stat (file_path, &mystat) !=0) {
+		  logprintfl (EUCAERROR, "failed to stat disk %s\n", file_path);
+		  return -1L;
+                }
+	}
+
+	return ((long long)mystat.st_size)*2L; // bundling requires twice the size of disk
+}
+
+char * alloc_work_path (
+	const char * instanceId, // IN: id of instance that needs work space
+	const char * userId, // IN: id of owner of the instance
+	const long long sizeMb) // IN: size needed under work path
+{
+	char file_path [MAX_PATH_SIZE];
+	if (sizeMb < 0L)
+		return NULL;
+
+	long long left = work_free_mb - sizeMb;
+	if (left>0) {
+		sem_p (sc_sem);
+		work_free_mb -= sizeMb;
+		sem_v (sc_sem);
+		if (snprintf (file_path, MAX_PATH_SIZE, "%s/%s/work/%s", sc_instance_path, EUCALYPTUS_ADMIN, instanceId)<1) { // work is in admin's directory
+			return NULL;
+		}
+	} else {
+		logprintfl (EUCAERROR, "work disk space limit exceeded (free=%lld size=%lld)\n", work_free_mb, sizeMb);
+		return NULL;
+	}
+	ensure_path_exists (file_path);
+
+	return strdup (file_path);
+}
+
+int free_work_path (
+	const char * instanceId, // IN: id of instance giving up work space
+	const char * userId, // IN: id of owner of the instance
+	const long long sizeMb) // IN: size needed under work path
+{
+	if (sizeMb < 0L) 
+		return ERROR;
+
+	char workPath [MAX_PATH_SIZE];
+	if (snprintf (workPath, MAX_PATH_SIZE, "%s/%s/work/%s", sc_instance_path, EUCALYPTUS_ADMIN, instanceId)<1) { // work is in admin's directory
+		return ERROR;
+	}
+	if (vrun ("rm -rf %s", workPath)) {
+		logprintfl (EUCAWARN, "warning: failed to clean work directory %s\n", workPath);
+	} else {
+		sem_p (sc_sem);
+		work_free_mb += sizeMb;
+		sem_v (sc_sem);
+	}
+	return OK;
+}
+
+int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
 {
     char image_path   [BUFSIZE]; long long image_size_b = 0L;
     char kernel_path  [BUFSIZE]; long long kernel_size_b = 0L;
@@ -1010,15 +1126,17 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
         return e; \
     }
     CHECK_LIMIT("swap");
-
+    
     /* do kernel & ramdisk first, since either the disk or the ephemeral partition will take up the rest */
-    if ((kernel_size_b=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, 0, limit_mb))<1L) return e;
-    limit_mb -= kernel_size_b/MEGABYTE;
-    CHECK_LIMIT("kernel")
+    if (kernelId && strnlen(kernelId, CHAR_BUFFER_SIZE) ) {
+      if ((kernel_size_b=get_cached_file (userId, kernelURL, kernelId, instanceId, "kernel", kernel_path, s, 0, limit_mb))<1L) return e;
+      limit_mb -= kernel_size_b/MEGABYTE;
+      CHECK_LIMIT("kernel");
+    }
     if (ramdiskId && strnlen (ramdiskId, CHAR_BUFFER_SIZE) ) {
-        if ((ramdisk_size_b=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, 0, limit_mb))<1L) return e;
-        limit_mb -= ramdisk_size_b/MEGABYTE;
-        CHECK_LIMIT("ramdisk")
+      if ((ramdisk_size_b=get_cached_file (userId, ramdiskURL, ramdiskId, instanceId, "ramdisk", ramdisk_path, s, 0, limit_mb))<1L) return e;
+      limit_mb -= ramdisk_size_b/MEGABYTE;
+      CHECK_LIMIT("ramdisk")
     }
 
     if ((image_size_b=get_cached_file (userId, imageURL, imageId, instanceId, image_name, image_path, s, convert_to_disk, limit_mb))<1L) return e;
@@ -1031,74 +1149,74 @@ int scMakeInstanceImage (char *userId, char *imageId, char *imageURL, char *kern
     /* embed the key, which is contained in keyName */
     char *key_template = NULL;
     if (keyName && strlen(keyName)) {
-        int key_len = strlen(keyName);
-        int fd = -1;
-        int ret;
-        
-        key_template = strdup("/tmp/sckey.XXXXXX");
-        
-        if (((fd = mkstemp(key_template)) < 0)) {
-            logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
-        } else if ((ret = write (fd, keyName, key_len))<key_len) {
-            logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
-        } else {
-            close (fd);
-            logprintfl (EUCAINFO, "adding key%s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
-        }
+      int key_len = strlen(keyName);
+      int fd = -1;
+      int ret;
+      
+      key_template = strdup("/tmp/sckey.XXXXXX");
+      
+      if (((fd = mkstemp(key_template)) < 0)) {
+	logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
+      } else if ((ret = write (fd, keyName, key_len))<key_len) {
+	logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
+      } else {
+	close (fd);
+	logprintfl (EUCAINFO, "adding key%s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
+      }
     } else { /* if no key was given, add_key just does tune2fs to up the filesystem mount date */
-        key_template = "";
-        logprintfl (EUCAINFO, "running tune2fs on the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
+      key_template = "";
+      logprintfl (EUCAINFO, "running tune2fs on the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
     }
-
+    
     /* do the key injection and/or tune2fs */
     sem_p (s);
     if (vrun("%s %d %s %s", add_key_command_path, mount_offset, image_path, key_template)!=0) {
-        logprintfl (EUCAERROR, "ERROR: key injection / tune2fs command failed\n");
-        /* we proceed despite the failure since maybe user embedded the key
-         * into the image; also tune2fs may fail on uncrecognized but valid
-         * filesystems */
+      logprintfl (EUCAERROR, "ERROR: key injection / tune2fs command failed\n");
+      /* we proceed despite the failure since maybe user embedded the key
+       * into the image; also tune2fs may fail on uncrecognized but valid
+       * filesystems */
     }
     sem_v (s);
     
     if (strlen(key_template)) {
-        if (unlink(key_template) != 0) {
-            logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
-        }
-        free (key_template);
+      if (unlink(key_template) != 0) {
+	logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
+      }
+      free (key_template);
     }
     
     /* if the image is a root partition... */
     if (!convert_to_disk) {
-        /* create swap partition */
-        if (swap_size_mb>0) { 
-	    sem_p (disk_sem);
-            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/swap 2>/dev/null", swap_size_mb, rundir_path)) != 0) { 
-                logprintfl (EUCAINFO, "creation of swap (dd) at %s/swap failed\n", rundir_path);
-	        sem_v (disk_sem);
-                return e;
-            }
-            if ((e=vrun ("mkswap %s/swap >/dev/null", rundir_path)) != 0) {
-                logprintfl (EUCAINFO, "initialization of swap (mkswap) at %s/swap failed\n", rundir_path);
-		sem_v (disk_sem);
-                return e;		
-            }
-	    sem_v (disk_sem);
-        }
-        /* create ephemeral partition */
-        if (limit_mb>0) {
-	    sem_p (disk_sem);
-            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/ephemeral 2>/dev/null", limit_mb, rundir_path )) != 0) {
-                logprintfl (EUCAINFO, "creation of ephemeral disk (dd) at %s/ephemeral failed\n", rundir_path);
-		sem_v (disk_sem);
-                return e;
-            }
-            if ((e=vrun ("mkfs.ext3 -F %s/ephemeral >/dev/null 2>&1", rundir_path)) != 0) {
-                logprintfl (EUCAINFO, "initialization of ephemeral disk (mkfs.ext3) at %s/ephemeral failed\n", rundir_path);
-		sem_v (disk_sem);
-                return e;		
-            }
-	    sem_v (disk_sem);
-        }
+      /* create swap partition */
+      if (swap_size_mb>0) { 
+	sem_p (disk_sem);
+	if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/swap 2>/dev/null", swap_size_mb, rundir_path)) != 0) { 
+	  logprintfl (EUCAINFO, "creation of swap (dd) at %s/swap failed\n", rundir_path);
+	  sem_v (disk_sem);
+	  return e;
+	}
+	if ((e=vrun ("mkswap %s/swap >/dev/null", rundir_path)) != 0) {
+	  logprintfl (EUCAINFO, "initialization of swap (mkswap) at %s/swap failed\n", rundir_path);
+	  sem_v (disk_sem);
+	  return e;		
+	}
+	sem_v (disk_sem);
+      }
+      /* create ephemeral partition */
+      if (limit_mb>0) {
+	sem_p (disk_sem);
+	if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/ephemeral 2>/dev/null", limit_mb, rundir_path )) != 0) {
+	  logprintfl (EUCAINFO, "creation of ephemeral disk (dd) at %s/ephemeral failed\n", rundir_path);
+	  sem_v (disk_sem);
+	  return e;
+	}
+	if ((e=vrun ("mkfs.ext3 -F %s/ephemeral >/dev/null 2>&1", rundir_path)) != 0) {
+	  logprintfl (EUCAINFO, "initialization of ephemeral disk (mkfs.ext3) at %s/ephemeral failed\n", rundir_path);
+	  sem_v (disk_sem);
+	  return e;		
+	}
+	sem_v (disk_sem);
+      }
     }
     
     * instance_path = strdup (rundir_path);

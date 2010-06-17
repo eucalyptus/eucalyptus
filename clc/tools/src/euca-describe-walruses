@@ -4,8 +4,7 @@ from boto.ec2.regioninfo import RegionInfo
 from euca_admin.walruses import Walrus
 
 def main():
-  c = Walrus()
-  c.describe()
+  c = Walrus().describe()
   sys.exit()
 
 if __name__ == "__main__":

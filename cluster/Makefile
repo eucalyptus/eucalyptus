@@ -3,7 +3,7 @@
 
 include ../Makedefs
 
-WSDLPATH=../wsdl/
+WSDLPATH=../wsdl
 CCWSDLNAME=eucalyptus_cc.wsdl
 CCWSDL=$(WSDLPATH)/$(CCWSDLNAME)
 NCWSDLNAME=eucalyptus_nc.wsdl
@@ -14,16 +14,16 @@ CLIENT=CCclient
 CLIENTKILLALL=euca_killall
 #WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o
-SCLIBS=../storage/storage.o
+SCLIBS=../storage/storage.o 
 VNLIBS=../net/vnetwork.o ../util/misc.o
-WSSECLIBS=../util/euca_auth.o
+WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 CC_LIBS 	= ${LIBS} -lcurl
 
 all: server client
 
 build: all
 
-generated/stubs: $(CCWSDL)
+generated/stubs: $(CCWSDL) $(NCWSDL)
 	rm -rf generated
 	mkdir -p generated
 	@echo Generating client stubs
@@ -44,16 +44,16 @@ generated/stubs: $(CCWSDL)
 
 server: $(SERVICE_SO)
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
+$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so 
 	$(CC) -shared generated/*.o server-marshal.o handlers.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
 client: $(CLIENT)_full $(CLIENTKILLALL)
 
 $(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
-	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c cc-client-marshal-adb.c -DMODE=1
+	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o $(WSSECLIBS) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1
 
 $(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
-	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c cc-client-marshal-adb.c -DMODE=0
+	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CC_LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o $(WSSECLIBS) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/

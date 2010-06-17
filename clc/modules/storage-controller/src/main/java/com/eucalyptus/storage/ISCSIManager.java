@@ -81,6 +81,7 @@ import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
@@ -96,18 +97,16 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class ISCSIManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
-	private static final String STORE_PREFIX = "iqn.2009-06." + StorageProperties.SC_LOCAL_NAME + ":store";
-
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
 		String returnValue;
-		returnValue = SystemUtil.run(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "tgtadm", "--help"});
+		returnValue = SystemUtil.run(new String[]{"sudo", "tgtadm", "--help"});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
 		} else {
 			LOG.info(returnValue);
 		}
-		if(SystemUtil.runAndGetCode(new String[]{LVM2Manager.eucaHome + LVM2Manager.EUCA_ROOT_WRAPPER, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
 			throw new EucalyptusCloudException("Unable to connect to tgt daemon. Is tgtd loaded?");
 		}
 	}
@@ -220,7 +219,7 @@ public class ISCSIManager implements StorageExportManager {
 		try {
 			List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
 			if(metaInfoList.size() <= 0) {
-				metaInfo.setStore_prefix(STORE_PREFIX);
+				metaInfo.setStorePrefix(StorageProperties.STORE_PREFIX);
 				metaInfo.setStoreNumber(0);
 				metaInfo.setStoreUser("eucalyptus");
 				metaInfo.setTid(1);
@@ -237,14 +236,14 @@ public class ISCSIManager implements StorageExportManager {
 			//check if account actually exists, if not create it.			
 			if(!checkUser("eucalyptus")) {
 				try {
-					addUser("eucalyptus", userInfo.getPassword());
+					addUser("eucalyptus", BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
 				} catch (ExecutionException e1) {
 					LOG.error(e1);					
 					return;
 				}
 			}
 		} catch(EucalyptusCloudException ex) {
-			String password = Hashes.getRandom(16);
+			String password = Hashes.getRandom(20);
 			try {
 				addUser("eucalyptus", password);
 			} catch (ExecutionException e1) {
@@ -252,8 +251,13 @@ public class ISCSIManager implements StorageExportManager {
 				dbUser.rollback();
 				return;
 			}
-			CHAPUserInfo userInfo = new CHAPUserInfo("eucalyptus", password);
-			dbUser.add(userInfo);
+			CHAPUserInfo userInfo;
+			try {
+				userInfo = new CHAPUserInfo("eucalyptus", BlockStorageUtil.encryptSCTargetPassword(password));
+				dbUser.add(userInfo);
+			} catch (EucalyptusCloudException e) {
+				LOG.error(e);
+			}
 		} finally {
 			dbUser.commit();
 		}
@@ -270,7 +274,7 @@ public class ISCSIManager implements StorageExportManager {
 				ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
 				int storeNumber = foundMetaInfo.getStoreNumber();
 				int tid = foundMetaInfo.getTid();
-				iscsiVolumeInfo.setStoreName(foundMetaInfo.getStore_prefix() + storeNumber);
+				iscsiVolumeInfo.setStoreName(foundMetaInfo.getStorePrefix() + StorageProperties.NAME + ":store" + storeNumber);
 				iscsiVolumeInfo.setStoreUser(foundMetaInfo.getStoreUser());
 				iscsiVolumeInfo.setTid(tid);
 				iscsiVolumeInfo.setLun(1);
@@ -278,22 +282,6 @@ public class ISCSIManager implements StorageExportManager {
 				foundMetaInfo.setTid(++tid);
 			}
 			db.commit();
-		}
-	}
-
-	private String encryptTargetPassword(String password) throws EucalyptusCloudException {
-		EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-		try {
-			ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
-			PublicKey ncPublicKey = X509Cert.toCertificate(credentials.getNodeCertificate()).getPublicKey();
-			credDb.commit();
-			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-			cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
-			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
-		} catch ( Exception e ) {
-			LOG.error( "Unable to encrypt storage target password" );
-			credDb.rollback( );
-			throw new EucalyptusCloudException(e.getMessage(), e);
 		}
 	}
 
@@ -331,16 +319,10 @@ public class ISCSIManager implements StorageExportManager {
 		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo("eucalyptus"));
-			String encryptedPassword;
-			try {
-				encryptedPassword = encryptTargetPassword(userInfo.getPassword());
-				return encryptedPassword;
-			} catch (EucalyptusCloudException e) {
-				LOG.error("Unable to encrypt target password. Please check credentials. Have you configured a cluster?", e);
-			}
-			return null;
+			String encryptedPassword = userInfo.getEncryptedPassword();
+			return BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(encryptedPassword));
 		} catch(EucalyptusCloudException ex) {
-			throw new EucalyptusCloudException("Unable to find CHAP user: " + "eucalyptus");
+			throw new EucalyptusCloudException("Unable to get CHAP password for: " + "eucalyptus");
 		} finally {
 			db.commit();
 		}

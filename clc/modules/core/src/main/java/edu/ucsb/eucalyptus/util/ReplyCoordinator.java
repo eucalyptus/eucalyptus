@@ -66,7 +66,7 @@
 package edu.ucsb.eucalyptus.util;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -80,13 +80,13 @@ public class ReplyCoordinator {
   private static long MAP_GET_WAIT_MS = 10;
   private static long MAP_SUBMIT_SLEEP_MS = MAP_GET_WAIT_MS;
   private long MAP_TIMEOUT_MS = 15000;
-  private ConcurrentHashMap<String, EucalyptusMessage> replyMap;
+  private ConcurrentHashMap<String, BaseMessage> replyMap;
   private ConcurrentHashMap<String,String> waitList;
 
   public ReplyCoordinator()
   {
     this.MAP_TIMEOUT_MS = 15000;
-    this.replyMap = new ConcurrentHashMap<String, EucalyptusMessage>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
+    this.replyMap = new ConcurrentHashMap<String, BaseMessage>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
     this.waitList = new ConcurrentHashMap<String, String>( MAP_CAPACITY, MAP_BIN_AVG_THRESHOLD, MAP_NUM_CONCURRENT );
   }
   public ReplyCoordinator( long user_timeout )
@@ -96,7 +96,7 @@ public class ReplyCoordinator {
   }
 
 
-  public void putMessage( EucalyptusMessage msg )
+  public void putMessage( BaseMessage msg )
   {
     long startTime = System.currentTimeMillis();
     String msgCorId = msg.getCorrelationId();
@@ -128,11 +128,11 @@ public class ReplyCoordinator {
     }
   }
 
-  public EucalyptusMessage getMessage( String corId )
+  public BaseMessage getMessage( String corId )
   {
     long startTime = System.currentTimeMillis();
     this.waitList.put( corId, corId );
-    EucalyptusMessage reply = null;
+    BaseMessage reply = null;
     synchronized ( corId )
     {
       while ( !this.replyMap.containsKey( corId ) && (System.currentTimeMillis() - startTime ) < MAP_TIMEOUT_MS )

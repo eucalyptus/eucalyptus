@@ -35,7 +35,7 @@ public class Service implements ComponentInformation, Comparable<Service> {
         local = true;
       }
       URI uri = null;
-      if ( local ) {
+      if ( !local ) {
         this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
         uri = this.parent.getConfiguration( ).makeUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
       } else {

@@ -19,7 +19,7 @@ public class BindingDiscovery extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processsClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Throwable {
     Field f;
     String bindingList;
     try {

@@ -125,7 +125,7 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
     eucaMsg.setEffectiveUserId( admin ? "eucalyptus" : userId );
 
     try {
-      Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.ucsb.edu" ) );
+      Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.com" ) );
       msg = binding.toOM( eucaMsg );
     } catch ( RuntimeException e ) {
       throw new BindingException( "Failed to build a valid message: " + e.getMessage( ) );

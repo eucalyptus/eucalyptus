@@ -93,6 +93,7 @@ import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -145,7 +146,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   
   private void prepareComponent( com.eucalyptus.bootstrap.Component component, InetSocketAddress addr ) throws ServiceRegistrationException {
     Component c = Components.lookup( component );
-    c.buildService( c.getUri( addr.getHostName( ), c.getConfiguration( ).getDefaultPort( ) ) );
+    c.buildService( c.getUri( addr.getAddress( ).getHostAddress( ), c.getConfiguration( ).getDefaultPort( ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -162,7 +163,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       for ( HeartbeatComponentType component : msg.getComponents( ) ) {
         LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
-        Components.lookup( component.getName( ) ).buildService( );
+        Component comp = Components.lookup( component.getComponent( ) );
+        comp.buildService( comp.getUri( addr.getAddress( ).getHostAddress( ), comp.getConfiguration( ).getDefaultPort( ) ) );
         initializedComponents.add( component.getComponent( ) );
       }
       if ( !initializedComponents.contains( Components.delegate.storage.name( ) ) ) {
@@ -171,11 +173,11 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       if ( !initializedComponents.contains( Components.delegate.walrus.name( ) ) ) {
         Components.lookup( Components.delegate.walrus ).markDisabled( );
       }
-      System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
-      System.setProperty( "euca.db.url", Components.lookup( Components.delegate.db ).getBuilder( ).list( ).get( 0 ).getUri( ) );
+      for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+        stage.updateBootstrapDependencies( );
+      }
       try {
         GroovyUtil.evaluateScript( "after_database.groovy" );
-        GroovyUtil.evaluateScript( "after_persistence.groovy" );
       } catch ( ScriptExecutionFailedException e1 ) {
         LOG.debug( e1, e1 );
         System.exit( 123 );
@@ -205,7 +207,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       LOG.error( e, e );
       System.exit( 123 );
     } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
+      LOG.error( e, e );
       System.exit( 123 );
     }
   }
@@ -227,7 +229,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
     pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
     try {
-      pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ) ) );
+      pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
     } catch ( BindingException e ) {
       LOG.error( e, e );
     }
@@ -319,12 +321,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
     List<String> registeredComponents = Lists.newArrayList( );
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
-      if ( !initializedComponents.contains( component.getComponent( ) ) ) {
+      if ( !initializedComponents.contains( component.getComponent( ) ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
         System.exit( 123 );//HUP
       }
       registeredComponents.add( component.getComponent( ) );
     }
-    if ( !registeredComponents.containsAll( initializedComponents ) ) {
+    if ( !registeredComponents.containsAll( initializedComponents ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
       System.exit( 123 );//HUP
     }
     //FIXME: end.

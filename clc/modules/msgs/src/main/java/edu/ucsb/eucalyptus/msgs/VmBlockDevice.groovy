@@ -167,7 +167,7 @@ public class Volume extends EucalyptusData {
 
 }
 
-public class AttachedVolume extends EucalyptusData {
+public class AttachedVolume extends EucalyptusData implements Comparable<AttachedVolume> {
 
   String volumeId;
   String instanceId;
@@ -190,16 +190,20 @@ public class AttachedVolume extends EucalyptusData {
 
   public AttachedVolume() {}
 
-  boolean equals(final Object o) {
+  public boolean equals(final Object o) {
     if ( this.is(o) ) return true;
-    if ( !o || getClass() != o.class ) return false;
+    if ( o == null || !getClass().equals( o.class ) ) return false;
     AttachedVolume that = (AttachedVolume) o;
     if ( volumeId ? !volumeId.equals(that.volumeId) : that.volumeId != null ) return false;
     return true;
   }
 
-  int hashCode() {
+  public int hashCode() {
     return (volumeId ? volumeId.hashCode() : 0);
+  }
+  
+  public int compareTo( AttachedVolume that ) {
+    return this.volumeId.compareTo( that.volumeId );
   }
 
 }

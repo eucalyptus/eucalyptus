@@ -63,12 +63,18 @@ permission notice:
 #include <string.h> 
 #include "data.h"
 
-int allocate_virtualMachine(virtualMachine *out, int mem, int disk, int cores, char *name) {
+int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in)
+{
   if (out != NULL) {
-    out->mem = mem;
-    out->disk = disk;
-    out->cores = cores;
-    snprintf(out->name, 64, "%s", name);
+    out->mem = in->mem;
+    out->disk = in->disk;
+    out->cores = in->cores;
+    snprintf(out->name, 64, "%s", in->name);
+
+    int i;
+    for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
+      out->deviceMapping[i].size = in->deviceMapping[i].size;
+    }
   }
   return(0);
 }
@@ -188,7 +194,6 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
       */
     }
     inst->stateCode = stateCode;
-    
     return inst;
 }
 

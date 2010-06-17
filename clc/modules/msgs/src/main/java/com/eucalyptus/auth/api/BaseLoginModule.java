@@ -27,7 +27,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
   
   @Override
   public boolean abort( ) throws LoginException {
-    BaseLoginModule.LOG.debug( "Login aborted." );
+    LOG.debug( "Login aborted." );
     this.reset( );
     return true;
   }

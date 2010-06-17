@@ -4,8 +4,7 @@ from boto.ec2.regioninfo import RegionInfo
 from euca_admin.clusters import Cluster
 
 def main():
-  c = Cluster()
-  c.describe()
+  c = Cluster().cli_describe()
   sys.exit()
 
 if __name__ == "__main__":

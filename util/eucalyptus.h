@@ -77,9 +77,10 @@ permission notice:
 #define EUCALYPTUS_ROOTWRAP           "%s/usr/lib/eucalyptus/euca_rootwrap"
 #define EUCALYPTUS_DETACH           "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/detach.pl"
 #define EUCALYPTUS_XM           "sudo xm"
-#define EUCALYPTUS_CONNECT_ISCSI    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/connect_iscsitarget.pl"
-#define EUCALYPTUS_DISCONNECT_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
-#define EUCALYPTUS_GET_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_iscsitarget.pl"
+
+#define EUCALYPTUS_CONNECT_ISCSI    "sudo %s/usr/share/eucalyptus/connect_iscsitarget.pl"
+#define EUCALYPTUS_DISCONNECT_ISCSI "sudo %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
+#define EUCALYPTUS_GET_ISCSI "sudo %s/usr/share/eucalyptus/get_iscsitarget.pl"
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
 #define CC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
@@ -102,6 +103,7 @@ permission notice:
 #define CONFIG_NODES "NODES"
 #define CONFIG_HYPERVISOR "HYPERVISOR"
 #define CONFIG_NC_CACHE_SIZE "NC_CACHE_SIZE"
+#define CONFIG_NC_WORK_SIZE "NC_WORK_SIZE"
 #define CONFIG_NC_SWAP_SIZE "SWAP_SIZE"
 #define CONFIG_SAVE_INSTANCES "MANUAL_INSTANCES_CLEANUP"
 #define CONFIG_CONCURRENT_DISK_OPS "CONCURRENT_DISK_OPS"
@@ -115,8 +117,12 @@ permission notice:
 #define MAXLOGFILESIZE 32768000
 #define EUCA_MAX_GROUPS 64
 #define EUCA_MAX_VOLUMES 256
-#define DEFAULT_NC_CACHE_SIZE 99999 /* in MB */
+#define EUCA_MAX_DEVMAPS 64
+#define EUCA_MAX_PATH 4096
+#define DEFAULT_NC_CACHE_SIZE 999999 // in MB
+#define DEFAULT_NC_WORK_SIZE  999999 // in MB
 #define DEFAULT_SWAP_SIZE 512 /* in MB */
+#define MAX_PATH_SIZE 4096 // TODO: remove
 
 #define MEGABYTE 1048576
 #define OK 0
@@ -124,7 +130,7 @@ permission notice:
 #define ERROR_FATAL 1
 #define ERROR_RETRY -1
 
-typedef enum instance_states_t {
+typedef enum instance_states_t { // these must match instance_sate_names[] below!
     /* the first 7 should match libvirt */
     NO_STATE = 0, 
     RUNNING,
@@ -138,6 +144,10 @@ typedef enum instance_states_t {
     STAGING,
     BOOTING,
     CANCELED,
+
+    /* state after running */
+    BUNDLING_SHUTDOWN,
+    BUNDLING_SHUTOFF,
 
     /* the only three states reported to CLC */
     PENDING,  /* staging in data, starting to boot, failed to boot */ 
@@ -160,9 +170,28 @@ static char * instance_state_names[] = {
     "Booting",
     "Canceled",
 
+	"Bundling-Shutdown",
+    "Bundling-Shutoff",
+
     "Pending",
     "Extant",
     "Teardown"
+};
+
+typedef enum bundling_progress_t {
+    NOT_BUNDLING = 0,
+	BUNDLING_IN_PROGRESS,
+	BUNDLING_SUCCESS,
+        BUNDLING_FAILED,
+        BUNDLING_CANCELLED
+} bundling_progress; 
+
+static char * bundling_progress_names[] = {
+	"none",
+	"bundling",
+	"succeeded",
+	"failed",
+        "cancelled"
 };
 
 #endif

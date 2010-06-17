@@ -47,6 +47,7 @@ public class CompositeHelper<T> {
         dest[sourceField.name]=source[sourceField.name];
       }
     }
+    return Arrays.asList(args);
   }
   
   public static Object update( Object source, Object dest ) {
@@ -55,6 +56,7 @@ public class CompositeHelper<T> {
       LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
       dest[sourceField.name]=source[sourceField.name];
     }
+    return dest;
   }
   
   public static Object updateNulls( Object source, Object dest ) {
@@ -63,6 +65,7 @@ public class CompositeHelper<T> {
       LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
       dest[sourceField.name]=source[sourceField.name];
     }
+    return dest;
   }
   
 }

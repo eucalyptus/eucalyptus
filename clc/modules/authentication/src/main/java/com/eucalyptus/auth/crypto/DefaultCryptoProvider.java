@@ -22,7 +22,7 @@ import com.eucalyptus.auth.api.CryptoProvider;
 import com.eucalyptus.auth.api.HmacProvider;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.records.EventType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String  KEY_ALGORITHM         = "RSA";
@@ -104,7 +104,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
     digest.update( inputBytes );
     if ( randomize ) {
       SecureRandom random = new SecureRandom( );
-      random.setSeed( System.currentTimeMillis( ) );
+//TODO: RELEASE:      random.setSeed( System.currentTimeMillis( ) );
       byte[] randomBytes = random.generateSeed( inputBytes.length );
       digest.update( randomBytes );
     }
@@ -115,11 +115,11 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
     X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
     SystemCredentialProvider sys = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus );
-    if( sys.getCertificate( ) != null ) {
-      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
-    } else {
+//    if( sys.getCertificate( ) != null ) {
+//      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
+//    } else {
       return generateCertificate( keys, x500, x500, null );
-    }
+//    }
   }
   
   public X509Certificate generateCertificate( KeyPair keys, String userName ) {
@@ -134,7 +134,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey ) {
     signer = ( signingKey == null ? signer : subjectDn );
     signingKey = ( signingKey == null ? keys.getPrivate( ) : signingKey );
-    LOG.debug( EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ) );
+    EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ).info();
     X509V3CertificateGenerator certGen = new X509V3CertificateGenerator( );
     certGen.setSerialNumber( BigInteger.valueOf( System.nanoTime( ) ).shiftLeft( 4 ).add( BigInteger.valueOf( ( long ) Math.rint( Math.random( ) * 1000 ) ) ) );
     certGen.setIssuerDN( signer );
@@ -164,7 +164,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   public KeyPair generateKeyPair( ) {
     KeyPairGenerator keyGen = null;
     try {
-      LOG.debug( EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR ) );
+      EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR );
       keyGen = KeyPairGenerator.getInstance( KEY_ALGORITHM, "BC" );
       SecureRandom random = new SecureRandom( );
       random.setSeed( System.currentTimeMillis( ) );

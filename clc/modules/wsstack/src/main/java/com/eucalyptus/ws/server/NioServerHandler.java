@@ -63,6 +63,9 @@
  */
 package com.eucalyptus.ws.server;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
+import javax.security.auth.login.LoginException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -85,6 +88,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
+import org.jboss.netty.util.DebugUtil;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.system.LogLevels;
@@ -96,7 +100,7 @@ import com.eucalyptus.ws.util.PipelineRegistry;
 public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private static Logger LOG   = Logger.getLogger( NioServerHandler.class );
   private boolean       first = true;
-
+  
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
     if ( !Bootstrap.isFinished( ) ) {
@@ -105,9 +109,10 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       lookupPipeline( ctx, e );
     } else if ( e.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) e.getMessage( );
-      if ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_1 ) 
-          || ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_0 ) 
-              && HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase( httpRequest.getHeader( HttpHeaders.Names.CONNECTION ) ) ) ) {
+      if ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_1 )
+           || ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_0 ) && HttpHeaders.Values.KEEP_ALIVE
+                                                                                                                 .equalsIgnoreCase( httpRequest
+                                                                                                                                               .getHeader( HttpHeaders.Names.CONNECTION ) ) ) ) {
         ChannelHandler p;
         while ( ( p = ctx.getPipeline( ).getLast( ) ) != this ) {
           ctx.getPipeline( ).remove( p );
@@ -121,35 +126,14 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     }
     ctx.sendUpstream( e );
   }
-
+  
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
-      if( LogLevels.TRACE ) {
+      if ( LogLevels.TRACE ) {
         LOG.trace( request.getContent( ).toString( "UTF-8" ) );
       }
       final ChannelPipeline pipeline = ctx.getPipeline( );
-//      pipeline.addLast( "context-cleanup-handler", new SimpleChannelHandler() {
-//        @Override
-//        public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-//          try {
-//            Contexts.lookup( ctx.getChannel( ) ).clear( );
-//          } catch ( Exception e1 ) {
-//            LOG.debug( e1, e1 );
-//          }
-//          super.channelClosed( ctx, e );
-//        }
-//
-//        @Override
-//        public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
-//          try {
-//            Context.lookup( ctx.getChannel( ) ).clear( );
-//          } catch ( Exception e1 ) {
-//            LOG.debug( e1, e1 );
-//          }
-//          super.writeComplete( ctx, e );
-//        }        
-//      } );
       FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
       filteredPipeline.unroll( pipeline );
       this.first = false;
@@ -160,41 +144,50 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       throw e2;
     }
   }
-
+  
   @Override
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) throws Exception {
     final Channel ch = e.getChannel( );
     final Throwable cause = e.getCause( );
-    if( cause instanceof ReadTimeoutException ) {      
+    if ( cause instanceof ReadTimeoutException ) {
       LOG.debug( cause, cause );
-      this.sendError( ctx, HttpResponseStatus.REQUEST_TIMEOUT );
+      this.sendError( ctx, HttpResponseStatus.REQUEST_TIMEOUT, cause );
     } else if ( cause instanceof WriteTimeoutException ) {
       LOG.debug( cause, cause );
       Channels.fireExceptionCaught( ctx, cause );
       ctx.getChannel( ).close( );
     } else if ( cause instanceof TooLongFrameException ) {
-      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST );
+      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
     } else if ( cause instanceof IllegalArgumentException ) {
-      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST);
+      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
+    } else if ( cause instanceof LoginException ) {
+      this.sendError( ctx, HttpResponseStatus.FORBIDDEN, cause );
     } else {
-      LOG.debug( "Internal Error.", cause );
+      LOG.error( "Internal Error.", cause );
       if ( ch.isConnected( ) ) {
         if ( e.getCause( ) instanceof WebServicesException ) {
-          this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ) );
+          this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ), cause );
         } else {
-          this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR );
+          this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, cause );
         }
       }
     }
   }
-
-  private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus status ) {
+  
+  private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus status, Throwable t ) {
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-    response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n", "UTF-8" ) );
+    if ( LogLevels.DEBUG ) {
+      ByteArrayOutputStream os = new ByteArrayOutputStream( );
+      PrintWriter out = new PrintWriter( os );
+      t.printStackTrace( out );
+      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ) + "\r\n" + os.toString( ) + "\r\n", "UTF-8" ) );      
+    } else {
+      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ), "UTF-8" ) );
+    }
     ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
     Channels.write( ctx, writeFuture, response );
-//    ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
+    //    ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
   }
 }

@@ -65,6 +65,7 @@ permission notice:
 #include "misc.h"
 #include <stdarg.h>
 #include <sys/types.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
@@ -73,13 +74,11 @@ permission notice:
 #include <fcntl.h> /* open */
 #include <utime.h> /* utime */
 #include <sys/wait.h>
-
-#ifndef NO_AXIS /* for compiling on systems without Axis */
-#include <neethi_policy.h>
-#include <neethi_util.h>
-#include <axutil_utils.h>
-#include <axis2_client.h>
-#include <axis2_stub.h>
+#include <sys/types.h>
+#include <dirent.h> // opendir, etc
+#include <errno.h> // errno
+#include <sys/time.h> // gettimeofday
+#include <limits.h>
 
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   int i, done, rc, j;
@@ -131,7 +130,7 @@ pid_t timewait(pid_t pid, int *status, int timeout) {
   time_t timer=0;
   int rc;
 
-  if (timeout < 0) timeout = 1;
+  if (timeout <= 0) timeout = 1;
 
   *status = 1;
   rc = waitpid(pid, status, WNOHANG);
@@ -145,31 +144,6 @@ pid_t timewait(pid_t pid, int *status, int timeout) {
   }
   return(rc);
 }
-
-int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile) {
-  axis2_svc_client_t *svc_client = NULL;
-  neethi_policy_t *policy = NULL;
-  axis2_status_t status = AXIS2_FAILURE;
-
-  //return(0);
-
-  svc_client =  axis2_stub_get_svc_client(stub, env);
-  if (!svc_client) {
-    logprintfl (EUCAERROR, "InitWSSEC(): ERROR could not get svc_client from stub\n");
-    return(1);
-  }
-  axis2_svc_client_engage_module(svc_client, env, "rampart");
-
-  policy = neethi_util_create_policy_from_file(env, policyFile);
-  if (!policy) {
-    logprintfl (EUCAERROR, "InitWSSEC(): ERROR could not initialize policy file %s\n", policyFile);
-    return(1);
-  }
-  status = axis2_svc_client_set_policy(svc_client, env, policy);
-    
-  return(0);
-}
-#endif /* NO_AXIS */
 
 int timelog=0; /* change to 1 for TIMELOG entries */
 
@@ -320,10 +294,21 @@ int check_directory(char *dir) {
   }
   
   rc = lstat(dir, &mystat);
-  if (rc < 0 || !S_ISDIR(mystat.st_mode)) {
-    return(1);
+  if (rc < 0)
+    return 1;
+
+  if (!S_ISDIR(mystat.st_mode)) {
+    if (S_ISLNK(mystat.st_mode)) { // links to dirs are OK
+      char tmp [4096];
+      snprintf (tmp, 4096, "%s/", dir);
+      lstat (tmp, &mystat);
+      if (S_ISDIR(mystat.st_mode)) {
+        return 0;
+      }
+    }
+    return 1;
   }
-  return(0);
+  return 0;
 }
 
 int check_file_newer_than(char *file, time_t mtime) {
@@ -436,51 +421,60 @@ int sscanf_lines (char * lines, char * format, void * varp)
     return found;
 }
 
+char * fp2str (FILE * fp)
+{
+#   define INCREMENT 512
+  int buf_max = INCREMENT;
+  int buf_current = 0;
+  char * last_read;
+  char * buf = NULL;
+
+  if (fp==NULL) return NULL;
+  do {
+    // create/enlarge the buffer
+    void * new_buf;
+    if ((new_buf = realloc (buf, buf_max)) == NULL) {
+      if ( buf != NULL ) { // previous realloc()s worked
+	free (buf); // free partial buffer
+      }
+      return NULL;
+    }
+    buf = new_buf;
+    logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
+
+    do { // read in until EOF or buffer is full
+      last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
+      if ( last_read != NULL )
+	buf_current = strlen(buf);
+      logprintfl (EUCADEBUG2, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
+    } while ( last_read && buf_max > buf_current+1 ); /* +1 is needed for fgets() to put \0 */
+        
+    buf_max += INCREMENT; /* in case it is full */
+  } while (last_read);
+
+  if ( buf_current < 1 ) {
+    free (buf);
+    buf = NULL;
+  }
+
+  return buf;
+}
+
 /* execute system(shell_command) and return stdout in new string
  * pointed to by *stringp */
 char * system_output (char * shell_command )
 {
-#   define INCREMENT 512
-    int buf_max = INCREMENT;
-    int buf_current = 0;
-    char * buf = NULL;
-    char * last_read;
-    FILE * fp;
+  char * buf = NULL;
+  FILE * fp;
 
-    /* forks off command (this doesn't fail if command doesn't exist */
-    logprintfl (EUCADEBUG, "system_output(): [%s]\n", shell_command);
-    if ( (fp=popen(shell_command, "r")) == NULL) 
-        return NULL; /* caller can check errno */
-    
-    do {
-        /* create/enlarge the buffer */
-        void * new_buf;
-        if ((new_buf = realloc (buf, buf_max)) == NULL) {
-            if ( buf != NULL ) { /* previous realloc()s worked */
-                free (buf); /* free partial buffer */
-                buf = NULL;
-            }
-            break;
-        }
-        buf = new_buf;
-        logprintfl (EUCADEBUG2, "system_output: enlarged buf to %d\n", buf_max);
+  /* forks off command (this doesn't fail if command doesn't exist */
+  logprintfl (EUCADEBUG, "system_output(): [%s]\n", shell_command);
+  if ( (fp=popen(shell_command, "r")) == NULL) 
+    return NULL; /* caller can check errno */
+  buf = fp2str (fp);
 
-        do { /* read in output until EOF or buffer is full */
-            last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
-            if ( last_read != NULL )
-                buf_current = strlen(buf);
-            logprintfl (EUCADEBUG2, "system_output: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
-        } while ( last_read && buf_max > buf_current+1 ); /* +1 is needed for fgets() to put \0 */
-        
-        buf_max += INCREMENT; /* in case it is full */
-    } while (last_read);
-
-    if ( buf_current < 1 ) {
-        free (buf);
-        buf = NULL;
-    }
-    pclose(fp);
-    return buf;
+  pclose(fp);
+  return buf;
 }
 
 
@@ -1138,6 +1132,20 @@ int write2file(const char *path, char *str) {
   return(0);
 }
 
+char * file2strn (const char * path, const ssize_t limit) 
+{
+  struct stat mystat;
+  if (stat (path, &mystat) < 0) {
+    logprintfl (EUCAERROR, "error: file2strn() could not stat file %s\n", path);
+    return NULL;
+  }
+  if (mystat.st_size>limit) {
+    logprintfl (EUCAERROR, "error: file %s exceeds the limit (%d) in file2strn()\n", path, limit);
+    return NULL;
+  }
+  return file2str (path);
+}
+
 /* read file 'path' into a new string */
 char * file2str (const char * path)
 {
@@ -1188,45 +1196,60 @@ char * file2str (const char * path)
     return content;
 }
 
-/* extract integer from str bound by 'begin' and 'end' */
-long long str2longlong (const char * str, const char * begin, const char * end)
+// extract string from str bound by 'begin' and 'end'
+char * str2str (const char * str, const char * begin, const char * end)
 {
-    long long value = -1L;
+  char * buf = NULL;
 
     if ( str==NULL || begin==NULL || end==NULL || strlen (str)<3 || strlen (begin)<1 || strlen (end)<1 ) {
-        logprintfl (EUCAERROR, "error: str2int() called with bad parameters\n");
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() called with bad parameters\n");
+        return buf;
     }
 
     char * b = strstr ( str, begin );
     if ( b==NULL ) {
-        logprintfl (EUCAERROR, "error: str2int() beginning string '%s' not found\n", begin);
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() beginning string '%s' not found\n", begin);
+        return buf;
     }
 
     char * e = strstr ( str, end );
     if ( e==NULL ) {
-        logprintfl (EUCAERROR, "error: str2int() end string '%s' not found\n", end);
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() end string '%s' not found\n", end);
+        return buf;
     }
 
-    b += strlen (begin); // b now points at the supposed number
+    b += strlen (begin); // b now points at the supposed content
     int len = e-b;
     if ( len < 0 ) {
-        logprintfl (EUCAERROR, "error: str2int() there is nothing between '%s' and '%s'\n", begin, end);
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() there is nothing between '%s' and '%s'\n", begin, end);
+        return buf;
     }
 
     if ( len > BUFSIZE-1 ) {
-        logprintfl (EUCAERROR, "error: str2int() string between '%s' and '%s' is too long\n", begin, end);
-        return value;
+        logprintfl (EUCAERROR, "error: str2str() string between '%s' and '%s' is too long\n", begin, end);
+        return buf;
     }
 
-    char buf [BUFSIZE];
-    strncpy (buf, b, len);
-    value = atoll (buf);
+    buf = malloc (len+1);
+    if (buf!=NULL) {
+      strncpy (buf, b, len);
+      buf [len] = '\0';
+    }
 
-    return value;
+    return buf;
+}
+
+/* extract integer from str bound by 'begin' and 'end' */
+long long str2longlong (const char * str, const char * begin, const char * end)
+{
+  long long val = -1L;
+  char * buf = str2str (str, begin, end);
+  if (buf!=NULL) {
+    val = atoll (buf);
+    free (buf);
+  }
+
+  return val;
 }
 
 int uint32compar(const void *ina, const void *inb) {
@@ -1307,4 +1330,249 @@ int maxint(int a, int b) {
 
 int minint(int a, int b) {
   return(a<b?a:b);
+}
+
+// copies contents of src to dst, possibly overwriting whatever is in dst
+int copy_file (const char * src, const char * dst)
+{
+	struct stat mystat;
+
+	if (stat (src, &mystat) < 0) {
+		logprintfl (EUCAERROR, "error: cannot stat '%s'\n", src);
+		return ERROR;
+	}
+
+	int ifp = open (src, O_RDONLY);
+	if (ifp<0) {
+		logprintfl (EUCAERROR, "failed to open the input file '%s'\n", src);
+		return ERROR;
+	}
+
+	int ofp = open (dst, O_WRONLY | O_CREAT, 0600);
+	if (ofp<0) {
+		logprintfl (EUCAERROR, "failed to create the ouput file '%s'\n", dst);
+		close (ifp);
+		return ERROR;
+	}
+
+#   define _BUFSIZE 16384
+	char buf [_BUFSIZE];
+	ssize_t bytes;
+	int ret = OK;
+
+	while ((bytes = read (ifp, buf, _BUFSIZE)) > 0) {
+		if (write (ofp, buf, bytes) < 1) {
+			logprintfl (EUCAERROR, "failed while writing to '%s'\n", dst);
+			ret = ERROR;
+			break;
+		}
+	}
+	if (bytes<0) {
+		logprintfl (EUCAERROR, "failed while writing to '%s'\n", dst);
+		ret = ERROR;
+	}
+
+	close (ifp);
+	close (ofp);
+
+	return ret;
+}
+
+long long file_size (const char * file_path)
+{
+    struct stat mystat;
+    int err = stat (file_path, &mystat);
+    if (err<0) return (long long)err;
+    return (long long)(mystat.st_size);
+}
+
+// tolower for strings (result must be freed by the caller)
+
+char * strduplc (const char * s)
+{
+	char * lc = strdup (s);
+	for (int i=0; i<strlen(s); i++) {
+		lc [i] = tolower(lc [i]);
+	}
+	return lc;
+}
+
+// some XML parsing routines
+
+// given a '\0'-terminated string in 'xml', finds the next complete <tag...>
+// and returns its name in a newly allocated string (which must be freed by
+// the caller) or returns NULL if no tag can be found or if the XML is not 
+// well formed; when not NULL, the following parameters are also returned:
+// 
+//     start   = index of the '<' character
+//     end     = index of the '>' character
+//     single  = 1 if this is a <..../> tag
+//     closing = 1 if this is a </....> tag
+
+static char * next_tag (const char * xml, int * start, int * end, int * single, int * closing)
+{
+    char * ret = NULL;
+
+    int name_start = -1;
+    int name_end = -1;
+    int tag_start = -1;
+
+    for (const char *p = xml; *p; p++) {
+        
+        if ( *p == '<' ) { // found a new tag
+            tag_start = (p - xml); // record the char so its offset can be returned
+
+            * closing = 0;
+            if (*(p+1) == '/' || *(p+1) == '?') {
+                if (*(p+1) == '/') // if followed by '/' then it is a "closing" tag
+                    * closing = 1;
+                name_start = (p - xml + 2); 
+                p++;
+            } else {
+                name_start = (p - xml + 1);
+            }
+            continue;
+        }
+
+        if ( *p == ' ' && name_start != -1 && name_end == -1 ) { // a name may be terminated by a space
+            name_end = (p - 1 - xml);
+            continue;
+        }
+
+        if ( *p == '>' ) {
+            if (name_start == -1) // never saw '<', error
+                break;
+            if (p < xml + 2) // tag is too short, error
+                break;
+            const char * last_ch = p-1;
+            if ( * last_ch == '/' || * last_ch == '?' ) {
+                * single = 1; // preceded by '/' then it is a "single" tag
+                last_ch--;
+            } else {
+                * single = 0;
+            }
+
+            if (name_start != -1 && name_end == -1) { // a name may be terminated by '/' or '>' or '?'
+                name_end = (last_ch - xml);
+            }
+
+            if ((name_end-name_start)>=0) { // we have a name rather than '<>'
+                ret = calloc (name_end-name_start+2, sizeof (char));
+                if (ret==NULL) break;
+                strncpy (ret, xml + name_start, name_end - name_start + 1);
+                * start = tag_start;
+                * end = p - xml;
+            }
+            break;
+        }
+    }
+
+    return ret;
+}
+
+// given a '\0'-terminated string in 'xml' and an 'xpath' of an XML
+// element, returns the "content" of that element in a newly allocated
+// string, which must be freed by the caller; for example, with XML:
+// 
+//   "<a><b>foo</b><c><d>bar</d><e>baz</e></c></a>"
+// 
+// the content returned for xpath "a/c/e" is "baz"
+
+static char * find_cont (const char * xml, char * xpath) 
+{
+    char * ret = NULL;
+
+    int tag_start;
+    int tag_end = -1;
+    int single;
+    int closing;
+    char * name;
+    #define _STK_SIZE 64
+    char       * n_stk [_STK_SIZE];
+    const char * c_stk [_STK_SIZE];
+    int stk_p = -1;
+    
+    // iterate over tags until the matching xpath is reached or
+    // until no more tags are found in the 'xml'
+    for (int xml_offset=0; 
+         (name = next_tag (xml + xml_offset, &tag_start, &tag_end, &single, &closing))!=NULL; 
+         xml_offset += tag_end + 1)
+    {
+        if (single) {
+            // not interested in singles because we are looking for content
+            
+        } else if (!closing) { // opening a tag
+            // put name and pointer to content onto the stack
+            stk_p++;   
+            if (stk_p==_STK_SIZE) // exceeding stack size, error
+                goto cleanup;
+            n_stk [stk_p] = strduplc (name); // put a lower-case-only copy onto stack
+            c_stk [stk_p] = xml + xml_offset + tag_end + 1;
+            
+        } else { // closing tag
+            // get the name in all lower-case, for consistency with xpath
+            char * name_lc = strduplc (name);
+            free (name);
+            name = name_lc;
+
+            // name doesn't match last seen opening tag, error
+            if (strcmp(n_stk[stk_p], name)!=0) 
+                goto cleanup;
+
+            // construct the xpath of the closing tag based on stack contents
+            char xpath_cur [MAX_PATH] = "";
+            for (int i=0; i<=stk_p; i++) {
+                if (i>0) strncat (xpath_cur, "/", MAX_PATH);
+                strncat (xpath_cur, n_stk[i], MAX_PATH);
+            }
+              
+            // pop the stack whether we have a match or not
+            if (stk_p<0) // past the bottom of the stack, error
+                goto cleanup; 
+            const char * contp = c_stk [stk_p];
+            int cont_len = xml + xml_offset + tag_start - contp;
+            free (n_stk [stk_p]);
+            stk_p--;
+
+            // see if current xpath matches the requested one
+            if (strcmp (xpath, xpath_cur)==0) {
+                char * cont = calloc (cont_len + 1, sizeof (char));
+                if (cont==NULL)
+                    goto cleanup;
+                strncpy (cont, contp, cont_len);
+                ret = cont;
+                break;
+            }
+        }
+        free (name);
+        name = NULL;
+    }
+
+cleanup:
+    if (name) free (name); // for exceptions
+    for (int i=0; i<=stk_p; i++)
+        free (n_stk [i]); // free everything on the stack
+    return ret;
+}
+
+// given a '\0'-terminated string in 'xml' and an 'xpath' of an XML
+// element, returns the "content" of that element in a newly allocated
+// string, which must be freed by the caller; for example, with XML:
+// 
+//   "<a><b>foo</b><c><d>bar</d><e>baz</e></c></a>"
+// 
+// the content returned for xpath "a/c/e" is "baz"
+
+char * xpath_content (const char * xml, const char * xpath)
+{
+    char * ret;
+
+    if (xml==NULL || xpath==NULL) return NULL;
+    char * xpath_l = strduplc (xpath); // lower-case copy of requested xpath
+    if (xpath_l != NULL) {
+        ret = find_cont (xml, xpath_l);
+        free (xpath_l);
+    }
+
+    return ret;
 }

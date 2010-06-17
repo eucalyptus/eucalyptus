@@ -108,11 +108,13 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 				if( !valid && credentials.getCertString() != null ) {
 					try {
 						X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( credentials.getCertString() ) );
-						PublicKey publicKey = nodeCert.getPublicKey( );
-						sig = Signature.getInstance( "SHA1withRSA" );
-						sig.initVerify( publicKey );
-						sig.update( data.getBytes( ) );
-						valid = sig.verify( Base64.decode( signature ) );
+						if(nodeCert != null) {
+							PublicKey publicKey = nodeCert.getPublicKey( );
+							sig = Signature.getInstance( "SHA1withRSA" );
+							sig.initVerify( publicKey );
+							sig.update( data.getBytes( ) );
+							valid = sig.verify( Base64.decode( signature ) );
+						}
 					} catch ( Exception e2 ) {
 						LOG.error ("Authentication error: " + e2.getMessage());
 						return false;
@@ -136,7 +138,7 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 				}
 				super.setCredential(queryId);
 				super.setPrincipal(user);
-				super.getGroups().addAll(Groups.lookupGroups( super.getPrincipal()));
+				super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
 				return true;	
 			} catch (NoSuchUserException e) {
 				LOG.error(e);

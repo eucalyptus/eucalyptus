@@ -72,7 +72,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_dns")
 @Table( name = "Zones" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ZoneInfo {
     @Id
     @GeneratedValue

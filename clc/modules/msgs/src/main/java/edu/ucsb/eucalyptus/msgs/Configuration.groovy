@@ -138,20 +138,3 @@ public class DeregisterWalrusResponseType extends DeregisterComponentResponseTyp
 public class DescribeWalrusesType extends DescribeComponentsType {}
 public class DescribeWalrusesResponseType extends DescribeComponentsResponseType {}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

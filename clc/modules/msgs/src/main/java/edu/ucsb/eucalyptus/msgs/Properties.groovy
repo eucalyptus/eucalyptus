@@ -83,6 +83,7 @@ public class DescribePropertiesResponseType extends EucalyptusMessage {
 public class ModifyPropertyValueType extends EucalyptusMessage {
   String name;
   String value;
+  Boolean reset;
 }
 public class ModifyPropertyValueResponseType extends EucalyptusMessage {
   String name;

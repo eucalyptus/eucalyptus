@@ -77,12 +77,10 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.cloud.RequestTransactionScript;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class ReplyQueue {
   private static Logger                                 LOG                   = Logger.getLogger( ReplyQueue.class );
@@ -97,20 +95,20 @@ public class ReplyQueue {
       reply = new EucalyptusErrorMessageType( service, request, t.getMessage( ) );
     }
     String corrId = reply.getCorrelationId( );
-    LOG.debug( EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, reply.getCorrelationId( ), reply.getClass( ).getSimpleName( ) ) );    
+    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, reply.getCorrelationId( ), reply.getClass( ).getSimpleName( ) ).debug( );    
     try {
       Context context = Contexts.lookup( corrId );
       Channel channel = context.getChannel( );
-      Contexts.clear(context);
       Channels.write( channel, reply );
+      Contexts.clear(context);
     } catch ( NoSuchContextException e ) {
-      LOG.debug( e, e );
+      LOG.trace( e, e );
     }
   }
   
   @SuppressWarnings( "unchecked" )
   public void handle( BaseMessage responseMessage ) {
-    LOG.debug( EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ) );
+    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
     String corrId = responseMessage.getCorrelationId( );
     try {
       Context context = Contexts.lookup( corrId );
@@ -124,7 +122,7 @@ public class ReplyQueue {
   }
 
   public void handle( ExceptionMessage exMsg ) {
-    LOG.debug( EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ) );
+    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ).debug( );
     LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
     Throwable exception = exMsg.getException( );
     Object payload = null;
@@ -133,8 +131,8 @@ public class ReplyQueue {
       MessagingException ex = ( MessagingException ) exception;
       MuleMessage muleMsg = ex.getUmoMessage( );
 
-      if ( payload instanceof RequestTransactionScript ) {
-        msg = ( ( RequestTransactionScript ) payload ).getRequestMessage( );
+      if ( payload instanceof VmAllocationInfo ) {
+        msg = ( ( VmAllocationInfo ) payload ).getRequest( );
       } else {
         try {
           msg = parsePayload( muleMsg.getPayload( ) );
@@ -169,15 +167,15 @@ public class ReplyQueue {
     return errMsg;
   }
 
-  private EucalyptusMessage parsePayload( Object payload ) throws Exception {
-    if ( payload instanceof EucalyptusMessage ) {
-      return ( EucalyptusMessage ) payload;
+  private BaseMessage parsePayload( Object payload ) throws Exception {
+    if ( payload instanceof BaseMessage ) {
+      return ( BaseMessage ) payload;
     } else if ( payload instanceof VmAllocationInfo ) {
       return ( ( VmAllocationInfo ) payload ).getRequest( );
     } else if ( !( payload instanceof String ) ) {
       return new EucalyptusErrorMessageType( "ReplyQueue", LogUtil.dumpObject( payload ) );
     } else {
-      return ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( ( String ) payload );
+      return ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
     }
   }
 

@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -77,18 +78,21 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.google.common.collect.Lists;
+import com.eucalyptus.records.EventRecord;
 
 @Provides( com.eucalyptus.bootstrap.Component.any )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
+  private static List<com.eucalyptus.bootstrap.Component> ignored = Lists.newArrayList( com.eucalyptus.bootstrap.Component.any, 
+                                                                                        com.eucalyptus.bootstrap.Component.component ); 
   
   @Override
   public boolean load( Stage current ) throws Exception {
     /** TODO: ultimately remove this: it is legacy and enforces a one-to-one relationship between component impls **/
     for ( com.eucalyptus.bootstrap.Component c : com.eucalyptus.bootstrap.Component.values( ) ) {
-      if ( com.eucalyptus.bootstrap.Component.any.equals( c ) ) continue;
+      if ( ignored.contains( c ) ) continue;
       try {
         Component comp = Components.lookup( c );
       } catch ( NoSuchElementException e ) {
@@ -101,7 +105,9 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
         try {
-          comp.buildService( s );
+          if ( comp.isEnabled( ) ) {
+            comp.buildService( s );
+          }
         } catch ( Throwable ex ) {
           LOG.warn( ex );
           LOG.error( ex, ex );
@@ -112,6 +118,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     if ( failed ) {
       BootstrapException.throwFatal( "Failures occurred while attempting to start component services.  See the log files for more information." );
     }
+    
     return true;
   }
   
@@ -122,7 +129,9 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
         try {
-          comp.startService( s );
+          if ( comp.isEnabled( ) ) {
+            comp.startService( s );
+          }
         } catch ( Throwable ex ) {
           LOG.warn( ex );
           LOG.error( ex, ex );

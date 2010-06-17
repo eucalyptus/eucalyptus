@@ -69,6 +69,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.HmacCredentials;
@@ -80,8 +81,10 @@ import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
 @ChannelPipelineCoverage( "one" )
 public class HmacHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( HmacHandler.class );
-  
-  public HmacHandler( ) {}
+  private boolean internal = false;
+  public HmacHandler( boolean b ) {
+    this.internal = b;
+  }
   
   @Override
   @SuppressWarnings( "deprecation" )
@@ -93,8 +96,10 @@ public class HmacHandler extends MessageStackHandler {
       httpRequest.getContent( ).readBytes( bos, httpRequest.getContent( ).readableBytes( ) );
       String blah = bos.toString( );
       bos.close( );
-      if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.toString( ) ) ) {
+      if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.toString( ) ) && !internal ) {
         throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
+      } else if ( internal ) {
+        parameters.put( SecurityParameter.AWSAccessKeyId.toString( ), Users.lookupUser( "admin" ).getQueryId( ) );
       }
       if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) {
         throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );
@@ -103,9 +108,12 @@ public class HmacHandler extends MessageStackHandler {
       String sig = parameters.remove( SecurityParameter.Signature.toString( ) );
       String sigVersion = parameters.get( RequiredQueryParams.SignatureVersion.toString( ) );
       String sigMethod = parameters.get( SecurityParameter.SignatureMethod.toString( ) );
-      sigMethod = ( ( sigMethod == null ) ? "HMACSHA" : sigMethod );
+      String verb = httpRequest.getMethod( ).getName( );
+      sigMethod = ( ( sigMethod == null ) ? "HMACSHA1" : sigMethod );
       Hmac hmac = Hmac.valueOf( "HmacSHA" + sigMethod.substring( 7 ) );
-      SecurityContext.getLoginContext( new HmacCredentials( httpRequest.getCorrelationId( ), httpRequest, sig, Integer.valueOf( sigVersion ), hmac ) ).login( );
+      String headerHost = httpRequest.getHeader( "Host" );
+      String servicePath = httpRequest.getServicePath( );
+      SecurityContext.getLoginContext( new HmacCredentials( httpRequest.getCorrelationId( ), sig, parameters, verb, servicePath, headerHost, Integer.valueOf( sigVersion ), hmac ) ).login( );
       parameters.remove( RequiredQueryParams.SignatureVersion.toString( ) );
       parameters.remove( SecurityParameter.SignatureMethod.toString( ) );
       parameters.remove( SecurityParameter.AWSAccessKeyId.toString( ) );

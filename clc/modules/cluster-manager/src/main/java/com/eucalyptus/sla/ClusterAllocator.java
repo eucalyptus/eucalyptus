@@ -72,20 +72,23 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterThreadFactory;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.StatefulMessageSet;
 import com.eucalyptus.cluster.SuccessCallback;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
 import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
+import com.eucalyptus.vm.SystemState.Reason;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -97,12 +100,7 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
-import edu.ucsb.eucalyptus.cloud.cluster.NoSuchTokenException;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
-import edu.ucsb.eucalyptus.cloud.ws.SystemState;
-import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -159,9 +157,7 @@ public class ClusterAllocator extends Thread {
         for( String vmId : vmToken.getInstanceIds( ) ) {
           try {
             VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-            vm.setState( VmState.TERMINATED );
-            vm.resetStopWatch( );
-            vm.setReason( SystemState.INSTANCE_FAILED + " " + e.getMessage( ) );
+            vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
             VmInstances.getInstance( ).disable( vmId );
           } catch ( Exception e1 ) {
             LOG.debug( e1, e1 );
@@ -176,13 +172,13 @@ public class ClusterAllocator extends Thread {
     if ( networkToken != null ) {
       QueuedEventCallback callback = new StartNetworkCallback( networkToken ).regardingUserRequest( vmAllocInfo.getRequest( ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
-      LOG.debug( EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ),networkToken.toString( ) ) );
+      EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ),networkToken.toString( ) ).debug( );
     }
     try {
       RunInstancesType request = this.vmAllocInfo.getRequest( );
       if ( networkToken != null ) {
         Network network = Networks.getInstance( ).lookup( networkToken.getName( ) );
-        LOG.debug( EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, ConfigureNetworkCallback.class.getSimpleName( ), network.getRules().toString( ) ) );
+        EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, ConfigureNetworkCallback.class.getSimpleName( ), network.getRules().toString( ) ).debug( );
         if ( !network.getRules( ).isEmpty( ) ) {
           this.messages.addRequest( State.CREATE_NETWORK_RULES, new ConfigureNetworkCallback( this.vmAllocInfo.getRequest( ).getUserId( ), network.getRules( ) ) );
         }
@@ -241,7 +237,9 @@ public class ClusterAllocator extends Thread {
     } catch ( NoSuchTokenException e ) {
       cb = makeRunRequest( request, token, rsvId, token.getInstanceIds( ), imgInfo, keyInfo, vmInfo, vlan, networkNames, networkIndexes, addresses, userData );
     }
-    this.messages.addRequest( State.CREATE_VMS, cb );
+    if ( cb != null ) {
+      this.messages.addRequest( State.CREATE_VMS, cb );
+    }
   }
   
   private QueuedEventCallback makeRunRequest( RunInstancesType request, ResourceToken childToken, String rsvId, List<String> instanceIds, VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, Integer vlan, List<String> networkNames, List<String> netIndexes, final List<String> addrList, String userData ) {

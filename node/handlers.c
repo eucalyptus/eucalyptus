@@ -69,6 +69,7 @@ permission notice:
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <pthread.h>
 #include <sys/vfs.h> /* statfs */
@@ -102,7 +103,7 @@ extern struct handlers default_libvirt_handlers;
 
 const int staging_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any STAGING domains will be cleaned up */
 const int booting_cleanup_threshold = 60; /* after this many seconds any BOOTING domains will be cleaned up */
-const int teardown_state_duration = 120; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
+const int teardown_state_duration = 180; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
 
 // a NULL-terminated array of available handlers
 static struct handlers * available_handlers [] = {
@@ -199,6 +200,7 @@ check_hypervisor_conn()
 void change_state(	ncInstance *instance,
 			instance_states state)
 {
+    int old_state = instance->state;
     instance->state = (int) state;
     switch (state) { /* mapping from NC's internal states into external ones */
     case STAGING:
@@ -224,6 +226,32 @@ void change_state(	ncInstance *instance,
     }
 
     strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
+    if (old_state != state) {
+        logprintfl (EUCADEBUG, "state change for instance %s: %s -> %s (%s)\n", 
+                    instance->instanceId, 
+                    instance_state_names [old_state],
+                    instance_state_names [instance->state],
+                    instance_state_names [instance->stateCode]);
+    }
+}
+
+// waits indefinitely until a state transition takes place
+// (timeouts are implemented in the monitoring thread) and
+// returns 0 if from_state->to_state transition takes place
+// and 1 otherwise
+int 
+wait_state_transition (ncInstance * instance, 
+		       instance_states from_state,
+		       instance_states to_state) 
+{
+  while (1) {
+    instance_states current_state = instance->state;
+    if (current_state == to_state ) 
+      return 0;
+    if (current_state != from_state )
+      return 1;
+    sleep (MONITORING_PERIOD); // no point in checking more frequently
+  }
 }
 
 static void
@@ -243,7 +271,7 @@ refresh_instance_info(	struct nc_state_t *nc,
     virDomainPtr dom = virDomainLookupByName (nc_state.conn, instance->instanceId);
     sem_v(hyp_sem);
     if (dom == NULL) { /* hypervisor doesn't know about it */
-        if (now==RUNNING ||
+      if (now==RUNNING ||
             now==BLOCKED ||
             now==PAUSED ||
             now==SHUTDOWN) {
@@ -340,7 +368,8 @@ int
 get_instance_xml(	const char *gen_libvirt_cmd_path,
 			char *userId,
 			char *instanceId,
-			int ramdisk,
+			char *ramdiskId,
+			char *kernelId,
 			char *disk_path,
 			virtualMachine *params,
 			char *privMac,
@@ -350,11 +379,11 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
 {
     char buf [MAX_PATH];
 
-    if (ramdisk) {
-        snprintf (buf, MAX_PATH, "%s --ramdisk", gen_libvirt_cmd_path);
-    } else {
-        snprintf (buf, MAX_PATH, "%s", gen_libvirt_cmd_path);
+    snprintf(buf, MAX_PATH, "%s", gen_libvirt_cmd_path);
+    if (strnlen(ramdiskId, CHAR_BUFFER_SIZE)) {
+        strncat(buf, " --ramdisk", MAX_PATH);
     }
+    
     if (params->disk > 0) { /* TODO: get this info from scMakeImage */
         strncat (buf, " --ephemeral", MAX_PATH);
     }
@@ -423,9 +452,11 @@ monitoring_thread (void *arg)
                 continue;
             }
 
-			// time out logic for STAGING or BOOTING instances
-            if (instance->state==STAGING && (now - instance->launchTime) < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
-            if (instance->state==BOOTING && (now - instance->bootTime)   < booting_cleanup_threshold) continue;
+	    // time out logic for STAGING or BOOTING instances
+            if (instance->state==STAGING  
+		&& (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
+            if (instance->state==BOOTING  
+		&& (now - instance->bootTime)     < booting_cleanup_threshold) continue;
             
             /* ok, it's been condemned => destroy the files */
             if (!nc_state.save_instance_files) {
@@ -491,12 +522,14 @@ void *startup_thread (void * arg)
     }
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
     
-    error = scMakeInstanceImage (instance->userId, 
+    error = scMakeInstanceImage (nc_state.home, 
+				 instance->userId, 
                                  instance->imageId, instance->imageURL, 
                                  instance->kernelId, instance->kernelURL, 
                                  instance->ramdiskId, instance->ramdiskURL, 
                                  instance->instanceId, instance->keyName, 
-                                 &disk_path, addkey_sem, nc_state.convert_to_disk,
+				 &disk_path, 
+				 addkey_sem, nc_state.convert_to_disk,
 				 instance->params.disk*1024);
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
@@ -517,11 +550,13 @@ void *startup_thread (void * arg)
     
     error = get_instance_xml (nc_state.gen_libvirt_cmd_path,
 		              instance->userId, instance->instanceId, 
-                              strnlen (instance->ramdiskId, CHAR_BUFFER_SIZE), /* 0 if no ramdisk */
+			      instance->ramdiskId,
+			      instance->kernelId,
                               disk_path, 
                               &(instance->params), 
                               instance->ncnet.privateMac, 
                               brname, &xml);
+
     if (brname) free(brname);
     if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
     if (error) {
@@ -554,18 +589,19 @@ void *startup_thread (void * arg)
     virDomainFree(dom);
     sem_v(hyp_sem);
 
+    sem_p (inst_sem);
     // check one more time for cancellation
-	if (instance->state==TEARDOWN) { // timed out in BOOTING
-        return NULL;
-	}
-    if (instance->state==CANCELED) {
-        logprintfl (EUCAFATAL, "startup of instance %s was cancelled\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
+    if (instance->state==TEARDOWN) { 
+      // timed out in BOOTING
+    } else if (instance->state==CANCELED || instance->state==SHUTOFF) {
+      logprintfl (EUCAFATAL, "startup of instance %s was cancelled\n", instance->instanceId);
+      change_state (instance, SHUTOFF);
     } else {
-        logprintfl (EUCAINFO, "booting VM instance %s\n", instance->instanceId);
-		instance->bootTime = time (NULL);
-        change_state (instance, BOOTING);
+      logprintfl (EUCAINFO, "booting VM instance %s\n", instance->instanceId);
+      instance->bootTime = time (NULL);
+      change_state (instance, BOOTING);
     }
+    sem_v (inst_sem);
     return NULL;
 }
 
@@ -877,7 +913,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 
 	for (i=0; i < (*outInstsLen); i++) {
 	  ncInstance *instance = (*outInsts)[i];
-	  logprintfl(EUCADEBUG, "doDescribeInstances(): instanceId=%s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d\n", instance->instanceId, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex);
+	  logprintfl(EUCADEBUG, "doDescribeInstances(): instanceId=%s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d \n", instance->instanceId, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex);
 	}
 
 	/* allocate enough memory */
@@ -970,11 +1006,19 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
 
 	logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
 	logprintfl (EUCAINFO, "                         image=%s at %s\n", imageId, imageURL);
-	logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
-	if (ramdiskId)
-		logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
+	if (kernelId && kernelURL)
+	  logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
+	if (ramdiskId && ramdiskURL)
+	  logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
 	logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
 
+	int i;
+	for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
+	  deviceMapping * dm = &(params->deviceMapping[i]);
+	  if (strlen(dm->deviceName)>0) {
+	    logprintfl (EUCAINFO, "                         device mapping: %s=%s size=%d format=%s\n", dm->deviceName, dm->virtualName, dm->size, dm->format);
+	  }
+	}
 
 	if (nc_state.H->doRunInstance)
  	  ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);

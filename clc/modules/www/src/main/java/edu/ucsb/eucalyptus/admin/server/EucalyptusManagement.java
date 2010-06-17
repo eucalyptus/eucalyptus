@@ -68,24 +68,31 @@ package edu.ucsb.eucalyptus.admin.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
-import java.security.GeneralSecurityException;
+import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.UserExistsException;
-import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.UserInfo;
+import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
-import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities.Counters;
+import com.eucalyptus.auth.WrappedUser;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventVetoedException;
@@ -98,8 +105,10 @@ import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.Composites;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.base.Function;
+import com.eucalyptus.util.Tx;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.client.CloudInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.ImageInfoWeb;
@@ -110,7 +119,10 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 public class EucalyptusManagement {
 
 	private static Logger LOG = Logger.getLogger( EucalyptusManagement.class );
-
+//grze: see Groups.{ALL,DEFAULT}
+//	private static final String GROUP_ALL = "all";
+//	private static final String GROUP_DEFAULT = "default";
+	
 	public static String getError( String message )
 	{
 		return "<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">" + message + "</h3></p></div></body></html>";
@@ -119,17 +131,15 @@ public class EucalyptusManagement {
 	/* TODO: for now 'pattern' is ignored and all users are returned */
 	public static List <UserInfoWeb> getWebUsers (String pattern) throws SerializableException
 	{
-    final EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get( UserInfo.class );
 	  final List<UserInfoWeb> webUsersList = Lists.newArrayList();
 	  for( User u : Users.listAllUsers( ) ) {
       try {
-        UserInfo userInfo = dbWrapper.getUnique( new UserInfo( u.getName( ) ) );
-        webUsersList.add( Composites.composeNew( UserInfoWeb.class, userInfo, u.getDelegate( ) ) );
+        UserInfo userInfo = (( WrappedUser ) u).getUserInfo( );
+        webUsersList.add( Composites.composeNew( UserInfoWeb.class, userInfo, u ) );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
 	  }
-		dbWrapper.commit();
 		return webUsersList;
 	}
 
@@ -159,18 +169,12 @@ public class EucalyptusManagement {
   }
   
   private static UserInfoWeb getWebUserByExample( UserInfo ex ) throws SerializableException {
-    EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
     try {
-      UserInfo userInfo = dbWrapper.getUnique( ex );
+      UserInfo userInfo = UserInfoStore.getUserInfo( ex );
       User user = Users.lookupUser( userInfo.getUserName( ) );
-      UserInfoWeb webUser = Composites.composeNew( UserInfoWeb.class, userInfo, user.getDelegate( ) );
-      dbWrapper.commit( );
+      UserInfoWeb webUser = Composites.composeNew( UserInfoWeb.class, userInfo, user );
       return webUser;
-    } catch ( EucalyptusCloudException e ) {
-      dbWrapper.rollback( );
-      throw EucalyptusManagement.makeFault( "Error looking up user information: " + e.getMessage( ) );
     } catch ( NoSuchUserException e ) {
-      dbWrapper.rollback( );
       throw EucalyptusManagement.makeFault( "User does not exist" );
     }
   }
@@ -184,7 +188,6 @@ public class EucalyptusManagement {
     } catch ( NoSuchUserException e ) {
       try {
         user = Users.addUser( webUser.getUserName( ), webUser.isAdministrator( ), webUser.isEnabled( ) );
-        EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get( UserInfo.class );
         try {
           UserInfo userInfo = Composites.updateNew( webUser, UserInfo.class );
           userInfo.setConfirmationCode( Crypto.generateSessionToken( webUser.getUserName() ) );
@@ -193,10 +196,8 @@ public class EucalyptusManagement {
           } catch ( EucalyptusCloudException e1 ) {
             LOG.debug( e1, e1 );
           }
-          dbWrapper.add( userInfo );
-          dbWrapper.commit();
+          UserInfoStore.addUserInfo( userInfo );
         } catch ( Exception e1 ) {
-          dbWrapper.rollback();
           LOG.error( e1, e1 );
           throw EucalyptusManagement.makeFault("Error adding user: " + e1.getMessage( ) );
         }
@@ -227,16 +228,7 @@ public class EucalyptusManagement {
 	{
 	  try {
       Users.deleteUser( userName );
-      EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
-      try {
-        UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
-        dbWrapper.delete( userInfo );
-        dbWrapper.commit( );
-      } catch ( EucalyptusCloudException e1 ) {
-        dbWrapper.rollback( );
-        LOG.error( e1, e1 );
-        throw EucalyptusManagement.makeFault("Error while deleting user: " + e1.getMessage( ) );      
-      }
+      UserInfoStore.deleteUserInfo( userName );
     } catch ( NoSuchUserException e1 ) {
       LOG.debug( e1, e1 );
       throw EucalyptusManagement.makeFault( "Unable to delete user" );
@@ -246,21 +238,20 @@ public class EucalyptusManagement {
     }
 	}
 
-	public static void commitWebUser( UserInfoWeb webUser ) throws SerializableException
+	public static void commitWebUser( final UserInfoWeb webUser ) throws SerializableException
 	{
 	  String userName = webUser.getUserName( );
     try {
-      User user = Users.lookupUser( userName );
-      EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
-      try {
-        UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
-        Composites.project( webUser, userInfo, user.getDelegate( ) );
-        dbWrapper.commit( );
-      } catch ( EucalyptusCloudException e1 ) {
-        dbWrapper.rollback( );
-        LOG.error( e1, e1 );
-        throw EucalyptusManagement.makeFault("Error while updating user: " + e1.getMessage( ) );      
-      }
+      Users.updateUser( userName, new Tx<User>( ) {
+        public void fire( User user ) throws Throwable {
+          Composites.project( webUser, user );
+        }
+      });
+      UserInfoStore.updateUserInfo( userName, new Tx<UserInfo>( ) {
+        public void fire( UserInfo info ) throws Throwable {
+          Composites.project( webUser, info );
+        }
+      });
     } catch ( NoSuchUserException e1 ) {
       LOG.error( e1, e1 );
       throw EucalyptusManagement.makeFault( "Unable to update user" );
@@ -272,13 +263,11 @@ public class EucalyptusManagement {
 
 	public static String getAdminEmail() throws SerializableException
 	{
-		EntityWrapper<UserInfo> db = new EntityWrapper<UserInfo>(  );
 		String addr = null;
 		try {
-      UserInfo adminUser = db.getUnique( new UserInfo("admin") );
+      UserInfo adminUser = UserInfoStore.getUserInfo( new UserInfo("admin") );
       addr = adminUser.getEmail( );
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( NoSuchUserException e ) {
       throw EucalyptusManagement.makeFault("Administrator account not found" );
     }
     if (addr==null || addr.equals("")) {
@@ -337,13 +326,13 @@ public class EucalyptusManagement {
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
 	{
 		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration();
+		LOG.debug( "Sending cloud host: " + sysConf.getCloudHost( ) );
 		return new SystemConfigWeb( 
 				sysConf.getDefaultKernel(),
 				sysConf.getDefaultRamdisk(),
 				sysConf.getMaxUserPublicAddresses(),
 				sysConf.isDoDynamicPublicAddresses(),
 				sysConf.getSystemReservedPublicAddresses(),
-				sysConf.getZeroFillVolumes(),
 				sysConf.getDnsDomain(),
 				sysConf.getNameserver(),
 				sysConf.getNameserverAddress(),
@@ -367,7 +356,6 @@ public class EucalyptusManagement {
 			sysConf.setMaxUserPublicAddresses( systemConfig.getMaxUserPublicAddresses() );
 			sysConf.setDoDynamicPublicAddresses( systemConfig.isDoDynamicPublicAddresses() );
 			sysConf.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
-			sysConf.setZeroFillVolumes(systemConfig.getZeroFillVolumes());
 			db.commit();
 			DNSProperties.update();
 		}
@@ -379,7 +367,6 @@ public class EucalyptusManagement {
 					systemConfig.getMaxUserPublicAddresses(),
 					systemConfig.isDoDynamicPublicAddresses(),
 					systemConfig.getSystemReservedPublicAddresses(),
-					systemConfig.getZeroFillVolumes(),
 					systemConfig.getDnsDomain(),
 					systemConfig.getNameserver(),
 					systemConfig.getNameserverAddress(),
@@ -458,6 +445,16 @@ public class EucalyptusManagement {
 		cloudInfo.setServicePath ("/register"); // TODO: what is the actual cloud registration service?
 		cloudInfo.setCloudId ( cloudRegisterId ); // TODO: what is the actual cloud registration ID?
 		return cloudInfo;
+	}
+
+	private static List<String> getGroupZones(Group group) {
+		List<String> zones = new ArrayList<String>();
+		for (Authorization auth : group.getAuthorizations()) {
+			if (auth instanceof AvailabilityZonePermission) {
+				zones.add(auth.getValue());
+			}
+		}
+		return zones;
 	}
 
 }

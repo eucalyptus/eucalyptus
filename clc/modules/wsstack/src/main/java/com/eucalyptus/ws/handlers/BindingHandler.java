@@ -75,7 +75,7 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.WebServicesException;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ChannelPipelineCoverage( "all" )
 public class BindingHandler extends MessageStackHandler {
@@ -95,31 +95,30 @@ public class BindingHandler extends MessageStackHandler {
   public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
-      //:: TODO: need an index of message types based on name space :://
-      Class msgType = null;
-      try {
-        msgType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs." + httpMessage.getOmMessage( ).getLocalName( ) + "Type" );
-      } catch ( ClassNotFoundException e ) {}
-      EucalyptusMessage msg = null;
+      BaseMessage msg = null;
       OMElement elem = httpMessage.getOmMessage( );
       OMNamespace omNs = elem.getNamespace( );
       String namespace = omNs.getNamespaceURI( );
+      Class msgType = null;
       try {
         this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
+        msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
       } catch ( Exception e1 ) {
         if( this.binding == null ) {
           throw new WebServicesException(e1);
+        } else {
+          throw new WebServicesException( "Failed to find binding for namespace: " + namespace + " due to: " + e1.getMessage( ), e1 );
         }
       }
       try {
         if(httpMessage instanceof MappingHttpRequest ) {
           if( msgType != null ) {
-            msg = ( EucalyptusMessage ) this.binding.fromOM( httpMessage.getOmMessage( ), msgType );
+            msg = ( BaseMessage ) this.binding.fromOM( httpMessage.getOmMessage( ), msgType );
           } else {
-            msg = ( EucalyptusMessage ) this.binding.fromOM( httpMessage.getOmMessage( ) );
+            msg = ( BaseMessage ) this.binding.fromOM( httpMessage.getOmMessage( ) );
           }
         } else {
-          msg = ( EucalyptusMessage ) this.binding.fromOM( httpMessage.getOmMessage( ) );          
+          msg = ( BaseMessage ) this.binding.fromOM( httpMessage.getOmMessage( ) );          
         }
       } catch ( Exception e1 ) {
         LOG.fatal( "FAILED TO PARSE:\n" + httpMessage.getMessageString( ) );

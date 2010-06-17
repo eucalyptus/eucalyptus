@@ -46,7 +46,7 @@ import com.eucalyptus.ws.handlers.soap.AddressingHandler;
 import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.GetKeysResponseType;
 
 public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHandler implements ChannelPipelineFactory, EventListener {
@@ -125,7 +125,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
       channelConnectFuture.addListener( ChannelFutureListener.CLOSE_ON_FAILURE );
       channelConnectFuture.addListener( ChannelUtil.WRITE_AND_CALLBACK( request, new ChannelFutureListener( ) {
         @Override public void operationComplete( ChannelFuture future ) throws Exception {
-          LOG.info( EventRecord.here( o.getClass(), EventType.MSG_SENT, LogUtil.dumpObject( o ) ) );
+          EventRecord.here( o.getClass(), EventType.MSG_SENT, LogUtil.dumpObject( o ) ).info( );
         } } ) );
     }
   }
@@ -155,7 +155,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   
   @Override
   public void channelInterestChanged( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    LOG.trace( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING, e.toString( ) ) );
+    EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_PENDING, e.toString( ) ).trace( );
     super.channelInterestChanged( ctx, e );
   }
   
@@ -166,7 +166,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
         MappingHttpResponse response = ( MappingHttpResponse ) ( ( MessageEvent ) e ).getMessage( );
         if ( HttpResponseStatus.OK.equals( response.getStatus( ) ) ) {
           if(!( response.getMessage( ) instanceof GetKeysResponseType )) {
-            LOG.info( EventRecord.here( response.getMessage( ).getClass(), EventType.MSG_SENT, LogUtil.dumpObject( response.getMessage( ) ) ) );
+            EventRecord.here( response.getMessage( ).getClass(), EventType.MSG_SENT, LogUtil.dumpObject( response.getMessage( ) ) ).info( );
           }
           this.upstreamMessage( ctx, ( MessageEvent ) e );
         } else {
@@ -181,7 +181,7 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   
   @Override
   public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
-    LOG.trace( EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_SERVICED, e.toString( ) ) );
+    EventRecord.here( AbstractClusterMessageDispatcher.class, EventType.MSG_SERVICED, e.toString( ) ).trace( );
     super.writeComplete( ctx, e );
   }
     
@@ -241,28 +241,24 @@ public abstract class AbstractClusterMessageDispatcher extends SimpleChannelHand
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( hostName == null ) ? 0 : hostName.hashCode( ) );
-    result = prime * result + port;
-    result = prime * result + ( ( servicePath == null ) ? 0 : servicePath.hashCode( ) );
+    result = prime * result + ( ( this.cluster == null ) ? 0 : this.cluster.hashCode( ) );
     return result;
   }
+
   
+    
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) return true;
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
     AbstractClusterMessageDispatcher other = ( AbstractClusterMessageDispatcher ) obj;
-    if ( hostName == null ) {
-      if ( other.hostName != null ) return false;
-    } else if ( !hostName.equals( other.hostName ) ) return false;
-    if ( port != other.port ) return false;
-    if ( servicePath == null ) {
-      if ( other.servicePath != null ) return false;
-    } else if ( !servicePath.equals( other.servicePath ) ) return false;
+    if ( this.cluster == null ) {
+      if ( other.cluster != null ) return false;
+    } else if ( !this.cluster.getName( ).equals( other.cluster.getName( ) ) ) return false;
     return true;
   }
-    
+
   @Override
   public void advertiseEvent( Event event ) {}
   

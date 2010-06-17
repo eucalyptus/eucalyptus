@@ -8,6 +8,9 @@ import java.lang.annotation.Target;
 @Target({ ElementType.TYPE, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ConfigurableClass {
-  String alias();
+  String root();
+  String alias() default "";
   String description();
+  boolean singleton() default true;
+  boolean deferred() default false;
 }

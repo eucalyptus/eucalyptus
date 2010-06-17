@@ -218,13 +218,15 @@ public class RemoteConfiguration extends EphemeralConfiguration {
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_clusters" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
   @Transient
   private static String INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
+  @Column(name="minvlan")
   Integer minVlan;
+  @Column(name="maxvlan")
   Integer maxVlan;
   
   public ClusterConfiguration( ) {}
@@ -265,7 +267,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_sc" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StorageControllerConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Storage";
@@ -280,7 +282,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_walrus" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class WalrusConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Walrus";
@@ -298,7 +300,7 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_system" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class System implements Serializable {
   @Id
   @GeneratedValue(generator = "system-uuid")

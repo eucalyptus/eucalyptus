@@ -119,6 +119,8 @@ import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotSizeResponseType;
+import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotSizeType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType;
 import edu.ucsb.eucalyptus.msgs.ListAllMyBucketsType;
@@ -148,6 +150,8 @@ import edu.ucsb.eucalyptus.msgs.StoreSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.StoreSnapshotType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
+import edu.ucsb.eucalyptus.msgs.ValidateImageResponseType;
+import edu.ucsb.eucalyptus.msgs.ValidateImageType;
 import edu.ucsb.eucalyptus.storage.StorageManager;
 import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -221,7 +225,7 @@ public class WalrusControl {
 		if(WalrusProperties.NAME.equals(name)) {
 			ConfigurableClass configurableClass = WalrusInfo.class.getAnnotation(ConfigurableClass.class);
 			if(configurableClass != null) {
-				String prefix = configurableClass.alias();
+				String prefix = configurableClass.root();
 				reply.setProperties((ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix));
 			}
 		}
@@ -350,6 +354,10 @@ public class WalrusControl {
 		return walrusImageManager.flushCachedImage(request);
 	}
 
+	public ValidateImageResponseType ValidateImage(ValidateImageType request) throws EucalyptusCloudException {
+		return walrusImageManager.validateImage(request);
+	}
+	
 	public StoreSnapshotResponseType StoreSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
 		return walrusBlockStorageManager.storeSnapshot(request);
 	}
@@ -362,4 +370,7 @@ public class WalrusControl {
 		return walrusBlockStorageManager.deleteWalrusSnapshot(request);
 	}
 
+	public GetWalrusSnapshotSizeResponseType GetWalrusSnapshotSize(GetWalrusSnapshotSizeType request) throws EucalyptusCloudException {
+		return walrusBlockStorageManager.getWalrusSnapshotSize(request);
+	}
 }

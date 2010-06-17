@@ -84,9 +84,8 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.cluster.NetworkAlreadyExistsException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public class ClusterState {
   private static Logger                           LOG                   = Logger.getLogger( ClusterState.class );
@@ -99,7 +98,7 @@ public class ClusterState {
   private ConcurrentNavigableMap<ClusterAddressInfo, Integer> orphans               = new ConcurrentSkipListMap<ClusterAddressInfo, Integer>( );
   
   public void clearOrphan( ClusterAddressInfo address ) {
-    Integer delay = orphans.remove( address.getAddress( ) );
+    Integer delay = orphans.remove( address );
     delay = ( delay == null ? 0 : delay );
     if ( delay > 2 ) {
       LOG.warn( "Forgetting stale orphan address mapping from cluster " + clusterName + " for " + address.toString( ) );
@@ -112,7 +111,7 @@ public class ClusterState {
     orphanCount = ( orphanCount == null ) ? 1 : orphanCount;
     orphans.put( address, orphanCount + 1 );
     LOG.warn( "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
-    if ( orphanCount > 10 ) {
+    if ( orphanCount > 3 ) {
       LOG.warn( "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
@@ -126,7 +125,7 @@ public class ClusterState {
         } ).dispatch( this.clusterName );
       } catch ( NoSuchElementException e ) {
       }
-      orphans.remove( address.getAddress( ) );
+      orphans.remove( address );
     }
   }
   
@@ -168,9 +167,9 @@ public class ClusterState {
         availableVlans.add( i );
       }
     }
-    LOG.debug( EventRecord.here( Component.cluster, "CONFIG_VLANS", Integer.toString( min ), Integer.toString( max ),
+    EventRecord.here( ClusterState.class, EventType.CONFIG_VLANS, Integer.toString( min ), Integer.toString( max ),
                                  availableVlans.toString( )
-                                               .substring( 0, 50 > availableVlans.toString( ).length( ) ? availableVlans.toString( ).length( ) : 50 ) ) );
+                                               .substring( 0, 50 > availableVlans.toString( ).length( ) ? availableVlans.toString( ).length( ) : 50 ) ).debug( );
   }
   
   private static NavigableSet<Integer> populate( ) {
@@ -197,7 +196,7 @@ public class ClusterState {
     try {
       Network network = getVlanAssignedNetwork( networkName );      
       NetworkToken token = network.createNetworkToken( clusterName );
-      LOG.info( EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, token.toString( ) ) );
+      EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
       return token;
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
@@ -215,14 +214,14 @@ public class ClusterState {
         ClusterState.availableVlans.add( vlan );
         throw new NotEnoughResourcesAvailable( "Not enough resources available: an error occured obtaining a usable vlan tag" );
       } else {
-        LOG.info( EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, network.toString( ) ) );
+        EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, network.toString( ) ).info( );
       }
     }
     return network;
   }
   
   public void releaseNetworkAllocation( NetworkToken token ) {
-    LOG.info( EventRecord.caller( NetworkToken.class, EventType.TOKEN_RETURNED, token.toString( ) ) );
+    EventRecord.caller( NetworkToken.class, EventType.TOKEN_RETURNED, token.toString( ) ).info( );
     try {
       Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
       if ( !existingNet.hasTokens( ) ) {

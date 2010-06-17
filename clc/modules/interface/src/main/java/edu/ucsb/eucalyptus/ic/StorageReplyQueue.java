@@ -66,6 +66,7 @@
 package edu.ucsb.eucalyptus.ic;
 
 import edu.ucsb.eucalyptus.cloud.*;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.StorageErrorMessageType;
@@ -95,7 +96,7 @@ public class StorageReplyQueue {
         {
             Object requestMsg = muleMsg.getPayload();
             String requestString = requestMsg.toString();
-            EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ).fromOM( requestString );
+            EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
             Throwable ex = muleMsg.getException().getCause();
             EucalyptusMessage errMsg;
 
@@ -141,10 +142,10 @@ public class StorageReplyQueue {
         }
     }
 
-    public static EucalyptusMessage getReply( String msgId )
+    public static BaseMessage getReply( String msgId )
     {
         Logger.getLogger( StorageReplyQueue.class ).warn( "storage request for reply to " + msgId );
-        EucalyptusMessage msg = replies.getMessage( msgId );
+        BaseMessage msg = replies.getMessage( msgId );
         Logger.getLogger( StorageReplyQueue.class ).warn( "storage obtained reply to " + msgId );
         return msg;
     }

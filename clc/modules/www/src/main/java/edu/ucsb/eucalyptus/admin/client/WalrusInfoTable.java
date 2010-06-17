@@ -60,6 +60,8 @@
 *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.client;
 
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 
@@ -72,13 +74,13 @@ import java.util.List;
 
 // dmitrii TODO: remove commented out lines once the CSS-based design is confirmed
 
-public class WalrusInfoTable extends VerticalPanel implements ClickListener {
+public class WalrusInfoTable extends VerticalPanel implements ClickHandler {
 
 	private static int maxWalruses = 1; // TODO: bump this up once we can do more than 1
 	private static Label noWalrusesLabel = new Label();
 	private static Label statusLabel = new Label();
 	private Grid grid = new Grid ();
-	private Button add_button = new Button ( "Register Walrus", this );
+	private EucaButton add_button = new EucaButton ( "Register Walrus", this );
 	private static HTML hint = new HTML ();
 	private List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>();
 	private static String sessionId;
@@ -104,7 +106,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		HorizontalPanel hpanel = new HorizontalPanel ();
 		hpanel.setSpacing (2);
 		hpanel.add ( add_button );
-		hpanel.add ( new Button( "Save Walrus configuration", new SaveCallback( this ) ) );
+		hpanel.add ( new EucaButton( "Save Walrus configuration", new SaveCallback( this ) ) );
 		hpanel.add ( this.statusLabel );
 //		this.statusLabel.setWidth ("250");
 		this.statusLabel.setText ("");
@@ -115,9 +117,9 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 				this.sessionId, new GetWalrusListCallback( this ) );
 	}
 
-	public void onClick( final Widget widget ) // Register walrus button
+	public void onClick( ClickEvent event ) // Register walrus button
 	{
-		this.walrusList.add (new WalrusInfoWeb("Walrus", "host", 8773, new ArrayList<String>())); //these values are just defaults
+		this.walrusList.add (new WalrusInfoWeb("Walrus", "host", 8773 /** FIXME: DRAMATICALLY: URGENTLY **/, new ArrayList<String>())); //these values are just defaults
 		this.rebuildTable();
 		this.statusLabel.setText ("Unsaved changes");
 		this.statusLabel.setStyleName ("euca-greeting-warning");
@@ -176,7 +178,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		walrusHost_box.setVisibleLength(35);
 		walrusHost_box.setText (walrusInfo.getHost());
 		p.add (walrusHost_box);
-		p.add (new Button ("Deregister", new DeleteCallback( this, row )));
+		p.add (new EucaButton ("Deregister", new DeleteCallback( this, row )));
 		
 		for(int propIdx = 0 ; propIdx < numProperties ; ++propIdx) {
 			i++; // next row
@@ -280,7 +282,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		}
 	}
 
-	class DeleteCallback implements ClickListener {
+	class DeleteCallback implements ClickHandler {
 
 		private WalrusInfoTable parent;
 		private int row;
@@ -291,7 +293,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 			this.row = row;
 		}
 
-		public void onClick( final Widget widget )
+		public void onClick( ClickEvent event )
 		{
 			this.parent.walrusList.remove (this.row);
 			this.parent.rebuildTable();
@@ -326,7 +328,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 		}
 	}
 
-	class SaveCallback implements AsyncCallback, ClickListener {
+	class SaveCallback implements AsyncCallback, ClickHandler {
 
 		private WalrusInfoTable parent;
 
@@ -335,7 +337,7 @@ public class WalrusInfoTable extends VerticalPanel implements ClickListener {
 			this.parent = parent;
 		}
 
-		public void onClick( final Widget widget )
+		public void onClick( ClickEvent event )
 		{
 			this.parent.statusLabel.setText ("Saving...");
 			this.parent.statusLabel.setStyleName ("euca-greeting-pending");
