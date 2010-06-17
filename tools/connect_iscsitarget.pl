@@ -55,21 +55,21 @@ sub login_target {
 
     while(<DISCOVERY>) {};
 
-    if(!open USERNAME, "iscsiadm -m node -T $store -p $ip --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
+    if(!open USERNAME, "iscsiadm -m node -T $store --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
         print "Could not update target username";
         do_exit(1)
     }
 
     while(<USERNAME>) {};
 
-    if(!open PASSWD, "iscsiadm -m node -T $store -p $ip --op=update --name node.session.auth.password --value=$passwd |") {
+    if(!open PASSWD, "iscsiadm -m node -T $store --op=update --name node.session.auth.password --value=$passwd |") {
         print "Could not update target password";
         do_exit(1)
     }
 
     while(<PASSWD>) {};
 
-    if(!open LOGIN, "iscsiadm -m node -T $store -p $ip -l |") {
+    if(!open LOGIN, "iscsiadm -m node -T $store -l |") {
 	print "Could not login to target";
 	do_exit(1)
     }
