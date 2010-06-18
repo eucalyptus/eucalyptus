@@ -1100,7 +1100,7 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
 	echo "cannot find version field in database, please go to the Eucalyptus web UI to obtain credentials."
 	exit 1
     fi
-    KEY=$(eval echo $(awk -v field=${FIELD} -v vercol=${VERCOL} -F, 'BEGIN { token=""; max=0; } /INSERT INTO AUTH_USERS.*admin/ { if ($vercol>max) { max=$vercol; token=$field; } } END { print token; }' ${DBDIR}/* | head -n 1 | sed 's/[()]//g'))
+    KEY=$(eval echo $(awk -v field=${FIELD} -v vercol=${VERCOL} -F, 'BEGIN { token=""; max=-1; } /INSERT INTO AUTH_USERS.*admin/ { if ($vercol>max) { max=$vercol; token=$field; } } END { print token; }' ${DBDIR}/* | head -n 1 | sed 's/[()]//g'))
     if [ -z "$KEY" ]; then
 	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
 	exit 1
