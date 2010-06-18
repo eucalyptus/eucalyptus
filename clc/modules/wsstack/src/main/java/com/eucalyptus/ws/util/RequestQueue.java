@@ -71,7 +71,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.NotReadyException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 
 public class RequestQueue {
@@ -84,7 +84,7 @@ public class RequestQueue {
         throw new NotReadyException( "walrus" );
       }
     }
-    LOG.debug( EventRecord.here( RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), msg.getClass( ).getSimpleName( ) ) );
+    EventRecord.here( RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), msg.getClass( ).getSimpleName( ) ).debug( );
     return msg;
   }
   

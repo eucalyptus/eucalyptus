@@ -69,6 +69,8 @@ permission notice:
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h> /* SIGINT */
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "ipc.h"
 #include "misc.h"
@@ -93,9 +95,9 @@ static int doInitialize (struct nc_state_t *nc)
 	/* set up paths of Eucalyptus commands NC relies on */
 	snprintf (nc->gen_libvirt_cmd_path, MAX_PATH, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
 	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
-	snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
-	snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
-	snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
+	snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home);
+	snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home);
+	snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
@@ -304,53 +306,76 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			ncMetadata *meta,
 			char *instanceId,
 			char **consoleOutput) {
-  char *console_output;
+
+  char *console_output=NULL, *console_append=NULL, *console_main=NULL;
   char console_file[MAX_PATH];
-  int rc, fd, readsize;
+  int rc, fd, ret, readsize;
   struct stat statbuf;
 
   *consoleOutput = NULL;
   readsize = 64 * 1024;
 
-  // for KVM, read the console output from a file, encode it, and return
-  console_output = malloc(readsize);
-  if (console_output == NULL) {
-    return(1);
-  }
-  
-  snprintf(console_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
-  
+  snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), meta->userId, instanceId);
   rc = stat(console_file, &statbuf);
-  if (rc < 0) {
-    logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", console_file);
-    if (console_output) free(console_output);
-    return(1);
-  }
-  
-  fd = open(console_file, O_RDONLY);
-  if (fd < 0) {
-    logprintfl(EUCAERROR, "cannot open '%s' read-only\n", console_file);
-    if (console_output) free(console_output);
-    return(1);
-  }
-
-  rc = lseek(fd, (off_t)(-1 * readsize), SEEK_END);
-  if (rc < 0) {
-    rc = lseek(fd, (off_t)0, SEEK_SET);
-    if (rc < 0) {
-      logprintfl(EUCAERROR, "cannot seek to beginning of file\n");
-      if (console_output) free(console_output);
-      return(1);
+  if (rc >= 0) {
+    fd = open(console_file, O_RDONLY);
+    if (fd >= 0) {
+      console_append = malloc(4096);
+      if (console_append) {
+	bzero(console_append, 4096);
+	rc = read(fd, console_append, (4096)-1);
+	close(fd);          
+      }
     }
   }
   
-  bzero(console_output, readsize);
-  rc = read(fd, console_output, (readsize)-1);
-  close(fd);
+  snprintf(console_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
+
+  rc = stat(console_file, &statbuf);
+  if (rc >= 0) {
+    fd = open(console_file, O_RDONLY);
+    if (fd >= 0) {
+      rc = lseek(fd, (off_t)(-1 * readsize), SEEK_END);
+      if (rc < 0) {
+	rc = lseek(fd, (off_t)0, SEEK_SET);
+	if (rc < 0) {
+	  logprintfl(EUCAERROR, "cannot seek to beginning of file\n");
+	  if (console_append) free(console_append);
+	  return(1);
+	}
+      }
+      console_main = malloc(readsize);
+      if (console_main) {
+	bzero(console_main, readsize);
+	rc = read(fd, console_main, (readsize)-1);
+	close(fd);
+      }
+    } else {
+      logprintfl(EUCAERROR, "cannot open '%s' read-only\n", console_file);
+    }
+  } else {
+    logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", console_file);
+  }
   
-  *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
+  ret = 1;
+  console_output = malloc( (readsize) + 4096 );
+  if (console_output) {
+    bzero(console_output, (readsize) + 4096 );
+    if (console_append) {
+      strncat(console_output, console_append, 4096);
+    }
+    if (console_main) {
+      strncat(console_output, console_main, readsize);
+    }
+    *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
+    ret = 0;
+  }
+
+  if (console_append) free(console_append);
+  if (console_main) free(console_main);
   if (console_output) free(console_output);
-  return(0);
+
+  return(ret);
 }
 
 static int
@@ -395,9 +420,13 @@ doAttachVolume (	struct nc_state_t *nc,
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*login to target*/
-                if((local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev)) == NULL)
-                    return ERROR;
-                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+		local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev);
+		if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
+		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
+		  rc = 1;
+		} else {
+		  snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+		}
             } else {
                 snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
                 rc = stat(remoteDev, &statbuf);

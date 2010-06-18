@@ -72,10 +72,15 @@ import java.util.*;
 @PersistenceContext(name="eucalyptus_images")
 @MappedSuperclass
 public abstract class AbstractIsomorph extends AbstractPersistent {
+  @Column(name="username")
   private String userName;
+  @Column(name="uuid")
   private String uuid;
+  @Column(name="displayname")
   private String displayName;
+  @Column(name="birthday")
   private Date birthday;
+  @Column(name="state")
   @Enumerated(EnumType.STRING)
   private State state;
 

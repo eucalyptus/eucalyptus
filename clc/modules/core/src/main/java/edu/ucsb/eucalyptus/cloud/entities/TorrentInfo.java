@@ -73,7 +73,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Torrents" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class TorrentInfo {
     @Id
     @GeneratedValue

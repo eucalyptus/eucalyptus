@@ -1,63 +1,63 @@
 /*******************************************************************************
-*Copyright (c) 2009  Eucalyptus Systems, Inc.
-* 
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, only version 3 of the License.
-* 
-* 
-*  This file is distributed in the hope that it will be useful, but WITHOUT
-*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-*  for more details.
-* 
-*  You should have received a copy of the GNU General Public License along
-*  with this program.  If not, see <http://www.gnu.org/licenses/>.
-* 
-*  Please contact Eucalyptus Systems, Inc., 130 Castilian
-*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
-*  if you need additional information or have any questions.
-* 
-*  This file may incorporate work covered under the following copyright and
-*  permission notice:
-* 
-*    Software License Agreement (BSD License)
-* 
-*    Copyright (c) 2008, Regents of the University of California
-*    All rights reserved.
-* 
-*    Redistribution and use of this software in source and binary forms, with
-*    or without modification, are permitted provided that the following
-*    conditions are met:
-* 
-*      Redistributions of source code must retain the above copyright notice,
-*      this list of conditions and the following disclaimer.
-* 
-*      Redistributions in binary form must reproduce the above copyright
-*      notice, this list of conditions and the following disclaimer in the
-*      documentation and/or other materials provided with the distribution.
-* 
-*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-*    ANY SUCH LICENSES OR RIGHTS.
-*******************************************************************************/
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 /*
  *
  * Author: Sunil Soman sunils@cs.ucsb.edu
@@ -74,6 +74,11 @@ import edu.ucsb.eucalyptus.storage.StorageManager;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -85,7 +90,7 @@ import javax.activity.InvalidActivityException;
 
 public class WalrusBlockStorageManager {
 	private static Logger LOG = Logger
-			.getLogger(WalrusBlockStorageManager.class);
+	.getLogger(WalrusBlockStorageManager.class);
 	private StorageManager storageManager;
 	private WalrusManager walrusManager;
 
@@ -129,9 +134,9 @@ public class WalrusBlockStorageManager {
 	}
 
 	public StoreSnapshotResponseType storeSnapshot(StoreSnapshotType request)
-			throws EucalyptusCloudException {
+	throws EucalyptusCloudException {
 		StoreSnapshotResponseType reply = (StoreSnapshotResponseType) request
-				.getReply();
+		.getReply();
 
 		String snapshotId = request.getKey();
 		String bucketName = request.getBucket();
@@ -142,7 +147,7 @@ public class WalrusBlockStorageManager {
 		} else {
 			throw new InvalidArgumentException("Snapshot size");
 		}
-		
+
 		int snapshotSize = (int)(snapSize / WalrusProperties.G);
 		if (WalrusProperties.shouldEnforceUsageLimits) {
 			int totalSnapshotSize = 0;
@@ -179,7 +184,7 @@ public class WalrusBlockStorageManager {
 			createBucketRequest.setUserId(userId);
 			createBucketRequest.setBucket(bucketName);
 			createBucketRequest
-					.setEffectiveUserId(request.getEffectiveUserId());
+			.setEffectiveUserId(request.getEffectiveUserId());
 			try {
 				walrusManager.createBucket(createBucketRequest);
 			} catch (EucalyptusCloudException ex) {
@@ -198,7 +203,7 @@ public class WalrusBlockStorageManager {
 		putObjectRequest.setEffectiveUserId(request.getEffectiveUserId());
 		try {
 			PutObjectResponseType putObjectResponseType = walrusManager
-					.putObject(putObjectRequest);
+			.putObject(putObjectRequest);
 			reply.setEtag(putObjectResponseType.getEtag());
 			reply.setLastModified(putObjectResponseType.getLastModified());
 			reply.setStatusMessage(putObjectResponseType.getStatusMessage());
@@ -218,7 +223,7 @@ public class WalrusBlockStorageManager {
 	public GetWalrusSnapshotResponseType getSnapshot(
 			GetWalrusSnapshotType request) throws EucalyptusCloudException {
 		GetWalrusSnapshotResponseType reply = (GetWalrusSnapshotResponseType) request
-				.getReply();
+		.getReply();
 		String snapshotId = request.getKey();
 		EntityWrapper<WalrusSnapshotInfo> db = WalrusControl.getEntityWrapper();
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
@@ -248,13 +253,13 @@ public class WalrusBlockStorageManager {
 			db.rollback();
 			throw new NoSuchEntityException(snapshotId);
 		}
-		return reply;
+		return null;
 	}
 
 	public DeleteWalrusSnapshotResponseType deleteWalrusSnapshot(
 			DeleteWalrusSnapshotType request) throws EucalyptusCloudException {
 		DeleteWalrusSnapshotResponseType reply = (DeleteWalrusSnapshotResponseType) request
-				.getReply();
+		.getReply();
 		String snapshotId = request.getKey();
 
 		// Load the entire snapshot tree and then remove the snapshot
@@ -317,6 +322,30 @@ public class WalrusBlockStorageManager {
 				return;
 			}
 		}
+	}
+
+	public GetWalrusSnapshotSizeResponseType getWalrusSnapshotSize(GetWalrusSnapshotSizeType request) throws EucalyptusCloudException {
+		GetWalrusSnapshotSizeResponseType reply = (GetWalrusSnapshotSizeResponseType) request.getReply();
+		String snapshotId = request.getKey();
+		EntityWrapper<WalrusSnapshotInfo> db = WalrusControl.getEntityWrapper();
+		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
+		List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
+		int size = 0;
+		if (snapshotInfos.size() > 0) {
+			WalrusSnapshotInfo foundSnapshotInfo = snapshotInfos.get(0);
+			size = foundSnapshotInfo.getSize();
+		}
+		db.commit();
+		Channel channel = request.getChannel();
+		if(channel != null) {
+			DefaultHttpResponse httpResponse = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.OK ); 
+			httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(0));
+			httpResponse.addHeader("SnapshotSize", String.valueOf(size));
+			channel.write(httpResponse);
+		} else {
+			throw new EucalyptusCloudException("Could not get channel to write response");
+		}
+		return reply;
 	}
 
 }

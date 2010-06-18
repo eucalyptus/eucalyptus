@@ -71,7 +71,6 @@ import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.StopNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 
@@ -82,11 +81,12 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopN
   public StopNetworkCallback( final NetworkToken networkToken ) {
     this.token = networkToken;
     StopNetworkType msg = new StopNetworkType( token.getUserName(), token.getNetworkName(), token.getVlan() ).regarding( );
+    msg.setUserId( token.getUserName() );
     this.setRequest( msg );
   }
 
   @Override
-  public void verify( BaseMessage msg ) throws Exception {}
+  public void verify( StopNetworkResponseType msg ) throws Exception {}
 
   @Override
   public void prepare( StopNetworkType msg ) throws Exception {
@@ -96,6 +96,9 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopN
       LOG.debug( "Releasing network token back to cluster: " + token );
       if( net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
       cluster.getState( ).releaseNetworkAllocation( token );
+    } catch ( EucalyptusClusterException e ) {
+      LOG.debug( "Aborting stop network for network with live instances: " + e.getMessage( ), e );
+      throw e;
     } catch ( Exception e ) {
       LOG.debug( e );
     }

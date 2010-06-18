@@ -105,7 +105,7 @@
             <inbound>
                 <inbound-endpoint ref="ImageVerifyWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.ws.ImageManager"/>
+            <component class="com.eucalyptus.images.ImageManager"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="KeyPairVerifyWS"/>
@@ -129,7 +129,7 @@
             <inbound>
                 <inbound-endpoint ref="VmTypeVerifyWS"/>
             </inbound>
-            <component class="edu.ucsb.eucalyptus.cloud.cluster.VmTypeVerify"/>
+            <component class="com.eucalyptus.cluster.VmTypeVerify"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="GroupsVerifyWS"/>

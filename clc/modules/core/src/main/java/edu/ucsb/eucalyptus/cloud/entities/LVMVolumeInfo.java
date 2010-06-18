@@ -98,7 +98,7 @@ public class LVMVolumeInfo implements Serializable {
 	@Column(name = "lv_name")
 	private String lvName;
 	@Column(name = "size")
-	private Integer size;
+	protected Integer size;
 	@Column(name = "status")
 	private String status;
 	@Column(name = "snapshot_of")

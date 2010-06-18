@@ -69,8 +69,6 @@ import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.ConfigureNetworkType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
@@ -87,7 +85,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType,Sta
   }
 
   @Override
-  public void verify( BaseMessage msg ) throws Exception {
+  public void verify( StartNetworkResponseType msg ) throws Exception {
     try {
       Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
     } catch ( Throwable e ) {

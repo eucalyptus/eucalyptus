@@ -69,6 +69,8 @@ permission notice:
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h> /* SIGINT */
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "ipc.h"
 #include "misc.h"
@@ -98,9 +100,9 @@ static int doInitialize (struct nc_state_t *nc)
 	snprintf (nc->virsh_cmd_path, MAX_PATH, EUCALYPTUS_VIRSH, nc->home);
 	snprintf (nc->xm_cmd_path, MAX_PATH, EUCALYPTUS_XM);
 	snprintf (nc->detach_cmd_path, MAX_PATH, EUCALYPTUS_DETACH, nc->home, nc->home);
-        snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
-        snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
-        snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
+        snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home);
+        snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home);
+        snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
 
@@ -280,31 +282,55 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			ncMetadata *meta,
 			char *instanceId,
 			char **consoleOutput) {
-  char *output;
-  int pid, status, rc, bufsize, fd;
-  char filename[MAX_PATH];  
 
-  if (getuid() != 0) {
-    output = strdup("NOT SUPPORTED");
-    if (!output) {
-      fprintf(stderr, "strdup failed (out of memory?)\n");
-      return 1;
+  char *console_output=NULL, *console_append=NULL, *console_main=NULL;
+  char console_file[MAX_PATH];
+  int rc, fd, ret;
+  struct stat statbuf;
+
+  int bufsize, pid, status;
+
+  *consoleOutput = NULL;
+
+  snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), meta->userId, instanceId);
+  rc = stat(console_file, &statbuf);
+  if (rc >= 0) {
+    fd = open(console_file, O_RDONLY);
+    if (fd >= 0) {
+      console_append = malloc(4096);
+      if (console_append) {
+	bzero(console_append, 4096);
+	rc = read(fd, console_append, (4096)-1);
+	close(fd);          
+      }
     }
-    *consoleOutput = base64_enc((unsigned char *)output, strlen(output));    
-    if (output) free(output);
-    return(0);
   }
 
-  bufsize = sizeof(char) * 1024 * 64;
-  output = malloc(bufsize);
-  bzero(output, bufsize);
 
-  snprintf(filename, MAX_PATH, "/tmp/consoleOutput.%s", instanceId);
+  if (getuid() != 0) {
+    console_main = strdup("NOT SUPPORTED");
+    if (!console_main) {
+      fprintf(stderr, "strdup failed (out of memory?)\n");
+      if (console_append) free(console_append);
+      return 1;
+    }
+  } else {
+
+  bufsize = sizeof(char) * 1024 * 64;
+  console_main = malloc(bufsize);
+  if (!console_main) {
+    logprintfl(EUCAERROR, "doGetConsoleOutput(): out of memory!\n");
+    if (console_append) free(console_append);
+    return(1);
+  }
+  bzero(console_main, bufsize);
+
+  snprintf(console_file, MAX_PATH, "/tmp/consoleOutput.%s", instanceId);
   
   pid = fork();
   if (pid == 0) {
     int fd;
-    fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+    fd = open(console_file, O_WRONLY | O_TRUNC | O_CREAT, 0644);
     if (fd < 0) {
       // error
     } else {
@@ -325,22 +351,22 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     struct stat statbuf;
     
     count=0;
-    while(count < 10000 && stat(filename, &statbuf) < 0) {count++;}
-    fd = open(filename, O_RDONLY);
+    while(count < 10000 && stat(console_file, &statbuf) < 0) {count++;}
+    fd = open(console_file, O_RDONLY);
     if (fd < 0) {
-      logprintfl (EUCAERROR, "ERROR: could not open consoleOutput file %s for reading\n", filename);
+      logprintfl (EUCAERROR, "ERROR: could not open consoleOutput file %s for reading\n", console_file);
     } else {
       FD_ZERO(&rfds);
       FD_SET(fd, &rfds);
       tv.tv_sec = 0;
       tv.tv_usec = 500000;
       rc = select(1, &rfds, NULL, NULL, &tv);
-      bzero(output, bufsize);
+      bzero(console_main, bufsize);
       
       count = 0;
       rc = 1;
       while(rc && count < 1000) {
-	rc = read(fd, output, bufsize-1);
+	rc = read(fd, console_main, bufsize-1);
 	count++;
       }
       close(fd);
@@ -349,16 +375,28 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     wait(&status);
   }
   
-  unlink(filename);
-  
-  if (output[0] == '\0') {
-    snprintf(output, bufsize, "EMPTY");
+  unlink(console_file);
   }
   
-  *consoleOutput = base64_enc((unsigned char *)output, strlen(output));
-  free(output);
-  
-  return(0);
+  ret = 1;
+  console_output = malloc( (64*1024) + 4096 );
+  if (console_output) {
+    bzero(console_output, (64*1024) + 4096 );
+    if (console_append) {
+      strncat(console_output, console_append, 4096);
+    }
+    if (console_main) {
+      strncat(console_output, console_main, 1024*64);
+    }
+    *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
+    ret = 0;
+  }
+
+  if (console_append) free(console_append);
+  if (console_main) free(console_main);
+  if (console_output) free(console_output);
+
+  return(ret);
 }
 
 static int
@@ -404,9 +442,13 @@ doAttachVolume (	struct nc_state_t *nc,
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*login to target*/
-                if((local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev)) == NULL)
-                    return ERROR;
-                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+                local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev);
+		if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
+		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
+		  rc = 1;
+		} else {
+		  snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+		}
             } else {
 	        snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
                 rc = stat(remoteDev, &statbuf);
@@ -435,7 +477,7 @@ doAttachVolume (	struct nc_state_t *nc,
             virDomainFree(dom);
 	    sem_v(hyp_sem);
             if(is_iscsi_target) {
-                free(local_iscsi_dev);
+	      if (local_iscsi_dev) free(local_iscsi_dev);
             }
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {

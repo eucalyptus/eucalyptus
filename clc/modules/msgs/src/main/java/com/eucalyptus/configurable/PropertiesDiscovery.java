@@ -16,8 +16,8 @@ public class PropertiesDiscovery extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processsClass( Class c ) throws Throwable {
-    if ( c.getAnnotation( ConfigurableClass.class ) != null ) {
+  public boolean processClass( Class c ) throws Throwable {
+    if ( (c.getAnnotation( ConfigurableClass.class ) != null) )  {
       LOG.info( "-> Registrering configuration properties for entry: " + c.getName( ) );
       LOG.debug( "Checking fields: " + Arrays.asList( c.getDeclaredFields( ) ));
       for( Field  f : c.getDeclaredFields( ) ) {

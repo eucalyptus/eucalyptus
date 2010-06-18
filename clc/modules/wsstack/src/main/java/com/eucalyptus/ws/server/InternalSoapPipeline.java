@@ -96,7 +96,7 @@ public class InternalSoapPipeline extends FilteredPipeline {
 
   @Override
   public String getPipelineName( ) {
-    return "internal-pipeline-" + this.serviceName;
+    return "zeinternal-pipeline-" + this.serviceName;
   }
 
 }

@@ -71,26 +71,19 @@
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
   <mule:configuration>
-    <mule:default-threading-profile doThreading="true" maxThreadsActive="48" poolExhaustedAction="RUN" />
+    <mule:default-threading-profile doThreading="true" maxThreadsActive="1024" poolExhaustedAction="RUN" />
   </mule:configuration>
-  <euca:connector name="eucaws" />
-  <!-- TODO: remove all these forward references somehow -->
-  <!--interface services-->
-  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" connector-ref="internal-async"/>
-  
-  <vm:connector name="internal-async" queueEvents="true" >
-    <vm:queueProfile persistent="false" maxOutstandingMessages="8192"/>
+   <euca:connector name="eucaws" />
+  <vm:connector name="internal-async" queueEvents="false" >
+    <vm:queueProfile persistent="false" maxOutstandingMessages="256"/>
   </vm:connector> 
-  <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <!--endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false"/-->
-  <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" connector-ref="internal-async"/>
-  <!--
-  <exception-strategy className="com.eucalyptus.ws.ExceptionTrap"/>
-  -->
+  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />  
+  <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" />
+  <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" />
+  <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" />
+  <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" />
+  <endpoint name="ComponentRequestQueueEndpoint" address="vm://ComponentRequestQueue" synchronous="false" />
   <model name="eucalyptus-bootstrap">
-<!--    <default-threading-profile  />-->
     <default-service-exception-strategy>
       <outbound-endpoint ref="ReplyQueueEndpoint" />
     </default-service-exception-strategy>
@@ -117,6 +110,10 @@
         <filtering-router>
           <outbound-endpoint ref="EucalyptusRequestQueueEndpoint" synchronous="false" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="ComponentRequestQueueEndpoint" synchronous="false" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ComponentMessageType" />
         </filtering-router>
       </outbound>
     </service>

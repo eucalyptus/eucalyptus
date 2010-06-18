@@ -44,6 +44,7 @@ public class Composites {
       dest = destType.newInstance( );
       return compose( dest, sources );
     } catch ( Exception e ) {
+      LOG.error( e, e );
       throw new RuntimeException( "Composition for " + destType.getCanonicalName( ) + " failed because of " + e.getMessage( ), e );
     }
   }
@@ -57,6 +58,7 @@ public class Composites {
     try {
       return ( B ) CompositeHelper.update( source, destType.newInstance( ) );
     } catch ( Exception e ) {
+      LOG.error( e, e );
       throw new RuntimeException( "Failed to update composable object because of: " + e.getMessage( ), e );
     }    
   }
@@ -86,6 +88,7 @@ public class Composites {
         }} );
       return project( source, dests );
     } catch ( Exception e ) {
+      LOG.error( e, e );
       throw new RuntimeException( "Projection for " + source.getClass( ).getCanonicalName( ) + " failed because of " + e.getMessage( ), e );
     }
   }

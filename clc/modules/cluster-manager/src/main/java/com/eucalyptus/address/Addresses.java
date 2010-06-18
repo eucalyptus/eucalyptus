@@ -73,6 +73,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.SuccessCallback;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -84,8 +86,6 @@ import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstance;
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 

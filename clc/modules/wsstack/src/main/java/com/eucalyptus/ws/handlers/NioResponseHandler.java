@@ -90,7 +90,7 @@ import com.eucalyptus.util.LogUtil;
 
 import edu.ucsb.eucalyptus.cloud.NotImplementedException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 @ChannelPipelineCoverage( "one" )
 public class NioResponseHandler extends SimpleChannelHandler implements ResponseHandler {
@@ -184,7 +184,7 @@ public class NioResponseHandler extends SimpleChannelHandler implements Response
           Thread.currentThread( ).interrupt( );
         }
       }
-      LOG.debug( EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get().getClass( ).toString( ) ) );
+      EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get().getClass( ).toString( ) ).debug( );
     } finally {
       this.canHas.unlock( );
     }

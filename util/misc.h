@@ -60,19 +60,17 @@ permission notice:
 #ifndef INCLUDE_MISC_H
 #define INCLUDE_MISC_H
 
+#include <stdio.h>
 #include <stdarg.h>
+#include <unistd.h> // ssize_t
 #include <linux/limits.h>
+
+typedef unsigned char boolean;
+#define TRUE 1
+#define FALSE 0
+
 #ifndef MAX_PATH
 #define MAX_PATH 4096
-#endif
-
-#ifndef NO_AXIS /* for compiling on systems without Axis */
-#include <neethi_policy.h>
-#include <neethi_util.h>
-#include <axutil_utils.h>
-#include <axis2_client.h>
-#include <axis2_stub.h>
-int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile);
 #endif
 
 #define TIMERSTART(a) double a;                                 \
@@ -97,6 +95,7 @@ enum {EUCADEBUG2, EUCADEBUG, EUCAINFO, EUCAWARN, EUCAERROR, EUCAFATAL};
 
 char * replace_string (char ** stringp, char * source, char * destination );
 int sscanf_lines (char * lines, char * format, void * varp);
+char * fp2str (FILE * fp);
 char * system_output (char * shell_command );
 char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
 
@@ -185,8 +184,10 @@ int logcat (int debug_level, const char * file_name);
 int touch (const char * path);
 int diff (const char * path1, const char * path2);
 long long dir_size (const char * path);
+char * file2strn (const char * path, const ssize_t limit);
 char * file2str (const char * path); /* read file 'path' into a new string */
 int write2file(const char *path, char *str);
+char * str2str (const char * str, const char * begin, const char * end);
 long long str2longlong (const char * str, const char * begin, const char * end); /* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
 int uint32compar(const void *ina, const void *inb);
@@ -195,6 +196,9 @@ int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER);
 int maxint(int a, int b);
 int minint(int a, int b);
-
+int copy_file (const char * src, const char * dst);
+long long file_size (const char * file_path);
+char * strduplc (const char * s);
+char * xpath_content (const char * xml, const char * xpath);
 
 #endif

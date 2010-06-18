@@ -64,18 +64,12 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.event.StartComponentEvent;
-import com.eucalyptus.component.event.StopComponentEvent;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.StorageProperties;
-import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
-import edu.ucsb.eucalyptus.ic.StorageController;
 
 public class BlockStorageEventListener implements EventListener {
 	private static Logger LOG  = Logger.getLogger( BlockStorageEventListener.class );

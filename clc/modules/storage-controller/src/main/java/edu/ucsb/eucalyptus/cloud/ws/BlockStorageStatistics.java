@@ -67,7 +67,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo;
-import edu.ucsb.eucalyptus.ic.StorageController;
 import edu.ucsb.eucalyptus.msgs.StorageUsageStatsRecord;
 
 public class BlockStorageStatistics {
@@ -104,12 +103,26 @@ public class BlockStorageStatistics {
 		dump();
 	}
 
+	public void incrementVolumeCount(long bytes) {
+		totalSpaceUsed += bytes;
+		numberOfVolumes++;
+		updateStateInfo();
+		dump();
+	}
+
+	public void decrementVolumeCount(long bytes) {
+		totalSpaceUsed += bytes;
+		numberOfVolumes--;
+		updateStateInfo();
+		dump();
+	}
+
 	public void dump() {
 		LOG.info(StorageUsageStatsRecord.create(numberOfVolumes, totalSpaceUsed));
 	}
 
 	private void getStateInfo() {
-		EntityWrapper<StorageStatsInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<StorageStatsInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			StorageStatsInfo storageStats = db.getUnique(new StorageStatsInfo(StorageProperties.NAME));
 			numberOfVolumes = storageStats.getNumberOfVolumes();
@@ -124,7 +137,7 @@ public class BlockStorageStatistics {
 	}
 
 	private void updateStateInfo() {
-		EntityWrapper<StorageStatsInfo> db = StorageController.getEntityWrapper();
+		EntityWrapper<StorageStatsInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			StorageStatsInfo storageStats = db.getUnique(new StorageStatsInfo(StorageProperties.NAME));
 			storageStats.setNumberOfVolumes(numberOfVolumes);

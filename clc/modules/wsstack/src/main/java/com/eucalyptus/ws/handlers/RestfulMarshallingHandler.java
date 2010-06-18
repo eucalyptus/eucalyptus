@@ -70,7 +70,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -98,7 +97,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       if ( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
         this.namespace = "http://ec2.amazonaws.com/doc/" + bindingVersion + "/";
       } else {
-        this.namespace = "http://msgs.eucalyptus.ucsb.edu";
+        this.namespace = "http://msgs.eucalyptus.com";
       }
       String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getName( );
       try {

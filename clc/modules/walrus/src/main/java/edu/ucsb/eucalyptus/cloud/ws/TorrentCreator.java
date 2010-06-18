@@ -121,7 +121,7 @@ public class TorrentCreator {
 
         int bytesRead;
         int totalBytesRead = 0;
-        byte[] bytes = new byte[1024];
+        byte[] bytes = new byte[102400];
         String inString = "";
 
         while((bytesRead = inStream.read(bytes)) > 0) {

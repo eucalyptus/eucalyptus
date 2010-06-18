@@ -6,17 +6,29 @@
     
     <xs:complexType name="virtualMachineType">
       <xs:sequence>
+	<xs:element minOccurs="0" name="name" type="xs:string"/>
 	<xs:element minOccurs="0" name="memory" type="xs:int"/>
 	<xs:element minOccurs="0" name="cores" type="xs:int"/>
 	<xs:element minOccurs="0" name="disk" type="xs:int"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="deviceMapping" type="tns:deviceMappingType"/>
       </xs:sequence>
     </xs:complexType>
+
+      <xs:complexType name="deviceMappingType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="deviceName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="virtualName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="size" type="xs:int"/>
+	  <xs:element minOccurs="0" name="format" type="xs:string"/>
+	</xs:sequence>
+      </xs:complexType>
     
     <xs:complexType abstract="true" name="eucalyptusMessage">
       <xs:sequence>
-	<xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
+	<xs:element nillable="true" minOccurs="0" name="correlationId" type="xs:string"/>
 	<xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
 	<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
+	<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
 	<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:int"/>
       </xs:sequence>
     </xs:complexType>
@@ -65,8 +77,8 @@
 	  <xs:complexContent>
 	    <xs:extension base="tns:eucalyptusMessage">
 	      <xs:sequence>
-	        <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="localDev" type="xs:string"/>
 	      </xs:sequence>
@@ -105,7 +117,7 @@
 	    </xs:extension>
 	  </xs:complexContent>
     </xs:complexType>
-    
+
     <xs:complexType name="ncGetConsoleOutputType">
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
@@ -180,10 +192,10 @@
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
 	    <xs:element name="imageId" type="xs:string"/>
-	    <xs:element name="kernelId" type="xs:string"/>
+	    <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
 	    <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
 	    <xs:element name="imageURL" type="xs:string"/>
-	    <xs:element name="kernelURL" type="xs:string"/>
+	    <xs:element minOccurs="0" name="kernelURL" type="xs:string"/>
 	    <xs:element minOccurs="0" name="ramdiskURL" type="xs:string"/>
 	    <xs:element name="reservationId" type="xs:string"/>
 	    <xs:element name="instanceId" type="xs:string"/>
@@ -219,7 +231,7 @@
 	    <xs:element minOccurs="1" name="reservationId" type="xs:string"/>
 	    <xs:element minOccurs="1" name="instanceId" type="xs:string"/>
 	    <xs:element minOccurs="1" name="imageId" type="xs:string"/>
-	    <xs:element minOccurs="1" name="kernelId" type="xs:string"/>
+	    <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
 	    <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
 	    <xs:element minOccurs="1" name="userId" type="xs:string"/> <!-- == owner ID in CC -->
 	    <xs:element minOccurs="1" name="keyName" type="xs:string"/>
@@ -591,7 +603,7 @@
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>
-  
+
   <wsdl:operation name="ncGetConsoleOutput">
     <soap:operation soapAction="EucalyptusNC#ncGetConsoleOutput" style="document"/>
     <wsdl:input name="ncGetConsoleOutput">

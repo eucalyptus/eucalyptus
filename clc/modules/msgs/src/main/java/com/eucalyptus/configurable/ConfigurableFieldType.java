@@ -65,5 +65,5 @@ package com.eucalyptus.configurable;
 
 
 public enum ConfigurableFieldType {
-  BOOLEAN, KEYVALUE, PASSWORD, HIDDEN
+  BOOLEAN, KEYVALUE, KEYVALUEHIDDEN, PRIVATE
 }

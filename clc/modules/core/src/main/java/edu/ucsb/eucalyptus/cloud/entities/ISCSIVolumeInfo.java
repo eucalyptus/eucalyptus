@@ -73,12 +73,13 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "ISCSIVolumeInfo" )
 @Entity
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ISCSIVolumeInfo extends LVMVolumeInfo {
     private String storeName;
     private Integer tid;
     private Integer lun;
     private String storeUser;
+	@Lob
     private String encryptedPassword;
 
     public ISCSIVolumeInfo() {}

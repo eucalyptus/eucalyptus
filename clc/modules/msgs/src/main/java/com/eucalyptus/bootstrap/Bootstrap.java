@@ -4,12 +4,12 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.mule.config.ConfigResource;
 import com.eucalyptus.bootstrap.transitions.LoadConfigs;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Lifecycles;
 import com.eucalyptus.component.Resource;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
@@ -17,7 +17,6 @@ import com.eucalyptus.util.Committor;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Transition;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
 
 public class Bootstrap {
   private static Logger LOG = Logger.getLogger( Bootstrap.class );
@@ -65,13 +64,13 @@ public class Bootstrap {
     }
     
     public void printAgenda( ) {
-      LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_AGENDA, this.name( ), Bootstrap.loading ? "LOAD" : "START" ) );
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_AGENDA, this.name( ), Bootstrap.loading ? "LOAD" : "START" ).info( );
       for ( Bootstrapper b : this.bootstrappers ) {
-        LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_AGENDA, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_AGENDA, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
       }
     }
     
-    private void updateBootstrapDependencies( ) {
+    public void updateBootstrapDependencies( ) {
       for ( Bootstrapper b : Lists.newArrayList( this.bootstrappers ) ) {
         if ( !b.checkLocal( ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ), this.getClass( ).getSimpleName( ),
@@ -90,13 +89,13 @@ public class Bootstrap {
       this.printAgenda( );
       for ( Bootstrapper b : this.bootstrappers ) {
         try {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_LOAD, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_LOAD, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           boolean result = b.load( this );
           if ( !result ) {
             throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from load( ): terminating bootstrap." );
           }
         } catch ( Throwable e ) {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
         }
       }
@@ -107,13 +106,13 @@ public class Bootstrap {
       this.printAgenda( );
       for ( Bootstrapper b : this.bootstrappers ) {
         try {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_START, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_START, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           boolean result = b.start( );
           if ( !result ) {
             throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from start( ): terminating bootstrap." );
           }
         } catch ( Throwable e ) {
-          LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ) );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
         }
       }
@@ -202,7 +201,7 @@ public class Bootstrap {
       starting = false;
       finished = false;
     } else if ( currentStage != null ) {
-      LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_COMPLETE, currentStage.toString( ) ) );
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_COMPLETE, currentStage.toString( ) ).info( );
       if ( Stage.Final.equals( currentStage ) ) {
         currentStage = null;
         if ( loading && !starting && !finished ) {
@@ -221,7 +220,7 @@ public class Bootstrap {
     for ( int i = currOrdinal + 1; i <= Stage.Final.ordinal( ); i++ ) {
       currentStage = Stage.values( )[i];
       if ( currentStage.bootstrappers.isEmpty( ) ) {
-        LOG.info( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_SKIPPED, currentStage.name( ) ) );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_STAGE_SKIPPED, currentStage.name( ) ).info( );
         continue;
       } else {
         return currentStage;
@@ -253,7 +252,7 @@ public class Bootstrap {
     Lifecycles.State.PRIMORDIAL.to( Lifecycles.State.INITIALIZED, new Committor<Component>( ) {
       @Override
       public void commit( Component comp ) throws Exception {
-        if( comp.isSingleton( ) && comp.isLocal( ) ) {
+        if( comp.isSingleton( ) && ( comp.isLocal( ) || comp.getPeer().equals(com.eucalyptus.bootstrap.Component.dns) ) ) {
           comp.buildService( );
         }
       }

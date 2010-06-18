@@ -35,7 +35,7 @@ public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
         final User user = Users.lookupCertificate( cert );
         super.setCredential( cert );
         super.setPrincipal( user );
-        super.getGroups( ).addAll( Groups.lookupGroups( super.getPrincipal( ) ) );
+        super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
       } catch ( NoSuchUserException e ) {
         try {
           if ( Users.getUserProvider( ).checkRevokedCertificate( cert ) ) {

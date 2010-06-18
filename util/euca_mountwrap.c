@@ -72,10 +72,23 @@ int main(int argc, char **argv) {
       exit(1);
     }
 
-    rc = mount(argv[2], argv[3], "ext2", MS_MGC_VAL, NULL);
-    if (rc) {
-      perror("");
-      exit(1);
+    if (argc==5) {
+        if (!strcmp("--bind", argv[2])) {
+            rc = mount (argv[3], argv[4], NULL, MS_BIND, NULL);
+            if (rc) {
+                perror("mount");
+                exit(1);
+            }
+        } else {
+            fprintf(stderr, "%s: unknown flag %s\n", argv[0], argv[2]);
+            exit(1);
+        }
+    } else {
+        rc = mount(argv[2], argv[3], "ext2", MS_MGC_VAL, NULL);
+        if (rc) {
+            perror("mount");
+            exit(1);
+        }
     }
   } else if (!strcmp("umount", argv[1])) {
     if (argc < 3) {
@@ -84,7 +97,7 @@ int main(int argc, char **argv) {
 
     rc = umount(argv[2]);
     if (rc) {
-      perror("");
+      perror("umount");
       exit(1);
     }
   }

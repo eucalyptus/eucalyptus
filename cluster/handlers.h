@@ -128,6 +128,7 @@ typedef struct resource_t {
   // state information
   int state, lastState;
   time_t stateChange, idleStart;
+  int running;
 } ccResource;
 int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory, int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart);
 
@@ -201,7 +202,7 @@ int privIpCmp(ccInstance *inst, void *ip);
 int privIpSet(ccInstance *inst, void *ip);
 int pubIpCmp(ccInstance *inst, void *ip);
 int pubIpSet(ccInstance *inst, void *ip);
-int free_instanceNetwork(char *mac, int vlan);
+int free_instanceNetwork(char *mac, int vlan, int force, int dolock);
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src);
 
 int add_resourceCache(char *host, ccResource *in);

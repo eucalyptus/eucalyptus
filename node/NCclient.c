@@ -61,7 +61,8 @@ permission notice:
 #include <unistd.h> /* getopt */
 #include "data.h"
 #include "client-marshal.h"
-#include <misc.h>
+#include "misc.h"
+#include "euca_axis.h"
 
 #define NC_ENDPOINT "/axis2/services/EucalyptusNC"
 #define WALRUS_ENDPOINT "/services/Walrus"
@@ -236,7 +237,10 @@ int main (int argc, char **argv)
     }
     
     ncMetadata meta = { "correlate-me-please", "eucalyptus" };
-    virtualMachine params = { 64, 64, 1, "m1.tiny"};
+    virtualMachine params = { 64, 64, 1, "m1.small", 
+			      { { "sda1", "root", 100, "none" }, 
+				{ "sda2", "ephemeral1", 1000, "ext3" },
+				{ "sda3", "swap", 50, "swap" } } };
     ncStub * stub;
     char configFile[1024], policyFile[1024];
     char *euca_home;
@@ -349,15 +353,20 @@ int main (int argc, char **argv)
                                        kernel_id, kernel_url, 
                                        ramdisk_id, ramdisk_url, 
                                        "", /* key */
-				       &netparams,
-				       //                                       privMac, privIp, vlan, 
+									   &netparams,
+									   //                                       privMac, privIp, vlan, 
                                        user_data, launch_index, group_names, group_names_size, /* CC stuff */
                                        &outInst);
             if (rc != 0) {
                 printf("ncRunInstance() failed: instanceId=%s error=%d\n", instance_id, rc);
                 exit(1);
             }
-            printf("instanceId=%s stateCode=%d stateName=%s\n", outInst->instanceId, outInst->stateCode, outInst->stateName);
+	    // count device mappings
+	    int i, count=0;
+	    for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
+	      if (strlen(outInst->params.deviceMapping[i].deviceName)>0) count++;
+	    }
+            printf("instanceId=%s stateCode=%d stateName=%s deviceMappings=%d\n", outInst->instanceId, outInst->stateCode, outInst->stateName, count);
             free_instance(&outInst);
         }
     

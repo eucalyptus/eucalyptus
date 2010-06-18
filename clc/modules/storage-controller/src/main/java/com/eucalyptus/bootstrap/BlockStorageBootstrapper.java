@@ -63,12 +63,13 @@ package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.storage.BlockStorageManagerFactory;
+import com.eucalyptus.storage.LogicalStorageManager;
 
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-import edu.ucsb.eucalyptus.storage.BlockStorageManagerFactory;
 
 @Provides(Component.storage)
-@RunDuring(Bootstrap.Stage.PrivilegedConfiguration)
+@RunDuring(Bootstrap.Stage.DatabaseInit)
 @DependsLocal(Component.storage)
 public class BlockStorageBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
@@ -98,7 +99,9 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean load(Stage current ) throws Exception {
-		BlockStorageManagerFactory.getBlockStorageManager().checkPreconditions();
+		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
+		if(blockStorageManager != null)
+			blockStorageManager.checkPreconditions();
 		return true;
 	}
 

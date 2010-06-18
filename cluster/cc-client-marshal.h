@@ -63,6 +63,7 @@ permission notice:
 #include <stdio.h>
 #include <time.h>
 #include <misc.h>
+#include <data.h>
 #include "axis2_stub_EucalyptusCC.h"
 
 int cc_registerImage(char *imageloc, axutil_env_t *, axis2_stub_t *);
@@ -78,7 +79,7 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
 
 int cc_describePublicAddresses(axutil_env_t *, axis2_stub_t *);
 int cc_configureNetwork(char *, char *, char *, int, int, char *, axutil_env_t *, axis2_stub_t *);
-int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, int num, int vlan, char *netName, axutil_env_t *, axis2_stub_t *);
+int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, int num, int vlan, char *netName, virtualMachine *vm_type, axutil_env_t *, axis2_stub_t *);
 int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
 int cc_getConsoleOutput(char *instId, axutil_env_t *, axis2_stub_t *);
 int cc_rebootInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);

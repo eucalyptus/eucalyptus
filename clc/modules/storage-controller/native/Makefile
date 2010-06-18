@@ -16,6 +16,7 @@ $(LIBDIR)/$(LVM2_SO):
 	gcc -shared $(CFLAGS) -o $(LIBDIR)/$(LVM2_SO) *.c
 
 clean:
+	rm -rf $(LIBDIR)
 	rm -f $(LVM2_SO) *.o *~* *#*  
 
 distclean: clean

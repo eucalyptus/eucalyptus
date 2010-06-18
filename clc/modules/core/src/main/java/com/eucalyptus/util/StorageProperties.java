@@ -74,6 +74,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
 
@@ -85,29 +86,31 @@ public class StorageProperties {
 
 	public static final String SERVICE_NAME = "StorageController";
 	public static final String SC_LOCAL_NAME = "StorageController-local";
-	public static String NAME = "StorageController" + UUID.randomUUID();
-	public static String SC_ID = SERVICE_NAME + UUID.randomUUID();
-	public static String DB_NAME             = "eucalyptus_storage";
+	public static final String DB_NAME             = "eucalyptus_storage";
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
 	public static final String EUCALYPTUS_HEADER = "EucaHeader";
-	public static String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
-	public static String WALRUS_URL = "http://localhost:8773/services/Walrus";
-	public static int MAX_TOTAL_VOLUME_SIZE = 50;
-	public static int MAX_VOLUME_SIZE = 10;
+	public static final String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
 	public static final long GB = 1024*1024*1024;
 	public static final long MB = 1024*1024;
 	public static final long KB = 1024;
-	public static int TRANSFER_CHUNK_SIZE = 102400;
+	public static final String ETHERD_PREFIX = "/dev/etherd/e";
+	public static final String iface = "eth0";
+	public static final int MAX_TOTAL_VOLUME_SIZE = 50;
+	public static final int MAX_VOLUME_SIZE = 10;
+	public static final int TRANSFER_CHUNK_SIZE = 8192;
+	public static final boolean zeroFillVolumes = false;
+
 	public static boolean enableSnapshots = false;
 	public static boolean enableStorage = false;
 	public static boolean shouldEnforceUsageLimits = true;
-	public static final String ETHERD_PREFIX = "/dev/etherd/e";
-	public static String iface = "eth0";
-	public static boolean zeroFillVolumes = false;
+	public static String STORE_PREFIX = "iqn.2009-06.com.eucalyptus.";
+	public static String WALRUS_URL = "http://localhost:"+System.getProperty("euca.ws.port")+"/services/Walrus";
+	public static String NAME = "unregistered";
+	public static Integer ISCSI_LUN = 1;
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
 
-        static { GroovyUtil.loadConfig("storageprops.groovy"); }
+	static { GroovyUtil.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
 		if(!Component.eucalyptus.isLocal()) {
@@ -134,8 +137,12 @@ public class StorageProperties {
 
 	public static void updateStorageHost() {
 		try {
-			StorageControllerConfiguration config = Configuration.getStorageControllerConfiguration(StorageProperties.NAME);
-			STORAGE_HOST = config.getHostName();
+			if(!"unregistered".equals(StorageProperties.NAME)) {
+				StorageControllerConfiguration config = Configuration.getStorageControllerConfiguration(StorageProperties.NAME);
+				STORAGE_HOST = config.getHostName();
+			} else {
+				LOG.info("Storage Controller not registered yet.");
+			}
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
 		}
@@ -170,5 +177,13 @@ public class StorageProperties {
 
 	public enum StorageParameters {
 		EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
+	}
+
+	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
+
+	public static final String blockSize = "1M";
+
+	public static <T> EntityWrapper<T> getEntityWrapper( ) {
+		return new EntityWrapper<T>( StorageProperties.DB_NAME );
 	}
 }

@@ -70,6 +70,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -79,8 +80,8 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "storage_info" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-@ConfigurableClass(alias = "storage", description = "Basic storage controller configuration.")
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ConfigurableClass(root = "storage", alias="basic", description = "Basic storage controller configuration.", singleton=false, deferred = true)
 public class
 StorageInfo {
 	private static Logger LOG = Logger.getLogger( StorageInfo.class );
@@ -89,23 +90,15 @@ StorageInfo {
 	@GeneratedValue
 	@Column( name = "storage_id" )
 	private Long id = -1l;
+	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
 	@ConfigurableField( description = "Total disk space reserved for volumes", displayName = "Disk space reserved for volumes" )
 	@Column( name = "system_storage_volume_size_gb" )
 	private Integer maxTotalVolumeSizeInGb;
-	@ConfigurableField( description = "Storage network interface.", displayName = "Storage Interface" )
-	@Column( name = "storage_interface" )
-	private String storageInterface;
 	@ConfigurableField( description = "Max volume size", displayName = "Max volume size" )
 	@Column( name = "system_storage_max_volume_size_gb")
 	private Integer maxVolumeSizeInGB;
-	@ConfigurableField( description = "Storage volumes directory.", displayName = "Volumes path" )
-	@Column( name = "system_storage_volumes_dir" )
-	private String volumesDir;
-	@ConfigurableField( description = "Should volumes be zero filled.", displayName = "Zero-fill volumes", type = ConfigurableFieldType.BOOLEAN )
-	@Column(name = "zero_fill_volumes")
-	private Boolean zeroFillVolumes;
 
 	public StorageInfo(){
 		this.name = StorageProperties.NAME;
@@ -118,16 +111,10 @@ StorageInfo {
 
 	public StorageInfo(final String name, 
 			final Integer maxTotalVolumeSizeInGb,
-			final String storageInterface, 
-			final Integer maxVolumeSizeInGB,
-			final String volumesDir,
-			final Boolean zeroFillVolumes) {
+			final Integer maxVolumeSizeInGB) {
 		this.name = name;
 		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
-		this.storageInterface = storageInterface;
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-		this.volumesDir = volumesDir;
-		this.zeroFillVolumes = zeroFillVolumes;
 	}
 
 	public Long getId()
@@ -151,36 +138,12 @@ StorageInfo {
 		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
 	}
 
-	public String getStorageInterface() {
-		return storageInterface;
-	}
-
-	public void setStorageInterface(String storageInterface) {
-		this.storageInterface = storageInterface;
-	}
-
 	public Integer getMaxVolumeSizeInGB() {
 		return maxVolumeSizeInGB;
 	}
 
 	public void setMaxVolumeSizeInGB(Integer maxVolumeSizeInGB) {
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-	}
-
-	public String getVolumesDir() {
-		return volumesDir;
-	}
-
-	public void setVolumesDir(String volumesDir) {
-		this.volumesDir = volumesDir;
-	}
-
-	public Boolean getZeroFillVolumes() {
-		return zeroFillVolumes;
-	}
-
-	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
-		this.zeroFillVolumes = zeroFillVolumes;
 	}
 
 	@Override
@@ -225,10 +188,7 @@ StorageInfo {
 			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
 			conf =  new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-					StorageProperties.iface, 
-					StorageProperties.MAX_VOLUME_SIZE, 
-					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes);
+					StorageProperties.MAX_VOLUME_SIZE);
 			storageDb.add(conf);
 			storageDb.commit();
 		}
@@ -237,10 +197,7 @@ StorageInfo {
 			storageDb.rollback();
 			return new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-					StorageProperties.iface, 
-					StorageProperties.MAX_VOLUME_SIZE, 
-					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes);
+					StorageProperties.MAX_VOLUME_SIZE);
 		}
 		return conf;
 	}

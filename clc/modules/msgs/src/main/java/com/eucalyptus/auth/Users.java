@@ -67,6 +67,10 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.UserProvider;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.records.EventClass;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Tx;
 
 /**
  * Facade for accessing the system configured credential provider.
@@ -90,10 +94,12 @@ public class Users {
   }
 
   public static User addUser( String userName, Boolean admin, Boolean enabled ) throws UserExistsException, UnsupportedOperationException {
+    EventRecord.here( Users.class, EventClass.USER, EventType.USER_ADDED, userName, "admin="+admin, "enabled="+enabled ).info();
     return Users.getUserProvider().addUser( userName, admin, enabled );
   }
 
   public static void deleteUser( String userName ) throws NoSuchUserException, UnsupportedOperationException {
+    EventRecord.here( Users.class, EventClass.USER, EventType.USER_DELETED, userName ).info();
     Users.getUserProvider().deleteUser( userName );
   }
 
@@ -115,6 +121,10 @@ public class Users {
 
   public static User lookupUser( String userName ) throws NoSuchUserException {
     return Users.getUserProvider( ).lookupUser( userName );
+  }
+  
+  public static void updateUser( String userName, Tx<User> userTx ) throws NoSuchUserException {
+    Users.getUserProvider( ).updateUser( userName, userTx );
   }
 
 }

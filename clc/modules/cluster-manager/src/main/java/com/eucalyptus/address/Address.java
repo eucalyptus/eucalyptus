@@ -77,6 +77,8 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
@@ -84,12 +86,14 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventClass;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "addresses" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Address implements HasName {
   public enum State {
     broken, unallocated, allocated, assigned, impending;
@@ -100,74 +104,82 @@ public class Address implements HasName {
       public Class getCallback( ) {
         return QueuedEventCallback.NOOP.class;
       }
-    }, unallocating {
+    },
+    unallocating {
       public Class getCallback( ) {
         return QueuedEventCallback.NOOP.class;
       }
-    }, assigning {
+    },
+    assigning {
       @Override
       public Class getCallback( ) {
         return AssignAddressCallback.class;
       }
-    }, unassigning {
+    },
+    unassigning {
       @Override
       public Class getCallback( ) {
         return UnassignAddressCallback.class;
       }
-    }, system {
+    },
+    system {
       public Class getCallback( ) {
         return QueuedEventCallback.NOOP.class;
       }
-    }, quiescent {
+    },
+    quiescent {
       public Class getCallback( ) {
         return QueuedEventCallback.NOOP.class;
       }
     };
-    public abstract Class getCallback();
+    public abstract Class getCallback( );
   }
   
-  private static Logger                  LOG                     = Logger.getLogger( Address.class );
+  private static Logger                   LOG                     = Logger.getLogger( Address.class );
   @Id
   @GeneratedValue
   @Column( name = "address_id" )
-  private Long                           id                      = -1l;
+  private Long                            id                      = -1l;
   @Column( name = "address_name" )
-  private String                         name;
+  private String                          name;
   @Column( name = "address_cluster" )
-  private String                         cluster;
+  private String                          cluster;
   @Column( name = "address_owner_id" )
-  private String                         userId;
+  private String                          userId;
   @Transient
-  private String                         instanceId;
+  private String                          instanceId;
   @Transient
-  private String                         instanceAddress;
+  private String                          instanceAddress;
   @Transient
-  public static String                   UNALLOCATED_USERID      = "nobody";
+  public static String                    UNALLOCATED_USERID      = "nobody";
   @Transient
-  public static String                   UNASSIGNED_INSTANCEID   = "available";
+  public static String                    UNASSIGNED_INSTANCEID   = "available";
   @Transient
-  public static String                   UNASSIGNED_INSTANCEADDR = "0.0.0.0";
+  public static String                    UNASSIGNED_INSTANCEADDR = "0.0.0.0";
   @Transient
-  public static String                   PENDING_ASSIGNMENT      = "pending";
+  public static String                    PENDING_ASSIGNMENT      = "pending";
   @Transient
-  private AtomicMarkableReference<State> state;
+  private AtomicMarkableReference<State>  state;
   @Transient
-  private transient final SplitTransition          QUIESCENT               = new SplitTransition( Transition.quiescent ) {
-                                                                   public void bottom( ) {}
-                                                                   public void top( ) {}
-                                                                   public String toString() {
-                                                                    return "";
-                                                                   }
-                                                                 };
+  private transient final SplitTransition QUIESCENT               = new SplitTransition( Transition.quiescent ) {
+                                                                    public void bottom( ) {}
+                                                                    
+                                                                    public void top( ) {}
+                                                                    
+                                                                    public String toString( ) {
+                                                                      return "";
+                                                                    }
+                                                                  };
   @Transient
-  private volatile SplitTransition       transition;
+  private volatile SplitTransition        transition;
   
-  public Address( ) {
-  }
+  public Address( ) {}
+  
   public Address( final String name ) {
     this( );
     this.name = name;
   }
+  
   public Address( String address, String cluster ) {
     this( address );
     this.userId = UNALLOCATED_USERID;
@@ -193,10 +205,10 @@ public class Address implements HasName {
   public void init( ) {//Should only EVER be called externally after loading from the db
     this.state = new AtomicMarkableReference<State>( State.unallocated, false );
     this.transition = QUIESCENT;
-    if( this.userId == null ) {
+    if ( this.userId == null ) {
       this.userId = UNALLOCATED_USERID;
     }
-    if( this.instanceAddress == null || this.instanceId == null ) {
+    if ( this.instanceAddress == null || this.instanceId == null ) {
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
     }
@@ -218,10 +230,10 @@ public class Address implements HasName {
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.name );
-        this.state.set( State.unallocated, false );        
+        this.state.set( State.unallocated, false );
       } else {
         Addresses.getInstance( ).register( this );
-        this.state.set( State.allocated, false );        
+        this.state.set( State.allocated, false );
       }
     }
     LOG.debug( "Initialized address: " + this.toString( ) );
@@ -229,12 +241,13 @@ public class Address implements HasName {
   
   private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, SplitTransition transition ) {
     this.transition = transition;
-    LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), this.toString( ) ) );
+    EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, this.state.getReference( ), this.toString( ) ).debug( );
     if ( !this.state.compareAndSet( expectedState, newState, expectedMark, newMark ) ) {
       throw new IllegalStateException( String.format( "Cannot mark address as %s[%s.%s->%s.%s] when it is %s.%s: %s", transition.getName( ), expectedState,
                                                       expectedMark, newState, newMark, this.state.getReference( ), this.state.isMarked( ), this.toString( ) ) );
     }
-    LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), "TOP", this.transition.getName( ).name( ), this.toString( ) ) );
+    EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, this.state.getReference( ), "TOP", this.transition.getName( ).name( ), this.toString( ) )
+               .debug( );
     this.transition.top( );
     return true;
   }
@@ -251,8 +264,11 @@ public class Address implements HasName {
         } catch ( NoSuchElementException e ) {
           LOG.debug( e );
         }
+        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ALLOCATE, "user=" + Address.this.userId, "address=" + Address.this.name,
+                          Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
         Address.this.state.attemptMark( State.allocated, false );
       }
+      
       public void bottom( ) {}
     } );
     return this;
@@ -261,12 +277,15 @@ public class Address implements HasName {
   public Address release( ) {
     this.transition( State.allocated, State.unallocated, false, true, new SplitTransition( Transition.unallocating ) {
       public void top( ) {
+        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_RELEASE, "user=" + Address.this.userId, "address=" + Address.this.name,
+                          Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.this.userId = UNALLOCATED_USERID;
         Address.removeAddress( Address.this.name );
         Address.this.state.attemptMark( State.unallocated, false );
       }
+      
       public void bottom( ) {}
     } );
     return this;
@@ -291,7 +310,25 @@ public class Address implements HasName {
   public Address unassign( ) {
     this.transition( State.assigned, State.allocated, false, true, //
                      new SplitTransition( Transition.unassigning ) {
-                       public void top( ) {}
+                       public void top( ) {
+                         if ( !Address.this.isSystemOwned( ) ) {
+                           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGN, "user=" + Address.this.userId )
+                                      .append( "address=" + Address.this.name, "instance=" + Address.this.instanceId, "instance-address=" )
+                                      .append( Address.this.instanceAddress, "SYSTEM" ).info( );
+                         } else {
+                           try {
+                             VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
+                             EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGN, "user=" + vm.getOwnerId( ) )
+                                        .append( "address=" + Address.this.name, "instance=" + Address.this.instanceId, "instance-address=" )
+                                        .append( Address.this.instanceAddress, "SYSTEM" ).info( );
+                           } catch ( NoSuchElementException e ) {
+                             EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGN, "user=<unknown>" )
+                                        .append( "address=" + Address.this.name, "instance=" + Address.this.instanceId, "instance-address=" )
+                                        .append( Address.this.instanceAddress, "SYSTEM" ).info( );
+                           }
+                         }
+                       }
+                       
                        public void bottom( ) {
                          Address.this.instanceId = UNASSIGNED_INSTANCEID;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
@@ -306,10 +343,12 @@ public class Address implements HasName {
                        public void bottom( ) {
                          Address.this.state.set( State.allocated, false );
                        }
+                       
                        public void top( ) {}
                      } );
     return this;
   }
+  
   public Address assign( final String instanceId, final String instanceAddr ) {
     this.state.compareAndSet( State.impending, State.allocated, true, false );
     this.transition( State.allocated, State.assigned, false, true, //
@@ -318,7 +357,25 @@ public class Address implements HasName {
                          Address.this.setInstanceId( instanceId );
                          Address.this.setInstanceAddress( instanceAddr );
                        }
-                       public void bottom( ) {}
+                       
+                       public void bottom( ) {
+                         if ( !Address.this.isSystemOwned( ) ) {
+                           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN, "user="+Address.this.userId ) 
+                             .append( "address="+Address.this.name, "instance="+Address.this.instanceId, "instance-address=" )
+                             .append( Address.this.instanceAddress, "SYSTEM" ).info( );
+                         } else {
+                           try {
+                             VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
+                             EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN, "user=" + vm.getOwnerId( ) )
+                                        .append( "address=" + Address.this.name, "instance=" + Address.this.instanceId, "instance-address=" )
+                                        .append( Address.this.instanceAddress, "SYSTEM" ).info( );
+                           } catch ( NoSuchElementException e ) {
+                             EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN, "user=<unknown>" )
+                                        .append( "address=" + Address.this.name, "instance=" + Address.this.instanceId, "instance-address=" )
+                                        .append( Address.this.instanceAddress, "SYSTEM" ).info( );
+                           }
+                         }
+                       }
                      } );
     return this;
   }
@@ -331,22 +388,25 @@ public class Address implements HasName {
     try {
       Class cbClass = this.transition.getName( ).getCallback( );
       Constructor cbCons = cbClass.getConstructor( Address.class );
-      return (QueuedEventCallback) cbCons.newInstance( this );
+      return ( QueuedEventCallback ) cbCons.newInstance( this );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       return new QueuedEventCallback.NOOP( );
     }
   }
+  
   public Address clearPending( ) {
     if ( !this.state.isMarked( ) ) {
       throw new IllegalStateException( "Trying to clear an address which is not currently pending." );
     } else {
-      LOG.debug( EventRecord.caller( this.getClass( ), this.state.getReference( ), "BOTTOM", this.transition.getName( ).name( ), this.toString( ) ) );
+      EventRecord
+                 .caller( this.getClass( ), EventType.ADDRESS_STATE, this.state.getReference( ), "BOTTOM", this.transition.getName( ).name( ), this.toString( ) )
+                 .debug( );
       try {
         this.transition.bottom( );
       } finally {
         this.transition = QUIESCENT;
-        this.state.set( this.state.getReference( ), false );        
+        this.state.set( this.state.getReference( ), false );
       }
     }
     return this;
@@ -359,9 +419,11 @@ public class Address implements HasName {
   public boolean isSystemOwned( ) {
     return Component.eucalyptus.name( ).equals( this.getUserId( ) );
   }
+  
   public boolean isAssigned( ) {
-    return this.state.getReference( ).ordinal( ) > State.allocated.ordinal( ); 
+    return this.state.getReference( ).ordinal( ) > State.allocated.ordinal( );
   }
+  
   public boolean isPending( ) {
     return this.state.isMarked( );
   }
@@ -382,47 +444,61 @@ public class Address implements HasName {
       }
     }
   }
+  
   public String getInstanceId( ) {
     return this.instanceId;
   }
+  
   public String getName( ) {
     return this.name;
   }
+  
   public String getCluster( ) {
     return cluster;
   }
+  
   public String getUserId( ) {
     return userId;
   }
+  
   public String getInstanceAddress( ) {
     return instanceAddress;
   }
+  
   private void setInstanceAddress( String instanceAddress ) {
     this.instanceAddress = instanceAddress;
   }
+  
   public void setUserId( final String userId ) {
     this.userId = userId;
   }
+  
   public Long getId( ) {
     return id;
   }
+  
   public void setId( final Long id ) {
     this.id = id;
   }
+  
   public void setCluster( final String cluster ) {
     this.cluster = cluster;
   }
+  
   public void setInstanceId( String instanceId ) {
     this.instanceId = instanceId;
   }
+  
   @Override
   public String toString( ) {
     return LogUtil.dumpObject( this );
   }
+  
   public int compareTo( final Object o ) {
     Address that = ( Address ) o;
     return this.getName( ).compareTo( that.getName( ) );
   }
+  
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -431,10 +507,12 @@ public class Address implements HasName {
     if ( !name.equals( address.name ) ) return false;
     return true;
   }
+  
   @Override
   public int hashCode( ) {
     return name.hashCode( );
   }
+  
   public DescribeAddressesResponseItemType getDescription( boolean isAdmin ) {
     String name = this.getName( );
     String desc = null;
@@ -448,19 +526,25 @@ public class Address implements HasName {
   
   public abstract class SplitTransition {
     private Transition t;
-    private State previous;
+    private State      previous;
+    
     public SplitTransition( Transition t ) {
       this.t = t;
-      this.previous = Address.this.state!=null?Address.this.state.getReference( ):State.unallocated;
+      this.previous = Address.this.state != null ? Address.this.state.getReference( ) : State.unallocated;
     }
+    
     private Transition getName( ) {
       return this.t;
     }
+    
     public abstract void top( );
+    
     public abstract void bottom( );
+    
     @Override
     public String toString( ) {
-      return String.format( "[SplitTransition previous=%s, transition=%s, next=%s, pending=%s]", this.previous, this.t, Address.this.state.getReference( ), Address.this.state.isMarked( ) );
+      return String.format( "[SplitTransition previous=%s, transition=%s, next=%s, pending=%s]", this.previous, this.t, Address.this.state.getReference( ),
+                            Address.this.state.isMarked( ) );
     }
   }
   

@@ -76,8 +76,8 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.TextParseException;
+import com.eucalyptus.cluster.VmInstances;
 
-import edu.ucsb.eucalyptus.cloud.cluster.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class TransientZone extends Zone {

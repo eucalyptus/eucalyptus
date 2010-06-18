@@ -72,8 +72,10 @@ typedef struct sem_struct {
     pthread_cond_t cond;
     int usemutex, mutwaiters, mutcount;
     char * name;
+    int flags;
 } sem;
 
+sem * sem_realloc (const int val, const char * name, const int flags);
 sem * sem_alloc (const int val, const char * name);
 int   sem_p (sem * s);
 int   sem_v (sem * s);

@@ -31,12 +31,22 @@ public class ConfigurationProperties {
       ConfigurationProperties.store( entrySetName );
     }
     Properties props = new Properties( );
+    FileReader fileReader = null;
     try {
-      props.load( new FileReader( propsFile ) );
+      fileReader = new FileReader( propsFile );
+	  props.load( fileReader );
     } catch ( FileNotFoundException e ) {
       LOG.trace( e, e );
     } catch ( IOException e ) {
       LOG.trace( e, e );
+    } finally {
+      if( fileReader != null ) {
+    	try {
+          fileReader.close();
+    	} catch(IOException e) {
+          LOG.error(e);
+    	}
+      }
     }
     List<ConfigurableProperty> prefixProps = PropertyDirectory.getPropertyEntrySet( entrySetName );
     Map<String,String> properties = Maps.fromProperties( props );
@@ -58,10 +68,20 @@ public class ConfigurationProperties {
     }
     if( !properties.isEmpty( ) ) {
       props.putAll( properties );
+      FileOutputStream fileOutputStream = null;
       try {
-        props.save( new FileOutputStream( propsFile ), PropertyDirectory.getEntrySetDescription( entrySetName ) );
+        fileOutputStream = new FileOutputStream( propsFile );
+		props.save( fileOutputStream, PropertyDirectory.getEntrySetDescription( entrySetName ) );
       } catch ( FileNotFoundException e ) {
         LOG.warn( "Failed to save property set: " + entrySetName, e );
+      } finally {
+    	if ( fileOutputStream != null ) {
+    	  try {
+    	    fileOutputStream.close();
+    	  } catch(IOException e) {
+    		LOG.error(e);
+    	  }
+    	}
       }
     }
   }
@@ -83,21 +103,41 @@ public class ConfigurationProperties {
   public static void store( String entrySetName ) {
     File propsFile = getPropertyFile( entrySetName );
     Properties props = new Properties( );
+    FileReader fileReader = null;
     try {
-      props.load( new FileReader( propsFile ) );
+      fileReader = new FileReader( propsFile );
+	  props.load( fileReader );
     } catch ( Exception e1 ) {
+    } finally {
+      if(fileReader != null) {
+    	try {
+          fileReader.close();
+    	} catch(IOException e) {
+          LOG.error(e);
+    	}
+      }
     }
     props.clear( );
     for( final ConfigurableProperty p : PropertyDirectory.getPropertyEntrySet( entrySetName ) ) {
-      if( !( p instanceof SingletonDatabasePropertyEntry ) ) {
+      if( !( p instanceof SingletonDatabasePropertyEntry ) && !( p instanceof MultiDatabasePropertyEntry ) ) {
         props.setProperty( p.getFieldName( ), p.getValue( ) );
       }
     }
     if( !props.isEmpty( ) ) {
+      FileWriter fileWriter = null;
       try {
-        props.store( new FileWriter( propsFile ), PropertyDirectory.getEntrySetDescription( entrySetName ) );
+        fileWriter = new FileWriter( propsFile );
+		props.store( fileWriter, PropertyDirectory.getEntrySetDescription( entrySetName ) );
       } catch ( IOException e ) {
         LOG.warn( e, e );
+      } finally {
+    	if(fileWriter != null) {
+    	  try { 
+    	    fileWriter.close();
+    	  } catch (IOException e) {
+    	    LOG.error(e);
+    	  }
+    	}
       }
     }
   }

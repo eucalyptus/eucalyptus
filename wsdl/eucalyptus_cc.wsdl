@@ -32,6 +32,7 @@
 	  <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
 	  <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	  
 	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
 	  <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="volumes" type="tns:volumeType"/>
@@ -61,6 +62,16 @@
 	  <xs:element minOccurs="0" name="memory" type="xs:int"/>
 	  <xs:element minOccurs="0" name="cores" type="xs:int"/>
 	  <xs:element minOccurs="0" name="disk" type="xs:int"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="deviceMapping" type="tns:deviceMappingType"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="deviceMappingType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="deviceName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="virtualName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="size" type="xs:int"/>
+	  <xs:element minOccurs="0" name="format" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
 

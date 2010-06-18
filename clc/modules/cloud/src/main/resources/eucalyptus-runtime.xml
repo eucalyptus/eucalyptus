@@ -81,7 +81,7 @@
       <inbound>
         <inbound-endpoint ref="VmControlWS"/>
       </inbound>
-      <component class="edu.ucsb.eucalyptus.cloud.ws.VmControl"/>
+      <component class="com.eucalyptus.vm.VmControl"/>
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint"/>
@@ -99,21 +99,21 @@
         <inbound>
           <inbound-endpoint ref="ImageResolveWS"/>
         </inbound>
-        <component class="edu.ucsb.eucalyptus.cloud.ws.ImageManager"/>
+        <component class="com.eucalyptus.images.ImageManager"/>
       </service>
 
     <service name="ClusterSink">
       <inbound>
         <inbound-endpoint ref="ClusterSinkWS"/>
       </inbound>
-      <component class="edu.ucsb.eucalyptus.cloud.cluster.ClusterEndpoint"/>
+      <component class="com.eucalyptus.cluster.ClusterEndpoint"/>
     </service>
 
     <service name="ClusterEndpoint">
       <inbound>
         <inbound-endpoint ref="ClusterEndpointWS"/>
       </inbound>
-      <component class="edu.ucsb.eucalyptus.cloud.cluster.ClusterEndpoint"/>
+      <component class="com.eucalyptus.cluster.ClusterEndpoint"/>
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint"/>
@@ -125,7 +125,7 @@
       <inbound>
         <inbound-endpoint ref="AddressWS"/>
       </inbound>
-      <component class="edu.ucsb.eucalyptus.cloud.ws.AddressManager"/>
+      <component class="com.eucalyptus.address.AddressManager"/>
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint"/>
@@ -137,7 +137,7 @@
       <inbound>
         <inbound-endpoint ref="SystemStateWS"/>
       </inbound>
-      <component class="edu.ucsb.eucalyptus.cloud.ws.SystemState"/>
+      <component class="com.eucalyptus.vm.SystemState"/>
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint"/>
@@ -149,7 +149,7 @@
       <inbound>
         <inbound-endpoint ref="UpdateSystemWS"/>
       </inbound>
-      <component class="edu.ucsb.eucalyptus.cloud.ws.CreateVmInstances"/>
+      <component class="com.eucalyptus.sla.CreateVmInstances"/>
       <outbound>
         <multicasting-router>
           <outbound-endpoint ref="ClusterSinkWS"/>
@@ -162,7 +162,7 @@
       <inbound>
         <inbound-endpoint ref="TransformReplyWS"/>
       </inbound>
-      <component class="edu.ucsb.eucalyptus.cloud.ws.VmReplyTransform"/>
+      <component class="com.eucalyptus.vm.VmReplyTransform"/>
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint"/>
@@ -177,7 +177,7 @@
       <inbound>
         <inbound-endpoint ref="VmMetadataWS"/>
       </inbound>
-      <component class="edu.ucsb.eucalyptus.cloud.ws.VmMetadata"/>
+      <component class="com.eucalyptus.vm.VmMetadata"/>
     </service>
   </model>
 

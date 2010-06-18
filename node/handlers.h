@@ -185,7 +185,6 @@ int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *r
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
 #endif /* HANDLERS_FANOUT */
 
-
 /* helper functions used by the low level handlers */
 int get_value(			char *s,
 				const char *name,
@@ -199,11 +198,16 @@ void print_running_domains(	void);
 virConnectPtr *check_hypervisor_conn();
 void change_state(		ncInstance * instance,
 				instance_states state);
+int 
+wait_state_transition (         ncInstance * instance, 
+				instance_states from_state,
+				instance_states to_state);
 void adopt_instances();
 int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *userId,
 				char *instanceId,
-				int ramdisk,
+				char *ramdiskId,
+				char *kernelId,
 				char *disk_path,
 				virtualMachine *params,
 				char *privMac,
@@ -218,5 +222,21 @@ void parse_target(char *dev_string);
 char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 char* get_iscsi_target(const char *storage_cmd_path, char *dev_string);
+
+// bundling structure
+struct bundling_params_t {
+	ncInstance * instance;
+	char * bucketName;
+	char * filePrefix;
+	char * walrusURL;
+	char * userPublicKey;
+  	char * S3Policy;
+  	char * S3PolicySig;
+	char * workPath; // work directory path
+	char * diskPath; // disk file path
+	char * eucalyptusHomePath; 
+	long long sizeMb; // diskPath size
+};
+
 #endif /* INCLUDE */
 

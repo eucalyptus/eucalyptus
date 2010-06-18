@@ -108,6 +108,7 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
   
   public RemoteBootstrapperServer( ) {
     this.port = ChannelUtil.PORT;
+    ChannelUtil.setupServer( );
     this.bootstrap = ChannelUtil.getServerBootstrap( );
     this.bootstrap.setPipelineFactory( this );
   }
@@ -138,7 +139,7 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
     }
     pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
     pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_ucsb_edu" ) ) );
+    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
     pipeline.addLast( "handler", new HeartbeatHandler( this.channel ) );
     return pipeline;
   }

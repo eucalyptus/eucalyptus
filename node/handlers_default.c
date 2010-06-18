@@ -69,6 +69,7 @@ permission notice:
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
+#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <pthread.h>
 #include <sys/vfs.h> /* statfs */
@@ -83,7 +84,6 @@ permission notice:
 #include <libvirt/virterror.h>
 #include <vnetwork.h>
 #include <euca_auth.h>
-
 
 /* coming from handlers.c */
 extern sem * hyp_sem;
@@ -104,7 +104,7 @@ doRunInstance (	struct nc_state_t *nc, ncMetadata *meta, char *instanceId,
 		char *ramdiskId, char *ramdiskURL, 
 		char *keyName, 
 		netConfig *netparams,
-		char *userData, char *launchIndex, 
+		char *userData, char *launchIndex,
 		char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
 	logprintfl(EUCAERROR, "no default for doRunInstance!\n");
@@ -128,24 +128,24 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 	return ERROR_FATAL;
 }
 
-static int
-doTerminateInstance(	struct nc_state_t *nc,
-			ncMetadata *meta,
-			char *instanceId,
-			int *shutdownState,
-			int *previousState)
+// finds instance by ID and destroys it on the hypervisor
+// NOTE: this must be called with inst_sem semaphore held
+static int 
+find_and_terminate_instance ( 
+	char *instanceId, 
+	ncInstance **instance_p,
+	char destroy)
 {
-	ncInstance *instance, *vninstance;
+	ncInstance *instance;
 	virConnectPtr *conn;
 	int err;
 
-	sem_p (inst_sem); 
 	instance = find_instance(&global_instances, instanceId);
-	sem_v (inst_sem);
 	if (instance == NULL) 
 		return NOT_FOUND;
+	* instance_p = instance;
 
-	/* try stopping the KVM domain */
+	/* try stopping the domain */
 	conn = check_hypervisor_conn();
 	if (conn) {
 	        sem_p(hyp_sem);
@@ -154,10 +154,16 @@ doTerminateInstance(	struct nc_state_t *nc,
 		if (dom) {
 			/* also protect 'destroy' commands, just in case */
 			sem_p (hyp_sem);
-			err = virDomainDestroy (dom);
+			if (destroy)
+			  err = virDomainDestroy (dom);
+			else 
+			  err = virDomainShutdown (dom);
 			sem_v (hyp_sem);
 			if (err==0) {
-				logprintfl (EUCAINFO, "destroyed domain for instance %s\n", instanceId);
+                if (destroy)
+                    logprintfl (EUCAINFO, "destroyed domain for instance %s\n", instanceId);
+                else
+                    logprintfl (EUCAINFO, "shutting down domain for instance %s\n", instanceId);
 			}
 			sem_p(hyp_sem);
 			virDomainFree(dom); /* necessary? */
@@ -167,17 +173,36 @@ doTerminateInstance(	struct nc_state_t *nc,
 				logprintfl (EUCAWARN, "warning: domain %s to be terminated not running on hypervisor\n", instanceId);
 		}
 	} 
+	return OK;
+}
 
-	/* change the state and let the monitoring_thread clean up state */
-    sem_p (inst_sem);
+static int
+doTerminateInstance(	struct nc_state_t *nc,
+			ncMetadata *meta,
+			char *instanceId,
+			int *shutdownState,
+			int *previousState)
+{
+	ncInstance *instance;
+	int err;
+
+	sem_p (inst_sem);
+	err = find_and_terminate_instance (instanceId, &instance, 1);
+	if (err!=OK) {
+		sem_v(inst_sem);
+		return err;
+	}
+
+	// change the state and let the monitoring_thread clean up state
 	if (instance->state!=TEARDOWN) { // do not leave TEARDOWN
-		if (instance->state==BOOTING || instance->state==STAGING) {
-			change_state (instance, CANCELED);
-		} else {
-			change_state (instance, SHUTOFF);
-		}
+	  if (instance->state==STAGING) {
+	    change_state (instance, CANCELED);
+	  } else {
+	    change_state (instance, SHUTOFF);
+	  }
 	}
     sem_v (inst_sem);
+
 	*previousState = instance->stateCode;
 	*shutdownState = instance->stateCode;
 
@@ -374,6 +399,6 @@ struct handlers default_libvirt_handlers = {
     .doStartNetwork      = doStartNetwork,
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
-    .doDetachVolume      = doDetachVolume
+    .doDetachVolume      = doDetachVolume,
 };
 

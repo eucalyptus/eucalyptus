@@ -76,7 +76,7 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.handlers.ServiceSinkHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import edu.ucsb.eucalyptus.msgs.EventRecord;
+import com.eucalyptus.records.EventRecord;
 
 public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   private static Logger               LOG    = Logger.getLogger( FilteredPipeline.class );
@@ -95,14 +95,14 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
   public boolean accepts( final HttpRequest message ) {
     final boolean result = this.checkAccepts( message );
     if ( result && LogLevels.TRACE ) {
-      LOG.trace( EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ) );
+      EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ).trace( );
     }
     return result;
   }
   
   @Override
   public int compareTo( final FilteredPipeline o ) {
-    return ( this.getClass( ).getCanonicalName( ) + this.getPipelineName( ) ).compareTo( ( o.getClass( ).getCanonicalName( ) + o.getPipelineName( ) ) );
+    return ( this.getPipelineName( ) + this.getClass( ).getCanonicalName( ) ).compareTo( (this.getPipelineName( ) + o.getClass( ).getCanonicalName( ) ) );
   }
   
   public abstract String getPipelineName( );
@@ -125,7 +125,7 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
       }
       if ( LogLevels.TRACE ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
-          LOG.trace( EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ) );
+          EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ).trace( );
         }
       }
     } catch ( final Exception e ) {
