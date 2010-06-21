@@ -425,10 +425,18 @@ doAttachVolume (	struct nc_state_t *nc,
 		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
 		  rc = 1;
 		} else {
-		  snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+		  if (nc->config_use_virtio_disk) {
+		      snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", local_iscsi_dev, localDevReal);
+		  } else {
+		      snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+		  }
 		}
             } else {
-                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                if (nc->config_use_virtio_disk) {
+                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
+                } else {
+                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                }
                 rc = stat(remoteDev, &statbuf);
                 if (rc) {
                    logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
@@ -526,9 +534,17 @@ doDetachVolume (	struct nc_state_t *nc,
                 /*logout from target*/
                 if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, remoteDev)) == NULL)
                     return ERROR;
-                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+                if (nc->config_use_virtio_disk) {
+                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", local_iscsi_dev, localDevReal);
+                } else {
+                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+                }
             } else {
-   		snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                if (nc->config_use_virtio_disk) {
+   		    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
+                } else {
+   		    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                }
 	    }
             /* protect KVM calls, just in case */
             sem_p (hyp_sem);

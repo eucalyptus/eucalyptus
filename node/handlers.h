@@ -103,6 +103,10 @@ struct nc_state_t {
 	char connect_storage_cmd_path[MAX_PATH];
 	char disconnect_storage_cmd_path[MAX_PATH];
 	char get_storage_cmd_path[MAX_PATH];
+	// virtio
+	int config_use_virtio_net;	// KVM: use virtio for network
+	int config_use_virtio_disk;	// KVM: use virtio for disk attachment
+	int config_use_virtio_root;	// KVM: use virtio for root partition
 };
 
 
@@ -213,6 +217,8 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *privMac,
 				//				char *pubMac,
 				char *brname,
+				int use_virtio_net,
+				int use_virtio_root,
 				char **xml);
 void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);

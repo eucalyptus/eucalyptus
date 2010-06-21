@@ -74,6 +74,8 @@ $OUTPUT_AUTOFLUSH = 1; # no output buffering
 
 our $use_ramdisk = 0;
 our $local_kvm="";
+our $use_virtio_net = 0;
+our $use_virtio_root = 0;
 
 if ( -x "/usr/bin/kvm" ) {
     $local_kvm="/usr/bin/kvm";
@@ -86,6 +88,8 @@ if ( -x "/usr/bin/kvm" ) {
 # deal with command-line parameters
 GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
            'ephemeral'      => sub { }, # option ignored 
+           'virtionet'      => sub { $use_virtio_net = 1; },
+           'virtioroot'      => sub { $use_virtio_root = 1; },
 		   ) or exit (1);
 
 print <<EOF;
@@ -100,8 +104,13 @@ if ( $use_ramdisk ) {
     print "        <initrd>BASEPATH/ramdisk</initrd>\n";
 }
 
+if ( $use_virtio_root ) {
+    print "        <cmdline>root=/dev/vda1 console=ttyS0</cmdline>\n"
+} else {
+    print "        <cmdline>root=/dev/sda1 console=ttyS0</cmdline>\n"
+}
+
 print <<EOF;
-        <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
     </os>
     <features>
         <acpi/>
@@ -110,15 +119,43 @@ print <<EOF;
     <vcpu>VCPUS</vcpu>
     <devices>
         <emulator>$local_kvm</emulator>
+EOF
+
+if ( $use_virtio_root ) {
+    print <<EOF;
+        <disk type='file' device='disk'>
+            <source file='BASEPATH/disk'/>
+            <target dev='vda' bus='virtio'/>
+        </disk>
+EOF
+} else {
+    print <<EOF;
         <disk type='file'>
             <source file='BASEPATH/disk'/>
             <target dev='sda'/>
         </disk>
+EOF
+}
+
+if ( $use_virtio_net ) {
+    print <<EOF;
+        <interface type='bridge'>
+            <source bridge='BRIDGEDEV'/>
+            <mac address='PRIVMACADDR'/>
+            <model type='virtio'/>
+        </interface>
+EOF
+} else {
+    print <<EOF;
         <interface type='bridge'>
             <source bridge='BRIDGEDEV'/>
             <mac address='PRIVMACADDR'/>
             <model type='e1000'/>
         </interface>
+EOF
+}
+
+print <<EOF;
         <serial type="file">
             <source path='BASEPATH/console.log'/>
             <target port='1'/>
