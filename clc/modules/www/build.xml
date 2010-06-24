@@ -85,6 +85,7 @@
 	<property environment="env" />
 	<path id="gwtclasspath">
 		<fileset dir="${lib.dir}">
+            <include name="**/gwt-dev-linux-1.6.4.jar" />
 			<include name="**/*.jar" />
 		</fileset>
 		<pathelement path="conf" />
@@ -94,7 +95,7 @@
 	</path>
 	<path id="gwtcompilerclasspath">
 		<fileset dir="${lib.dir}">
-			<include name="**/gwt-dev.jar" />
+			<include name="**/gwt-dev-linux-1.6.4.jar" />
 		</fileset>
 		<path refid="gwtclasspath" />
     <dirset dir="${modules.dir}">

@@ -200,10 +200,10 @@
 		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
 			<fileset dir="${deps.lib.dir}">
 				<include name="**/*" />
-				<exclude name="**/gwt-api-checker-*.jar" />
+				<!--exclude name="**/gwt-api-checker-*.jar" />
 				<exclude name="**/gwt-dev-*.jar" />
 				<exclude name="**/gwt-soyc-vis-*.jar" />
-				<exclude name="**/gwt-user-*.jar" />
+				<exclude name="**/gwt-user-*.jar" /-->
 			</fileset>
 		</copy>
 		<!--copy admin tools -->
