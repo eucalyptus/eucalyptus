@@ -414,7 +414,12 @@ doAttachVolume (	struct nc_state_t *nc,
             char xml [1024];
             int is_iscsi_target = 0;
             char *local_iscsi_dev;
+            int virtio_dev = 0;
             rc = 0;
+            /* only attach using virtio when the device is /dev/vdXX */
+            if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
+                virtio_dev = 1;
+            }
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
@@ -425,14 +430,14 @@ doAttachVolume (	struct nc_state_t *nc,
 		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
 		  rc = 1;
 		} else {
-		  if (nc->config_use_virtio_disk) {
+		  if (nc->config_use_virtio_disk && virtio_dev) {
 		      snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", local_iscsi_dev, localDevReal);
 		  } else {
 		      snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
 		  }
 		}
             } else {
-                if (nc->config_use_virtio_disk) {
+                if (nc->config_use_virtio_disk && virtio_dev) {
                     snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
                 } else {
                     snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
@@ -527,6 +532,11 @@ doDetachVolume (	struct nc_state_t *nc,
             char xml [1024];
             int is_iscsi_target = 0;
             char *local_iscsi_dev;
+            int virtio_dev = 0;
+            /* only attach using virtio when the device is /dev/vdXX */
+            if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
+                virtio_dev = 1;
+            }
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
@@ -534,13 +544,13 @@ doDetachVolume (	struct nc_state_t *nc,
                 /*logout from target*/
                 if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, remoteDev)) == NULL)
                     return ERROR;
-                if (nc->config_use_virtio_disk) {
+                if (nc->config_use_virtio_disk && virtio_dev) {
                     snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", local_iscsi_dev, localDevReal);
                 } else {
                     snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
                 }
             } else {
-                if (nc->config_use_virtio_disk) {
+                if (nc->config_use_virtio_disk && virtio_dev) {
    		    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
                 } else {
    		    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
