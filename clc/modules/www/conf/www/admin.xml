@@ -69,4 +69,5 @@
   <Set name="parentLoaderPriority">true</Set>
   <Set name="logUrlOnStart">true</Set>
   <Set name="war"><SystemProperty name="euca.var.dir" default="buildroot/var/lib/eucalyptus"/>/webapps/root.war</Set>
+  <Set name="tempDirectory"><SystemProperty name="euca.run.dir" default="buildroot/var/run/eucalyptus"/></Set>
 </Configure>
