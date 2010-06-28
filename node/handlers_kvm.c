@@ -263,7 +263,23 @@ static void * rebooting_thread (void *arg)
     dom = virDomainCreateLinux (*conn, xml, 0);
     sem_v (hyp_sem);
     free (xml);
-    
+
+    //generate xml for each attached vol and attach them
+    int i;
+    for (i=0 ; i < instance->volumesSize; ++i) {
+        char attach_xml[1024];
+        int err = 0;
+        ncVolume *volume = &instance->volumes[i];
+        snprintf (attach_xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", volume->remoteDev, volume->localDevReal);
+        sem_p (hyp_sem);
+        err = virDomainAttachDevice (dom, attach_xml);
+        sem_v (hyp_sem);      
+        if (err) {
+            logprintfl (EUCAERROR, "virDomainAttachDevice() failed (err=%d) XML=%s\n", err, attach_xml);
+        } else {
+            logprintfl (EUCAINFO, "reattached %s to %s in domain %s\n", volume->remoteDev, volume->localDevReal, instance->instanceId);
+        }
+    }
     if (dom==NULL) {
         logprintfl (EUCAFATAL, "Failed to restart instance %s\n", instance->instanceId);
         change_state (instance, SHUTOFF);
@@ -467,7 +483,7 @@ doAttachVolume (	struct nc_state_t *nc,
         ncVolume * volume;
 
         sem_p (inst_sem);
-        volume = add_volume (instance, volumeId, remoteDev, localDevTag, "attached");
+        volume = add_volume (instance, volumeId, remoteDev, localDevTag, localDevReal, "attached");
         scSaveInstanceInfo(instance); /* to enable NC recovery */
         sem_v (inst_sem);
         if ( volume == NULL ) {
