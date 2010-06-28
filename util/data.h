@@ -95,6 +95,7 @@ typedef struct ncVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];
     char remoteDev[CHAR_BUFFER_SIZE];
     char localDev[CHAR_BUFFER_SIZE];
+    char localDevReal[CHAR_BUFFER_SIZE];
     char stateName[CHAR_BUFFER_SIZE];
 } ncVolume;
 
@@ -190,7 +191,7 @@ ncResource * allocate_resource(char *nodeStatus,
                                char *publicSubnets);
 void free_resource(ncResource ** res);
 ncVolume * find_volume (ncInstance * instance, char *volumeId);
-ncVolume *  add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev, char *stateName);
+ncVolume *  add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev, char *localDevReal, char *stateName);
 ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev);
 
 #endif
