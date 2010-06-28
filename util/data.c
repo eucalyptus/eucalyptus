@@ -363,7 +363,7 @@ ncVolume * find_volume (ncInstance * instance, char *volumeId)
     return v;
 }
 
-ncVolume * add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev, char *stateName)
+ncVolume * add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev, char *localDevReal, char *stateName)
 {
     ncVolume * v = find_volume (instance, volumeId);
 
@@ -377,6 +377,7 @@ ncVolume * add_volume (ncInstance * instance, char *volumeId, char *remoteDev, c
         strncpy (v->volumeId, volumeId, CHAR_BUFFER_SIZE);
         strncpy (v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
         strncpy (v->localDev, localDev , CHAR_BUFFER_SIZE);
+        strncpy (v->localDevReal, localDevReal , CHAR_BUFFER_SIZE);
 	strncpy (v->stateName, stateName , CHAR_BUFFER_SIZE);
         instance->volumesSize++;
     }
