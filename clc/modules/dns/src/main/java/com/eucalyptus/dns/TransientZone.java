@@ -72,10 +72,13 @@ import org.xbill.DNS.ARecord;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
+import org.xbill.DNS.PTRRecord;
 import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.TextParseException;
+
+import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -169,9 +172,77 @@ public class TransientZone extends Zone {
       } catch ( Throwable e ) {
         return super.findRecords( name, type );
       }
+    } else if (name.toString().endsWith(".in-addr.arpa.")) {
+  	  int index = name.toString().indexOf(".in-addr.arpa.");
+  	  Name target;
+	  if ( index > 0 ) {
+		String ipString = name.toString().substring(0, index);
+		String[] parts = ipString.split("\\.");
+		String ipCandidate;
+		if (parts.length == 4) {
+	      ipCandidate = new StringBuffer()
+	          .append(parts[3]).append(".")
+	          .append(parts[2]).append(".")
+	          .append(parts[1]).append(".")
+	          .append(parts[0]).toString( );		  	
+		} else {
+		  return super.findRecords( name, type );
+		}
+		try {
+	      VmInstance instance = VmInstances.getInstance( ).lookupByPublicIp( ipCandidate );
+	      target = new Name(instance.getNetworkConfig().getPublicDnsName() + ".");
+	    } catch ( Exception e ) {
+	      try {
+	        VmInstance instance = VmInstances.getInstance( ).lookupByInstanceIp( ipCandidate );
+	        target = new Name(instance.getNetworkConfig().getPrivateDnsName() + ".");
+	      } catch ( Exception e1 ) {
+	        return super.findRecords( name, type );
+	      }
+	    }
+        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+        resp.addRRset( new RRset( new PTRRecord( name, DClass.IN, ttl, target ) ) );
+        return resp;
+	  } else {
+	    return super.findRecords( name, type );
+	  }
     } else {
       return super.findRecords( name, type );
     }
+  }
+
+  public static Zone getPtrZone(Name queryName) {
+    try {
+      String nameString = queryName.toString();
+      Name name;
+	  int index = nameString.indexOf(".in-addr.arpa.");
+	  if ( index > 0 ) {
+		 String ipString = nameString.substring(0, index);
+		 String[] parts = ipString.split("\\.");
+		 //fix this for v6
+		 if(parts.length == 4) {
+		   nameString = nameString.substring(parts[0].length() + 1);
+		   name = new Name(nameString);    	 
+		 } else {
+		   return null;
+		 }
+	  } else {
+	    return null;
+	  }
+	  long serial = 1;
+	  long refresh = 86400;
+	  long retry = ttl;
+	  long expires = 2419200;
+	  long minimum = ttl;
+	  Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
+	    refresh, retry, expires, minimum );
+	  long nsTTL = 604800;
+	  Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
+	    Name.fromString( InetAddress.getByName( SystemConfiguration.getCloudHostAddress( ) ).getCanonicalHostName( ) +".") );
+	  return new TransientZone( name, new Record[] { soarec, nsrec } );
+	} catch ( Exception e ) {
+	  LOG.error( e, e );
+	  return null;
+	} 	
   }
 
   
