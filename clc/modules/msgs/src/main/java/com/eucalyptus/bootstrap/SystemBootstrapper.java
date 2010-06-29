@@ -107,6 +107,8 @@ public class SystemBootstrapper {
     }
     try {
       Bootstrap.initialize( );
+      Bootstrap.Stage stage = Bootstrap.transition( );
+      stage.load();
       return true;
     } catch ( BootstrapException e ) {
       e.printStackTrace( );
