@@ -623,7 +623,7 @@ public class VmInstance implements HasName {
     return networkConfig.getIgnoredPublicIp( );
   }
   
-  private NetworkConfigType getNetworkConfig( ) {
+  public NetworkConfigType getNetworkConfig( ) {
     return networkConfig;
   }
   

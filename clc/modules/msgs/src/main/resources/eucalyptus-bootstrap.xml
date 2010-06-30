@@ -74,9 +74,9 @@
     <mule:default-threading-profile doThreading="true" maxThreadsActive="32" poolExhaustedAction="RUN" />
   </mule:configuration>
    <euca:connector name="eucaws" />
-  <vm:connector name="internal-async" queueEvents="false" >
+  <!--vm:connector name="internal-async" queueEvents="false" >
     <vm:queueProfile persistent="false" maxOutstandingMessages="128"/>
-  </vm:connector> 
+  </vm:connector--> 
   <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />  
   <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" />
   <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" />

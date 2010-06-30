@@ -894,7 +894,7 @@ public class BlockStorage {
 				for(VolumeInfo volume : volumes) {
 					try {
 						String volumeId = volume.getVolumeId();
-						LOG.info("Converting volume: " + volumeId);
+						LOG.info("Converting volume: " + volumeId + " please wait...");
 						String volumePath = fromBlockManager.getVolumePath(volumeId);
 						blockManager.importVolume(volumeId, volumePath, volume.getSize());
 						fromBlockManager.finishVolume(volumeId);
@@ -908,7 +908,7 @@ public class BlockStorage {
 				for(SnapshotInfo snap : snapshots) {
 					try {
 						String snapshotId = snap.getSnapshotId();
-						LOG.info("Converting snapshot: " + snapshotId);
+						LOG.info("Converting snapshot: " + snapshotId + " please wait...");
 						String snapPath = fromBlockManager.getSnapshotPath(snapshotId);
 						int size = fromBlockManager.getSnapshotSize(snapshotId);
 						blockManager.importSnapshot(snapshotId, snap.getVolumeId(), snapPath, size);

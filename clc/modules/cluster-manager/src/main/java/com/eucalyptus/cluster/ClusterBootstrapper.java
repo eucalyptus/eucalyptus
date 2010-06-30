@@ -99,7 +99,7 @@ import com.eucalyptus.ws.ServiceVerifyBootstrapper;
 import com.eucalyptus.records.EventRecord;
 
 @Provides( Component.eucalyptus )
-@RunDuring( Bootstrap.Stage.Anonymous )
+@RunDuring( Bootstrap.Stage.RemoteServicesInit )
 @DependsLocal( Component.eucalyptus )
 public class ClusterBootstrapper extends Bootstrapper implements EventListener {
   public static Logger LOG         = Logger.getLogger( ClusterBootstrapper.class );

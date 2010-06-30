@@ -411,6 +411,7 @@ public class EquallogicProvider implements SANProvider {
 				String returnValue = execCommand("stty hardwrap off\rchapuser create " + userName + "\r");
 				String password = matchPattern(returnValue, USER_CREATE_PATTERN);
 				if(password != null) {
+					password = password.trim();
 					db = StorageProperties.getEntityWrapper();
 					CHAPUserInfo userInfo = new CHAPUserInfo(userName, BlockStorageUtil.encryptSCTargetPassword(password));
 					db.add(userInfo);
@@ -420,6 +421,7 @@ public class EquallogicProvider implements SANProvider {
 					returnValue = execCommand("stty hardwrap off\rchapuser show " + userName + "\r");
 					password = matchPattern(returnValue, USER_SHOW_PATTERN);
 					if(password != null) {
+						password = password.trim();
 						db = StorageProperties.getEntityWrapper();
 						CHAPUserInfo userInfo = new CHAPUserInfo(userName, BlockStorageUtil.encryptSCTargetPassword(password));
 						db.add(userInfo);

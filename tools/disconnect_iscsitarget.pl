@@ -33,7 +33,7 @@ sub parse_devstring {
 sub logout_target {
     my ($ip, $store, $passwd) = @_;
 
-    $rc = system("$ISCSIADM -m node -T $store -p $ip -u");
+    $rc = system("$ISCSIADM -m node -T $store -u");
 
     if ($rc < 0) { 
 	print STDERR "could not logout from session to $store on $ip\n";

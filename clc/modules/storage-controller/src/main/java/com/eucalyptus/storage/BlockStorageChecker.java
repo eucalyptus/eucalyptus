@@ -164,7 +164,6 @@ public class BlockStorageChecker {
 			LOG.info("Cleaning failed volume " + volumeId);
 			blockManager.cleanVolume(volumeId);
 			db.delete(volInfo);
-			LOG.info("Volume: " + volumeId + " deleted from db");
 		}
 		db.commit();
 	}

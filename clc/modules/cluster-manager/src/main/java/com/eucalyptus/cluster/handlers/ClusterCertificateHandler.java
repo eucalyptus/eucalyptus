@@ -5,8 +5,10 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import org.springframework.beans.factory.access.BootstrapException;
 
 import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
@@ -80,7 +82,7 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
       MappingHttpResponse resp = (MappingHttpResponse) e.getMessage( );
       GetKeysResponseType msg = (GetKeysResponseType) resp.getMessage( );
       boolean certs = ClusterUtil.checkCerts( msg, this.getCluster( ) );
-      if( certs && !this.verified ) {
+      if( certs && !this.verified && Bootstrap.isFinished( ) ) {
         try {
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
           ClusterUtil.registerClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
