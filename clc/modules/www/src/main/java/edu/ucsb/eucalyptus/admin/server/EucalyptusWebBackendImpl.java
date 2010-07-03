@@ -70,7 +70,7 @@ import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
@@ -841,10 +841,10 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 		HttpClient httpClient = new HttpClient();
 		//support for http proxy
-		if(System.getProperty("http.proxyHost") != null) {
-			String proxyHost = System.getProperty("http.proxyHost");
-			if(System.getProperty("http.proxyPort") != null) {
-				int proxyPort = Integer.parseInt(System.getProperty("http.proxyPort"));
+		if(HttpServerBootstrapper.httpProxyHost != null && (HttpServerBootstrapper.httpProxyHost.length() > 0)) {
+			String proxyHost = HttpServerBootstrapper.httpProxyHost;
+			if(HttpServerBootstrapper.httpProxyPort != null &&  (HttpServerBootstrapper.httpProxyPort.length() > 0)) {
+				int proxyPort = Integer.parseInt(HttpServerBootstrapper.httpProxyPort);
 				httpClient.getHostConfiguration().setProxy(proxyHost, proxyPort);
 			} else {
 				httpClient.getHostConfiguration().setProxyHost(new ProxyHost(proxyHost));
