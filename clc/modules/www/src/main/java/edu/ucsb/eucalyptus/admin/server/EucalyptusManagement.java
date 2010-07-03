@@ -93,6 +93,7 @@ import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.WrappedUser;
+import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventVetoedException;
@@ -388,10 +389,10 @@ public class EucalyptusManagement {
 		String ipAddr = null;
 		HttpClient httpClient = new HttpClient();
 		//support for http proxy
-		if(System.getProperty("http.proxyHost") != null) {
-			String proxyHost = System.getProperty("http.proxyHost");
-			if(System.getProperty("http.proxyPort") != null) {
-				int proxyPort = Integer.parseInt(System.getProperty("http.proxyPort"));
+		if(HttpServerBootstrapper.httpProxyHost != null && (HttpServerBootstrapper.httpProxyHost.length() > 0)) {
+			String proxyHost = HttpServerBootstrapper.httpProxyHost;
+			if(HttpServerBootstrapper.httpProxyPort != null &&  (HttpServerBootstrapper.httpProxyPort.length() > 0)) {
+				int proxyPort = Integer.parseInt(HttpServerBootstrapper.httpProxyPort);
 				httpClient.getHostConfiguration().setProxy(proxyHost, proxyPort);
 			} else {
 				httpClient.getHostConfiguration().setProxyHost(new ProxyHost(proxyHost));
