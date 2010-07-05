@@ -41,7 +41,7 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 %endif
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       2.0.0eee
+Version:       2.0.1eee
 Release:       1.REVNO
 License:       Eucalyptus EEE Software License
 Group:         Applications/System
