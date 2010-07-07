@@ -180,10 +180,13 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			String addrString = addrStrings[0];
 
 			if(addrStrings.length > 1) {
-				for(WalrusProperties.SubResource subResource : WalrusProperties.SubResource.values()) {
-					if(addr.endsWith(subResource.toString().toLowerCase())) {
-						addrString += "?" + subResource.toString().toLowerCase();
-						break;
+				String[] subResourcesCandidates = addrStrings[1].split("&");
+				for(String subResourceCandidate : subResourcesCandidates) {
+					for(WalrusProperties.SubResource subResource : WalrusProperties.SubResource.values()) {
+						if(subResourceCandidate.equals(subResource.toString().toLowerCase())) {
+							addrString += "?" + subResource.toString().toLowerCase();
+							break;
+						}
 					}
 				}
 			}
@@ -333,16 +336,16 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
 		if(auth_part != null) {
 			String sigString[] = getSigInfo(auth_part);
-		        if(sigString.length < 2) {
-			    throw new AuthenticationException("Invalid authentication header");
+			if(sigString.length < 2) {
+				throw new AuthenticationException("Invalid authentication header");
 			}
 			String accessKeyId = sigString[0];
 			String signature = sigString[1];
 			try {
-			    SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature)).login();
+				SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature)).login();
 			} catch(Exception ex) {
-			    LOG.error(ex);
-			    throw new AuthenticationException(ex);
+				LOG.error(ex);
+				throw new AuthenticationException(ex);
 			}
 		} else {
 			throw new AuthenticationException("User authentication failed. Invalid policy signature.");
