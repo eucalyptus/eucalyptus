@@ -84,9 +84,8 @@ public class Registration extends HttpServlet {
   private static String getMessage( String key, String uuid ) {
     
     return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + "<Signature>\n" + "  <SignedInfo>\n"
-           + "    <SignatureMethod>http://www.w3.org/2001/04/xmldsig-more#hmac-sha256</SignatureMethod>" + "  </SignedInfo>\n" + "  <SignatureValue>"
-           + getSignature( key, uuid ) + "  </SignatureValue>" + "  <Object>\n" + getConfigurationString( uuid ) + "\n</Object>" + "</Signature>";
-    
+           + "    <SignatureMethod>http://www.w3.org/2001/04/xmldsig-more#hmac-sha256</SignatureMethod>\n" + "  </SignedInfo>\n" + "  <SignatureValue>"
+           + getSignature( key, uuid ) + "</SignatureValue>\n" + "  <Object>\n" + getConfigurationString( uuid ) + "\n</Object>\n" + "</Signature>";
   }
   
   private static String getConfigurationString( String uuid ) {
@@ -98,7 +97,7 @@ public class Registration extends HttpServlet {
            + "      </Resources>\n" + "    </Service>\n" + "    <Service>\n" + "      <Name>s3</Name>\n" + "      <EndpointUrl>" + getWalrusUrl( )
            + "</EndpointUrl>\n" + "      <Resources type=\"array\">\n" + "        <Resource>\n" + "          <Name>buckets</Name>\n" + "        </Resource>\n"
            + "        <Resource>\n" + "          <Name>keys</Name>\n" + "        </Resource>\n" + "      </Resources>\n" + "    </Service>\n"
-           + "  </Services>\n" + "  <id>" + uuid + "</id>" + "  <CloudType>eucalyptus</CloudType>\n" + "  <CloudVersion>" + System.getProperty( "euca.version" )
+           + "  </Services>\n" + "  <id>" + uuid + "</id>" + "\n  <CloudType>eucalyptus</CloudType>\n" + "  <CloudVersion>" + System.getProperty( "euca.version" )
            + "</CloudVersion>\n" + "  <SchemaVersion>1.0</SchemaVersion>\n" + "  <Description>Public cloud in the new cluster</Description>\n"
            + "  <Credentials type=\"array\">\n" + "    <Credential>\n" + "      <Required type=\"boolean\">false</Required>\n"
            + "      <Name>username</Name>\n" + "      <Nickname>User ID</Nickname>\n" + "      <Description>Username....</Description>\n"
@@ -158,7 +157,7 @@ public class Registration extends HttpServlet {
       Mac mac = Hmac.HmacSHA256.getInstance( );
       mac.init( signingKey );
       byte[] rawHmac = mac.doFinal( uuid.getBytes( ) );
-      String sig = Hmacs.generateSystemToken( rawHmac );
+      String sig = Hashes.getHexString( rawHmac );
       LOG.warn( "\nkey='" + key + "'\nid='" + uuid + "'\nresult=" + sig );
       return sig;
     } catch ( Exception e ) {
