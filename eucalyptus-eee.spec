@@ -499,7 +499,7 @@ fi
 
 %post broker
 /usr/sbin/euca_conf --enable vmwarebroker
-if [ -e /etc/eucalyptus/init.d/eucalyptus-cc -a /etc/eucalyptus/eucalyptus.conf ]; then
+if [ -e /etc/init.d/eucalyptus-cc -a -e /etc/eucalyptus/eucalyptus.conf ]; then
     sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/services\/VMwareBroker\"/" /etc/eucalyptus/eucalyptus.conf
     sed -i "s/NC_PORT=.*/NC_PORT=\"8773\"/" /etc/eucalyptus/eucalyptus.conf
     echo DISABLE_ISCSI=\"N\" >> /etc/eucalyptus/eucalyptus.conf
