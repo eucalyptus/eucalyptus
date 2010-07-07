@@ -2446,12 +2446,10 @@ public class WalrusManager {
 								storageManager.copyObject(sourceBucket,
 										sourceObjectName, destinationBucket,
 										destinationObjectName);
-								if (WalrusProperties.trackUsageStatistics) {	
-									if(!(sourceKey.equals(destinationKey) && sourceBucket.equals(destinationBucket))) 
-										walrusStatistics
-										.updateSpaceUsed(sourceObjectInfo
+								if (WalrusProperties.trackUsageStatistics)
+									walrusStatistics
+									.updateSpaceUsed(sourceObjectInfo
 											.getSize());
-								}
 							} catch (Exception ex) {
 								LOG.error(ex);
 								db.rollback();
@@ -2469,7 +2467,7 @@ public class WalrusManager {
 									DateUtils.ISO8601_DATETIME_PATTERN)
 									+ ".000Z");
 
-							if(destinationBucketInfo.isVersioningEnabled()) {
+							if(foundDestinationBucketInfo.isVersioningEnabled()) {
 								reply.setCopySourceVersionId(sourceVersionId);
 								reply.setVersionId(destinationVersionId);
 							}							
