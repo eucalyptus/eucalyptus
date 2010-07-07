@@ -103,11 +103,13 @@ public class ISCSIManager implements StorageExportManager {
 		returnValue = SystemUtil.run(new String[]{"sudo", "tgtadm", "--help"});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
-		} else {
-			LOG.info(returnValue);
 		}
 		if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
-			throw new EucalyptusCloudException("Unable to connect to tgt daemon. Is tgtd loaded?");
+			LOG.warn("Unable to connect to tgt daemon. Is tgtd loaded?");
+			LOG.info("Attempting to start tgtd ISCSI daemon");
+			if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtd"}) != 0) {
+				throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
+			}
 		}
 	}
 
