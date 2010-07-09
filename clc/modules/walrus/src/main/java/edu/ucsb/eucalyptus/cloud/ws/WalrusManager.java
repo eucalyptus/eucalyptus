@@ -849,19 +849,27 @@ public class WalrusManager {
 									foundObject.setLast(true);
 									foundObject.setDeleted(false);
 									reply.setSize(size);
+									EntityWrapper<BucketInfo> dbBucket = dbObject.recast(BucketInfo.class);										
+									try {
+										bucket = dbBucket.getUnique(new BucketInfo(bucketName));
+									} catch(EucalyptusCloudException e) {
+										LOG.error(e);
+										dbObject.rollback();
+										throw new NoSuchBucketException(bucketName);
+									}
+									Long bucketSize = bucket.getBucketSize();
+									long newSize = bucketSize + oldBucketSize
+									+ size;
 									if (WalrusProperties.shouldEnforceUsageLimits
 											&& !request.isAdministrator()) {
-										Long bucketSize = bucket.getBucketSize();
-										long newSize = bucketSize + oldBucketSize
-										+ size;
 										if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
 											messenger.removeQueue(key, randomKey);
 											dbObject.rollback();
 											throw new EntityTooLargeException(
 													"Key", objectKey);
 										}
-										bucket.setBucketSize(newSize);
 									}
+									bucket.setBucketSize(newSize);
 									if (WalrusProperties.trackUsageStatistics) {
 										walrusStatistics.updateBytesIn(size);
 										walrusStatistics.updateSpaceUsed(size);
