@@ -2684,7 +2684,9 @@ public class WalrusManager {
 		if (prefix == null)
 			prefix = "";
 
-		// String marker = request.getMarker();
+                String keyMarker = request.getKeyMarker();
+                String versionIdMarker = request.getVersionIdMarker();
+		
 		int maxKeys = -1;
 		String maxKeysString = request.getMaxKeys();
 		if (maxKeysString != null)
@@ -2733,7 +2735,8 @@ public class WalrusManager {
 						if (maxKeys >= 0)
 							reply.setMaxKeys(maxKeys);
 						reply.setPrefix(prefix);
-						// reply.setMarker(marker);
+						reply.setKeyMarker(keyMarker);
+						reply.setVersionIdMarker(versionIdMarker);
 						if (delimiter != null)
 							reply.setDelimiter(delimiter);
 						EntityWrapper<ObjectInfo> dbObject = db
@@ -2743,17 +2746,20 @@ public class WalrusManager {
 						List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 						if (objectInfos.size() > 0) {
 							int howManyProcessed = 0;
-							if (/* marker != null || */objectInfos.size() < maxKeys)
+							if (keyMarker != null || objectInfos.size() < maxKeys)
 								Collections.sort(objectInfos);
 							ArrayList<VersionEntry> versions = new ArrayList<VersionEntry>();
 							ArrayList<DeleteMarkerEntry> deleteMarkers = new ArrayList<DeleteMarkerEntry>();
 
 							for (ObjectInfo objectInfo : objectInfos) {
 								String objectKey = objectInfo.getObjectKey();
-								/*
-								 * if(marker != null) { if(objectKey.compareTo(marker)
-								 * <= 0) continue; }
-								 */
+								
+								  if(keyMarker != null) { if(objectKey.compareTo(keyMarker)
+								  <= 0) continue; } else if (versionIdMarker != null) {
+									if(!objectInfo.getVersionId().equals(versionIdMarker))
+										continue;
+								  }
+								 
 								if (prefix != null) {
 									if (!objectKey.startsWith(prefix)) {
 										continue;
