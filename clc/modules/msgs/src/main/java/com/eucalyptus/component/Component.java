@@ -11,6 +11,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Record;
 import com.eucalyptus.util.Nameable;
+import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -61,10 +62,11 @@ public class Component implements ComponentInformation, Nameable<Component> {
   
   public void removeService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     this.enabled = false;
+    final boolean configLocal = NetworkUtil.testLocal( config.getHostName( ) );
     Service remove = Iterables.find( this.services.values(), new Predicate<Service>() {
       @Override
       public boolean apply( Service arg0 ) {
-        return arg0.getHost( ).equals( config.getHostName( ) );
+        return arg0.getHost( ).equals( config.getHostName( ) ) || ( arg0.isLocal( ) && configLocal );
       }} );
     Service service = this.services.remove( remove.getName( ) );
     Components.deregister( service );
