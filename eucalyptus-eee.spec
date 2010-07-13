@@ -19,6 +19,7 @@
 %global euca_iscsi_server tgt
 %global euca_build_req vlan
 %global euca_fuse libfuse2
+%global euca_which util-linux
 %endif
 %if %is_centos
 %global euca_libvirt libvirt >= 0.6
@@ -28,6 +29,7 @@
 %global euca_iscsi_client iscsi-initiator-utils
 %global euca_iscsi_server scsi-target-utils
 %global euca_fuse fuse-libs
+%global euca_which which
 %endif
 %if %is_fedora
 %global euca_libvirt libvirt
@@ -45,8 +47,8 @@ Version:       2.0.1eee
 Release:       1.REVNO
 License:       Eucalyptus EEE Software License
 Group:         Applications/System
-BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
-Requires:      %{euca_build_req}, perl-Crypt-OpenSSL-RSA, perl-Crypt-OpenSSL-Random
+BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
+Requires:      %{euca_build_req}, perl-Crypt-OpenSSL-RSA, perl-Crypt-OpenSSL-Random, %{euca_which}, sudo
 Source:        %{name}-%{version}.tar.gz
 URL:           http://www.eucalyptus.com
 
@@ -63,7 +65,7 @@ them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     %{name} = %{version}, %{euca_java}, lvm2, %{euca_fuse}
+Requires:     %{name} = %{version}, lvm2, %{euca_fuse}
 Group:        Applications/System
 
 %description common-java
@@ -76,7 +78,7 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2
+Requires:     %{name}-common-java = %{version}, lvm2
 Group:        Applications/System
 
 %description walrus
@@ -92,9 +94,9 @@ cloud controller.
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
 %if %is_centos
-Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
+Requires:     %{name}-common-java = %{version}, lvm2, vblade, %{euca_iscsi_server}
 %else
-Requires:     %{name}-common-java = %{version}, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
+Requires:     %{name}-common-java = %{version}, lvm2, vblade, %{euca_iscsi_server}
 %endif
 Group:        Applications/System
 
@@ -110,7 +112,7 @@ alongside the cluster-controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     %{name}-common-java = %{version}, euca2ools-eee, %{euca_java}, lvm2
+Requires:     %{name}-common-java = %{version}, euca2ools-eee, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -166,7 +168,7 @@ This package contains the internal log service of eucalyptus.
 
 %package broker
 Summary:      Elastic Utility Computing Architecture - vmware broker
-Requires:     %{name}-common-java = %{version}, %{name}-cc, %{euca_java}
+Requires:     %{name}-common-java = %{version}, %{name}-cc
 AutoReqProv:  no
 Group:        Applications/System
 
