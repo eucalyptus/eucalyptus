@@ -137,11 +137,10 @@ public class AOEManager implements StorageExportManager {
 	@Override
 	public void configure() {
 		EntityWrapper<AOEMetaInfo> db = StorageProperties.getEntityWrapper();
-		AOEMetaInfo metaInfo = new AOEMetaInfo();
+		AOEMetaInfo metaInfo = new AOEMetaInfo(StorageProperties.NAME);
 		try {
 			List<AOEMetaInfo> metaInfoList = db.query(metaInfo);
 			if(metaInfoList.size() <= 0) {
-				metaInfo.setHostName(StorageProperties.NAME);
 				metaInfo.setMajorNumber(0);
 				metaInfo.setMinorNumber(0);
 				db.add(metaInfo);
@@ -159,9 +158,8 @@ public class AOEManager implements StorageExportManager {
 			AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) volumeInfo;
 			int majorNumber = -1;
 			int minorNumber = -1;
-			AOEMetaInfo metaInfo = new AOEMetaInfo();
 			EntityWrapper<AOEMetaInfo> db = StorageProperties.getEntityWrapper();
-			List<AOEMetaInfo> metaInfoList = db.query(metaInfo);
+			List<AOEMetaInfo> metaInfoList = db.query(new AOEMetaInfo(StorageProperties.NAME));
 			if(metaInfoList.size() > 0) {
 				AOEMetaInfo foundMetaInfo = metaInfoList.get(0);
 				majorNumber = foundMetaInfo.getMajorNumber();

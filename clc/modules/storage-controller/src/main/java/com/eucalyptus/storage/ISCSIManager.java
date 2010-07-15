@@ -174,31 +174,20 @@ public class ISCSIManager implements StorageExportManager {
 	public void unexportTarget(int tid, int lun) {
 		try
 		{
-			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"});
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			StreamConsumer output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			proc.waitFor();
+			if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"}) != 0) {
+				LOG.error("Unable to unbind tid: " + tid);
+				return;
+			}
 
-			proc = rt.exec(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)});
-			error = new StreamConsumer(proc.getErrorStream());
-			output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			proc.waitFor();
-			output.join();
-			String errorValue = error.getReturnValue();
-			if(errorValue.length() > 0)
-				throw new EucalyptusCloudException(errorValue);
+			if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
+				LOG.error("Unable to delete lun for tid: " + tid);
+				return;
+			}
 
-			proc = rt.exec(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid ", String.valueOf(tid)});
-			error = new StreamConsumer(proc.getErrorStream());
-			output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			proc.waitFor();			
+			if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid)}) != 0) {
+				LOG.error("Unable to delete target: " + tid);
+				return;
+			}			
 		} catch (Throwable t) {
 			LOG.error(t);
 		}
@@ -215,7 +204,7 @@ public class ISCSIManager implements StorageExportManager {
 	@Override
 	public void configure() {
 		EntityWrapper<ISCSIMetaInfo> db = StorageProperties.getEntityWrapper();
-		ISCSIMetaInfo metaInfo = new ISCSIMetaInfo();
+		ISCSIMetaInfo metaInfo = new ISCSIMetaInfo(StorageProperties.NAME);
 		try {
 			List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
 			if(metaInfoList.size() <= 0) {
@@ -267,21 +256,49 @@ public class ISCSIManager implements StorageExportManager {
 	public synchronized void allocateTarget(LVMVolumeInfo volumeInfo) {
 		if(volumeInfo instanceof ISCSIVolumeInfo) {
 			ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;		
-			ISCSIMetaInfo metaInfo = new ISCSIMetaInfo();
 			EntityWrapper<ISCSIMetaInfo> db = StorageProperties.getEntityWrapper();
-			List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
+			List<ISCSIMetaInfo> metaInfoList = db.query(new ISCSIMetaInfo(StorageProperties.NAME));
+			int tid = -1, storeNumber = -1;
 			if(metaInfoList.size() > 0) {
 				ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
-				int storeNumber = foundMetaInfo.getStoreNumber();
-				int tid = foundMetaInfo.getTid();
-				iscsiVolumeInfo.setStoreName(foundMetaInfo.getStorePrefix() + StorageProperties.NAME + ":store" + storeNumber);
-				iscsiVolumeInfo.setStoreUser(foundMetaInfo.getStoreUser());
-				iscsiVolumeInfo.setTid(tid);
-				iscsiVolumeInfo.setLun(1);
-				foundMetaInfo.setStoreNumber(++storeNumber);
-				foundMetaInfo.setTid(++tid);
-			}
+				storeNumber = foundMetaInfo.getStoreNumber();
+				tid = foundMetaInfo.getTid();
+			}			
 			db.commit();
+			//check if tid is in use
+			int i = tid;
+			do {
+				try {
+					String returnValue = SystemUtil.run(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(i)});
+					if(returnValue.length() == 0) {
+						tid = i;
+						break;
+					}
+				} catch (ExecutionException e) {
+					LOG.error(e);
+					iscsiVolumeInfo.setTid(-1);
+					return;
+				}
+				i = (i + 1) % Integer.MAX_VALUE;
+			} while(i != tid);
+			if(tid > 0) {
+				db = StorageProperties.getEntityWrapper();
+				metaInfoList = db.query(new ISCSIMetaInfo(StorageProperties.NAME));
+				if(metaInfoList.size() > 0) {
+					ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
+					foundMetaInfo.setStoreNumber(++storeNumber);
+					foundMetaInfo.setTid(tid + 1);
+					iscsiVolumeInfo.setStoreName(foundMetaInfo.getStorePrefix() + StorageProperties.NAME + ":store" + storeNumber);
+					iscsiVolumeInfo.setStoreUser(foundMetaInfo.getStoreUser());
+					iscsiVolumeInfo.setTid(tid);
+					//LUN cannot be 0 (some clients don't like that).
+					iscsiVolumeInfo.setLun(1);
+				}
+				db.commit();
+			} else {
+				iscsiVolumeInfo.setTid(-1);
+				LOG.fatal("Unable to allocate ISCSI target id.");
+			}
 		}
 	}
 
