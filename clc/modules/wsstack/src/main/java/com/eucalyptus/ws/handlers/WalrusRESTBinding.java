@@ -1125,12 +1125,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			buffer.markReaderIndex( );
 			byte[] read = new byte[buffer.readableBytes( )];
 			buffer.readBytes( read );
-			while(!putQueue.offer(WalrusDataMessage.DataMessage(read), 500, TimeUnit.MILLISECONDS));
+			while((putQueue != null) && (!putQueue.offer(WalrusDataMessage.DataMessage(read), 500, TimeUnit.MILLISECONDS)));
 			if(httpChunk.isLast()) {
-				while(!putQueue.offer(WalrusDataMessage.EOF(), 1000, TimeUnit.MILLISECONDS));
+				while((putQueue != null) && (!putQueue.offer(WalrusDataMessage.EOF(), 1000, TimeUnit.MILLISECONDS)));
 			}
-		} catch(NullPointerException ex) {
-			//ignore NPEs (they are intentional if an exception has been thrown
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
 		}
