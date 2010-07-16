@@ -75,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -214,16 +215,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			Binding binding;
 
 			if(!(msg instanceof EucalyptusErrorMessageType)) {
-				if(msg instanceof PutObjectResponseType) {
-					if(putQueue != null) {
-						putQueue = null;
-					}
-				}
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
-				if(msg instanceof PutObjectResponseType) {
-					if(putQueue != null) {
-						putQueue = null;
-					}
+				if(putQueue != null) {
+					putQueue = null;
 				}
 			} else {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.com" ) );
@@ -1131,10 +1125,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			buffer.markReaderIndex( );
 			byte[] read = new byte[buffer.readableBytes( )];
 			buffer.readBytes( read );
-			putQueue.put(WalrusDataMessage.DataMessage(read));
-			if(httpChunk.isLast())
-				putQueue.put(WalrusDataMessage.EOF());
-
+			while(!putQueue.offer(WalrusDataMessage.DataMessage(read), 500, TimeUnit.MILLISECONDS));
+			if(httpChunk.isLast()) {
+				while(!putQueue.offer(WalrusDataMessage.EOF(), 1000, TimeUnit.MILLISECONDS));
+			}
+		} catch(NullPointerException ex) {
+			//ignore NPEs (they are intentional if an exception has been thrown
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
 		}
