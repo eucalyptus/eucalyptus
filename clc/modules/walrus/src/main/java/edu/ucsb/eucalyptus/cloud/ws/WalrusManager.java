@@ -720,6 +720,8 @@ public class WalrusManager {
 											logData);
 								} 
 								objectName = foundObject.getObjectName();
+							} catch(AccessDeniedException ex) { 
+								throw ex;
 							} catch(EucalyptusCloudException ex) {
 								objectInfo = new ObjectInfo(bucketName, objectKey);
 								objectInfo.setOwnerId(userId);
