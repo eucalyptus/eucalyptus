@@ -155,7 +155,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the internal log service of eucalyptus.
 
 %prep
-%setup -n eucalyptus-%{version}-src
+%setup -n eucalyptus-%{version}
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
