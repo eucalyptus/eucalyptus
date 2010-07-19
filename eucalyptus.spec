@@ -42,7 +42,7 @@ Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Requires:      %{euca_build_req}
 
-Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-%{version}-src.tar.gz
+Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-%{version}.tar.gz
 URL:           http://open.eucalyptus.com
 
 %description
