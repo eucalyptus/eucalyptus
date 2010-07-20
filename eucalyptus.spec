@@ -358,6 +358,7 @@ then
     fi
 fi
 chkconfig --add eucalyptus-cloud
+/usr/sbin/euca_conf -setup -user eucalyptus
 
 %post cloud
 /usr/sbin/euca_conf --enable cloud
