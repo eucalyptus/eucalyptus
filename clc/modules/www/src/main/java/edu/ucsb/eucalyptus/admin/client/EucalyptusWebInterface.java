@@ -2324,14 +2324,18 @@ public class EucalyptusWebInterface implements EntryPoint {
          	vpanel.add (new HTML ("<iframe width=\"80%\" height=\"100%\" name=\"test\" scrolling=\"auto\" frameborder=\"0\" src=\"extensions/store/test.html\">Sorry, your browser does not support IFRAME tag
 .</iframe>"));
          */
-        parent.add(new HTML ("Contacting server..."));
+        
+		parent.clear();
+		parent.add (vpanel);
+		vpanel.add(new HTML ("Contacting server..."));
+		
         EucalyptusWebBackend.App.getInstance().getHtmlByPath(
                 sessionId,
                 "extensions/store/test.html",
                 new AsyncCallback() {
 					public void onSuccess( Object result )
 					{
-						String html = ( String ) ( (List) result).get(0);
+						String html = ( String ) result;
 						//vpanel.clear();
 						vpanel.add (new Label ("Server results:"));
 						vpanel.add (new HTML (html));
@@ -2344,8 +2348,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 					}
                 }
         );
-		parent.clear();
-		parent.add (vpanel);
+
 	}
 
     public void displayStoreTab (final VerticalPanel parent) 
