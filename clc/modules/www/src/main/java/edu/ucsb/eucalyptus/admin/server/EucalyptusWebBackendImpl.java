@@ -908,9 +908,11 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public String getHtmlByPath(final String sessionId, final String path) throws SerializableException {
 		SessionInfo session = verifySession(sessionId);
 		UserInfoWeb user = verifyUser(session, session.getUserId(), true);
+		String realPath = BaseDirectory.HOME.toString() + "/var/run/eucalyptus/webapp" + path;
+		LOG.debug("feeding contents of " + realPath);
 		// TODO: verify path
 		try {
-			return readFileAsString (BaseDirectory.HOME.toString() + "/var/run/eucalyptus/webapp" + path);
+			return readFileAsString (realPath);
 		} catch (java.io.IOException e) {
 			throw new SerializableException (e.getMessage());
 		}

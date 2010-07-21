@@ -2305,7 +2305,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     public void displayDownloadsTab (final VerticalPanel parent)
     {
 		History.newItem("extras");
-        VerticalPanel vpanel = new VerticalPanel();
+        final VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
         //vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
         /*
@@ -2324,6 +2324,7 @@ public class EucalyptusWebInterface implements EntryPoint {
          	vpanel.add (new HTML ("<iframe width=\"80%\" height=\"100%\" name=\"test\" scrolling=\"auto\" frameborder=\"0\" src=\"extensions/store/test.html\">Sorry, your browser does not support IFRAME tag
 .</iframe>"));
          */
+        parent.add(new HTML ("Contacting server..."));
         EucalyptusWebBackend.App.getInstance().getHtmlByPath(
                 sessionId,
                 "extensions/store/test.html",
@@ -2331,13 +2332,14 @@ public class EucalyptusWebInterface implements EntryPoint {
 					public void onSuccess( Object result )
 					{
 						String html = ( String ) ( (List) result).get(0);
-						parent.clear();
-						parent.add (new HTML (html));
+						vpanel.clear();
+						vpanel.add (new HTML (html));
 					}
 
 					public void onFailure( Throwable caught )
 					{
-
+						vpanel.clear();
+						vpanel.add (new HTML ("Failed to contact server"));
 					}
                 }
         );
