@@ -42,7 +42,7 @@ Group:         Applications/System
 BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Requires:      %{euca_build_req}
 
-Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-%{version}-src.tar.gz
+Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-%{version}.tar.gz
 URL:           http://open.eucalyptus.com
 
 %description
@@ -155,7 +155,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the internal log service of eucalyptus.
 
 %prep
-%setup -n eucalyptus-%{version}-src
+%setup -n eucalyptus-%{version}
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
@@ -200,6 +200,34 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/share/eucalyptus/connect_iscsitarget.pl
 /usr/share/eucalyptus/disconnect_iscsitarget.pl
 /usr/share/eucalyptus/get_iscsitarget.pl
+/usr/sbin/euca-add-group
+/usr/sbin/euca-add-user
+/usr/sbin/euca-add-user-group
+/usr/sbin/euca-delete-user
+/usr/sbin/euca-delete-user-group
+/usr/sbin/euca-deregister-cluster
+/usr/sbin/euca-deregister-storage-controller
+/usr/sbin/euca-deregister-walrus
+/usr/sbin/euca-describe-clusters
+/usr/sbin/euca-describe-groups
+/usr/sbin/euca-describe-properties
+/usr/sbin/euca-describe-storage-controllers
+/usr/sbin/euca-describe-user-groups
+/usr/sbin/euca-describe-users
+/usr/sbin/euca-describe-walruses
+/usr/sbin/euca-get-credentials
+/usr/sbin/euca-modify-property
+/usr/sbin/euca-register-cluster
+/usr/sbin/euca-register-storage-controller
+/usr/sbin/euca-register-walrus
+/usr/sbin/euca_admin/__init__.py
+/usr/sbin/euca_admin/clusters.py
+/usr/sbin/euca_admin/generic.py
+/usr/sbin/euca_admin/groups.py
+/usr/sbin/euca_admin/properties.py
+/usr/sbin/euca_admin/storagecontrollers.py
+/usr/sbin/euca_admin/users.py
+/usr/sbin/euca_admin/walruses.py
 
 #%files common-java -f jar_list
 %files common-java
@@ -330,6 +358,7 @@ then
     fi
 fi
 chkconfig --add eucalyptus-cloud
+/usr/sbin/euca_conf -setup -user eucalyptus
 
 %post cloud
 /usr/sbin/euca_conf --enable cloud

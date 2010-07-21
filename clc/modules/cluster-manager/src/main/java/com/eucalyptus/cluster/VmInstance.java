@@ -308,10 +308,11 @@ public class VmInstance implements HasName {
     }
     m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     
-    m.put( "block-device-mapping/", "emi\nephemeral0\nroot\nswap" );
+    m.put( "block-device-mapping/", "emi\nephemeral\nephemeral0\nroot\nswap" );
     m.put( "block-device-mapping/emi", "sda1" );
     m.put( "block-device-mapping/ami", "sda1" );
     m.put( "block-device-mapping/ephemeral", "sda2" );
+    m.put( "block-device-mapping/ephemeral0", "sda2" );
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
     
