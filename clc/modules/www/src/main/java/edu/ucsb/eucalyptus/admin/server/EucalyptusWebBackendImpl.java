@@ -101,6 +101,7 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -892,6 +893,29 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		return getDownloadsFromUrl(downloadsUrl);
 	}
 
+	private static String readFileAsString(String filePath) throws java.io.IOException {
+	    byte[] buffer = new byte[(int) new File(filePath).length()];
+	    BufferedInputStream f = null;
+	    try {
+	        f = new BufferedInputStream (new FileInputStream(filePath));
+	        f.read(buffer);
+	    } finally {
+	        if (f != null) try { f.close(); } catch (IOException ignored) { }
+	    }
+	    return new String(buffer);
+	}
+	
+	public String getHtmlByPath(final String sessionId, final String path) throws SerializableException {
+		SessionInfo session = verifySession(sessionId);
+		UserInfoWeb user = verifyUser(session, session.getUserId(), true);
+		// TODO: verify path
+		try {
+			return readFileAsString (BaseDirectory.HOME.toString() + "/var/run/eucalyptus/webapp" + path);
+		} catch (java.io.IOException e) {
+			throw new SerializableException (e.getMessage());
+		}
+	}
+	
 	/**
 	 * Overridden to really throw Jetty RetryRequest Exception (as opposed to sending failure to client).
 	 *
