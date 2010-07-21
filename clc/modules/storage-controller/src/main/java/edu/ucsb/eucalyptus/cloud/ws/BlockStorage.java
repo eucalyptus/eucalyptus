@@ -406,7 +406,7 @@ public class BlockStorage {
 				throw new SnapshotInUseException(snapshotId);
 			}
 		} else {
-			//the SC knows nothing about this snapshot. It should be deleted directly from Walrus (not by the SC).
+			//the SC knows nothing about this snapshot.
 			db.rollback();
 		}
 		return reply;

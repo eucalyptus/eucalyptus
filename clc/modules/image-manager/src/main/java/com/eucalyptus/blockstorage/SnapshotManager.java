@@ -78,13 +78,18 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
+
+import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 import edu.ucsb.eucalyptus.msgs.DeleteSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSnapshotType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
@@ -183,11 +188,22 @@ public class SnapshotManager {
     String userName = request.isAdministrator( ) ? null : request.getUserId( );
     try {
       Snapshot snap = db.getUnique( Snapshot.named( userName, request.getSnapshotId( ) ) );
+      if ( !State.EXTANT.equals( snap.getState() ) ) {
+        db.rollback();
+    	reply.set_return( false );
+    	return reply;
+      }
       db.delete( snap );
       db.getSession( ).flush( );
-      StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
-      db.commit( );
-      EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getUserName( ), "snapshot=" + snap.getDisplayName( ) ).info( );
+      DeleteStorageSnapshotResponseType scReply = StorageUtil.send( snap.getCluster( ), new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
+      if ( scReply.get_return( ) ) {
+        StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
+        db.commit( );
+        EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getUserName( ), "snapshot=" + snap.getDisplayName( ) ).info( );
+      } else {
+    	db.rollback();
+        throw new EucalyptusCloudException( "Unable to delete snapshot." );
+      }
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback( );
