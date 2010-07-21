@@ -914,6 +914,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		try {
 			return readFileAsString (realPath);
 		} catch (java.io.IOException e) {
+			LOG.debug("failed to feed " + realPath + " due to exception " + e.getMessage());
 			throw new SerializableException (e.getMessage());
 		}
 	}

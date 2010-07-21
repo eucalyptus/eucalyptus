@@ -2333,7 +2333,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 					{
 						String html = ( String ) ( (List) result).get(0);
 						vpanel.clear();
+						vpanel.add (new Label ("Server results:"));
 						vpanel.add (new HTML (html));
+						vpanel.add (new label ("result size: " + html.length()));
 					}
 
 					public void onFailure( Throwable caught )
