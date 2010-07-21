@@ -2332,7 +2332,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 					public void onSuccess( Object result )
 					{
 						String html = ( String ) ( (List) result).get(0);
-						vpanel.clear();
+						//vpanel.clear();
 						vpanel.add (new Label ("Server results:"));
 						vpanel.add (new HTML (html));
 						vpanel.add (new Label ("result size: " + html.length()));
@@ -2340,8 +2340,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
 					public void onFailure( Throwable caught )
 					{
-						vpanel.clear();
-						vpanel.add (new HTML ("Failed to contact server"));
+						vpanel.add (new HTML ("Failed to contact server: " + caught.getMessage()));
 					}
                 }
         );

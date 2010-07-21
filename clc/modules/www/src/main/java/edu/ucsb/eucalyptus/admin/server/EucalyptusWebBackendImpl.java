@@ -912,7 +912,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		LOG.debug("feeding contents of " + realPath);
 		// TODO: verify path
 		try {
-			return readFileAsString (realPath);
+			String result = readFileAsString (realPath);
+			LOG.debug("read from " + realPath + " string of size " + result.length());
+			return result;
 		} catch (java.io.IOException e) {
 			LOG.debug("failed to feed " + realPath + " due to exception " + e.getMessage());
 			throw new SerializableException (e.getMessage());
