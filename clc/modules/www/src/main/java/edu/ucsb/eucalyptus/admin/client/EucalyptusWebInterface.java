@@ -2308,6 +2308,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
         //vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+        /*
 		vpanel.add (new DownloadsTable(sessionId,
                 "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php?version=" + URL.encode(version),
                 "http://open.eucalyptus.com/wiki/EucalyptusUserImageCreatorGuide_v1.6",
@@ -2318,7 +2319,28 @@ public class EucalyptusWebInterface implements EntryPoint {
                 "http://open.eucalyptus.com/wiki/ToolsEcosystem",
                 "Eucalyptus-compatible Tools",
                 50));
+                */
+        /*
+         	vpanel.add (new HTML ("<iframe width=\"80%\" height=\"100%\" name=\"test\" scrolling=\"auto\" frameborder=\"0\" src=\"extensions/store/test.html\">Sorry, your browser does not support IFRAME tag
+.</iframe>"));
+         */
+        EucalyptusWebBackend.App.getInstance().getHtmlByPath(
+                sessionId,
+                "extensions/store/test.html",
+                new AsyncCallback() {
+					public void onSuccess( Object result )
+					{
+						String html = ( String ) ( (List) result).get(0);
+						parent.clear();
+						parent.add (new HTML (html));
+					}
 
+					public void onFailure( Throwable caught )
+					{
+
+					}
+                }
+        );
 		parent.clear();
 		parent.add (vpanel);
 	}
