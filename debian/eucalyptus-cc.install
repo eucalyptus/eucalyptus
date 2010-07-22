@@ -1,4 +1,4 @@
+/opt/euca-axis2c/services/EucalyptusCC
 /etc/init.d/eucalyptus-cc
 /etc/eucalyptus/vtunall.conf.template
-/usr/lib/axis2/services/EucalyptusCC
-/var/lib/eucalyptus/keys/nc-client-policy.xml
+
