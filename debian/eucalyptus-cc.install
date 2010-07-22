@@ -1,4 +1,4 @@
-/opt/euca-axis2c/services/EucalyptusCC
+/usr/lib/axis2/services/EucalyptusCC
 /etc/init.d/eucalyptus-cc
 /etc/eucalyptus/vtunall.conf.template
 

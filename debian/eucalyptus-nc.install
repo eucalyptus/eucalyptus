@@ -5,6 +5,6 @@
 /usr/share/eucalyptus/get_sys_info
 /usr/share/eucalyptus/detach.pl
 /usr/sbin/euca_test_nc
-/opt/euca-axis2c/services/EucalyptusNC
+/usr/lib/axis2/services/EucalyptusNC
 /etc/init.d/eucalyptus-nc
 
