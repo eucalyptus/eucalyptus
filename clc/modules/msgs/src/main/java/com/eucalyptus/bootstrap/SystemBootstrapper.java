@@ -125,7 +125,9 @@ public class SystemBootstrapper {
     try {
       Bootstrap.Stage stage = Bootstrap.transition( );
       do {
-        stage.load( );
+      	if ( stage != null ) {
+          stage.load( );
+      	}
       } while( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( BootstrapException e ) {
       throw e;
@@ -143,7 +145,9 @@ public class SystemBootstrapper {
     try {
       Bootstrap.Stage stage = Bootstrap.transition( );
       do {
-        stage.start( );
+    	if ( stage != null ) {
+          stage.start( );
+    	}
       } while( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( BootstrapException e ) {
       e.printStackTrace( );

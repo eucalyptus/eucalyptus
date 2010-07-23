@@ -508,10 +508,12 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 				if ( user != null ) {
 				  user.setConfirmed(true);
 				}
-				EucalyptusManagement.commitWebUser(user);
+				if (user != null) {
+				  EucalyptusManagement.commitWebUser(user);
+				}
 				response = "Your account is now active.";
 			} else {
-				if(user != null) {
+				if (user != null) {
 			      user.setPassword (user.getPassword());
 				  long now = System.currentTimeMillis();
 				  user.setPasswordExpires( new Long(now + pass_expiration_ms) );

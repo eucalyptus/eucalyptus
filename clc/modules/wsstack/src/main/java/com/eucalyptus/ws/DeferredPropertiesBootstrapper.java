@@ -102,7 +102,9 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
 						} else if (prop instanceof MultiDatabasePropertyEntry) {
 							addProp = ((MultiDatabasePropertyEntry) prop).getClone(s.getName());
 						}
-						PropertyDirectory.addProperty(addProp);
+						if ( addProp != null ) {
+						  PropertyDirectory.addProperty(addProp);
+						}
 					}
 				}
 			}

@@ -189,8 +189,9 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     for ( File f : libDir.listFiles( ) ) {
       if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" ) && !f.getName( ).matches( ".*-ext-.*" ) ) {
 //        LOG.trace( "Found eucalyptus component jar: " + f.getName( ) );
+        JarFile jar = null;
         try {
-          JarFile jar = new JarFile( f );
+          jar = new JarFile( f );
           Enumeration<JarEntry> jarList = jar.entries( );
           while ( jarList.hasMoreElements( ) ) {
             JarEntry j = jarList.nextElement( );
@@ -207,6 +208,12 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           jar.close( );
         } catch ( Throwable e ) {
           LOG.error( e.getMessage( ) );
+          if ( jar != null ) {
+            try {
+              jar.close();	
+            } catch ( IOException ex ) {            
+            }
+          }
           continue;
         }
       }

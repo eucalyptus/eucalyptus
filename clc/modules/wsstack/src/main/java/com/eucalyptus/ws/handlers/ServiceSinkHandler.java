@@ -170,8 +170,10 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     MappingHttpRequest request = null;
     Context reqCtx = null; 
     try {
-      reqCtx = Contexts.lookup( reply.getCorrelationId( ) );
-      request = reqCtx.getHttpRequest( );
+      if ( reply != null ) {
+        reqCtx = Contexts.lookup( reply.getCorrelationId( ) );
+        request = reqCtx.getHttpRequest( );
+      }
     } catch ( NoSuchContextException e1 ) {
       LOG.debug( e1, e1 );
     }
