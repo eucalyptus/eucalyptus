@@ -46,7 +46,9 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       } else if (prop instanceof MultiDatabasePropertyEntry) {
     	  addProp = ((MultiDatabasePropertyEntry) prop).getClone(config.getName());
       }
-  	  PropertyDirectory.addProperty(addProp);
+      if ( addProp != null ) {
+  	    PropertyDirectory.addProperty(addProp);
+      }
     }
   }
 

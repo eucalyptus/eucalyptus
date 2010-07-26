@@ -32,6 +32,7 @@ package org.hsqldb;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -106,17 +107,25 @@ public final class HsqlSocketFactorySecure extends HsqlSocketFactory {
   }
 
   private static void loadKeystore( ) {
+    FileInputStream fin = null;      
     try {
       KeyStore keyStore = KeyStore.getInstance( "pkcs12", "BC" );
       if ( ( new File( KEYSTORE ) ).exists( ) ) {
-        final FileInputStream fin = new FileInputStream( KEYSTORE );
+        fin = new FileInputStream( KEYSTORE );
         keyStore.load( fin, EUCALYPTUS.toCharArray( ) );
-        fin.close( );
         pk = ( PrivateKey ) keyStore.getKey( EUCALYPTUS, EUCALYPTUS.toCharArray( ) );
         cert = ( X509Certificate ) keyStore.getCertificate( EUCALYPTUS );
       } 
     } catch ( Throwable t ) {
       LOG.error( t, t );
+    } finally {
+      if ( fin != null ) {
+        try {
+    	  fin.close();
+    	} catch ( IOException e ) {
+    	  LOG.error ( e );
+        }
+      }
     }
   }
   
