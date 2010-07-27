@@ -71,7 +71,7 @@ public class SnapshotService {
 	private Logger LOG = Logger.getLogger( SnapshotService.class );
 	
 	private final ExecutorService pool;
-	private final int NUM_THREADS = 5;
+	private final int NUM_THREADS = 1;
 	
 	public SnapshotService() {
 		pool = Executors.newFixedThreadPool(NUM_THREADS);
