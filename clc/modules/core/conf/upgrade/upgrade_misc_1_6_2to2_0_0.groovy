@@ -22,11 +22,11 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.Groups;
 
-class upgrade_misc_162_eee extends AbstractUpgradeScript {
+class upgrade_misc_162to2_0_0 extends AbstractUpgradeScript {
 	static final String FROM_VERSION = "1.6.2";
 	static final String TO_VERSION = "2.0.0";
 	
-	public upgrade_misc_162_eee() {
+	public upgrade_misc_162to2_0_0() {
 		super(4);
 	}
 	

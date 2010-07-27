@@ -17,11 +17,11 @@ import com.eucalyptus.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 
-class upgrade_walrus_162_eee extends AbstractUpgradeScript {
+class upgrade_walrus_162to2_0_0 extends AbstractUpgradeScript {
 	static final String FROM_VERSION = "1.6.2";
 	static final String TO_VERSION = "2.0.0";
 	
-	public upgrade_walrus_162_eee() {
+	public upgrade_walrus_162to2_0_0() {
 		super(2);
 	}
 	

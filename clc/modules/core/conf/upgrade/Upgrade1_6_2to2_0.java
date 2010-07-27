@@ -60,14 +60,14 @@ import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
 
-class Upgrade1_6_2eee2_0 extends AbstractUpgradeScript {
+class Upgrade1_6_2to2_0_0 extends AbstractUpgradeScript {
 	static final String FROM_VERSION = "1.6.2";
 	static final String TO_VERSION = "2.0.0";
-	private static Logger LOG = Logger.getLogger( Upgrade1_6_2eee2_0.class );
+	private static Logger LOG = Logger.getLogger( Upgrade1_6_2to2_0_0.class );
 	private static List<Class> entities = new ArrayList<Class>();
 	private static Map<String, Class> entityMap = new HashMap<String, Class>();
 
-	public Upgrade1_6_2eee2_0() {
+	public Upgrade1_6_2to2_0_0() {
 		super(0);
 	}
 
