@@ -81,6 +81,7 @@ public class StandalonePersistence {
       StandalonePersistence.setupNewDatabase( );
       StandalonePersistence.setupOldDatabase( );
       StandalonePersistence.runUpgrade( );
+      System.exit(0);
     } catch ( Throwable e ) {
       e.printStackTrace( );
       System.exit( -1 );
