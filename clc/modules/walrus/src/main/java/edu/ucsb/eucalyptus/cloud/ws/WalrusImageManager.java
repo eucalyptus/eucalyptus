@@ -1052,6 +1052,7 @@ public class WalrusImageManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
 				if(objectInfo.canRead(userId) || request.isAdministrator() ) {
+					db.commit();
 					EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
 					try {
 						semaphore.acquire();
@@ -1071,7 +1072,6 @@ public class WalrusImageManager {
 							foundImageCacheInfos = db2.query(searchImageCacheInfo);
 						}						
 					}
-
 					if((foundImageCacheInfos.size() == 0) || 
 							(!imageCachers.containsKey(bucketName + objectKey))) {
 						db2.commit();
@@ -1084,6 +1084,7 @@ public class WalrusImageManager {
 					ImageCacheInfo foundImageCacheInfo = null;
 					if(foundImageCacheInfos.size() > 0)
 						foundImageCacheInfo = foundImageCacheInfos.get(0);
+					db2.commit();
 					if((foundImageCacheInfo == null) || 
 							(!foundImageCacheInfo.getInCache())) {
 						boolean cached = false;
@@ -1111,21 +1112,16 @@ public class WalrusImageManager {
 								} while(true);
 							} catch(Exception ex) {
 								LOG.error(ex);
-								db2.rollback();
-								db.rollback();
 								semaphore.release();
 								throw new EucalyptusCloudException("monitor failure");
 							}
 						}
 						if(!cached) {
 							LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
-							db2.rollback();
-							db.rollback();
 							semaphore.release();
 							throw new EucalyptusCloudException("caching failure");
 						}
 						//caching may have modified the db. repeat the query
-						db2.commit();
 						db2 = WalrusControl.getEntityWrapper();
 						foundImageCacheInfos = db2.query(searchImageCacheInfo);
 						if(foundImageCacheInfos.size() > 0) {
@@ -1133,11 +1129,11 @@ public class WalrusImageManager {
 							foundImageCacheInfo.setUseCount(foundImageCacheInfo.getUseCount() + 1);
 							assert(foundImageCacheInfo.getInCache());
 						} else {
-							db.rollback();
 							db2.rollback();
 							semaphore.release();
 							throw new NoSuchEntityException(objectKey);
 						}
+						db2.commit();
 					}
 
 					Long unencryptedSize = foundImageCacheInfo.getSize();
@@ -1150,8 +1146,6 @@ public class WalrusImageManager {
 							DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 							objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed(), null, null);                            
 					semaphore.release();
-					db.commit();
-					db2.commit();
 					return reply;
 				} else {
 					db.rollback();
