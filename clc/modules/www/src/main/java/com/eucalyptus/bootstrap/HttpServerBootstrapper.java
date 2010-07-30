@@ -86,9 +86,20 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public static Integer HTTP_PORT  = 8080;
   private static Server jettyServer;
   private static Thread serverThread;
-  
+  @ConfigurableField( initial = "", description = "Http Proxy Host" )
+  public static String httpProxyHost;
+  @ConfigurableField( initial = "", description = "Http Proxy Port" )
+  public static String httpProxyPort;
+ 
   private static void setupJettyServer( ) throws Exception {
-    jettyServer = new org.mortbay.jetty.Server( );
+    //http proxy setup
+	if(System.getProperty("http.proxyHost") != null) {
+		httpProxyHost = System.getProperty("http.proxyHost");
+	}
+	if(System.getProperty("http.proxyPort") != null) {
+		httpProxyPort = System.getProperty("http.proxyPort");
+	} 
+	jettyServer = new org.mortbay.jetty.Server( );
     System.setProperty( "euca.http.port", "" + HTTP_PORT );
     System.setProperty( "euca.https.port", "" + HTTPS_PORT );
     URL defaultConfig = ClassLoader.getSystemResource( "eucalyptus-jetty.xml" );

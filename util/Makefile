@@ -9,7 +9,7 @@ all: misc.o data.o euca_auth.o euca_axis.o ipc.o euca_rootwrap euca_mountwrap
 build: all 
 
 euca_rootwrap: euca_rootwrap.c
-	$(CC) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c
+	$(CC) -g $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c
 
 euca_mountwrap: euca_mountwrap.c
 	$(CC) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c

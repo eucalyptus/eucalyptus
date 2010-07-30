@@ -118,6 +118,7 @@ static char *jvm_default_opts[] = {
 	    "-Dsun.java.command=Eucalyptus",
 	    "-Deuca.home=%1$s/",
 	    "-Deuca.var.dir=%1$s/var/lib/eucalyptus",
+	    "-Deuca.run.dir=%1$s/var/run/eucalyptus",
 	    "-Deuca.lib.dir=%1$s/usr/share/eucalyptus",
 	    "-Deuca.conf.dir=%1$s/etc/eucalyptus/cloud.d",
 	    "-Deuca.log.dir=%1$s/var/log/eucalyptus",
