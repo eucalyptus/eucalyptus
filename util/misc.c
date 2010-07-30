@@ -1494,6 +1494,8 @@ static char * find_cont (const char * xml, char * xpath)
     
     // iterate over tags until the matching xpath is reached or
     // until no more tags are found in the 'xml'
+    bzero(n_stk, sizeof(char *) * _STK_SIZE);
+
     for (int xml_offset=0; 
          (name = next_tag (xml + xml_offset, &tag_start, &tag_end, &single, &closing))!=NULL; 
          xml_offset += tag_end + 1)
@@ -1516,8 +1518,12 @@ static char * find_cont (const char * xml, char * xpath)
             name = name_lc;
 
             // name doesn't match last seen opening tag, error
-            if (strcmp(n_stk[stk_p], name)!=0) 
+	    if (stk_p >= 0) {
+	      if (!n_stk[stk_p] || (strcmp(n_stk[stk_p], name)!=0)) {
                 goto cleanup;
+	      }
+	    }
+
 
             // construct the xpath of the closing tag based on stack contents
             char xpath_cur [MAX_PATH] = "";
@@ -1565,7 +1571,7 @@ cleanup:
 
 char * xpath_content (const char * xml, const char * xpath)
 {
-    char * ret;
+    char * ret=NULL;
 
     if (xml==NULL || xpath==NULL) return NULL;
     char * xpath_l = strduplc (xpath); // lower-case copy of requested xpath

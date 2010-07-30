@@ -217,7 +217,7 @@ doDescribeInstances(	struct nc_state_t *nc,
 			ncInstance ***outInsts,
 			int *outInstsLen)
 {
-	ncInstance *instance;
+	ncInstance *instance, *tmp;
 	int total, i, j, k;
 
 	*outInstsLen = 0;
@@ -251,7 +251,10 @@ doDescribeInstances(	struct nc_state_t *nc,
 				/* instance of not relavance right now */
 				continue;
 		}
-		(* outInsts)[k++] = instance;
+		//(* outInsts)[k++] = instance;
+		tmp = (ncInstance *)malloc(sizeof(ncInstance));
+    memcpy(tmp, instance, sizeof(ncInstance));
+    (* outInsts)[k++] = tmp;
 	}
 	*outInstsLen = k;
 	sem_v (inst_sem);

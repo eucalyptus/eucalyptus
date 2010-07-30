@@ -75,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -153,6 +154,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private String key;
 	private String randomKey;
 	private WalrusDataQueue<WalrusDataMessage> putQueue;
+	private static final int PUT_ENTRY_TIMEOUT = 500;
+	private static final int PUT_RETRY_COUNT = 30;
 
 	@Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
@@ -214,16 +217,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			Binding binding;
 
 			if(!(msg instanceof EucalyptusErrorMessageType)) {
-				if(msg instanceof PutObjectResponseType) {
-					if(putQueue != null) {
-						putQueue = null;
-					}
-				}
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
-				if(msg instanceof PutObjectResponseType) {
-					if(putQueue != null) {
-						putQueue = null;
-					}
+				if(putQueue != null) {
+					putQueue = null;
 				}
 			} else {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.com" ) );
@@ -512,7 +508,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				if (verb.equals(WalrusProperties.HTTPVerb.PUT.toString())) {
 					if(httpRequest.containsHeader(WalrusProperties.COPY_SOURCE.toString())) {
 						String copySource = httpRequest.getHeader(WalrusProperties.COPY_SOURCE.toString());
-						String[] sourceParts = copySource.split("\\?");
+						String[] sourceParts = copySource.split("&");
 						if(sourceParts.length > 1) {
 							operationParams.put("SourceVersionId", sourceParts[1].replaceFirst("versionId=", "").trim());
 						}
@@ -1125,16 +1121,30 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		return new String( read );
 	}
 
+	private void insertChunk(WalrusDataMessage message) throws InterruptedException {
+		if(putQueue != null) {
+			boolean success = false;
+			int retry_count = 0;
+			do {
+				success = putQueue.offer(message, 500, TimeUnit.MILLISECONDS);
+				if(++retry_count > PUT_RETRY_COUNT) {
+					LOG.error("Tired of waiting for PUT. Giving up.");
+					putQueue = null;
+				}
+			} while((putQueue != null) && (!success));
+		}
+	}
+
 	private void handleHttpChunk(HttpChunk httpChunk) throws Exception {
 		ChannelBuffer buffer = httpChunk.getContent();
 		try {
 			buffer.markReaderIndex( );
 			byte[] read = new byte[buffer.readableBytes( )];
 			buffer.readBytes( read );
-			putQueue.put(WalrusDataMessage.DataMessage(read));
-			if(httpChunk.isLast())
-				putQueue.put(WalrusDataMessage.EOF());
-
+			insertChunk(WalrusDataMessage.DataMessage(read));
+			if(httpChunk.isLast()) {
+				insertChunk(WalrusDataMessage.EOF());				
+			}
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
 		}
@@ -1178,34 +1188,5 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 		return putMessenger;
 	}	
-
-	class Writer extends Thread {
-
-		private ChannelBuffer firstBuffer;
-		private long dataLength;
-		public Writer(ChannelBuffer firstBuffer, long dataLength) {
-			this.firstBuffer = firstBuffer;
-			this.dataLength = dataLength;
-		}
-
-		public void run() {
-			byte[] bytes = new byte[DATA_MESSAGE_SIZE];
-
-			try {
-				LOG.info("Starting upload");                
-				putQueue.put(WalrusDataMessage.StartOfData(dataLength));
-
-				firstBuffer.markReaderIndex( );
-				byte[] read = new byte[firstBuffer.readableBytes( )];
-				firstBuffer.readBytes( read );
-				putQueue.put(WalrusDataMessage.DataMessage(read));
-				//putQueue.put(WalrusDataMessage.EOF());
-
-			} catch (Exception ex) {
-				LOG.error(ex, ex);
-			}
-		}
-
-	}
 
 }
