@@ -66,6 +66,8 @@
 /* Define if there is strnlen */
 #undef HAVE_STRNLEN
 
+/* Define if we have libcap */
+#undef HAVE_LIBCAP
 
 #ifdef __cplusplus
 }

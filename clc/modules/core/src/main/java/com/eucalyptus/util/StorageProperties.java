@@ -97,9 +97,9 @@ public class StorageProperties {
 	public static final String iface = "eth0";
 	public static final int MAX_TOTAL_VOLUME_SIZE = 50;
 	public static final int MAX_VOLUME_SIZE = 10;
-	public static final int TRANSFER_CHUNK_SIZE = 8192;
 	public static final boolean zeroFillVolumes = false;
 
+	public static int TRANSFER_CHUNK_SIZE = 8192;
 	public static boolean enableSnapshots = false;
 	public static boolean enableStorage = false;
 	public static boolean shouldEnforceUsageLimits = true;

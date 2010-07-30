@@ -100,9 +100,9 @@ static int doInitialize (struct nc_state_t *nc)
 	snprintf (nc->virsh_cmd_path, MAX_PATH, EUCALYPTUS_VIRSH, nc->home);
 	snprintf (nc->xm_cmd_path, MAX_PATH, EUCALYPTUS_XM);
 	snprintf (nc->detach_cmd_path, MAX_PATH, EUCALYPTUS_DETACH, nc->home, nc->home);
-        snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home);
-        snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home);
-        snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home);
+    snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
+    snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
+    snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
 
