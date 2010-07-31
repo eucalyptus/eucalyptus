@@ -405,7 +405,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			if (session!=null) {
 				sessions.remove(session.getSessionId());
 			}
-			throw new SerializableException("Username '" + userName + "' not found");
+			throw new SerializableException("Login incorrect");
 		}
 		if (!user.isApproved()) {
 			throw new SerializableException("User not approved yet");
@@ -437,7 +437,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		// you can get a sessionId with an expired password so you can change it => false
 		user = verifyUser (null, userId, false);
 		if (!user.getPassword().equals( md5Password )) {
-			throw new SerializableException("Incorrect password");
+			throw new SerializableException("Login incorrect");
 		}
 
 		sessionId = ServletUtils.genGUID();
@@ -696,7 +696,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		try {
 			oldRecord = EucalyptusManagement.getWebUser(userName);
 		} catch (Exception e) {
-			throw new SerializableException("Username '" + userName + "' not found");
+			throw new SerializableException("Login incorrect");
 		}
 		if (! callerRecord.isAdministrator()
 				&&  ! callerRecord.getUserName().equals(userName)) {
