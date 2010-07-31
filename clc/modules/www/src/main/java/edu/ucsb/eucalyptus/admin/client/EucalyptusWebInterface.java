@@ -2308,6 +2308,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
         //vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+        
 		vpanel.add (new DownloadsTable(sessionId,
                 "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php?version=" + URL.encode(version),
                 "http://open.eucalyptus.com/wiki/EucalyptusUserImageCreatorGuide_v1.6",

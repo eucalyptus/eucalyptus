@@ -1,0 +1,222 @@
+.TH eucalyptus.conf 5 "8 January 2010" "eucalyptus.conf"
+
+.SH NAME
+eucalyptus.conf, eucalyptus.local.conf \- configuration files for Eucalyptus
+
+.SH SYNOPSIS
+.B /etc/eucalyptus/eucalyptus.conf
+
+.B /etc/eucalyptus/eucalyptus.local.conf
+
+.SH DESCRIPTION
+This manual describes the configuration files used to configure and customize Eucalyptus.
+
+\fI/etc/eucalyptus/eucalyptus.conf\fP is the traditional Eucalyptus configuration file.  In previous Eucalyptus versions (<1.6.2), and on non-Ubuntu versions, Eucalyptus is configured by this one monolithic file, with inline comments describing all options.  As of Ubuntu's Eucalyptus 1.6.2 version, the inline documentation has been extracted to two manpages, \fBeuca_conf\fP(8) and this page, \fBeucalyptus.conf\fP(5).
+
+\fI/etc/eucalyptus/eucalyptus.conf\fP now contains a base set of your distribution's recommended configuration.  This file is managed by \fBdpkg\fP(1), and provides a vector for your distribution to add new variables/values and maintain a sane set of defaults.  It serves as the base configuration, which are easily overriden by the administrator.
+
+\fI/etc/eucalyptus/eucalyptus.local.conf\fP contains values written by \fBeuca_conf\fP(8).  This file should never be edited directly.  Rather, the user should see the documentation at \fBeuca_conf\fP(8) and use the various options and interfaces for modifying this file.
+
+.SH OPTIONS
+
+Each option below may affect one or more of the following Eucalyptus components:
+  - CLC = Cloud Controller
+  - WC  = Walrus Controller
+  - CC  = Cluster Controller
+  - SC  = Storage Controller
+  - NC  = Node Controller
+
+\fB**NOTE**\fP: To activate changes of any parameters on a CC, you must:
+  sudo restart eucalyptus-cc CLEAN=1
+
+\fB**HOWEVER**\fP, if you do this, all currently running virtual machines in this cluster will lose network connectivity.
+
+Options affecting CLC, WC, CC, SC, NC:
+
+.BI EUCALYPTUS="/"
+.RS
+This variable points to where eucalyptus has been installed.
+.RE
+
+.BI EUCA_USER="eucalyptus"
+.RS
+This is the username that you would like eucalyptus to run as.
+.RE
+
+Options affecting CLC, WC, SC only:
+
+.BI DISABLE_DNS="Y"
+.RS
+Enable/disable Eucalyptus dynamic DNS functionality.
+.RE
+
+.BI DISABLE_ISCSI="Y"
+.RS
+Use either iSCSI or AoE for dynamic block storage.
+.RE
+
+.BI JVM_MEM="512m"
+.RS
+Amount of memory to allocate to the JVM.  This number value will affect how many instances you can over a period of time.  These processes are memory hungry; give them as much memory as you can spare.  At least 2048m is recommended for very busy Eucalyptus deployments.
+.RE
+
+Options affecting CC, NC only:
+
+.BI ENABLE_WS_SECURITY="Y"
+.RS
+This variable controls whether ws-security is enabled between eucalyptus components.  The default settings provide secure connections between the Cloud, Cluster, and Node Controllers and we recommend that this feature remains enabled.  If you wish to disable security, you must change this variable to "N" and manually configure the services.xml for both Cluster and Node Controllers (see documentation for more details).
+.RE
+
+.BI LOGLEVEL="DEBUG"
+.RS
+This variable controls the level of logging output that appears in various eucalyptus log files.  The options are, in descending order of verbosity, 'DEBUG, INFO, WARN, ERROR, and FATAL'. The default is DEBUG (everything).
+.RE
+
+.BI VNET_PUBINTERFACE="br0"
+.BI VNET_PRIVINTERFACE="br0"
+.RS
+The 2 variable  VNET_PRIVINTERFACE and VNET_PUBINTERFACE specify the local physical ethernet interfaces that eucalyptus should use to manage the VM network.  On the front-end, VNET_PRIVINTERFACE should be set to the device that is attached to the same ethernet network as your nodes.  - VNET_PUBINTERFACE should be set to the device which is connected to the 'public' network.  If you have only one interface, these should be set to the same value.  On the nodes, both should be set to either the name of the bridge that has been set up by Xen (xenbr0, eth0, etc), or the physical ethernet device that is attached to the xen bridge (peth0, peth1, etc), depending on your xen configuration.  CAVEAT: These parameters in \fIeucalyptus.conf\fP do not affect Storage Controller interface settings--to do this, please use the administrative web interface.
+.RE
+
+.BI VNET_MODE="MANAGED-NOVLAN"
+.RS
+There are four modes to choose from (MANAGED, MANAGED-NOVLAN, SYSTEM, or STATIC) and each has its own sub-options.  The first modes (MANAGED, MANAGED-NOVLAN) configure eucalyptus to fully manage the VM networks, and enables the ability to use security groups and dynamic public IP assignment (with and without vlan tagging of security group networks, respectively).
+.RE
+
+Options affecting CC only:
+
+.BI CC_PORT="8774"
+.RS
+This is the port the Cluster Controller will be listening on.
+.RE
+
+.BI SCHEDPOLICY="ROUNDROBIN"
+.RS
+This option configures the Cluster Controller's scheduling policy.  Currently, this option can be set to GREEDY (first node that is found that can run the VM will be chosen), ROUNDROBIN (nodes are selected one after another until one is found that can run the VM), or POWERSAVE (nodes are put to sleep when they are not running VMs, and reawakened when new resources are required.  VMs will be placed on the first awake machine, followed by machines that are asleep).
+.RE
+
+.BI POWER_IDLETHRESH="300"
+.BI POWER_WAKETHRESH="300"
+.RS
+Powersave options.  POWER_IDLETHRESH is the number of seconds that a node can remain idle (i.e. no running VMs) before a powerdown is attempted.  POWER_WAKETHRESH is the number of seconds that Eucalyptus should wait after attempting a node wake-up before it will consider the node actually down (and not waking up).
+.RE
+
+.BI NC_SERVICE="axis2/services/EucalyptusNC"
+.RS
+The name of the Node Controller service. Change this if you want to plug in your own Node Controller service.
+.RE
+
+.BI VNET_DHCPDAEMON="/usr/sbin/dhcpd3"
+.RS
+This indicates where we have a dhcp server binary. We use it to provide the images with IPs: Eucalyptus provides its own configuration per instance.
+.RE
+
+.BI VNET_DHCPUSER="dhcpd"
+.RS
+Some systems have their DHCP daemon configured to run as a non-root user.  If this is the case, set the name of that user here (by default, Eucalyptus will set up DHCPD configuration files and directories as owned by root).
+.RE
+
+.BI NODES=""
+.RS
+The list of Node Controllers the Cluster Controller will communicate with. If you are running Rocks, you can run "rocks list host" to find out the list of machines available to you (in our case we are interested in the VM Container kind).
+.RE
+
+.BI VNET_SUBNET=""
+.RS
+VNET_SUBNET should be set to an IP subnet that is free for eucalyptus to use (i.e. no other system connected to your network directly is configured with addresses from this subnet).
+.RE
+
+.BI VNET_NETMASK=""
+.RS
+VNET_NETMASK defines the size of the subnet.
+.RE
+
+.BI VNET_DNS=""
+.RS
+VNET_DNS should be set to a DNS server that your systems use (usually safe to use the same DNS that is configured on the front-end).
+.RE
+
+.BI VNET_ADDRSPERNET="32"
+.RS
+VNET_ADDRSPERNET can be used to limit the number of instances that can be attached to each named security group simultaneously.
+.RE
+
+.BI VNET_PUBLICIPS=""
+.RS
+VNET_PUBLICIPS should be set to any public IPs, that are currently unused, that can be dynamically assigned to VMs.  Of these options, only VNET_PUBLICIPS can be left blank or undefined.
+.RE
+
+.BI VNET_LOCALIP="your-public-interface's-ip"
+.RS
+If you are running in multi-cluster mode (more than one CC), you should uncomment VNET_LOCALIP and set it to the local IP of the CC that is accessible by all other CCs in the system.  If VNET_LOCALIP is unset, the CC will try to determine the list of all IPs currently assigned to the machine at CC run time.
+.RE
+
+.BI VNET_CLOUDIP="your-cloud-controller's-ip"
+.RS
+If your CC and CLC are on different machines, uncomment VNET_CLOUDIP and set it to your cloud-contoller's IP address (must be an address that can be reached by the CC).
+.RE
+
+Options affecting the NC only:
+
+.BI NC_PORT="8775"
+.RS
+This is the port the Node Controller will be listening on.
+.RE
+
+.BI HYPERVISOR="kvm"
+.RS
+The hypervisor that the Node Controller will interact with in order to manage virtual machines.  Currently, supported values are 'kvm' and 'xen'.
+.RE
+
+.BI MANUAL_INSTANCES_CLEANUP=0
+.RS
+Setting this to 1 disables the cleanup of instance files (root, kernel, ramdisk) for failed and terminated instances.  This is not recommended for normal use, but it can be useful in debugging VM startup.
+.RE
+
+.BI NC_CACHE_SIZE=99999
+.RS
+The maximum amount of disk space, in Megabytes, that Eucalyptus is allowed to use in the cache directory (INSTANCES_PATH/eucalyptus/cache).  A generous size is recommended.  Setting this to zero disables caching.
+.RE
+
+.BI VNET_BRIDGE="br0"
+.RS
+VNET_BRIDGE should be set to the name of the bridge that xen has configured.  This is typically named 'xenbr0, xenbr1, etc' on older Xen versions, and 'eth0, eth1, etc' on newer Xen versions.  The command 'brctl show' will give you more information on your local bridge setup.
+.RE
+
+.BI INSTANCE_PATH="/var/lib/eucalyptus/instances/"
+.RS
+This variable points to a directory which is used by the Node Controller to store images of running instances as well as local cached copies of images.  The running images will be deleted after the instance is terminated, but the cached copies will persist, subject to LRU cache replacement and the NC_CACHE_SIZE size limit, below.  So, this partition should be at least as big as the cache size (or the maximum space needed by all images, whichever is bigger) plus the maximum space needed by the maximum number of instances allowed on the node.  This directory should be local to the Node Controller (as opposed to a NFS share) for performance reasons.
+.RE
+
+.BI MAX_MEM=2048
+.RS
+The maximum amount of memory Eucalyptus is allowed to use on the node: if you leave this commented out, Eucalyptus will use all available memory, otherwise it will use at most this value for ALL running instances.
+.RE
+
+.BI MAX_CORES=2
+.RS
+The maximum number of CPU/cores Eucalyptus is allowed to use on the node (at the moment we don't differentiate between cores and CPU). If you leave this commented out, Eucalyptus will use all available CPU/cores it can find.
+.RE
+
+.BI SWAP_SIZE=512
+.RS
+The size of the swap partition, in MB, for each instance started on the node (default is 512MB).  If the maximum disk allowed for the instance is not big enough to accommodate the swap together with the root partition, then no swap is allocated.  If there is extra room left, then an "ephemeral" partition will be created, available as /dev/sda3 inside the VM.
+.RE
+
+.BI CONCURRENT_DISK_OPS=4
+.RS
+Set the number of 'disk intensive operations' that are allowed to take place in parallel on this machine.  If this value is set too high, we run the risk of driving the load on the machine too high when multiple instances are started on this single node.  The default is 4.
+.RE
+
+.SH SEE ALSO
+.PD 0
+.TP
+\fBeuca_conf\fP(8)
+.TP
+\fIhttp://launchpad.net/eucalyptus\fP
+.PD
+
+.SH AUTHOR
+This manpage was written by Dustin Kirkland <kirkland@canonical.com> (with extensive help from Daniel Nurmi, and some of it lifted from the original /etc/eucalyptus/eucalyptus.conf) for Ubuntu systems (but may be used by others).  Permission is granted to copy, distribute and/or modify this document under the terms of the GNU General Public License, Version 3 published by the Free Software Foundation.
+
+On Debian systems, the complete text of the GNU General Public License can be found in /usr/share/common-licenses/GPL.
