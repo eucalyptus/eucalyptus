@@ -101,6 +101,7 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -404,7 +405,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			if (session!=null) {
 				sessions.remove(session.getSessionId());
 			}
-			throw new SerializableException("Username '" + userName + "' not found");
+			throw new SerializableException("Login incorrect");
 		}
 		if (!user.isApproved()) {
 			throw new SerializableException("User not approved yet");
@@ -436,7 +437,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		// you can get a sessionId with an expired password so you can change it => false
 		user = verifyUser (null, userId, false);
 		if (!user.getPassword().equals( md5Password )) {
-			throw new SerializableException("Incorrect password");
+			throw new SerializableException("Login incorrect");
 		}
 
 		sessionId = ServletUtils.genGUID();
@@ -695,7 +696,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		try {
 			oldRecord = EucalyptusManagement.getWebUser(userName);
 		} catch (Exception e) {
-			throw new SerializableException("Username '" + userName + "' not found");
+			throw new SerializableException("Login incorrect");
 		}
 		if (! callerRecord.isAdministrator()
 				&&  ! callerRecord.getUserName().equals(userName)) {
@@ -894,6 +895,34 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		return getDownloadsFromUrl(downloadsUrl);
 	}
 
+	private static String readFileAsString(String filePath) throws java.io.IOException {
+	    byte[] buffer = new byte[(int) new File(filePath).length()];
+	    BufferedInputStream f = null;
+	    try {
+	        f = new BufferedInputStream (new FileInputStream(filePath));
+	        f.read(buffer);
+	    } finally {
+	        if (f != null) try { f.close(); } catch (IOException ignored) { }
+	    }
+	    return new String(buffer);
+	}
+	
+	public String getFileContentsByPath(final String sessionId, final String path) throws SerializableException {
+		SessionInfo session = verifySession(sessionId);
+		UserInfoWeb user = verifyUser(session, session.getUserId(), true);
+		String realPath = BaseDirectory.HOME.toString() + "/var/run/eucalyptus/webapp/" + path;
+		LOG.debug("feeding contents of " + realPath);
+		// TODO: verify path
+		try {
+			String result = readFileAsString (realPath);
+			LOG.debug("read from " + realPath + " string of size " + result.length());
+			return result;
+		} catch (java.io.IOException e) {
+			LOG.debug("failed to feed " + realPath + " due to exception " + e.getMessage());
+			throw new SerializableException (e.getMessage());
+		}
+	}
+	
 	/**
 	 * Overridden to really throw Jetty RetryRequest Exception (as opposed to sending failure to client).
 	 *

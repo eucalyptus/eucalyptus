@@ -150,4 +150,7 @@ public interface EucalyptusWebBackendAsync {
 
 	void getDownloads(String sessionId, String downloadsUrl, final AsyncCallback<List<DownloadsWeb>> async)
 	;
+	
+	void getFileContentsByPath(String sessionId, String path, final AsyncCallback<String> async)
+	;
 }
