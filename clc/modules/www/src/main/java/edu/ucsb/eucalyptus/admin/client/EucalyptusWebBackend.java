@@ -147,7 +147,7 @@ public interface EucalyptusWebBackend extends RemoteService {
 
 	public List<DownloadsWeb> getDownloads ( String sessionId, String downloadsUrl ) throws SerializableException;
 
-	public String getHtmlByPath ( String sessionId, String path ) throws SerializableException;
+	public String getFileContentsByPath ( String sessionId, String path ) throws SerializableException;
 
 	/**
 	 * Utility/Convenience class.

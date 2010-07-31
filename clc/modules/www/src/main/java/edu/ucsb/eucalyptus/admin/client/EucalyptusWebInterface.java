@@ -2305,10 +2305,10 @@ public class EucalyptusWebInterface implements EntryPoint {
     public void displayDownloadsTab (final VerticalPanel parent)
     {
 		History.newItem("extras");
-        final VerticalPanel vpanel = new VerticalPanel();
+        VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
         //vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
-        /*
+        
 		vpanel.add (new DownloadsTable(sessionId,
                 "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php?version=" + URL.encode(version),
                 "http://open.eucalyptus.com/wiki/EucalyptusUserImageCreatorGuide_v1.6",
@@ -2319,36 +2319,9 @@ public class EucalyptusWebInterface implements EntryPoint {
                 "http://open.eucalyptus.com/wiki/ToolsEcosystem",
                 "Eucalyptus-compatible Tools",
                 50));
-                */
-        /*
-         	vpanel.add (new HTML ("<iframe width=\"80%\" height=\"100%\" name=\"test\" scrolling=\"auto\" frameborder=\"0\" src=\"extensions/store/test.html\">Sorry, your browser does not support IFRAME tag
-.</iframe>"));
-         */
         
 		parent.clear();
 		parent.add (vpanel);
-		vpanel.add(new HTML ("Contacting server..."));
-		
-        EucalyptusWebBackend.App.getInstance().getHtmlByPath(
-                sessionId,
-                "extensions/store/test.html",
-                new AsyncCallback() {
-					public void onSuccess( Object result )
-					{
-						String html = ( String ) result;
-						//vpanel.clear();
-						vpanel.add (new Label ("Server results:"));
-						vpanel.add (new HTML (html));
-						vpanel.add (new Label ("result size: " + html.length()));
-					}
-
-					public void onFailure( Throwable caught )
-					{
-						vpanel.add (new HTML ("Failed to contact server: " + caught.getMessage()));
-					}
-                }
-        );
-
 	}
 
     public void displayStoreTab (final VerticalPanel parent) 
