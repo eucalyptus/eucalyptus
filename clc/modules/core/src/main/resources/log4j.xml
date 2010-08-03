@@ -44,7 +44,7 @@
     <param name="Threshold" value="${euca.log.level}" />
     <param name="File" value="${euca.log.dir}/cloud-output.log" />
     <param name="MaxFileSize" value="10MB" />
-    <param name="MaxBackupIndex" value="1000" />
+    <param name="MaxBackupIndex" value="10" />
     <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
   <appender name="exhaustive" class="org.apache.log4j.RollingFileAppender">
@@ -58,7 +58,7 @@
   <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug.log" />
     <param name="MaxFileSize" value="10MB" />
-    <param name="MaxBackupIndex" value="1000" />
+    <param name="MaxBackupIndex" value="10" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
     </layout>
@@ -66,7 +66,7 @@
   <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-error.log" />
     <param name="MaxFileSize" value="10MB" />
-    <param name="MaxBackupIndex" value="1000" />
+    <param name="MaxBackupIndex" value="10" />
     <param name="Threshold" value="ERROR" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
