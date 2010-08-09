@@ -115,6 +115,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPInputStream;
 
@@ -297,7 +298,7 @@ public class WalrusImageManager {
 						}
 					}
 					//Assemble parts
-					String encryptedImageKey = imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
+					String encryptedImageKey = UUID.randomUUID().toString() + ".crypt.gz";//imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
 					String encryptedImageName = storageManager.getObjectPath(bucketName, encryptedImageKey);
 					String decryptedImageKey = encryptedImageKey.substring(0, encryptedImageKey.lastIndexOf("crypt.gz")) + "tgz";
 

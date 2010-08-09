@@ -701,8 +701,7 @@ public class WalrusManager {
 							List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 							objectInfo.addGrants(userId, grantInfos, accessControlList);
 							objectInfo.setGrants(grantInfos);
-							objectName = UUID.randomUUID().toString(); //objectKey.replaceAll("/", "-")
-							//+ Hashes.getRandom(4);
+							objectName = UUID.randomUUID().toString();
 							objectInfo.setObjectName(objectName);
 							objectInfo.setSize(0L);
 							versionId = UUID.randomUUID().toString().replaceAll("-", "");
@@ -728,8 +727,7 @@ public class WalrusManager {
 								List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 								objectInfo.addGrants(userId, grantInfos, accessControlList);
 								objectInfo.setGrants(grantInfos);
-								objectName =  UUID.randomUUID().toString();//objectKey.replaceAll("/", "-")
-								//+ Hashes.getRandom(4);
+								objectName =  UUID.randomUUID().toString();
 								objectInfo.setObjectName(objectName);
 								objectInfo.setSize(0L);
 							}
@@ -769,8 +767,7 @@ public class WalrusManager {
 									continue;
 								}
 								if (WalrusDataMessage.isStart(dataMessage)) {
-									tempObjectName = UUID.randomUUID().toString();//objectName + "."
-									//+ Hashes.getRandom(12);
+									tempObjectName = UUID.randomUUID().toString();
 									digest = Digest.MD5.get();
 									try {
 										fileIO = storageManager.prepareForWrite(
@@ -1064,8 +1061,7 @@ public class WalrusManager {
 							foundObject
 							.addGrants(userId, grantInfos, accessControlList);
 							foundObject.setGrants(grantInfos);
-							objectName = UUID.randomUUID().toString();//objectKey.replaceAll("/", "-")
-							//+ Hashes.getRandom(4);
+							objectName = UUID.randomUUID().toString();
 							foundObject.setObjectName(objectName);
 							dbObject.add(foundObject);
 						} else {
@@ -2403,9 +2399,7 @@ public class WalrusManager {
 										grantInfos, accessControlList);
 								destinationObjectInfo.setGrants(grantInfos);
 								destinationObjectInfo
-								.setObjectName(UUID.randomUUID().toString()); //destinationKey
-										//.replaceAll("/", "-")
-										//+ Hashes.getRandom(4));
+								.setObjectName(UUID.randomUUID().toString());
 							} else {
 								if (destinationObjectInfo.canWriteACP(userId)) {
 									List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
