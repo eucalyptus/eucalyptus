@@ -80,7 +80,7 @@ public class RequestQueue {
   
   public BaseMessage handle( BaseMessage msg ) throws EucalyptusCloudException {
     if ( msg instanceof WalrusRequestType ) {
-      if ( !Components.lookup( Components.delegate.walrus ).isInitialized( ) ) {
+      if ( !Components.lookup( Components.delegate.walrus ).isRunning( ) ) {
         throw new NotReadyException( "walrus" );
       }
     }

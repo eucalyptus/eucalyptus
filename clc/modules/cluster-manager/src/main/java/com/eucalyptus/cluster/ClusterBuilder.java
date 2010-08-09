@@ -20,8 +20,6 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.event.NewClusterEvent;
-import com.eucalyptus.cluster.event.TeardownClusterEvent;
 import com.eucalyptus.cluster.handlers.AddressStateHandler;
 import com.eucalyptus.cluster.handlers.ClusterCertificateHandler;
 import com.eucalyptus.cluster.handlers.LogStateHandler;
@@ -38,12 +36,9 @@ import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.Handles;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventVetoedException;
-import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.collect.ImmutableList;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
@@ -189,6 +184,22 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         }
       }
     }
+    String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
+    File keyDir = new File( directory );
+    if ( keyDir.exists( ) ) {
+      for( File f : keyDir.listFiles( ) ) {
+        if( f.delete( ) ) {
+          LOG.info( "Removing cluster key file: " + f.getAbsolutePath( ) );
+        } else {
+          LOG.info( "Failed to remove cluster key file: " + f.getAbsolutePath( ) );
+        }        
+      }
+      if( keyDir.delete( ) ) {
+        LOG.info( "Removing cluster key directory: " + keyDir.getAbsolutePath( ) );
+      } else {
+        LOG.info( "Failed to remove cluster key directory: " + keyDir.getAbsolutePath( ) );
+      }
+    }    
     super.fireStop( config );
   }
   

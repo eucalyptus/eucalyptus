@@ -68,7 +68,20 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Authentication;
+import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.event.NewClusterEvent;
+import com.eucalyptus.cluster.event.TeardownClusterEvent;
+import com.eucalyptus.cluster.handlers.ClusterCertificateHandler;
+import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -84,6 +97,34 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     }
     return singleton;
   }
+  
+  public static Cluster start( ClusterConfiguration c ) throws EucalyptusCloudException {
+    String clusterName = c.getName( );
+    if ( Clusters.getInstance( ).contains( clusterName ) ) {
+      return Clusters.getInstance( ).lookup( clusterName );
+    } else {
+      ClusterCredentials credentials = null;//ASAP: fix it.
+      EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
+      try {
+        credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
+        credDb.rollback( );
+      } catch ( EucalyptusCloudException e ) {
+        LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
+        credDb.rollback( );
+        throw e;
+      }
+      Cluster newCluster = new Cluster( c, credentials );
+      Clusters.getInstance( ).register( newCluster );
+      try {
+        registerClusterStateHandler( newCluster );
+        ListenerRegistry.getInstance( ).fireEvent( new NewClusterEvent( ).setMessage( newCluster ) );
+      } catch ( EventVetoedException ex ) {
+        LOG.error( ex , ex );
+      }
+      return newCluster;
+    }
+  }
+
   
   public boolean hasNetworking( ) {
     return Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
@@ -108,4 +149,54 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return Lists.newArrayList( hostOrdered );
   }
     
+  private static void registerClusterStateHandler( Cluster newCluster ) throws EventVetoedException {
+    try {
+      ClusterCertificateHandler cc = new ClusterCertificateHandler( newCluster );
+      ListenerRegistry.getInstance( ).register( NewClusterEvent.class, cc );
+      ListenerRegistry.getInstance( ).register( TeardownClusterEvent.class, cc );
+      ListenerRegistry.getInstance( ).register( ClockTick.class, cc );
+    } catch ( BindingException e1 ) {
+      LOG.error( e1, e1 );
+    }
+  }
+  
+  private static void deregisterClusterStateHandler( Cluster removeCluster ) throws EventVetoedException {
+    try {
+      ClusterCertificateHandler cc = new ClusterCertificateHandler( removeCluster );
+      ListenerRegistry.getInstance( ).deregister( NewClusterEvent.class, cc );
+      ListenerRegistry.getInstance( ).deregister( TeardownClusterEvent.class, cc );
+      ListenerRegistry.getInstance( ).deregister( ClockTick.class, cc );
+    } catch ( BindingException e1 ) {
+      LOG.error( e1, e1 );
+    }
+  }
+  private static Cluster lookupCluster( ClusterConfiguration c ) throws EucalyptusCloudException {
+    ClusterCredentials credentials = null;
+    EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
+    try {
+      credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
+      credDb.rollback( );
+    } catch ( EucalyptusCloudException e ) {
+      LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
+      credDb.rollback( );
+      throw e;
+    }
+    Cluster newCluster = new Cluster( c, credentials );
+    Clusters.getInstance( ).register( newCluster );
+    return newCluster;
+  }
+
+  public static void stop( String name ) {
+    Cluster c = Clusters.getInstance( ).lookup( name );
+    Clusters.getInstance( ).deregister( c.getName( ) );
+    c.stop();
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new TeardownClusterEvent( ).setMessage( c ) );
+      deregisterClusterStateHandler( c );
+      return;
+    } catch ( EventVetoedException e1 ) {
+      return;
+    }          
+  }
+
 }

@@ -82,6 +82,9 @@ import com.eucalyptus.bootstrap.DependsRemote;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.HeartbeatHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
@@ -124,6 +127,34 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
 
   public boolean start( ) {
     return true;
+  }
+  
+  @Provides(Component.eucalyptus)
+  @RunDuring(Bootstrap.Stage.RemoteServicesInit)
+  @DependsRemote(Component.eucalyptus)
+  public static class DeferedRemoteServiceBootstrapper extends Bootstrapper {
+    @Override
+    public boolean start( ) throws Exception {
+      for( com.eucalyptus.component.Component c : Components.list( ) ) {
+        for( Service s : c.getServices( ) ) {
+          if( s.isLocal( ) ) {
+            try {
+              c.startService( s.getServiceConfiguration( ) );
+            } catch ( ServiceRegistrationException ex ) {
+              LOG.error( ex , ex );
+              System.exit( 123 );
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public boolean load( Stage current ) throws Exception {
+      return true;
+    }
+    
   }
   
   public ChannelPipeline getPipeline( ) throws Exception {

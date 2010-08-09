@@ -74,22 +74,36 @@ import com.eucalyptus.util.NetworkUtil;
 
 @Deprecated
 public enum Component {
-  bootstrap( true ),
-  component( true ),
-  eucalyptus( true ),
-  walrus( true ),
-  dns( true ),
-  storage( false ),
-  db( true ),
-  jetty( true ),
-  configuration( true ),
-  cluster( false ),
-  any( true );
+  bootstrap( false, true, false ),
+  component( false, true, false ),
+  eucalyptus( true, false, true ),
+  walrus( true, false, false ),
+  dns( true, false, true ),
+  storage( true, false, false ),
+  db( false, false, true ),
+  jetty( true, false, true ),
+  configuration( true, false, true ),
+  cluster( false, false, false ),
+  any( false, true, false );
   private static Logger LOG = Logger.getLogger( Component.class );
-  private final Boolean singleton;
+
+  /**
+   * @note is a sub-service of {@link Component.eucalyptus}
+   */
+  private final Boolean cloudLocal;
+  /**
+   * @note should have a dispatcher built
+   */
+  private final Boolean hasDispatcher;
+  /**
+   * @note always load the service locally
+   */
+  private final Boolean alwaysLocal;
   
-  private Component( Boolean singleton ) {
-    this.singleton = singleton;
+  private Component( Boolean hasDispatcher, Boolean alwaysLocal, Boolean cloudLocal ) {
+    this.alwaysLocal = alwaysLocal;
+    this.hasDispatcher = hasDispatcher;
+    this.cloudLocal = cloudLocal;
   }
   
   public Boolean isEnabled( ) {
@@ -107,9 +121,9 @@ public enum Component {
   public URI getUri( ) {
     com.eucalyptus.component.Component c = Components.lookup( this );
     NavigableSet<Service> services = c.getServices( );
-    if( this.isSingleton( ) && services.size( ) != 1 ) {
-        throw new RuntimeException( "Singleton component has "+services.size()+" registered services (Should be exactly 1)." );
-    } else if( this.isSingleton( ) && services.size( ) == 1 ) {
+    if( this.isCloudLocal( ) && services.size( ) != 1 ) {
+        throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
+    } else if( this.isCloudLocal( ) && services.size( ) == 1 ) {
       return services.first( ).getUri( );
     } else {
       for( Service s : services ) {
@@ -125,10 +139,18 @@ public enum Component {
     return Components.lookup( this ).getConfiguration( ).getLocalUri( );
   }
   
-  public Boolean isSingleton( ) {
-    return this.singleton;
+  public Boolean isCloudLocal( ) {
+    return this.cloudLocal;
   }
-  
+
+  public Boolean hasDispatcher( ) {
+    return this.hasDispatcher;
+  }
+
+  public Boolean isAlwaysLocal( ) {
+    return this.alwaysLocal;
+  }
+
   public static List<Component> list( ) {
     return Arrays.asList( Component.values( ) );
   }
