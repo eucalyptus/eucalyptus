@@ -123,11 +123,10 @@ public class SystemBootstrapper {
 
   public boolean load( ) throws Throwable {
     try {
+      /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );
       do {
-      	if ( stage != null ) {
-          stage.load( );
-      	}
+        stage.load( );
       } while( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( BootstrapException e ) {
       throw e;
@@ -143,11 +142,10 @@ public class SystemBootstrapper {
     
   public boolean start( ) throws Throwable {
     try {
+      /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );
       do {
-    	if ( stage != null ) {
-          stage.start( );
-    	}
+        stage.start( );
       } while( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( BootstrapException e ) {
       e.printStackTrace( );
