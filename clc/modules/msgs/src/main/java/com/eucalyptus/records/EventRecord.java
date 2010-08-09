@@ -33,8 +33,10 @@ public class EventRecord extends EucalyptusMessage {
 
   private static String getMessageString( final Object[] other ) {
     StringBuffer last = new StringBuffer( );
-    for ( Object x : other ) {
-      last.append( ":" ).append( x.toString( ) );
+    if( other != null ) {
+      for ( Object x : other ) {
+        last.append( ":" ).append( x );
+      }
     }
     return last.length( ) > 1 ? last.substring( 1 ) : last.toString( );
   }
