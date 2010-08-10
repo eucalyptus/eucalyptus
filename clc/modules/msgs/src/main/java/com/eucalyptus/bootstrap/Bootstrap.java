@@ -119,11 +119,11 @@ public class Bootstrap {
     }
         
     public String describe( ) {
-      StringBuffer buf = new StringBuffer( );
+      StringBuffer buf = new StringBuffer( this.name( ) ).append( " " );
       for ( Bootstrapper b : this.bootstrappers ) {
-        buf.append( EventRecord.caller( Component.class, EventType.COMPONENT_INFO, this.name( ), b.getClass( ).getSimpleName( ) ) ).append( "\n" );
+        buf.append( b.getClass( ).getSimpleName( ) ).append( " " );
       }
-      return buf.toString( );
+      return buf.append( "\n" ).toString( );
     }
     
     public String getResourceName( ) {
@@ -174,7 +174,7 @@ public class Bootstrap {
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, currentStage.name( ), bc, "Provides", comp.name( ),
                           "Component." + comp.name( ) + ".isEnabled", "true" ).info( );
         stage.addBootstrapper( bootstrap );
-      } else if ( !comp.isSingleton( ) && !comp.isEnabled( ) && Components.contains( comp ) ) { //report skipping a bootstrapper for an enabled component
+      } else if ( !comp.isCloudLocal( ) && !comp.isEnabled( ) && Components.contains( comp ) ) { //report skipping a bootstrapper for an enabled component
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "Provides", comp.name( ),
                           "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
       } else if ( !bootstrap.checkLocal( ) ) {
@@ -252,7 +252,7 @@ public class Bootstrap {
     Lifecycles.State.PRIMORDIAL.to( Lifecycles.State.INITIALIZED, new Committor<Component>( ) {
       @Override
       public void commit( Component comp ) throws Exception {
-        if( comp.isSingleton( ) && ( comp.isLocal( ) || comp.getPeer().equals(com.eucalyptus.bootstrap.Component.dns) ) ) {
+        if( ( comp.getPeer( ).isEnabled( ) && comp.getPeer( ).isAlwaysLocal( ) ) || ( Components.delegate.eucalyptus.isLocal( ) && comp.getPeer( ).isCloudLocal( ) ) ){
           comp.buildService( );
         }
       }

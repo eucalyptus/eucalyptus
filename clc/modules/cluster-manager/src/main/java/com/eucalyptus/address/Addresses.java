@@ -147,9 +147,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
         Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
         LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
-      } else {
-        Addresses.systemAddressManager.inheritReservedAddresses( Addresses.systemAddressManager.getReservedAddresses( ) );
-      }
+      } 
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
@@ -195,23 +193,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     return address;
   }
-  
-  public static void checkSanity( ) {
-  //TODO: check all addresses here.
-  }
-  
-  private static void checkSanity( Address address ) {
-    if ( address.isAssigned( ) ) {
-      VmInstance vm = null;
-      try {
-        vm = VmInstances.getInstance( ).lookup( address.getInstanceId( ) );
-        if ( VmState.TERMINATED.equals( vm.getState( ) ) || VmState.BURIED.equals( vm.getState( ) ) ) {
-          Addresses.release( address );
-        }
-      } catch ( NoSuchElementException e ) {}
-    }
-  }
-  
+    
   public static Address allocate( String userId, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
     Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( userId );

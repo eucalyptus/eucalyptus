@@ -16,7 +16,13 @@ public abstract class DispatcherFactory {
   public static Dispatcher build( Component parent, Service service ) {
     return factory.buildChild( parent, service );
   }
-  
+
   public abstract Dispatcher buildChild( Component parent, Service service );
+
+  public static void remove( Service service ) {
+    factory.removeChild( service );
+  }
+  
+  public abstract void removeChild( Service service );
   
 }

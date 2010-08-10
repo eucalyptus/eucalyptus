@@ -179,7 +179,6 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 }
 
 public class EphemeralConfiguration extends ComponentConfiguration {
-  String  name;
   URI uri;
   Component c;
   

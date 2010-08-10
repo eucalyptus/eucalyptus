@@ -1,6 +1,6 @@
 name=db
 euca.model.dns=db-model.xml
 euca.model.dns.services=db-services.xml
-euca.url.local=jdbc:hsqldb:hsqls://127.0.0.1:9001/eucalyptus
-euca.url.pattern=jdbc:hsqldb:hsqls://%s:%d/eucalyptus
+euca.url.local=hsqls://127.0.0.1:9001/eucalyptus
+euca.url.pattern=hsqls://%s:%d/eucalyptus
 euca.url.port=9001

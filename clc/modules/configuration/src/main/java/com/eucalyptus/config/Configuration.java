@@ -110,7 +110,7 @@ public class Configuration {
     }
     ServiceConfiguration newComponent = builder.add( name, hostName, port );
     builder.getComponent( ).buildService( newComponent );
-    builder.fireStart( newComponent );
+    builder.getComponent( ).startService( newComponent );
     reply.set_return( true );
     return reply;
   }
@@ -119,19 +119,15 @@ public class Configuration {
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     reply.set_return( false );
     ServiceBuilder builder = builders.get( request.getClass( ) );
-    try {
-      if( !builder.checkRemove( request.getName( ) ) ) {
-        return reply;
-      }
-    } catch ( Exception e ) {
-      throw new ServiceRegistrationException( e.getMessage( ), e );
+    if( !builder.checkRemove( request.getName( ) ) ) {
+      return reply;
     }
     ServiceConfiguration conf;
     try {
       conf = builder.lookupByName( request.getName( ) );
       builder.remove( conf );
       builder.getComponent( ).removeService( conf );
-      builder.fireStop( conf );
+//      builder.fireStop( conf );
       reply.set_return( true );
     } catch( EucalyptusCloudException e ) {
       throw e;
