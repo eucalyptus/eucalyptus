@@ -12,7 +12,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "image_authorization" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ImageAuthorization {
   @Id
   @GeneratedValue

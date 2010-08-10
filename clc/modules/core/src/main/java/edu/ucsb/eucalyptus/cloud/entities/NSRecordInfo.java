@@ -72,7 +72,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_dns")
 @Table( name = "NSRecords" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class NSRecordInfo {
     @Id
     @GeneratedValue
