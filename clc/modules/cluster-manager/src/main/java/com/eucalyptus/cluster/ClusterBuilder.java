@@ -200,7 +200,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       LOG.error( e, e );
       credDb.rollback( );
     }
-    Clusters.stop( cluster );
+    Clusters.stop( cluster.getName( ) );
     for( Group g : Groups.listAllGroups( ) ) {
       for( Authorization auth : g.getAuthorizations( ) ) {
         if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {
