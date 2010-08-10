@@ -273,14 +273,13 @@ public class X509Cert extends AbstractPersistent implements Serializable {
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = super.hashCode( );
+    int result = 1;
     result = prime * result + ( ( alias == null ) ? 0 : alias.hashCode( ) );
     return result;
   }
   @Override
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
-    if ( !super.equals( obj ) ) return false;
     if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     X509Cert other = ( X509Cert ) obj;
     if ( alias == null ) {
@@ -320,14 +319,14 @@ public class ClusterCredentials extends AbstractPersistent implements Serializab
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = super.hashCode( );
+    int result = 1;
     result = prime * result + ( ( clusterName == null ) ? 0 : clusterName.hashCode( ) );
     return result;
   }
+
   @Override
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
-    if ( !super.equals( obj ) ) return false;
     if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     ClusterCredentials other = ( ClusterCredentials ) obj;
     if ( clusterName == null ) {

@@ -119,12 +119,8 @@ public class Configuration {
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     reply.set_return( false );
     ServiceBuilder builder = builders.get( request.getClass( ) );
-    try {
-      if( !builder.checkRemove( request.getName( ) ) ) {
-        return reply;
-      }
-    } catch ( Exception e ) {
-      throw new ServiceRegistrationException( e.getMessage( ), e );
+    if( !builder.checkRemove( request.getName( ) ) ) {
+      return reply;
     }
     ServiceConfiguration conf;
     try {
