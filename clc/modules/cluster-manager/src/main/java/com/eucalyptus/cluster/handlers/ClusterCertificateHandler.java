@@ -5,12 +5,15 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
+import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.GenericEvent;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.GetKeysResponseType;
@@ -75,12 +78,13 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
       MappingHttpResponse resp = (MappingHttpResponse) e.getMessage( );
       GetKeysResponseType msg = (GetKeysResponseType) resp.getMessage( );
       boolean certs = Clusters.checkCerts( msg, this.getCluster( ) );
-      if( certs && !this.verified ) {
+      if( certs && !this.verified && Bootstrap.isFinished( ) ) {
         try {
           Clusters.registerClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
           Clusters.registerClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
           Clusters.registerClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
           Clusters.registerClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );
+          ListenerRegistry.getInstance( ).fireEvent( new ClockTick().setMessage( 1l ) );
         } catch ( Exception e1 ) {
           LOG.error( e1, e1 );
         }
