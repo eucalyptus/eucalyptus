@@ -71,7 +71,7 @@ public class MetadataPipeline extends FilteredPipeline implements UnrollableStag
       if ( !( reply instanceof NullPayload ) ) {
         response = new DefaultHttpResponse(request.getProtocolVersion( ),HttpResponseStatus.OK);
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/html" );
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ((String)reply).getBytes( ) );
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer((byte[])reply);
         response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
       }

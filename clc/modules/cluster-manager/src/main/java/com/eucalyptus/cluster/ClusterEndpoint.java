@@ -75,11 +75,16 @@ import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Collections;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -227,6 +232,26 @@ public class ClusterEndpoint implements Startable {
       String val = network.toString();
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
+    }
+    retList.add( new ClusterInfoType( "================== Configurations", "" ) );
+    for( String val : Iterables.transform( Components.list( ), Components.configurationToString( ) ) ) {
+      retList.add( new ClusterInfoType( val, "" ) );
+      LOG.info( val );
+    }
+    retList.add( new ClusterInfoType( "================== Components", "" ) );
+    for( String val : Iterables.transform( Components.list( ), Components.componentToString( ) ) ) {
+      retList.add( new ClusterInfoType( val, "" ) );
+      LOG.info( val );
+    }
+    retList.add( new ClusterInfoType( "================== Dispatchers", "" ) );
+    for( String val : Iterables.transform( ServiceDispatcher.values( ), Components.dispatcherToString( ) ) ) {
+      retList.add( new ClusterInfoType( val, "" ) );
+      LOG.info( val );
+    }
+    retList.add( new ClusterInfoType( "================== Bootstrappers", "" ) );
+    for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+      retList.add( new ClusterInfoType( stage.name( ), stage.describe( ).replaceAll( "\n", "" ).replaceAll( "^\\w* ", "" ) ) );
+      LOG.info( stage.describe( ) );
     }
     return retList;
   }

@@ -71,7 +71,7 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   }
 
   @Override
-  public ServiceConfiguration add( URI uri ) throws ServiceRegistrationException {
+  public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
     try {
       if( "vm".equals( uri.getScheme( ) ) || NetworkUtil.testLocal( uri.getHost( ) ) ) {
         return new LocalConfiguration( this.getComponent( ).getPeer( ), uri );      

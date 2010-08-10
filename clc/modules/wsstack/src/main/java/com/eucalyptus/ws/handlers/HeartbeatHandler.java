@@ -96,6 +96,7 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.StartComponentEvent;
@@ -164,7 +165,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
         LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
         Component comp = Components.lookup( component.getComponent( ) );
-        comp.buildService( comp.getUri( addr.getAddress( ).getHostAddress( ), comp.getConfiguration( ).getDefaultPort( ) ) );
+        comp.buildService( );
+        
         initializedComponents.add( component.getComponent( ) );
       }
       if ( !initializedComponents.contains( Components.delegate.storage.name( ) ) ) {

@@ -19,14 +19,18 @@ public class Service implements ComponentInformation, Comparable<Service> {
   public Service( Component parent, ServiceConfiguration serviceConfig ) {
     this.parent = parent;
     this.serviceConfiguration = serviceConfig;
-    if( serviceConfig.isLocal( ) ) {
+    if ( "cluster".equals( parent.getName( ) ) && com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
+      this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
+      URI uri = this.parent.getConfiguration( ).makeUri( "localhost", serviceConfig.getPort( ) );
+      this.endpoint = new ServiceEndpoint( this, false, uri );
+    } else if ( serviceConfig.isLocal( ) ) {
       URI uri = this.parent.getConfiguration( ).getLocalUri( );
       this.name = parent.getName( ) + LOCAL_HOSTNAME;
-      this.endpoint = new ServiceEndpoint( this, true, uri );      
+      this.endpoint = new ServiceEndpoint( this, true, uri );
     } else {
       Boolean local = false;
       try {
-        if( serviceConfig.getHostName( ) != null ) {
+        if ( serviceConfig.getHostName( ) != null ) {
           local = NetworkUtil.testLocal( serviceConfig.getHostName( ) );
         } else {
           local = true;
@@ -42,10 +46,10 @@ public class Service implements ComponentInformation, Comparable<Service> {
         this.name = parent.getName( ) + LOCAL_HOSTNAME;
         uri = this.parent.getConfiguration( ).getLocalUri( );
       }
-      this.endpoint = new ServiceEndpoint( this, local, uri );      
+      this.endpoint = new ServiceEndpoint( this, local, uri );
     }
     this.keys = new Credentials( this );//TODO: integration with JAAS
-    this.dispatcher = DispatcherFactory.build( parent, this );    
+    this.dispatcher = DispatcherFactory.build( parent, this );
   }
   
   public Boolean isLocal( ) {
@@ -84,4 +88,12 @@ public class Service implements ComponentInformation, Comparable<Service> {
   public int compareTo( Service that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
+
+  @Override
+  public String toString( ) {
+    return String.format( "Service:parent=%s:name=%s:keys=%s:endpoint=%s:dispatcher=%s:serviceConfiguration=%s", this.parent, this.name, this.keys,
+                          this.endpoint, this.dispatcher, this.serviceConfiguration );
+  }
+  
+  
 }

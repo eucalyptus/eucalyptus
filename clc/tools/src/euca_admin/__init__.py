@@ -37,8 +37,9 @@ class EucaAdmin:
         s = '%sERROR %s %s %s: %s\n' % (s,ex.status, ex.reason, i[0], i[1])
     else:
       s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
-    while s.count("\n") != 3:
-      s = re.sub(".*Exception.*\n", ": ", s)
+    if not re.match(".*Exception.*\n",s) == None:
+      while s.count("\n") != 3:
+        s = re.sub(".*Exception.*\n", ": ", s)
     print s.replace("\n","")
     sys.exit(1)
     

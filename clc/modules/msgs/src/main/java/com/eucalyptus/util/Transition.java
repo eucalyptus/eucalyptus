@@ -1,5 +1,6 @@
 package com.eucalyptus.util;
 
+import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
@@ -116,6 +117,15 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
    * @throws Throwable
    */
   public final Transition<O,T> transition( O object ) throws Throwable {
+    if( object instanceof Iterable ) {
+      for( O o : (Iterable<O>) object ) this.doTransition( o );
+    } else {
+      this.doTransition( object );
+    }
+    return this;
+  }
+
+  private void doTransition( O object ) throws Exception {
     try {
       EventRecord.caller( this.getClass( ), EventType.TRANSITION_PREPARE, this.toString( ), object.getClass( ).getCanonicalName( ) ).info( );
       this.prepare( object );
@@ -130,10 +140,9 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
       throw e;
     }
     EventRecord.caller( this.getClass( ), EventType.TRANSITION_FINISHED, this.toString( ) );
-    return this;
   }
   public final Transition<O,T> transition( Iterable<O> list ) throws Throwable {
-    for( O o : list ) this.transition( o );
+    for( O o : list ) this.doTransition( o );
     return this;
   }  
   /**
