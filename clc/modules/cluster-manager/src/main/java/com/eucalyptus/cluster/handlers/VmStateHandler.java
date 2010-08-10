@@ -8,8 +8,8 @@ import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmTypes;
-import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -63,7 +63,7 @@ public class VmStateHandler extends AbstractClusterMessageDispatcher {
         SystemState.handle( reply );
         if( this.init.addAndGet( 1 ) == 2 ) {
           try {
-            ClusterUtil.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
+            Clusters.registerClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
           } catch ( Exception e1 ) {
             LOG.error( e1, e1 );
           }

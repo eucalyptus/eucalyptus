@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
@@ -18,15 +19,7 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.handlers.AddressStateHandler;
-import com.eucalyptus.cluster.handlers.ClusterCertificateHandler;
-import com.eucalyptus.cluster.handlers.LogStateHandler;
-import com.eucalyptus.cluster.handlers.NetworkStateHandler;
-import com.eucalyptus.cluster.handlers.ResourceStateHandler;
-import com.eucalyptus.cluster.handlers.VmStateHandler;
-import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
@@ -36,7 +29,8 @@ import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.Handles;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
@@ -70,6 +64,24 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     }
   }
   
+  @Override
+  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    try {
+      if( Components.lookup( Components.delegate.eucalyptus ).isLocal( ) ) {
+        try {
+          Clusters.start( ( ClusterConfiguration ) config );
+        } catch ( EucalyptusCloudException ex ) {
+          LOG.error( ex , ex );
+          throw new ServiceRegistrationException( "Registration failed: " + ex.getMessage( ), ex );
+        }
+        super.fireStart( config );
+      }
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+    }
+  }
+
   @Override
   public ClusterConfiguration newInstance( ) {
     return new ClusterConfiguration( );
@@ -164,19 +176,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
-    ClusterCertificateHandler cc;
-    try {
-      ClusterUtil.deregisterClusterStateHandler( cluster, new ClusterCertificateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new NetworkStateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new LogStateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new ResourceStateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new VmStateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new AddressStateHandler( cluster ) );
-    } catch ( BindingException e ) {
-      LOG.error( e, e );
-    } catch ( EventVetoedException e ) {
-      LOG.error( e, e );
-    }
+    Clusters.stop( cluster.getName( ) );
     for( Group g : Groups.listAllGroups( ) ) {
       for( Authorization auth : g.getAuthorizations( ) ) {
         if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {

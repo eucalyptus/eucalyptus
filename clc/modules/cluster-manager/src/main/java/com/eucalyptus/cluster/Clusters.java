@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.cluster;
 
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
@@ -70,21 +71,35 @@ import java.util.TreeSet;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.util.B64;
+import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.event.InitializeClusterEvent;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
+import com.eucalyptus.cluster.handlers.AbstractClusterMessageDispatcher;
+import com.eucalyptus.cluster.handlers.AddressStateHandler;
 import com.eucalyptus.cluster.handlers.ClusterCertificateHandler;
+import com.eucalyptus.cluster.handlers.LogStateHandler;
+import com.eucalyptus.cluster.handlers.NetworkStateHandler;
+import com.eucalyptus.cluster.handlers.ResourceStateHandler;
+import com.eucalyptus.cluster.handlers.VmStateHandler;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.GetKeysResponseType;
+import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
@@ -166,10 +181,60 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       ListenerRegistry.getInstance( ).deregister( NewClusterEvent.class, cc );
       ListenerRegistry.getInstance( ).deregister( TeardownClusterEvent.class, cc );
       ListenerRegistry.getInstance( ).deregister( ClockTick.class, cc );
+      try {
+        Clusters.deregisterClusterStateHandler( removeCluster, new ClusterCertificateHandler( removeCluster ) );
+        Clusters.deregisterClusterStateHandler( removeCluster, new NetworkStateHandler( removeCluster ) );
+        Clusters.deregisterClusterStateHandler( removeCluster, new LogStateHandler( removeCluster ) );
+        Clusters.deregisterClusterStateHandler( removeCluster, new ResourceStateHandler( removeCluster ) );
+        Clusters.deregisterClusterStateHandler( removeCluster, new VmStateHandler( removeCluster ) );
+        Clusters.deregisterClusterStateHandler( removeCluster, new AddressStateHandler( removeCluster ) );
+      } catch ( BindingException e ) {
+        LOG.error( e, e );
+      } catch ( EventVetoedException e ) {
+        LOG.error( e, e );
+      }
     } catch ( BindingException e1 ) {
       LOG.error( e1, e1 );
     }
   }
+
+  public static void registerClusterStateHandler( Cluster newCluster, AbstractClusterMessageDispatcher dispatcher ) throws EventVetoedException {
+    ListenerRegistry.getInstance( ).register( InitializeClusterEvent.class, dispatcher );
+    ListenerRegistry.getInstance( ).register( TeardownClusterEvent.class, dispatcher );
+    ListenerRegistry.getInstance( ).register( ClockTick.class, dispatcher );
+  }
+  
+  public static void deregisterClusterStateHandler( Cluster removeCluster, AbstractClusterMessageDispatcher dispatcher ) throws EventVetoedException {
+    ListenerRegistry.getInstance( ).deregister( InitializeClusterEvent.class, dispatcher );
+    ListenerRegistry.getInstance( ).deregister( TeardownClusterEvent.class, dispatcher );
+    ListenerRegistry.getInstance( ).deregister( ClockTick.class, dispatcher );
+  }
+
+  public static boolean checkCerts( final GetKeysResponseType reply, final Cluster cluster ) {
+    NodeCertInfo certs = reply.getCerts( );
+    if ( certs == null || certs.getCcCert( ) == null || certs.getNcCert( ) == null ) { return false; }
+
+    X509Certificate realClusterx509 = X509Cert.toCertificate( cluster.getCredentials( ).getClusterCertificate( ) );
+    X509Certificate realNodex509 = X509Cert.toCertificate( cluster.getCredentials( ).getNodeCertificate( ) );
+
+    X509Certificate clusterx509 = PEMFiles.getCert( B64.dec( certs.getCcCert( ) ) );
+    X509Certificate nodex509 = PEMFiles.getCert( B64.dec( certs.getNcCert( ) ) );
+    
+    Boolean cc = realClusterx509.equals( clusterx509 );
+    Boolean nc = realNodex509.equals( nodex509 );
+
+    EventRecord.here( Cluster.class, EventType.CLUSTER_CERT, cluster.getName(), "cc", cc.toString( ), "nc", nc.toString( ) ).info( );
+    if( !cc ) {
+      LOG.debug( LogUtil.subheader( "EXPECTED CERTIFICATE" ) + X509Cert.toCertificate( cluster.getCredentials( ).getClusterCertificate( ) ) );
+      LOG.debug( LogUtil.subheader( "RECEIVED CERTIFICATE" ) + clusterx509 );
+    }
+    if( !nc ) {
+      LOG.debug( LogUtil.subheader( "EXPECTED CERTIFICATE" ) + X509Cert.toCertificate( cluster.getCredentials( ).getNodeCertificate( ) ) );
+      LOG.debug( LogUtil.subheader( "RECEIVED CERTIFICATE" ) + nodex509 );
+    }
+    return cc && nc;
+  }
+
   private static Cluster lookupCluster( ClusterConfiguration c ) throws EucalyptusCloudException {
     ClusterCredentials credentials = null;
     EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
