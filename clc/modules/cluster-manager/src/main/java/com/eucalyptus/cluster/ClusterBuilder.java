@@ -208,14 +208,16 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   private static void removeCredentials( ClusterConfiguration config ) {
-    EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
+    EntityWrapper<ClusterCredentials> credDb = EntityWrapper.get( ClusterCredentials.class );
     try {
-      List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
-      for ( ClusterCredentials ccert : ccCreds ) {
-        credDb.recast( X509Cert.class ).delete( ccert.getClusterCertificate( ) );
-        credDb.recast( X509Cert.class ).delete( ccert.getNodeCertificate( ) );
-        credDb.delete( ccert );
-        LOG.debug( "Deleting cluster certificate: " + ccert.getClusterName( ) + "\n" + X509Cert.toCertificate( ccert.getClusterCertificate( ) ) + "\n" + X509Cert.toCertificate( ccert.getNodeCertificate( ) ) );
+      for ( ClusterCredentials ccert : credDb.query( new ClusterCredentials( ) ) ) {
+        LOG.debug( "Checking cluster certificate: " + ccert.getClusterName( ) + "\n" + X509Cert.toCertificate( ccert.getClusterCertificate( ) ) + "\n" + X509Cert.toCertificate( ccert.getNodeCertificate( ) ) );
+        if( config.getName( ).equals( ccert.getClusterName( ) ) ) {
+          credDb.recast( X509Cert.class ).delete( ccert.getClusterCertificate( ) );
+          credDb.recast( X509Cert.class ).delete( ccert.getNodeCertificate( ) );
+          credDb.delete( ccert );
+          LOG.debug( "Deleting cluster certificate: " + ccert.getClusterName( ) + "\n" + X509Cert.toCertificate( ccert.getClusterCertificate( ) ) + "\n" + X509Cert.toCertificate( ccert.getNodeCertificate( ) ) );
+        }
       }
       credDb.commit( );
     } catch ( Exception e ) {
