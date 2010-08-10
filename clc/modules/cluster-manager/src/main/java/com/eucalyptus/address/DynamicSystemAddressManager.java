@@ -17,17 +17,19 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
     List<Address> addressList = Lists.newArrayList( );
     if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
     for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
-      if ( cluster.equals( addr.getCluster( ) ) ) {
-        addressList.add( addr.allocate( Component.eucalyptus.name( ) ) );
-        addr.pendingAssignment( );
-        if ( --count == 0 ) {
-          break;
-        }
+      try {
+        if ( cluster.equals( addr.getCluster( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
+      } catch ( IllegalStateException e ) {
+        LOG.error( e , e );
       }
     }
     if ( count != 0 ) {
       for( Address addr : addressList ) {
-        addr.release( );
+        try {
+          addr.release( );
+        } catch ( IllegalStateException e ) {
+          LOG.error( e , e );
+        }
       }
       throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
     } 
@@ -35,7 +37,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   }
   @Override
   public void assignSystemAddress( VmInstance vm ) throws NotEnoughResourcesAvailable {
-    Address addr = this.allocateNext( Component.eucalyptus.name( ) );
+    Address addr = this.allocateSystemAddresses( vm.getPlacement( ), 1 ).get( 0 );
     AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
   }
     
@@ -53,7 +55,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public void inheritReservedAddresses( List<Address> previouslyReservedAddresses ) {
     for ( final Address addr : previouslyReservedAddresses ) {
-      if( !addr.isAssigned( ) ) {
+      if( !addr.isAssigned( ) && !addr.isPending() && addr.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( addr.getInstanceId() ) ) {
         Addresses.release( addr );
       }
     }

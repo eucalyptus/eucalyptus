@@ -79,5 +79,5 @@ int main(int argc, char **argv) {
       perror("setresgid");
   }
   
-  exit(execv(newargv[0], newargv));
+  exit(execvp(newargv[0], newargv));
 }

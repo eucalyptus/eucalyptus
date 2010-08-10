@@ -105,7 +105,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext(name="eucalyptus_auth")
 @Table( name = "auth_users" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class UserEntity extends AbstractPersistent implements Serializable, User {
   @Transient
   private static Logger LOG = Logger.getLogger( UserEntity.class );
@@ -133,7 +133,7 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable(name = "auth_user_has_x509", joinColumns = [ @JoinColumn( name = "auth_user_id" ) ],inverseJoinColumns = [ @JoinColumn( name = "auth_x509_id" ) ])
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   List<X509Cert> certificates = [];
   
   @Transient
@@ -203,14 +203,13 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = super.hashCode( );
+    int result = 1;
     result = prime * result + ( ( name == null ) ? 0 : name.hashCode( ) );
     return result;
   }
   @Override
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
-    if ( !super.equals( obj ) ) return false;
     if ( getClass( ).is( obj.getClass( ) ) ) return false;
     User other = ( User ) obj;
     if ( name == null ) {
@@ -243,7 +242,7 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
 @Entity
 @PersistenceContext(name="eucalyptus_auth")
 @Table(name="auth_x509")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class X509Cert extends AbstractPersistent implements Serializable {
   @Column( name = "auth_x509_alias", unique=true )
   String alias
@@ -273,14 +272,13 @@ public class X509Cert extends AbstractPersistent implements Serializable {
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = super.hashCode( );
+    int result = 1;
     result = prime * result + ( ( alias == null ) ? 0 : alias.hashCode( ) );
     return result;
   }
   @Override
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
-    if ( !super.equals( obj ) ) return false;
     if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     X509Cert other = ( X509Cert ) obj;
     if ( alias == null ) {
@@ -299,17 +297,17 @@ public class X509Cert extends AbstractPersistent implements Serializable {
 @Entity
 @PersistenceContext(name="eucalyptus_auth")
 @Table( name = "auth_clusters" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ClusterCredentials extends AbstractPersistent implements Serializable {
   @Column( name = "auth_cluster_name", unique=true )
   String clusterName
-  @OneToOne(cascade = CascadeType.ALL)
+  @OneToOne( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinColumn(name="auth_cluster_x509_certificate")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   X509Cert clusterCertificate
-  @OneToOne(cascade = CascadeType.ALL)
+  @OneToOne( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinColumn(name="auth_cluster_node_x509_certificate")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   X509Cert nodeCertificate  
   public ClusterCredentials( ) {
   }
@@ -320,14 +318,14 @@ public class ClusterCredentials extends AbstractPersistent implements Serializab
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = super.hashCode( );
+    int result = 1;
     result = prime * result + ( ( clusterName == null ) ? 0 : clusterName.hashCode( ) );
     return result;
   }
+
   @Override
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
-    if ( !super.equals( obj ) ) return false;
     if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     ClusterCredentials other = ( ClusterCredentials ) obj;
     if ( clusterName == null ) {

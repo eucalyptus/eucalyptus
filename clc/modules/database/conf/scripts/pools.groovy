@@ -16,7 +16,7 @@ poolProps = [
 p = new Properties();
 p.putAll(poolProps)
 String dbDriver = 'org.hsqldb.jdbcDriver';
-String url = "proxool.eucalyptus_${context_name}:${dbDriver}:${Component.db.uri.toASCIIString( )}_${context_name}";
+String url = "proxool.eucalyptus_${context_name}:${dbDriver}:jdbc:hsqldb:${Component.db.uri.toASCIIString( )}_${context_name}";
 LogUtil.logHeader( "Proxool config for ${context_name}" ).log( url ).log( poolProps )
 ProxoolFacade.registerConnectionPool(url, p);
 

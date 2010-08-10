@@ -1,21 +1,21 @@
 package com.eucalyptus.cluster.handlers;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-
 import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.cluster.event.TeardownClusterEvent;
-import com.eucalyptus.cluster.util.ClusterUtil;
+import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.GenericEvent;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.LogUtil;
-
 import edu.ucsb.eucalyptus.msgs.GetKeysResponseType;
 import edu.ucsb.eucalyptus.msgs.GetKeysType;
 
@@ -58,11 +58,11 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
       } else if ( event instanceof TeardownClusterEvent ) {
         this.verified = false;
         try {
-          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
-          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
-          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
-          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );
-          ClusterUtil.deregisterClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
+          Clusters.deregisterClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
+          Clusters.deregisterClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
+          Clusters.deregisterClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
+          Clusters.deregisterClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );
+          Clusters.deregisterClusterStateHandler( this.getCluster( ), new AddressStateHandler( this.getCluster( ) ) );
         } catch ( Exception e ) {
           LOG.error( e, e );
         }
@@ -77,13 +77,14 @@ public class ClusterCertificateHandler extends AbstractClusterMessageDispatcher 
     if( e.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse resp = (MappingHttpResponse) e.getMessage( );
       GetKeysResponseType msg = (GetKeysResponseType) resp.getMessage( );
-      boolean certs = ClusterUtil.checkCerts( msg, this.getCluster( ) );
-      if( certs && !this.verified ) {
+      boolean certs = Clusters.checkCerts( msg, this.getCluster( ) );
+      if( certs && !this.verified && Bootstrap.isFinished( ) ) {
         try {
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
-          ClusterUtil.registerClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );
+          Clusters.registerClusterStateHandler( this.getCluster( ), new NetworkStateHandler( this.getCluster( ) ) );
+          Clusters.registerClusterStateHandler( this.getCluster( ), new LogStateHandler( this.getCluster( ) ) );
+          Clusters.registerClusterStateHandler( this.getCluster( ), new ResourceStateHandler( this.getCluster( ) ) );
+          Clusters.registerClusterStateHandler( this.getCluster( ), new VmStateHandler( this.getCluster( ) ) );
+          ListenerRegistry.getInstance( ).fireEvent( new ClockTick().setMessage( 1l ) );
         } catch ( Exception e1 ) {
           LOG.error( e1, e1 );
         }

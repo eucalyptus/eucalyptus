@@ -1076,6 +1076,7 @@ public class WalrusImageManager {
 							(!imageCachers.containsKey(bucketName + objectKey))) {
 						db2.commit();
 						//issue a cache request
+						LOG.info("Image " + bucketName + "/" + objectKey + " not found in cache. Issuing cache request (might take a while...)");
 						cacheImage(bucketName, objectKey, userId, request.isAdministrator());
 						//query db again
 						db2 = WalrusControl.getEntityWrapper();
@@ -1094,6 +1095,7 @@ public class WalrusImageManager {
 								long bytesCached = 0;
 								int number_of_tries = 0;
 								do {
+									LOG.info("Waiting " + WalrusProperties.CACHE_PROGRESS_TIMEOUT + "ms for image to cache (" + number_of_tries + " out of " + WalrusProperties.IMAGE_CACHE_RETRY_LIMIT + ")");
 									monitor.wait(WalrusProperties.CACHE_PROGRESS_TIMEOUT);
 									if(isCached(bucketName, objectKey)) {
 										cached = true;

@@ -105,16 +105,6 @@ public abstract class AbstractSystemAddressManager {
       } else {
         if( addr != null && addr.isAssigned( ) && !addr.isPending( ) ) {
           Helper.clearAddressCachedState( addr );
-          /* 
-           * REVIEW:
-           * there are two cases here:
-           * - vm exists with assignment addr
-           * - no vm with assignment addr      
-           *      
-           * if( Helper.maybeFindVm( addr.getName( ), addr.getInstanceAddress( ) ) == null ) {
-           * } else {
-           * }
-           */
         } else if( addr != null && !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) ) {
           Addresses.getAddressManager( ).releaseSystemAddress( addr );
         } else if( addr == null ) {
@@ -126,11 +116,13 @@ public abstract class AbstractSystemAddressManager {
     }
     
     private static void markAsAllocated( Cluster cluster, ClusterAddressInfo addrInfo, Address address ) {
-      address.allocate( Component.eucalyptus.name( ) );
       try {
+        address.allocate( Component.eucalyptus.name( ) );
         address.clearPending( );
-      } catch ( IllegalStateException e ) {/* might not be pending still valid. */}
-      cluster.getState( ).clearOrphan( addrInfo );
+        cluster.getState( ).clearOrphan( addrInfo );
+      } catch ( IllegalStateException e ) {
+        LOG.error( e, e );
+      }
     }
 
     private static void clearAddressCachedState( Address addr ) {
