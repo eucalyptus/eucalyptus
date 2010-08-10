@@ -176,6 +176,15 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
+    EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
+    try {
+      ClusterCredentials creds = credDb.getUnique( new ClusterCredentials( cluster.getName( ) ) );
+      credDb.delete( creds );
+      credDb.commit( );
+    } catch ( EucalyptusCloudException ex ) {
+      LOG.error( ex , ex );
+      credDb.rollback( );
+    }
     Clusters.stop( cluster.getName( ) );
     for( Group g : Groups.listAllGroups( ) ) {
       for( Authorization auth : g.getAuthorizations( ) ) {
