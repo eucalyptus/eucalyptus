@@ -215,6 +215,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         credDb.recast( X509Cert.class ).delete( ccert.getClusterCertificate( ) );
         credDb.recast( X509Cert.class ).delete( ccert.getNodeCertificate( ) );
         credDb.delete( ccert );
+        LOG.debug( "Deleting cluster certificate: " + ccert.getClusterName( ) + "\n" + X509Cert.toCertificate( ccert.getClusterCertificate( ) ) + "\n" + X509Cert.toCertificate( ccert.getNodeCertificate( ) ) );
       }
       credDb.commit( );
     } catch ( Exception e ) {
