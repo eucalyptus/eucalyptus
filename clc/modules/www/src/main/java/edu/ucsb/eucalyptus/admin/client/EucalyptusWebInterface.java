@@ -2319,7 +2319,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 "http://open.eucalyptus.com/wiki/ToolsEcosystem",
                 "Eucalyptus-compatible Tools",
                 50));
-        
+
 		parent.clear();
 		parent.add (vpanel);
 	}
