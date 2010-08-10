@@ -70,27 +70,27 @@ import com.eucalyptus.cluster.VmInstances;
 public class VmMetadata {
   private static Logger LOG = Logger.getLogger( VmMetadata.class );
 
-  public String handle( String path ) {
+  public byte[] handle( String path ) {
     String[] parts = path.split( ":" );
     String vmIp = parts[0];
     String url = parts.length==2?parts[ 1 ]:"/";
     LOG.debug( "Instance Metadata: " + path + " " + url );
     if( url.matches("[/]*") ) {
-      return "dynamic\nuser-data\nmeta-data";
+      return "dynamic\nuser-data\nmeta-data".getBytes( );
     }
     for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
       if ( vmIp.equals( vm.getPrivateAddress( ) ) || vmIp.equals( vm.getPublicAddress( ) ) ) {
         if ( url.matches( "user-data[/]*" ) ) {
           return vm.getUserData( );
         } else if ( url.matches( "dynamic[/]*" ) ) {
-          return "";
+          return "".getBytes( );
         } else if ( url.matches( "meta-data(/.*)*" ) ) {
           url = url.replaceAll( "meta-data/?", "" );
-          return vm.getByKey( url );
+          return vm.getByKey( url ).getBytes( );
         }
       }
     }
-    return "";
+    return "".getBytes( );
   }
 }
 

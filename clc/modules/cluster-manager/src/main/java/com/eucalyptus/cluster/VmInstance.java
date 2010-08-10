@@ -107,7 +107,7 @@ public class VmInstance implements HasName {
   private final String                                instanceId;
   private final String                                ownerId;
   private final String                                placement;
-  private final String                                userData;
+  private final byte[]                                userData;
   private final List<Network>                         networks      = Lists.newArrayList( );
   private final NetworkConfigType                     networkConfig = new NetworkConfigType( );
   private VmImageInfo                                 imageInfo;
@@ -127,7 +127,7 @@ public class VmInstance implements HasName {
   private Boolean                                     privateNetwork;
   
   public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement,
-                     final String userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks,
+                     final byte[] userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks,
                      final String networkIndex ) {
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
@@ -434,7 +434,7 @@ public class VmInstance implements HasName {
     return launchTime;
   }
   
-  public String getUserData( ) {
+  public byte[] getUserData( ) {
     return userData;
   }
   

@@ -91,18 +91,15 @@ public class VmAdmissionControl {
     }
     vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
     
-    String userData = vmAllocInfo.getRequest( ).getUserData( );
-    if ( userData != null ) {
+    byte[] userData = new byte[0];
+    if ( vmAllocInfo.getRequest( ).getUserData( ) != null ) {
       try {
-        userData = new String( Base64.decode( vmAllocInfo.getRequest( ).getUserData( ) ) );
+        userData = Base64.decode( vmAllocInfo.getRequest( ).getUserData( ) );
       } catch ( Exception e ) {
-        userData = "";
       }
-    } else {
-      userData = "";
     }
     vmAllocInfo.setUserData( userData );
-    vmAllocInfo.getRequest( ).setUserData( new String( Base64.encode( userData.getBytes( ) ) ) );
+    vmAllocInfo.getRequest( ).setUserData( new String( Base64.encode( userData ) ) );
     return vmAllocInfo;
   }
   

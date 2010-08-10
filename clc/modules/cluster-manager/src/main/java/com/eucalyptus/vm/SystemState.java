@@ -70,6 +70,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
@@ -248,7 +249,7 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, imgInfo, keyInfo, vmType, networks,
+      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, Base64.decode( userData ), imgInfo, keyInfo, vmType, networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
       vm.setLaunchTime( runVm.getLaunchTime( ) );

@@ -100,7 +100,7 @@ public class VmAllocationInfo extends EucalyptusMessage {
   
   RunInstancesType request;
   RunInstancesResponseType reply;
-  String userData;
+  byte[] userData;
   Long reservationIndex;
   String reservationId;
   VmImageInfo imageInfo;
@@ -361,6 +361,8 @@ public class Network implements HasName {
         this.assignedNetworkIndexes.add( index );
         NetworkToken token = this.getClusterToken( cluster );
         token.indexes.add( index );
+      } else {
+        LOG.error( "Extant network index not in available set: network=${this.name} cluster=${cluster} networkIndex=${index}",new RuntimeException());
       }
     }
   }
