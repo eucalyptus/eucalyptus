@@ -235,22 +235,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return cc && nc;
   }
 
-  private static Cluster lookupCluster( ClusterConfiguration c ) throws EucalyptusCloudException {
-    ClusterCredentials credentials = null;
-    EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-    try {
-      credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
-      credDb.rollback( );
-    } catch ( EucalyptusCloudException e ) {
-      LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
-      credDb.rollback( );
-      throw e;
-    }
-    Cluster newCluster = new Cluster( c, credentials );
-    Clusters.getInstance( ).register( newCluster );
-    return newCluster;
-  }
-
   public static void stop( String name ) {
     Cluster c = Clusters.getInstance( ).lookup( name );
     Clusters.getInstance( ).deregister( c.getName( ) );
