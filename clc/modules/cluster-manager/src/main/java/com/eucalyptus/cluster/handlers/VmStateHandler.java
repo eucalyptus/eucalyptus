@@ -10,7 +10,6 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmTypes;
-import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
