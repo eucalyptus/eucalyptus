@@ -88,7 +88,7 @@ public class Cluster implements HasName {
   private ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private ClusterState                             state;
   private ClusterNodeState                         nodeState;
-  private ClusterCredentials                       credentials;
+  private final ClusterCredentials                       credentials;
   
   public Cluster( ClusterConfiguration configuration, ClusterCredentials credentials ) {
     super( );
@@ -102,18 +102,7 @@ public class Cluster implements HasName {
   }
   
   public ClusterCredentials getCredentials( ) {
-    synchronized ( this ) {
-      if ( this.credentials == null ) {
-        EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-        try {
-          this.credentials = credDb.getUnique( new ClusterCredentials( this.configuration.getName( ) ) );
-        } catch ( EucalyptusCloudException e ) {
-          LOG.error( "Failed to load credentials for cluster: " + this.configuration.getName( ) );
-        }
-        credDb.rollback( );
-      }
-    }
-    return credentials;
+    return this.credentials;
   }
   
   @Override
