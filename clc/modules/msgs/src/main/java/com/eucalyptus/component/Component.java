@@ -248,4 +248,14 @@ public class Component implements ComponentInformation, Nameable<Component> {
     LOG.error( this.services.values( ) );
     throw new NoSuchElementException( "No service found matching hostname: " + hostName + " for component: " + this.getName( ) );
   }
+
+  public Boolean isRunningLocally( ) {
+    try {
+      this.lookupServiceByHost( "localhost" );
+      return true;
+    } catch ( NoSuchElementException ex ) {
+      LOG.trace( ex, ex );
+      return false;
+    }
+  }
 }
