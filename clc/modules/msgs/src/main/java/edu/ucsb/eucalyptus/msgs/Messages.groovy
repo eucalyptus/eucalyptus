@@ -63,10 +63,13 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import java.util.List;
+
 import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.binding.HttpParameterMapping;
 
 //TODO: Remove me
 //public class INTERNAL extends EucalyptusMessage {
@@ -234,10 +237,24 @@ public class DescribeResourcesType extends EucalyptusMessage {
   
   ArrayList<VmTypeInfo> instanceTypes = new ArrayList<VmTypeInfo>();
 }
+public class NodeType extends EucalyptusData {
+  String serviceTag;
+  public String toString() {
+    return "NodeType ${URI.create(serviceTag).getHost()}";
+  }
+}
 public class DescribeResourcesResponseType extends EucalyptusMessage {
   
   ArrayList<ResourceType> resources = new ArrayList<ResourceType>();
-  ArrayList<String> serviceTags = new ArrayList<String>();
+  ArrayList<NodeType> nodes = new ArrayList<NodeType>();
+  ArrayList<String> serviceTags = new ArrayList<String>();  
+  
+  public String toString() {
+    String out = "";
+    resources.each{ out += "${this.getClass().getSimpleName()}: ${it.toString()}\n" };
+    nodes.each{ out += "${this.getClass().getSimpleName()}: ${it.toString()}\n" };
+    return out;
+  }
 }
 
 public class VmTypeInfo extends EucalyptusData {
@@ -246,7 +263,7 @@ public class VmTypeInfo extends EucalyptusData {
   Integer memory;
   Integer disk;
   Integer cores;
-  
+  ArrayList<BlockDeviceMappingItemType> deviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   def VmTypeInfo(){
   }
   
@@ -259,12 +276,7 @@ public class VmTypeInfo extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "VmTypeInfo [" +
-    "name='" + name + '\'' +
-    ", memory=" + memory +
-    ", disk=" + disk +
-    ", cores=" + cores +
-    ']';
+    return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
   
 }
@@ -273,6 +285,9 @@ public class ResourceType extends EucalyptusData {
   VmTypeInfo instanceType;
   int maxInstances;
   int availableInstances;
+  public String toString() {
+    return "ResourceType ${instanceType} ${availableInstances} / ${maxInstances}"; 
+  }
 }
 public class NetworkConfigType extends EucalyptusData {
   String macAddress;
@@ -293,14 +308,7 @@ public class NetworkConfigType extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "NetworkConfigType [" +
-    ", privateIp='" + ipAddress + '\'' +
-    ", publicIp='" + ignoredPublicIp + '\'' +
-    ", privateDnsName='" + privateDnsName + '\'' +
-    ", publicDnsName='" + publicDnsName + '\'' +
-    ", networkIndex='" + networkIndex + '\'' +
-    ", vlan=" + vlan +
-    ']';
+    return "NetworkConfig ${vlan} ${networkIndex} ${ipAddress} ${ignoredPublicIp} ${privateDnsName} ${publicDnsName}";
   }
   
 }
@@ -354,18 +362,11 @@ public class PacketFilterRule extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "PacketFilterRule [" +
-    "destUserName='" + destUserName + '\'' +
-    "destNetworkName='" + destNetworkName + '\'' +
-    ", policy='" + policy + '\'' +
-    ", protocol='" + protocol + '\'' +
-    ", portMin=" + portMin +
-    ", portMax=" + portMax +
-    ((!sourceCidrs.isEmpty())?"":", sourceCidrs=" + sourceCidrs) +
-    ((!peers.isEmpty())?"":", peers=" + peers) +
-    ((!sourceNetworkNames.isEmpty())?"":", sourceNetworkNames=" + sourceNetworkNames) +
-    ((!sourceUserNames.isEmpty())?"":", sourceUserNames=" + sourceUserNames) +
-    ']';
+    return "PacketFilterRule ${destUserName} ${destNetworkName} ${policy} ${protocol} ${portMin}-${portMax} " +
+    ((!sourceCidrs.isEmpty())?"":" source ${sourceCidrs}") +
+    ((!peers.isEmpty())?"":" peers ${peers}") +
+    ((!sourceNetworkNames.isEmpty())?"":" sourceNetworks ${sourceNetworkNames}") +
+    ((!sourceUserNames.isEmpty())?"":" sourceUsers ${sourceUserNames}");
   }
   
   

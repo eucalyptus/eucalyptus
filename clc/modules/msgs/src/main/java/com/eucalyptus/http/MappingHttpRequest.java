@@ -73,6 +73,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import com.eucalyptus.component.ServiceEndpoint;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class MappingHttpRequest extends MappingHttpMessage implements HttpRequest {
@@ -118,7 +119,20 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     }
   }
   
-  public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final String host, final int port, final String servicePath, final Object source ) {
+  public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final ServiceEndpoint serviceEndpoint, final Object source ) {
+    super( httpVersion );
+    this.method = method;
+    this.uri = serviceEndpoint.getUri( ).toString( );
+    this.servicePath = serviceEndpoint.getServicePath( );
+    this.query = null;
+    this.parameters = null;
+    this.formFields = null;
+    super.setMessage( source );
+    this.addHeader( HttpHeaders.Names.HOST, serviceEndpoint.getUri( ).getHost( ) + ":" + serviceEndpoint.getUri( ).getPort( ) );
+  }
+  
+  public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final String host, final int port, final String servicePath,
+                             final Object source ) {
     super( httpVersion );
     this.method = method;
     this.uri = "http://" + host + ":" + port + servicePath;
@@ -132,16 +146,16 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   
   @Override
   public void setMessage( Object message ) {
-    if( message instanceof BaseMessage ) {
-      ((BaseMessage)message).setCorrelationId( this.getCorrelationId( ) );
+    if ( message instanceof BaseMessage ) {
+      ( ( BaseMessage ) message ).setCorrelationId( this.getCorrelationId( ) );
     }
     super.setMessage( message );
   }
-
+  
   public String getServicePath( ) {
     return this.servicePath;
   }
-
+  
   public void setServicePath( String servicePath ) {
     this.servicePath = servicePath;
   }
@@ -153,7 +167,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   
   public void setQuery( String query ) {
     try {
-      this.query = new URLCodec().decode( query );
+      this.query = new URLCodec( ).decode( query );
     } catch ( DecoderException e ) {
       this.query = query;
     }
@@ -173,8 +187,8 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   public String toString( ) {
     return this.getMethod( ).toString( ) + ' ' + this.getUri( ) + ' ' + super.getProtocolVersion( ).getText( );
   }
-
-  public Map<String,String> getParameters( ) {
+  
+  public Map<String, String> getParameters( ) {
     return parameters;
   }
 
@@ -185,14 +199,14 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   public void setRestNamespace( String restNamespace ) {
     this.restNamespace = restNamespace;
   }
-
-  public Map getFormFields() {
-	  return formFields;
+  
+  public Map getFormFields( ) {
+    return formFields;
   }
   
-  public String getAndRemoveHeader(String key) {
-	  String value = getHeader(key);
-	  removeHeader(key);
-	  return value;
+  public String getAndRemoveHeader( String key ) {
+    String value = getHeader( key );
+    removeHeader( key );
+    return value;
   }
 }

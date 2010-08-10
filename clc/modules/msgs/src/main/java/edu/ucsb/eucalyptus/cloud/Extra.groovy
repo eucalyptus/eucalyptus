@@ -312,7 +312,7 @@ public class VmKeyInfo {
   
 }
 
-public class Network implements HasName {
+public class Network implements HasName<Network> {
   private static Logger LOG = Logger.getLogger( Network.class );
   String name;
   String networkName;
@@ -445,6 +445,10 @@ public class Network implements HasName {
     return (Boolean) this.rules.collect{ pf -> pf.peers.contains( new VmNetworkPeer( peerName, peerNetworkName )) }.max();
   }
   
+  public String getName() {
+    return this.name;
+  }
+
   public int compareTo(final Object o) {
     Network that = (Network) o;
     return this.getName().compareTo(that.getName());
@@ -510,8 +514,7 @@ public class NetworkToken implements Comparable {
   
   @Override
   public String toString( ) {
-    return String.format( "NetworkToken [cluster=%s, indexes=%s, name=%s, networkName=%s, userName=%s, vlan=%s]",
-    this.cluster, this.indexes, this.name, this.networkName, this.userName, this.vlan);
+    return "NetworkToken ${cluster} ${name} ${vlan} ${indexes}";
   }
 }
 
@@ -583,16 +586,27 @@ public class ResourceToken implements Comparable {
 }
 
 public class NodeInfo implements Comparable {
-  
   String serviceTag;
   String name;
+  Boolean hasClusterCert = false;
+  Boolean hasNodeCert = false;
   Date lastSeen;
   NodeCertInfo certs = new NodeCertInfo();
   NodeLogInfo logs = new NodeLogInfo();
   
-  def NodeInfo(final String serviceTag) {
-    this.name = (new URI(serviceTag)).getHost();
+  def NodeInfo() {}
+  
+  def NodeInfo(final String serviceTag ) {
     this.serviceTag = serviceTag;
+    this.name = (new URI(this.serviceTag)).getHost();
+    this.lastSeen = new Date();
+    this.certs.setServiceTag(this.serviceTag);
+    this.logs.setServiceTag(this.serviceTag);
+  }
+
+    def NodeInfo(final NodeType nodeType) {
+    this.serviceTag = nodeType.getServiceTag( );
+    this.name = (new URI(this.serviceTag)).getHost();
     this.lastSeen = new Date();
     this.certs.setServiceTag(this.serviceTag);
     this.logs.setServiceTag(this.serviceTag);
@@ -643,6 +657,6 @@ public class NodeInfo implements Comparable {
   
   @Override
   public String toString( ) {
-    return String.format( "NodeInfo [name=%s, lastSeen=%s, serviceTag=%s]", this.name, this.lastSeen, this.serviceTag );
+    return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag} iqn=${iqn}";
   }
 }

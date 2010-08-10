@@ -15,7 +15,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
-public class StatefulNamedRegistry<T extends HasName, E extends Enum<E>> {
+public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
   private static Logger                             LOG = Logger.getLogger( StatefulNamedRegistry.class );
   private Map<E, ConcurrentNavigableMap<String, T>> stateMaps;
   private ConcurrentNavigableMap<String, T>         activeMap;

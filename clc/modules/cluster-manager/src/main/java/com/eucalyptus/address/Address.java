@@ -94,7 +94,7 @@ import com.eucalyptus.records.EventType;
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "addresses" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
-public class Address implements HasName {
+public class Address implements HasName<Address> {
   public enum State {
     broken, unallocated, allocated, assigned, impending;
   }
@@ -536,11 +536,6 @@ public class Address implements HasName {
     return LogUtil.dumpObject( this ).replaceAll( "\\w*=\\s", "" );
   }
   
-  public int compareTo( final Object o ) {
-    Address that = ( Address ) o;
-    return this.getName( ).compareTo( that.getName( ) );
-  }
-  
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -588,6 +583,11 @@ public class Address implements HasName {
       return String.format( "[SplitTransition previous=%s, transition=%s, next=%s, pending=%s]", this.previous, this.t, Address.this.state.getReference( ),
                             Address.this.state.isMarked( ) );
     }
+  }
+
+  @Override
+  public int compareTo( Address that ) {
+    return this.getName( ).compareTo( that.getName( ) );
   }
   
 }
