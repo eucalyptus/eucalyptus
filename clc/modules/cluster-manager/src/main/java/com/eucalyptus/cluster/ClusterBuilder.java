@@ -3,6 +3,7 @@ package com.eucalyptus.cluster;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -28,6 +29,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.Handles;
+import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -133,12 +135,19 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         out.close( );
         
         EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-        ClusterCredentials componentCredentials = new ClusterCredentials( config.getName( ) );
         try {
-          List<ClusterCredentials> ccCreds = credDb.query( componentCredentials );
+          List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
           for ( ClusterCredentials ccert : ccCreds ) {
             credDb.delete( ccert );
           }
+          credDb.commit( );
+        } catch ( Exception e ) {
+          LOG.error( e, e );
+          credDb.rollback( );
+        }
+        credDb = Authentication.getEntityWrapper( );
+        try {          
+          ClusterCredentials componentCredentials = new ClusterCredentials( config.getName( ) );
           componentCredentials.setClusterCertificate( X509Cert.fromCertificate( clusterX509 ) );
           componentCredentials.setNodeCertificate( X509Cert.fromCertificate( nodeX509 ) );
           credDb.add( componentCredentials );
@@ -178,11 +187,13 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
     EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
     try {
-      ClusterCredentials creds = credDb.getUnique( new ClusterCredentials( cluster.getName( ) ) );
-      credDb.delete( creds );
+      List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
+      for ( ClusterCredentials ccert : ccCreds ) {
+        credDb.delete( ccert );
+      }
       credDb.commit( );
-    } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex , ex );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
       credDb.rollback( );
     }
     Clusters.stop( cluster.getName( ) );
@@ -212,4 +223,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     super.fireStop( config );
   }
   
+  @Override
+  public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
+    return new RemoteConfiguration( this.getComponent( ).getPeer( ), uri );
+  }
 }
