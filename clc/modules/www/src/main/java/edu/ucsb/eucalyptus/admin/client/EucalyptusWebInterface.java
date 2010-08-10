@@ -699,10 +699,9 @@ public class EucalyptusWebInterface implements EntryPoint {
                     g1.setWidget( password2_row, 2, l );
                     formOk = false;
                 }
-                // TODO: matches() won't work if user's input contains special regexp characters
-                if ( realName_box.getText().toLowerCase().matches(".*" +
-                        cleartextPassword1_box.getText().toLowerCase() + ".*") ){
-                    Label l = new Label ( "Password may not contain parts of your name!");
+                if ( realName_box.getText().equalsIgnoreCase(cleartextPassword1_box.getText())
+                		|| userName_box.getText().equalsIgnoreCase(cleartextPassword1_box.getText())) {
+                    Label l = new Label ( "Password may not be your name or username!");
                     l.setStyleName("euca-error-hint");
                     g1.setWidget( password1_row, 2, l );
                     formOk = false;
