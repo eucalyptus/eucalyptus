@@ -251,8 +251,12 @@ public class Component implements ComponentInformation, Nameable<Component> {
 
   public Boolean isRunningLocally( ) {
     try {
-      this.lookupServiceByHost( "localhost" );
-      return true;
+      for( Service s : this.services.values( ) ) {
+        if( s.isLocal( ) ) {
+          return true;
+        }
+      }
+      return false;
     } catch ( NoSuchElementException ex ) {
       LOG.trace( ex, ex );
       return false;
