@@ -138,6 +138,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         try {
           List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
           for ( ClusterCredentials ccert : ccCreds ) {
+            credDb.recast( X509Cert.class ).delete( ccert.getClusterCertificate( ) );
+            credDb.recast( X509Cert.class ).delete( ccert.getNodeCertificate( ) );
             credDb.delete( ccert );
           }
           credDb.commit( );
@@ -189,6 +191,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     try {
       List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
       for ( ClusterCredentials ccert : ccCreds ) {
+        credDb.recast( X509Cert.class ).delete( ccert.getClusterCertificate( ) );
+        credDb.recast( X509Cert.class ).delete( ccert.getNodeCertificate( ) );
         credDb.delete( ccert );
       }
       credDb.commit( );
@@ -196,7 +200,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       LOG.error( e, e );
       credDb.rollback( );
     }
-    Clusters.stop( cluster.getName( ) );
+    Clusters.stop( cluster );
     for( Group g : Groups.listAllGroups( ) ) {
       for( Authorization auth : g.getAuthorizations( ) ) {
         if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {
