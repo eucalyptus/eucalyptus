@@ -67,6 +67,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
@@ -107,11 +108,19 @@ public enum Component {
   }
   
   public Boolean isEnabled( ) {
-    return Components.lookup( this ).isEnabled( );
+    try {
+      return Components.lookup( this ).isEnabled( );
+    } catch ( NoSuchElementException ex ) {
+      return false;
+    }
   }
   
   public Boolean isLocal( ) {
-    return Components.lookup( this ).isLocal( );
+    try {
+      return Components.lookup( this ).isLocal( );
+    } catch ( NoSuchElementException ex ) {
+      return false;
+    }
   }
   
   public String getLocalAddress( ) {
