@@ -149,7 +149,7 @@ public class StorageUtil {
         } else if( status != null ) {
           v.setMappedState( status );
         }
-        if( v.getSize() == 0 ) {
+        if( v.getSize() <= 0 ) {
           v.setSize( new Integer( size ) );
         }
         if( "invalid".equals ( v.getRemoteDevice( ) ) || "unknown".equals( v.getRemoteDevice( ) ) || v.getRemoteDevice( ) == null ) {
