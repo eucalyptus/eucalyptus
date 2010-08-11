@@ -95,6 +95,7 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
@@ -164,13 +165,15 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       try {
         final Component comp = safeLookupComponent( component.getComponent( ) );
         URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
-        comp.buildService( new ComponentConfiguration( comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) ) {
+        ServiceConfiguration config = new ComponentConfiguration( comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) ) {
           @Override
           public com.eucalyptus.bootstrap.Component getComponent( ) {
             return comp.getPeer( );
           }
-        } );
+        };
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
+        comp.buildService( config );
+        comp.startService( config );
         initializedComponents.add( component.getComponent( ) );
       } catch ( Exception ex ) {
         LOG.warn( LogUtil.header( "Failed registering local component "+LogUtil.dumpObject( component )+":  Are the required packages installed?\n The cause of the error: " + ex.getMessage( ) ) );
