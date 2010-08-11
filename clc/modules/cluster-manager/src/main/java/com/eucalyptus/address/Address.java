@@ -533,7 +533,7 @@ public class Address implements HasName<Address> {
   
   @Override
   public String toString( ) {
-    return LogUtil.dumpObject( this ).replaceAll( "\\w*=\\s", "" );
+    return "Address " + this.name + " " + this.cluster + " " + (this.isAllocated( )?this.userId + " ":"") + (this.isAssigned( )? this.instanceId + " " + this.instanceAddress + " ":"") + " " + this.transition;
   }
   
   @Override

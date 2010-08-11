@@ -17,7 +17,7 @@ public class AddressCategory {
   @SuppressWarnings( "unchecked" )
   public static QueuedEventCallback unassign( final Address addr ) {
     final String instanceId = addr.getInstanceId( );
-    if( !VmInstance.DEFAULT_IP.equals( addr.getInstanceAddress( ) ) ) {
+//    if( !VmInstance.DEFAULT_IP.equals( addr.getInstanceAddress( ) ) ) {
       return addr.unassign( ).getCallback( ).then( new SuccessCallback( ) {
         public void apply( BaseMessage response ) {
           try {
@@ -27,15 +27,15 @@ public class AddressCategory {
           } catch ( NoSuchElementException e ) {}
         }
       } );
-    } else {
-      return new QueuedEventCallback.NOOP();
-    }
+//    } else {
+//      return new QueuedEventCallback.NOOP();
+//    }
 
   }
   
   @SuppressWarnings( "unchecked" )
   public static QueuedEventCallback assign( final Address addr, final VmInstance vm ) {
-    EventRecord.here( AddressCategory.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING, "user="+vm.getOwnerId( ), "address="+addr.getName( ), "instanceid="+vm.getInstanceId( ), addr.isSystemOwned( ) ? "SYSTEM":"USER" ).info( );
+    EventRecord.here( AddressCategory.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING, "user="+vm.getOwnerId( ), "address="+addr.getName( ), "instanceid="+vm.getInstanceId( ), addr.isSystemOwned( ) ? "SYSTEM":"USER", addr.toString( ) ).info( );
     return addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).getCallback( ).then( new SuccessCallback() {
       public void apply( BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
