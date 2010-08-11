@@ -1,6 +1,6 @@
 package com.eucalyptus.component;
 
-import javassist.Modifier;
+import java.lang.reflect.Modifier;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 
 public class DispatcherFactoryDiscovery extends ServiceJarDiscovery {

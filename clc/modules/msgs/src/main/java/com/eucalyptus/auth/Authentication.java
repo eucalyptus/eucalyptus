@@ -65,7 +65,7 @@ package com.eucalyptus.auth;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import javassist.Modifier;
+import java.lang.reflect.Modifier;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.BaseSecurityProvider;
 import com.eucalyptus.auth.api.CertificateProvider;
