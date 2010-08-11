@@ -766,10 +766,15 @@ public class BlockStorage {
 					if(foundSnapshotInfos.size() == 0) {
 						db.commit();						
 						//get snapshot size from walrus
-						int sizeExpected = getSnapshotSize(snapshotId);
+						int sizeExpected;
+						if(size <= 0) {
+							sizeExpected = getSnapshotSize(snapshotId);
+						} else {
+							sizeExpected = size;
+						}
 						String snapDestination = blockManager.prepareSnapshot(snapshotId, sizeExpected);
 						getSnapshot(snapshotId, snapDestination);
-						size = blockManager.createVolume(volumeId, snapshotId);
+						size = blockManager.createVolume(volumeId, snapshotId, size);
 					} else {
 						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
 						if(!foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
@@ -778,7 +783,7 @@ public class BlockStorage {
 							LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
 						} else {
 							db.commit();
-							size = blockManager.createVolume(volumeId, snapshotId);
+							size = blockManager.createVolume(volumeId, snapshotId, size);
 						}
 					}
 				} catch(Exception ex) {
