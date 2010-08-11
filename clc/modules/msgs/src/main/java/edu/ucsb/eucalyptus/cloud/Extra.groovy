@@ -361,8 +361,6 @@ public class Network implements HasName<Network> {
         this.assignedNetworkIndexes.add( index );
         NetworkToken token = this.getClusterToken( cluster );
         token.indexes.add( index );
-      } else {
-        LOG.error( "Extant network index not in available set: network=${this.name} cluster=${cluster} networkIndex=${index}",new RuntimeException());
       }
     }
   }

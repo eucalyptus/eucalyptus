@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRule;
 import com.eucalyptus.entities.NetworkRulesGroup;
@@ -148,7 +149,7 @@ public class NetworkGroupManager {
       return reply;
     }
     Network changedNetwork = ruleGroup.getVmNetwork( );
-    Messaging.dispatch( "vm://ClusterSink", changedNetwork );
+    ServiceContext.dispatch( "ClusterSink", changedNetwork );
     reply.set_return( true );
     return reply;
   }
@@ -181,7 +182,7 @@ public class NetworkGroupManager {
     db.merge( ruleGroup );
     db.commit( );
     Network changedNetwork = ruleGroup.getVmNetwork( );
-    Messaging.dispatch( "vm://ClusterSink", changedNetwork );
+    ServiceContext.dispatch( "ClusterSink", changedNetwork );
     reply.set_return( true );
     
     return reply;
