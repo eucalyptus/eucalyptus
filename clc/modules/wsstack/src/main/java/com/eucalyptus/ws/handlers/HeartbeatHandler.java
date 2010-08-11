@@ -159,6 +159,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     try {
       this.prepareComponent( "db", addr.getHostName( ) );
       this.prepareComponent( "dns", addr.getHostName( ) );
+      this.prepareComponent( "eucalyptus", addr.getHostName( ) );
     } catch ( ServiceRegistrationException ex1 ) {
       LOG.error( ex1 , ex1 );
       System.exit( 123 );
