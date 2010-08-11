@@ -145,14 +145,14 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     ctx.sendDownstream( e );
   }
   
-  private void prepareComponent( com.eucalyptus.bootstrap.Component component, InetSocketAddress addr ) throws ServiceRegistrationException {
+  private void prepareComponent( com.eucalyptus.bootstrap.Component component, String hostName ) throws ServiceRegistrationException {
     final Component c;
     if( !Components.contains( component ) ) {
       c = Components.create( component.name( ), null );
     } else {
       c = Components.lookup( component );
     }
-    c.buildService( c.getUri( addr.getAddress( ).getHostAddress( ), c.getConfiguration( ).getDefaultPort( ) ) );
+    c.buildService( c.getUri( hostName, c.getConfiguration( ).getDefaultPort( ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -167,8 +167,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       }
     }
     try {
-      this.prepareComponent( Components.delegate.db, addr );
-      this.prepareComponent( Components.delegate.dns, addr );
+      this.prepareComponent( Components.delegate.db, addr.getHostName( ) );
+      this.prepareComponent( Components.delegate.dns, addr.getHostName( ) );
 //      this.prepareComponent( Components.delegate.eucalyptus, addr );
 //      this.prepareComponent( Components.delegate.cluster, addr );
 //      this.prepareComponent( Components.delegate.jetty, addr );
@@ -193,7 +193,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
         initializedComponents.add( component.getComponent( ) );
       }
       if ( !initializedComponents.contains( Components.delegate.walrus.name( ) ) ) {
-        this.prepareComponent( Components.delegate.walrus, addr );
+        this.prepareComponent( Components.delegate.walrus, addr.getHostName( ) );
       }
       for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
         stage.updateBootstrapDependencies( );
@@ -342,6 +342,28 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     HeartbeatType hb = ( HeartbeatType ) request.getMessage( );
     //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
     List<String> registeredComponents = Lists.newArrayList( );
+    for( ComponentType started : hb.getStarted( ) ) {
+      try {
+        URI uri = URI.create( started.getUri( ) );
+        final Component c;
+        if ( !Components.contains( started.getComponent( ) ) ) {
+          c = Components.create( started.getComponent( ), null );
+        } else {
+          c = Components.lookup( started.getComponent( ) );
+        }
+        c.buildService( new ComponentConfiguration( started.getName( ), uri.getHost( ), uri.getPort( ), uri.getPath( ) ) {
+          
+          @Override
+          public com.eucalyptus.bootstrap.Component getComponent( ) {
+            return c.getPeer( );
+          }
+        } );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.error( ex , ex );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      }
+    }
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
       if ( !initializedComponents.contains( component.getComponent( ) ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
         System.exit( 123 );//HUP

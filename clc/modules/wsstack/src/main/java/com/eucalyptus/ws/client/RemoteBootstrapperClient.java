@@ -249,7 +249,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
         hb.send( this.componentMap.get( hb.getHostName( ) ) );
       } else {
         LOG.info( "--> Queueing start event for next clock tick on all other remote components: " + LogUtil.dumpObject( hb ) );
-        hb.addStarted( config );
+        hb.addStopped( config );
       }
     }
   }
