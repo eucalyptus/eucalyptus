@@ -300,7 +300,7 @@ then
 	mkdir -p /root/eucalyptus.backup.$DATESTR
 	cd /root/eucalyptus.backup.$DATESTR
 	EUCABACKUPS=""
-	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version
+	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version $EUCADIR/usr/share/eucalyptus/
 	do
 	    if [ -e $i ]; then
 		EUCABACKUPS="$EUCABACKUPS $i"
