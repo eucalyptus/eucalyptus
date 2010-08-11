@@ -357,6 +357,7 @@ then
 		export NEWVERSION=`cat /etc/eucalyptus/eucalyptus-version`
 		if [ "$OLDVERSION" != "$NEWVERSION" ]; then
 		    rm -f /usr/share/eucalyptus/eucalyptus-*$OLDVERSION*.jar
+		    rm -f /usr/share/eucalyptus/groovy-1.6.3.jar
 		fi
 	    fi
 	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
