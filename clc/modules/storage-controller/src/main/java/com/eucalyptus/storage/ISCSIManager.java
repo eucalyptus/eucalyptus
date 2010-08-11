@@ -81,6 +81,7 @@ import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
@@ -97,35 +98,36 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class ISCSIManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
+	private static String ROOT_WRAP = BaseDirectory.HOME.toString() + StorageProperties.EUCA_ROOT_WRAPPER;
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
 		String returnValue;
-		returnValue = SystemUtil.run(new String[]{"sudo", "tgtadm", "--help"});
+		returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--help"});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
 		}
-		if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
 			LOG.warn("Unable to connect to tgt daemon. Is tgtd loaded?");
 			LOG.info("Attempting to start tgtd ISCSI daemon");
-			if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtd"}) != 0) {
+			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtd"}) != 0) {
 				throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
 			}
 		}
 	}
 
 	public void addUser(String username, String password) throws ExecutionException {
-		SystemUtil.run(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "account", "--user", username, "--password", password});
+		SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "account", "--user", username, "--password", password});
 	}
 
 	public void deleteUser(String username) throws ExecutionException {
-		SystemUtil.run(new String[]{"sudo" , "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "account", "--user", username});
+		SystemUtil.run(new String[]{ROOT_WRAP , "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "account", "--user", username});
 	}
 
 	public void exportTarget(int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
 		try
 		{
 			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "target", "--tid", String.valueOf(tid), "-T", name});
+			Process proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "target", "--tid", String.valueOf(tid), "-T", name});
 			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -136,7 +138,7 @@ public class ISCSIManager implements StorageExportManager {
 			if(errorValue.length() > 0)
 				throw new EucalyptusCloudException(errorValue);
 
-			proc = rt.exec(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun", String.valueOf(lun), "-b", path});
+			proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun", String.valueOf(lun), "-b", path});
 			error = new StreamConsumer(proc.getErrorStream());
 			output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -147,7 +149,7 @@ public class ISCSIManager implements StorageExportManager {
 			if(errorValue.length() > 0)
 				throw new EucalyptusCloudException(errorValue);
 
-			proc = rt.exec(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "account", "--tid", String.valueOf(tid), "--user", user});
+			proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "account", "--tid", String.valueOf(tid), "--user", user});
 			error = new StreamConsumer(proc.getErrorStream());
 			output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -158,7 +160,7 @@ public class ISCSIManager implements StorageExportManager {
 			if(errorValue.length() > 0)
 				throw new EucalyptusCloudException(errorValue);
 
-			proc = rt.exec(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "target", "--tid" , String.valueOf(tid), "-I", "ALL"});
+			proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "target", "--tid" , String.valueOf(tid), "-I", "ALL"});
 			error = new StreamConsumer(proc.getErrorStream());
 			output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -176,17 +178,17 @@ public class ISCSIManager implements StorageExportManager {
 	public void unexportTarget(int tid, int lun) {
 		try
 		{
-			if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"}) != 0) {
+			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"}) != 0) {
 				LOG.error("Unable to unbind tid: " + tid);
 				return;
 			}
 
-			if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
+			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
 				LOG.error("Unable to delete lun for tid: " + tid);
 				return;
 			}
 
-			if(SystemUtil.runAndGetCode(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid)}) != 0) {
+			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid)}) != 0) {
 				LOG.error("Unable to delete target: " + tid);
 				return;
 			}			
@@ -271,7 +273,7 @@ public class ISCSIManager implements StorageExportManager {
 			int i = tid;
 			do {
 				try {
-					String returnValue = SystemUtil.run(new String[]{"sudo", "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(i)});
+					String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(i)});
 					if(returnValue.length() == 0) {
 						tid = i;
 						break;
@@ -308,7 +310,7 @@ public class ISCSIManager implements StorageExportManager {
 		Runtime rt = Runtime.getRuntime();
 		Process proc;
 		try {
-			proc = rt.exec(new String[]{"sudo", "tgtadm", "--op", "show", "--mode", "account"});
+			proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--op", "show", "--mode", "account"});
 			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();

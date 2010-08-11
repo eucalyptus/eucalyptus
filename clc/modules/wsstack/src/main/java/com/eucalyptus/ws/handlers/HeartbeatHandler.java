@@ -334,16 +334,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     List<String> registeredComponents = Lists.newArrayList( );
     for( ComponentType started : hb.getStarted( ) ) {
       try {
-        URI uri = URI.create( started.getUri( ) );
-        String componentName = started.getComponent( );
-        final Component c = safeLookupComponent( componentName );
-        c.buildService( new ComponentConfiguration( started.getName( ), uri.getHost( ), uri.getPort( ), uri.getPath( ) ) {
-          
-          @Override
-          public com.eucalyptus.bootstrap.Component getComponent( ) {
-            return c.getPeer( );
-          }
-        } );
+        safeLookupComponent( started.getComponent( ) ).buildService( started.toConfiguration( ) );
       } catch ( ServiceRegistrationException ex ) {
         LOG.error( ex , ex );
       } catch ( NoSuchElementException ex ) {
@@ -352,7 +343,13 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     }
     for( ComponentType stopped : hb.getStarted( ) ) {
       if( Components.contains( stopped.getComponent( ) ) ) {
-        Components.lookup( stopped.getComponent( ) ).removeService( null );
+        try {
+          Components.lookup( stopped.getComponent( ) ).removeService( stopped.toConfiguration( ) );
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex , ex );
+        } catch ( NoSuchElementException ex ) {
+          LOG.error( ex , ex );
+        }
       }
     }
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
