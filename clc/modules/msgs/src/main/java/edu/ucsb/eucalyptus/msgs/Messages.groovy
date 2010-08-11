@@ -114,7 +114,7 @@ public class ComponentType extends EucalyptusData {
   public ServiceConfiguration toConfiguration() {
     URI realUri = URI.create( this.getUri( ) );
     final com.eucalyptus.bootstrap.Component c = com.eucalyptus.bootstrap.Component.valueOf( component );
-    return new EphemeralConfiguration( name, c, uri );
+    return new EphemeralConfiguration( name, c, realUri );
   }
 }
 public class ComponentProperty extends EucalyptusData {
