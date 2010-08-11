@@ -156,9 +156,9 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     try {
       this.prepareComponent( Components.delegate.db, addr );
       this.prepareComponent( Components.delegate.dns, addr );
-      this.prepareComponent( Components.delegate.eucalyptus, addr );
-      this.prepareComponent( Components.delegate.cluster, addr );
-      this.prepareComponent( Components.delegate.jetty, addr );
+//      this.prepareComponent( Components.delegate.eucalyptus, addr );
+//      this.prepareComponent( Components.delegate.cluster, addr );
+//      this.prepareComponent( Components.delegate.jetty, addr );
       HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
       LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
       for ( HeartbeatComponentType component : msg.getComponents( ) ) {
