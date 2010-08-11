@@ -170,6 +170,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
           public com.eucalyptus.bootstrap.Component getComponent( ) {
             return comp.getPeer( );
           }
+
+          @Override
+          public Boolean isLocal( ) {
+            return true;
+          }
+          
         };
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
         comp.buildService( config );
