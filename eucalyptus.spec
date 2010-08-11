@@ -352,7 +352,9 @@ then
 	BACKDIR=`cat /tmp/eucaback.dir`
 	if [ -d "$BACKDIR" ]; then
 	    /usr/sbin/euca_conf -setup
+	    export EUCALYPTUS=$BACKDIR
 	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+	    unset EUCALYPTUS
 	    /usr/sbin/euca_conf -setup
 	fi
     fi
