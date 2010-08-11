@@ -320,9 +320,13 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, UserIn
     List<Group> ret = Lists.newArrayList( );
     GroupEntity search = new GroupEntity( );
     EntityWrapper<GroupEntity> db = EntityWrapper.get( search );
-    List<GroupEntity> groupList = db.query( search );
-    for ( GroupEntity g : groupList ) {
-      ret.add( DatabaseWrappedGroup.newInstance( g ) );
+    try {
+      List<GroupEntity> groupList = db.query( search );
+      for ( GroupEntity g : groupList ) {
+        ret.add( DatabaseWrappedGroup.newInstance( g ) );
+      }
+    } finally {
+      db.commit( );
     }
     return ret;
   }
