@@ -179,7 +179,6 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
         };
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
         comp.buildService( config );
-        comp.startService( config );
         initializedComponents.add( component.getComponent( ) );
       } catch ( Exception ex ) {
         LOG.warn( LogUtil.header( "Failed registering local component "+LogUtil.dumpObject( component )+":  Are the required packages installed?\n The cause of the error: " + ex.getMessage( ) ) );
