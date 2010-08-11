@@ -89,21 +89,17 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.LocalConfiguration;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -145,35 +141,53 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     ctx.sendDownstream( e );
   }
   
-  private void prepareComponent( com.eucalyptus.bootstrap.Component component, InetSocketAddress addr ) throws ServiceRegistrationException {
-    Component c = Components.lookup( component );
-    c.buildService( c.getUri( addr.getAddress( ).getHostAddress( ), c.getConfiguration( ).getDefaultPort( ) ) );
+  private void prepareComponent( String componentName, String hostName ) throws ServiceRegistrationException {
+    final Component c = safeLookupComponent( componentName );
+    c.buildService( c.getUri( hostName, c.getConfiguration( ).getDefaultPort( ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
+    HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
+    LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
     InetSocketAddress addr = ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( );
+    InetSocketAddress localAddr = ( InetSocketAddress ) ctx.getChannel( ).getLocalAddress( );
     LOG.info( LogUtil.subheader( "Using " + addr.getHostName( ) + " as the database address." ) );
     try {
-      this.prepareComponent( Components.delegate.db, addr );
-      this.prepareComponent( Components.delegate.dns, addr );
-      this.prepareComponent( Components.delegate.eucalyptus, addr );
-      this.prepareComponent( Components.delegate.cluster, addr );
-      this.prepareComponent( Components.delegate.jetty, addr );
-      HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
-      LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
-      for ( HeartbeatComponentType component : msg.getComponents( ) ) {
-        LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
+      this.prepareComponent( "db", addr.getHostName( ) );
+      this.prepareComponent( "dns", addr.getHostName( ) );
+      this.prepareComponent( "eucalyptus", addr.getHostName( ) );
+    } catch ( ServiceRegistrationException ex1 ) {
+      LOG.error( ex1 , ex1 );
+      System.exit( 123 );
+    }
+    for ( HeartbeatComponentType component : msg.getComponents( ) ) {
+      LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
+      try {
+        final Component comp = safeLookupComponent( component.getComponent( ) );
+        URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
+        ServiceConfiguration config = new ComponentConfiguration( comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) ) {
+          @Override
+          public com.eucalyptus.bootstrap.Component getComponent( ) {
+            return comp.getPeer( );
+          }
+
+          @Override
+          public Boolean isLocal( ) {
+            return true;
+          }
+          
+        };
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
-        Component comp = Components.lookup( component.getComponent( ) );
-        comp.buildService( );
-        
+        comp.buildService( config );
         initializedComponents.add( component.getComponent( ) );
+      } catch ( Exception ex ) {
+        LOG.warn( LogUtil.header( "Failed registering local component "+LogUtil.dumpObject( component )+":  Are the required packages installed?\n The cause of the error: " + ex.getMessage( ) ) );
+        LOG.error( ex , ex );
       }
-      if ( !initializedComponents.contains( Components.delegate.storage.name( ) ) ) {
-        Components.lookup( Components.delegate.storage ).markDisabled( );
-      }
+    }
+    try {
       if ( !initializedComponents.contains( Components.delegate.walrus.name( ) ) ) {
-        Components.lookup( Components.delegate.walrus ).markDisabled( );
+        this.prepareComponent( "walrus", addr.getHostName( ) );
       }
       for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
         stage.updateBootstrapDependencies( );
@@ -322,6 +336,26 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     HeartbeatType hb = ( HeartbeatType ) request.getMessage( );
     //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
     List<String> registeredComponents = Lists.newArrayList( );
+    for( ComponentType started : hb.getStarted( ) ) {
+      try {
+        safeLookupComponent( started.getComponent( ) ).buildService( started.toConfiguration( ) );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.error( ex , ex );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      }
+    }
+    for( ComponentType stopped : hb.getStarted( ) ) {
+      if( Components.contains( stopped.getComponent( ) ) ) {
+        try {
+          Components.lookup( stopped.getComponent( ) ).removeService( stopped.toConfiguration( ) );
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex , ex );
+        } catch ( NoSuchElementException ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    }
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
       if ( !initializedComponents.contains( component.getComponent( ) ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
         System.exit( 123 );//HUP
@@ -332,6 +366,21 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       System.exit( 123 );//HUP
     }
     //FIXME: end.
+  }
+
+  private static Component safeLookupComponent( String componentName ) {
+    final Component c;
+    if ( !Components.contains( componentName ) ) {
+      try {
+        c = Components.create( componentName, null );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex );
+      }
+    } else {
+      c = Components.lookup( componentName );
+    }
+    return c;
   }
   
   private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventVetoedException {

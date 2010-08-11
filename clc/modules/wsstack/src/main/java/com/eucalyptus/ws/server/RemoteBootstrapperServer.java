@@ -129,7 +129,7 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
     return true;
   }
   
-  @Provides(Component.eucalyptus)
+  @Provides(Component.bootstrap)
   @RunDuring(Bootstrap.Stage.RemoteServicesInit)
   @DependsRemote(Component.eucalyptus)
   public static class DeferedRemoteServiceBootstrapper extends Bootstrapper {

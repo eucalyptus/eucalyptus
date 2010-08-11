@@ -9,11 +9,13 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Lifecycles;
 import com.eucalyptus.component.Resource;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.Committor;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Transition;
 import com.google.common.collect.Lists;
@@ -184,7 +186,17 @@ public class Bootstrap {
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
                           "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
       } else if ( !Components.contains( comp ) ) {
-        throw BootstrapException.throwFatal( "Bootstrap class provides a component for which registration failed: " + bc + " provides " + comp.name( ) );
+        Exceptions.eat( "Bootstrap class provides a component for which registration failed: " + bc + " provides " + comp.name( ) );
+        //        throw BootstrapException.throwFatal
+        try {
+          Component realComponent = Components.create( comp.name( ), null );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, currentStage.name( ), bc, "Provides", comp.name( ),
+                            "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
+          realComponent.getConfiguration( ).addBootstrapper( bootstrap );
+          stage.addBootstrapper( bootstrap );          
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex , ex );
+        }
       } else {
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, currentStage.name( ), bc, "Provides", comp.name( ),
                           "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );

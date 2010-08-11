@@ -72,7 +72,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_dns")
 @Table( name = "CNAMERecords" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class CNAMERecordInfo {
     @Id
     @GeneratedValue

@@ -81,7 +81,7 @@ import org.apache.log4j.Logger;
 @Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Objects" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ObjectInfo implements Comparable {
     @Id
     @GeneratedValue
@@ -118,7 +118,7 @@ public class ObjectInfo implements Comparable {
             joinColumns = { @JoinColumn( name = "object_id" ) },
             inverseJoinColumns = @JoinColumn( name = "grant_id" )
     )
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+    @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
     private List<GrantInfo> grants = new ArrayList<GrantInfo>();
 
     @Column(name="etag")
@@ -139,7 +139,7 @@ public class ObjectInfo implements Comparable {
             joinColumns = { @JoinColumn( name = "object_id" ) },
             inverseJoinColumns = @JoinColumn( name = "metadata_id" )
     )
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+    @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
     @Column(name="metadata")
     private List<MetaDataInfo> metaData = new ArrayList<MetaDataInfo>();
 

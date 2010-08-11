@@ -97,7 +97,7 @@ import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-public class VmInstance implements HasName {
+public class VmInstance implements HasName<VmInstance> {
   private static Logger LOG          = Logger.getLogger( VmInstance.class );
   public static String  DEFAULT_IP   = "0.0.0.0";
   public static String  DEFAULT_TYPE = "m1.small";
@@ -332,8 +332,8 @@ public class VmInstance implements HasName {
     return m;
   }
   
-  public int compareTo( final Object o ) {
-    VmInstance that = ( VmInstance ) o;
+  @Override
+  public int compareTo( final VmInstance that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
   

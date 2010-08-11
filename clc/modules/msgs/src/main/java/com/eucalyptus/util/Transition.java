@@ -25,26 +25,28 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
     this.newState = newState;
   }
   
-  public static <A, B extends Comparable, S extends Transition<A,B>> S anonymous( Class<? extends Transition<A,B>> r ) throws Exception {
+  public static <A, B extends Comparable, S extends Transition<A, B>> S anonymous( Class<? extends Transition<A, B>> r ) throws Exception {
     return ( S ) new Transition.anonymously<A, B>( r );
   }
-  public static <A, B extends Comparable, L extends Iterable<A>> Transition<A,B> anonymous( L i, Class<? extends Transition<A,B>> r ) throws Throwable {
+  
+  public static <A, B extends Comparable, L extends Iterable<A>> Transition<A, B> anonymous( L i, Class<? extends Transition<A, B>> r ) throws Throwable {
     Transition anon = anonymous( r );
     for ( A a : i ) {
       anon.transition( a );
     }
-    return ( Transition<A,B> ) anon;
-  }
-  public static <A, B extends Comparable, S extends Transition<A, B>> Transition<A,B> anonymous( B from, B to, Committor<A> r ) throws Exception {
-    return ( Transition<A,B> ) new Transition.anonymously<A, B>( from, to, r );
+    return ( Transition<A, B> ) anon;
   }
   
-  public static <A, B extends Comparable, L extends Iterable<A>> Transition<A,B> anonymous( B from, B to, L i, Committor<A> r ) throws Throwable {
+  public static <A, B extends Comparable, S extends Transition<A, B>> Transition<A, B> anonymous( B from, B to, Committor<A> r ) throws Exception {
+    return ( Transition<A, B> ) new Transition.anonymously<A, B>( from, to, r );
+  }
+  
+  public static <A, B extends Comparable, L extends Iterable<A>> Transition<A, B> anonymous( B from, B to, L i, Committor<A> r ) throws Throwable {
     Transition<A, B> anon = anonymous( from, to, r );
     for ( A a : i ) {
       anon.transition( a );
     }
-    return ( Transition<A,B> ) anon;
+    return ( Transition<A, B> ) anon;
   }
   
   private static class anonymously<O, T extends Comparable> extends Transition<O, T> {
@@ -55,7 +57,7 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
       this.committor = committor;
     }
     
-    public anonymously( final Class<? extends Transition<O,T>> c ) throws Exception {
+    public anonymously( final Class<? extends Transition<O, T>> c ) throws Exception {
       this( c.newInstance( ) );
     }
     
@@ -92,7 +94,8 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
   protected abstract void prepare( O component ) throws Exception;
   
   /**
-   * Perform component specific operations needed to accomplish the state transition. Note that the component's lifecycle state will only be updated when and if
+   * Perform component specific operations needed to accomplish the state transition. Note that the
+   * component's lifecycle state will only be updated when and if
    * this operations completes.
    * 
    * @throws Exception
@@ -116,15 +119,16 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
    * @param object
    * @throws Throwable
    */
-  public final Transition<O,T> transition( O object ) throws Throwable {
-    if( object instanceof Iterable ) {
-      for( O o : (Iterable<O>) object ) this.doTransition( o );
+  public final Transition<O, T> transition( O object ) throws Throwable {
+    if ( object instanceof Iterable ) {
+      for ( O o : ( Iterable<O> ) object )
+        this.doTransition( o );
     } else {
       this.doTransition( object );
     }
     return this;
   }
-
+  
   private void doTransition( O object ) throws Exception {
     try {
       EventRecord.caller( this.getClass( ), EventType.TRANSITION_PREPARE, this.toString( ), object.getClass( ).getCanonicalName( ) ).info( );
@@ -134,17 +138,19 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
       EventRecord.caller( this.getClass( ), EventType.TRANSITION_POST, this.toString( ), object.getClass( ).getCanonicalName( ) ).info( );
       this.post( object );
     } catch ( Exception e ) {
-      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FAILED, this.toString( ), object.getClass( ).getCanonicalName( ) ).error( );
       EventRecord.caller( this.getClass( ), EventType.TRANSITION_ROLLBACK, this.toString( ), object.getClass( ).getCanonicalName( ) ).error( );
       this.rollback( object );
       throw e;
     }
     EventRecord.caller( this.getClass( ), EventType.TRANSITION_FINISHED, this.toString( ) );
   }
-  public final Transition<O,T> transition( Iterable<O> list ) throws Throwable {
-    for( O o : list ) this.doTransition( o );
+  
+  public final Transition<O, T> transition( Iterable<O> list ) throws Throwable {
+    for ( O o : list )
+      this.doTransition( o );
     return this;
-  }  
+  }
+  
   /**
    * @see java.lang.Comparable#compareTo(java.lang.Object)
    * @param that
@@ -168,8 +174,12 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.newState == null ) ? 0 : this.newState.hashCode( ) );
-    result = prime * result + ( ( this.oldState == null ) ? 0 : this.oldState.hashCode( ) );
+    result = prime * result + ( ( this.newState == null )
+      ? 0
+      : this.newState.hashCode( ) );
+    result = prime * result + ( ( this.oldState == null )
+      ? 0
+      : this.oldState.hashCode( ) );
     return result;
   }
   

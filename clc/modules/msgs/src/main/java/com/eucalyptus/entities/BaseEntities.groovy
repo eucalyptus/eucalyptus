@@ -89,7 +89,7 @@ public abstract class UserMetadata extends AbstractPersistent implements Seriali
 @Entity
 @PersistenceContext(name="eucalyptus_general")
 @Table( name = "metadata_keypair" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class SshKeyPair extends UserMetadata implements Serializable {
   @Column( name = "metadata_keypair_user_keyname", unique=true )
   String uniqueName;//bogus field to enforce uniqueness
@@ -152,7 +152,7 @@ public class SshKeyPair extends UserMetadata implements Serializable {
 @Entity
 @PersistenceContext(name="eucalyptus_general")
 @Table( name = "metadata_network_group" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class NetworkRulesGroup extends UserMetadata implements Serializable {
   @Column( name = "metadata_network_group_user_network_group_name", unique=true )
   String uniqueName;//bogus field to enforce uniqueness
@@ -160,7 +160,7 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
   String            description;
   @OneToMany( cascade=[CascadeType.ALL], fetch=FetchType.EAGER )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = [ @JoinColumn( name = "id" ) ], inverseJoinColumns = [ @JoinColumn( name = "metadata_network_rule_id" ) ] )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   List<NetworkRule> networkRules = new ArrayList<NetworkRule>( );
   public static String NETWORK_DEFAULT_NAME = "default";
   public NetworkRulesGroup( ) {
@@ -222,7 +222,7 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
 @Entity
 @PersistenceContext(name="eucalyptus_general")
 @Table( name = "network_rule_peer_network" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class NetworkPeer {  
   @Id
   @GeneratedValue
@@ -275,7 +275,7 @@ public class NetworkPeer {
 @Entity
 @PersistenceContext(name="eucalyptus_general")
 @Table( name = "metadata_network_rule" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class NetworkRule {
   
   @Id
@@ -290,11 +290,11 @@ public class NetworkRule {
   Integer highPort;
   @OneToMany( cascade=[CascadeType.REMOVE,CascadeType.MERGE,CascadeType.PERSIST], fetch=FetchType.EAGER )
   @JoinTable( name = "metadata_network_rule_has_ip_range", joinColumns = [ @JoinColumn( name = "metadata_network_rule_id" ) ], inverseJoinColumns = [ @JoinColumn( name = "metadata_network_rule_ip_range_id" ) ] )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   Set<IpRange> ipRanges = new HashSet<IpRange>();
   @OneToMany( cascade=[CascadeType.REMOVE,CascadeType.MERGE,CascadeType.PERSIST], fetch=FetchType.EAGER )
   @JoinTable( name = "metadata_network_rule_has_peer_network", joinColumns = [ @JoinColumn( name = "metadata_network_rule_id" ) ], inverseJoinColumns = [ @JoinColumn( name = "metadata_network_rule_peer_network_id" ) ] )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
   Set<NetworkPeer> networkPeers = new HashSet<NetworkPeer>();
   public NetworkRule() {
   }
@@ -359,7 +359,7 @@ public class NetworkRule {
 @Entity
 @PersistenceContext(name="eucalyptus_general")
 @Table( name = "metadata_network_rule_ip_range" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class IpRange {
   @Id
   @GeneratedValue

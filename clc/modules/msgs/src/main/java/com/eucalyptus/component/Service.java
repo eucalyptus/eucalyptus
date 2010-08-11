@@ -1,9 +1,10 @@
 package com.eucalyptus.component;
 
 import java.net.URI;
+import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.NetworkUtil;
 
-public class Service implements ComponentInformation, Comparable<Service> {
+public class Service implements ComponentInformation, Comparable<Service>, HasParent<Component> {
   public static String          LOCAL_HOSTNAME = "@localhost";
   private final Component       parent;
   private final String          name;
@@ -90,10 +91,16 @@ public class Service implements ComponentInformation, Comparable<Service> {
   }
 
   @Override
+  public Component getParent( ) {
+    return this.parent;
+  }
+
+  @Override
   public String toString( ) {
     return String.format( "Service:parent=%s:name=%s:keys=%s:endpoint=%s:dispatcher=%s:serviceConfiguration=%s", this.parent, this.name, this.keys,
                           this.endpoint, this.dispatcher, this.serviceConfiguration );
   }
+
   
   
 }

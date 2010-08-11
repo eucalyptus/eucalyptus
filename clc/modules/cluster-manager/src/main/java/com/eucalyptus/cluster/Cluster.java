@@ -80,7 +80,7 @@ import com.eucalyptus.util.HasName;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
-public class Cluster implements HasName {
+public class Cluster implements HasName<Cluster> {
   private static Logger                            LOG = Logger.getLogger( Cluster.class );
   private ClusterMessageQueue                      mq;
   private ClusterConfiguration                     configuration;
@@ -125,8 +125,7 @@ public class Cluster implements HasName {
   }
   
   @Override
-  public int compareTo( Object o ) {
-    Cluster that = ( Cluster ) o;
+  public int compareTo( Cluster that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
   

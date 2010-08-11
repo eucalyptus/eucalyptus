@@ -1,7 +1,5 @@
-package com.eucalyptus.util;
-
 /*******************************************************************************
- * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -59,11 +57,18 @@ package com.eucalyptus.util;
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/**
- * @author Chris Grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.util;
 
-public interface Nameable<T> extends Comparable<T> {
-  public String getName( );
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.fsm.FusedCallbackTransition;
+
+public class Fuses {
+  public static <P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> FusedCallbackTransition<P,S,T> callbackToTransition( P subject, Class msgClass, ChannelPipelineFactory channelFactory ) {
+    return new FusedCallbackTransition<P, S, T>( channelFactory, Callbacks.newSubjectMessageFactory( msgClass, subject ) );
+  }
+
 }
