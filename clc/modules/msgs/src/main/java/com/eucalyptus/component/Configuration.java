@@ -18,7 +18,7 @@ public class Configuration implements ComponentInformation {
   private URI                      uriLocal;
   private String                   uriPattern;
   private Integer                  port;
-  
+
   Configuration( Component parent ) {
     this.parent = parent;
     this.propertyKey = "euca." + this.parent.getName( ) + ".host";
@@ -26,7 +26,7 @@ public class Configuration implements ComponentInformation {
     this.resource = null;
     this.port = Integer.parseInt( System.getProperty("euca.ws.port") );
     this.uriPattern = "http://%s:%d/internal/%s";
-    this.uriLocal = URI.create( "vm://EucalyptusRequestQueue" );
+    this.uriLocal = URI.create( "vm://"+parent.getName( ).substring( 0, 1 ).toUpperCase( ) + parent.getName( ).substring( 1 )+"RequestQueue" );
   }
   
   Configuration( Component parent, URI u ) {

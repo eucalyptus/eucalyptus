@@ -69,7 +69,7 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.isLocal( ) ) {
+    if ( Components.delegate.eucalyptus.isLocal( ) ) {
       java.lang.System.setProperty( "euca.storage.name", config.getName( ) );
       LOG.info( LogUtil.subheader( "Setting euca.storage.name=" + config.getName( ) + " for: " + LogUtil.dumpObject( config ) ) );
     }

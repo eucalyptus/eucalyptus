@@ -146,13 +146,26 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   }
   
   private void prepareComponent( com.eucalyptus.bootstrap.Component component, InetSocketAddress addr ) throws ServiceRegistrationException {
-    Component c = Components.lookup( component );
+    final Component c;
+    if( !Components.contains( component ) ) {
+      c = Components.create( component.name( ), null );
+    } else {
+      c = Components.lookup( component );
+    }
     c.buildService( c.getUri( addr.getAddress( ).getHostAddress( ), c.getConfiguration( ).getDefaultPort( ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
     InetSocketAddress addr = ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( );
+    InetSocketAddress localAddr = ( InetSocketAddress ) ctx.getChannel( ).getLocalAddress( );
     LOG.info( LogUtil.subheader( "Using " + addr.getHostName( ) + " as the database address." ) );
+    if( !Components.contains( "walrus" ) ) {
+      try {
+        Components.create( "walrus", null );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.error( ex , ex );
+      }
+    }
     try {
       this.prepareComponent( Components.delegate.db, addr );
       this.prepareComponent( Components.delegate.dns, addr );
@@ -165,20 +178,23 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
         LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
         try {
-          Component comp = Components.lookup( component.getComponent( ) );
-          comp.buildService( );
+          final Component comp = Components.lookup( component.getComponent( ) );
+          URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
+          comp.buildService( new ComponentConfiguration( comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) ) {
+            @Override
+            public com.eucalyptus.bootstrap.Component getComponent( ) {
+              return comp.getPeer( );
+            }
+          } );
         } catch ( Exception ex ) {
           LOG.warn( LogUtil.header( "Failed registering local component "+LogUtil.dumpObject( component )+":  Are the required packages installed?\n The cause of the error: " + ex.getMessage( ) ) );
           LOG.error( ex , ex );
         }
         initializedComponents.add( component.getComponent( ) );
       }
-//      if ( !initializedComponents.contains( Components.delegate.storage.name( ) ) ) {
-//        Components.lookup( Components.delegate.storage ).markDisabled( );
-//      }
-//      if ( !initializedComponents.contains( Components.delegate.walrus.name( ) ) ) {
-//        Components.lookup( Components.delegate.walrus ).markDisabled( );
-//      }
+      if ( !initializedComponents.contains( Components.delegate.walrus.name( ) ) ) {
+        this.prepareComponent( Components.delegate.walrus, addr );
+      }
       for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
         stage.updateBootstrapDependencies( );
       }

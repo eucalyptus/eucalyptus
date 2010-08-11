@@ -113,7 +113,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       this.configuration = new Configuration( this, configFile );
       Components.register( this.configuration );
     } else {
-      this.configuration = null;
+      this.configuration = new Configuration( this );
     }
     this.lifecycle = new Lifecycle( this );
     Components.register( this.lifecycle );
