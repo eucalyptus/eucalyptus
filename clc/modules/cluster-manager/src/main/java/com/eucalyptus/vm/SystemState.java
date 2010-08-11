@@ -310,7 +310,10 @@ public class SystemState {
       String reservationId = runVm.getReservationId( );
       String ownerId = runVm.getOwnerId( );
       String placement = cluster;
-      String userData = runVm.getUserData( );
+      byte[] userData = new byte[0];
+      if( runVm.getUserData( ) != null && runVm.getUserData( ).length( ) > 1 ) {
+        userData = Base64.decode( runVm.getUserData( ) );
+      }
       Integer launchIndex = 0;
       try {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
@@ -380,7 +383,7 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, Base64.decode( userData ), imgInfo, keyInfo, vmType, networks,
+      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, imgInfo, keyInfo, vmType, networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
       vm.setLaunchTime( runVm.getLaunchTime( ) );
