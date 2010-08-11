@@ -189,7 +189,11 @@ public class Bootstrap {
         Exceptions.eat( "Bootstrap class provides a component for which registration failed: " + bc + " provides " + comp.name( ) );
         //        throw BootstrapException.throwFatal
         try {
-          Components.create( comp.name( ), null );
+          Component realComponent = Components.create( comp.name( ), null );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, currentStage.name( ), bc, "Provides", comp.name( ),
+                            "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
+          realComponent.getConfiguration( ).addBootstrapper( bootstrap );
+          stage.addBootstrapper( bootstrap );          
         } catch ( ServiceRegistrationException ex ) {
           LOG.error( ex , ex );
         }
