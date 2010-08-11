@@ -182,6 +182,11 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   URI uri;
   Component c;
   
+  public EphemeralConfiguration( String name, Component c, URI uri ) {
+    super( name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+    this.uri = uri;
+    this.c = c;
+  }
   public EphemeralConfiguration( Component c, URI uri ) {
     super( c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;

@@ -63,6 +63,7 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import java.net.URI;
 import java.util.List;
 
 import org.jibx.runtime.BindingDirectory
@@ -70,6 +71,10 @@ import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.config.EphemeralConfiguration;
+
 
 //TODO: Remove me
 //public class INTERNAL extends EucalyptusMessage {
@@ -106,6 +111,11 @@ public class ComponentType extends EucalyptusData {
     this.uri = uri;
   }
   public ComponentType( ) {}  
+  public ServiceConfiguration toConfiguration() {
+    URI realUri = URI.create( this.getUri( ) );
+    final com.eucalyptus.bootstrap.Component c = com.eucalyptus.bootstrap.Component.valueOf( component );
+    return new EphemeralConfiguration( name, c, uri );
+  }
 }
 public class ComponentProperty extends EucalyptusData {
   private String type;
