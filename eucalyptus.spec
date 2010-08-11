@@ -352,9 +352,14 @@ then
 	BACKDIR=`cat /tmp/eucaback.dir`
 	if [ -d "$BACKDIR" ]; then
 	    /usr/sbin/euca_conf -setup
-	    export EUCALYPTUS=$BACKDIR
+	    if [ -f "$BACKDIR/etc/eucalyptus/eucalyptus-version" -a -f "/etc/eucalyptus/eucalyptus-version" ]; then
+		export OLDVERSION=`cat $BACKDIR/etc/eucalyptus/eucalyptus-version`
+		export NEWVERSION=`cat /etc/eucalyptus/eucalyptus-version`
+		if [ "$OLDVERSION" != "$NEWVERSION" ]; then
+		    rm -f /usr/share/eucalyptus/eucalyptus-*$OLDVERSION*.jar
+		fi
+	    fi
 	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
-	    unset EUCALYPTUS
 	    /usr/sbin/euca_conf -setup
 	fi
     fi
