@@ -68,8 +68,8 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 
@@ -97,7 +97,7 @@ public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputT
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
     reply.setTimestamp( new Date( ) );
     reply.setOutput( new String( Base64.encode( vm.getConsoleOutput( ).toString( ).getBytes( ) ) ) );
-    Messaging.dispatch( "vm://ReplyQueue", reply );
+    ServiceContext.dispatch( "ReplyQueue", reply );
   }
 
 

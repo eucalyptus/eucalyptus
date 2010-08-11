@@ -20,6 +20,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.transport.NullPayload;
 
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.util.Messaging;
@@ -67,7 +68,7 @@ public class MetadataPipeline extends FilteredPipeline implements UnrollableStag
 
       HttpResponse response = null;
       LOG.info( "Trying to get metadata: " + newUri );
-      Object reply = Messaging.send( "vm://VmMetadata", newUri );
+      Object reply = ServiceContext.send( "VmMetadata", newUri );
       if ( !( reply instanceof NullPayload ) ) {
         response = new DefaultHttpResponse(request.getProtocolVersion( ),HttpResponseStatus.OK);
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/html" );
