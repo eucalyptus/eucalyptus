@@ -115,7 +115,7 @@ public class ClusterMessageQueue implements Runnable {
     if ( !this.checkDuplicates( event ) ) {
       try {
         while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) ) {
-          ;
+          LOG.trace(new RuntimeException(),new RuntimeException());
         }
       } catch ( final InterruptedException e ) {
         LOG.debug( e, e );
