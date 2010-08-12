@@ -299,12 +299,14 @@ public class ClusterAllocator extends Thread {
       cb.then( new SuccessCallback<VmRunResponseType>( ) {
         @Override
         public void apply( VmRunResponseType response ) {
-          try {
-            final Address addr = Addresses.getInstance( ).lookup( address );
-            final VmInstance vm = VmInstances.getInstance( ).lookup( childToken.getInstanceIds( ).get( 0 ) );
-            addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).getCallback( ).dispatch( addr.getCluster( ) );
-          } catch ( NoSuchElementException ex ) {
-            LOG.debug( ex , ex );
+          for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
+            try {
+              final Address addr = Addresses.getInstance( ).lookup( address );
+              final VmInstance vm = VmInstances.getInstance( ).lookup( childToken.getInstanceIds( ).get( 0 ) );
+              addr.assign( vmInfo.getInstanceId( ), vmInfo.getNetParams( ).getIpAddress( ) ).getCallback( ).dispatch( addr.getCluster( ) );
+            } catch ( NoSuchElementException ex ) {
+              LOG.debug( ex , ex );
+            }
           }
         }
       }

@@ -74,6 +74,7 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
@@ -91,6 +92,15 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   
   @Override
   public void prepare( AssignAddressType msg ) throws Exception {
+    if( VmInstance.DEFAULT_IP.equals( this.getRequest( ).getDestination( ) ) ) {
+      VmInstance vm = VmInstances.getInstance( ).lookup( address.getInstanceId( ) );
+      String privAddr = vm.getPrivateAddress( );
+      if( VmInstance.DEFAULT_IP.equals( privAddr ) ) {
+        throw new EucalyptusCloudException( "BUG: Failing to assign address because the vm's private address is 0.0.0.0!: " + vm.toString( ) );
+      } else {
+        this.getRequest( ).setDestination( privAddr );
+      }
+    }
     EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), address.toString( ) ).debug( );
   }
   
