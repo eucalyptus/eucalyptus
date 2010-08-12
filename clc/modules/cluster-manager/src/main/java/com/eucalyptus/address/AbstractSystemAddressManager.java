@@ -117,7 +117,7 @@ public abstract class AbstractSystemAddressManager {
     private static void markAsAllocated( Cluster cluster, ClusterAddressInfo addrInfo, Address address ) {
       try {
         Exceptions.eat( "Out of band address state change: " + addrInfo + " address=" + address );
-        address.allocate( Component.eucalyptus.name( ) ).clearPending( );
+        address.pendingAssignment( ).clearPending( );
         cluster.getState( ).clearOrphan( addrInfo );
       } catch ( IllegalStateException e ) {
         LOG.error( e, e );
