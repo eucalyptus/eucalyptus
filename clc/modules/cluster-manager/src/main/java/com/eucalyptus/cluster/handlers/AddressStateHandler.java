@@ -13,6 +13,7 @@ import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.event.NewClusterEvent;
+import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.GenericEvent;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -39,7 +40,7 @@ public class AddressStateHandler extends AbstractClusterMessageDispatcher {
   
   @Override
   public void fireEvent( Event event ) {
-    if ( this.timedTrigger( event ) ) {
+    if ( event instanceof ClockTick ) {
       this.trigger( );
     } else if ( event instanceof GenericEvent ) {
       GenericEvent<Cluster> g = ( GenericEvent<Cluster> ) event;

@@ -115,7 +115,13 @@ public class ClusterState {
       LOG.warn( "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
-        addr.unassign( ).getCallback( ).dispatch( this.clusterName );
+        if( Address.Transition.system.equals( addr.getTransition( ) ) ) {
+          addr.release( );
+        } else if( !addr.isPending( ) ) {
+          addr.unassign( ).getCallback( ).dispatch( this.clusterName );
+        } else {
+          LOG.debug( "Ignoring orphan which is pending but not system allocated: " + addr );
+        }
       } catch ( NoSuchElementException e ) {
       }
       orphans.remove( address );

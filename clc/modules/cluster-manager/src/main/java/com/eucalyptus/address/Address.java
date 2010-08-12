@@ -365,7 +365,7 @@ public class Address implements HasName<Address> {
   }
   
   public Address pendingAssignment( ) {
-    this.transition( State.unallocated, State.impending, false, true, new SplitTransition( Transition.allocating ) {
+    this.transition( State.unallocated, State.impending, false, true, new SplitTransition( Transition.system ) {
       public void top( ) {
         Address.this.instanceId = PENDING_ASSIGNMENT;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
