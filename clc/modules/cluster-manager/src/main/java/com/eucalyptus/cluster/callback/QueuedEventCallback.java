@@ -211,8 +211,12 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
             this.failCallback.failure( this, ex );
             this.queueResponse( ex );
           } else {
-            this.verify( msg );
-            this.successCallback.apply( msg );
+            try {
+              this.verify( msg );
+              this.successCallback.apply( msg );
+            } catch ( Throwable ex ) {
+              LOG.error( ex , ex );
+            }
             this.queueResponse( msg );
           }
         } catch ( Throwable e1 ) {
@@ -365,10 +369,10 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     } catch ( Throwable e ) {
       try {
         this.fail( e );
-      } catch ( Exception e1 ) {
+        this.failCallback.failure( this, e );
+      } catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
       }
-      this.failCallback.failure( this, e );
       this.queueResponse( e );
       this.connectFuture.addListener( ChannelFutureListener.CLOSE );
     }
