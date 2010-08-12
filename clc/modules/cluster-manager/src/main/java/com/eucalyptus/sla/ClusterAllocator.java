@@ -269,11 +269,7 @@ public class ClusterAllocator extends Thread {
           for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
             final Address addr = Addresses.getInstance( ).lookup( addrs.next( ) );
             final VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
-            addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).getCallback( ).then( new SuccessCallback( ) {
-              public void apply( BaseMessage response ) {
-                vm.updatePublicAddress( addr.getName( ) );
-              }
-            } ).dispatch( addr.getCluster( ) );
+            addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).getCallback( ).dispatch( addr.getCluster( ) );
           }
         }
       } );
@@ -312,11 +308,7 @@ public class ClusterAllocator extends Thread {
         public void apply( VmRunResponseType response ) {
           final Address addr = Addresses.getInstance( ).lookup( address );
           final VmInstance vm = VmInstances.getInstance( ).lookup( childToken.getInstanceIds( ).get( 0 ) );
-          addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).getCallback( ).then( new SuccessCallback( ) {
-            public void apply( BaseMessage response ) {
-              vm.updatePublicAddress( addr.getName( ) );
-            }
-          } ).dispatch( addr.getCluster( ) );
+          addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).getCallback( ).dispatch( addr.getCluster( ) );
         }
       }
         );
