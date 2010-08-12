@@ -543,7 +543,11 @@ public class Address implements HasName<Address> {
   
   @Override
   public String toString( ) {
-    return "Address " + this.name + " " + this.cluster + " " + (this.isAllocated( )?this.userId + " ":"") + (this.isAssigned( )? this.instanceId + " " + this.instanceAddress + " ":"") + " " + this.transition;
+    return "Address " + this.name + " " + this.cluster + " " + 
+    (this.isAllocated( )?this.userId + " ":"") + 
+    (this.isAssigned( )? this.instanceId + " " + this.instanceAddress + " ":"") + " " + 
+    this.state.getReference( ) + (this.state.isMarked( )?":pending":"") +
+    this.transition;
   }
   
   @Override
