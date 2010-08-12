@@ -142,7 +142,7 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     for( String addr : this.token.getAddresses() ) {
       try {
         LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
-        Addresses.release( Addresses.getInstance().lookup( addr ) );
+        Addresses.getInstance().lookup( addr ).release( );
       } catch ( NoSuchElementException e1 ) {
         LOG.debug( "-> Failed to release addresses from failed vm run allocation: " + addr );
       }
