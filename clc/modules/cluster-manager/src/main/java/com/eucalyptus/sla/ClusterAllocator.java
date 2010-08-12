@@ -230,14 +230,7 @@ public class ClusterAllocator extends Thread {
     try {
       int index = 0;
       for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        List<String> instanceIds = Lists.newArrayList( token.getInstanceIds( ).get( index ) );
-        List<String> netIndexes = Lists.newArrayList( networkIndexes.get( index ) );
-        List<String> addrList = Lists.newArrayList( );
-        List<String> netNames = Lists.newArrayList( networkNames.get( index ) );
-        if ( !addresses.isEmpty( ) ) {
-          addrList.add( addresses.get( index ) );
-        }
-        cb = makeRunRequest( request, childToken, rsvId, instanceIds, imgInfo, keyInfo, vmInfo, vlan, netNames, netIndexes, addrList, userData );
+        cb = makeRunRequest( request, childToken, rsvId, imgInfo, keyInfo, vmInfo, userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
         index++;
       }
