@@ -117,8 +117,10 @@ public class ClusterState {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
         if( Address.Transition.system.equals( addr.getTransition( ) ) ) {
           addr.release( );
-        } else if( !addr.isPending( ) ) {
+        } else if( addr.isAssigned( ) ) {
           addr.unassign( ).getCallback( ).dispatch( this.clusterName );
+        } else if( addr.isAssigned( ) ) {
+          new UnassignAddressCallback( address ).dispatch( this.clusterName );
         } else {
           LOG.debug( "Ignoring orphan which is pending but not system allocated: " + addr );
         }
