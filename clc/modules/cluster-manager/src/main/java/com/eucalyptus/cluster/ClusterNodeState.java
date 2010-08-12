@@ -142,8 +142,8 @@ public class ClusterNodeState {
     }
     List<ResourceToken> childTokens = Lists.newArrayList( );
     for( int index = 0; index < token.getAmount( ); index++ ) {
+      NetworkToken primaryNet = token.getPrimaryNetwork( );
       ResourceToken childToken = new ResourceToken( token.getCluster( ), token.getCorrelationId( )+index, token.getUserName( ), 1, this.virtualTimer++, token.getVmType( ) );
-      NetworkToken primaryNet = childToken.getPrimaryNetwork( );
       if( token.getAddresses( ).size( ) > index ) {
         childToken.getAddresses( ).add( token.getAddresses( ).get( index ) );
       }
