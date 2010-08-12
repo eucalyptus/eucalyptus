@@ -105,7 +105,11 @@ public abstract class AbstractSystemAddressManager {
         if( addr != null && addr.isAssigned( ) && !addr.isPending( ) ) {
           Helper.clearAddressCachedState( addr );
         } else if( addr != null && !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) ) {
-          addr.release( );
+          try {
+            addr.release( );
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+          }
         } else if( addr == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );
           Helper.clearVmState( addrInfo );
@@ -185,7 +189,7 @@ public abstract class AbstractSystemAddressManager {
       if ( vmCount > 1 ) {
         String vmList = "";
         for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-          if ( addrInfo.getAddress( ).equals( v.getPublicAddress( ) ) ) {
+          if ( addrInfo.getAddress( ).equals( v.getPublicAddress( ) ) && ( VmState.PENDING.equals( v.getState( ) ) || VmState.RUNNING.equals( v.getState( ) ) ) ) {
             vmList += " " + v.getInstanceId( );
           }
         }
