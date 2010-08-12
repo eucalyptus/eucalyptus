@@ -203,11 +203,13 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
       MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
       try {
         RTYPE msg = ( RTYPE ) response.getMessage( );
+        LOG.trace( msg.toSimpleString( ) );
         try {
           if ( !msg.get_return( ) ) {
             Exception ex = new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
             this.fail( ex );
             this.failCallback.failure( this, ex );
+            this.queueResponse( ex );
           } else {
             this.verify( msg );
             this.successCallback.apply( msg );

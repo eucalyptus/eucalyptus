@@ -380,11 +380,11 @@ public class SystemState {
             notwork.addTokenIfAbsent( netToken );
             Networks.getInstance( ).registerIfAbsent( notwork, Networks.State.ACTIVE );
           } catch ( EucalyptusCloudException e ) {
-            LOG.error( e, e );
+            LOG.error( e );
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
             new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
-            LOG.trace( e, e );
+            LOG.trace( e );
           }
         }
       }
