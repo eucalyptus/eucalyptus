@@ -154,10 +154,18 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
           try {
             if ( address.isSystemOwned( ) ) {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
-              Addresses.release( address );
+              try {
+                if ( address.isAssigned( ) ) {
+                  address.unassign( ).getCallback( ).dispatch( address.getCluster( ) );
+                } else {
+                  address.release( );
+                }
+              } catch ( IllegalStateException e ) {
+                LOG.debug( e, e );
+              }
             } else {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+              address.unassign( ).getCallback( ).dispatch( address.getCluster( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );

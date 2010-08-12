@@ -20,7 +20,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       try {
         if ( cluster.equals( addr.getCluster( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
       } catch ( IllegalStateException e ) {
-        LOG.error( e , e );
+        LOG.trace( e , e );
       }
     }
     if ( count != 0 ) {
