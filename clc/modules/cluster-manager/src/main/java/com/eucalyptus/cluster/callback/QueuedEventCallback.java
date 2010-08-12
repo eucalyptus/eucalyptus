@@ -203,15 +203,19 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
       MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
       try {
         RTYPE msg = ( RTYPE ) response.getMessage( );
-        if ( !msg.get_return( ) ) {
-          throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
-        }
-        this.verify( msg );
         try {
-          this.successCallback.apply( msg );
+          if ( !msg.get_return( ) ) {
+            Exception ex = new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
+            this.fail( ex );
+            this.failCallback.failure( this, ex );
+          } else {
+            this.verify( msg );
+            this.successCallback.apply( msg );
+            this.queueResponse( msg );
+          }
         } catch ( Throwable e1 ) {
-          LOG.debug( e1, e1 );
-          this.failCallback.failure( this, e1 );
+          LOG.error( e1, e1 );
+          throw e1;
         }
       } catch ( Throwable e1 ) {
         try {
@@ -234,9 +238,6 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
         }
       }
     }
-    final MappingHttpMessage httpResponse = ( MappingHttpMessage ) e.getMessage( );
-    final EucalyptusMessage reply = ( EucalyptusMessage ) httpResponse.getMessage( );
-    this.queueResponse( reply );
     ctx.getChannel( ).close( );
   }
   

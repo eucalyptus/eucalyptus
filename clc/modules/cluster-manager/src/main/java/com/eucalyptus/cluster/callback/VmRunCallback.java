@@ -139,11 +139,13 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
 
   @Override
   public void fail( Throwable e ) {
-    LOG.debug( "-> Release resource tokens for unused resources." );
-    try {
-      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
-    } catch ( Throwable e2 ) {
-      LOG.debug( e2, e2 );
+    for( String addr : this.token.getAddresses() ) {
+      try {
+        LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
+        Addresses.release( Addresses.getInstance().lookup( addr ) );
+      } catch ( NoSuchElementException e1 ) {
+        LOG.debug( "-> Failed to release addresses from failed vm run allocation: " + addr );
+      }
     }
     LOG.debug( "-> Release network index allocation." );
     if( this.token.getPrimaryNetwork( ) != null ) {
@@ -157,11 +159,11 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
         LOG.debug( e2, e2 );
       }
     }
-    for( String addr : this.token.getAddresses() ) {
-      try {
-        Addresses.release( Addresses.getInstance().lookup( addr ) );
-        LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
-      } catch ( NoSuchElementException e1 ) {}
+    LOG.debug( "-> Release resource tokens for unused resources." );
+    try {
+      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
+    } catch ( Throwable e2 ) {
+      LOG.debug( e2, e2 );
     }
     LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
