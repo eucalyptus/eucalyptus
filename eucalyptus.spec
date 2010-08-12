@@ -333,6 +333,7 @@ fi
 if [ "$1" = "2" ];
 then
 	/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor %{euca_hypervisor} -bridge %{euca_bridge}
+	sed -i "s/DISABLE_ISCSI=\"N\"/DISABLE_ISCSI=\"Y\"/" /etc/eucalyptus/eucalyptus.conf
 	if [ -f /tmp/eucaback.dir ]; then
 	    BACKDIR=`cat /tmp/eucaback.dir`
 	    if [ -d "$BACKDIR" ]; then
