@@ -220,6 +220,6 @@ public class Snapshot extends EucalyptusData {
   Date startTime = new Date();
   String progress;
   String ownerId;
-  String volumeSize = "n/a";
+  String volumeSize = "-1";
   String description;
 }
