@@ -327,7 +327,7 @@ public class Address implements HasName<Address> {
                          
                          @Override
                          public void bottom( ) {
-                           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGN, "user=" + Address.this.userId )
+                           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_RELEASE, "user=" + Address.this.userId )
                            .append( "address=" + Address.this.name, "instance=" + Address.this.instanceId, "instance-address=" )
                            .append( Address.this.instanceAddress, "SYSTEM" ).info( );
                            Address.this.instanceId = UNASSIGNED_INSTANCEID;
@@ -375,7 +375,12 @@ public class Address implements HasName<Address> {
             LOG.debug( e );
           }
         }
+        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_PENDING, "user="+Address.this.userId ) 
+        .append( "address="+Address.this.name, "instance="+Address.this.instanceId, "instance-address=" )
+        .append( Address.this.instanceAddress, "SYSTEM" ).info( );
       }
+      @Override
+      public void bottom( ) {}      
     } );
     return this;
   }

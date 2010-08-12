@@ -227,10 +227,11 @@ public class ClusterAllocator extends Thread {
         List<String> instanceIds = Lists.newArrayList( token.getInstanceIds( ).get( index ) );
         List<String> netIndexes = Lists.newArrayList( networkIndexes.get( index ) );
         List<String> addrList = Lists.newArrayList( );
+        List<String> netNames = Lists.newArrayList( networkNames.get( index ) );
         if ( !addresses.isEmpty( ) ) {
           addrList.add( addresses.get( index ) );
         }
-        cb = makeRunRequest( request, childToken, rsvId, instanceIds, imgInfo, keyInfo, vmInfo, vlan, networkNames, netIndexes, addrList, userData );
+        cb = makeRunRequest( request, childToken, rsvId, instanceIds, imgInfo, keyInfo, vmInfo, vlan, netNames, netIndexes, addrList, userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
         index++;
       }

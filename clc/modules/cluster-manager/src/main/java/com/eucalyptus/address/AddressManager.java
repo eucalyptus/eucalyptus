@@ -105,6 +105,7 @@ public class AddressManager {
     reply.set_return( false );
     Addresses.updateAddressingMode( );
     Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
+    address.release( );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
@@ -143,7 +144,7 @@ public class AddressManager {
       public void apply( ) {
         AddressCategory.assign( address, vm ).dispatch( address.getCluster( ) );
         if ( oldAddrSystem ) {
-          Addresses.getAddressManager( ).releaseSystemAddress( oldAddr );
+          oldAddr.release( );
         }
         if ( oldVm != null ) {
           Addresses.system( oldVm );
@@ -206,7 +207,7 @@ public class AddressManager {
         if ( address.isSystemOwned( ) ) {
           AddressCategory.unassign( address ).then( new UnconditionalCallback( ) {
             public void apply( ) {
-              Addresses.getAddressManager( ).releaseSystemAddress( address );
+              address.release( );
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
               } catch ( Exception e ) {

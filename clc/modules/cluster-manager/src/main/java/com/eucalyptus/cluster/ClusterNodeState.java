@@ -142,6 +142,15 @@ public class ClusterNodeState {
     List<ResourceToken> childTokens = Lists.newArrayList( );
     for( int index = 0; index < token.getAmount( ); index++ ) {
       ResourceToken childToken = new ResourceToken( token.getCluster( ), token.getCorrelationId( )+index, token.getUserName( ), 1, this.virtualTimer++, token.getVmType( ) );
+      if( token.getAddresses( ).size( ) > index ) {
+        childToken.getAddresses( ).add( token.getAddresses( ).get( index ) );
+      }
+      if( token.getInstanceIds( ).size( ) > index ) {
+        childToken.getInstanceIds( ).add( token.getInstanceIds( ).get( index ) );
+      }
+      if( token.getNetworkTokens( ).size( ) > index ) {
+        childToken.getNetworkTokens( ).add( token.getNetworkTokens( ).get( index ) );
+      }
       EventRecord.caller( ResourceToken.class, EventType.TOKEN_CHILD, childToken.toString( ) ).info( );
       childTokens.add( childToken );
     }

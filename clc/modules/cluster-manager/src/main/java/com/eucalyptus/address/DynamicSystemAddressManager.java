@@ -60,12 +60,5 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       }
     }
   }
-  @Override public void releaseSystemAddress( Address addr ) {
-    try {
-      addr.release( );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
-    }
-  }
   
 }

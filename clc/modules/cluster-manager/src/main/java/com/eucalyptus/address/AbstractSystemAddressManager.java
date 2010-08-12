@@ -11,6 +11,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmState;
@@ -31,7 +32,6 @@ public abstract class AbstractSystemAddressManager {
   }
   
   public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable;
-  public abstract void releaseSystemAddress( final Address addr );
   public abstract List<Address> getReservedAddresses( );
   public abstract void inheritReservedAddresses( List<Address> previouslyReservedAddresses );
   public abstract List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable;
@@ -88,8 +88,7 @@ public abstract class AbstractSystemAddressManager {
       if ( addrInfo.hasMapping( ) ) {
         vm = Helper.maybeFindVm( addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
         if ( addr != null && vm != null ) {
-          Helper.ensureAllocated( addr );
-          Helper.ensureAssigned( addr, vm );
+          Helper.ensureAllocated( addr, vm );
           cluster.getState( ).clearOrphan( addrInfo );
         } else if ( addr != null && vm != null && vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
@@ -106,7 +105,7 @@ public abstract class AbstractSystemAddressManager {
         if( addr != null && addr.isAssigned( ) && !addr.isPending( ) ) {
           Helper.clearAddressCachedState( addr );
         } else if( addr != null && !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) ) {
-          Addresses.getAddressManager( ).releaseSystemAddress( addr );
+          addr.release( );
         } else if( addr == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );
           Helper.clearVmState( addrInfo );
@@ -117,8 +116,8 @@ public abstract class AbstractSystemAddressManager {
     
     private static void markAsAllocated( Cluster cluster, ClusterAddressInfo addrInfo, Address address ) {
       try {
-        address.allocate( Component.eucalyptus.name( ) );
-        address.clearPending( );
+        Exceptions.eat( "Out of band address state change: " + addrInfo + " address=" + address );
+        address.allocate( Component.eucalyptus.name( ) ).clearPending( );
         cluster.getState( ).clearOrphan( addrInfo );
       } catch ( IllegalStateException e ) {
         LOG.error( e, e );
@@ -129,11 +128,9 @@ public abstract class AbstractSystemAddressManager {
       try {
         if( !addr.isPending( ) ) {
           addr.unassign( ).clearPending( );
-          if( addr.isSystemOwned( ) ) {
-            Addresses.getAddressManager( ).releaseSystemAddress( addr );
-          }
         }
       } catch ( Throwable t ) {
+        LOG.trace( t, t );
       }
     }
 
@@ -149,32 +146,37 @@ public abstract class AbstractSystemAddressManager {
       VmInstance vm = null;
       try {
         vm = VmInstances.getInstance( ).lookupByInstanceIp( privateIp );
-        LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + publicIp );
+        LOG.debug( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + publicIp );
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
-          vm.updatePublicAddress( publicIp );
-          LOG.trace( "Updated vm with address information: " + vm.getInstanceId( ) + " " + publicIp );
+          LOG.debug( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + publicIp );
+          return vm;
         }
       } catch ( NoSuchElementException e ) {}
-      return vm;
+      return null;
     }
     
-    private static void ensureAssigned( Address addr, VmInstance vm ) {
-      if ( !addr.isAssigned( ) && !addr.isPending( ) ) {
+    private static void ensureAllocated( Address addr, VmInstance vm ) {
+      if ( !addr.isAllocated( ) ) {
+        try {
+          addr.pendingAssignment( );
+          if ( !addr.isAssigned( ) ) {
+            try {
+              addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
+            } catch ( Throwable e1 ) {
+              LOG.debug( e1, e1 );
+            }
+          }
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1, e1 );
+        }
+      } else if ( !addr.isAssigned( ) ) {
         try {
           addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
         } catch ( Throwable e1 ) {
           LOG.debug( e1, e1 );
         }
-      }
-    }
-    
-    private static void ensureAllocated( Address addr ) {
-      if ( !addr.isAllocated( ) ) {
-        try {
-          addr.allocate( Component.eucalyptus.name( ) );
-        } catch ( Throwable e1 ) {
-          LOG.debug( e1, e1 );
-        }
+      } else {
+        LOG.debug( "Address usage checked: " + addr );
       }
     }
     
