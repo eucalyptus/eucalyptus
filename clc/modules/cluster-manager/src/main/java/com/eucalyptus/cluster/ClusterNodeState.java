@@ -80,6 +80,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
@@ -142,14 +143,17 @@ public class ClusterNodeState {
     List<ResourceToken> childTokens = Lists.newArrayList( );
     for( int index = 0; index < token.getAmount( ); index++ ) {
       ResourceToken childToken = new ResourceToken( token.getCluster( ), token.getCorrelationId( )+index, token.getUserName( ), 1, this.virtualTimer++, token.getVmType( ) );
+      NetworkToken primaryNet = childToken.getPrimaryNetwork( );
       if( token.getAddresses( ).size( ) > index ) {
         childToken.getAddresses( ).add( token.getAddresses( ).get( index ) );
       }
       if( token.getInstanceIds( ).size( ) > index ) {
         childToken.getInstanceIds( ).add( token.getInstanceIds( ).get( index ) );
       }
-      if( token.getNetworkTokens( ).size( ) > index ) {
-        childToken.getNetworkTokens( ).add( token.getNetworkTokens( ).get( index ) );
+      if( primaryNet != null ) {
+        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getUserName( ), primaryNet.getNetworkName( ), primaryNet.getVlan( ) );
+        childNet.getIndexes( ).add( primaryNet.getIndexes( ).pollFirst( ) );
+        childToken.getNetworkTokens( ).add( childNet );
       }
       EventRecord.caller( ResourceToken.class, EventType.TOKEN_CHILD, childToken.toString( ) ).info( );
       childTokens.add( childToken );

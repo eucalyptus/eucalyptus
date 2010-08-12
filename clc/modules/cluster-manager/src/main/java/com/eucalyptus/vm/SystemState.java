@@ -368,18 +368,23 @@ public class SystemState {
           notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams( ).getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
-            notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
+            try {
+              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
+            }
             networks.add( notwork );
             NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
             Networks.getInstance( ).registerIfAbsent( notwork, Networks.State.ACTIVE );
           } catch ( EucalyptusCloudException e ) {
-            LOG.error( e );
+            LOG.error( e, e );
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
             new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
-            LOG.trace( e );
+            LOG.trace( e, e );
           }
         }
       }
