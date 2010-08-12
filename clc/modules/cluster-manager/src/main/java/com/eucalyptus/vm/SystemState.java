@@ -371,7 +371,7 @@ public class SystemState {
             try {
               notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
             } catch ( Exception ex ) {
-              LOG.error( ex, ex );
+              LOG.error( ex );
               notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
             }
             networks.add( notwork );
