@@ -16,7 +16,7 @@ then
 			then
 				# we prefer the new conf file and we saved
 				# a copy of the original one
-				cp /etc/eucalyptus/eucalyptus.conf.dpkg-dist etc/eucalyptus/eucalyptus.conf
+				cp /etc/eucalyptus/eucalyptus.conf.dpkg-dist /etc/eucalyptus/eucalyptus.conf
 			fi
 		fi
 		/usr/share/eucalyptus/euca_upgrade --old / --new / --conf || true
