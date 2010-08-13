@@ -32,6 +32,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.NioBootstrap;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
+import com.eucalyptus.ws.handlers.http.NioSslHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
 
 @ConfigurableClass( root = "ws", description = "Parameters controlling the web services endpoint." )
@@ -74,7 +75,7 @@ public class ChannelUtil {
   static class NioServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline( ) throws Exception {
       final ChannelPipeline pipeline = Channels.pipeline( );
-      //pipeline.addLast("ssl", new NioSslHandler());
+      pipeline.addLast("ssl", new NioSslHandler());
       //ChannelUtil.addPipelineMonitors( pipeline );
       pipeline.addLast( "decoder", new NioHttpDecoder( ) );
       pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
