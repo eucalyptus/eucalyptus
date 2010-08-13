@@ -10,7 +10,7 @@ import com.eucalyptus.util.HasName;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "AvailabilityZonePermission" )
 public class AvailabilityZonePermission extends BaseAuthorization<HasName> implements Serializable {
   public AvailabilityZonePermission( ) {}

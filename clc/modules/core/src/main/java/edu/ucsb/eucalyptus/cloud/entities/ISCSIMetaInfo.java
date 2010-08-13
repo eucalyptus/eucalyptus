@@ -78,7 +78,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "ISCSIMetadata" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(root = "storage", description = "Storage controller ISCSI meta info", singleton=false, deferred = true)
 public class ISCSIMetaInfo extends LVMMetaInfo {
 	@ConfigurableIdentifier

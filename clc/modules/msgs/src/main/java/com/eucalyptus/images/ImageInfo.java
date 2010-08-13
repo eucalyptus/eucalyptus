@@ -104,7 +104,7 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "Images" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ImageInfo implements Image {
   @Transient
   private static Logger   LOG = Logger.getLogger( ImageInfo.class );
@@ -139,15 +139,15 @@ public class ImageInfo implements Image {
   private String          platform;
   @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "image_has_group_auth", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<ImageAuthorization> userGroups   = new HashSet<ImageAuthorization>( );
   @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "image_has_user_auth", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<ImageAuthorization> permissions  = new HashSet<ImageAuthorization>( );
   @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "image_has_product_codes", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_product_code_id" ) )
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<ProductCode>        productCodes = new HashSet<ProductCode>( );
   
   public static ImageInfo deregistered( ) {
