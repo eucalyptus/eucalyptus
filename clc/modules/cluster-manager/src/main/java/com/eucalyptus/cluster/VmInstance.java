@@ -325,7 +325,10 @@ public class VmInstance implements HasName<VmInstance> {
     m.put( "placement/availability-zone", this.getPlacement( ) );
     String dir = "";
     for ( String entry : m.keySet( ) ) {
-      if ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) continue;
+      if ( ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) 
+          || ( "ramdisk-id".equals(entry) && this.getImageInfo( ).getRamdiskId( ) == null ) ) {
+        continue;
+      }
       dir += entry + "\n";
     }
     m.put( "", dir );
