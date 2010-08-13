@@ -122,11 +122,22 @@ public abstract class AbstractSystemAddressManager {
     
     private static void markAsAllocated( Cluster cluster, ClusterAddressInfo addrInfo, Address address ) {
       try {
-        Exceptions.eat( "Out of band address state change: " + addrInfo + " address=" + address );
-        address.pendingAssignment( ).clearPending( );
-        cluster.getState( ).clearOrphan( addrInfo );
+        if( !address.isPending( ) ) {
+          for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+            if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
+              LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
+              if( !address.isAllocated( ) ) {
+                address.pendingAssignment( ).assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
+              } else {
+                address.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
+              }
+              cluster.getState( ).clearOrphan( addrInfo );
+              return;
+            }
+          }
+        }
       } catch ( IllegalStateException e ) {
-        LOG.error( e, e );
+        LOG.error( e );
       }
     }
 
