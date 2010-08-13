@@ -94,7 +94,7 @@ Package: eucalyptus-nc
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, eucalyptus-common (>= 2.0.0~), 
   apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, 
-  eucalyptus-gl (>= 2.0.0~), adduser, avahi-utils, librampart0, parted, libvirt-bin
+  eucalyptus-gl (>= 2.0.0~), adduser, avahi-utils, librampart0, parted, libvirt-bin, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl
 Replaces: eucalyptus-common
 Recommends: vlan, bridge-utils, qemu-kvm, aoetools
 Conflicts: apache2-mpm-itk, qemu (<< 0.11.0-0)
