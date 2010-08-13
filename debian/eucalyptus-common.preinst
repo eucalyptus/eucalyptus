@@ -2,9 +2,23 @@
 
 if [ "$1" = "upgrade" ];
 then
-	if dpkg --compare-versions "$2" lt 1.6
+	if dpkg --compare-versions "$2" lt "2.0"
 	then
 		cp -a /etc/eucalyptus/eucalyptus.conf /etc/eucalyptus/eucalyptus.conf.old
+		CWD=`pwd`
+		DATESTR=`date +%s`
+		echo /root/eucalyptus.backup.$DATESTR > /tmp/eucaback.dir
+		mkdir -p /root/eucalyptus.backup.$DATESTR
+		cd /root/eucalyptus.backup.$DATESTR
+		EUCABACKUPS=""
+		for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version $EUCADIR/usr/share/eucalyptus/
+		do
+		    if [ -e $i ]; then
+			EUCABACKUPS="$EUCABACKUPS $i"
+		    fi
+		done
+		tar cf -  $EUCABACKUPS 2>/dev/null | tar xf - 2>/dev/null
+		cd $CWD
 	fi
 fi
 

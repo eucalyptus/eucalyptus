@@ -1,5 +1,4 @@
 /etc/eucalyptus/eucalyptus.conf
-/var/lib/eucalyptus/keys
 /var/log/eucalyptus
 /var/run/eucalyptus
 /usr/share/eucalyptus/add_key.pl

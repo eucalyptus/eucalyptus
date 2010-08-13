@@ -19,7 +19,14 @@ then
 				cp /etc/eucalyptus/eucalyptus.conf.dpkg-dist /etc/eucalyptus/eucalyptus.conf
 			fi
 		fi
-		/usr/share/eucalyptus/euca_upgrade --old / --new / --conf || true
+		if [ -f /tmp/eucaback.dir ]; then
+		    BACKDIR=`cat /tmp/eucaback.dir`
+		    if [ -d "$BACKDIR" ]; then
+			/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+		    fi
+		fi
+
+#		/usr/share/eucalyptus/euca_upgrade --old / --new / --conf || true
 	else
 		euca_conf -d / -user eucalyptus -bridge br0 --hypervisor kvm --instances /var/lib/eucalyptus/instances --dhcpd /usr/sbin/dhcpd3 --dhcp_user dhcpd
 	fi
