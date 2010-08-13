@@ -152,9 +152,9 @@ public abstract class AbstractSystemAddressManager {
       VmInstance vm = null;
       try {
         vm = VmInstances.getInstance( ).lookupByInstanceIp( privateIp );
-        LOG.debug( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + publicIp );
+        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
-          LOG.debug( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + publicIp );
+          LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
           return vm;
         }
       } catch ( NoSuchElementException e ) {}
@@ -162,10 +162,10 @@ public abstract class AbstractSystemAddressManager {
     }
     
     private static void ensureAllocated( Address addr, VmInstance vm ) {
-      if ( !addr.isAllocated( ) ) {
+      if ( !addr.isAllocated( ) && !addr.isPending( ) ) {
         try {
-          addr.pendingAssignment( );
-          if ( !addr.isAssigned( ) ) {
+          if ( !addr.isAssigned( ) && !addr.isPending( ) ) {
+            addr.pendingAssignment( );
             try {
               addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
             } catch ( Throwable e1 ) {
