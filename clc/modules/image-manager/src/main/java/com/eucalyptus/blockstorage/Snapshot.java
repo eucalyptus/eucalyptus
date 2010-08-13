@@ -77,7 +77,7 @@ import edu.ucsb.eucalyptus.cloud.state.State;
 
 @Entity
 @PersistenceContext(name="eucalyptus_images")
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Snapshot extends AbstractIsomorph {
   @Column(name="parentvolume")
   private String parentVolume;

@@ -84,7 +84,7 @@ import java.util.List;
 @Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Buckets" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class BucketInfo {
 	@Id
 	@GeneratedValue
@@ -139,7 +139,7 @@ public class BucketInfo {
 			joinColumns = { @JoinColumn( name = "bucket_id" ) },
 			inverseJoinColumns = @JoinColumn( name = "grant_id" )
 	)
-	@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private List<GrantInfo> grants = new ArrayList<GrantInfo>();
 
 	public BucketInfo() {

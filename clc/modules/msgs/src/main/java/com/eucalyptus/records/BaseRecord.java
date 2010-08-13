@@ -30,7 +30,7 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
 @DiscriminatorColumn( name = "record_class", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "base" )

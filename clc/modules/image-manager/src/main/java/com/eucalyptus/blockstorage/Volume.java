@@ -78,7 +78,7 @@ import edu.ucsb.eucalyptus.cloud.state.State;
 
 @Entity
 @PersistenceContext(name="eucalyptus_images")
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Volume extends AbstractIsomorph {
 
   @Column(name="size")

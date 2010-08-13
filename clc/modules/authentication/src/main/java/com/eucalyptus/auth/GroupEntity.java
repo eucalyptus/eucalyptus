@@ -93,7 +93,7 @@ import edu.emory.mathcs.backport.java.util.Collections;
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_groups" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class GroupEntity extends AbstractPersistent implements Group {
   @Transient
   private static Logger   LOG      = Logger.getLogger( GroupEntity.class );
@@ -102,12 +102,12 @@ public class GroupEntity extends AbstractPersistent implements Group {
   
   @ManyToMany( cascade = CascadeType.PERSIST )
   @JoinTable( name = "auth_group_has_userList", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<UserEntity>        userList = new ArrayList<UserEntity>( );
   
   @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "auth_group_has_authorization", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_authorization_id" ) )
-  @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<BaseAuthorization> authList = new ArrayList<BaseAuthorization>( );
   
   @Transient
