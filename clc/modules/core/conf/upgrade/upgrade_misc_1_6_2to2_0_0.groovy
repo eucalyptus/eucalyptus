@@ -21,6 +21,7 @@ import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.Groups;
+import com.eucalyptus.blockstorage.Volume;
 
 class upgrade_misc_162to2_0_0 extends AbstractUpgradeScript {
 	static final String FROM_VERSION = "1.6.2";
@@ -80,5 +81,12 @@ class upgrade_misc_162to2_0_0 extends AbstractUpgradeScript {
 				dbGen.rollback();
 			}
 		}
+		//hack to update remote dev string (CLC)
+		EntityWrapper dbVol = new EntityWrapper("eucalyptus_images");
+		List<Volume> volumes = dbVol.query(new Volume());
+		for (Volume vol : volumes) {
+			vol.setRemoteDevice(null);
+		}
+		dbVol.commit();
 	}
 }
