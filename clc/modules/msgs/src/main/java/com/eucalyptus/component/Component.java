@@ -203,8 +203,10 @@ public class Component implements ComponentInformation, HasName<Component> {
   public String toString( ) {
     Record rec = EventRecord.caller( Component.class, EventType.COMPONENT_INFO, this.getName( ), "enabled", this.isEnabled( ), "local", this.isLocal( ),
                                           "state", this.getLifecycle( ).getState( ) );
-    for ( ConfigResource cfg : this.getConfiguration( ).getResource( ).getConfigurations( ) ) {
-      rec.next( ).append( ConfigResource.class, EventType.COMPONENT_INFO, this.getName( ), "->" + cfg.getUrl( ) );
+    if( this.getConfiguration( ).getResource( ) != null ) {
+      for ( ConfigResource cfg : this.getConfiguration( ).getResource( ).getConfigurations( ) ) {
+        rec.next( ).append( ConfigResource.class, EventType.COMPONENT_INFO, this.getName( ), "->" + cfg.getUrl( ) );
+      }
     }
     for ( Bootstrapper b : this.configuration.getBootstrappers( ) ) {
       rec.next( ).append( Bootstrapper.class, EventType.COMPONENT_INFO, this.getName( ), "->" + b.getClass( ).getSimpleName( ) );
