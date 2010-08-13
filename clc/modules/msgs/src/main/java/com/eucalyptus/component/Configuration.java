@@ -86,7 +86,7 @@ public class Configuration implements ComponentInformation {
         try {
           uri = String.format( this.getUriPattern( ), host, port );
         } catch ( MissingFormatArgumentException e ) {
-          uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ) );
+          uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ).replaceAll( "RequestQueue", "" ) );
         }
         try {
           URI u = new URI( uri );
