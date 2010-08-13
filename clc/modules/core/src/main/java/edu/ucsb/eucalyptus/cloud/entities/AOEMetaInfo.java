@@ -77,7 +77,7 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "AOEMetaInfo" )
 @Entity
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 @ConfigurableClass(root = "storage", description = "Storage controller AOE meta info", singleton=false, deferred = true)
 public class AOEMetaInfo extends LVMMetaInfo {
 	@ConfigurableIdentifier

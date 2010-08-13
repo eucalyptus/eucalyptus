@@ -93,7 +93,7 @@ import com.eucalyptus.records.EventType;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "addresses" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Address implements HasName<Address> {
   public enum State {
     broken, unallocated, allocated, assigned, impending;

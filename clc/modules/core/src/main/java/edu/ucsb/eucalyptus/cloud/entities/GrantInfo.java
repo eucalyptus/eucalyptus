@@ -85,7 +85,7 @@ import com.eucalyptus.auth.Users;
 @Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Grants" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class GrantInfo {
 	@Id
 	@GeneratedValue

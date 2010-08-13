@@ -72,7 +72,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_dns")
 @Table( name = "SOARecords" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class SOARecordInfo {
     @Id
     @GeneratedValue
