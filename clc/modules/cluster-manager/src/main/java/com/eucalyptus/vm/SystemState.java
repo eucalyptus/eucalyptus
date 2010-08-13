@@ -101,7 +101,6 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.eucalyptus.ws.util.Messaging;
 import com.google.common.base.Function;
