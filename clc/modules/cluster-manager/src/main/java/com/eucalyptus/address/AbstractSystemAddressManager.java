@@ -110,6 +110,8 @@ public abstract class AbstractSystemAddressManager {
           } catch ( Exception ex ) {
             LOG.error( ex );
           }
+        } else if( addr != null && Address.Transition.system.equals( addr.getTransition( ) ) ) {
+          cluster.getState( ).handleOrphan( addrInfo );
         } else if( addr == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );
           Helper.clearVmState( addrInfo );
