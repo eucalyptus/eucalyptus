@@ -203,15 +203,25 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
       MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
       try {
         RTYPE msg = ( RTYPE ) response.getMessage( );
-        if ( !msg.get_return( ) ) {
-          throw new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
-        }
-        this.verify( msg );
+        LOG.trace( msg.toString( ) );
         try {
-          this.successCallback.apply( msg );
+          if ( !msg.get_return( ) ) {
+            Exception ex = new EucalyptusClusterException( LogUtil.dumpObject( msg ) );
+            this.fail( ex );
+            this.failCallback.failure( this, ex );
+            this.queueResponse( ex );
+          } else {
+            try {
+              this.verify( msg );
+              this.successCallback.apply( msg );
+            } catch ( Throwable ex ) {
+              LOG.error( ex , ex );
+            }
+            this.queueResponse( msg );
+          }
         } catch ( Throwable e1 ) {
-          LOG.debug( e1, e1 );
-          this.failCallback.failure( this, e1 );
+          LOG.error( e1, e1 );
+          throw e1;
         }
       } catch ( Throwable e1 ) {
         try {
@@ -234,9 +244,6 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
         }
       }
     }
-    final MappingHttpMessage httpResponse = ( MappingHttpMessage ) e.getMessage( );
-    final EucalyptusMessage reply = ( EucalyptusMessage ) httpResponse.getMessage( );
-    this.queueResponse( reply );
     ctx.getChannel( ).close( );
   }
   
@@ -362,10 +369,10 @@ public abstract class QueuedEventCallback<TYPE extends BaseMessage, RTYPE extend
     } catch ( Throwable e ) {
       try {
         this.fail( e );
-      } catch ( Exception e1 ) {
+        this.failCallback.failure( this, e );
+      } catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
       }
-      this.failCallback.failure( this, e );
       this.queueResponse( e );
       this.connectFuture.addListener( ChannelFutureListener.CLOSE );
     }

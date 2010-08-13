@@ -20,7 +20,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       try {
         if ( cluster.equals( addr.getCluster( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
       } catch ( IllegalStateException e ) {
-        LOG.error( e , e );
+        LOG.trace( e , e );
       }
     }
     if ( count != 0 ) {
@@ -58,13 +58,6 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       if( !addr.isAssigned( ) && !addr.isPending() && addr.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( addr.getInstanceId() ) ) {
         Addresses.release( addr );
       }
-    }
-  }
-  @Override public void releaseSystemAddress( Address addr ) {
-    try {
-      addr.release( );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
     }
   }
   

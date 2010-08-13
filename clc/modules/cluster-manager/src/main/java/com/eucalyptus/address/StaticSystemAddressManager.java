@@ -85,6 +85,4 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     }
   }
 
-  @Override public void releaseSystemAddress( Address addr )  {}
-
 }

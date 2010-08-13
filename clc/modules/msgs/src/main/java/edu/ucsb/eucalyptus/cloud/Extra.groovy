@@ -655,6 +655,6 @@ public class NodeInfo implements Comparable {
   
   @Override
   public String toString( ) {
-    return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag} iqn=${iqn}";
+    return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag}";
   }
 }

@@ -65,6 +65,7 @@ package com.eucalyptus.address;
 
 import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -175,8 +176,10 @@ public class Address implements HasName<Address> {
                                                                     }
                                                                   };
   @Transient
-  private volatile SplitTransition        transition;
-  
+  private volatile SplitTransition             transition;
+  @Transient
+  private volatile String                      transitionId = PENDING_ASSIGNMENT;
+
   public Address( ) {}
   
   public Address( final String name ) {
@@ -242,6 +245,7 @@ public class Address implements HasName<Address> {
   
   private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, SplitTransition transition ) {
     this.transition = transition;
+    this.transitionId = UUID.randomUUID( ).toString( );
     EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, this.state.getReference( ), this.toString( ) ).debug( );
     if ( !this.state.compareAndSet( expectedState, newState, expectedMark, newMark ) ) {
       throw new IllegalStateException( String.format( "Cannot mark address as %s[%s.%s->%s.%s] when it is %s.%s: %s", transition.getName( ), expectedState,
@@ -327,7 +331,7 @@ public class Address implements HasName<Address> {
                          
                          @Override
                          public void bottom( ) {
-                           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGN, "user=" + Address.this.userId )
+                           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_RELEASE, "user=" + Address.this.userId )
                            .append( "address=" + Address.this.name, "instance=" + Address.this.instanceId, "instance-address=" )
                            .append( Address.this.instanceAddress, "SYSTEM" ).info( );
                            Address.this.instanceId = UNASSIGNED_INSTANCEID;
@@ -361,7 +365,7 @@ public class Address implements HasName<Address> {
   }
   
   public Address pendingAssignment( ) {
-    this.transition( State.unallocated, State.impending, false, true, new SplitTransition( Transition.allocating ) {
+    this.transition( State.unallocated, State.impending, false, true, new SplitTransition( Transition.system ) {
       public void top( ) {
         Address.this.instanceId = PENDING_ASSIGNMENT;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
@@ -375,7 +379,12 @@ public class Address implements HasName<Address> {
             LOG.debug( e );
           }
         }
+        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_PENDING, "user="+Address.this.userId ) 
+        .append( "address="+Address.this.name, "instance="+Address.this.instanceId, "instance-address=" )
+        .append( Address.this.instanceAddress, "SYSTEM" ).info( );
       }
+      @Override
+      public void bottom( ) {}      
     } );
     return this;
   }
@@ -450,6 +459,7 @@ public class Address implements HasName<Address> {
         this.transition.bottom( );
       } finally {
         this.transition = QUIESCENT;
+        this.transitionId = PENDING_ASSIGNMENT;
       }
     }
     return this;
@@ -533,7 +543,11 @@ public class Address implements HasName<Address> {
   
   @Override
   public String toString( ) {
-    return LogUtil.dumpObject( this ).replaceAll( "\\w*=\\s", "" );
+    return "Address " + this.name + " " + this.cluster + " " + 
+    (this.isAllocated( )?this.userId + " ":"") + 
+    (this.isAssigned( )? this.instanceId + " " + this.instanceAddress + " ":"") + " " + 
+    this.state.getReference( ) + (this.state.isMarked( )?":pending":"") +
+    this.transition;
   }
   
   @Override
@@ -580,8 +594,8 @@ public class Address implements HasName<Address> {
     }
     @Override
     public String toString( ) {
-      return String.format( "[SplitTransition previous=%s, transition=%s, next=%s, pending=%s]", this.previous, this.t, Address.this.state.getReference( ),
-                            Address.this.state.isMarked( ) );
+      return String.format( "[SplitTransition previous=%s, transition=%s, next=%s, pending=%s, transitionId=%s]", this.previous, this.t, Address.this.state.getReference( ),
+                            Address.this.state.isMarked( ), Address.this.transitionId );
     }
   }
 

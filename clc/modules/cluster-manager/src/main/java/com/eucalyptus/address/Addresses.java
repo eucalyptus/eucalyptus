@@ -73,6 +73,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.SuccessCallback;
+import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -213,61 +214,26 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   
   public static void release( final Address addr ) {
     try {
-      addr.clearPending( );//clear the state here irregardless
-    } catch ( IllegalStateException e1 ) {
-    } finally {
-      try {
-        if ( addr.isAssigned( ) ) {
-          SuccessCallback release = getReleaseCallback( addr );
-          AddressCategory.unassign( addr ).then( release ).dispatch( addr.getCluster( ) );
-        } else {
-          try {
-            if( !addr.isSystemOwned( ) ) {
-              addr.release( );
-            } else {
-              Addresses.getAddressManager( ).releaseSystemAddress( addr );
-            }
-          } catch ( Throwable e ) {
-            LOG.debug( e, e );
-          }
-        }
-      } catch ( IllegalStateException e ) {
-        LOG.debug( e, e );
+      final String instanceId = addr.getInstanceId( );
+      if ( addr.isAssigned( ) ) {
+        addr.unassign( ).getCallback( ).then( new UnconditionalCallback( ) {
+          @Override
+          public void apply( ) {
+            try {
+              final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
+              Addresses.system( vm );
+            } catch ( NoSuchElementException ex ) {
+                                              }
+                                          }
+        } ).dispatch( addr.getCluster( ) );
+      } else {
+        addr.release( );
       }
+    } catch ( IllegalStateException e ) {
+      LOG.debug( e, e );
     }
   }
   
-  private static SuccessCallback getReleaseCallback( final Address addr ) {
-    final String instanceId = addr.getInstanceId( );
-    try {
-      final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
-      return new SuccessCallback( ) {
-        public void apply( BaseMessage response ) {
-          try {
-            if( !addr.isSystemOwned( ) ) {
-              addr.release( );
-            } else {
-              Addresses.getAddressManager( ).releaseSystemAddress( addr );
-            }
-          } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
-            LOG.debug( e, e );
-          }
-          Addresses.system( vm );
-        }
-      };
-    } catch ( NoSuchElementException e ) {
-      return new SuccessCallback( ) {
-        public void apply( BaseMessage response ) {
-          if( !addr.isSystemOwned( ) ) {
-            addr.release( );
-          } else {
-            Addresses.getAddressManager( ).releaseSystemAddress( addr );
-          }
-        }
-      };
-    }
-  }
-
   @Override public void advertiseEvent( Event event ) {}
 
   @Override public void fireEvent( Event event ) {
