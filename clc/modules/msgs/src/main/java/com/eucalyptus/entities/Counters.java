@@ -82,7 +82,7 @@ import com.eucalyptus.util.Tx;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "counters" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class Counters extends AbstractPersistent implements Serializable {
   private static Logger   LOG = Logger.getLogger( Counters.class );
   private static Counters singleton;

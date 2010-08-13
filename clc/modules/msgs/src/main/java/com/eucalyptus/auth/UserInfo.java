@@ -78,7 +78,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "Users" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class UserInfo {
   
   @Id
