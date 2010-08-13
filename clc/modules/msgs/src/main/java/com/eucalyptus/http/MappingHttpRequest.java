@@ -119,18 +119,6 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     }
   }
   
-  public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final ServiceEndpoint serviceEndpoint, final Object source ) {
-    super( httpVersion );
-    this.method = method;
-    this.uri = serviceEndpoint.getUri( ).toString( );
-    this.servicePath = serviceEndpoint.getServicePath( );
-    this.query = null;
-    this.parameters = null;
-    this.formFields = null;
-    super.setMessage( source );
-    this.addHeader( HttpHeaders.Names.HOST, serviceEndpoint.getUri( ).getHost( ) + ":" + serviceEndpoint.getUri( ).getPort( ) );
-  }
-  
   public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final String host, final int port, final String servicePath,
                              final Object source ) {
     super( httpVersion );

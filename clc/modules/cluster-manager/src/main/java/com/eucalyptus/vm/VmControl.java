@@ -81,7 +81,6 @@ import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
 import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
