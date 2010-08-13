@@ -300,6 +300,8 @@ public class Address implements HasName<Address> {
     };
     if( State.impending.equals( this.state.getReference( ) ) ) {
       this.transition( State.impending, State.unallocated, true, true, release );
+    } else if( State.unallocated.equals( this.state.getReference( ) ) ) {
+      return this;
     } else {
       this.transition( State.allocated, State.unallocated, false, true, release );
     }
