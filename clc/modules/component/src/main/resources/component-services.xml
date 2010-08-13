@@ -74,9 +74,9 @@
 
 	<euca:endpoint name="ComponentWS" connector-ref="eucaws"
 		address="http://127.0.0.1:${euca.ws.port}/services/Component" />
-	<euca:endpoint name="ComponentInternalWS"
-		connector-ref="eucaws" address="http://127.0.0.1:${euca.ws.port}/internal/ComponentInternal"
-		synchronous="true" />
+  <euca:endpoint name="ComponentInternalWS"
+    connector-ref="eucaws" address="http://127.0.0.1:${euca.ws.port}/internal/ComponentInternal"
+    synchronous="true" />
 	<endpoint name="ComponentInternalVM" address="vm://ComponentInternal"
 		synchronous="true" />
 </mule>

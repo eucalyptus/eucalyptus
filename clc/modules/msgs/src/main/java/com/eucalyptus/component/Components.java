@@ -95,8 +95,13 @@ public class Components {
   
   public static <T extends ComponentInformation> T lookup( Class<T> type, String name ) throws NoSuchElementException {
     if ( !contains( type, name ) ) {
-      throw new NoSuchElementException( "Missing entry for component '" + name + "' info type: " + type.getSimpleName( ) + " ("
-                                        + getRealType( type ).getCanonicalName( ) );
+      try {
+        Components.create( name, null );
+        return Components.lookup( type, name );
+      } catch ( ServiceRegistrationException ex ) {
+        throw new NoSuchElementException( "Missing entry for component '" + name + "' info type: " + type.getSimpleName( ) + " ("
+                                          + getRealType( type ).getCanonicalName( ) );
+      }
     } else {
       return ( T ) Components.lookup( type ).get( name );
     }
@@ -146,7 +151,9 @@ public class Components {
                         + "/"
                         + System.getProperty( "euca." + comp.getPeer( ).name( ) + ".remote" ) ).append( "\n" );
             buf.append( "-> Configuration:      "
-                        + comp.getConfiguration( ).getResource( ).getOrigin( ) ).append( "\n" );
+                        + ( comp.getConfiguration( ).getResource( ) != null
+                          ? comp.getConfiguration( ).getResource( ).getOrigin( )
+                          : "null" ) ).append( "\n" );
             for ( Bootstrapper b : comp.getConfiguration( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
@@ -268,10 +275,11 @@ public class Components {
             buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
                                        comp.getName( ), comp.isEnabled( ), comp.isLocal( ), comp.isRunning( ) ) ).append( "\n" );
             buf.append( String.format( "%s -> configuration:        %s",
-                                       comp.getName( ), comp.getConfiguration( ).getResource( ).getOrigin( ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> bootstrappers:        %s",
-                                       comp.getName( ),
-                                       Iterables.transform( comp.getConfiguration( ).getBootstrappers( ), bootstrapperToString ).toString( ) ) ).append( "\n" );
+                                       comp.getName( ), ( comp.getConfiguration( ).getResource( ) != null
+                                         ? comp.getConfiguration( ).getResource( ).getOrigin( )
+                                         : "null" ) ) ).append( "\n" );
+            buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),
+                                       Iterables.transform( comp.getConfiguration( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
             return buf.toString( );
           }
         };
