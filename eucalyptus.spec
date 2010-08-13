@@ -336,7 +336,7 @@ then
 	if [ -f /tmp/eucaback.dir ]; then
 	    BACKDIR=`cat /tmp/eucaback.dir`
 	    if [ -d "$BACKDIR" ]; then
-		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys >/dev/null 2>&1
 		/usr/sbin/euca_conf -setup
 	    fi
 	fi
@@ -361,7 +361,7 @@ then
 		    rm -f /usr/share/eucalyptus/asm2-2.2.3.jar
 		fi
 	    fi
-	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db >/dev/null 2>&1
 	    /usr/sbin/euca_conf -setup
 	fi
     fi
