@@ -176,6 +176,8 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
 
   @Override
   public void fail( Throwable e ) {
+    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
     for( String addr : this.token.getAddresses() ) {
       try {
         LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
@@ -202,8 +204,6 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     } catch ( Throwable e2 ) {
       LOG.debug( e2, e2 );
     }
-    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
   }
 
 

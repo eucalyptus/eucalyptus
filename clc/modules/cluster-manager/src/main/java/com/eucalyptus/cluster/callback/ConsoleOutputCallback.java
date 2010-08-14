@@ -96,7 +96,7 @@ public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputT
     reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
     reply.setTimestamp( new Date( ) );
-    reply.setOutput( new String( Base64.encode( vm.getConsoleOutput( ).toString( ).getBytes( ) ) ) );
+    reply.setOutput( vm.getConsoleOutputString( ) );
     ServiceContext.dispatch( "ReplyQueue", reply );
   }
 

@@ -103,7 +103,7 @@ public abstract class AbstractSystemAddressManager {
         }
       } else {
         if( addr != null && addr.isAssigned( ) && !addr.isPending( ) ) {
-          Helper.clearAddressCachedState( addr );
+          cluster.getState( ).handleOrphan( addrInfo );
         } else if( addr != null && !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) ) {
           try {
             addr.release( );
@@ -203,7 +203,7 @@ public abstract class AbstractSystemAddressManager {
         String vmList = "";
         for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
           if ( addrInfo.getAddress( ).equals( v.getPublicAddress( ) ) && ( VmState.PENDING.equals( v.getState( ) ) || VmState.RUNNING.equals( v.getState( ) ) ) ) {
-            vmList += " " + v.getInstanceId( );
+            vmList += " " + v.getInstanceId( ) + "(" + v.getState( ) + ")";
           }
         }
         LOG.error( "Found " + vmCount + " vms with the same address: " + addrInfo + " -> " + vmList );
