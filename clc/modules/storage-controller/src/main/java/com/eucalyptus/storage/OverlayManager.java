@@ -781,6 +781,7 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
 			try {
+				LOG.info("Scanning volume groups. This might take a little while...");
 				volumeManager.exportVolume(foundVolumeInfo);
 			} catch(EucalyptusCloudException ex) {
 				LOG.error("Unable to reload volume: " + foundVolumeInfo.getVolumeId() + ex);
