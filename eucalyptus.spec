@@ -32,6 +32,8 @@
 %global euca_hypervisor kvm
 %global euca_bridge  br0
 %global euca_java    java-devel >= 1:1.6.0
+%global euca_iscsi_client iscsi-initiator-utils
+%global euca_iscsi_server scsi-target-utils
 %endif
 
 %if %is_centos
