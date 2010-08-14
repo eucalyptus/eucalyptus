@@ -186,7 +186,7 @@ public class SystemState {
         }
         return;
       } catch ( NoSuchElementException e1 ) {
-        if ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) {
+        if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
           SystemState.restoreInstance( originCluster, runVm );
         }
         return;
