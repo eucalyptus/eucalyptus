@@ -128,7 +128,9 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
       return;
     } 
     try {
-      if ( reply != null && !reply.getVms( ).isEmpty( ) ) {
+      if ( reply != null && reply.getVms( ).isEmpty( ) ) {
+        this.fail( new EucalyptusClusterException( "Failed to run the requested instances because the request was rejected: " + token.toString( ) ) );
+      } else if ( reply != null && !reply.getVms( ).isEmpty( ) ) {
         Set<String> liveIds = Sets.newHashSet( );
         for ( VmInfo vmInfo : reply.getVms() ) {
           liveIds.add( vmInfo.getInstanceId( ) );
