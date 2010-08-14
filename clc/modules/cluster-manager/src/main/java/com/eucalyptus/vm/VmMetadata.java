@@ -79,7 +79,7 @@ public class VmMetadata {
       return "dynamic\nuser-data\nmeta-data".getBytes( );
     }
     for ( VmInstance vm : VmInstances.getInstance().listValues() ) {
-      if ( vmIp.equals( vm.getPrivateAddress( ) ) || vmIp.equals( vm.getPublicAddress( ) ) ) {
+      if ( VmState.RUNNING.equals( vm.getState( ) ) && ( vmIp.equals( vm.getPrivateAddress( ) ) || vmIp.equals( vm.getPublicAddress( ) ) ) ) {
         if ( url.matches( "user-data[/]*" ) ) {
           return vm.getUserData( );
         } else if ( url.matches( "dynamic[/]*" ) ) {

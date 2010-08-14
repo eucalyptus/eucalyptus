@@ -75,6 +75,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Configurations;
 import com.eucalyptus.records.EventClass;
@@ -445,8 +446,12 @@ public class VmInstance implements HasName<VmInstance> {
     return keyInfo;
   }
   
+  public String getConsoleOutputString( ) {
+    return new String( Base64.encode( this.consoleOutput.toString( ).getBytes( ) ) );
+  }
+
   public StringBuffer getConsoleOutput( ) {
-    return consoleOutput;
+    return this.consoleOutput;
   }
   
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
