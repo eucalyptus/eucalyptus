@@ -543,7 +543,11 @@ public class Address implements HasName<Address> {
     this.instanceId = instanceId;
   }
   
-  @Override
+  public void setName(String name) {
+	this.name = name;
+  }
+
+@Override
   public String toString( ) {
     return "Address " + this.name + " " + this.cluster + " " + 
     (this.isAllocated( )?this.userId + " ":"") + 
