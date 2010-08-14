@@ -15,6 +15,8 @@
 %global euca_libcurl libcurl-devel
 %global euca_bridge  br0
 %global euca_java    java-sdk >= 1.6.0
+%global euca_iscsi_client open-iscsi
+%global euca_iscsi_server tgt
 %global euca_build_req vlan
 %endif
 %if %is_centos
@@ -22,6 +24,8 @@
 %global euca_hypervisor xen
 %global euca_bridge  xenbr0
 %global euca_java    java-sdk >= 1.6.0
+%global euca_iscsi_client iscsi-initiator-utils
+%global euca_iscsi_server scsi-target-utils
 %endif
 %if %is_fedora
 %global euca_libvirt libvirt
@@ -39,8 +43,8 @@ Version:       main
 Release:       1
 License:       GPLv3
 Group:         Applications/System
-BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
-Requires:      %{euca_build_req}
+BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
+Requires:      %{euca_build_req}, perl-Crypt-OpenSSL-RSA, perl-Crypt-OpenSSL-Random
 
 Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-%{version}.tar.gz
 URL:           http://open.eucalyptus.com
@@ -85,7 +89,7 @@ cloud controller.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2, vblade
+Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
 Group:        Applications/System
 
 %description sc
@@ -129,7 +133,7 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus = main, eucalyptus-gl = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}
+Requires:     eucalyptus = main, eucalyptus-gl = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}, %{euca_iscsi_client}
 Group:        Applications/System
 
 %description nc
