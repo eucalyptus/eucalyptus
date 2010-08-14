@@ -63,16 +63,23 @@
  */
 package com.eucalyptus.cluster.callback;
 
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -121,11 +128,39 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
       return;
     } 
     try {
-      if ( reply != null && reply.get_return() ) {
+      if ( reply != null && !reply.getVms( ).isEmpty( ) ) {
+        Set<String> liveIds = Sets.newHashSet( );
         for ( VmInfo vmInfo : reply.getVms() ) {
-          VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
-          vm.updateAddresses( vmInfo.getNetParams().getIpAddress(), vmInfo.getNetParams().getIgnoredPublicIp() );
-          vm.clearPending( );
+          liveIds.add( vmInfo.getInstanceId( ) );
+          try {
+            VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
+            vm.updateAddresses( vmInfo.getNetParams().getIpAddress(), vmInfo.getNetParams().getIgnoredPublicIp() );
+            vm.clearPending( );
+          } catch ( Throwable ex ) {
+            Exceptions.eat( "UNIDENTIFIED VM: " + vmInfo.toString( ) );
+          }
+        }
+        Set<String> requestIds = Sets.newHashSet( token.getInstanceIds( ) );
+        requestIds.removeAll( liveIds );
+        for( String id : requestIds ) {
+          int idx = token.getInstanceIds( ).indexOf( id );
+          try {
+            VmInstance vm = VmInstances.getInstance().lookup( id );
+            vm.clearPending( );
+            vm.setState( VmState.TERMINATED, Reason.FAILED, "This instance failed to be run by the CC." );
+            LOG.error( "Failed virtual machine: " + vm.toString( ) );
+          } catch ( Throwable ex ) {
+            LOG.trace( "Failed virtual machine: " + id );
+          }          
+          if( idx > 0 && token.getAddresses( ).size( ) > idx ) {
+            try {
+              String addr = token.getAddresses( ).get( idx );
+              LOG.warn( "Failed virtual machine: " + id + " releasing address: " + addr ); 
+              Addresses.getInstance( ).lookup( addr ).release( );
+            } catch ( Throwable ex ) {
+              LOG.error( ex , ex );
+            }
+          }
         }
       } else {
         this.fail( new EucalyptusClusterException( "RunInstances returned false." + this.getRequest( ) ) );
