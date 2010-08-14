@@ -178,6 +178,10 @@ public class OverlayManager implements LogicalStorageManager {
 		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
 	}
 
+	private String scanVolumeGroups() throws ExecutionException {
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgscan"});
+	}
+
 	private String createLogicalVolume(String vgName, String lvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-l", "100%FREE", vgName});
 	}
@@ -770,6 +774,11 @@ public class OverlayManager implements LogicalStorageManager {
 			}
 		}
 		//now enable them
+		try {
+			scanVolumeGroups();
+		} catch (ExecutionException e) {
+			LOG.error(e);
+		}
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
 			try {
 				volumeManager.exportVolume(foundVolumeInfo);
