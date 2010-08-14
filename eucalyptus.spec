@@ -454,15 +454,15 @@ then
 	fi
 fi
 %endif
-%if %is_suse
-if [ -e /etc/PolicyKit/PolicyKit.conf ]; 
-then
-	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
-	then
-		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalyptus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
-	fi
-fi
-%endif
+#%if %is_suse
+#if [ -e /etc/PolicyKit/PolicyKit.conf ]; 
+#then
+#	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
+#	then
+#		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalyptus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
+#	fi
+#fi
+#%endif
 #if [ "$1" = "2" ];
 #then
 #    if [ -f /tmp/eucaback.dir ]; then
