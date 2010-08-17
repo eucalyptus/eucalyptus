@@ -2,5 +2,5 @@ name=walrus
 euca.model.walrus=walrus-model.xml
 euca.model.walrus.services=walrus-services.xml
 euca.url.local=vm://BukkitInternal
-euca.url.pattern=http://%s:%d/internal/%s
+euca.url.pattern=http://%s:%d/internal/WalrusInternal
 euca.url.port=8773
