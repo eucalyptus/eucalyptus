@@ -512,7 +512,8 @@ doDetachVolume (	struct nc_state_t *nc,
 			char *volumeId,
 			char *remoteDev,
 			char *localDev,
-			int force)
+			int force,
+                        int grab_inst_sem)
 {
     int ret = OK;
     ncInstance * instance;
@@ -524,9 +525,11 @@ doDetachVolume (	struct nc_state_t *nc,
     if (ret)
         return ret;
 
-    sem_p (inst_sem); 
+    if (grab_inst_sem)
+        sem_p (inst_sem); 
     instance = find_instance(&global_instances, instanceId);
-    sem_v (inst_sem);
+    if (grab_inst_sem)
+        sem_v (inst_sem);
     if ( instance == NULL ) 
         return NOT_FOUND;
 
@@ -640,9 +643,11 @@ doDetachVolume (	struct nc_state_t *nc,
     if (ret==OK) {
         ncVolume * volume;
 
-        sem_p (inst_sem);
+        if (grab_inst_sem)
+            sem_p (inst_sem);
         volume = free_volume (instance, volumeId, remoteDev, localDevReal);
-        sem_v (inst_sem);
+        if (grab_inst_sem)
+            sem_v (inst_sem);
         if ( volume == NULL ) {
             logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");
             return ERROR;
