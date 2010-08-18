@@ -206,7 +206,6 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/share/eucalyptus/connect_iscsitarget.pl
 /usr/share/eucalyptus/disconnect_iscsitarget.pl
 /usr/share/eucalyptus/get_iscsitarget.pl
-/usr/sbin/euca-add-group
 /usr/sbin/euca-add-user
 /usr/sbin/euca-add-user-group
 /usr/sbin/euca-delete-user
@@ -215,7 +214,6 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/sbin/euca-deregister-storage-controller
 /usr/sbin/euca-deregister-walrus
 /usr/sbin/euca-describe-clusters
-/usr/sbin/euca-describe-groups
 /usr/sbin/euca-describe-properties
 /usr/sbin/euca-describe-storage-controllers
 /usr/sbin/euca-describe-user-groups
