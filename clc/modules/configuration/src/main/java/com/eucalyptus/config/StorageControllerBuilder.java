@@ -47,8 +47,6 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
     return super.checkAdd( name, host, port );
   }
 
-  
-  
   @Override
   public List<StorageControllerConfiguration> list( ) throws ServiceRegistrationException {
     try {
@@ -64,12 +62,14 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   }
 
   @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
+    super.fireStop( config );
+  }
   
   
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.isLocal( ) ) {
+    if ( Components.delegate.eucalyptus.isLocal( ) ) {
       java.lang.System.setProperty( "euca.storage.name", config.getName( ) );
       LOG.info( LogUtil.subheader( "Setting euca.storage.name=" + config.getName( ) + " for: " + LogUtil.dumpObject( config ) ) );
     }

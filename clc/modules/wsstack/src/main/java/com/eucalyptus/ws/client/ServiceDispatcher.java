@@ -1,6 +1,7 @@
 package com.eucalyptus.ws.client;
 
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -46,9 +47,16 @@ public abstract class ServiceDispatcher implements Dispatcher {
     LOG.info( "Registering "+ registryKey + " as "  + proxy );
     return proxies.put( registryKey, proxy );
   }
+  public static Dispatcher deregister( String name ) {
+    LOG.info( "Deregistering "+ name );
+    return proxies.remove( name );
+  }
   public static Dispatcher deregister( Component c, String hostName ) {
     LOG.info( "Deregistering "+ c.getRegistryKey( hostName ) );
     return proxies.remove( c.getRegistryKey( hostName ) );
+  }
+  public static Collection<Dispatcher> values( ) {
+    return proxies.values( );
   }
   public static Set<Map.Entry<String,Dispatcher>> getEntries() {
     return proxies.entrySet( );

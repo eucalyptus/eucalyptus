@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,41 +57,110 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.ws.util;
+package com.eucalyptus.util.async;
 
-import java.util.NoSuchElementException;
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.NotReadyException;
+import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import com.eucalyptus.records.EventRecord;
-import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 
-public class RequestQueue {
-  private static Logger  LOG = Logger.getLogger( RequestQueue.class );
-  private static boolean acceptable;
+public interface Callback<R> {
+  /**
+   * The operation completed. Guaranteed to be called only once per corresponding dispatch.
+   * 
+   * @param t
+   */
+  public void fire( R t );
   
-  public BaseMessage handle( BaseMessage msg ) throws EucalyptusCloudException {
-    if ( msg instanceof WalrusRequestType ) {
-      try {
-        if( !Components.lookup( Components.delegate.walrus ).isRunningLocally( ) ) {
-          throw new NotReadyException( "walrus" );
-        }
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
-        throw new NotReadyException( "walrus" );
-      }
-    }
-    EventRecord.here( RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), msg.getClass( ).getSimpleName( ) ).debug( );
-    return msg;
+  /**
+   * Allows for handling exceptions which occur during the asynchronous operation.
+   * 
+   * @author decker
+   * @param <R>
+   */
+  public interface Checked<R> extends Callback<R> {
+    public void fireException( Throwable t );
   }
   
+  public interface TwiceChecked<Q, R> extends Checked<R> {
+    public void initialize( Q request ) throws Exception;
+  }
+  
+  /**
+   * Only invoked when the requested operation succeeds.
+   * 
+   * @author decker
+   * @param <R>
+   */
+  public abstract class Success<R> implements Callback<R>, Predicate<R> {
+
+    /**
+     * @see com.google.common.base.Predicate#apply(java.lang.Object)
+     * @param arg0
+     * @return
+     */
+    @Override
+    public boolean apply( R arg0 ) {
+      try {
+        this.fire( arg0 );
+        return true;
+      } catch ( Exception ex ) {
+        return false;
+      }
+    }
+    
+  }
+  
+  /**
+   * Invoked only when the associated operation fails. The method {@link Callback.Checked#fireException(Throwable)} will be called with the cause of the
+   * failure.
+   * 
+   * @author decker
+   */
+  public abstract class Failure<R> implements Checked<R> {
+    /**
+     * @see com.eucalyptus.util.async.Callback#fire(java.lang.Object)
+     * @param response
+     */
+    @Override
+    public final void fire( R response ) {}
+    
+    /**
+     * @see com.eucalyptus.util.async.Callback.Checked#fireException(java.lang.Throwable)
+     * @param t
+     */
+    public abstract void fireException( Throwable t );
+  }
+  
+  public abstract class Completion<R> implements Checked<R>, Predicate<R> {
+    /**
+     * @see com.eucalyptus.util.async.Callback#fire(java.lang.Object)
+     * @param r
+     */
+    @Override
+    public final void fire( R r ) {
+      this.fire( );
+    }
+    
+    /**
+     * @see com.google.common.base.Predicate#apply(java.lang.Object)
+     * @param arg0
+     * @return
+     */
+    @Override
+    public boolean apply( R arg0 ) {
+      try {
+        this.fire( );
+        return true;
+      } catch ( Exception ex ) {
+        return false;
+      }
+    }
+
+    public abstract void fire( );
+    
+    public abstract void fireException( Throwable t );
+  }
 }

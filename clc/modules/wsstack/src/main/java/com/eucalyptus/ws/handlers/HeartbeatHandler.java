@@ -89,7 +89,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
@@ -100,9 +99,8 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
+import com.eucalyptus.config.BogoConfig;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.LocalConfiguration;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -117,7 +115,6 @@ import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 
@@ -144,37 +141,42 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     ctx.sendDownstream( e );
   }
   
-  private void prepareComponent( com.eucalyptus.bootstrap.Component component, InetSocketAddress addr ) throws ServiceRegistrationException {
-    Component c = Components.lookup( component );
-    c.buildService( c.getUri( addr.getAddress( ).getHostAddress( ), c.getConfiguration( ).getDefaultPort( ) ) );
+  private void prepareComponent( String componentName, String hostName ) throws ServiceRegistrationException {
+    final Component c = safeLookupComponent( componentName );
+    c.buildService( c.getUri( hostName, c.getConfiguration( ).getDefaultPort( ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
+    HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
+    LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
     InetSocketAddress addr = ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( );
+    InetSocketAddress localAddr = ( InetSocketAddress ) ctx.getChannel( ).getLocalAddress( );
     LOG.info( LogUtil.subheader( "Using " + addr.getHostName( ) + " as the database address." ) );
     try {
-      this.prepareComponent( Components.delegate.db, addr );
-      this.prepareComponent( Components.delegate.dns, addr );
-      this.prepareComponent( Components.delegate.eucalyptus, addr );
-      this.prepareComponent( Components.delegate.cluster, addr );
-      this.prepareComponent( Components.delegate.jetty, addr );
-      HeartbeatType msg = ( HeartbeatType ) request.getMessage( );
-      LOG.info( LogUtil.header( "Got heartbeat event: " + LogUtil.dumpObject( msg ) ) );
-      for ( HeartbeatComponentType component : msg.getComponents( ) ) {
-        LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
+      this.prepareComponent( "db", addr.getHostName( ) );
+      this.prepareComponent( "dns", addr.getHostName( ) );
+      this.prepareComponent( "eucalyptus", addr.getHostName( ) );
+    } catch ( ServiceRegistrationException ex1 ) {
+      LOG.error( ex1 , ex1 );
+      System.exit( 123 );
+    }
+    for ( HeartbeatComponentType component : msg.getComponents( ) ) {
+      LOG.info( LogUtil.subheader( "Registering local component: " + LogUtil.dumpObject( component ) ) );
+      try {
+        final Component comp = safeLookupComponent( component.getComponent( ) );
+        URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
+        ServiceConfiguration config = new BogoConfig( comp.getPeer( ), comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
-        Component comp = Components.lookup( component.getComponent( ) );
-        comp.buildService( comp.getUri( addr.getAddress( ).getHostAddress( ), comp.getConfiguration( ).getDefaultPort( ) ) );
+        comp.buildService( config );
         initializedComponents.add( component.getComponent( ) );
+      } catch ( Exception ex ) {
+        LOG.warn( LogUtil.header( "Failed registering local component "+LogUtil.dumpObject( component )+":  Are the required packages installed?\n The cause of the error: " + ex.getMessage( ) ) );
+        LOG.error( ex , ex );
       }
-      if ( !initializedComponents.contains( Components.delegate.storage.name( ) ) ) {
-        Components.lookup( Components.delegate.storage ).markDisabled( );
-      }
+    }
+    try {
       if ( !initializedComponents.contains( Components.delegate.walrus.name( ) ) ) {
-        Components.lookup( Components.delegate.walrus ).markDisabled( );
-      }
-      if ( !initializedComponents.contains( Components.delegate.vmwarebroker.name( ) ) ) {
-        Components.lookup( Components.delegate.vmwarebroker ).markDisabled( );
+        this.prepareComponent( "walrus", addr.getHostName( ) );
       }
       for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
         stage.updateBootstrapDependencies( );
@@ -334,7 +336,22 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     }
     //FIXME: end.
   }
-  
+
+  private static Component safeLookupComponent( String componentName ) {
+    final Component c;
+    if ( !Components.contains( componentName ) ) {
+      try {
+        c = Components.create( componentName, null );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex );
+      }
+    } else {
+      c = Components.lookup( componentName );
+    }
+    return c;
+  }
+
   private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventVetoedException {
     ListenerRegistry.getInstance( ).fireEvent( StopComponentEvent.getLocal( remoteConfiguration ) );
   }

@@ -26,7 +26,7 @@ public class Configuration implements ComponentInformation {
     this.resource = null;
     this.port = Integer.parseInt( System.getProperty("euca.ws.port") );
     this.uriPattern = "http://%s:%d/internal/%s";
-    this.uriLocal = URI.create( "vm://EucalyptusRequestQueue" );
+    this.uriLocal = URI.create( "vm://"+parent.getName( ).substring( 0, 1 ).toUpperCase( ) + parent.getName( ).substring( 1 )+"RequestQueue" );
   }
   
   Configuration( Component parent, URI u ) {
@@ -86,7 +86,7 @@ public class Configuration implements ComponentInformation {
         try {
           uri = String.format( this.getUriPattern( ), host, port );
         } catch ( MissingFormatArgumentException e ) {
-          uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ) );
+          uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ).replaceAll( "RequestQueue", "Internal" ) );
         }
         try {
           URI u = new URI( uri );

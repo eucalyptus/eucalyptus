@@ -64,8 +64,12 @@
 package com.eucalyptus.bootstrap;
 
 import static com.eucalyptus.system.Ats.From;
+import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Arrays;
 
 public abstract class Bootstrapper {
   
@@ -73,6 +77,8 @@ public abstract class Bootstrapper {
   public static String  SERVICES_PROPERTY = "euca.services";
   public static String  MODEL_PROPERTY    = "euca.model";
   public static String  VERSION_PROPERTY  = "euca.version";
+  private List<Component> dependsLocal  = null;
+  private List<Component> dependsRemote = null;
   
   public String getVersion( ) {
     return System.getProperty( VERSION_PROPERTY );
@@ -118,4 +124,101 @@ public abstract class Bootstrapper {
     return this.getClass( ).equals( obj.getClass( ) );
   }
   
+  
+  /**
+   * Get the list of {@link Component}s which must be on the local system for this bootstrapper to
+   * be executable.
+   * 
+   * @note If the {@link DependsLocal} annotation is not specified this bootstrapper will always
+   *       execute.
+   * @see {@link DependsLocal}
+   * @see BootstrapException#throwFatal(String)
+   * @return List<Component> which must present on the local system for this bootstrapper to
+   *         execute.
+   */
+  public List<Component> getDependsLocal( ) {
+    if ( dependsLocal != null ) {
+      return dependsLocal;
+    } else {
+      synchronized ( this ) {
+        if ( dependsLocal != null ) {
+          return dependsLocal;
+        } else {
+          if ( !From( this.getClass( ) ).has( DependsLocal.class ) ) {
+            dependsLocal = Lists.newArrayListWithExpectedSize( 0 );
+          } else {
+            dependsLocal = Arrays.asList( From( this.getClass( ) ).get( DependsLocal.class ).value( ) );
+          }
+          return dependsLocal;
+        }
+      }
+    }
+  }
+  
+  /**
+   * Get the list of {@link Component}s which must be present on a remote system for this
+   * bootstrapper to be execute.
+   * 
+   * @note If the {@link DependsRemote} annotation is not specified this bootstrapper will always
+   *       execute.
+   * @see {@link DependsRemote}
+   * @see BootstrapException#throwFatal(String)
+   * @return List<Component> which must <b>not</b> present on the local system for this bootstrapper
+   *         to execute.
+   */
+  public List<Component> getDependsRemote( ) {
+    if ( dependsRemote != null ) {
+      return dependsRemote;
+    } else {
+      synchronized ( this ) {
+        if ( dependsRemote != null ) {
+          return dependsRemote;
+        } else {
+          if ( !From( this.getClass( ) ).has( DependsRemote.class ) ) {
+            dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
+          } else {
+            dependsRemote = Arrays.asList( From( this.getClass( ) ).get( DependsRemote.class ).value( ) );
+            for ( Component c : dependsRemote ) {
+              if ( !c.isCloudLocal( ) ) {
+                BootstrapException.throwFatal( "DependsRemote specifies a component which is not cloud-local: " + this.getClass( ).getSimpleName( ) );
+              }
+            }
+          }
+          return dependsRemote;
+        }
+      }
+    }
+  }
+  
+  /**
+   * The Bootstrap.Stage during which the bootstrapper executes.
+   * 
+   * @note If the {@link RunDuring} annotation is not specified on this class bootstrap will fail
+   *       and the system will exit.
+   * @see BootstrapException#throwFatal(String)
+   * @return Bootstrap.Stage
+   */
+  public Bootstrap.Stage getBootstrapStage( ) {
+    if ( !From( this.getClass( ) ).has( RunDuring.class ) ) {
+      throw BootstrapException.throwFatal( "Bootstrap class does not specify execution stage (RunDuring.value=Bootstrap.Stage): " + this.getClass( ) );
+    } else {
+      return From( this.getClass( ) ).get( RunDuring.class ).value( );
+    }
+  }
+  
+  /**
+   * The Component to which this bootstrapper belongs and on whose behalf it executes.
+   * 
+   * @return Component
+   */
+  public Component getProvides( ) {
+    if ( !From( this.getClass( ) ).has( Provides.class ) ) {
+      Exceptions.eat( "Bootstrap class does not specify the component which it @Provides.  Fine.  For now we pretend you had put @Provides(Component.any) instead of System.exit(-1): "
+                      + this.getClass( ) );
+      return Component.any;
+    } else {
+      return From( this.getClass( ) ).get( Provides.class ).value( );
+    }
+    
+  }
 }

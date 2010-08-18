@@ -177,9 +177,27 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 	  return name.compareTo(((ComponentConfiguration) o).getName());
   }
 }
+/**
+ * @deprecated do not even think of using this.
+ */
+@Deprecated
+public class BogoConfig extends ComponentConfiguration {
+  Component c;
+  public BogoConfig( Component c, String name, String hostName, Integer port, String servicePath ) {
+    super( name, hostName, port, servicePath );
+    this.c = c;
+  }
+  @Override
+  public Component getComponent( ) {
+    return c;
+  }
 
+  @Override
+  public Boolean isLocal( ) {
+    return true;
+  }
+}
 public class EphemeralConfiguration extends ComponentConfiguration {
-  String  name;
   URI uri;
   Component c;
   

@@ -19,4 +19,9 @@ public abstract class DispatcherFactory {
   
   public abstract Dispatcher buildChild( Component parent, Service service );
   
+  public static void remove( Service service ) {
+    factory.removeChild( service );
+  }
+  
+  public abstract void removeChild( Service service );
 }

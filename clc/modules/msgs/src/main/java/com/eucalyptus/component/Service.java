@@ -84,4 +84,10 @@ public class Service implements ComponentInformation, Comparable<Service> {
   public int compareTo( Service that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
+
+  @Override
+  public String toString( ) {
+    return String.format( "Service:parent=%s:name=%s:keys=%s:endpoint=%s:dispatcher=%s:serviceConfiguration=%s", this.parent, this.name, this.keys,
+                          this.endpoint, this.dispatcher, this.serviceConfiguration );
+  }
 }
