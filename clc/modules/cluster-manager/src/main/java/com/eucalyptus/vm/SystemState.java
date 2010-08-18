@@ -212,8 +212,6 @@ public class SystemState {
         Network network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
         network.extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
       } catch ( Exception e ) {}
-    } else {
-      vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
     }
   }
   @Deprecated /** TODO: HACK HACK **/
