@@ -10,8 +10,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.Callback;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 public class Components {
   private static Logger                                                                                  LOG                  = Logger
@@ -89,8 +95,13 @@ public class Components {
   
   public static <T extends ComponentInformation> T lookup( Class<T> type, String name ) throws NoSuchElementException {
     if ( !contains( type, name ) ) {
-      throw new NoSuchElementException( "Missing entry for component '" + name + "' info type: " + type.getSimpleName( ) + " ("
-                                        + getRealType( type ).getCanonicalName( ) );
+      try {
+        Components.create( name, null );
+        return Components.lookup( type, name );
+      } catch ( ServiceRegistrationException ex ) {
+        throw new NoSuchElementException( "Missing entry for component '" + name + "' info type: " + type.getSimpleName( ) + " ("
+                                          + getRealType( type ).getCanonicalName( ) );
+      }
     } else {
       return ( T ) Components.lookup( type ).get( name );
     }
@@ -117,5 +128,163 @@ public class Components {
     register( c );
     return c;
   }
+
+  private final static Function<Component, String> componentToString = componentToString( );
   
+  public static Function<Component, String> componentToString( ) {
+    if ( componentToString != null ) {
+      return componentToString;
+    } else {
+      synchronized ( Components.class ) {
+        return new Function<Component, String>( ) {
+          
+          @Override
+          public String apply( Component comp ) {
+            final StringBuilder buf = new StringBuilder( );
+            buf.append( LogUtil.header( comp.getName( ) + " component configuration" ) ).append( "\n" );
+            buf.append( "-> Enabled/Local:      " + comp.isEnabled( ) + "/" + comp.isLocal( ) ).append( "\n" );
+            buf.append( "-> State/Running:      " + comp.getState( ) + "/" + comp.isRunning( ) ).append( "\n" );
+            buf.append( "-> Builder:            "
+                        + comp.getBuilder( ).getClass( ).getSimpleName( ) ).append( "\n" );
+            buf.append( "-> Disable/Remote cli: "
+                        + System.getProperty( "euca." + comp.getPeer( ).name( ) + ".disable" )
+                        + "/"
+                        + System.getProperty( "euca." + comp.getPeer( ).name( ) + ".remote" ) ).append( "\n" );
+            buf.append( "-> Configuration:      "
+                        + ( comp.getConfiguration( ).getResource( ) != null
+                          ? comp.getConfiguration( ).getResource( ).getOrigin( )
+                          : "null" ) ).append( "\n" );
+            for ( Bootstrapper b : comp.getConfiguration( ).getBootstrappers( ) ) {
+              buf.append( "-> " + b.toString( ) ).append( "\n" );
+            }
+            buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
+            for ( Service s : comp.getServices( ) ) {
+              buf.append( "->  Service:          " + s.getName( ) + " " + s.getUri( ) ).append( "\n" );
+              buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
+                          + s.getDispatcher( ).getAddress( ) ).append( "\n" );
+              buf.append( "|-> Service Endpoint: " + s.getEndpoint( ) ).append( "\n" );
+//TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
+              buf.append( "|-> Service config:   "
+                          + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
+            }
+            return buf.toString( );
+          }
+        };
+      }
+    }
+  }
+  
+  private static final Callback.Success<Component> componentPrinter = componentPrinter( );
+  
+  public static Callback.Success<Component> componentPrinter( ) {
+    if ( componentPrinter != null ) {
+      return componentPrinter;
+    } else {
+      synchronized ( Components.class ) {
+        return new Callback.Success<Component>( ) {
+          
+          @Override
+          public void fire( Component comp ) {
+            LOG.info( componentToString.apply( comp ) );
+          }
+        };
+      }
+    }
+  }
+  
+  private static final Function<Dispatcher, String> dispatcherToString = dispatcherToString( );
+  
+  public static Function<Dispatcher, String> dispatcherToString( ) {
+    if ( dispatcherToString != null ) {
+      return dispatcherToString;
+    } else {
+      synchronized ( Components.class ) {
+        return new Function<Dispatcher, String>( ) {
+          
+          @Override
+          public String apply( Dispatcher comp ) {
+            final StringBuilder buf = new StringBuilder( );
+            buf.append( "-> Dispatcher key=" ).append( comp.getName( ) ).append( " entry=" ).append( comp );
+            return buf.toString( );
+          }
+        };
+      }
+    }
+  }
+  
+  private static final Callback.Success<Dispatcher> dispatcherPrinter = dispatcherPrinter( );
+  
+  public static Callback.Success<Dispatcher> dispatcherPrinter( ) {
+    if ( dispatcherPrinter != null ) {
+      return dispatcherPrinter;
+    } else {
+      synchronized ( Components.class ) {
+        return new Callback.Success<Dispatcher>( ) {
+          
+          @Override
+          public void fire( Dispatcher arg0 ) {
+            LOG.info( dispatcherToString.apply( arg0 ) );
+          }
+        };
+      }
+    }
+  }
+  
+  private final static Callback.Success<Component> configurationPrinter = configurationPrinter( );
+  
+  public static Callback.Success<Component> configurationPrinter( ) {
+    if ( configurationPrinter != null ) {
+      return configurationPrinter;
+    } else {
+      synchronized ( Components.class ) {
+        return new Callback.Success<Component>( ) {
+          @Override
+          public void fire( Component comp ) {
+            LOG.info( configurationToString.apply( comp ) );
+          }
+        };
+      }
+    }
+  }
+  
+  private final static Function<Component, String>    configurationToString = configurationToString( );
+  private static final Function<Bootstrapper, String> bootstrapperToString  = new Function<Bootstrapper, String>( ) {
+                                                                              @Override
+                                                                              public String apply( Bootstrapper b ) {
+                                                                                return b.getClass( ).getName( )
+                                                                                       + " provides=" + b.getProvides( )
+                                                                                       + " deplocal=" + b.getDependsLocal( )
+                                                                                       + " depremote=" + b.getDependsRemote( );
+                                                                              }
+                                                                            };
+  
+  public static Function<Component, String> configurationToString( ) {
+    if ( configurationToString != null ) {
+      return configurationToString;
+    } else {
+      synchronized ( Components.class ) {
+        return new Function<Component, String>( ) {
+          
+          @Override
+          public String apply( Component comp ) {
+            final StringBuilder buf = new StringBuilder( );
+            buf.append( String.format( "%s -> disable/remote cli:   %s/%s",
+                                       comp.getName( ),
+                                       System.getProperty( String.format( "euca.%s.disable", comp.getPeer( ).name( ) ) ),
+                                       System.getProperty( String.format( "euca.%s.remote", comp.getPeer( ).name( ) ) ) ) ).append( "\n" );
+            buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
+                                       comp.getName( ), comp.isEnabled( ), comp.isLocal( ), comp.isRunning( ) ) ).append( "\n" );
+            buf.append( String.format( "%s -> configuration:        %s",
+                                       comp.getName( ), ( comp.getConfiguration( ).getResource( ) != null
+                                         ? comp.getConfiguration( ).getResource( ).getOrigin( )
+                                         : "null" ) ) ).append( "\n" );
+            buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),
+                                       Iterables.transform( comp.getConfiguration( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
+            return buf.toString( );
+          }
+        };
+        
+      }
+    }
+  }
 }
