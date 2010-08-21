@@ -113,7 +113,7 @@ upgrade_conf() {
   fi
 
   if [ -f ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ]; then
-      sed -i "s/DISABLE_ISCSI=\"N\"/DISABLE_ISCSI=\"Y\"/" /etc/eucalyptus/eucalyptus.conf
+      sed -i "s/DISABLE_ISCSI=\"N\"/DISABLE_ISCSI=\"Y\"/" ${NEW_EUCA}/etc/eucalyptus/eucalyptus.conf
   fi
 
   if [ ! -x ${NEW_EUCA}/usr/sbin/euca_conf ]; then
