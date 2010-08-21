@@ -149,9 +149,6 @@ public class RemoteInfoHandler {
       updateStorageConfiguration.setName( storageControllerWeb.getName( ) );
       updateStorageConfiguration.setStorageParams( convertProps( storageControllerWeb.getStorageParams( ) ) );
       Dispatcher scDispatch = ServiceDispatcher.lookup( Component.storage, storageControllerWeb.getHost( ) );
-      if ( Component.eucalyptus.isLocal( ) ) {
-        updateStorageConfiguration.setName( StorageProperties.SC_LOCAL_NAME );
-      }
       try {
         scDispatch.send( updateStorageConfiguration );
       } catch ( Exception e ) {

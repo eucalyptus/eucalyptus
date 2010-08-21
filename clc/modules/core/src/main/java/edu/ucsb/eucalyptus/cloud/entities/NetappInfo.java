@@ -58,26 +58,133 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.ws;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
+package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.VolumeTask;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.BlockStorageUtil;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.StorageProperties;
 
-public class VolumeService {
-	private Logger LOG = Logger.getLogger( VolumeService.class );
-	
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 10;
-	
-	public VolumeService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
+import javax.persistence.*;
+
+@Entity
+@PersistenceContext(name="eucalyptus_storage")
+@Table( name = "netapp_info" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ConfigurableClass(root = "storage", alias="netapp", description = "Basic netapp config.", singleton=false, deferred = true)
+public class
+NetappInfo {
+	private static Logger LOG = Logger.getLogger( NetappInfo.class );
+
+	@Id
+	@GeneratedValue
+	@Column( name = "storage_netapp_id" )
+	private Long id = -1l;
+	@ConfigurableIdentifier
+	@Column( name = "storage_name", unique=true)
+	private String name;
+	@ConfigurableField( description = "Aggregate for Netapp filer", displayName = "Reserved aggregate", type = ConfigurableFieldType.KEYVALUE )
+	@Column(name = "netapp_aggregate")
+	private String aggregate;
+
+	public NetappInfo(){
+		this.name = StorageProperties.NAME;
 	}
-	
-	public void add(VolumeTask creator) {
-		pool.execute(creator);
+
+	public NetappInfo( final String name )
+	{
+		this.name = name;
+	}
+
+	public NetappInfo(final String name, 
+			final String aggregate) {
+		this.name = name;
+		this.aggregate = aggregate;
+	}
+
+	public Long getId()
+	{
+		return id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getAggregate() {
+		return aggregate;
+	}
+
+	public void setAggregate(String aggregate) {
+		this.aggregate = aggregate;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		NetappInfo other = (NetappInfo) obj;
+		if (name == null) {
+			if (other.name != null)
+				return false;
+		} else if (!name.equals(other.name))
+			return false;
+		return true;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((name == null) ? 0 : name.hashCode());
+		return result;
+	}
+
+	@Override
+	public String toString()
+	{
+		return this.name;
+	}
+
+	public static NetappInfo getStorageInfo() {
+		EntityWrapper<NetappInfo> storageDb = new EntityWrapper<NetappInfo>(StorageProperties.DB_NAME);
+		NetappInfo conf = null;
+		try {
+			conf = storageDb.getUnique(new NetappInfo(StorageProperties.NAME));
+			storageDb.commit();
+		}
+		catch ( EucalyptusCloudException e ) {
+			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
+			conf =  new NetappInfo(StorageProperties.NAME, 
+					StorageProperties.AGGR_NAME);
+			storageDb.add(conf);
+			storageDb.commit();
+		}
+		catch (Throwable t) {
+			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
+			storageDb.rollback();
+			return new NetappInfo(StorageProperties.NAME, 
+					StorageProperties.AGGR_NAME);
+		}
+		return conf;
 	}
 }

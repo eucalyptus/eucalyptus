@@ -65,126 +65,19 @@
 
 package com.eucalyptus.storage;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import org.apache.log4j.Logger;
-
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.jcraft.jsch.Channel;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-
-import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
 
 
-public class SessionManager {
-	private BufferedWriter writer;
-	private BufferedReader reader;
-	private Channel channel;
-	private final ExecutorService pool;
+public interface SessionManager {
 
-	private static Logger LOG = Logger.getLogger(SessionManager.class);
-	private final int NUM_THREADS = 1;
+	public void checkConnection() throws EucalyptusCloudException;
 
-	public SessionManager() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
-	}
+	public void connect() throws EucalyptusCloudException;
 
-	public void checkConnection() throws EucalyptusCloudException {
-		try {
-			if(channel != null) {
-				if(!channel.isConnected())
-					connect();
-			} else {
-				connect();
-			}
-		} catch(JSchException ex) {
-			LOG.error(ex);
-			throw new EucalyptusCloudException(ex);
-		} catch(IOException ex) {
-			LOG.error(ex);
-			throw new EucalyptusCloudException(ex);
-		}
-	}
+	public void refresh() throws EucalyptusCloudException;
 
-	public void connect() throws JSchException, IOException {
-		JSch jsch = new JSch();
-		Session session;
-		SANInfo sanInfo = SANInfo.getStorageInfo();
-		session = jsch.getSession(sanInfo.getSanUser(), sanInfo.getSanHost());
-		session.setConfig("StrictHostKeyChecking", "no");
-		session.setPassword(sanInfo.getSanPassword());
-		session.connect();
-		channel = session.openChannel("shell");
-		PipedOutputStream outStream = new PipedOutputStream();
-		channel.setInputStream(new PipedInputStream(outStream));
-		PipedInputStream inStream = new PipedInputStream();
-		channel.setOutputStream(new PipedOutputStream(inStream));
-		channel.connect();
-		writer = new BufferedWriter(new OutputStreamWriter(outStream, "utf-8"));
-		reader = new BufferedReader(new InputStreamReader(inStream, "utf-8"));			
-	}
+	public void addTask(final AbstractSANTask task) throws InterruptedException;
 
-	public void refresh() throws JSchException, IOException {
-		channel.disconnect();
-		channel.getSession().disconnect();
-		connect();
-	}
-
-	public void addTask(final SANTask task) throws InterruptedException {
-		pool.execute(new Runnable() {		
-			@Override
-			public void run() {
-				try {
-					writer.write(task.getCommand() + task.getEOFCommand());
-					writer.flush();
-					String returnValue = "";
-					for (String line = null; (line = reader.readLine()) != null;) {
-						line = line + "\r";
-						if(line.contains(task.getEOFCommand()))
-							break;
-						returnValue += line;
-					}
-					synchronized (task) {
-						task.setValue(returnValue);
-						task.notifyAll();
-					}
-				} catch (IOException e) {
-					LOG.error(e);
-					try {
-						refresh();
-						addTask(task);
-					} catch(Exception ex) {
-						LOG.error(ex);
-					}
-				}
-			}
-		});
-	}
-
-	public void update() throws EucalyptusCloudException {
-		try {
-			if(channel != null) {
-				refresh();
-			} else {
-				connect();
-			}	
-		} catch (JSchException e) {
-			LOG.error(e);
-			throw new EucalyptusCloudException(e);
-		} catch (IOException e) {
-			LOG.error(e);
-			throw new EucalyptusCloudException(e);
-		}
-	}
+	public void update() throws EucalyptusCloudException;
 }
 

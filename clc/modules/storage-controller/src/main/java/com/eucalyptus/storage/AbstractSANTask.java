@@ -58,26 +58,21 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.ws;
+/*
+ *
+ * Author: Neil Soman neil@eucalyptus.com
+ */
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+package com.eucalyptus.storage;
 
-import org.apache.log4j.Logger;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.VolumeTask;
-
-public class VolumeService {
-	private Logger LOG = Logger.getLogger( VolumeService.class );
+public abstract class AbstractSANTask<T> {
+	public abstract T getCommand();
 	
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 10;
+	public abstract T getEOFCommand();
 	
-	public VolumeService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
-	}
-	
-	public void add(VolumeTask creator) {
-		pool.execute(creator);
-	}
+	public abstract T getValue();
+
+	public abstract void setValue(T value);
 }
+

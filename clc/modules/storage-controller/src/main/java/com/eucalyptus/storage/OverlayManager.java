@@ -493,10 +493,9 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 	}
 
-	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException {
+	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
-		int size = -1;
 		if(foundSnapshotInfo != null) {
 			String status = foundSnapshotInfo.getStatus();
 			if(status.equals(StorageProperties.Status.available.toString())) {
@@ -511,8 +510,13 @@ public class OverlayManager implements LogicalStorageManager {
 					//create file and attach to loopback device
 					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
 					assert(snapshotFile.exists());
-					long absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
-					size = (int)(snapshotFile.length() / StorageProperties.GB);
+					long absoluteSize;
+					if(size > 0) {
+						absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
+					} else {
+						size = (int)(snapshotFile.length() / StorageProperties.GB);
+						absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
+					}
 					String loDevName = createLoopback(rawFileName, absoluteSize);
 					//create physical volume, volume group and logical volume
 					createLogicalVolume(loDevName, vgName, lvName);
@@ -615,7 +619,7 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 
-	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException {
+	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		ArrayList<String> returnValues = new ArrayList<String>();
@@ -1192,5 +1196,16 @@ public class OverlayManager implements LogicalStorageManager {
 		snapshotInfo.setSnapshotOf(volumeId);
 		volumeManager.add(snapshotInfo);
 		volumeManager.finish();
+	}
+
+	@Override
+	public String attachVolume(String volumeId, String nodeIqn)
+	throws EucalyptusCloudException {
+		return getVolumeProperty(volumeId);
+	}
+
+	@Override
+	public void detachVolume(String volumeId, String nodeIqn)
+	throws EucalyptusCloudException {
 	}
 }

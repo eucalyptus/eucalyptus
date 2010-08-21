@@ -58,26 +58,131 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.ws;
+/*
+ *
+ * Author: Neil Soman neil@eucalyptus.com
+ */
 
+package com.eucalyptus.storage;
+
+import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import netapp.manage.NaAPIFailedException;
+import netapp.manage.NaAuthenticationException;
+import netapp.manage.NaElement;
+import netapp.manage.NaProtocolException;
+import netapp.manage.NaServer;
+
 import org.apache.log4j.Logger;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.VolumeTask;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-public class VolumeService {
-	private Logger LOG = Logger.getLogger( VolumeService.class );
-	
+import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
+
+public class NetappSessionManager implements SessionManager {
+	private static Logger LOG = Logger.getLogger(NetappSessionManager.class);
 	private final ExecutorService pool;
-	private final int NUM_THREADS = 10;
-	
-	public VolumeService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
+	private NaServer connection;
+
+	public NetappSessionManager() {
+		pool = Executors.newFixedThreadPool(1);
 	}
-	
-	public void add(VolumeTask creator) {
-		pool.execute(creator);
+
+	public void checkConnection() throws EucalyptusCloudException {
+	}
+
+	public void connect() throws EucalyptusCloudException {
+		try {
+			SANInfo sanInfo = SANInfo.getStorageInfo();
+			connection = new NaServer(sanInfo.getSanHost(), NetappProvider.API_MAJOR_VERSION, NetappProvider.API_MINOR_VERSION);
+			connection.setStyle(NaServer.STYLE_LOGIN_PASSWORD);
+			connection.setKeepAliveEnabled(true);
+			connection.setAdminUser(sanInfo.getSanUser(), sanInfo.getSanPassword());
+			//test
+			NaElement request = new NaElement("system-get-version");
+			NaElement reply;
+			try {
+				reply = connection.invokeElem(request);
+				LOG.info("Version: " + reply.getChildContent("version"));
+			} catch (NaAuthenticationException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} catch (NaAPIFailedException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} catch (NaProtocolException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			} catch (IOException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException(e);
+			}			
+		} catch (UnknownHostException ex) {
+			throw new EucalyptusCloudException(ex);
+		}
+	}
+
+	public void refresh() throws EucalyptusCloudException {
+		connection.close();
+		connect();
+	}
+
+	public void update() throws EucalyptusCloudException {
+		if(connection != null) {
+			refresh();
+		} else {
+			connect();
+		}
+	}
+
+	@Override
+	public void addTask(final AbstractSANTask task) throws InterruptedException {
+		final NetappSANTask sanTask = (NetappSANTask) task;
+		pool.execute(new Runnable() {		
+			@Override
+			public void run() {
+				NaElement request = sanTask.getCommand();
+				try {
+					NaElement reply = connection.invokeElem(request);
+					synchronized (task) {
+						sanTask.setValue(reply);
+						sanTask.notifyAll();
+					}
+				} catch (NaAuthenticationException e) {
+					LOG.error(e);
+					sanTask.setErrorMessage(e.getMessage());
+					synchronized (task) {
+						sanTask.notifyAll();
+					}
+				} catch (NaAPIFailedException e) {
+					LOG.error(e);
+					sanTask.setErrorMessage(e.getMessage());
+					synchronized (task) {
+						sanTask.notifyAll();
+					}
+				} catch (NaProtocolException e) {
+					LOG.error(e);
+					sanTask.setErrorMessage(e.getMessage());
+					synchronized (task) {
+						sanTask.notifyAll();
+					}
+				} catch (IOException e) {
+					try {
+						refresh();
+						addTask(task);
+					} catch(Exception ex) {
+						LOG.error(ex);
+						sanTask.setErrorMessage(e.getMessage());
+						synchronized (task) {
+							sanTask.notifyAll();
+						}
+					}
+				}			
+			}
+		});
 	}
 }
+

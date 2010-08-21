@@ -58,26 +58,40 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.ws;
+/*
+ *
+ * Author: Neil Soman neil@eucalyptus.com
+ */
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+package com.eucalyptus.storage;
 
-import org.apache.log4j.Logger;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.VolumeTask;
+public class EquallogicSANTask extends AbstractSANTask<String> {
+	private String command;
+	private String EOFCommand;
+	private volatile String returnValue;
 
-public class VolumeService {
-	private Logger LOG = Logger.getLogger( VolumeService.class );
-	
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 10;
-	
-	public VolumeService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
+	public EquallogicSANTask(String command, String EOFCommand) {
+		this.command = command;
+		this.EOFCommand = EOFCommand;
+	}
+
+	@Override
+	public String getCommand() {
+		return command;
+	}
+
+	@Override
+	public String getEOFCommand() {
+		return EOFCommand;
 	}
 	
-	public void add(VolumeTask creator) {
-		pool.execute(creator);
+	@Override
+	public String getValue() { return returnValue; }
+
+	@Override
+	public void setValue(String value) {
+		this.returnValue = value;
 	}
 }
+

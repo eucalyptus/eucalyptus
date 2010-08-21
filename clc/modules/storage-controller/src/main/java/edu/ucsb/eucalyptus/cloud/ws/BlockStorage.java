@@ -76,11 +76,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.persistence.EntityNotFoundException;
+
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.mule.RequestContext;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.config.StorageControllerBuilder;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.storage.BlockStorageChecker;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
@@ -100,6 +103,8 @@ import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.ConvertVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.ConvertVolumesType;
@@ -115,6 +120,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType;
@@ -575,6 +582,51 @@ public class BlockStorage {
 		return reply;
 	}
 
+	public AttachStorageVolumeResponseType attachVolume(AttachStorageVolumeType request) throws EucalyptusCloudException {
+		AttachStorageVolumeResponseType reply = request.getReply();
+		String volumeId = request.getVolumeId();
+		String nodeIqn = request.getNodeIqn();
+
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		try {
+			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));			
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Unable to find volume: " + volumeId + ex);
+			throw new EntityNotFoundException("Unable to find volume: " + volumeId + ex);
+		} finally {
+			db.commit();
+		}
+		try {
+			String deviceName = blockManager.attachVolume(volumeId, nodeIqn);
+			reply.setRemoteDeviceString(deviceName);
+		} catch (EucalyptusCloudException ex) {
+			throw ex;
+		}
+		return reply;
+	}
+
+	public DetachStorageVolumeResponseType detachVolume(DetachStorageVolumeType request) throws EucalyptusCloudException {
+		DetachStorageVolumeResponseType reply = request.getReply();
+		String volumeId = request.getVolumeId();
+		String nodeIqn = request.getNodeIqn();
+
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		try {
+			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));			
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Unable to find volume: " + volumeId + ex);
+			throw new EntityNotFoundException("Unable to find volume: " + volumeId + ex);
+		} finally {
+			db.commit();
+		}
+		try {
+			blockManager.detachVolume(volumeId, nodeIqn);
+		} catch (EucalyptusCloudException ex) {
+			throw ex;
+		}
+		return reply;
+	}
+
 	private StorageVolume convertVolumeInfo(VolumeInfo volInfo) throws EucalyptusCloudException {
 		StorageVolume volume = new StorageVolume();
 		String volumeId = volInfo.getVolumeId();
@@ -630,19 +682,30 @@ public class BlockStorage {
 				} catch(InterruptedException ex) {
 					throw new EucalyptusCloudException("semaphore could not be acquired");
 				}
-				List<String> returnValues = blockManager.createSnapshot(volumeId, snapshotId);
+				Boolean shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
+				List<String> returnValues = blockManager.createSnapshot(volumeId, 
+						snapshotId, 
+						shouldTransferSnapshots);
 				semaphore.release();
-				if(returnValues.size() < 2) {
-					throw new EucalyptusCloudException("Unable to transfer snapshot");
+				if(shouldTransferSnapshots) {
+					if(returnValues.size() < 2) {
+						throw new EucalyptusCloudException("Unable to transfer snapshot");
+					}
+					snapshotFileName = returnValues.get(0);
+					transferSnapshot(returnValues.get(1));
+					try {
+						blockManager.finishVolume(snapshotId);
+					} catch(EucalyptusCloudException ex) {
+						blockManager.cleanSnapshot(snapshotId);
+						LOG.error(ex);
+					}
 				}
-				snapshotFileName = returnValues.get(0);
-				transferSnapshot(returnValues.get(1));
-				blockManager.finishVolume(snapshotId);
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 				try {
 					SnapshotInfo snapshotInfo = db.getUnique(snapInfo);
 					snapshotInfo.setStatus(StorageProperties.Status.available.toString());
+					snapshotInfo.setProgress("100");
 				} catch(EucalyptusCloudException e) {
 					LOG.error(e);
 				} finally {
@@ -653,6 +716,7 @@ public class BlockStorage {
 				try {
 					blockManager.finishVolume(snapshotId);
 				} catch (EucalyptusCloudException e1) {
+					blockManager.cleanSnapshot(snapshotId);
 					LOG.error(e1);
 				}
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
@@ -766,10 +830,15 @@ public class BlockStorage {
 					if(foundSnapshotInfos.size() == 0) {
 						db.commit();						
 						//get snapshot size from walrus
-						int sizeExpected = getSnapshotSize(snapshotId);
+						int sizeExpected;
+						if(size <= 0) {
+							sizeExpected = getSnapshotSize(snapshotId);
+						} else {
+							sizeExpected = size;
+						}
 						String snapDestination = blockManager.prepareSnapshot(snapshotId, sizeExpected);
 						getSnapshot(snapshotId, snapDestination);
-						size = blockManager.createVolume(volumeId, snapshotId);
+						size = blockManager.createVolume(volumeId, snapshotId, size);
 					} else {
 						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
 						if(!foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
@@ -778,7 +847,7 @@ public class BlockStorage {
 							LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
 						} else {
 							db.commit();
-							size = blockManager.createVolume(volumeId, snapshotId);
+							size = blockManager.createVolume(volumeId, snapshotId, size);
 						}
 					}
 				} catch(Exception ex) {

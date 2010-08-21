@@ -154,22 +154,23 @@ public class DASManager implements LogicalStorageManager {
 
 	private void updateVolumeGroup() throws EucalyptusCloudException {
 		if(volumeGroup == null) {
-			if(DASInfo.getStorageInfo().getDASDevice() != null) {
+			String dasDevice = DASInfo.getStorageInfo().getDASDevice();
+			if(dasDevice != null) {
 				try {
-					String returnValue = getPhysicalVolume(DASInfo.getStorageInfo().getDASDevice());
-					if(!returnValue.matches("(?s:.*)PV Name.*" + DASInfo.getStorageInfo().getDASDevice() + "(?s:.*)")) {
-						returnValue = createPhysicalVolume(DASInfo.getStorageInfo().getDASDevice());
+					String returnValue = getPhysicalVolume(dasDevice);
+					if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+						returnValue = createPhysicalVolume(dasDevice);
 						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create physical volume on device: " + DASInfo.getStorageInfo().getDASDevice());
+							throw new EucalyptusCloudException("Unable to create physical volume on device: " + dasDevice);
 						}
 					}
 					//PV is initialized at this point.
-					returnValue = getVolumeGroupsVerbose();
-					if(!returnValue.matches("(?s:.*)PV Name.*" + DASInfo.getStorageInfo().getDASDevice() + "(?s:.*)")) {
+					returnValue = getPhysicalVolumeVerbose(dasDevice);
+					if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
 						volumeGroup = "vg-" + Hashes.getRandom(10);
-						returnValue = createVolumeGroup(DASInfo.getStorageInfo().getDASDevice(), volumeGroup);
+						returnValue = createVolumeGroup(dasDevice, volumeGroup);
 						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + DASInfo.getStorageInfo().getDASDevice());
+							throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);
 						}
 					} else {
 						Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
@@ -177,7 +178,7 @@ public class DASManager implements LogicalStorageManager {
 						if(m.find()) 
 							volumeGroup = m.group(1).trim();
 						else
-							throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + DASInfo.getStorageInfo().getDASDevice());
+							throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + dasDevice);
 					}
 				} catch (ExecutionException e) {
 					LOG.error(e);
@@ -205,8 +206,8 @@ public class DASManager implements LogicalStorageManager {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgcreate", vgName, pvName});
 	}
 
-	private String getVolumeGroupsVerbose() throws ExecutionException {
-		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgdisplay", "-v"});
+	private String getPhysicalVolumeVerbose(String pvName) throws ExecutionException {
+		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvdisplay", "-v", pvName});
 	}
 
 	private String createLogicalVolume(String vgName, String lvName, int size) throws ExecutionException {
@@ -392,11 +393,10 @@ public class DASManager implements LogicalStorageManager {
 		}
 	}
 
-	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException {
+	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
 		updateVolumeGroup();
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
-		int size = -1;
 		if(foundSnapshotInfo != null) {
 			String status = foundSnapshotInfo.getStatus();
 			if(status.equals(StorageProperties.Status.available.toString())) {
@@ -408,7 +408,9 @@ public class DASManager implements LogicalStorageManager {
 				try {
 					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
 					assert(snapshotFile.exists());
-					size = (int)(snapshotFile.length() / StorageProperties.GB);
+					if(size <= 0) {
+						size = (int)(snapshotFile.length() / StorageProperties.GB);
+					}
 					//create physical volume, volume group and logical volume
 					createLogicalVolume(lvName, size);
 					//duplicate snapshot volume
@@ -469,7 +471,22 @@ public class DASManager implements LogicalStorageManager {
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + lvName;
 			volumeManager.unexportVolume(foundLVMVolumeInfo);
 			try {
-				String returnValue = removeLogicalVolume(absoluteLVName);
+				String returnValue = "";				
+				for (int i = 0; i < 5 ; ++i) {
+					returnValue = removeLogicalVolume(absoluteLVName);
+					if(returnValue.length() != 0) {
+						if(returnValue.contains("successfully removed")) {
+							break;
+						}
+					}
+					//retry lv deletion (can take a while).
+					try {
+						Thread.sleep(500);
+					} catch (InterruptedException e) {
+						LOG.error(e);
+						break;
+					}
+				}
 				if(returnValue.length() == 0) {
 					throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
 				}
@@ -488,7 +505,7 @@ public class DASManager implements LogicalStorageManager {
 	}
 
 
-	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException {
+	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
 		updateVolumeGroup();
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
@@ -1024,5 +1041,16 @@ public class DASManager implements LogicalStorageManager {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find volume with id: " + volumeId);
 		}
+	}
+
+	@Override
+	public String attachVolume(String volumeId, String nodeIqn)
+	throws EucalyptusCloudException {
+		return getVolumeProperty(volumeId);
+	}
+
+	@Override
+	public void detachVolume(String volumeId, String nodeIqn)
+	throws EucalyptusCloudException {
 	}
 }
