@@ -173,7 +173,8 @@ struct handlers {
 				char *volumeId,
 				char *remoteDev,
 				char *localDev,
-				int force);
+				int force,
+                                int grab_inst_sem);
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
