@@ -1,3 +1,34 @@
+*Fri Aug 13 2010 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 2.0
+    * Stability/Performance point-release.
+    * Back-end (CC/NC) scale improvements.
+    * CLC fixes including backend database pooling and persistence improvements, SSL support.
+    * euca_conf fixes including the ability to list nodes (and VMs).
+    * Fixes to Walrus for specific use cases, bugs and stability, as well as beta support for the S3 server logging API, fixes to bittorrent support.
+    * Storage Controller scalability improvements.
+    * Updated packages for current versions of supported distributions.
+    * Closes many bugs, including:
+
+      #477776 #461156 #477776 #498379 #498379 
+      #517769 #518601 #513842 #453416 #328146
+
+*Fri Feb 12 2010 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 1.6.2
+    * Stability/Performance point-release.
+    * Back-end (CC/NC) scale improvements.
+    * CLC fixes including backend database pooling and persistence
+      improvements, SSL support.
+    * euca_conf fixes including the ability to list nodes (and VMs).
+    * Fixes to Walrus for specific use cases, bugs and stability, as
+      well as beta support for the S3 server logging API, fixes to
+      bittorrent support.
+    * Storage Controller scalability improvements.
+    * Updated packages for current versions of supported distributions.
+    * Closes many bugs, including:
+
+     #477776 #461156 #477776 #498379 #498379 #517769 #518601 #513842
+     #453416 #328146
+
 *Thu Nov 5 2009 Eucalyptus Systems (support@eucalyptus.com)
     * Version 1.6.1
     * Added support for multiple clusters (availability zones)
@@ -15,7 +46,7 @@
     * A lot of work toward long term stability: run the code thru
       different code/memory checker, re-engineer the java stack to be
       faster and more robust.
-    * V Closes bugs:
+    * Closes bugs:
 
       #426469 #426576 #428546 #428654 #428710 #430260 #430356 #430888
       #430922 #431939 #430830 #431933 #431935 #426469 #431934 #431937
