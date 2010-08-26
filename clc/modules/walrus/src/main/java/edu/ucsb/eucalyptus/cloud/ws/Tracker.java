@@ -96,6 +96,8 @@ public class Tracker extends Thread {
 					}
 				}
 			});
+		} else {
+			LOG.warn("bttrack not found (bittorrent installed?). Torrent support disabled (non critical).");
 		}
 	}
 
