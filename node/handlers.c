@@ -387,12 +387,20 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
 			char *privMac,
 			//			char *privIp,
 			char *brname,
+			int use_virtio_net,
+			int use_virtio_root,
 			char **xml)
 {
     char buf [MAX_PATH];
 
     snprintf(buf, MAX_PATH, "%s", gen_libvirt_cmd_path);
-    
+    if (use_virtio_net) {
+        strncat(buf, " --virtionet", MAX_PATH);
+    }
+    if (use_virtio_root) {
+        strncat(buf, " --virtioroot", MAX_PATH);
+    }
+
     if (!strstr(platform, "windows")) {
       if (strnlen(ramdiskId, CHAR_BUFFER_SIZE) && strnlen(kernelId, CHAR_BUFFER_SIZE)) {
 	strcat(buf, " --ramdisk --kernel");
@@ -582,7 +590,10 @@ void *startup_thread (void * arg)
                               disk_path, 
                               &(instance->params), 
                               instance->ncnet.privateMac, 
-                              brname, &xml);
+                              brname,
+                              nc_state.config_use_virtio_net,
+                              nc_state.config_use_virtio_root,
+                              &xml);
 
     if (brname) free(brname);
     if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
@@ -841,6 +852,15 @@ static int init (void)
 		free (hypervisor);
 		return ERROR_FATAL;
 	}
+	
+	/* only load virtio config for kvm */
+	if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) ||
+		!strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
+		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET);
+		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK);
+		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT);
+	}
+
 	free (hypervisor);
 
 	/* NOTE: this is the only call which needs to be called on both
@@ -1199,9 +1219,9 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
 
 	if (nc_state.H->doDetachVolume)
-		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force);
+		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, 1);
 	else 
-		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force);
+		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, 1);
 
 	return ret;
 }

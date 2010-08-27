@@ -105,6 +105,11 @@ struct nc_state_t {
 	char connect_storage_cmd_path[MAX_PATH];
 	char disconnect_storage_cmd_path[MAX_PATH];
 	char get_storage_cmd_path[MAX_PATH];
+	// virtio
+	int config_use_virtio_net;	// KVM: use virtio for network
+	int config_use_virtio_disk;	// KVM: use virtio for disk attachment
+	int config_use_virtio_root;	// KVM: use virtio for root partition
+    // windows support
 	char ncBundleUploadCmd[MAX_PATH];
   	char ncCheckBucketCmd[MAX_PATH];
   	char ncDeleteBundleCmd[MAX_PATH];
@@ -175,7 +180,8 @@ struct handlers {
 				char *volumeId,
 				char *remoteDev,
 				char *localDev,
-				int force);
+				int force,
+                                int grab_inst_sem);
     int (*doBundleInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
 				char *instanceId,
@@ -213,6 +219,7 @@ int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bun
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
+
 /* helper functions used by the low level handlers */
 int get_value(			char *s,
 				const char *name,
@@ -242,6 +249,8 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *privMac,
 				//				char *pubMac,
 				char *brname,
+				int use_virtio_net,
+				int use_virtio_root,
 				char **xml);
 void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);
