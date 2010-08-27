@@ -15,7 +15,7 @@ if [ -z "${target_name}" ]; then
 fi
 
 check_target_name=${target_name%%:*}
-if [ $check_target_name = "iqn.2001-05.com.equallogic" ]; then
+if [ $check_target_name = "iqn.2001-05.com.equallogic" ] || [ $check_target_name = "iqn.1992-08.com.netapp" ]; then
     target_name=`echo "${target_name#${check_target_name}:}"`
 else
    exit 1

@@ -58,26 +58,49 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.ws;
+/*
+ *
+ * Author: Neil Soman neil@eucalyptus.com
+ */
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+package com.eucalyptus.storage;
 
-import org.apache.log4j.Logger;
+import netapp.manage.NaElement;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.VolumeTask;
 
-public class VolumeService {
-	private Logger LOG = Logger.getLogger( VolumeService.class );
-	
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 10;
-	
-	public VolumeService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
+public class NetappSANTask extends AbstractSANTask<NaElement> {
+	private NaElement command;
+	private volatile NaElement returnValue;
+	private String errorMessage;
+
+	public NetappSANTask(NaElement command) {
+		this.command = command;		
 	}
-	
-	public void add(VolumeTask creator) {
-		pool.execute(creator);
+
+	@Override
+	public NaElement getCommand() {
+		return command;
+	}
+
+	@Override
+	public NaElement getValue() { return returnValue; }
+
+	@Override
+	public void setValue(NaElement value) {
+		this.returnValue = value;
+	}
+
+	public String getErrorMessage() {
+		return errorMessage;
+	}
+
+	public void setErrorMessage(String errorMessage) {
+		this.errorMessage = errorMessage;
+	}
+
+	@Override
+	public NaElement getEOFCommand() {
+		return null;
 	}
 }
+

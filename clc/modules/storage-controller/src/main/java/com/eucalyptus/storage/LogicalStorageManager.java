@@ -86,15 +86,15 @@ public interface LogicalStorageManager {
 
 	public void cleanVolume(String volumeId);
 
-	public void cleanSnapshot(String volumeId);
+	public void cleanSnapshot(String snapshotId);
 
-	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
+	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException;
 
 	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
 
 	public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
 
-	public int createVolume(String volumeId, String snapshotId) throws EucalyptusCloudException;
+	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
 
 	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
 
@@ -125,4 +125,8 @@ public interface LogicalStorageManager {
 	public String getSnapshotPath(String snapshotId) throws EucalyptusCloudException;
 
 	public void importSnapshot(String snapshotId, String snapPath, String volumeId, int size) throws EucalyptusCloudException;
+
+	public String attachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+
+	public void detachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 }

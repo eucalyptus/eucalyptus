@@ -277,13 +277,43 @@ public class ConvertVolumesResponseType extends StorageComponentMessageResponseT
         }
 }
 
-public class StorageControllerHeartbeatMessage extends HeartbeatMessage {
-
-	def StorageControllerHeartbeatMessage() {}
-
-	def StorageControllerHeartbeatMessage(final String heartbeatId) {
-		super(heartbeatId);
+public class AttachStorageVolumeType extends StorageRequestType {
+	String nodeIqn;
+	String volumeId;
+	
+	def AttachStorageVolumeType() {}
+	
+	def AttachStorageVolumeType(String nodeIqn, String volumeId) {
+		this.nodeIqn = nodeIqn;
+		this.volumeId = volumeId;
 	}
+}
+
+public class AttachStorageVolumeResponseType extends StorageResponseType {
+	String remoteDeviceString;
+	
+	def AttachStorageVolumeResponseType() {}
+	
+	def AttachStorageVolumeResponseType(String remoteDeviceString) {
+		this.remoteDeviceString = remoteDeviceString;
+	}	
+}
+
+public class DetachStorageVolumeType extends StorageRequestType {
+	String nodeIqn;
+	String volumeId;
+	
+	def DetachStorageVolumeType() {}
+	
+	def DetachStorageVolumeType(String nodeIqn, String volumeId) {
+		this.nodeIqn = nodeIqn;
+		this.volumeId = volumeId;
+	}
+}
+
+public class DetachStorageVolumeResponseType extends StorageResponseType {	
+	
+	def DetachStorageVolumeResponseType() {}
 }
 
 public class StorageUsageStatsRecord extends StatEventRecord {

@@ -85,7 +85,6 @@ public class StorageProperties {
 	private static Logger LOG = Logger.getLogger( StorageProperties.class );
 
 	public static final String SERVICE_NAME = "StorageController";
-	public static final String SC_LOCAL_NAME = "StorageController-local";
 	public static final String DB_NAME             = "eucalyptus_storage";
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
 	public static final String EUCALYPTUS_HEADER = "EucaHeader";
@@ -93,8 +92,7 @@ public class StorageProperties {
 	public static final long GB = 1024*1024*1024;
 	public static final long MB = 1024*1024;
 	public static final long KB = 1024;
-	public static final String DUMMY_SAN_PASSWORD = "password";
-	public static final String DUMMY_SAN_HOST = "san_host";
+	public static final String DUMMY_SAN_HOST = "sanHost";
 	public static final String ETHERD_PREFIX = "/dev/etherd/e";
 	public static final String iface = "eth0";
 	public static final int MAX_TOTAL_VOLUME_SIZE = 50;
@@ -112,6 +110,19 @@ public class StorageProperties {
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
 
+	public static String eucaHome = System.getProperty("euca.home");
+	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
+	public static final String blockSize = "1M";
+	public static String SAN_HOST = "sanHost";
+	public static String SAN_USERNAME = "sanUser";
+	public static String SAN_PASSWORD = "sanPassword";
+	public static String DAS_DEVICE = "/dev/blockdev";
+	public static String AGGR_NAME = "aggr1";
+	public static String IQN;
+	public static enum IscsiAuthType {
+		HBA
+	}
+	
 	static { GroovyUtil.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
@@ -181,19 +192,8 @@ public class StorageProperties {
 		EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
 	}
 
-	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
-
-	public static final String blockSize = "1M";
-
-	public static String SAN_HOST = "sanHost";
-
-	public static String SAN_USERNAME = "sanUser";
-
-	public static String SAN_PASSWORD = "sanPassword";
-
-	public static String DAS_DEVICE = "/dev/blockdev";
-	
 	public static <T> EntityWrapper<T> getEntityWrapper( ) {
 		return new EntityWrapper<T>( StorageProperties.DB_NAME );
 	}
+
 }

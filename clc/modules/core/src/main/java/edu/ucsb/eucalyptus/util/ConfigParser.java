@@ -58,26 +58,54 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.ws;
+/*
+ * Author: Neil Soman <neil@eucalyptus.com>
+ */
+package edu.ucsb.eucalyptus.util;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.apache.log4j.Logger;
+public class ConfigParser extends Thread {
+	private InputStream is;
+	private File file;
+	private Map<String, String> values;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.VolumeTask;
-
-public class VolumeService {
-	private Logger LOG = Logger.getLogger( VolumeService.class );
-	
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 10;
-	
-	public VolumeService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
+	public ConfigParser(InputStream is) {
+		this.is = is;
+		values = new HashMap<String, String>();
 	}
-	
-	public void add(VolumeTask creator) {
-		pool.execute(creator);
+
+	public Map<String, String> getValues() {
+		return values;
+	}
+
+	public void run() {
+		try {			
+			BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+			String line;
+            while((line = reader.readLine()) !=null) {
+                if(!line.startsWith("#")) {
+                    String[] parts = line.split("=");
+                    if(parts.length > 1) {
+                        values.put(parts[0], parts[1].replaceAll('\"' + "", ""));
+                    }
+                }
+            }
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		} finally {
+			try {
+				is.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+		}
 	}
 }
