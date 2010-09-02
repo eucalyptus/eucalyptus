@@ -106,6 +106,7 @@ public class Configuration {
     Integer port = request.getPort( );
     ServiceBuilder builder = builders.get( request.getClass( ) );
     if( !builder.checkAdd( name, hostName, port ) ) {
+      reply.set_return(true);
       return reply;
     }
     ServiceConfiguration newComponent = builder.add( name, hostName, port );
