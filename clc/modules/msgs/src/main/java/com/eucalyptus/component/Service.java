@@ -80,7 +80,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
     this.serviceConfiguration = serviceConfig;
     if ( "cluster".equals( parent.getName( ) ) && com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
       this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
-      URI uri = this.parent.getConfiguration( ).makeUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
+      URI uri = this.parent.getConfiguration( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
       this.endpoint = new ServiceEndpoint( this, false, uri );
     } else if ( serviceConfig.isLocal( ) ) {
       URI uri = this.parent.getConfiguration( ).getLocalUri( );

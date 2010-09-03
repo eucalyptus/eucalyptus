@@ -24,10 +24,4 @@ public abstract class DispatcherFactory {
   }
   
   public abstract void removeChild( Service service );
-  
-  public static void remove( Service service ) {
-    factory.removeChild( service );
-  }
-  
-  public abstract void removeChild( Service service );
 }

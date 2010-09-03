@@ -116,6 +116,7 @@ import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 
