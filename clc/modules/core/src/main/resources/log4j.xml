@@ -64,9 +64,6 @@
       <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
     --></layout>
   </appender>
-      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
-    </layout>
-  </appender>
   <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-error.log" />
     <param name="MaxFileSize" value="10MB" />
