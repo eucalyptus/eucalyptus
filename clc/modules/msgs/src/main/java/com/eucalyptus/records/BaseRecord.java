@@ -69,7 +69,7 @@ public class BaseRecord implements Serializable, Record {
   @Transient
   private static final String ISNULL = "NULL";
   @Transient
-  private static final String NEXT   = "\n";
+  protected static final String NEXT   = "\n";
   @Transient
   private transient String    lead;
   @Transient
@@ -90,8 +90,8 @@ public class BaseRecord implements Serializable, Record {
     this.type = type;
     this.eventClass = clazz;
     this.realCreator = creator;
-    this.creator = creator.getSimpleName( );
-    this.codeLocation = codeLocation.toString( );
+    this.creator = creator != null ? creator.getSimpleName( ) : "";
+    this.codeLocation = codeLocation != null ? codeLocation.toString( ) : "";
     this.userId = userId;
     this.correlationId = correlationId;
     this.timestamp = new Date();
@@ -175,6 +175,7 @@ public class BaseRecord implements Serializable, Record {
     }
     this.extra = "";
     for ( Object o : this.others ) {
+      if( o == null ) continue;
       this.extra += ":" + o.toString( );
     }
     return this;
@@ -209,6 +210,7 @@ public class BaseRecord implements Serializable, Record {
   public String toString( ) {
     String ret = this.leadIn( );
     for ( Object o : this.others ) {
+      if( o == null ) continue;
       ret += ":" + o.toString( );
     }
     return ret.replaceAll( "::*", ":" ).replaceAll( NEXT, NEXT + this.leadIn( ) );
@@ -287,6 +289,20 @@ public class BaseRecord implements Serializable, Record {
     this.correlationId = correlationId;
   }
   
+  public Record withDetails( String userId, String primaryInfo, String key, String value ) {
+    this.userId = userId;
+    this.correlationId = primaryInfo;
+    return this.withDetails( key, value );
+  }
+
+  public Record withDetails( String key, String value ) {
+    this.others.clear( );
+    this.others.add( key );
+    this.others.add( value );
+    this.info();
+    return this.next();
+  }
+
   /**
    * @see com.eucalyptus.records.Record#hashCode()
    * @return

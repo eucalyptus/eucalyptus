@@ -21,6 +21,7 @@ public class Contexts {
     Context ctx = new Context( request, channel );
     request.setCorrelationId( ctx.getCorrelationId( ) );
     uuidContexts.put( ctx.getCorrelationId( ), ctx );
+    channelContexts.put( channel, ctx );
     return ctx;
   }
 

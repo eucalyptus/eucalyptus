@@ -83,22 +83,27 @@ public class Configuration implements ComponentInformation {
       if ( NetworkUtil.testLocal( host ) ) {
         return this.getLocalUri( );
       } else {
-        try {
-          uri = String.format( this.getUriPattern( ), host, port );
-        } catch ( MissingFormatArgumentException e ) {
-          uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ).replaceAll( "RequestQueue", "Internal" ) );
-        }
-        try {
-          URI u = new URI( uri );
-          u.parseServerAuthority( );
-          return u;
-        } catch ( URISyntaxException e ) {
-          LOG.error( e, e );
-          return URI.create( uri );
-        }
+        return makeRemoteUri( host, port );
       }
     } catch ( Exception e ) {
       return this.getLocalUri( );
+    }
+  }
+
+  public URI makeRemoteUri( String host, Integer port ) {
+    String uri;
+    try {
+      uri = String.format( this.getUriPattern( ), host, port );
+    } catch ( MissingFormatArgumentException e ) {
+      uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ).replaceAll( "RequestQueue", "Internal" ) );
+    }
+    try {
+      URI u = new URI( uri );
+      u.parseServerAuthority( );
+      return u;
+    } catch ( URISyntaxException e ) {
+      LOG.error( e, e );
+      return URI.create( uri );
     }
   }
 

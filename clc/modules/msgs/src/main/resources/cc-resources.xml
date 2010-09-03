@@ -64,22 +64,26 @@
   -->
 
 <binding force-classes="true">
-    <namespace uri="http://eucalyptus.ucsb.edu/" default="elements"/>
-    <mapping name="DescribeResources" class="edu.ucsb.eucalyptus.msgs.DescribeResourcesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection field="instanceTypes" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="instanceTypes" type="edu.ucsb.eucalyptus.msgs.VmTypeInfo"/>
-        </collection>
-    </mapping>
-    <mapping name="DescribeResourcesResponse"
-             class="edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType"
-             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection field="resources" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="resources" type="edu.ucsb.eucalyptus.msgs.ResourceType"/>
-        </collection>
-        <collection field="serviceTags" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <value name="serviceTags" type="java.lang.String"/>
-        </collection>
-    </mapping>
+  <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
+  <mapping name="DescribeResources" class="edu.ucsb.eucalyptus.msgs.DescribeResourcesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection field="instanceTypes" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="instanceTypes" type="edu.ucsb.eucalyptus.msgs.VmTypeInfo" />
+    </collection>
+  </mapping>
+  <mapping name="DescribeResourcesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection field="resources" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="resources" type="edu.ucsb.eucalyptus.msgs.ResourceType" />
+    </collection>
+    <structure usage="optional">
+      <collection field="nodes" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="nodes" map-as="edu.ucsb.eucalyptus.msgs.NodeType" />
+      </collection>
+    </structure>
+    <collection field="serviceTags" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <value name="serviceTags" type="java.lang.String" />
+    </collection>
+  </mapping>
 </binding>

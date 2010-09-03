@@ -110,12 +110,10 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   }
 
   @Override
-  public boolean destroy( ) throws Exception {
-    return false;
-  }
+  public void destroy( ) throws Exception {}
 
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     try {
       LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.util.SslSetup" ) );
     } catch ( Throwable t ) {}

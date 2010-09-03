@@ -29,7 +29,7 @@ class StorageController():
       setattr(self, name, value)
   
   def get_describe_parser(self):
-    parser = OptionParser("usage: %prog [SCNAME...]",version="Eucalyptus %prog VERSION")
+    parser = OptionParser("usage: %prog [NAME...]",version="Eucalyptus %prog VERSION")
     return parser.parse_args()
 
   def cli_describe(self):
@@ -49,12 +49,14 @@ class StorageController():
 
 
   def get_register_parser(self):
-    parser = OptionParser("usage: %prog [options] SCNAME",version="Eucalyptus %prog VERSION")
-    parser.add_option("-H","--host",dest="sc_host",help="Hostname of the storage.")
-    parser.add_option("-p","--port",dest="sc_port",type="int",default=8773,help="Port for the storage.")
+    parser = OptionParser("usage: %prog [options] NAME",version="Eucalyptus %prog VERSION")
+    parser.add_option("-H","--host",dest="host",help="Hostname of the storage controller.")
+    parser.add_option("-p","--port",dest="port",type="int",default=8773,help="Port for the storage controller.")
     (options,args) = parser.parse_args()    
+    if options.host == None:
+      self.euca.handle_error("You must provide a hostname (-H or --host)")
     if len(args) != 1:
-      print "ERROR  Required argument SCNAME is missing or malformed."
+      print "ERROR  Required argument NAME is missing or malformed."
       parser.print_help()
       sys.exit(1)
     else:
@@ -62,20 +64,24 @@ class StorageController():
 
   def cli_register(self):
     (options, args) = self.get_register_parser()
-    self.register(args[0],options.sc_host,options.sc_port)
+    self.register(args[0],options.host,options.port)
 
-  def register(self, sc_name, sc_host, sc_port=8773):
+  def register(self, name, host, port=8773):
+    if name == None:
+      self.euca.handle_error("Missing name")
+    if host == None:
+      self.euca.handle_error("Missing hostname")
     try:
-      reply = self.euca.connection.get_object('RegisterStorageController', {'Name':sc_name,'Host':sc_host,'Port':sc_port}, BooleanResponse)
+      reply = self.euca.connection.get_object('RegisterStorageController', {'Name':name,'Host':host,'Port':port}, BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
   def get_deregister_parser(self):
-    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
+    parser = OptionParser("usage: %prog [options] NAME",version="Eucalyptus %prog VERSION")
     (options,args) = parser.parse_args()    
     if len(args) != 1:
-      print "ERROR  Required argument SCNAME is missing or malformed."
+      print "ERROR  Required argument NAME is missing or malformed."
       parser.print_help()
       sys.exit(1)
     else:

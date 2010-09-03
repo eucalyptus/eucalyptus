@@ -120,7 +120,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
       if ( c.isAnnotationPresent( Entity.class ) && 
     		  ((ConfigurableClass)c.getAnnotation(ConfigurableClass.class)).singleton() &&
     		  f.isAnnotationPresent( ConfigurableField.class ) ) {
-        LOG.debug( "Checking field: " + c.getName( ) + "." + f.getName( ) );
+        LOG.trace( "Checking field: " + c.getName( ) + "." + f.getName( ) );//REVIEW: lowered this to trace.. sorry.
         ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
         ConfigurableField annote = f.getAnnotation( ConfigurableField.class );
         String fqPrefix = classAnnote.root( );

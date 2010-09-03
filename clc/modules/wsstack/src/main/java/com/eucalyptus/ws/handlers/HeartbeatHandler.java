@@ -95,6 +95,7 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.StartComponentEvent;
@@ -263,7 +264,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
         String resp = "";
         for ( Component c : Components.list( ) ) {
           resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
-                                 c.isInitialized( ) );
+                                 c.isRunning( ) );
         }
         ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
         response.setContent( buf );
@@ -322,7 +323,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     String resp = "";
     for ( Component c : Components.list( ) ) {
       resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
-                             c.isInitialized( ) );
+                             c.isRunning( ) );
     }
     ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
     response.setContent( buf );

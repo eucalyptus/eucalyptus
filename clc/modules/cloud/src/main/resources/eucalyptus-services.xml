@@ -87,8 +87,6 @@
   <endpoint name="GroupsVerifyWS" address="vm://GroupsVerify" synchronous="false" />
   <endpoint name="VmTypeVerifyWS" address="vm://VmTypeVerify" synchronous="false" />
   <endpoint name="FinishedVerifyWS" address="vm://VmVerified" synchronous="false" />
-  <endpoint name="KeyPairResolveWS" address="vm://KeyPairResolve" synchronous="true" />
-  <endpoint name="ImageResolveWS" address="vm://ImageResolve" synchronous="true" />
   <!--run-time system state services-->
   <endpoint name="ClusterEndpointWS" address="vm://ClusterEndpoint" synchronous="false" />
   <endpoint name="ClusterSinkWS" address="vm://ClusterSink" synchronous="false" />

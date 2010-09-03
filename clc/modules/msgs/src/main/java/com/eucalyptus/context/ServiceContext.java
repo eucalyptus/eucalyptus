@@ -15,12 +15,12 @@ import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -153,13 +153,13 @@ public class ServiceContext {
     public ServiceBootstrapper( ) {}
     
     @Override
-    public boolean load( Stage current ) throws Exception {
+    public boolean load( ) throws Exception {
       List<ConfigResource> configs = Lists.newArrayList( );
       for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
         if ( comp.isEnabled( ) ) {
           Resource rsc = comp.getConfiguration( ).getResource( );
           if( rsc != null ) {
-            LOG.info( LogUtil.subheader( "Preparing configuration for: " + rsc ) );
+            LOG.info( "-> Preparing cfg: " + rsc );
             configs.addAll( rsc.getConfigurations( ) );
           }
         }

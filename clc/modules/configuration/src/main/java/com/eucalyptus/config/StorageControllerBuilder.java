@@ -3,6 +3,8 @@ package com.eucalyptus.config;
 import java.util.List;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
@@ -41,8 +43,12 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
     try {
       Configuration.getClusterConfiguration( name );
     } catch ( Exception e1 ) {
-      throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
-                                              + "  No cluster found with the name: " + name );
+      try {
+        Groups.lookupGroup( name );
+      } catch ( NoSuchGroupException ex ) {
+        throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
+                                                + "  No cluster found with the name: " + name );
+      }
     }
     return super.checkAdd( name, host, port );
   }
@@ -59,7 +65,7 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   @Override
   public Boolean checkRemove( String name ) throws ServiceRegistrationException {
     return super.checkRemove( name );
-  }
+  }  
 
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {

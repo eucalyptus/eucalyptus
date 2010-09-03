@@ -66,21 +66,20 @@ package com.eucalyptus.cluster.callback;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.address.Address.Transition;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 
-public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType,AssignAddressResponseType> {
+public class AssignAddressCallback extends MessageCallback<AssignAddressType, AssignAddressResponseType> {
   private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
   
   private Address       address;
@@ -91,21 +90,12 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
   
   @Override
-  public void prepare( AssignAddressType msg ) throws Exception {
-    if( VmInstance.DEFAULT_IP.equals( this.getRequest( ).getDestination( ) ) ) {
-      VmInstance vm = VmInstances.getInstance( ).lookup( address.getInstanceId( ) );
-      String privAddr = vm.getPrivateAddress( );
-      if( VmInstance.DEFAULT_IP.equals( privAddr ) ) {
-        throw new EucalyptusCloudException( "BUG: Failing to assign address because the vm's private address is 0.0.0.0!: " + vm.toString( ) );
-      } else {
-        this.getRequest( ).setDestination( privAddr );
-      }
-    }
+  public void initialize( AssignAddressType msg ) {
     EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), address.toString( ) ).debug( );
   }
   
   @Override
-  public void verify( AssignAddressResponseType msg ) throws Exception {
+  public void fire( AssignAddressResponseType msg ) {
     try {
       this.updateState( );
     } catch ( IllegalStateException e ) {
@@ -117,14 +107,14 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
   
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( e, e );
     this.cleanupState( );
   }
-
+  
   private boolean checkVmState( ) {
     try {
-      VmInstance vm = VmInstances.getInstance( ).lookup( super.getRequest().getInstanceId( ) );
+      VmInstance vm = VmInstances.getInstance( ).lookup( super.getRequest( ).getInstanceId( ) );
       VmState vmState = vm.getState( );
       if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
         vm.updatePublicAddress( VmInstance.DEFAULT_IP );
@@ -139,7 +129,7 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
   
   private void updateState( ) {
-    if( !this.checkVmState( ) ) {
+    if ( !this.checkVmState( ) ) {
       this.address.clearPending( );
       throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
     } else {
@@ -147,17 +137,17 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
       this.address.clearPending( );
     }
   }
-
+  
   private void cleanupState( ) {
     EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), LogUtil.FAIL, address.toString( ) ).debug( );
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
-    if( this.address.isPending( ) ) {
+    if ( this.address.isPending( ) ) {
       this.address.clearPending( );
-    } else if( this.address.isSystemOwned( ) ) {
+    } else if ( this.address.isSystemOwned( ) ) {
       Addresses.release( address );
-    } else if( this.address.isAssigned( ) ) {
+    } else if ( this.address.isAssigned( ) ) {
       AddressCategory.unassign( address );
     }
   }
-
+  
 }

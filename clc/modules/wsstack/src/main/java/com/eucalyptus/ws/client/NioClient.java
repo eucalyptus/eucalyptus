@@ -75,6 +75,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.util.async.NioBootstrap;
 import com.eucalyptus.ws.Client;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import com.eucalyptus.ws.handlers.ResponseHandler;

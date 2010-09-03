@@ -9,6 +9,8 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.util.async.RemoteCallback;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -17,10 +19,10 @@ public class StateUpdateHandler implements EventListener {
   private static Logger LOG = Logger.getLogger( StateUpdateHandler.class );
   private static final ConcurrentMap<String,StateUpdateHandler> clusterMap = Maps.newConcurrentHashMap( );
   private final ConcurrentMap<Class,AtomicBoolean> inflightMap = Maps.newConcurrentHashMap( );
-  private final ConcurrentMap<Class,QueuedEventCallback> callbackMap = Maps.newConcurrentHashMap( );
+  private final ConcurrentMap<Class,MessageCallback> callbackMap = Maps.newConcurrentHashMap( );
   private final Cluster cluster;
   
-  public static void create( Cluster cluster, QueuedEventCallback callback ) {
+  public static void create( Cluster cluster, RemoteCallback callback ) {
     StateUpdateHandler handler = new StateUpdateHandler( cluster );
     StateUpdateHandler.clusterMap.putIfAbsent( cluster.getName( ), handler );
     handler = StateUpdateHandler.clusterMap.get( cluster.getName( ) );
@@ -39,7 +41,7 @@ public class StateUpdateHandler implements EventListener {
     }
   }
 
-  public void addCallback( QueuedEventCallback cb ) {
+  public void addCallback( MessageCallback cb ) {
     if( this.callbackMap.putIfAbsent( cb.getClass( ), cb ) == null ) {
       this.inflightMap.put( cb.getClass( ), new AtomicBoolean( false ) );
     } else {

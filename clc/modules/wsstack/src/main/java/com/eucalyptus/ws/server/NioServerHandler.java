@@ -59,7 +59,7 @@
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.ws.server;
 
@@ -88,8 +88,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
-import org.jboss.netty.util.DebugUtil;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.ServiceNotReadyException;
@@ -149,6 +149,13 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) throws Exception {
     final Channel ch = e.getChannel( );
     final Throwable cause = e.getCause( );
+    try {
+      if( ch != null ) {
+        Contexts.clear( Contexts.lookup( ch ) );
+      }
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+    }
     if ( cause instanceof ReadTimeoutException ) {
       LOG.debug( cause, cause );
       this.sendError( ctx, HttpResponseStatus.REQUEST_TIMEOUT, cause );

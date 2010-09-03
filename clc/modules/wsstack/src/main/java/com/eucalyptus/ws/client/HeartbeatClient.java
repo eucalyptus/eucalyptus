@@ -16,6 +16,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.NioBootstrap;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ComponentType;

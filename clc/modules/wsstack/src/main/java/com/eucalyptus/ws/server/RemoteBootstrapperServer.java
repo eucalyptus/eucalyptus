@@ -59,7 +59,7 @@
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.ws.server;
 
@@ -117,7 +117,7 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
   }
   
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     this.channel = this.bootstrap.bind( new InetSocketAddress( this.port ) );
     LOG.info( "Waiting for system properties before continuing bootstrap." );
     this.channel.getCloseFuture( ).awaitUninterruptibly( );
@@ -151,10 +151,9 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
     }
 
     @Override
-    public boolean load( Stage current ) throws Exception {
+    public boolean load( ) throws Exception {
       return true;
     }
-    
   }
   
   public ChannelPipeline getPipeline( ) throws Exception {

@@ -32,12 +32,14 @@ class EucaAdmin:
 
   def handle_error(self,ex):
     s = ""
-    if ex.errors.__len__() != 0:
-      for i in ex.errors:
-        s = '%sERROR %s %s %s: %s\n' % (s,ex.status, ex.reason, i[0], i[1])
+    if not hasattr(ex,"errors"):
+      s = 'ERROR %s' % (ex)
     else:
-      s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
-    if not re.match(".*Exception.*\n",s) == None:
+      if ex.errors.__len__() != 0:
+        for i in ex.errors:
+          s = '%sERROR %s %s %s: %s\n' % (s,ex.status, ex.reason, i[0], i[1])
+      else:
+        s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
       while s.count("\n") != 3:
         s = re.sub(".*Exception.*\n", ": ", s)
     print s.replace("\n","")

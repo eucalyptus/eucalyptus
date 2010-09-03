@@ -41,26 +41,45 @@ class Walrus():
 
   def get_register_parser(self):
     parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-H","--host",dest="walrus_host",help="Hostname of the walrus.")
-    parser.add_option("-p","--port",dest="walrus_port",type="int",default=8773,help="Port for the walrus.")
-    return parser
+    parser.add_option("-H","--host",dest="host",help="Hostname of the walrus.")
+    parser.add_option("-p","--port",dest="port",type="int",default=8773,help="Port for the walrus.")
+    (options,args) = parser.parse_args()    
+    if options.host == None:
+      self.euca.handle_error("You must provide a hostname (-H or --host)")
+    return (options,args)  
 
+  def cli_register(self):
+    (options, args) = self.get_register_parser()
+    if len(args) != 1:
+      self.register(options.host,port=options.port)
+    else:
+      self.register(options.host,name=args[0],port=options.port)
 
-  def register(self, walrus_name, walrus_host, walrus_port=8773):
+  def register(self, host, name='walrus', port=8773):
+    if host == None:
+      self.euca.handle_error("Missing hostname")
     try:
-      reply = self.euca.connection.get_object('RegisterWalrus', {'Name':'walrus','Host':walrus_host,'Port':walrus_port}, BooleanResponse)
+      reply = self.euca.connection.get_object('RegisterWalrus', {'Name':'walrus','Host':host,'Port':port}, BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
   def get_deregister_parser(self):
-    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-n","--name",dest="walrus_name",help="Name of the walrus.")
-    return parser
+    parser = OptionParser("usage: %prog [options] NAME",version="Eucalyptus %prog VERSION")
+    parser.add_option("-n","--name",dest="name",help="Name of the walrus.")
+    (options,args) = parser.parse_args()    
+    return (options,args)  
+
+  def cli_deregister(self):
+    (options, args) = self.get_deregister_parser()
+    if len(args) != 1:
+      self.deregister()
+    else:
+      self.deregister(args[0])
             
-  def deregister(self, walrus_name):
+  def deregister(self, name='walrus'):
     try:
-      reply = self.euca.connection.get_object('DeregisterWalrus', {'Name':walrus_name},BooleanResponse)
+      reply = self.euca.connection.get_object('DeregisterWalrus', {'Name':name},BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)

@@ -72,8 +72,6 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.SuccessCallback;
-import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -84,6 +82,10 @@ import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callback.Success;
+import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -148,7 +150,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
         Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
         LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
-      } 
+      }
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
@@ -194,7 +196,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     return address;
   }
-    
+  
   public static Address allocate( String userId, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
     Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( userId );
@@ -216,15 +218,14 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     try {
       final String instanceId = addr.getInstanceId( );
       if ( addr.isAssigned( ) ) {
-        addr.unassign( ).getCallback( ).then( new UnconditionalCallback( ) {
+        Callbacks.newClusterRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
           @Override
-          public void apply( ) {
+          public void fire( ) {
             try {
               final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
               Addresses.system( vm );
-            } catch ( NoSuchElementException ex ) {
-                                              }
-                                          }
+            } catch ( NoSuchElementException ex ) {}
+          }
         } ).dispatch( addr.getCluster( ) );
       } else {
         addr.release( );

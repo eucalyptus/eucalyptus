@@ -65,11 +65,12 @@
 package com.eucalyptus.address;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.UnconditionalCallback;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.UnconditionalCallback;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
@@ -105,7 +106,6 @@ public class AddressManager {
     reply.set_return( false );
     Addresses.updateAddressingMode( );
     Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
-    address.release( );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
@@ -141,11 +141,8 @@ public class AddressManager {
     reply.set_return( true );
     
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
-      public void apply( ) {
+      public void fire( ) {
         AddressCategory.assign( address, vm ).dispatch( address.getCluster( ) );
-        if ( oldAddrSystem ) {
-          oldAddr.release( );
-        }
         if ( oldVm != null ) {
           Addresses.system( oldVm );
         }
@@ -153,18 +150,18 @@ public class AddressManager {
     };
     
     final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
-      public void apply( ) {
+      public void fire( ) {
         if ( oldAddr != null ) {
           AddressCategory.unassign( oldAddr ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
         } else {
-          assignTarget.apply( );
+          assignTarget.fire( );
         }
       }
     };
     if ( address.isAssigned( ) ) {
-      address.unassign( ).getCallback( ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
+      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
     } else {
-      unassignBystander.apply( );
+      unassignBystander.fire( );
     }
     return reply;
   }
@@ -206,8 +203,7 @@ public class AddressManager {
       try {
         if ( address.isSystemOwned( ) ) {
           AddressCategory.unassign( address ).then( new UnconditionalCallback( ) {
-            public void apply( ) {
-              address.release( );
+            public void fire( ) {
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
               } catch ( Exception e ) {
@@ -218,7 +214,7 @@ public class AddressManager {
         } else {
           AddressCategory.unassign( address ).then( new UnconditionalCallback( ) {
             @Override
-            public void apply( ) {
+            public void fire( ) {
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
               } catch ( Exception e ) {

@@ -178,6 +178,6 @@ public class VmType extends AbstractPersistent implements Serializable, Comparab
   
   @Override
   public String toString( ) {
-    return "VmType [name='" + name + '\'' + ", cpu=" + cpu + ", disk=" + disk + ", mem=" + memory + "]";
+    return "VmType " + name + " cores=" + cpu + " disk=" + disk + " mem=" + memory;
   }
 }

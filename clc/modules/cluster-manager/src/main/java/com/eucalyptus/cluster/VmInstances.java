@@ -60,32 +60,46 @@
  *******************************************************************************/
 /*
  *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
 package com.eucalyptus.cluster;
 
 import java.security.MessageDigest;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
-import com.eucalyptus.cluster.callback.QueuedEventCallback;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.util.async.Request;
+import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.SystemState.Reason;
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.eucalyptus.records.EventRecord;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+//import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   private static Logger      LOG       = Logger.getLogger( VmInstances.class );
@@ -149,7 +163,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   
   public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
     UnconditionalCallback cleanup = new UnconditionalCallback( ) {
-      public void apply( ) {
+      public void fire( ) {
         if ( address != null ) {
           try {
             if ( address.isSystemOwned( ) ) {
@@ -175,7 +189,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-                stopNet.newInstance( ).dispatch( cluster );
+                Callbacks.newClusterRequest( stopNet.newInstance( ) ).dispatch( cluster.getServiceEndpoint( ) );
               }
             }
           }
@@ -192,8 +206,10 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
       Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
       int networkIndex = vm.getNetworkIndex( );
+      VmInstances.cleanUpAttachedVolumes( vm );
+
       Address address = null;
-      QueuedEventCallback cb = new TerminateCallback( vm.getInstanceId( ) );
+      Request<TerminateInstancesType, TerminateInstancesResponseType> req = Callbacks.newClusterRequest( new TerminateCallback( vm.getInstanceId( ) ) );
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
@@ -201,10 +217,40 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
           LOG.debug( e1, e1 );
         }
       }
-      cb.then( VmInstances.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
-      cb.dispatch( cluster );
+      req.then( VmInstances.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
+      req.dispatch( cluster.getServiceEndpoint( ) );
     } catch ( Throwable e ) {
       LOG.error( e, e );
+    }
+  }
+
+  private static void cleanUpAttachedVolumes( final VmInstance vm ) {
+    Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+    if ( !vm.getVolumes( ).isEmpty( ) ) {
+      try {
+//MERGE    
+//        StorageControllerConfiguration sc = Configuration.lookupScHack( vm.getPlacement( ) );
+//        for ( AttachedVolume volume : vm.getVolumes( ) ) {
+//          try {
+//            ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) ).send( new DetachStorageVolumeType(
+//                                                                                                                cluster.getNode( vm.getServiceTag( ) ).getIqn( ),
+//                                                                                                                volume.getVolumeId( ) ) );
+//            vm.getVolumes( ).remove( volume );
+//          } catch ( Throwable e ) {
+//            LOG.error( "Failed sending Detach Storage Volume for: " + volume.getVolumeId( )
+//                       + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
+//          }
+//        }
+      } catch ( Exception ex ) {
+        LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPlacement( ) + ").  " +
+                   "The the following volumes are attached: " + Iterables.transform( vm.getVolumes( ), new Function<AttachedVolume, String>( ) {
+                     
+                     @Override
+                     public String apply( AttachedVolume arg0 ) {
+                       return arg0.getVolumeId( );
+                     }
+                   } ) );
+      }
     }
   }
 

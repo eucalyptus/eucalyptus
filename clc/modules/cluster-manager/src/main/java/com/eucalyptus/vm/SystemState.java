@@ -101,8 +101,8 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.ws.client.RemoteDispatcher;
-import com.eucalyptus.ws.util.Messaging;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -186,7 +186,7 @@ public class SystemState {
         }
         return;
       } catch ( NoSuchElementException e1 ) {
-        if ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) {
+        if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
           SystemState.restoreInstance( originCluster, runVm );
         }
         return;
@@ -383,7 +383,7 @@ public class SystemState {
           } catch ( EucalyptusCloudException e ) {
             LOG.error( e );
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-            new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
+            Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.trace( e );
           }
@@ -399,7 +399,7 @@ public class SystemState {
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
+      Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     } catch ( Throwable t ) {
       LOG.error( t, t );
     }

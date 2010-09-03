@@ -16,7 +16,7 @@ public class DirectoryBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DirectoryBootstrapper.class );
   public DirectoryBootstrapper( ) {}
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     for( BaseDirectory b : BaseDirectory.values( ) ) {
       EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, b.name(), b.toString( ) ).info( );
       b.check( );
