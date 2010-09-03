@@ -240,9 +240,8 @@ public class ClusterNodeState {
 
   @Override
   public String toString( ) {
-    return String.format(
-                          "ClusterNodeState [clusterName=%s, pendingTokens=%s, redeemedTokens=%s, submittedTokens=%s, typeMap=%s]",
-                          this.clusterName, this.pendingTokens, this.redeemedTokens, this.submittedTokens, this.typeMap );
+    return String.format( "ClusterNodeState pending=%s redeemed=%s submitted=%s",
+                          this.pendingTokens, this.redeemedTokens, this.submittedTokens );
   }
 
 }

@@ -18,16 +18,16 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 
 public class Context {
-  private static Logger            LOG         = Logger.getLogger( Context.class );
+  private static Logger            LOG       = Logger.getLogger( Context.class );
   
-  private String                   correlationId;
+  private final String             correlationId;
   private Long                     creationTime;
-  private BaseMessage              request     = null;
-  private MappingHttpRequest       httpRequest = null;
-  private Channel                  channel     = null;
-  private WeakReference<MuleEvent> muleEvent   = null;
-  private User                     user        = null;
-  private Subject                  subject     = null;
+  private BaseMessage              request   = null;
+  private final MappingHttpRequest httpRequest;
+  private final Channel            channel;
+  private WeakReference<MuleEvent> muleEvent = new WeakReference<MuleEvent>( null );
+  private User                     user      = null;
+  private Subject                  subject   = null;
   
   protected Context( MappingHttpRequest httpRequest, Channel channel ) {
     UUID uuid = UUID.randomUUID( );
@@ -35,7 +35,7 @@ public class Context {
     this.creationTime = System.nanoTime( );
     this.httpRequest = httpRequest;
     this.channel = channel;
-    EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug();
+    EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
   
   public Channel getChannel( ) {
@@ -79,15 +79,14 @@ public class Context {
   public List<Group> getGroups( ) {
     return Groups.lookupUserGroups( this.getUser( ) );
   }
-
+  
   public List<Authorization> getAuthorizations( ) {
     List<Authorization> auths = Lists.newArrayList( );
-    for( Group g : this.getGroups( ) ) {
+    for ( Group g : this.getGroups( ) ) {
       auths.addAll( g.getAuthorizations( ) );
     }
     return auths;
   }
-
   
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {
@@ -111,15 +110,13 @@ public class Context {
   
   public void setSubject( Subject subject ) {
     if ( subject != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_SUBJECT, this.correlationId, subject.getPrincipals( ).toString( ) ).debug( );
+      EventRecord.caller( Context.class, EventType.CONTEXT_SUBJECT, this.correlationId, subject.getPrincipals( ).toString( ) ).trace( );
       this.subject = subject;
     }
   }
   
   void clear( ) {
     EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ).debug( );
-    this.channel = null;
-    this.httpRequest = null;
     this.muleEvent.clear( );
     this.muleEvent = null;
   }

@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.VmTypes;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.config.ClusterConfiguration;
@@ -163,7 +164,7 @@ public class RemoteInfoHandler {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
     for ( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
       try {
-        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Component.storage.isEnabled( ) ) {
+        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( Component.storage ).isRunning( ) ) {
           storageList.add( StorageInfoWeb.DEFAULT_SC );
           continue;
         }

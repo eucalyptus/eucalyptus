@@ -86,7 +86,7 @@ public class HttpUtils {
       } else if ( nextByte == HttpUtils.LF ) {
         return sb.toString( );
       } else {
-        if ( lineLength >= maxLineLength ) { throw new HttpException( "HTTP input line longer than " + maxLineLength + " bytes." ); }
+        if ( lineLength >= maxLineLength ) { throw new HttpException( "HTTP input line longer than " + maxLineLength + " bytes: " + sb.toString( ) ); }
         lineLength++;
         sb.append( ( char ) nextByte );
       }

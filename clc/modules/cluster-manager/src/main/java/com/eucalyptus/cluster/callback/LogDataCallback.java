@@ -4,13 +4,14 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
 import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.GetLogsResponseType;
 import edu.ucsb.eucalyptus.msgs.GetLogsType;
 
-public class LogDataCallback extends QueuedEventCallback<GetLogsType, GetLogsResponseType> {
+public class LogDataCallback extends MessageCallback<GetLogsType, GetLogsResponseType> {
   private static Logger  LOG  = Logger.getLogger( LogDataCallback.class );
   private final NodeInfo node;
   private final Cluster  cluster;
@@ -28,22 +29,17 @@ public class LogDataCallback extends QueuedEventCallback<GetLogsType, GetLogsRes
   }
   
   @Override
-  public void prepare( GetLogsType msg ) throws Exception {}
+  public void initialize( GetLogsType msg )  {}
   
   @Override
-  public void fail( Throwable t ) {
+  public void fireException( Throwable t ) {
     LOG.error( t, t );
   }
-  
   @Override
-  public NioClientPipeline getClientPipeline( ) throws Exception {
-    return new LogClientPipeline( this );
-  }
-  
-  @Override
-  public void verify( GetLogsResponseType msg ) throws Exception {
+  public void fire( GetLogsResponseType msg )  {
     if ( msg == null || msg.getLogs( ) == null ) {
-      throw new EucalyptusClusterException( "Failed to get log data from cluster." );
+      EucalyptusClusterException error = new EucalyptusClusterException( "Failed to get log data from cluster." );
+      LOG.error( error, error );
     } else {
       String log = "";
       if ( self ) {
@@ -63,10 +59,6 @@ public class LogDataCallback extends QueuedEventCallback<GetLogsType, GetLogsRes
       }
       LOG.debug( "LOG: " + log );
     }
-  }
-  
-  public void fire( final String hostname, final int port, final String servicePath ) {
-    super.fire( hostname, port, servicePath.replaceAll( "EucalyptusCC", "EucalyptusGL" ) );
   }
   
 }

@@ -120,12 +120,10 @@ public class LdapBootstrapper extends Bootstrapper implements DatabaseBootstrapp
   }
   
   @Override
-  public boolean destroy( ) throws Exception {
-    return true;
-  }
+  public void destroy( ) throws Exception {}
   
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     if ( LdapConfiguration.ENABLE_LDAP ) {
       try {
         LOG.debug( "Initializing SSL just in case: " + Class.forName( "com.eucalyptus.auth.util.SslSetup" ) );

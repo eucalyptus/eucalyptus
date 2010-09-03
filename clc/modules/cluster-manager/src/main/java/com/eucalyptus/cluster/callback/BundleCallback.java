@@ -7,10 +7,11 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceType;
 
-public class BundleCallback extends QueuedEventCallback<BundleInstanceType,BundleInstanceResponseType> {
+public class BundleCallback extends MessageCallback<BundleInstanceType,BundleInstanceResponseType> {
 
   private static Logger LOG = Logger.getLogger( BundleCallback.class );
   public BundleCallback( BundleInstanceType request ) {
@@ -19,10 +20,10 @@ public class BundleCallback extends QueuedEventCallback<BundleInstanceType,Bundl
   
 
   @Override
-  public void prepare( BundleInstanceType msg ) throws Exception {}
+  public void initialize( BundleInstanceType msg ) {}
 
   @Override
-  public void verify( BundleInstanceResponseType reply ) throws Exception {
+  public void fire( BundleInstanceResponseType reply ) {
     if ( !reply.get_return( ) ) {
       LOG.info( "Attempt to bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
       try {
@@ -42,7 +43,7 @@ public class BundleCallback extends QueuedEventCallback<BundleInstanceType,Bundl
   }
 
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
   }

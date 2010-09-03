@@ -80,13 +80,13 @@ public class Configuration implements ComponentInformation {
   public URI makeUri( String host, Integer port ) {
     String uri;
     try {
-      if ( NetworkUtil.testLocal( host ) ) {
+      if ( NetworkUtil.testLocal( host ) && port != -1 ) {
         return this.getLocalUri( );
       } else {
         try {
           uri = String.format( this.getUriPattern( ), host, port );
         } catch ( MissingFormatArgumentException e ) {
-          uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ).replaceAll( "RequestQueue", "Internal" ) );
+		      uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ).replaceAll( "RequestQueue", "Internal" ) );
         }
         try {
           URI u = new URI( uri );

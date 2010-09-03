@@ -72,20 +72,19 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.ClusterAddressInfo;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callbacks;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import com.eucalyptus.records.EventRecord;
 
 public class ClusterState {
   private static Logger                           LOG                   = Logger.getLogger( ClusterState.class );
@@ -115,9 +114,9 @@ public class ClusterState {
       LOG.warn( "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
-        new UnassignAddressCallback( address ).then( new SuccessCallback( ) {
+        Callbacks.newClusterRequest( new UnassignAddressCallback( address ) ).then( new Callback.Success( ) {
           @Override
-          public void apply( BaseMessage t ) {
+          public void fire( Object t ) {
             if ( addr.isSystemOwned( ) ) {
               Addresses.getAddressManager( ).releaseSystemAddress( addr );
             }

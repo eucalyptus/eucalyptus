@@ -59,7 +59,7 @@
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.config;
 
@@ -67,17 +67,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
@@ -108,13 +110,27 @@ public class Configuration {
     String hostName = request.getHost();
     Integer port = request.getPort( );
     ServiceBuilder builder = builders.get( request.getClass( ) );
+    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + name + "@" + hostName + ":" + port );
     if( !builder.checkAdd( name, hostName, port ) ) {
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
       return reply;
     }
-    ServiceConfiguration newComponent = builder.add( name, hostName, port );
-    builder.getComponent( ).buildService( newComponent );
-    builder.fireStart( newComponent );
-    reply.set_return( true );
+    try {
+      ServiceConfiguration newComponent = builder.add( name, hostName, port );
+      builder.getComponent( ).buildService( newComponent );
+      builder.getComponent( ).startService( newComponent );
+      reply.set_return( true );
+    } catch( EucalyptusCloudException e ) {
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
+      LOG.info( e.getMessage( ) );
+      LOG.error( e, e );
+      throw e;
+    } catch ( Throwable e ) {
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
+      LOG.info( e.getMessage( ) );
+      LOG.error( e, e );
+      throw new ServiceRegistrationException( e );
+    }
     return reply;
   }
     
@@ -122,25 +138,42 @@ public class Configuration {
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     reply.set_return( false );
     ServiceBuilder builder = builders.get( request.getClass( ) );
+    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     try {
       if( !builder.checkRemove( request.getName( ) ) ) {
+        LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
         return reply;
       }
     } catch ( Exception e ) {
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
       throw new ServiceRegistrationException( e.getMessage( ), e );
     }
     ServiceConfiguration conf;
     try {
       conf = builder.lookupByName( request.getName( ) );
-      builder.fireStop( conf );
-      builder.getComponent( ).removeService( conf );
+    } catch ( ServiceRegistrationException e ) {
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": lookupByName failed." );
+      LOG.error( e, e );
+      return reply;
+    }
+    try {
+      try {
+        builder.getComponent( ).removeService( conf );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+      }
       builder.remove( conf );
       reply.set_return( true );
     } catch( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": remove failed." );
+      LOG.info( e.getMessage( ) );
+      LOG.error( e, e );
       throw e;
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
+    } catch ( Throwable e ) {
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": remove failed." );
+      LOG.info( e.getMessage( ) );
+      LOG.error( e, e );
+      throw new ServiceRegistrationException( e );
     }
     return reply;
   }
@@ -160,6 +193,34 @@ public class Configuration {
     return reply;
   }
   
+  public static StorageControllerConfiguration lookupScHack( final String requestedZone ) throws EucalyptusCloudException {
+    try {
+      return getStorageControllerConfiguration( requestedZone );
+    } catch ( Exception e ) {
+      try {
+        Group g = Iterables.find( Groups.listAllGroups( ), new Predicate<Group>( ) {
+          @Override
+          public boolean apply( Group arg0 ) {
+            return Iterables.any( arg0.getAuthorizations( ), new Predicate<Authorization>( ) {
+              @Override
+              public boolean apply( Authorization arg0 ) {
+                return arg0.check( new AvailabilityZonePermission( requestedZone ) );
+              }
+            } );
+          }
+        } );
+        if( g == null ) {
+          throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone." );          
+        } else {
+          return getStorageControllerConfiguration( g.getName( ) );
+        }
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+        throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone.", ex );
+      }
+    }
+  }
+
   public static List<ClusterConfiguration> getClusterConfigurations( ) throws EucalyptusCloudException {
     EntityWrapper<ClusterConfiguration> db = ServiceConfigurations.getEntityWrapper( );
     try {

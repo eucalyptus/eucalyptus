@@ -4,15 +4,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.security.PrivateKey;
-
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
-
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.entities.SshKeyPair;
-import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.util.EucalyptusCloudException;
-
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
@@ -35,10 +31,10 @@ public class KeyPairManager {
       } catch ( Exception e ) {
         kp = SshKeyPair.NO_KEY;
       }
+    } else {
+      kp = SshKeyPair.NO_KEY;
     }
-    if(kp != null)
-        return new VmKeyInfo( kp.getDisplayName(), kp.getPublicKey(), kp.getFingerPrint() );
-	return null;
+    return new VmKeyInfo( kp.getDisplayName(), kp.getPublicKey(), kp.getFingerPrint() );
   }
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {

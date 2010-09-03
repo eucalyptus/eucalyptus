@@ -89,19 +89,6 @@
       </outbound>
     </service>
 
-      <service name="KeyPairResolve">
-        <inbound>
-          <inbound-endpoint ref="KeyPairResolveWS"/>
-        </inbound>
-        <component class="com.eucalyptus.keys.KeyPairManager"/>
-      </service>
-      <service name="ImageResolve">
-        <inbound>
-          <inbound-endpoint ref="ImageResolveWS"/>
-        </inbound>
-        <component class="com.eucalyptus.images.ImageManager"/>
-      </service>
-
     <service name="ClusterSink">
       <inbound>
         <inbound-endpoint ref="ClusterSinkWS"/>

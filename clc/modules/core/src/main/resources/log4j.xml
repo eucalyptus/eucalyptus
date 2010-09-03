@@ -60,8 +60,9 @@
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
     <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" /><!--
       <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
-    </layout>
+    --></layout>
   </appender>
   <appender name="extlogfile" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug-ext.log" />
@@ -77,7 +78,7 @@
     <param name="MaxBackupIndex" value="10" />
     <param name="Threshold" value="ERROR" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
+      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
   <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">

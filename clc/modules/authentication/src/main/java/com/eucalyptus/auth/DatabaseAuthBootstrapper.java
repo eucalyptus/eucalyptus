@@ -21,7 +21,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   
   public static boolean ENABLE = !LdapConfiguration.ENABLE_LDAP;
   
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     if (ENABLE) {
       DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
       Users.setUserProvider( dbAuth );

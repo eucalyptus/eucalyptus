@@ -80,11 +80,12 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
-import com.eucalyptus.cluster.callback.QueuedEventCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.NOOP;
+import com.eucalyptus.util.async.RemoteCallback;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
@@ -94,7 +95,7 @@ import com.eucalyptus.records.EventType;
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Address implements HasName {
+public class Address implements HasName<Address> {
   public enum State {
     broken, unallocated, allocated, assigned, impending;
   }
@@ -102,12 +103,12 @@ public class Address implements HasName {
   public enum Transition {
     allocating {
       public Class getCallback( ) {
-        return QueuedEventCallback.NOOP.class;
+        return NOOP.class;
       }
     },
     unallocating {
       public Class getCallback( ) {
-        return QueuedEventCallback.NOOP.class;
+        return NOOP.class;
       }
     },
     assigning {
@@ -124,12 +125,12 @@ public class Address implements HasName {
     },
     system {
       public Class getCallback( ) {
-        return QueuedEventCallback.NOOP.class;
+        return NOOP.class;
       }
     },
     quiescent {
       public Class getCallback( ) {
-        return QueuedEventCallback.NOOP.class;
+        return NOOP.class;
       }
     };
     public abstract Class getCallback( );
@@ -364,14 +365,14 @@ public class Address implements HasName {
     return this.transition.getName( );
   }
   
-  public QueuedEventCallback getCallback( ) {
+  public RemoteCallback getCallback( ) {
     try {
       Class cbClass = this.transition.getName( ).getCallback( );
       Constructor cbCons = cbClass.getConstructor( Address.class );
-      return ( QueuedEventCallback ) cbCons.newInstance( this );
+      return ( RemoteCallback ) cbCons.newInstance( this );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      return new QueuedEventCallback.NOOP( );
+      return new NOOP( );
     }
   }
   
@@ -471,11 +472,10 @@ public class Address implements HasName {
   
   @Override
   public String toString( ) {
-    return LogUtil.dumpObject( this );
+    return "Address " + this.name + " " + this.cluster + " " + (this.isAllocated( )?this.userId + " ":"") + (this.isAssigned( )? this.instanceId + " " + this.instanceAddress + " ":"") + " " + this.transition;
   }
   
-  public int compareTo( final Object o ) {
-    Address that = ( Address ) o;
+  public int compareTo( final Address that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
   
@@ -490,7 +490,7 @@ public class Address implements HasName {
   
   @Override
   public int hashCode( ) {
-    return name.hashCode( );
+    return this.name.hashCode( );
   }
   
   public DescribeAddressesResponseItemType getDescription( boolean isAdmin ) {
@@ -527,5 +527,7 @@ public class Address implements HasName {
                             Address.this.state.isMarked( ) );
     }
   }
+
+  
   
 }

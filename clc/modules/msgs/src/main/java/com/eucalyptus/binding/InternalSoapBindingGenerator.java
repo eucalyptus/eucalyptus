@@ -13,7 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import javassist.Modifier;
+import java.lang.reflect.Modifier;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 

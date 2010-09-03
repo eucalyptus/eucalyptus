@@ -72,7 +72,6 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -83,6 +82,8 @@ import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callback.Success;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -236,7 +237,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     } finally {
       try {
         if ( addr.isAssigned( ) ) {
-          SuccessCallback release = getReleaseCallback( addr );
+          Callback.Success release = getReleaseCallback( addr );
           AddressCategory.unassign( addr ).then( release ).dispatch( addr.getCluster( ) );
         } else {
           try {
@@ -255,12 +256,12 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
   }
   
-  private static SuccessCallback getReleaseCallback( final Address addr ) {
+  private static Callback.Success getReleaseCallback( final Address addr ) {
     final String instanceId = addr.getInstanceId( );
     try {
       final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
-      return new SuccessCallback( ) {
-        public void apply( BaseMessage response ) {
+      return new Callback.Success<BaseMessage>( ) {
+        public void fire( BaseMessage response ) {
           try {
             if( !addr.isSystemOwned( ) ) {
               addr.release( );
@@ -274,8 +275,8 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         }
       };
     } catch ( NoSuchElementException e ) {
-      return new SuccessCallback( ) {
-        public void apply( BaseMessage response ) {
+      return new Callback.Success<BaseMessage>( ) {
+        public void fire( BaseMessage response ) {
           if( !addr.isSystemOwned( ) ) {
             addr.release( );
           } else {

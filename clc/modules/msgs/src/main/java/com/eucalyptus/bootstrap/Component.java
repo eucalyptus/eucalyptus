@@ -67,6 +67,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
@@ -87,8 +88,9 @@ public enum Component {
   cluster( false, false, false ),
   vmwarebroker( true, false, false ),
   any( false, true, false );
-  private static Logger LOG = Logger.getLogger( Component.class );  
-  /**
+  private static Logger LOG = Logger.getLogger( Component.class );
+
+/**
    * @note is a sub-service of {@link Component.eucalyptus}
    */
   private final Boolean cloudLocal;
@@ -108,11 +110,19 @@ public enum Component {
   }
   
   public Boolean isEnabled( ) {
-    return Components.lookup( this ).isEnabled( );
+    try {
+      return Components.lookup( this ).isEnabled( );
+    } catch ( NoSuchElementException ex ) {
+      return false;
+    }
   }
   
   public Boolean isLocal( ) {
-    return Components.lookup( this ).isLocal( );
+    try {
+      return Components.lookup( this ).isLocal( );
+    } catch ( NoSuchElementException ex ) {
+      return false;
+    }
   }
   
   public String getLocalAddress( ) {
@@ -123,7 +133,7 @@ public enum Component {
     com.eucalyptus.component.Component c = Components.lookup( this );
     NavigableSet<Service> services = c.getServices( );
     if( this.isCloudLocal( ) && services.size( ) != 1 ) {
-        throw new RuntimeException( "Singleton component has "+services.size()+" registered services (Should be exactly 1)." );
+      throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
     } else if( this.isCloudLocal( ) && services.size( ) == 1 ) {
       return services.first( ).getUri( );
     } else {
@@ -151,7 +161,7 @@ public enum Component {
   public Boolean isAlwaysLocal( ) {
     return this.alwaysLocal;
   }
-  
+
   public static List<Component> list( ) {
     return Arrays.asList( Component.values( ) );
   }

@@ -126,10 +126,6 @@ public class ImageManager {
   public static String IMAGE_PLATFORM_DEFAULT = "linux";
   public static String IMAGE_PLATFORM_WINDOWS = "windows";
   
-  public VmImageInfo resolve( VmInfo vmInfo ) throws EucalyptusCloudException {
-    return ImageUtil.resolveImage( vmInfo );
-  }
-  
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     String walrusUrl = ImageUtil.getWalrusUrl( );
     

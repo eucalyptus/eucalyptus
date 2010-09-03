@@ -65,10 +65,11 @@ package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 
-public class RebootCallback extends QueuedEventCallback<RebootInstancesType,RebootInstancesResponseType> {
+public class RebootCallback extends MessageCallback<RebootInstancesType,RebootInstancesResponseType> {
 
   private static Logger LOG = Logger.getLogger( RebootCallback.class );
 
@@ -80,13 +81,13 @@ public class RebootCallback extends QueuedEventCallback<RebootInstancesType,Rebo
   }
 
   @Override
-  public void prepare( RebootInstancesType msg ) throws Exception {}
+  public void initialize( RebootInstancesType msg )  {}
 
   @Override
-  public void verify( RebootInstancesResponseType msg ) throws Exception {}
+  public void fire( RebootInstancesResponseType msg )  {}
 
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
   }

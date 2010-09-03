@@ -1,6 +1,7 @@
 package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.util.Exceptions;
 
 public class BootstrapException extends RuntimeException {
   private static Logger LOG = Logger.getLogger( BootstrapException.class );
@@ -9,7 +10,7 @@ public class BootstrapException extends RuntimeException {
     super( Bootstrap.getCurrentStage( ) + ": " + message, cause );
   }
 
-  private BootstrapException( String message ) {
+  public BootstrapException( String message ) {
     super( Bootstrap.getCurrentStage( ) + ": " + message );
   }
 
@@ -43,14 +44,14 @@ public class BootstrapException extends RuntimeException {
   }
   private static BootstrapException fatal( String message, Throwable t ) {
     Bootstrap.Stage stage = Bootstrap.getCurrentStage( );
-    BootstrapException ex = new BootstrapException( message );
+    BootstrapException ex = new BootstrapException( message, t );
     StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[3];
     if( t == null ) {
       Logger.getLogger( ste.getClassName( ) ).fatal( "Fatal error occured during bootstrap: " + ste.getClassName( ) + "." + ste.getMethodName( ) + ":" + ste.getLineNumber( ), ex );
     } else {
       Logger.getLogger( ste.getClassName( ) ).fatal( "Fatal error occured during bootstrap: " + ste.getClassName( ) + "." + ste.getMethodName( ) + ":" + ste.getLineNumber( ), t );
     }
-    LOG.fatal( "Terminating Eucalyptus." );
+    Exceptions.fatal( message, t );
     System.exit( -1 );
     return ex;
   }

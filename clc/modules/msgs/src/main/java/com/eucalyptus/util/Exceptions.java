@@ -1,9 +1,12 @@
 package com.eucalyptus.util;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 
 public class Exceptions {
   private static Logger LOG = Logger.getLogger( Exceptions.class );
+
   public static IllegalArgumentException illegalArgument( String message, Throwable t ) {
     StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[t==null?3:2];
     IllegalArgumentException ex = new IllegalArgumentException( "Illegal argument given to " + ste.toString( ) + ": " + message, t );
@@ -21,7 +24,7 @@ public class Exceptions {
     Logger.getLogger( ste.getClassName( ) ).error( "Fatal error occured: " + ste.getClassName( ) + "." + ste.getMethodName( ) + ":" + ste.getLineNumber( ), t );
     RuntimeException ex = ( t ==null? new RuntimeException( "Terminating Eucalyptus: " + message ) : new RuntimeException( "Terminating Eucalyptus: " + t.getMessage( ), t ) );
     ex.fillInStackTrace( );
-    LOG.error( t!=null?t:ex, t!=null?t:ex );
+    LOG.fatal( t!=null?t:ex, t!=null?t:ex );
     System.exit( -1 );
     return ex;
   }
