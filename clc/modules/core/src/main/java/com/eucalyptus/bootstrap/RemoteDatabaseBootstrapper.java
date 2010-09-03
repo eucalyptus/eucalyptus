@@ -63,9 +63,7 @@
 package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.SslSetup;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 
 @Provides(Component.db)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)

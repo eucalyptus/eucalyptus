@@ -178,7 +178,7 @@ public class VolumeManager {
       StorageUtil.send( sc.getName( ), req );
       EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_CREATE )
                  .withDetails( newVol.getUserName( ), newVol.getDisplayName( ), "size", newVol.getSize( ).toString( ) )
-                 .withDetails( "cluster", newVol.getCluster( ) ).withDetails( "snapshot", newVol.getParentSnapshot( ) );
+                 .withDetails( "cluster", newVol.getCluster( ) ).withDetails( "snapshot", newVol.getParentSnapshot( ) ).info( );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       try {
@@ -224,7 +224,7 @@ public class VolumeManager {
         vol.setState( State.ANNIHILATING );
         db.commit( );
         EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE ).withDetails( vol.getUserName( ), vol.getDisplayName( ) , "size", vol.getSize( ).toString( ) )
-                          .withDetails( "cluster", vol.getCluster( ) ).withDetails( "snapshot", vol.getParentSnapshot( ) );
+                          .withDetails( "cluster", vol.getCluster( ) ).withDetails( "snapshot", vol.getParentSnapshot( ) ).info( );
       } else {
         reallyFailed = true;
         throw new EucalyptusCloudException( "Storage Controller returned false:  Contact the administrator to report the problem." );
@@ -263,7 +263,7 @@ public class VolumeManager {
         } else {
           EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE )
                      .withDetails( v.getUserName( ), v.getDisplayName( ), "size", v.getSize( ).toString( ) ).withDetails( "cluster", v.getCluster( ) )
-                     .withDetails( "snapshot", v.getParentSnapshot( ) );
+                     .withDetails( "snapshot", v.getParentSnapshot( ) ).info( );
           db.delete( v );
         }
       }
@@ -364,7 +364,7 @@ public class VolumeManager {
     vm.getVolumes( ).add( attachVol );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getUserName( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
-               .withDetails( "cluster", vm.getPlacement( ) );
+               .withDetails( "cluster", vm.getPlacement( ) ).info( );
     volume.setState( State.BUSY );
     reply.setAttachedVolume( attachVol );
     return reply;
@@ -430,7 +430,7 @@ public class VolumeManager {
     request.setInstanceId( vm.getInstanceId( ) );
     Callbacks.newClusterRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
-               .withDetails( vm.getOwnerId( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster", vm.getPlacement( ) );
+               .withDetails( vm.getOwnerId( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster", vm.getPlacement( ) ).info( );
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     return reply;

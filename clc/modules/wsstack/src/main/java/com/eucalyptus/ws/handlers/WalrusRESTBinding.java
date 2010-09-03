@@ -154,8 +154,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private String key;
 	private String randomKey;
 	private WalrusDataQueue<WalrusDataMessage> putQueue;
-	private static final int PUT_ENTRY_TIMEOUT = 500;
-	private static final int PUT_RETRY_COUNT = 30;
 
 	@Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
@@ -1121,29 +1119,15 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		return new String( read );
 	}
 
-	private void insertChunk(WalrusDataMessage message) throws InterruptedException {
-		if(putQueue != null) {
-			boolean success = false;
-			int retry_count = 0;
-			do {
-				success = putQueue.offer(message, 500, TimeUnit.MILLISECONDS);
-				if(++retry_count > PUT_RETRY_COUNT) {
-					LOG.error("Tired of waiting for PUT. Giving up.");
-					putQueue = null;
-				}
-			} while((putQueue != null) && (!success));
-		}
-	}
-
 	private void handleHttpChunk(HttpChunk httpChunk) throws Exception {
 		ChannelBuffer buffer = httpChunk.getContent();
 		try {
 			buffer.markReaderIndex( );
 			byte[] read = new byte[buffer.readableBytes( )];
 			buffer.readBytes( read );
-			insertChunk(WalrusDataMessage.DataMessage(read));
+			while((putQueue != null) && (!putQueue.offer(WalrusDataMessage.DataMessage(read), 500, TimeUnit.MILLISECONDS)));
 			if(httpChunk.isLast()) {
-				insertChunk(WalrusDataMessage.EOF());				
+				while((putQueue != null) && (!putQueue.offer(WalrusDataMessage.EOF(), 1000, TimeUnit.MILLISECONDS)));
 			}
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
@@ -1188,5 +1172,34 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 		return putMessenger;
 	}	
+
+	class Writer extends Thread {
+
+		private ChannelBuffer firstBuffer;
+		private long dataLength;
+		public Writer(ChannelBuffer firstBuffer, long dataLength) {
+			this.firstBuffer = firstBuffer;
+			this.dataLength = dataLength;
+		}
+
+		public void run() {
+			byte[] bytes = new byte[DATA_MESSAGE_SIZE];
+
+			try {
+				LOG.info("Starting upload");                
+				putQueue.put(WalrusDataMessage.StartOfData(dataLength));
+
+				firstBuffer.markReaderIndex( );
+				byte[] read = new byte[firstBuffer.readableBytes( )];
+				firstBuffer.readBytes( read );
+				putQueue.put(WalrusDataMessage.DataMessage(read));
+				//putQueue.put(WalrusDataMessage.EOF());
+
+			} catch (Exception ex) {
+				LOG.error(ex, ex);
+			}
+		}
+
+	}
 
 }

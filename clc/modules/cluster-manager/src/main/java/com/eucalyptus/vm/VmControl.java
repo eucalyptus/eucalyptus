@@ -100,6 +100,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
 import com.eucalyptus.records.EventRecord;
 import com.google.common.base.Predicate;
@@ -206,7 +207,16 @@ public class VmControl {
     try {
       v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
     } catch ( NoSuchElementException e2 ) {
-      throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );
+      try {
+        v = VmInstances.getInstance( ).lookupDisabled( request.getInstanceId( ) );
+        GetConsoleOutputResponseType reply = request.getReply( );
+        reply.setInstanceId( request.getInstanceId( ) );
+        reply.setTimestamp( new Date( ) );
+        reply.setOutput( v.getConsoleOutputString( ) );
+        ServiceContext.dispatch( "ReplyQueue", reply );
+      } catch ( NoSuchElementException ex ) {
+        throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );
+      }
     }
     if ( !request.isAdministrator( ) && !v.getOwnerId( ).equals( request.getUserId( ) ) ) {
       throw new EucalyptusCloudException( "Permission denied for vm: " + request.getInstanceId( ) );

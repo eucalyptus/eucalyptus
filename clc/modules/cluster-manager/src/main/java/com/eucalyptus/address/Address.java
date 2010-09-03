@@ -265,7 +265,7 @@ public class Address implements HasName<Address> {
         } catch ( NoSuchElementException e ) {
           LOG.debug( e );
         }
-        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ALLOCATE ).withDetails( Address.this.userId, Address.this.name, "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" );
+        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ALLOCATE ).withDetails( Address.this.userId, Address.this.name, "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
         Address.this.state.attemptMark( State.allocated, false );
       }
       
@@ -277,7 +277,7 @@ public class Address implements HasName<Address> {
   public Address release( ) {
     this.transition( State.allocated, State.unallocated, false, true, new SplitTransition( Transition.unallocating ) {
       public void top( ) {
-        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_RELEASE ).withDetails( Address.this.userId, Address.this.name, "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" );
+        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_RELEASE ).withDetails( Address.this.userId, Address.this.name, "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.this.userId = UNALLOCATED_USERID;
@@ -316,7 +316,7 @@ public class Address implements HasName<Address> {
                          } catch ( NoSuchElementException e ) {}
                          EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
                                     .withDetails( userId, Address.this.name, "instance", Address.this.instanceId )
-                                    .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" );
+                                    .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
                        }
                        
                        public void bottom( ) {
@@ -355,7 +355,7 @@ public class Address implements HasName<Address> {
         } catch ( NoSuchElementException e ) {}
         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
                    .withDetails( userId, Address.this.name, "instance", Address.this.instanceId )
-                   .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" );
+                   .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
       }
     } );
     return this;
