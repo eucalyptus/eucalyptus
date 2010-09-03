@@ -73,7 +73,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
 
 import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
@@ -103,9 +102,6 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				PutObjectResponseType putObjectResponse = (PutObjectResponseType) msg;
 				httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + putObjectResponse.getEtag() + '\"');
 				httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, putObjectResponse.getLastModified());
-				if(putObjectResponse.getVersionId() != null) {
-					httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, putObjectResponse.getVersionId());
-				}
 			} else if (msg instanceof PostObjectResponseType) {
 				PostObjectResponseType postObjectResponse = (PostObjectResponseType) msg;
 				String redirectUrl = postObjectResponse.getRedirectUrl();
