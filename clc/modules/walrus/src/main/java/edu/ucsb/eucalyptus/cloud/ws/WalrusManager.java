@@ -471,7 +471,14 @@ public class WalrusManager {
 								db.rollback();
 								throw new BucketNotEmptyException(bucketName, logData);
 							}
-
+							//remove any delete markers
+							ObjectInfo searchDeleteMarker = new ObjectInfo();
+							searchDeleteMarker.setBucketName(bucketName);
+							searchDeleteMarker.setDeleted(true);
+							List<ObjectInfo> deleteMarkers = dbObject.query(searchDeleteMarker);
+							for(ObjectInfo deleteMarker : deleteMarkers) {
+								dbObject.delete(deleteMarker);
+							}
 							db.delete(bucketFound);
 							// Actually remove the bucket from the backing store
 							try {
