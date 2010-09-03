@@ -848,6 +848,18 @@ public class WalrusManager {
 									foundObject.setLast(true);
 									foundObject.setDeleted(false);
 									reply.setSize(size);
+									ObjectInfo deleteMarker = new ObjectInfo(bucketName, objectKey);
+									deleteMarker.setDeleted(true);
+									try {
+										ObjectInfo foundDeleteMarker = dbObject.getUnique(deleteMarker);
+										dbObject.delete(foundDeleteMarker);
+									} catch(EucalyptusCloudException ex) {
+										//no delete marker found.
+										LOG.trace("No delete marker found for: " + bucketName + "/" + objectKey);
+									}
+									if (bucket.isVersioningEnabled()) {
+										reply.setVersionId(versionId);
+									}
 									EntityWrapper<BucketInfo> dbBucket = dbObject.recast(BucketInfo.class);										
 									try {
 										bucket = dbBucket.getUnique(new BucketInfo(bucketName));
@@ -2019,10 +2031,10 @@ public class WalrusManager {
 										while ((bytesRead = fileIO.read(offset)) > 0) {
 											ByteBuffer buffer = fileIO.getBuffer();
 											if(buffer != null) {
-											    buffer.get(bytes, 0, bytesRead);
-											    base64Data += new String(bytes, 0,
-													bytesRead);
-											    offset += bytesRead;
+												buffer.get(bytes, 0, bytesRead);
+												base64Data += new String(bytes, 0,
+														bytesRead);
+												offset += bytesRead;
 											}
 										}
 										fileIO.finish();
@@ -2680,9 +2692,9 @@ public class WalrusManager {
 		if (prefix == null)
 			prefix = "";
 
-                String keyMarker = request.getKeyMarker();
-                String versionIdMarker = request.getVersionIdMarker();
-		
+		String keyMarker = request.getKeyMarker();
+		String versionIdMarker = request.getVersionIdMarker();
+
 		int maxKeys = -1;
 		String maxKeysString = request.getMaxKeys();
 		if (maxKeysString != null)
@@ -2749,13 +2761,13 @@ public class WalrusManager {
 
 							for (ObjectInfo objectInfo : objectInfos) {
 								String objectKey = objectInfo.getObjectKey();
-								
-								  if(keyMarker != null) { if(objectKey.compareTo(keyMarker)
-								  <= 0) continue; } else if (versionIdMarker != null) {
-									if(!objectInfo.getVersionId().equals(versionIdMarker))
-										continue;
-								  }
-								 
+
+								if(keyMarker != null) { if(objectKey.compareTo(keyMarker)
+										<= 0) continue; } else if (versionIdMarker != null) {
+											if(!objectInfo.getVersionId().equals(versionIdMarker))
+												continue;
+										}
+
 								if (prefix != null) {
 									if (!objectKey.startsWith(prefix)) {
 										continue;
