@@ -857,6 +857,9 @@ public class WalrusManager {
 										//no delete marker found.
 										LOG.trace("No delete marker found for: " + bucketName + "/" + objectKey);
 									}
+									if (bucket.isVersioningEnabled()) {
+										reply.setVersionId(versionId);
+									}
 									EntityWrapper<BucketInfo> dbBucket = dbObject.recast(BucketInfo.class);										
 									try {
 										bucket = dbBucket.getUnique(new BucketInfo(bucketName));
