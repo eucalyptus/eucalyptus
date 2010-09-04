@@ -171,7 +171,7 @@ public class ClusterNodeState {
   }
 
   public synchronized void submitToken( ResourceToken token ) throws NoSuchTokenException {
-    LOG.debug( new RuntimeException( ), new RuntimeException( ) ); 
+//    LOG.trace( new RuntimeException( ), new RuntimeException( ) ); 
     EventRecord.caller( ResourceToken.class, EventType.TOKEN_SUBMITTED, token.toString( ) ).info( );
     if ( this.pendingTokens.remove( token ) ) {
       this.submittedTokens.add( token );
