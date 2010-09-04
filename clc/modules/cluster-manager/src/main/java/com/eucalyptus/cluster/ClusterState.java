@@ -114,7 +114,11 @@ public class ClusterState {
       EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE, "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
-        Callbacks.newClusterRequest( new UnassignAddressCallback( address ) ).dispatch( this.clusterName );
+        if( addr.isAssigned( ) ) {
+          Callbacks.newClusterRequest( new UnassignAddressCallback( address ) ).dispatch( this.clusterName );
+        } else if ( addr.isSystemOwned( ) ) {
+          addr.release( );
+        }
       } catch ( NoSuchElementException e ) {
       }
       orphans.remove( address );
