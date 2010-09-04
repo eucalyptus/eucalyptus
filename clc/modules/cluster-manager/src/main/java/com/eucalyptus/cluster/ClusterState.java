@@ -106,12 +106,12 @@ public class ClusterState {
   public void handleOrphan( ClusterAddressInfo address ) {
     Integer orphanCount = 1;
     orphanCount = orphans.putIfAbsent( address, orphanCount );
-    LOG.warn( "Found orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
+    EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE, "Found orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).debug( );
     orphanCount = ( orphanCount == null ) ? 1 : orphanCount;
     orphans.put( address, orphanCount + 1 );
-    LOG.warn( "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
+    EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE, "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).debug( );
     if ( orphanCount > 3 ) {
-      LOG.warn( "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
+      EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE, "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
         Callbacks.newClusterRequest( new UnassignAddressCallback( address ) ).dispatch( this.clusterName );
