@@ -240,8 +240,6 @@ public class ClusterAllocator extends Thread {
       }
     } catch ( NoSuchTokenException e ) {
       cb = makeRunRequest( request, token, rsvId, token.getInstanceIds( ), imgInfo, keyInfo, vmInfo, vlan, networkNames, networkIndexes, addresses, userData );
-    }
-    if ( cb != null ) {
       this.messages.addRequest( State.CREATE_VMS, cb );
     }
   }
