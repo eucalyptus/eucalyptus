@@ -328,7 +328,7 @@ public class Address implements HasName<Address> {
   }
   
   public Address pendingAssignment( ) {
-    this.transition( State.allocated, State.impending, false, true, //
+    this.transition( State.unallocated, State.impending, false, true, //
                      new SplitTransition( Transition.system ) {
                        public void bottom( ) {
                          Address.this.state.set( State.allocated, false );
