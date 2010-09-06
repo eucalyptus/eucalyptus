@@ -110,7 +110,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
         final TransitionListener<P> tl = entry.getValue( );
         if( LogLevels.TRACE ) {
           EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, this.toString( ), phase.toString( ),//
-                            entry.getKey( ).toString( ), tl.getClass( ).toString( ).replaceAll("^(\\w.)*","") ).trace( );
+                            entry.getKey( ).toString( ), tl.getClass( ).getCanonicalName( ).replaceAll("^(\\w.)*","") ).trace( );
         }
         try {
           if ( !pred.apply( entry.getValue( ) ) ) {
@@ -181,7 +181,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
   public String toString( ) {
     Iterable<String> listenerNames = Iterables.transform( this.listeners.values( ), new Function<TransitionListener<P>, String>( ) {
       public String apply( TransitionListener<P> arg0 ) {
-        return arg0.getClass( ).getSimpleName( );
+        return arg0.getClass( ).getCanonicalName( ).replaceAll( "^(\\w.)*", "" );
       }
     } );
     return String.format( "Transition:name=%s:from=%s/%s:to=%s/%s:listeners=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
