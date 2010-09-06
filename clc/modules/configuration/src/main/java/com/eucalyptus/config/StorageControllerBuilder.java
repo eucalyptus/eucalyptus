@@ -43,12 +43,8 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
     try {
       Configuration.getClusterConfiguration( name );
     } catch ( Exception e1 ) {
-      try {
-        Groups.lookupGroup( name );
-      } catch ( NoSuchGroupException ex ) {
-        throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
-                                                + "  No cluster found with the name: " + name );
-      }
+      throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
+                                              + "  No cluster found with the name: " + name );
     }
     return super.checkAdd( name, host, port );
   }
