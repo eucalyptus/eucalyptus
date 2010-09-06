@@ -121,7 +121,7 @@ public class VolumeManager {
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
-    StorageControllerConfiguration sc = Configuration.lookupScHack( request.getAvailabilityZone( ) );
+    StorageControllerConfiguration sc = Configuration.lookupSc( request.getAvailabilityZone( ) );
     try {
       User u = Users.lookupUser( request.getUserId( ) );
     } catch ( NoSuchUserException e ) {
@@ -318,14 +318,14 @@ public class VolumeManager {
     }
     StorageControllerConfiguration sc;
     try {
-      sc = Configuration.lookupScHack( volume.getCluster( ) );
+      sc = Configuration.lookupSc( volume.getCluster( ) );
     } catch ( Exception ex ) {
       LOG.error( ex , ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for volume: " + volume, ex );
     }
     StorageControllerConfiguration scVm;
     try {
-      scVm = Configuration.lookupScHack( cluster.getName( ) );
+      scVm = Configuration.lookupSc( cluster.getName( ) );
     } catch ( Exception ex ) {
       LOG.error( ex , ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for cluster: " + cluster, ex );
@@ -400,7 +400,7 @@ public class VolumeManager {
     }
     StorageControllerConfiguration scVm;
     try {
-      scVm = Configuration.lookupScHack( cluster.getName( ) );
+      scVm = Configuration.lookupSc( cluster.getName( ) );
     } catch ( Exception ex ) {
       LOG.error( ex , ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for cluster: " + cluster, ex );

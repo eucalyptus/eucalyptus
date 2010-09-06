@@ -193,31 +193,12 @@ public class Configuration {
     return reply;
   }
   
-  public static StorageControllerConfiguration lookupScHack( final String requestedZone ) throws EucalyptusCloudException {
+  public static StorageControllerConfiguration lookupSc( final String requestedZone ) throws EucalyptusCloudException {
     try {
       return getStorageControllerConfiguration( requestedZone );
-    } catch ( Exception e ) {
-      try {
-        Group g = Iterables.find( Groups.listAllGroups( ), new Predicate<Group>( ) {
-          @Override
-          public boolean apply( Group arg0 ) {
-            return Iterables.any( arg0.getAuthorizations( ), new Predicate<Authorization>( ) {
-              @Override
-              public boolean apply( Authorization arg0 ) {
-                return arg0.check( new AvailabilityZonePermission( requestedZone ) );
-              }
-            } );
-          }
-        } );
-        if( g == null ) {
-          throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone." );          
-        } else {
-          return getStorageControllerConfiguration( g.getName( ) );
-        }
-      } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
-        throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone.", ex );
-      }
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+      throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone.", ex );
     }
   }
 
