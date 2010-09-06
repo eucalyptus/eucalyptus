@@ -225,14 +225,19 @@ public class ClusterAllocator extends Thread {
     String userData = this.vmAllocInfo.getRequest( ).getUserData( );
     Request cb = null;
     int index = 0;
-    for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-      cb = makeRunRequest( request, childToken, rsvId, imgInfo, keyInfo, vmInfo, vlan, networkNames, , userData );
-      this.messages.addRequest( State.CREATE_VMS, cb );
-      index++;
+    try {
+      for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
+        cb = makeRunRequest( request, childToken, rsvId, imgInfo, keyInfo, vmInfo, vlan, networkNames, userData );
+        this.messages.addRequest( State.CREATE_VMS, cb );
+        index++;
+      }
+    } catch ( NoSuchTokenException ex ) {
+      throw new RuntimeException( ex );
     }
   }
   
-  private Request makeRunRequest( RunInstancesType request, final ResourceToken childToken, String rsvId, VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, Integer vlan, List<String> networkNames, String userData ) {
+  private Request makeRunRequest( RunInstancesType request, final ResourceToken childToken, String rsvId, 
+                                  VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, Integer vlan, List<String> networkNames, String userData ) {
     List<String> macs = Lists.transform( childToken.getInstanceIds( ), new Function<String, String>( ) {
       @Override
       public String apply( String instanceId ) {
