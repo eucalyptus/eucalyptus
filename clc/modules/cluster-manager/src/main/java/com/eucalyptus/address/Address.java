@@ -338,6 +338,11 @@ public class Address implements HasName<Address> {
     this.transition( State.unallocated, State.impending, false, true, //
                      new SplitTransition( Transition.system ) {
                        public void bottom( ) {
+                         try {
+                           Addresses.getInstance( ).register( Address.this );
+                         } catch ( NoSuchElementException e ) {
+                           LOG.debug( e );
+                         }
                          Address.this.state.set( State.allocated, false );
                        }
                        
@@ -366,7 +371,7 @@ public class Address implements HasName<Address> {
                          try {
                            VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
                          } catch ( NoSuchElementException e ) {}
-                         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
+                           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
                                     .withDetails( userId, Address.this.name, "instance", Address.this.instanceId )
                                     .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( )
                                       ? "SYSTEM"
