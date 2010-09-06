@@ -57,7 +57,7 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   @Override
   public Boolean checkRemove( String name ) throws ServiceRegistrationException {
     return super.checkRemove( name );
-  }  
+  }
 
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
