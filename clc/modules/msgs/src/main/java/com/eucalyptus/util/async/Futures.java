@@ -74,7 +74,7 @@ public class Futures {
 
     @Override
     public String toString( ) {
-      return String.format( "BasicCallbackProcessor:callback=%s", this.callback.getClass( ).getCanonicalName( ).replaceAll( "^(\\w.)*", "" ) );
+      return String.format( "BasicCallbackProcessor:callback=%s", this.callback.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) );
     }
     
     
