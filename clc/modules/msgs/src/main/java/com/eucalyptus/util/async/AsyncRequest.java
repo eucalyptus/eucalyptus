@@ -11,6 +11,7 @@ import com.eucalyptus.util.async.Callback.TwiceChecked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implements Request<Q, R> {
+  private static Logger LOG = Logger.getLogger( AsyncRequest.class );
   private final Callback.TwiceChecked<Q, R> callback;
   private final CheckedListenableFuture<R>  response;
   private Throwable                         callbackError = null;
@@ -29,15 +30,19 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     this.callbackSequence = new CallbackListenerSequence<R>( );
     this.pipelineFactory = factory;
     Futures.addListenerHandler( response, this.callback );
-//ASAP: error handling decision in callback sequencing
-//    Futures.addListenerHandler( response, new Callback<R>( ) {
-//      
-//      @Override
-//      public void fire( R r ) {}
-//      
-//      @Override
-//      public void fireException( Throwable t ) {}
-//    } );
+    Futures.addListenerHandler( response, new Callback.Success<R>( ) {
+      
+      @Override
+      public void fire( R r ) {
+        try {
+          AsyncRequest.this.callbackResult.set( AsyncRequest.this.response.get( ) );
+        } catch ( ExecutionException ex ) {
+          AsyncRequest.this.callbackResult.setException( ex.getCause( ) );
+        } catch ( InterruptedException ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    } );
     Futures.addListenerHandler( this.callbackResult, this.callbackSequence );
   }
   
