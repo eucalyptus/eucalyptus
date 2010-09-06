@@ -108,8 +108,10 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
     } else {
       for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
         final TransitionListener<P> tl = entry.getValue( );
-        EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, this.toString( ), phase.toString( ),//
-                          entry.getKey( ).toString( ), tl.getClass( ).getSimpleName( ) ).trace( );
+        if( LogLevels.TRACE ) {
+          EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, this.toString( ), phase.toString( ),//
+                            entry.getKey( ).toString( ), tl.getClass( ).toString( ).replaceAll("^(\\w.)*","") ).trace( );
+        }
         try {
           if ( !pred.apply( entry.getValue( ) ) ) {
             throw new TransitionListenerException( entry.getValue( ).getClass( ).getSimpleName( ) + "." + phase + "( ) returned false." );
