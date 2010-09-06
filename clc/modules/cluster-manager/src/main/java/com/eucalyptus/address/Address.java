@@ -82,14 +82,13 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.NOOP;
-import com.eucalyptus.util.async.RemoteCallback;
-import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.async.NOOP;
+import com.eucalyptus.util.async.RemoteCallback;
+import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
@@ -313,10 +312,18 @@ public class Address implements HasName<Address> {
                          String userId = Address.this.userId;
                          try {
                            VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
+                           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
+                                      .withDetails( vm.getOwnerId( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
+                                      .withDetails( "type", Address.this.isSystemOwned( )
+                                        ? "SYSTEM"
+                                        : "USER" )
+                                      .withDetails( "cluster", Address.this.getCluster( ) ).info( );
                          } catch ( NoSuchElementException e ) {}
                          EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
                                     .withDetails( userId, Address.this.name, "instance", Address.this.instanceId )
-                                    .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
+                                    .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( )
+                                      ? "SYSTEM"
+                                      : "USER" ).info( );
                        }
                        
                        public void bottom( ) {
@@ -339,25 +346,33 @@ public class Address implements HasName<Address> {
     return this;
   }
   
-  public Address assign( final String instanceId, final String instanceAddr ) {
+  public Address assign( final VmInstance vm ) {
     this.state.compareAndSet( State.impending, State.allocated, true, false );
     this.transition( State.allocated, State.assigned, false, true, //
-    new SplitTransition( Transition.assigning ) {
-      public void top( ) {
-        Address.this.setInstanceId( instanceId );
-        Address.this.setInstanceAddress( instanceAddr );
-      }
-      
-      public void bottom( ) {
-        String userId = Address.this.userId;
-        try {
-          VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
-        } catch ( NoSuchElementException e ) {}
-        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
-                   .withDetails( userId, Address.this.name, "instance", Address.this.instanceId )
-                   .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
-      }
-    } );
+                     new SplitTransition( Transition.assigning ) {
+                       public void top( ) {
+                         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING )
+                                    .withDetails( vm.getOwnerId( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
+                                    .withDetails( "type", Address.this.isSystemOwned( )
+                                      ? "SYSTEM"
+                                      : "USER" )
+                                    .withDetails( "cluster", Address.this.getCluster( ) ).info( );
+                         Address.this.setInstanceId( vm.getInstanceId( ) );
+                         Address.this.setInstanceAddress( vm.getPrivateAddress( ) );
+                       }
+                       
+                       public void bottom( ) {
+                         String userId = Address.this.userId;
+                         try {
+                           VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
+                         } catch ( NoSuchElementException e ) {}
+                         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
+                                    .withDetails( userId, Address.this.name, "instance", Address.this.instanceId )
+                                    .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( )
+                                      ? "SYSTEM"
+                                      : "USER" ).info( );
+                       }
+                     } );
     return this;
   }
   

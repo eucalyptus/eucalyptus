@@ -70,10 +70,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
-import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.ClusterThreadFactory;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.NoSuchTokenException;
@@ -84,10 +82,8 @@ import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.async.AsyncRequest;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callbacks;
-import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
 import com.eucalyptus.vm.SystemState.Reason;
@@ -103,6 +99,7 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
@@ -259,9 +256,13 @@ public class ClusterAllocator extends Thread {
         public void fire( VmRunResponseType response ) {
           Iterator<String> addrs = addrList.iterator( );
           for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
-            Address addr = Addresses.getInstance( ).lookup( addrs.next( ) );
-            VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
-            AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
+            final Address addr = Addresses.getInstance( ).lookup( addrs.next( ) );
+            final VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
+            Callbacks.newClusterRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
+              public void fire( BaseMessage response ) {
+                vm.updatePublicAddress( addr.getName( ) );
+              }
+            }).dispatch( addr.getCluster( ) );
           }
         }
       } );

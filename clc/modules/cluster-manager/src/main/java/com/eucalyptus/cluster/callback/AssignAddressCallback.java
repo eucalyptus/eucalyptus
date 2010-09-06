@@ -67,13 +67,13 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Address.Transition;
-import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
@@ -99,10 +99,10 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     try {
       this.updateState( );
     } catch ( IllegalStateException e ) {
-      AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
   
@@ -146,7 +146,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     } else if ( this.address.isSystemOwned( ) ) {
       Addresses.release( address );
     } else if ( this.address.isAssigned( ) ) {
-      AddressCategory.unassign( address );
+      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
   

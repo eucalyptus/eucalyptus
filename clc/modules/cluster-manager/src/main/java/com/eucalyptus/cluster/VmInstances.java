@@ -67,37 +67,29 @@ package com.eucalyptus.cluster;
 
 import java.security.MessageDigest;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
-import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callbacks;
-import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.SystemState.Reason;
-import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.vm.VmState;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-//import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
@@ -171,7 +163,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               Addresses.release( address );
             } else {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+              Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
