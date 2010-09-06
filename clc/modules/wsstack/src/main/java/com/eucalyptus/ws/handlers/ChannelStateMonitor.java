@@ -16,8 +16,8 @@ import com.eucalyptus.records.EventRecord;
 @ChannelPipelineCoverage( "one" )
 public class ChannelStateMonitor extends SimpleChannelHandler {
   private static Logger    LOG           = Logger.getLogger( ChannelStateMonitor.class );
-  private final AtomicLong readBytes     = new AtomicLong( );
-  private final AtomicLong writeBytes    = new AtomicLong( );
+  private final AtomicLong readBytes     = new AtomicLong( 0l );
+  private final AtomicLong writeBytes    = new AtomicLong( 0l );
   private AtomicLong             openTime      = new AtomicLong( );
   private String           eventUserId   = "unknown";
   private String           correlationId = "unknown";

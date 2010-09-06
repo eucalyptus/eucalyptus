@@ -63,23 +63,19 @@
  */
 package com.eucalyptus.cluster.callback;
 
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusClusterException;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.vm.SystemState.Reason;
+import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmState;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -87,7 +83,7 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
 
-public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseType> {
+public class VmRunCallback extends MessageCallback<VmRunType,VmRunResponseType> {
 
   private static Logger LOG = Logger.getLogger( VmRunCallback.class );
 
@@ -98,7 +94,8 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     this.setRequest( msg );
   }
 
-  public void prepare( final VmRunType msg ) throws Exception {
+  @Override
+  public void initialize( final VmRunType msg ) throws Exception {
 //    LOG.trace( LogUtil.subheader( msg.toString( ) ) );
     for( String vmId : msg.getInstanceIds( ) ) {
       try {
@@ -112,79 +109,39 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     }
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
-    } catch ( Exception e2 ) {
+    } catch ( NoSuchTokenException e2 ) {
       LOG.debug( e2, e2 );
-      throw e2;
     }
   }
 
   @Override
-  public void verify( VmRunResponseType reply ) throws Exception {
+  public void fire( VmRunResponseType reply ) {
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
     } catch ( Throwable e ) {
-      this.fail( e );
+      this.fireException( e );
       LOG.debug( e, e );
       return;
     } 
-    try {
-      if ( reply != null && reply.getVms( ).isEmpty( ) ) {
-        this.fail( new EucalyptusClusterException( "Failed to run the requested instances because the request was rejected: " + token.toString( ) ) );
-      } else if ( reply != null && !reply.getVms( ).isEmpty( ) ) {
-        Set<String> liveIds = Sets.newHashSet( );
-        for ( VmInfo vmInfo : reply.getVms() ) {
-          liveIds.add( vmInfo.getInstanceId( ) );
-          try {
-            VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
-            vm.updateAddresses( vmInfo.getNetParams().getIpAddress(), vmInfo.getNetParams().getIgnoredPublicIp() );
-            vm.clearPending( );
-          } catch ( Throwable ex ) {
-            Exceptions.eat( "UNIDENTIFIED VM: " + vmInfo.toString( ) );
-          }
-        }
-        Set<String> requestIds = Sets.newHashSet( token.getInstanceIds( ) );
-        requestIds.removeAll( liveIds );
-        for( String id : requestIds ) {
-          int idx = token.getInstanceIds( ).indexOf( id );
-          try {
-            VmInstance vm = VmInstances.getInstance().lookup( id );
-            vm.clearPending( );
-            vm.setState( VmState.TERMINATED, Reason.FAILED, "This instance failed to be run by the CC." );
-            LOG.error( "Failed virtual machine: " + vm.toString( ) );
-          } catch ( Throwable ex ) {
-            LOG.trace( "Failed virtual machine: " + id );
-          }          
-          if( idx > 0 && token.getAddresses( ).size( ) > idx ) {
-            try {
-              String addr = token.getAddresses( ).get( idx );
-              LOG.warn( "Failed virtual machine: " + id + " releasing address: " + addr ); 
-              Addresses.getInstance( ).lookup( addr ).release( );
-            } catch ( Throwable ex ) {
-              LOG.error( ex , ex );
-            }
-          }
-        }
-      } else {
-        this.fail( new EucalyptusClusterException( "RunInstances returned false." + this.getRequest( ) ) );
+    for ( VmInfo vmInfo : reply.getVms() ) {
+      try {
+        VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
+        vm.updateAddresses( vmInfo.getNetParams().getIpAddress(), vmInfo.getNetParams().getIgnoredPublicIp() );
+        vm.clearPending( );
+      } catch ( NoSuchElementException e ) {
+        LOG.error( e , e );
       }
-    } catch ( Exception e ) { 
-      LOG.debug( e, e );
-      throw e; 
     }
   }
 
 
   @Override
-  public void fail( Throwable e ) {
-    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
-    for( String addr : this.token.getAddresses() ) {
-      try {
-        LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
-        Addresses.getInstance().lookup( addr ).release( );
-      } catch ( NoSuchElementException e1 ) {
-        LOG.debug( "-> Failed to release addresses from failed vm run allocation: " + addr );
-      }
+  public void fireException( Throwable e ) {
+    LOG.debug( "-> Release resource tokens for unused resources." );
+    try {
+      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
+    } catch ( Throwable e2 ) {
+      LOG.debug( e2, e2 );
     }
     LOG.debug( "-> Release network index allocation." );
     if( this.token.getPrimaryNetwork( ) != null ) {
@@ -198,12 +155,15 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
         LOG.debug( e2, e2 );
       }
     }
-    LOG.debug( "-> Release resource tokens for unused resources." );
-    try {
-      Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
-    } catch ( Throwable e2 ) {
-      LOG.debug( e2, e2 );
+    for( String addr : this.token.getAddresses() ) {
+      try {
+        Address address = Addresses.getInstance().lookup( addr );
+        address.release( );
+        LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
+      } catch ( NoSuchElementException e1 ) {}
     }
+    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
   }
 
 

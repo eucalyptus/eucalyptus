@@ -83,6 +83,7 @@ import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -171,7 +172,7 @@ public class VmControl {
           try {
             VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
             if ( admin || v.getOwnerId( ).equals( userId ) ) {
-              new RebootCallback( v.getInstanceId( ) ).regarding( request ).dispatch( v.getPlacement( ) );
+              Callbacks.newClusterRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getPlacement( ) );
               return true;
             } else {
               return false;
@@ -218,7 +219,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPlacement( ) + "' related to vm: " + request.getInstanceId( ) );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-      new ConsoleOutputCallback( request ).dispatch( cluster );
+      Callbacks.newClusterRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     }
   }
 }

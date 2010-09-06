@@ -4,7 +4,10 @@ import java.util.List;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurationProperties;
 import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.DescribePropertiesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribePropertiesType;
 import edu.ucsb.eucalyptus.msgs.ModifyPropertyValueResponseType;
@@ -24,6 +27,14 @@ public class Properties {
         props.add( new Property( entry.getQualifiedName( ), entry.getValue( ), entry.getDescription( ) ) );
       }
     } else {
+      Iterable<String> eucas = Iterables.filter( request.getProperties( ), new Predicate<String>() {
+        @Override
+        public boolean apply( String arg0 ) {
+          return arg0.matches( "euca=.*" );
+        }});
+      for( String altValue : eucas ) {
+        props.add( new Property( (altValue = altValue.replaceAll( "euca=","") ), ""+GroovyUtil.eval( altValue ), altValue ) );
+      }
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
         if ( request.getProperties( ).contains( entry.getQualifiedName( ) ) ) {
           props.add( new Property( entry.getQualifiedName( ), entry.getValue( ), entry.getDescription( ) ) );

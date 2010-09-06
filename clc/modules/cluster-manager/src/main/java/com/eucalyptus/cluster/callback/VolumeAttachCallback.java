@@ -63,16 +63,28 @@
  */
 package com.eucalyptus.cluster.callback;
 
+import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+//import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 
-public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType,AttachVolumeResponseType> {
+public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,AttachVolumeResponseType> {
 
   private static Logger LOG = Logger.getLogger( VolumeAttachCallback.class );
   public VolumeAttachCallback( AttachVolumeType request ) {
@@ -81,20 +93,12 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType,A
   
 
   @Override
-  public void prepare( AttachVolumeType msg ) throws Exception {}
+  public void initialize( AttachVolumeType msg ) {}
 
   @Override
-  public void verify( AttachVolumeResponseType reply ) throws Exception {
+  public void fire( AttachVolumeResponseType reply ) {
     if ( !reply.get_return( ) ) {
-      LOG.debug( "Trying to remove invalid volume attachment " + this.getRequest().getVolumeId( ) + " from instance " + this.getRequest().getInstanceId( ) );
-      try {
-        VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
-        AttachedVolume failVol = new AttachedVolume( this.getRequest().getVolumeId( ) );
-        vm.getVolumes( ).remove( failVol );
-        LOG.debug( "Removed failed attachment: " + failVol.getVolumeId( ) + " -> " + vm.getInstanceId( ) );
-        LOG.debug( "Final volume attachments for " + vm.getInstanceId( ) + " " + vm.getVolumes( ) );
-      } catch ( NoSuchElementException e1 ) {
-      }
+      this.fireException( new FailedRequestException( "Got _return=false", this.getRequest( ) ) );
     } else {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
@@ -103,18 +107,34 @@ public class VolumeAttachCallback extends QueuedEventCallback<AttachVolumeType,A
       } catch ( NoSuchElementException e1 ) {
       }
     }
-
   }
 
   @Override
-  public void fail( Throwable e ) {
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+  public void fireException( Throwable e ) {
     LOG.debug( e, e );
     LOG.debug( "Trying to remove invalid volume attachment " + this.getRequest().getVolumeId( ) + " from instance " + this.getRequest().getInstanceId( ) );
     try {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
       AttachedVolume failVol = new AttachedVolume( this.getRequest().getVolumeId( ) );
-      vm.getVolumes( ).remove( failVol );
+      NavigableSet<AttachedVolume> volList = vm.getVolumes( ).subSet( failVol, true, failVol, true );
+      if( !volList.isEmpty( ) ) {
+        AttachedVolume volume = volList.first( );
+//MERGE
+//        LOG.debug( "Found volume attachment info in async error path: " + volume );
+//        try {
+//          Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+//          StorageControllerConfiguration sc = Configuration.lookupScHack( cluster.getName( ) );
+//          Dispatcher dispatcher = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) );
+//          String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
+//          LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher=" + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );
+//          dispatcher.send( new DetachStorageVolumeType( iqn, volume.getVolumeId( ) ) );
+//        } catch ( EucalyptusCloudException ex ) {
+//          LOG.error( ex , ex );
+//        }
+        vm.getVolumes( ).remove( failVol );
+      } else {
+        LOG.error( "Failed to find volume attachment information for volume: " + failVol );
+      }
       LOG.debug( "Removed failed attachment: " + failVol.getVolumeId( ) + " -> " + vm.getInstanceId( ) );
       LOG.debug( "Final volume attachments for " + vm.getInstanceId( ) + " " + vm.getVolumes( ) );
     } catch ( NoSuchElementException e1 ) {

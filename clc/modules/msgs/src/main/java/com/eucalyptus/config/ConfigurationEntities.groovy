@@ -100,7 +100,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
 public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, Comparable {
-  @Column( name = "config_component_name", unique=true )
+  @Column( name = "config_component_name" )
   String name;
   @Column( name = "config_component_hostname" )
   String hostName;
@@ -133,7 +133,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   }
   
   public abstract Component getComponent();
-
+  //REMOVE: maybe?
   public com.eucalyptus.component.Component lookup() {
     return Components.lookup( this.getComponent() );
   }

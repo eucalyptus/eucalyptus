@@ -171,19 +171,22 @@ public class ClusterNodeState {
   }
 
   public synchronized void submitToken( ResourceToken token ) throws NoSuchTokenException {
+//    LOG.trace( new RuntimeException( ), new RuntimeException( ) ); 
     EventRecord.caller( ResourceToken.class, EventType.TOKEN_SUBMITTED, token.toString( ) ).info( );
-    if ( this.pendingTokens.remove( token ) )
+    if ( this.pendingTokens.remove( token ) ) {
       this.submittedTokens.add( token );
-    else
-      throw new NoSuchTokenException();
+    } else {
+      throw new NoSuchTokenException( );
+    }
   }
 
   public synchronized void redeemToken( ResourceToken token ) throws NoSuchTokenException {
     EventRecord.caller( ResourceToken.class, EventType.TOKEN_REDEEMED, token.toString( ) ).info( );
-    if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) )
+    if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) ) {
       this.redeemedTokens.add( token );
-    else
-      throw new NoSuchTokenException();
+    } else {
+      throw new NoSuchTokenException( );
+    }
   }
 
 
@@ -249,9 +252,8 @@ public class ClusterNodeState {
 
   @Override
   public String toString( ) {
-    return String.format(
-                          "ClusterNodeState [clusterName=%s, pendingTokens=%s, redeemedTokens=%s, submittedTokens=%s, typeMap=%s]",
-                          this.clusterName, this.pendingTokens, this.redeemedTokens, this.submittedTokens, this.typeMap );
+    return String.format( "ClusterNodeState pending=%s redeemed=%s submitted=%s",
+                          this.pendingTokens, this.redeemedTokens, this.submittedTokens );
   }
 
 }

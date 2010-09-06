@@ -59,7 +59,7 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.auth;
 
@@ -73,6 +73,7 @@ import com.eucalyptus.bootstrap.DependsRemote;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Components;
 
 @Provides(Component.bootstrap)
 @RunDuring(Bootstrap.Stage.SystemCredentialsInit)
@@ -81,7 +82,7 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteComponentCredentialBootstrapper.class );
 
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     while ( !this.checkAllKeys( ) ) {
       LOG.fatal( "Waiting for system credentials before proceeding with startup..." );
       try {
@@ -97,10 +98,10 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   }
 
   private boolean checkAllKeys( ) {
-    for ( Component c : Component.values( ) ) {
-      if ( !Component.any.equals( c ) && c.isEnabled( ) ) {
+    for ( com.eucalyptus.component.Component c : Components.list( ) ) {
+      if ( c.isEnabled( ) ) {
         try {
-          if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.name( ) ) ) {
+          if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.getName( ) ) ) {//ASAP: this is where the keys thing happens during bootstrap.
             return false;
           }
         } catch ( Exception e ) {

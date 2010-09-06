@@ -24,7 +24,11 @@ public class ReentrantListenerRegistry<T> {
   }
   
   public void register( T type, EventListener listener ) {
-    EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getCanonicalName( ) ).info( );
+    if( type instanceof Enum ) {
+      EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass( ).getSimpleName( ), ((Enum)type).name( ), listener.getClass( ).getSimpleName( ) ).info( );
+    } else {
+      EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_REGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getSimpleName( ) ).info( );
+    }
     this.modificationLock.lock( );
     try {
       if ( !this.listenerMap.containsEntry( type, listener ) ) {
@@ -36,7 +40,11 @@ public class ReentrantListenerRegistry<T> {
   }
   
   public void deregister( T type, EventListener listener ) {
-    EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getCanonicalName( ) ).info( );
+    if( type instanceof Enum ) {
+      EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass( ).getSimpleName( ), ((Enum)type).name( ), listener.getClass( ).getSimpleName( ) ).info( );
+    } else {
+      EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DEREGISTERED, type.getClass( ).getSimpleName( ), listener.getClass( ).getSimpleName( ) ).info( );
+    }
     this.modificationLock.lock( );
     try {
       this.listenerMap.remove( type, listener );

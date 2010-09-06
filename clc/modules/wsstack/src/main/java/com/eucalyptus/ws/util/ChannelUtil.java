@@ -2,7 +2,6 @@ package com.eucalyptus.ws.util;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -27,9 +26,10 @@ import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.NioBootstrap;
+import com.eucalyptus.util.async.NioBootstrap;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.handlers.http.NioSslHandler;
@@ -140,11 +140,11 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( clientWorkerThreadPool == null ) {
-        LOG.info( LogUtil.subheader( "Creating client worker thread pool." ) );
-        LOG.info( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
-        LOG.info( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
-        LOG.info( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-        LOG.info( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+        LOG.trace( LogUtil.subheader( "Creating client worker thread pool." ) );
+        LOG.trace( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
+        LOG.trace( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
+        LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
+        LOG.trace( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
         clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( CLIENT_POOL_MAX_THREADS, CLIENT_POOL_MAX_MEM_PER_CONN, CLIENT_POOL_TOTAL_MEM,
                                                                            CLIENT_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
@@ -158,11 +158,11 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( clientBossThreadPool == null ) {
-        LOG.info( LogUtil.subheader( "Creating client boss thread pool." ) );
-        LOG.info( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
-        LOG.info( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
-        LOG.info( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-        LOG.info( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+        LOG.trace( LogUtil.subheader( "Creating client boss thread pool." ) );
+        LOG.trace( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
+        LOG.trace( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
+        LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
+        LOG.trace( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
         clientBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( CLIENT_POOL_MAX_THREADS, CLIENT_POOL_MAX_MEM_PER_CONN, CLIENT_POOL_TOTAL_MEM,
                                                                          CLIENT_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
@@ -176,11 +176,15 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverBossThreadPool == null ) {
-        LOG.info( LogUtil.subheader( "Creating server boss thread pool." ) );
-        LOG.info( String.format( "-> Pool threads:              %8d", SERVER_BOSS_POOL_MAX_THREADS ) );
-        LOG.info( String.format( "-> Pool timeout:              %8d ms", SERVER_BOSS_POOL_TIMEOUT_MILLIS ) );
-        LOG.info( String.format( "-> Max memory per connection: %8.2f MB", SERVER_BOSS_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-        LOG.info( String.format( "-> Max total memory:          %8.2f MB", SERVER_BOSS_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+        if( !LogLevels.TRACE ) {
+          LOG.info( "Creating server boss thread pool. (log level TRACE for details)" );
+        } else {
+          LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );
+          LOG.trace( String.format( "-> Pool threads:              %8d", SERVER_BOSS_POOL_MAX_THREADS ) );
+          LOG.trace( String.format( "-> Pool timeout:              %8d ms", SERVER_BOSS_POOL_TIMEOUT_MILLIS ) );
+          LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", SERVER_BOSS_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
+          LOG.trace( String.format( "-> Max total memory:          %8.2f MB", SERVER_BOSS_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+        }
         serverBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( SERVER_BOSS_POOL_MAX_THREADS, SERVER_BOSS_POOL_MAX_MEM_PER_CONN,
                                                                          SERVER_BOSS_POOL_TOTAL_MEM, SERVER_BOSS_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
@@ -194,11 +198,15 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverWorkerThreadPool == null ) {
-        LOG.info( LogUtil.subheader( "Creating server worker thread pool." ) );
-        LOG.info( String.format( "-> Pool threads:              %8d", SERVER_POOL_MAX_THREADS ) );
-        LOG.info( String.format( "-> Pool timeout:              %8d ms", SERVER_POOL_TIMEOUT_MILLIS ) );
-        LOG.info( String.format( "-> Max memory per connection: %8.2f MB", SERVER_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-        LOG.info( String.format( "-> Max total memory:          %8.2f MB", SERVER_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+        if( !LogLevels.TRACE ) {
+          LOG.info( "Creating server worker thread pool. (log level TRACE for details)" );
+        } else {
+          LOG.trace( LogUtil.subheader( "Creating server worker thread pool." ) );
+          LOG.trace( String.format( "-> Pool threads:              %8d", SERVER_POOL_MAX_THREADS ) );
+          LOG.trace( String.format( "-> Pool timeout:              %8d ms", SERVER_POOL_TIMEOUT_MILLIS ) );
+          LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", SERVER_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
+          LOG.trace( String.format( "-> Max total memory:          %8.2f MB", SERVER_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+        }
         serverWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( SERVER_POOL_MAX_THREADS, SERVER_POOL_MAX_MEM_PER_CONN, SERVER_POOL_TOTAL_MEM,
                                                                            SERVER_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
@@ -222,12 +230,17 @@ public class ChannelUtil {
     ChannelUtil.setupServer( );
     final ServerBootstrap bootstrap = new ServerBootstrap( ChannelUtil.getServerSocketChannelFactory( ) );
     bootstrap.setPipelineFactory( ChannelUtil.getServerPipeline( ) );
-    LOG.info( String.format( "-> Server option: %25.25s = %s", "child.tcpNoDelay", CHANNEL_NODELAY ) );
-    LOG.info( String.format( "-> Server option: %25.25s = %s", "child.keepAlive", CHANNEL_KEEP_ALIVE ) );
-    LOG.info( String.format( "-> Server option: %25.25s = %s", "child.reuseAddress", CHANNEL_REUSE_ADDRESS ) );
-    LOG.info( String.format( "-> Server option: %25.25s = %s", "child.connectTimeoutMillis", CHANNEL_CONNECT_TIMEOUT ) );
-    LOG.info( String.format( "-> Server option: %25.25s = %s", "tcpNoDelay", SERVER_CHANNEL_NODELAY ) );
-    LOG.info( String.format( "-> Server option: %25.25s = %s", "reuseAddress", SERVER_CHANNEL_REUSE_ADDRESS ) );
+    if( !LogLevels.TRACE ) {
+      LOG.info( "Creating server bootstrap. (log level TRACE for details)" );
+    } else {
+      LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.tcpNoDelay", CHANNEL_NODELAY ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.keepAlive", CHANNEL_KEEP_ALIVE ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.reuseAddress", CHANNEL_REUSE_ADDRESS ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.connectTimeoutMillis", CHANNEL_CONNECT_TIMEOUT ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "tcpNoDelay", SERVER_CHANNEL_NODELAY ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "reuseAddress", SERVER_CHANNEL_REUSE_ADDRESS ) );
+    }
     bootstrap.setOption( "child.tcpNoDelay", CHANNEL_NODELAY );
     bootstrap.setOption( "child.keepAlive", CHANNEL_KEEP_ALIVE );
     bootstrap.setOption( "child.reuseAddress", CHANNEL_REUSE_ADDRESS );

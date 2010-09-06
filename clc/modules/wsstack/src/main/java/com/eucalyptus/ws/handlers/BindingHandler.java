@@ -96,14 +96,16 @@ public class BindingHandler extends MessageStackHandler {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
       BaseMessage msg = null;
-      OMElement elem = httpMessage.getOmMessage( );
-      OMNamespace omNs = elem.getNamespace( );
-      String namespace = omNs.getNamespaceURI( );
       Class msgType = null;
+      String namespace = null;
       try {
+        OMElement elem = httpMessage.getOmMessage( );
+        OMNamespace omNs = elem.getNamespace( );
+        namespace = omNs.getNamespaceURI( );
         this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
         msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
-      } catch ( Exception e1 ) {
+      } catch ( Throwable e1 ) {
+        LOG.error( httpMessage.getSoapEnvelope( ).toString( ), e1 );
         if( this.binding == null ) {
           throw new WebServicesException(e1);
         } else {

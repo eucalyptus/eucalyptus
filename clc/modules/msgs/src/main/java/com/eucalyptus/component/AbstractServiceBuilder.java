@@ -1,6 +1,7 @@
 package com.eucalyptus.component;
 
 import java.util.List;
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
@@ -13,7 +14,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.util.NetworkUtil;
 
 public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
-
+  private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
   @Override
   public Boolean checkRemove( String name ) throws ServiceRegistrationException {
     try {
@@ -26,6 +27,21 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
 
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
+    try {
+      List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponent( ).name( ) );
+      for ( ConfigurableProperty prop : props ) {
+        ConfigurableProperty addProp = null;
+        if ( prop instanceof SingletonDatabasePropertyEntry ) {
+          addProp = prop;
+        } else if ( prop instanceof MultiDatabasePropertyEntry ) {
+          addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getName( ) );
+        }
+        PropertyDirectory.addProperty( addProp );
+      }
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+    }
+
     StartComponentEvent e = null;
     if ( config.isLocal( ) ) {
       e = StartComponentEvent.getLocal( config );
@@ -35,20 +51,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     try {
       ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
     } catch ( EventVetoedException e1 ) {
+      LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
-    }
-    
-    List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(config.getComponent().name());
-    for ( ConfigurableProperty prop : props ) {
-      ConfigurableProperty addProp = null;
-      if (prop instanceof SingletonDatabasePropertyEntry) {
-    	  addProp = prop;
-      } else if (prop instanceof MultiDatabasePropertyEntry) {
-    	  addProp = ((MultiDatabasePropertyEntry) prop).getClone(config.getName());
-      }
-      if ( addProp != null ) {
-  	    PropertyDirectory.addProperty(addProp);
-      }
     }
   }
 
@@ -63,16 +67,22 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     try {
       ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
     } catch ( EventVetoedException e1 ) {
+      LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
     
-    List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet(config.getComponent().name());
-    for ( ConfigurableProperty prop : props ) {
-      if(prop instanceof SingletonDatabasePropertyEntry) {   	 
-      } else if ( prop instanceof MultiDatabasePropertyEntry) {
-    	 ((MultiDatabasePropertyEntry) prop).setIdentifierValue(config.getName());
+    try {
+      List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponent( ).name( ) );
+      for ( ConfigurableProperty prop : props ) {
+        if ( prop instanceof SingletonDatabasePropertyEntry ) {
+          //noop
+        } else if ( prop instanceof MultiDatabasePropertyEntry ) {
+          ( ( MultiDatabasePropertyEntry ) prop ).setIdentifierValue( config.getName( ) );
+        }
+        PropertyDirectory.removeProperty( prop );
       }
-      PropertyDirectory.removeProperty(prop);	
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
     }
   }
 

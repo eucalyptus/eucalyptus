@@ -59,7 +59,7 @@
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.ws.client;
 
@@ -102,6 +102,7 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.async.NioBootstrap;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
@@ -179,7 +180,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   }
 
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     return true;
   }
 

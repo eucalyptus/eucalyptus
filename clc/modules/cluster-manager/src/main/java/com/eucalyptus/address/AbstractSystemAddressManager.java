@@ -11,7 +11,6 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmState;
@@ -127,9 +126,9 @@ public abstract class AbstractSystemAddressManager {
             if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
               if( !address.isAllocated( ) ) {
-                address.pendingAssignment( ).assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
+                address.pendingAssignment( ).assign( vm ).clearPending( );
               } else {
-                address.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
+                address.assign( vm ).clearPending( );
               }
               cluster.getState( ).clearOrphan( addrInfo );
               return;
@@ -178,7 +177,7 @@ public abstract class AbstractSystemAddressManager {
           if ( !addr.isAssigned( ) && !addr.isPending( ) ) {
             addr.pendingAssignment( );
             try {
-              addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
+              addr.assign( vm ).clearPending( );
             } catch ( Throwable e1 ) {
               LOG.debug( e1, e1 );
             }
@@ -188,7 +187,7 @@ public abstract class AbstractSystemAddressManager {
         }
       } else if ( !addr.isAssigned( ) ) {
         try {
-          addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
+          addr.assign( vm ).clearPending( );
         } catch ( Throwable e1 ) {
           LOG.debug( e1, e1 );
         }

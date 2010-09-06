@@ -72,20 +72,19 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.ClusterAddressInfo;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callbacks;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import com.eucalyptus.records.EventRecord;
 
 public class ClusterState {
   private static Logger                           LOG                   = Logger.getLogger( ClusterState.class );
@@ -107,22 +106,18 @@ public class ClusterState {
   public void handleOrphan( ClusterAddressInfo address ) {
     Integer orphanCount = 1;
     orphanCount = orphans.putIfAbsent( address, orphanCount );
-    LOG.warn( "Found orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
+    EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE, "Found orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).debug( );
     orphanCount = ( orphanCount == null ) ? 1 : orphanCount;
     orphans.put( address, orphanCount + 1 );
-    LOG.warn( "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
+    EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE, "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).debug( );
     if ( orphanCount > 3 ) {
-      LOG.warn( "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount );
+      EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE, "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
-        if( Address.Transition.system.equals( addr.getTransition( ) ) ) {
+        if( addr.isAssigned( ) ) {
+          Callbacks.newClusterRequest( new UnassignAddressCallback( address ) ).dispatch( this.clusterName );
+        } else if ( addr.isSystemOwned( ) ) {
           addr.release( );
-        } else if( addr.isAssigned( ) ) {
-          addr.unassign( ).getCallback( ).dispatch( this.clusterName );
-        } else if( addr.isAssigned( ) ) {
-          new UnassignAddressCallback( address ).dispatch( this.clusterName );
-        } else {
-          LOG.debug( "Ignoring orphan which is pending but not system allocated: " + addr );
         }
       } catch ( NoSuchElementException e ) {
       }

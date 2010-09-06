@@ -12,7 +12,7 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 public class PropertiesBootstrapper extends Bootstrapper {
 
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     ConfigurationProperties.doConfiguration( );
     return true;
   }
