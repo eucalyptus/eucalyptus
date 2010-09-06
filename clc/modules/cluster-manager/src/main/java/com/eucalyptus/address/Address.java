@@ -389,9 +389,6 @@ public class Address implements HasName<Address> {
       
       public void bottom( ) {
         String userId = Address.this.userId;
-        try {
-          VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
-        } catch ( NoSuchElementException e ) {}
         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
                    .withDetails( userId, Address.this.name, "instance", Address.this.instanceId )
                    .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( )
