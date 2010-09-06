@@ -39,6 +39,8 @@ package com.eucalyptus.util.concurrent;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
@@ -131,6 +133,7 @@ public class ExecutionList implements Runnable {
 
     void execute() {
       try {
+        EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run( )" ).debug( );
         executor.execute(runnable);
       } catch (RuntimeException e) {
         // Log it and keep going, bad runnable and/or executor.  Don't
