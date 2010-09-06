@@ -346,16 +346,19 @@ public class Address implements HasName<Address> {
   public Address pendingAssignment( ) {
     this.transition( State.unallocated, State.impending, false, true, //
                      new SplitTransition( Transition.system ) {
-                       public void bottom( ) {
+                       public void top( ) {
+                         Address.this.instanceId = PENDING_ASSIGNMENT;
+                         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+                         Address.this.userId = PENDING_ASSIGNMENT;
                          try {
                            Addresses.getInstance( ).register( Address.this );
                          } catch ( NoSuchElementException e ) {
                            LOG.debug( e );
                          }
-                         Address.this.state.set( State.allocated, false );
+                         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ALLOCATE ).withDetails( Address.this.userId, Address.this.name, "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
                        }
                        
-                       public void top( ) {}
+                       public void bottom( ) {}
                      } );
     return this;
   }
