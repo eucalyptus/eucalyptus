@@ -86,7 +86,7 @@ public class ExecutionList implements Runnable {
     // We only add to the list if we have not yet started execution.
     synchronized ( runnables ) {
       if ( !executed ) {
-        EventRecord.here( runnable.getClass( ), EventType.FUTURE, "add( )" ).debug( );
+        EventRecord.here( runnable.getClass( ), EventType.FUTURE, "add(" + runnable.toString( ) + ")" ).debug( );
         runnables.add( new RunnableExecutorPair( runnable, executor ) );
       } else {
         executeImmediate = true;
@@ -133,7 +133,7 @@ public class ExecutionList implements Runnable {
     
     void execute( ) {
       try {
-        EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run( )" ).debug( );
+        EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).debug( );
         executor.execute( runnable );
       } catch ( RuntimeException e ) {
         // Log it and keep going, bad runnable and/or executor.  Don't
