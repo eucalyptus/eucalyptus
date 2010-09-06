@@ -274,7 +274,7 @@ public class Address implements HasName<Address> {
   }
   
   public Address release( ) {
-    this.transition( State.allocated, State.unallocated, false, true, new SplitTransition( Transition.unallocating ) {
+    SplitTransition release = new SplitTransition( Transition.unallocating ) {
       public void top( ) {
         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_RELEASE ).withDetails( Address.this.userId, Address.this.name, "type", Address.this.isSystemOwned( ) ? "SYSTEM" : "USER" ).info( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
@@ -285,7 +285,12 @@ public class Address implements HasName<Address> {
       }
       
       public void bottom( ) {}
-    } );
+    };
+    if( State.impending.equals( this.state.getReference( ) ) ) {
+      this.transition( State.impending, State.unallocated, true, true, release );
+    } else {
+      this.transition( State.allocated, State.unallocated, false, true, release );
+    }    
     return this;
   }
   
@@ -306,31 +311,35 @@ public class Address implements HasName<Address> {
   }
   
   public Address unassign( ) {
-    this.transition( State.assigned, State.allocated, false, true, //
-                     new SplitTransition( Transition.unassigning ) {
-                       public void top( ) {
-                         String userId = Address.this.userId;
-                         try {
-                           VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
-                           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
-                                      .withDetails( vm.getOwnerId( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
-                                      .withDetails( "type", Address.this.isSystemOwned( )
-                                        ? "SYSTEM"
-                                        : "USER" )
-                                      .withDetails( "cluster", Address.this.getCluster( ) ).info( );
-                         } catch ( NoSuchElementException e ) {}
-                         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
-                                    .withDetails( userId, Address.this.name, "instance", Address.this.instanceId )
-                                    .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( )
-                                      ? "SYSTEM"
-                                      : "USER" ).info( );
-                       }
-                       
-                       public void bottom( ) {
-                         Address.this.instanceId = UNASSIGNED_INSTANCEID;
-                         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-                       }
-                     } );
+    SplitTransition unassign = new SplitTransition( Transition.unassigning ) {
+      public void top( ) {
+        String userId = Address.this.userId;
+        try {
+          VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
+          EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
+                     .withDetails( vm.getOwnerId( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
+                     .withDetails( "type", Address.this.isSystemOwned( )
+                       ? "SYSTEM"
+                       : "USER" )
+                     .withDetails( "cluster", Address.this.getCluster( ) ).info( );
+        } catch ( NoSuchElementException e ) {}
+        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
+                   .withDetails( userId, Address.this.name, "instance", Address.this.instanceId )
+                   .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( )
+                     ? "SYSTEM"
+                     : "USER" ).info( );
+      }
+      
+      public void bottom( ) {
+        Address.this.instanceId = UNASSIGNED_INSTANCEID;
+        Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+      }
+    };
+    if( State.impending.equals( this.state.getReference( ) ) ) {
+      this.transition( State.impending, State.allocated, true, true, unassign );
+    } else {
+      this.transition( State.assigned, State.allocated, false, true, unassign );
+    }
     return this;
   }
   
