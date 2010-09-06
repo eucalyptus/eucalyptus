@@ -136,7 +136,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
 
   private void rollback( ) {
     if ( this.currentTransition.get( ) == null ) {
-      throw new IllegalStateException( "There is no currently pending transition." );
+//      throw new IllegalStateException( "There is no currently pending transition." );
     } else {
       ActiveTransition tr = this.currentTransition.get( );
       if ( !this.state.compareAndSet( tr.getToState( ), tr.getFromState( ), true, tr.getFromStateMark( ) ) ) {
