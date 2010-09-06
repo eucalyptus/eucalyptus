@@ -2484,6 +2484,17 @@ public class WalrusManager {
 							if(addNew)
 								dbObject.add(destinationObjectInfo);
 
+							//get rid of delete marker
+							ObjectInfo deleteMarker = new ObjectInfo(destinationBucket, destinationKey);
+							deleteMarker.setDeleted(true);
+							try {
+								ObjectInfo foundDeleteMarker = dbObject.getUnique(deleteMarker);
+								dbObject.delete(foundDeleteMarker);
+							} catch(EucalyptusCloudException ex) {
+								//no delete marker found.
+								LOG.trace("No delete marker found for: " + destinationBucket + "/" + destinationKey);
+							}
+
 							reply.setEtag(etag);
 							reply.setLastModified(DateUtils.format(lastModified
 									.getTime(),
