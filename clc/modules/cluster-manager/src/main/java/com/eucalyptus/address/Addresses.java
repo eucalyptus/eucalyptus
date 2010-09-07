@@ -83,6 +83,8 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.util.async.Callback.Success;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
@@ -197,22 +199,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return address;
   }
   
-  public static void checkSanity( ) {
-  //TODO: check all addresses here.
-  }
-  
-  private static void checkSanity( Address address ) {
-    if ( address.isAssigned( ) ) {
-      VmInstance vm = null;
-      try {
-        vm = VmInstances.getInstance( ).lookup( address.getInstanceId( ) );
-        if ( VmState.TERMINATED.equals( vm.getState( ) ) || VmState.BURIED.equals( vm.getState( ) ) ) {
-          Addresses.release( address );
-        }
-      } catch ( NoSuchElementException e ) {}
-    }
-  }
-  
   public static Address allocate( String userId, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
     Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( userId );
@@ -232,61 +218,25 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   
   public static void release( final Address addr ) {
     try {
-      addr.clearPending( );//clear the state here irregardless
-    } catch ( IllegalStateException e1 ) {
-    } finally {
-      try {
-        if ( addr.isAssigned( ) ) {
-          Callback.Success release = getReleaseCallback( addr );
-          AddressCategory.unassign( addr ).then( release ).dispatch( addr.getCluster( ) );
-        } else {
-          try {
-            if( !addr.isSystemOwned( ) ) {
-              addr.release( );
-            } else {
-              Addresses.getAddressManager( ).releaseSystemAddress( addr );
-            }
-          } catch ( Throwable e ) {
-            LOG.debug( e, e );
+      final String instanceId = addr.getInstanceId( );
+      if ( addr.isAssigned( ) ) {
+        Callbacks.newClusterRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+          @Override
+          public void fire( ) {
+            try {
+              final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
+              Addresses.system( vm );
+            } catch ( NoSuchElementException ex ) {}
           }
-        }
-      } catch ( IllegalStateException e ) {
-        LOG.debug( e, e );
+        } ).dispatch( addr.getCluster( ) );
+      } else {
+        addr.release( );
       }
+    } catch ( IllegalStateException e ) {
+      LOG.debug( e, e );
     }
   }
   
-  private static Callback.Success getReleaseCallback( final Address addr ) {
-    final String instanceId = addr.getInstanceId( );
-    try {
-      final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
-      return new Callback.Success<BaseMessage>( ) {
-        public void fire( BaseMessage response ) {
-          try {
-            if( !addr.isSystemOwned( ) ) {
-              addr.release( );
-            } else {
-              Addresses.getAddressManager( ).releaseSystemAddress( addr );
-            }
-          } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
-            LOG.debug( e, e );
-          }
-          Addresses.system( vm );
-        }
-      };
-    } catch ( NoSuchElementException e ) {
-      return new Callback.Success<BaseMessage>( ) {
-        public void fire( BaseMessage response ) {
-          if( !addr.isSystemOwned( ) ) {
-            addr.release( );
-          } else {
-            Addresses.getAddressManager( ).releaseSystemAddress( addr );
-          }
-        }
-      };
-    }
-  }
-
   @Override public void advertiseEvent( Event event ) {}
 
   @Override public void fireEvent( Event event ) {

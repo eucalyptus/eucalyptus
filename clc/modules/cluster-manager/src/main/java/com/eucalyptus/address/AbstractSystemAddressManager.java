@@ -89,7 +89,6 @@ public abstract class AbstractSystemAddressManager {
         vm = Helper.maybeFindVm( addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
         if ( addr != null && vm != null ) {
           Helper.ensureAllocated( addr );
-          Helper.ensureAssigned( addr, vm );
           cluster.getState( ).clearOrphan( addrInfo );
         } else if ( addr != null && vm != null && vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
@@ -126,11 +125,24 @@ public abstract class AbstractSystemAddressManager {
     }
     
     private static void markAsAllocated( Cluster cluster, ClusterAddressInfo addrInfo, Address address ) {
-      address.allocate( Component.eucalyptus.name( ) );
       try {
-        address.clearPending( );
-      } catch ( IllegalStateException e ) {/* might not be pending still valid. */}
-      cluster.getState( ).clearOrphan( addrInfo );
+        if( !address.isPending( ) ) {
+          for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+            if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
+              LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
+              if( !address.isAllocated( ) ) {
+                address.pendingAssignment( ).assign( vm ).clearPending( );
+              } else {
+                address.assign( vm ).clearPending( );
+              }
+              cluster.getState( ).clearOrphan( addrInfo );
+              return;
+            }
+          }
+        }
+      } catch ( IllegalStateException e ) {
+        LOG.error( e );
+      }
     }
 
     private static void clearAddressCachedState( Address addr ) {
@@ -164,16 +176,6 @@ public abstract class AbstractSystemAddressManager {
         }
       } catch ( NoSuchElementException e ) {}
       return vm;
-    }
-    
-    private static void ensureAssigned( Address addr, VmInstance vm ) {
-      if ( !addr.isAssigned( ) && !addr.isPending( ) ) {
-        try {
-          addr.assign( vm.getInstanceId( ), vm.getPrivateAddress( ) ).clearPending( );
-        } catch ( Throwable e1 ) {
-          LOG.debug( e1, e1 );
-        }
-      }
     }
     
     private static void ensureAllocated( Address addr ) {

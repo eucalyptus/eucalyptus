@@ -122,7 +122,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
         LOG.debug( "Found volume attachment info in async error path: " + volume );
         try {
           Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-          StorageControllerConfiguration sc = Configuration.lookupScHack( cluster.getName( ) );
+          StorageControllerConfiguration sc = Configuration.lookupSc( cluster.getName( ) );
           Dispatcher dispatcher = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) );
           String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
           LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher=" + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );

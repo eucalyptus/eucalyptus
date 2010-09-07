@@ -2,6 +2,8 @@ package com.eucalyptus.util.async;
 
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -23,6 +25,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    * @return <tt>this</tt>
    */
   public CallbackListenerSequence<R> addCallback( UnconditionalCallback c ) {
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, UnconditionalCallback.class.getSimpleName( ), c.getClass( ).toString( ) ).debug( );
     this.successCallbacks.add( c );
     this.failureCallbacks.add( c );
     return this;
@@ -36,6 +39,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    * @return <tt>this</tt>
    */
   public CallbackListenerSequence<R> addCallback( Callback.Completion c ) {
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Completion.class.getSimpleName( ), c.getClass( ).toString( ) ).debug( );
     this.successCallbacks.add( c );
     this.failureCallbacks.add( c );
     return this;
@@ -50,6 +54,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    */
   @SuppressWarnings( "unchecked" )
   public CallbackListenerSequence<R> addSuccessCallback( Callback.Success<R> c ) {
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Success.class.getSimpleName( ), c.getClass( ).toString( ) ).debug( );
     this.successCallbacks.add( c );
     return this;
   }
@@ -62,6 +67,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    * @return <tt>this</tt>
    */
   public CallbackListenerSequence<R> addFailureCallback( Callback.Failure c ) {
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Failure.class.getSimpleName( ), c.getClass( ).toString( ) ).debug( );
     this.failureCallbacks.add( c );
     return this;
   }
@@ -75,6 +81,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
   public void fire( R response ) {
     for ( Callback<R> cb : this.successCallbacks ) {
       try {
+        EventRecord.here( cb.getClass( ), EventType.CALLBACK, "fire(" + response.getClass( ).getName( ) + ")" ).debug( );
         cb.fire( response );
       } catch ( Throwable t ) {
         LOG.error( "Exception occurred while trying to call: " + cb.getClass( ).getSimpleName( ) + ".apply( " + t.getMessage( ) + " )" );
@@ -92,10 +99,10 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
   public void fireException( Throwable t ) {
     for ( Callback cb : this.failureCallbacks ) {
       try {
-        LOG.debug( this.getClass( ).getSimpleName( ) + ":failure(" + t.getClass( ).getSimpleName( ) + ") invoking callback: " + cb.getClass( ).getSimpleName( ) );
+        EventRecord.here( cb.getClass( ), EventType.CALLBACK, "fireException(" + t.getClass( ).getName( ) + ")" ).debug( );
         cb.fire( t );
       } catch ( Throwable t2 ) {
-        LOG.error( "Exception occurred while trying to call: " + cb.getClass( ).getSimpleName( ) + ".failure( " + t.getMessage( ) + " )" );
+        LOG.error( "Exception occurred while trying to call: " + cb.getClass( ).toString( ) + ".failure( " + t.getMessage( ) + " )" );
         LOG.error( t2, t2 );
       }
     }

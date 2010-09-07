@@ -95,7 +95,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   private final Service                      parent;
   private final Boolean                      local;
   private final BlockingQueue<QueuedRequest> msgQueue;
-  private final AtomicBoolean                finished;
+  private final AtomicBoolean                running;
   @ConfigurableField( initial = "8", description = "Maximum number of concurrent messages sent to a single CC at a time." )
   public static Integer                      NUM_WORKERS   = 8;                                        //ASAP: restore configurability
   private final ExecutorService              workers;
@@ -111,17 +111,17 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       LOG.error( e, e );
       System.exit( -1 );
     }
-    this.finished = new AtomicBoolean( false );
+    this.running = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
     this.workers = Threads.lookup( parent.getParent( ).getName( ) + "-" + parent.getName( ) + "-" + uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
   }
 
-  public Boolean isFinished( ) {
-    return this.finished.get( );
+  public Boolean isRunning( ) {
+    return this.running.get( );
   }
   
   public void start( ) {
-    if( this.finished.compareAndSet( false, true ) ) {
+    if( this.running.compareAndSet( false, true ) ) {
       for ( int i = 0; i < NUM_WORKERS; i++ ) {
         this.workers.execute( new ServiceEndpointWorker( ) );
       }
@@ -129,7 +129,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   }
   
   public void enqueue( final Request request ) {//FIXME: for now request is already wrapped in messaging state.
-    if ( this.finished.get( ) ) {
+    if ( !this.running.get( ) ) {
       throw new RuntimeException( "Endpoint is currently not operational." );
     } else {
       QueuedRequest event = new QueuedRequest( request );
@@ -152,7 +152,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     @SuppressWarnings( "unchecked" )
     public void run( ) {
       LOG.info( "Starting message queue: " + Thread.currentThread( ).getName( ) + " for endpoint: " + ServiceEndpoint.this.get( ) );
-      while ( !ServiceEndpoint.this.finished.get( ) ) {
+      while ( ServiceEndpoint.this.running.get( ) ) {
         try {
           QueuedRequest event;
           if ( ( event = ServiceEndpoint.this.msgQueue.poll( ServiceEndpoint.this.pollInterval, TimeUnit.MILLISECONDS ) ) != null ) {
@@ -180,7 +180,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   }
   
   public void stop( ) {
-    this.finished.set( true );
+    this.running.set( false );
     this.workers.shutdownNow( );
   }
   
@@ -214,9 +214,9 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   
   @Override
   public String toString( ) {
-    return String.format( "ServiceEndpoint %s %s %s mq:%d url:%s", this.parent.getName( ), this.local ? "local" : "remote", this.isFinished( )
-      ? "stopped"
-      : "running",
+    return String.format( "ServiceEndpoint %s %s %s mq:%d url:%s", this.parent.getName( ), this.local ? "local" : "remote", this.running.get()
+      ? "running"
+      : "stopped",
       this.msgQueue.size( ), this.get( ) );
   }
   

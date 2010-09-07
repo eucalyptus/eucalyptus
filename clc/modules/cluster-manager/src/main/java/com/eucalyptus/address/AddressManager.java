@@ -69,12 +69,14 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesType;
@@ -142,10 +144,11 @@ public class AddressManager {
     
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
       public void fire( ) {
-        AddressCategory.assign( address, vm ).dispatch( address.getCluster( ) );
-        if ( oldAddrSystem ) {
-          Addresses.getAddressManager( ).releaseSystemAddress( oldAddr );
-        }
+        Callbacks.newClusterRequest( address.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
+          public void fire( BaseMessage response ) {
+            vm.updatePublicAddress( address.getName( ) );
+          }
+        }).dispatch( address.getCluster( ) );
         if ( oldVm != null ) {
           Addresses.system( oldVm );
         }
@@ -155,14 +158,14 @@ public class AddressManager {
     final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
       public void fire( ) {
         if ( oldAddr != null ) {
-          AddressCategory.unassign( oldAddr ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
+          Callbacks.newClusterRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
         } else {
           assignTarget.fire( );
         }
       }
     };
     if ( address.isAssigned( ) ) {
-      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( oldAddr.getCluster( ) );
+      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( address.getCluster( ) );
     } else {
       unassignBystander.fire( );
     }
@@ -205,9 +208,8 @@ public class AddressManager {
     } else {
       try {
         if ( address.isSystemOwned( ) ) {
-          AddressCategory.unassign( address ).then( new UnconditionalCallback( ) {
+          Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             public void fire( ) {
-              Addresses.getAddressManager( ).releaseSystemAddress( address );
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
               } catch ( Exception e ) {
@@ -216,7 +218,7 @@ public class AddressManager {
             }
           } ).dispatch( address.getCluster( ) );
         } else {
-          AddressCategory.unassign( address ).then( new UnconditionalCallback( ) {
+          Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             @Override
             public void fire( ) {
               try {

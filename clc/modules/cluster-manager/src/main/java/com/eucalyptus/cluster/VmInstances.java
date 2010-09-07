@@ -71,7 +71,6 @@ import java.util.Set;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
-import com.eucalyptus.address.AddressCategory;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.bootstrap.Component;
@@ -189,7 +188,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               Addresses.release( address );
             } else {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+              Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
@@ -246,7 +245,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
     if ( !vm.getVolumes( ).isEmpty( ) ) {
       try {
-        StorageControllerConfiguration sc = Configuration.lookupScHack( vm.getPlacement( ) );
+        StorageControllerConfiguration sc = Configuration.lookupSc( vm.getPlacement( ) );
         for ( AttachedVolume volume : vm.getVolumes( ) ) {
           try {
             ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) ).send( new DetachStorageVolumeType(

@@ -193,7 +193,7 @@ public class Configuration {
     return reply;
   }
   
-  public static StorageControllerConfiguration lookupScHack( final String requestedZone ) throws EucalyptusCloudException {
+  public static StorageControllerConfiguration lookupSc( final String requestedZone ) throws EucalyptusCloudException {
     try {
       return getStorageControllerConfiguration( requestedZone );
     } catch ( Exception e ) {

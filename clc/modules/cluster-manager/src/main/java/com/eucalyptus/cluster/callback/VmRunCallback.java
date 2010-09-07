@@ -65,6 +65,7 @@ package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
@@ -93,6 +94,7 @@ public class VmRunCallback extends MessageCallback<VmRunType,VmRunResponseType> 
     this.setRequest( msg );
   }
 
+  @Override
   public void initialize( final VmRunType msg ) throws Exception {
 //    LOG.trace( LogUtil.subheader( msg.toString( ) ) );
     for( String vmId : msg.getInstanceIds( ) ) {
@@ -155,7 +157,8 @@ public class VmRunCallback extends MessageCallback<VmRunType,VmRunResponseType> 
     }
     for( String addr : this.token.getAddresses() ) {
       try {
-        Addresses.release( Addresses.getInstance().lookup( addr ) );
+        Address address = Addresses.getInstance().lookup( addr );
+        address.release( );
         LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
       } catch ( NoSuchElementException e1 ) {}
     }
