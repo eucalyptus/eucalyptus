@@ -112,8 +112,10 @@ public class ServiceContext {
       for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
         if ( comp.isEnabled( ) ) {
           Resource rsc = comp.getConfiguration( ).getResource( );
-          LOG.info( LogUtil.subheader( "Preparing configuration for: " + rsc ) );
-          configs.addAll( rsc.getConfigurations( ) );
+          if( rsc != null ) {
+            LOG.info( LogUtil.subheader( "Preparing configuration for: " + rsc ) );
+            configs.addAll( rsc.getConfigurations( ) );
+          }
         }
       }
       for ( ConfigResource cfg : configs ) {

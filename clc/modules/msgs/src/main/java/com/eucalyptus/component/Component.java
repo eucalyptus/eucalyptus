@@ -4,12 +4,14 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.mule.config.ConfigResource;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Record;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Nameable;
 import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Predicate;
@@ -33,7 +35,6 @@ public class Component implements ComponentInformation, Nameable<Component> {
   private Lifecycle                                lifecycle;
   private Boolean                                  enabled;
   private Boolean                                  local;
-  private final Boolean                            singleton;
   private Map<String, Service>                     services        = Maps.newConcurrentHashMap( );
   
   Component( String name, URI configFile ) throws ServiceRegistrationException {
@@ -48,7 +49,6 @@ public class Component implements ComponentInformation, Nameable<Component> {
     this.enabled = enabled;
     this.local = local;
     this.component = initComponent( );
-    this.singleton = this.component.isSingleton( );
     if ( configFile != null ) {
       this.configuration = new Configuration( this, configFile );
       Components.register( this.configuration );
@@ -61,17 +61,16 @@ public class Component implements ComponentInformation, Nameable<Component> {
   }
   
   public void removeService( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    this.enabled = false;
-    final boolean configLocal = NetworkUtil.testLocal( config.getHostName( ) );
-    Service remove = Iterables.find( this.services.values(), new Predicate<Service>() {
-      @Override
-      public boolean apply( Service arg0 ) {
-        return arg0.getHost( ).equals( config.getHostName( ) ) || ( arg0.isLocal( ) && configLocal );
-      }} );
-    Service service = this.services.remove( remove.getName( ) );
-    Components.deregister( service );
-    EventRecord.caller( Component.class, config.isLocal( ) ? EventType.COMPONENT_SERVICE_STOP : EventType.COMPONENT_SERVICE_STOP_REMOTE, this.getName( ),
-                        service.getName( ), service.getUri( ).toString( ) ).info( );
+    Service service = this.lookupServiceByHost( config.getHostName( ) );
+    if ( service == null ) {
+      throw new ServiceRegistrationException( "Failed to find service corresponding to: " + config );
+    } else {
+      this.builder.fireStop( config );
+      DispatcherFactory.remove( service );
+      Components.deregister( service );
+      EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_STOP, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+      this.services.remove( service.getName( ) );
+    }
   }
   
   /**
@@ -132,10 +131,6 @@ public class Component implements ComponentInformation, Nameable<Component> {
     }
   }
   
-  public Boolean isSingleton( ) {
-    return this.singleton;
-  }
-  
   private com.eucalyptus.bootstrap.Component initComponent( ) {
     try {
       com.eucalyptus.bootstrap.Component component = com.eucalyptus.bootstrap.Component.valueOf( name );
@@ -155,6 +150,78 @@ public class Component implements ComponentInformation, Nameable<Component> {
   public String getName( ) {
     return this.name;
   }
+  
+  /**
+   * Lookup the {@link Service} instance of this {@link Component} registered as {@code name}
+   * 
+   * @param name
+   * @return Service instance
+   * @throws NoSuchElementException if no {@link Service} instance is registered with the name of
+   *           {@code name}
+   */
+  public Service lookupServiceByName( String name ) {
+    Exceptions.ifNullArgument( name );
+    for ( Service s : this.services.values( ) ) {
+      LOG.error( s );
+      if ( name.equals( s.getServiceConfiguration( ).getName( ) ) ) {
+        return s;
+      }
+    }
+    throw new NoSuchElementException( "No service found matching name: " + name + " for component: " + this.getName( ) );
+  }
+  
+  /**
+   * Lookup the {@link Service} instance of this {@link Component} running on {@code hostName}
+   * 
+   * @param hostName
+   * @return Service instance
+   * @throws NoSuchElementException if no {@link Service} instance is registered for
+   *           {@code hostName}
+   */
+  public Service lookupServiceByHost( String hostName ) {
+    Exceptions.ifNullArgument( hostName );
+    for ( Service s : this.services.values( ) ) {
+      if ( hostName.equals( s.getServiceConfiguration( ).getHostName( ) ) ) {
+        return s;
+      }
+    }
+    for ( Service s : this.services.values( ) ) {
+      if ( hostName.equals( s.getEndpoint( ).getHost( ) ) ) {
+        return s;
+      }
+    }
+    if ( NetworkUtil.testLocal( hostName ) ) {
+      for ( Service s : this.services.values( ) ) {
+        if ( hostName.equals( s.getEndpoint( ).getHost( ) ) ) {
+          return s;
+        }
+      }
+    }
+    if ( NetworkUtil.testLocal( hostName ) ) {
+      for ( Service s : this.services.values( ) ) {
+        if ( s.isLocal( ) ) {
+          return s;
+        }
+      }
+    }
+    LOG.error( this.services.values( ) );
+    throw new NoSuchElementException( "No service found matching hostname: " + hostName + " for component: " + this.getName( ) );
+  }
+  
+  /**
+   * TODO: DOCUMENT Component.java
+   * @return
+   */
+  public Boolean isRunningLocally( ) {
+    try {
+      this.lookupServiceByHost( "localhost" );
+      return true;
+    } catch ( NoSuchElementException ex ) {
+      LOG.trace( ex, ex );
+      return false;
+    }
+  }
+
   
   public String toString( ) {
     Record rec = EventRecord.caller( Component.class, EventType.COMPONENT_INFO, this.getName( ), "enabled", this.isEnabled( ), "local", this.isLocal( ),
@@ -218,8 +285,16 @@ public class Component implements ComponentInformation, Nameable<Component> {
     return Lifecycles.State.INITIALIZED.equals( this.getLifecycle( ).getState( ) );
   }
   
+  public Boolean isRunning( ) {
+    return Lifecycles.State.STARTED.equals( this.getLifecycle( ).getState( ) );
+  }
+
   public NavigableSet<Service> getServices( ) {
     return Sets.newTreeSet( this.services.values( ) );
+  }
+
+  public String getState( ) {
+    return this.lifecycle.getState( ).name( );
   }
   
 }

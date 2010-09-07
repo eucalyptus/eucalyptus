@@ -65,7 +65,11 @@
 
 package com.eucalyptus.storage;
 
+import java.util.ArrayList;
+
 import com.eucalyptus.util.EucalyptusCloudException;
+
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 public interface SANProvider {
 
@@ -73,19 +77,17 @@ public interface SANProvider {
 
 	public void checkConnection();
 	
-	public String createVolume(String volumeId, String snapshotId);
+	public String createVolume(String volumeId, String snapshotId, int snapSize, int size) throws EucalyptusCloudException;
 
 	public String connectTarget(String iqn) throws EucalyptusCloudException;
 
 	public String getVolumeProperty(String volumeId);
 
-	public String execCommand(String command) throws EucalyptusCloudException;
-
-	public String createVolume(String volumeName, int size);
+	public String createVolume(String volumeName, int size) throws EucalyptusCloudException;
 
 	public boolean deleteVolume(String volumeName);
 
-	public String createSnapshot(String volumeId, String snapshotId);
+	public String createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
 
 	public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated);
 
@@ -93,9 +95,16 @@ public interface SANProvider {
 
 	public void addUser(String userName);
 
-	public void disconnectTarget(String iqn) throws EucalyptusCloudException;
+	public void disconnectTarget(String snapshotId, String iqn) throws EucalyptusCloudException;
 
 	public void checkPreconditions() throws EucalyptusCloudException;
 
+	public int addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+
+	public void removeInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+
+	public void getStorageProps(ArrayList<ComponentProperty> componentProperties);
+
+	public void setStorageProps(ArrayList<ComponentProperty> storageProps);
 }
 

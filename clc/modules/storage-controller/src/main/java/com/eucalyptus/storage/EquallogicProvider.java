@@ -66,6 +66,7 @@
 package com.eucalyptus.storage;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -82,15 +83,16 @@ import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
-import edu.ucsb.eucalyptus.cloud.entities.EquallogicVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class EquallogicProvider implements SANProvider {
 	private static Logger LOG = Logger.getLogger(EquallogicProvider.class);
 	private final String TARGET_USERNAME = "eucalyptus"; 
 	private boolean enabled;
-	private SessionManager sessionManager;
+	private ShellSessionManager sessionManager;
 
 	private static final Pattern VOLUME_CREATE_PATTERN = Pattern.compile(".*iSCSI target name is (.*)\r");
 	private static final Pattern VOLUME_DELETE_PATTERN = Pattern.compile("Volume deletion succeeded.");
@@ -110,30 +112,26 @@ public class EquallogicProvider implements SANProvider {
 	private int REFRESH_PERIODICITY = 30;
 
 	public EquallogicProvider() {
-		sessionManager = new SessionManager();
+		sessionManager = new ShellSessionManager();
 	}
 
 	public void configure() {
 		SANInfo sanInfo = SANInfo.getStorageInfo();
-		if(sessionManager != null) {
-			try {
-				if(!StorageProperties.DUMMY_SAN_HOST.equals(sanInfo.getSanHost())) {
-					sessionManager.update();
-					showFreeSpace();
-					if(sessionRefresh == null) {
-						sessionRefresh = Executors.newSingleThreadScheduledExecutor();
-						sessionRefresh.scheduleAtFixedRate(new Runnable() {
-							@Override
-							public void run() {
-								showFreeSpace();
-							}}, 1, REFRESH_PERIODICITY, TimeUnit.MINUTES);				
-					}
+		try {
+			if(!StorageProperties.DUMMY_SAN_HOST.equals(sanInfo.getSanHost())) {
+				sessionManager.update();
+				showFreeSpace();
+				if(sessionRefresh == null) {
+					sessionRefresh = Executors.newSingleThreadScheduledExecutor();
+					sessionRefresh.scheduleAtFixedRate(new Runnable() {
+						@Override
+						public void run() {
+							showFreeSpace();
+						}}, 1, REFRESH_PERIODICITY, TimeUnit.MINUTES);				
 				}
-			} catch (EucalyptusCloudException e) {
-				LOG.error(e, e);
 			}
-		} else {
-			sessionManager = new SessionManager();
+		} catch (EucalyptusCloudException e) {
+			LOG.error(e, e);
 		}
 	}
 
@@ -157,34 +155,33 @@ public class EquallogicProvider implements SANProvider {
 		addUser(TARGET_USERNAME);
 	}
 
-	public String createVolume(String volumeId, String snapshotId) {
+	public String createVolume(String volumeId, String snapshotId, int snapSize, int size) throws EucalyptusCloudException {
 		if(!enabled) {
 			checkConnection();
 			if(!enabled) {
-				LOG.error("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");
-				return null;
+				throw new EucalyptusCloudException("Unable to create user " + TARGET_USERNAME + " on target. Will not run command. ");				
 			}
 		}
-		try {
-			if(volumeExists(volumeId)) {
-				LOG.error("Volume already exists: " + volumeId);
-				return null;
-			}
-			String returnValue = execCommand("stty hardwrap off\rvolume select " + snapshotId + 
-					" offline\rvolume select " + snapshotId + " clone " + volumeId + "\r");
-			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
-			if(targetName != null) {
-				returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\r");
+		if(volumeExists(volumeId)) {
+			throw new EucalyptusCloudException("Volume already exists: " + volumeId);				
+		}
+		String returnValue = execCommand("stty hardwrap off\rvolume select " + snapshotId + 
+				" offline\rvolume select " + snapshotId + " clone " + volumeId + "\r");
+		String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+		if(targetName != null) {
+			int sizeDiff = size - snapSize;
+			if(sizeDiff > 0) {
+				returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " size " +  (size * StorageProperties.KB) + "\r");
 				if(returnValue.length() == 0) {
-					LOG.error("Unable to set access for volume: " + volumeId);
-					return null;
+					throw new EucalyptusCloudException("Unable to resize volume: " + volumeId);
 				}
 			}
-			return targetName;
-		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
-			return null;
-		}			
+			returnValue = execCommand("volume select " + volumeId + " access create username " + TARGET_USERNAME + "\r");
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to set access for volume: " + volumeId);				
+			}
+		}
+		return targetName;
 	}
 
 	public String connectTarget(String iqn) throws EucalyptusCloudException {
@@ -211,11 +208,11 @@ public class EquallogicProvider implements SANProvider {
 	}
 
 	public String getVolumeProperty(String volumeId) {
-		EntityWrapper<EquallogicVolumeInfo> db = StorageProperties.getEntityWrapper();
+		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			SANInfo sanInfo = SANInfo.getStorageInfo();
-			EquallogicVolumeInfo searchVolumeInfo = new EquallogicVolumeInfo(volumeId);
-			EquallogicVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
+			SANVolumeInfo searchVolumeInfo = new SANVolumeInfo(volumeId);
+			SANVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
 			EntityWrapper<CHAPUserInfo> dbUser = db.recast(CHAPUserInfo.class);
 			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
 			String property = System.getProperty("euca.home") + "," + sanInfo.getSanHost() + "," + volumeInfo.getIqn() + "," + BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
@@ -229,7 +226,7 @@ public class EquallogicProvider implements SANProvider {
 	}
 
 	public String execCommand(String command) throws EucalyptusCloudException {
-		SANTask task = new SANTask(command, EOF_COMMAND);
+		EquallogicSANTask task = new EquallogicSANTask(command, EOF_COMMAND);
 		try {
 			sessionManager.addTask(task);
 			synchronized (task) {
@@ -259,33 +256,25 @@ public class EquallogicProvider implements SANProvider {
 			return null;			
 	}
 
-	public String createVolume(String volumeName, int size) {
+	public String createVolume(String volumeName, int size) throws EucalyptusCloudException {
 		if(!enabled) {
 			checkConnection();
 			if(!enabled) {
-				LOG.error("Not enabled. Will not run command. ");
-				return null;
+				throw new EucalyptusCloudException("Not enabled. Will not run command. ");				
 			}
 		}
-		try {
-			if(volumeExists(volumeName)) {
-				LOG.error("Volume already exists: " + volumeName);
-				return null;
-			}
-			String returnValue = execCommand("stty hardwrap off\rvolume create " + volumeName + " " + (size * StorageProperties.KB) + "\r");
-			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
-			if(targetName != null) {
-				returnValue = execCommand("volume select " + volumeName + " access create username " + TARGET_USERNAME + "\r");
-				if(returnValue.length() == 0) {
-					LOG.error("Unable to set access for volume: " + volumeName);
-					return null;
-				}
-			}
-			return targetName;
-		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
-			return null;
+		if(volumeExists(volumeName)) {
+			throw new EucalyptusCloudException("Volume already exists: " + volumeName);				
 		}
+		String returnValue = execCommand("stty hardwrap off\rvolume create " + volumeName + " " + (size * StorageProperties.KB) + "\r");
+		String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+		if(targetName != null) {
+			returnValue = execCommand("volume select " + volumeName + " access create username " + TARGET_USERNAME + "\r");
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to set access for volume: " + volumeName);					
+			}
+		}
+		return targetName;
 	}
 
 	public boolean deleteVolume(String volumeName) {
@@ -314,33 +303,25 @@ public class EquallogicProvider implements SANProvider {
 		}
 	}
 
-	public String createSnapshot(String volumeId, String snapshotId) {
+	public String createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException {
 		if(!enabled) {
 			checkConnection();
 			if(!enabled) {
-				LOG.error("Not enabled. Will not run command. ");
-				return null;
+				throw new EucalyptusCloudException("Not enabled. Will not run command. ");				
 			}
 		}
-		try {
-			if(!volumeExists(volumeId)) {
-				LOG.error("Volume not found: " + volumeId);
-				return null;
-			}
-			String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " clone " + snapshotId + "\r");
-			String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
-			if(targetName != null) {
-				returnValue = execCommand("volume select " + snapshotId + " access create username " + TARGET_USERNAME + "\r");
-				if(returnValue.length() == 0) {
-					LOG.error("Unable to set access for volume: " + snapshotId);
-					return null;
-				}
-			}
-			return targetName;
-		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
-			return null;
+		if(!volumeExists(volumeId)) {
+			throw new EucalyptusCloudException("Volume not found: " + volumeId);				
 		}
+		String returnValue = execCommand("stty hardwrap off\rvolume select " + volumeId + " clone " + snapshotId + "\r");
+		String targetName = matchPattern(returnValue, VOLUME_CREATE_PATTERN);
+		if(targetName != null) {
+			returnValue = execCommand("volume select " + snapshotId + " access create username " + TARGET_USERNAME + "\r");
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to set access for volume: " + snapshotId);					
+			}
+		}
+		return targetName;
 	}
 
 	public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated) {
@@ -380,7 +361,6 @@ public class EquallogicProvider implements SANProvider {
 		if(!enabled) {
 			checkConnection();
 			if(!enabled) {
-				LOG.error("Not enabled. Will not run command. ");
 				throw new EucalyptusCloudException("Not enabled. Will not run command.");
 			}
 		}
@@ -436,7 +416,7 @@ public class EquallogicProvider implements SANProvider {
 		}
 	}
 
-	public void disconnectTarget(String iqn) throws EucalyptusCloudException {
+	public void disconnectTarget(String snapshotId, String iqn) throws EucalyptusCloudException {
 		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo(TARGET_USERNAME));
@@ -463,10 +443,10 @@ public class EquallogicProvider implements SANProvider {
 		if((returnValue.split(VOLUME_SHOW_PATTERN.toString()).length > 1) && returnValue.contains(volumeId)) {
 			return true;
 		}
-		EntityWrapper<EquallogicVolumeInfo> db = StorageProperties.getEntityWrapper();
-		EquallogicVolumeInfo searchVolumeInfo = new EquallogicVolumeInfo(volumeId);
+		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
+		SANVolumeInfo searchVolumeInfo = new SANVolumeInfo(volumeId);
 		try {
-			EquallogicVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
+			SANVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
 			db.delete(volumeInfo);
 		} catch (EucalyptusCloudException ex) {			
 		} finally {
@@ -486,6 +466,29 @@ public class EquallogicProvider implements SANProvider {
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
 		}
+	}
+
+	@Override
+	public int addInitiatorRule(String volumeId, String nodeIqn)
+	throws EucalyptusCloudException {
+		//nothing to do here yet.
+		return -1;
+	}
+
+	@Override
+	public void removeInitiatorRule(String volumeId, String nodeIqn)
+	throws EucalyptusCloudException {
+		//nothing to do here yet.
+	}
+
+	@Override
+	public void getStorageProps(ArrayList<ComponentProperty> componentProperties) {
+		//nothing to do here.		
+	}
+
+	@Override
+	public void setStorageProps(ArrayList<ComponentProperty> storageProps) {
+		this.configure();
 	}
 }
 

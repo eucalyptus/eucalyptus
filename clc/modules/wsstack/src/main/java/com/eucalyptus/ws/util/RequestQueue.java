@@ -65,6 +65,7 @@
 
 package com.eucalyptus.ws.util;
 
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.records.EventType;
@@ -80,7 +81,12 @@ public class RequestQueue {
   
   public BaseMessage handle( BaseMessage msg ) throws EucalyptusCloudException {
     if ( msg instanceof WalrusRequestType ) {
-      if ( !Components.lookup( Components.delegate.walrus ).isInitialized( ) ) {
+      try {
+        if( !Components.lookup( Components.delegate.walrus ).isRunningLocally( ) ) {
+          throw new NotReadyException( "walrus" );
+        }
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
         throw new NotReadyException( "walrus" );
       }
     }
