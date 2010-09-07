@@ -14,19 +14,19 @@ Users.listAllUsers().each{ User user ->
       userName = user.getName() 
     }
   };
-  def query = "SELECT\n" + 
-    "  crt.record_correlation_id as instance_id, \n" + 
-    "  crt.record_user_id as user_id, \n" + 
-    "  UNIX_TIMESTAMP(del.record_timestamp)*1000 as terminate_time, UNIX_TIMESTAMP(crt.record_timestamp)*1000 as start_time,\n" + 
-    "  TRIM(REPLACE(crt.record_extra,':type:',' ')) as instance_type\n" + 
-    "FROM eucalyptus_records.records_logs as del, eucalyptus_records.records_logs as crt \n" + 
-    "WHERE  \n" + 
-    "  crt.record_user_id LIKE '${u.userName}' AND crt.record_extra LIKE '%type%' \n" + 
-    "  AND crt.record_type LIKE 'VM_STATE' \n" + 
-    "  AND UNIX_TIMESTAMP(crt.record_timestamp)*1000 < ${notAfter} \n" +
-    "  AND UNIX_TIMESTAMP(del.record_timestamp)*1000 > ${notBefore} \n" +
-    "  AND crt.record_correlation_id=del.record_correlation_id AND del.record_class LIKE 'VM'\n" + 
-    "ORDER BY terminate_time DESC;"
+def query = "SELECT MAX(UNIX_TIMESTAMP(record_timestamp)*1000) as terminate_time, " +
+            " MIN(UNIX_TIMESTAMP(record_timestamp)*1000) as start_time, " +
+            " record_user_id as user_id, " +
+            " record_correlation_id as instance_id, " +
+            " TRIM(REPLACE(record_extra,':type:',' ')) as instance_type " + 
+            "FROM eucalyptus_records.records_logs " +
+            "WHERE record_class LIKE 'VM' " +
+            "AND record_type LIKE 'VM_STATE' " +
+            "AND record_user_id LIKE '${u.userName}' " +
+            "AND record_extra LIKE '%type%' " + 
+            "GROUP BY instance_id " +
+            "HAVING start_time < ${notAfter} " +
+            "AND terminate_time > ${notBefore};"
   sql.rows( query ).each{
     if( accountedFor.add( it.instance_id ) ) {
       def type = it.instance_type.replaceAll("\\.","")
