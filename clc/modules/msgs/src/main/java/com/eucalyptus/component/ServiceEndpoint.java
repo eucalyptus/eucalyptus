@@ -76,6 +76,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Expendable;
@@ -120,9 +121,10 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   }
   
   public void start( ) {
-    this.finished.set( false );
-    for ( int i = 0; i < NUM_WORKERS; i++ ) {
-      this.workers.execute( new ServiceEndpointWorker( ) );
+    if( this.finished.compareAndSet( false, true ) ) {
+      for ( int i = 0; i < NUM_WORKERS; i++ ) {
+        this.workers.execute( new ServiceEndpointWorker( ) );
+      }
     }
   }
   
@@ -135,6 +137,9 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       if ( !this.filter( event ) ) {
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
+          if( LogLevels.TRACE ) {
+            Exceptions.eat( event.getRequest( ).getRequest( ).toSimpleString( ) );
+          }
         } catch ( final InterruptedException e ) {
           LOG.debug( e, e );
           Thread.currentThread( ).interrupted( );
@@ -151,7 +156,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
         try {
           QueuedRequest event;
           if ( ( event = ServiceEndpoint.this.msgQueue.poll( ServiceEndpoint.this.pollInterval, TimeUnit.MILLISECONDS ) ) != null ) {
-            LOG.debug( "-> Dequeued message of type " + event.getCallback( ).getClass( ).getSimpleName( ) );
+            EventRecord.here( ServiceEndpointWorker.class, EventType.DEQUEUE, event.getCallback( ).getClass( ).getSimpleName( ), event.getRequest( ).getRequest( ).toSimpleString( ) ).debug( );
             final long start = System.nanoTime( );
             event.getRequest( ).sendSync( ServiceEndpoint.this );
             EventRecord.here( ServiceEndpointWorker.class, EventType.QUEUE, ServiceEndpoint.this.getParent( ).getName( ) )//
@@ -159,6 +164,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
             .append( EventType.QUEUE_TIME.name( ), Long.toString( start - event.getStartTime( ) ) )//
             .append( EventType.SERVICE_TIME.name( ), Long.toString( System.currentTimeMillis( ) - start ) )//
             .append( EventType.QUEUE_LENGTH.name( ), Long.toString( ServiceEndpoint.this.msgQueue.size( ) ) )//
+            .append( EventType.MSG_SENT.name( ), event.getRequest( ).getRequest( ).toSimpleString( ) )//
             .info( );
           }
         } catch ( InterruptedException e1 ) {
