@@ -214,6 +214,42 @@ public class OverlayManager implements LogicalStorageManager {
 		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
 	}
 
+	private boolean logicalVolumeExists(String lvName) {
+		boolean success = false;
+		try {
+			String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvdisplay", lvName});
+			if(returnValue.length() > 0) {
+				success = true;
+			}
+		} catch(ExecutionException ex) {			
+		}
+		return success;
+	}
+
+	private boolean volumeGroupExists(String vgName) {
+		boolean success = false;
+		try {
+			String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgdisplay", vgName});
+			if(returnValue.length() > 0) {
+				success = true;
+			}
+		} catch(ExecutionException ex) {			
+		}
+		return success;
+	}
+
+	private boolean physicalVolumeExists(String pvName) {
+		boolean success = false;
+		try {
+			String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "pvdisplay", pvName});
+			if(returnValue.length() > 0) {
+				success = true;
+			}
+		} catch(ExecutionException ex) {			
+		}
+		return success;
+	}
+
 	private int losetup(String absoluteFileName, String loDevName) {
 		try
 		{
@@ -589,39 +625,55 @@ public class OverlayManager implements LogicalStorageManager {
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 			volumeManager.unexportVolume(foundLVMVolumeInfo);
 			try {
-				String returnValue = removeLogicalVolume(absoluteLVName);
-				if(returnValue.length() == 0) {
-					throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
+				String returnValue;
+				deleteLogicalVolume(loDevName, vgName, absoluteLVName);
+				removeLoopback(loDevName);
+				if(getLoopback(loDevName).length() != 0) {
+					throw new EucalyptusCloudException("Unable to remove loopback device: " + loDevName);
+				} else {
+					LOG.info(loDevName + "was removed.");
 				}
-				returnValue = removeVolumeGroup(vgName);
-				if(returnValue.length() == 0) {
-					throw new EucalyptusCloudException("Unable to remove volume group " + vgName);
-				}
-				returnValue = removePhysicalVolume(loDevName);
-				if(returnValue.length() == 0) {
-					throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
-				}
-				returnValue = removeLoopback(loDevName);
-				File rawFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId);
-				if (rawFile.exists()) {
-					if(!rawFile.delete()) {
-						throw new EucalyptusCloudException("Unable to delete: " + rawFile.getAbsolutePath());
-					}
-				}
-				volumeManager.remove(foundLVMVolumeInfo);				
+				volumeManager.remove(foundLVMVolumeInfo);
 				volumeManager.finish();
 			} catch(ExecutionException ex) {
 				volumeManager.abort();
 				String error = "Unable to run command: " + ex.getMessage();
 				LOG.error(error);
 				throw new EucalyptusCloudException(error);
+			} catch(EucalyptusCloudException ex) {
+				volumeManager.abort();
+				throw ex;
 			}
+
 		}  else {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find volume: " + volumeId);
 		}
 	}
 
+	/*LVM is flaky when there are a large number of concurrent removal requests. This workaround serializes lvm cleanup*/
+	private synchronized void deleteLogicalVolume(String loDevName, String vgName,
+			String absoluteLVName) throws ExecutionException,
+			EucalyptusCloudException {
+		if(logicalVolumeExists(absoluteLVName)) {
+			String returnValue = removeLogicalVolume(absoluteLVName);
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName + " " + returnValue);
+			}
+		}
+		if(volumeGroupExists(vgName)) {
+			String returnValue = removeVolumeGroup(vgName);
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to remove volume group " + vgName + " " + returnValue);
+			}
+		}
+		if(physicalVolumeExists(loDevName)) { 
+			String returnValue = removePhysicalVolume(loDevName);
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName + " " + returnValue);
+			}
+		}
+	}
 
 	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -971,6 +1023,14 @@ public class OverlayManager implements LogicalStorageManager {
 						File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
 						if(vbladePidFile.exists()) {
 							vbladePidFile.delete();
+						}
+						while(aoeStatus(pid).length() > 0) {
+							LOG.info("Waiting for volume to be unexported...");
+							try {
+								Thread.sleep(300);
+							} catch (InterruptedException e) {
+								LOG.error(e);
+							}
 						}
 					}
 				}
