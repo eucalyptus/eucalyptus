@@ -115,6 +115,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPInputStream;
 
@@ -297,7 +298,7 @@ public class WalrusImageManager {
 						}
 					}
 					//Assemble parts
-					String encryptedImageKey = imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
+					String encryptedImageKey = UUID.randomUUID().toString() + ".crypt.gz";//imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
 					String encryptedImageName = storageManager.getObjectPath(bucketName, encryptedImageKey);
 					String decryptedImageKey = encryptedImageKey.substring(0, encryptedImageKey.lastIndexOf("crypt.gz")) + "tgz";
 
@@ -1076,6 +1077,7 @@ public class WalrusImageManager {
 							(!imageCachers.containsKey(bucketName + objectKey))) {
 						db2.commit();
 						//issue a cache request
+						LOG.info("Image " + bucketName + "/" + objectKey + " not found in cache. Issuing cache request (might take a while...)");
 						cacheImage(bucketName, objectKey, userId, request.isAdministrator());
 						//query db again
 						db2 = WalrusControl.getEntityWrapper();
@@ -1094,6 +1096,7 @@ public class WalrusImageManager {
 								long bytesCached = 0;
 								int number_of_tries = 0;
 								do {
+									LOG.info("Waiting " + WalrusProperties.CACHE_PROGRESS_TIMEOUT + "ms for image to cache (" + number_of_tries + " out of " + WalrusProperties.IMAGE_CACHE_RETRY_LIMIT + ")");
 									monitor.wait(WalrusProperties.CACHE_PROGRESS_TIMEOUT);
 									if(isCached(bucketName, objectKey)) {
 										cached = true;
