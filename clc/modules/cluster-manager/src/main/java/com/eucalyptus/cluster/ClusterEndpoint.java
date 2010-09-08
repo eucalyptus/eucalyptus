@@ -249,17 +249,17 @@ public class ClusterEndpoint implements Startable {
       LOG.info( val );
     }
     retList.add( new ClusterInfoType( "================== Configurations", "" ) );
-    for( String val : Iterables.transform( Components.list( ), Components.configurationToString( ) ) ) {
+    for ( String val : Iterables.transform( Components.list( ), Components.configurationToString( ) ) ) {
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
     retList.add( new ClusterInfoType( "================== Components", "" ) );
-    for( String val : Iterables.transform( Components.list( ), Components.componentToString( ) ) ) {
+    for ( String val : Iterables.transform( Components.list( ), Components.componentToString( ) ) ) {
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
     retList.add( new ClusterInfoType( "================== Dispatchers", "" ) );
-    for( String val : Iterables.transform( ServiceDispatcher.values( ), Components.dispatcherToString( ) ) ) {
+    for ( String val : Iterables.transform( ServiceDispatcher.values( ), Components.dispatcherToString( ) ) ) {
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }

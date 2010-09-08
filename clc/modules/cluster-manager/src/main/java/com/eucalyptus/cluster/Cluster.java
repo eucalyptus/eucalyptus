@@ -244,7 +244,18 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public NodeInfo getNode( String serviceTag ) {
     return this.nodeMap.get( serviceTag );
   }
-    
+  
+  public void updateNodeInfo( ArrayList<String> serviceTags ) {
+    NodeInfo ret = null;
+    for ( String serviceTag : serviceTags ) {
+      if ( ( ret = this.nodeMap.putIfAbsent( serviceTag, new NodeInfo( serviceTag ) ) ) != null ) {
+        ret.touch( );
+        ret.setServiceTag( serviceTag );
+        ret.setIqn( "No IQN reported" );
+      }
+    }
+  }
+
   public void updateNodeInfo( List<NodeType> nodeTags ) {
     NodeInfo ret = null;
     for ( NodeType node : nodeTags )
@@ -517,4 +528,5 @@ public class Cluster implements HasName<Cluster>, EventListener {
       }
     }
   }
+
 }

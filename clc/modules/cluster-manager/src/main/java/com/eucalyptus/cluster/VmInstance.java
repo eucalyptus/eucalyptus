@@ -125,7 +125,7 @@ public class VmInstance implements HasName<VmInstance> {
   private final String                                instanceId;
   private final String                                ownerId;
   private final String                                placement;
-  private final String                                userData;
+  private final byte[]                                userData;
   private final List<Network>                         networks      = Lists.newArrayList( );
   private final NetworkConfigType                     networkConfig = new NetworkConfigType( );
   private String                                      platform;
@@ -148,7 +148,7 @@ public class VmInstance implements HasName<VmInstance> {
   private Boolean                                     privateNetwork;
   
   public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement,
-                     final String userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks,
+                     final byte[] userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks,
                      final String networkIndex ) {
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
@@ -346,10 +346,11 @@ public class VmInstance implements HasName<VmInstance> {
     }
     m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     
-    m.put( "block-device-mapping/", "emi\nephemeral0\nroot\nswap" );
+    m.put( "block-device-mapping/", "emi\nephemeral\nephemeral0\nroot\nswap" );
     m.put( "block-device-mapping/emi", "sda1" );
     m.put( "block-device-mapping/ami", "sda1" );
     m.put( "block-device-mapping/ephemeral", "sda2" );
+    m.put( "block-device-mapping/ephemeral0", "sda2" );
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
     
@@ -362,7 +363,10 @@ public class VmInstance implements HasName<VmInstance> {
     m.put( "placement/availability-zone", this.getPlacement( ) );
     String dir = "";
     for ( String entry : m.keySet( ) ) {
-      if ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) continue;
+      if ( ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) 
+          || ( "ramdisk-id".equals(entry) && this.getImageInfo( ).getRamdiskId( ) == null ) ) {
+        continue;
+      }
       dir += entry + "\n";
     }
     m.put( "", dir );
@@ -585,7 +589,7 @@ public class VmInstance implements HasName<VmInstance> {
     return launchTime;
   }
   
-  public String getUserData( ) {
+  public byte[] getUserData( ) {
     return userData;
   }
   
@@ -593,14 +597,14 @@ public class VmInstance implements HasName<VmInstance> {
     return keyInfo;
   }
   
-  public StringBuffer getConsoleOutput( ) {
-    return consoleOutput;
-  }
-  
   public String getConsoleOutputString( ) {
     return new String( Base64.encode( this.consoleOutput.toString( ).getBytes( ) ) );
   }
 
+  public StringBuffer getConsoleOutput( ) {
+    return this.consoleOutput;
+  }
+  
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
     this.consoleOutput = consoleOutput;
     if ( this.passwordData == null ) {

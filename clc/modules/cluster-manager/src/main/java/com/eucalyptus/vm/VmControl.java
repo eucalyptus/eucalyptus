@@ -69,6 +69,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.Users;

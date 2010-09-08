@@ -100,7 +100,7 @@ public class VmAllocationInfo extends EucalyptusMessage {
   
   RunInstancesType request;
   RunInstancesResponseType reply;
-  String userData;
+  byte[] userData;
   Long reservationIndex;
   String reservationId;
   VmImageInfo imageInfo;
@@ -446,7 +446,7 @@ public class Network implements HasName<Network> {
   public boolean isPeer( String peerName, String peerNetworkName ) {
     return (Boolean) this.rules.collect{ pf -> pf.peers.contains( new VmNetworkPeer( peerName, peerNetworkName )) }.max();
   }
-
+  
   public String getName() {
     return this.name;
   }
@@ -600,7 +600,15 @@ public class NodeInfo implements Comparable {
   
   def NodeInfo() {}
   
-  def NodeInfo(final NodeType nodeType) {
+  def NodeInfo(final String serviceTag ) {
+    this.serviceTag = serviceTag;
+    this.name = (new URI(this.serviceTag)).getHost();
+    this.lastSeen = new Date();
+    this.certs.setServiceTag(this.serviceTag);
+    this.logs.setServiceTag(this.serviceTag);
+  }
+
+    def NodeInfo(final NodeType nodeType) {
     this.serviceTag = nodeType.getServiceTag( );
     this.iqn = nodeType.getIqn( );
     this.name = (new URI(this.serviceTag)).getHost();

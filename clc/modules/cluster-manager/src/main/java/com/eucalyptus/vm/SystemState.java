@@ -79,6 +79,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -185,7 +186,7 @@ public class SystemState {
         }
         return;
       } catch ( NoSuchElementException e1 ) {
-        if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+        if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) ) {
           SystemState.restoreInstance( originCluster, runVm );
         }
         return;
@@ -202,8 +203,10 @@ public class SystemState {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
     } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-    } else {
-      vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+    } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+      if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
+        vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+      }
       vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
       vm.updateNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
       vm.setVolumes( runVm.getVolumes( ) );
@@ -310,7 +313,10 @@ public class SystemState {
       String reservationId = runVm.getReservationId( );
       String ownerId = runVm.getOwnerId( );
       String placement = cluster;
-      String userData = runVm.getUserData( );
+      byte[] userData = new byte[0];
+      if( runVm.getUserData( ) != null && runVm.getUserData( ).length( ) > 1 ) {
+        userData = Base64.decode( runVm.getUserData( ) );
+      }
       Integer launchIndex = 0;
       try {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
@@ -365,7 +371,12 @@ public class SystemState {
           notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams( ).getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
-            notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
+            try {
+              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
+            } catch ( Exception ex ) {
+              LOG.error( ex );
+              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
+            }
             networks.add( notwork );
             NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
