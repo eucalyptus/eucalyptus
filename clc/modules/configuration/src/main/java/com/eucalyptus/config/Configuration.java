@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
@@ -93,12 +94,13 @@ import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 
 public class Configuration {
-  static Logger         LOG                 = Logger.getLogger( Configuration.class );
-  public static String DB_NAME             = "eucalyptus_config";
-  static String         CLUSTER_KEY_FSTRING = "cc-%s";
-  static String         NODE_KEY_FSTRING    = "nc-%s";
-
-  private static Map<Class,ServiceBuilder<ComponentConfiguration>> builders = Maps.newConcurrentHashMap( );
+  static Logger                                                     LOG                 = Logger.getLogger( Configuration.class );
+  public static String                                              DB_NAME             = "eucalyptus_config";
+  static String                                                     CLUSTER_KEY_FSTRING = "cc-%s";
+  static String                                                     NODE_KEY_FSTRING    = "nc-%s";
+  
+  private static Map<Class, ServiceBuilder<ComponentConfiguration>> builders            = Maps.newConcurrentHashMap( );
+  
   public static void addBuilder( Class c, ServiceBuilder b ) {
     builders.put( c, b );
   }
@@ -107,11 +109,11 @@ public class Configuration {
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     reply.set_return( false );
     String name = request.getName( );
-    String hostName = request.getHost();
+    String hostName = request.getHost( );
     Integer port = request.getPort( );
     ServiceBuilder builder = builders.get( request.getClass( ) );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + name + "@" + hostName + ":" + port );
-    if( !builder.checkAdd( name, hostName, port ) ) {
+    if ( !builder.checkAdd( name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
       return reply;
     }
@@ -120,7 +122,7 @@ public class Configuration {
       builder.getComponent( ).buildService( newComponent );
       builder.getComponent( ).startService( newComponent );
       reply.set_return( true );
-    } catch( EucalyptusCloudException e ) {
+    } catch ( EucalyptusCloudException e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
       LOG.info( e.getMessage( ) );
       LOG.error( e, e );
@@ -133,14 +135,14 @@ public class Configuration {
     }
     return reply;
   }
-    
+  
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     reply.set_return( false );
     ServiceBuilder builder = builders.get( request.getClass( ) );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     try {
-      if( !builder.checkRemove( request.getName( ) ) ) {
+      if ( !builder.checkRemove( request.getName( ) ) ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
         return reply;
       }
@@ -160,11 +162,11 @@ public class Configuration {
       try {
         builder.getComponent( ).removeService( conf );
       } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
       builder.remove( conf );
       reply.set_return( true );
-    } catch( EucalyptusCloudException e ) {
+    } catch ( EucalyptusCloudException e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": remove failed." );
       LOG.info( e.getMessage( ) );
       LOG.error( e, e );
@@ -183,11 +185,11 @@ public class Configuration {
     reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
     return reply;
   }
-
+  
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
-    for( ComponentConfiguration conf : builders.get( request.getClass( ) ).list( ) ) {
+    for ( ComponentConfiguration conf : builders.get( request.getClass( ) ).list( ) ) {
       listConfigs.add( new ComponentInfoType( conf.getName( ), conf.getHostName( ) ) );
     }
     return reply;
@@ -198,29 +200,40 @@ public class Configuration {
       return getStorageControllerConfiguration( requestedZone );
     } catch ( Exception e ) {
       try {
-        Group g = Iterables.find( Groups.listAllGroups( ), new Predicate<Group>( ) {
-          @Override
-          public boolean apply( Group arg0 ) {
-            return Iterables.any( arg0.getAuthorizations( ), new Predicate<Authorization>( ) {
-              @Override
-              public boolean apply( Authorization arg0 ) {
-                return arg0.check( new AvailabilityZonePermission( requestedZone ) );
-              }
-            } );
+        Group g = Groups.lookupGroup( requestedZone );
+        for( Authorization a : g.getAuthorizations( ) ) {
+          if( a instanceof AvailabilityZonePermission ) {
+            try {
+              return Configuration.getStorageControllerConfiguration( a.getValue( ) );
+            } catch ( NoSuchComponentException ex ) {
+            }
           }
-        } );
-        if( g == null ) {
-          throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone." );          
-        } else {
+        }
+        return getStorageControllerConfiguration( g.getName( ) );
+      } catch ( NoSuchGroupException ex1 ) {
+        try {
+          Group g = Iterables.find( Groups.listAllGroups( ), new Predicate<Group>( ) {
+            @Override
+            public boolean apply( Group arg0 ) {
+              return Iterables.any( arg0.getAuthorizations( ), new Predicate<Authorization>( ) {
+                @Override
+                public boolean apply( Authorization arg0 ) {
+                  return arg0.check( new AvailabilityZonePermission( requestedZone ) );
+                }
+              } );
+            }
+          } );
           return getStorageControllerConfiguration( g.getName( ) );
+        } catch ( Exception ex ) {
+          throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone: " + requestedZone );
         }
       } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
-        throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone.", ex );
+        LOG.error( ex, ex );
+        throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone: " + requestedZone, ex );
       }
     }
   }
-
+  
   public static List<ClusterConfiguration> getClusterConfigurations( ) throws EucalyptusCloudException {
     EntityWrapper<ClusterConfiguration> db = ServiceConfigurations.getEntityWrapper( );
     try {
@@ -263,19 +276,19 @@ public class Configuration {
       throw new EucalyptusCloudException( e );
     }
   }
-
-    public static List<VMwareBrokerConfiguration> getVMwareBrokerConfigurations( ) throws EucalyptusCloudException {
-        EntityWrapper<VMwareBrokerConfiguration> db = ServiceConfigurations.getEntityWrapper( );
-        try {
-	    List<VMwareBrokerConfiguration> componentList = db.query( new VMwareBrokerConfiguration( ) );
-	    db.commit( );
-	    return componentList;
-        } catch ( Exception e ) {
-	    db.rollback( );
-	    LOG.error( e, e );
-	    throw new EucalyptusCloudException( e );
-        }
+  
+  public static List<VMwareBrokerConfiguration> getVMwareBrokerConfigurations( ) throws EucalyptusCloudException {
+    EntityWrapper<VMwareBrokerConfiguration> db = ServiceConfigurations.getEntityWrapper( );
+    try {
+      List<VMwareBrokerConfiguration> componentList = db.query( new VMwareBrokerConfiguration( ) );
+      db.commit( );
+      return componentList;
+    } catch ( Exception e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
     }
+  }
   
   public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException {
     List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
@@ -306,5 +319,5 @@ public class Configuration {
     }
     throw new NoSuchComponentException( ClusterConfiguration.class.getSimpleName( ) + " named " + clusterName );
   }
-    
+  
 }
