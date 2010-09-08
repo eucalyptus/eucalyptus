@@ -95,9 +95,9 @@ static int doInitialize (struct nc_state_t *nc)
 	/* set up paths of Eucalyptus commands NC relies on */
 	snprintf (nc->gen_libvirt_cmd_path, MAX_PATH, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
 	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
-	snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home);
-	snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home);
-	snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home);
+	snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
+	snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
+	snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
 
@@ -139,7 +139,7 @@ doRunInstance (	struct nc_state_t *nc,
 		char *keyName, 
 		//		char *privMac, char *privIp, int vlan, 
 		netConfig *netparams,
-		char *userData, char *launchIndex, char *platform, char **groupNames,
+                char *userData, char *launchIndex, char *platform, char **groupNames,
 		int groupNamesSize, ncInstance **outInst)
 {
     ncInstance * instance = NULL;
@@ -430,7 +430,12 @@ doAttachVolume (	struct nc_state_t *nc,
             char xml [1024];
             int is_iscsi_target = 0;
             char *local_iscsi_dev;
+            int virtio_dev = 0;
             rc = 0;
+            /* only attach using virtio when the device is /dev/vdXX */
+            if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
+                virtio_dev = 1;
+            }
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
@@ -441,10 +446,18 @@ doAttachVolume (	struct nc_state_t *nc,
 		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
 		  rc = 1;
 		} else {
-		  snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+		  if (nc->config_use_virtio_disk && virtio_dev) {
+		      snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", local_iscsi_dev, localDevReal);
+		  } else {
+		      snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+		  }
 		}
             } else {
-                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                if (nc->config_use_virtio_disk && virtio_dev) {
+                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
+                } else {
+                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                }
                 rc = stat(remoteDev, &statbuf);
                 if (rc) {
                    logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
@@ -502,7 +515,8 @@ doDetachVolume (	struct nc_state_t *nc,
 			char *volumeId,
 			char *remoteDev,
 			char *localDev,
-			int force)
+			int force,
+                        int grab_inst_sem)
 {
     int ret = OK;
     ncInstance * instance;
@@ -515,9 +529,11 @@ doDetachVolume (	struct nc_state_t *nc,
         return ret;
 
     // find the instance record
-    sem_p (inst_sem); 
+    if (grab_inst_sem)  
+        sem_p (inst_sem); 
     instance = find_instance(&global_instances, instanceId);
-    sem_v (inst_sem);
+    if (grab_inst_sem)  
+        sem_v (inst_sem);
     if ( instance == NULL ) 
         return NOT_FOUND;
     if ( find_volume (instance, volumeId)==NULL )
@@ -535,6 +551,11 @@ doDetachVolume (	struct nc_state_t *nc,
             char xml [1024];
             int is_iscsi_target = 0;
             char *local_iscsi_dev;
+            int virtio_dev = 0;
+            /* only attach using virtio when the device is /dev/vdXX */
+            if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
+                virtio_dev = 1;
+            }
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
@@ -542,9 +563,17 @@ doDetachVolume (	struct nc_state_t *nc,
                 /*logout from target*/
                 if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, remoteDev)) == NULL)
                     return ERROR;
-                snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+                if (nc->config_use_virtio_disk && virtio_dev) {
+                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", local_iscsi_dev, localDevReal);
+                } else {
+                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
+                }
             } else {
-   		snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                if (nc->config_use_virtio_disk && virtio_dev) {
+   		    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
+                } else {
+   		    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+                }
 	    }
             /* protect KVM calls, just in case */
             sem_p (hyp_sem);
@@ -574,11 +603,12 @@ doDetachVolume (	struct nc_state_t *nc,
 
     if (ret==OK) {
         ncVolume * volume;
-
-        sem_p (inst_sem);
+        if (grab_inst_sem)  
+            sem_p (inst_sem);
         volume = free_volume (instance, volumeId, remoteDev, localDevTag);
         scSaveInstanceInfo(instance); /* to enable NC recovery */
-        sem_v (inst_sem);
+        if (grab_inst_sem)  
+            sem_v (inst_sem);
         if ( volume == NULL ) {
             logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");
             return ERROR;

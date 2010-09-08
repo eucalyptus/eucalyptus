@@ -134,6 +134,8 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 // NOTE: this must be called with inst_sem semaphore held
 static int 
 find_and_terminate_instance ( 
+        struct nc_state_t *nc_state,
+        ncMetadata *meta,
 	char *instanceId, 
 	ncInstance **instance_p,
 	char destroy)
@@ -141,11 +143,25 @@ find_and_terminate_instance (
 	ncInstance *instance;
 	virConnectPtr *conn;
 	int err;
+	int i;
 
 	instance = find_instance(&global_instances, instanceId);
 	if (instance == NULL) 
 		return NOT_FOUND;
 	* instance_p = instance;
+
+        /* detach all attached volumes */
+        for (i=0 ; i < instance->volumesSize; ++i) {
+	int ret = OK;
+        ncVolume *volume = &instance->volumes[i];
+	logprintfl (EUCAINFO, "Detaching volume on terminate: %s\n", volume->volumeId);
+	if (nc_state->H->doDetachVolume) 
+		ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
+	else
+		ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
+	if(ret != OK)
+		return ret;
+	}
 
 	/* try stopping the domain */
 	conn = check_hypervisor_conn();
@@ -189,7 +205,7 @@ doTerminateInstance(	struct nc_state_t *nc,
 	int err;
 
 	sem_p (inst_sem);
-	err = find_and_terminate_instance (instanceId, &instance, 1);
+	err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
 	if (err!=OK) {
 		sem_v(inst_sem);
 		return err;
@@ -219,7 +235,7 @@ doDescribeInstances(	struct nc_state_t *nc,
 			ncInstance ***outInsts,
 			int *outInstsLen)
 {
-	ncInstance *instance;
+	ncInstance *instance, *tmp;
 	int total, i, j, k;
 
 	*outInstsLen = 0;
@@ -253,7 +269,10 @@ doDescribeInstances(	struct nc_state_t *nc,
 				/* instance of not relavance right now */
 				continue;
 		}
-		(* outInsts)[k++] = instance;
+		//(* outInsts)[k++] = instance;
+		tmp = (ncInstance *)malloc(sizeof(ncInstance));
+    memcpy(tmp, instance, sizeof(ncInstance));
+    (* outInsts)[k++] = tmp;
 	}
 	*outInstsLen = k;
 	sem_v (inst_sem);
@@ -383,7 +402,8 @@ doDetachVolume(	struct nc_state_t *nc,
 		char *volumeId,
 		char *remoteDev,
 		char *localDev,
-		int force)
+                int force,
+                        int grab_inst_sem)
 {
 	logprintfl(EUCAERROR, "no default for doDetachVolume!\n");
 	return ERROR_FATAL;
@@ -666,7 +686,7 @@ doBundleInstance(
 	change_state (instance, BUNDLING_SHUTDOWN);
 	change_bundling_state (instance, BUNDLING_IN_PROGRESS);
 	
-	int err = find_and_terminate_instance (instanceId, &instance, 0);
+	int err = find_and_terminate_instance (nc, meta, instanceId, &instance, 0);
 	if (err!=OK) {
 	  sem_v (inst_sem);
 	  if (params) free(params);

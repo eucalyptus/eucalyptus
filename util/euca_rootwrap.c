@@ -57,6 +57,7 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -69,5 +70,14 @@ int main(int argc, char **argv) {
     exit(1);
   }
   newargv = argv + 1;
+
+  if (setresuid((uid_t)0, (uid_t)0, (uid_t)0)) {
+      perror("setresuid");
+  }
+  
+  if (setresgid((gid_t)0, (gid_t)0, (gid_t)0)) {
+      perror("setresgid");
+  }
+  
   exit(execvp(newargv[0], newargv));
 }
