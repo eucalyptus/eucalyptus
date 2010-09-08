@@ -64,6 +64,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -243,7 +244,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public NodeInfo getNode( String serviceTag ) {
     return this.nodeMap.get( serviceTag );
   }
-  
+    
   public void updateNodeInfo( List<NodeType> nodeTags ) {
     NodeInfo ret = null;
     for ( NodeType node : nodeTags )

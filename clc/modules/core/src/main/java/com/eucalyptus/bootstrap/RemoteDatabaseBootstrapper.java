@@ -71,6 +71,7 @@ import com.eucalyptus.auth.util.SslSetup;
 public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
   @Override
+
   public boolean load( ) throws Exception {
     LOG.trace( "Initializing SSL just in case: " + SslSetup.class );
     return true;

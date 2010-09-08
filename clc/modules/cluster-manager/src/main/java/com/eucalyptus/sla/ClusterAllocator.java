@@ -222,7 +222,7 @@ public class ClusterAllocator extends Thread {
     VmImageInfo imgInfo = this.vmAllocInfo.getImageInfo( );
     VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo( );
     VmTypeInfo vmInfo = this.vmAllocInfo.getVmTypeInfo( );
-    String userData = this.vmAllocInfo.getUserData( );
+    String userData = this.vmAllocInfo.getRequest( ).getUserData( );
     Request cb = null;
     int index = 0;
     try {

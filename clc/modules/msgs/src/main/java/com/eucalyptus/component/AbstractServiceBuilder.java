@@ -2,6 +2,7 @@ package com.eucalyptus.component;
 
 import java.util.List;
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.configurable.ConfigurableProperty;

@@ -64,6 +64,8 @@
 package edu.ucsb.eucalyptus.msgs
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.jibx.runtime.BindingDirectory
@@ -564,6 +566,7 @@ public class DescribeBundleTasksResponseType extends VmBundleMessage {
   ArrayList<BundleTask> bundleTasks = new ArrayList<BundleTask>();
   ArrayList<BundleTaskState> bundleTaskStates = new ArrayList<BundleTaskState>();
 }
+
 
 public class StatEventRecord extends EucalyptusMessage {
   

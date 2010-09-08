@@ -85,7 +85,6 @@ import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.UnconditionalCallback;
-import com.eucalyptus.util.async.Callback.Success;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -150,8 +149,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
         Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
         LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
-      } else {
-        Addresses.systemAddressManager.inheritReservedAddresses( Addresses.systemAddressManager.getReservedAddresses( ) );
       }
     } catch ( Throwable e ) {
       LOG.debug( e, e );

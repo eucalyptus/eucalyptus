@@ -450,7 +450,7 @@ public class Network implements HasName<Network> {
   public String getName() {
     return this.name;
   }
-    
+
   public int compareTo(final Network that) {
     return this.getName().compareTo(that.getName());
   }
@@ -656,4 +656,5 @@ public class NodeInfo implements Comparable {
   public String toString( ) {
     return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag} iqn=${iqn}";
   }
+
 }
