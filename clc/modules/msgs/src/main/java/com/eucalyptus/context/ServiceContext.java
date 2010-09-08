@@ -3,25 +3,31 @@ package com.eucalyptus.context;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.mule.RequestContext;
 import org.mule.api.MuleContext;
+import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
+import org.mule.api.MuleMessage;
 import org.mule.api.context.MuleContextFactory;
 import org.mule.api.registry.Registry;
 import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
+import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.event.PassiveEventListener;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
@@ -44,6 +50,46 @@ public class ServiceContext {
   }
   
   private static AtomicReference<MuleContext> context = new AtomicReference<MuleContext>( null );
+  private static AtomicReference<MuleClient> client = new AtomicReference<MuleClient>( null );
+  private static final BootstrapException failEx = new BootstrapException( "Attempt to use esb client before the service bus has been started." );
+  private static MuleClient getClient( ) throws MuleException {
+    if( context.get( ) == null ) {
+      LOG.fatal( failEx, failEx );
+      System.exit( 123 );
+      throw failEx;
+    } else if( client.get( ) == null && client.compareAndSet( null, new MuleClient( context.get( ) ) ) ) {
+      return client.get( );
+    } else {
+      return client.get( );
+    }
+  }
+
+  public static void dispatch( String dest, Object msg ) {
+    MuleEvent context = RequestContext.getEvent( );
+    try {
+      ServiceContext.getClient( ).sendDirect( dest, null, msg, null );
+    } catch ( MuleException e ) {
+      LOG.error( e );
+    } finally {
+      RequestContext.setEvent( context );
+    }
+  }
+
+  public static <T> T send( String dest, Object msg ) throws EucalyptusCloudException {
+    MuleEvent context = RequestContext.getEvent( );
+    try {
+      MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, msg, null );
+
+      if ( reply.getExceptionPayload( ) != null ) throw new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
+      else return (T) reply.getPayload( );
+    } catch ( MuleException e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    } finally {
+      RequestContext.setEvent( context );
+    }
+  }
+
   
   public static void buildContext( List<ConfigResource> configs ) {
     ServiceContext.builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
@@ -107,13 +153,13 @@ public class ServiceContext {
     public ServiceBootstrapper( ) {}
     
     @Override
-    public boolean load( Stage current ) throws Exception {
+    public boolean load( ) throws Exception {
       List<ConfigResource> configs = Lists.newArrayList( );
       for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
         if ( comp.isEnabled( ) ) {
           Resource rsc = comp.getConfiguration( ).getResource( );
           if( rsc != null ) {
-            LOG.info( LogUtil.subheader( "Preparing configuration for: " + rsc ) );
+            LOG.info( "-> Preparing cfg: " + rsc );
             configs.addAll( rsc.getConfigurations( ) );
           }
         }

@@ -2,6 +2,7 @@ package com.eucalyptus.scripting.groovy;
 
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
+import groovy.lang.ReadOnlyPropertyException;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -97,7 +98,11 @@ public class GroovyUtil {
         try {
           getGroovyEngine( ).eval( conf );
         } catch ( ScriptException e ) {
-          LOG.warn( e, e );
+          if( !(e.getCause( ) instanceof ReadOnlyPropertyException ) ) {
+            LOG.warn( e, e );
+          } else {
+            LOG.warn( e.getMessage( ) );
+          }
         }
       } catch ( FileNotFoundException e ) {
         LOG.info( "-> No config file found." );

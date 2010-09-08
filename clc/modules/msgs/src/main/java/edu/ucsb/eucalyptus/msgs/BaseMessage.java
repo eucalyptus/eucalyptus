@@ -12,19 +12,19 @@ public class BaseMessage {
   String                correlationId;
   String                userId;
   String                effectiveUserId;
-  boolean               _return;
+  Boolean               _return;
   String                statusMessage;
   
   public BaseMessage( ) {
     super( );
     this.correlationId = UUID.randomUUID( ).toString( );
+    this._return = true;
   }
   
   public BaseMessage( String userId ) {
     this( );
     this.userId = userId;
     this.effectiveUserId = userId;
-    this._return = true;
     this.statusMessage = null;
   }
   public String getCorrelationId( ) {
@@ -42,10 +42,10 @@ public class BaseMessage {
   public void setEffectiveUserId( String effectiveUserId ) {
     this.effectiveUserId = effectiveUserId;
   }
-  public boolean get_return( ) {
+  public Boolean get_return( ) {
     return this._return;
   }
-  public void set_return( boolean return1 ) {
+  public void set_return( Boolean return1 ) {
     this._return = return1;
   }
   public String getStatusMessage( ) {
@@ -142,4 +142,7 @@ public class BaseMessage {
     return reply;
   }
   
+  public String toSimpleString( ) {
+    return String.format("%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.getUserId( ), this.getEffectiveUserId( ), this.get_return( ), this.getStatusMessage( ) );
+  }
 }

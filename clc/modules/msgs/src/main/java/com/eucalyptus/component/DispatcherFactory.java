@@ -8,7 +8,7 @@ public abstract class DispatcherFactory {
   
   public static void setFactory( DispatcherFactory factory ) {
     synchronized ( DispatcherFactory.class ) {
-      LOG.info( "Setting the dispatcher factory to: " + factory.getClass( ).getCanonicalName( ) );
+      LOG.trace( "Setting the dispatcher factory to: " + factory.getClass( ).getCanonicalName( ) );
       DispatcherFactory.factory = factory;
     }
   }
@@ -16,9 +16,9 @@ public abstract class DispatcherFactory {
   public static Dispatcher build( Component parent, Service service ) {
     return factory.buildChild( parent, service );
   }
-  
+
   public abstract Dispatcher buildChild( Component parent, Service service );
-  
+
   public static void remove( Service service ) {
     factory.removeChild( service );
   }

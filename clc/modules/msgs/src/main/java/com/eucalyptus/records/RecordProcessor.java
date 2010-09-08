@@ -46,11 +46,11 @@ public class RecordProcessor extends Bootstrapper implements Runnable, EventList
               if( record instanceof BaseRecord ) {
                 db.add( ( BaseRecord ) record );
               } else {
-                LOG.debug( "Received system event record of a type which cannot be stored: " + record.getClass( ).getCanonicalName( ) );
+                LOG.error( "Received system event record of a type which cannot be stored: " + record.getClass( ).getCanonicalName( ) );
               }
             }
             db.commit( );
-            LOG.debug( "Saving " + savedRecords.size( ) + " records total in " + ( System.currentTimeMillis( ) - start ) + " msec. " + msg );
+            LOG.trace( "Saving " + savedRecords.size( ) + " records total in " + ( System.currentTimeMillis( ) - start ) + " msec. " + msg );
           } catch ( Exception e ) {
             LOG.error( e, e );
           }
@@ -79,7 +79,7 @@ public class RecordProcessor extends Bootstrapper implements Runnable, EventList
   }
   
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     return true;
   }
   

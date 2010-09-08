@@ -119,6 +119,11 @@
     <value name="availableInstances" field="availableInstances" usage="optional" />
   </mapping>
 
+  <mapping class="edu.ucsb.eucalyptus.msgs.NodeType" abstract="true">
+    <value name="serviceTag" field="serviceTag" usage="optional" />
+    <value name="iqn" field="iqn" usage="optional" />
+  </mapping>
+
   <mapping class="edu.ucsb.eucalyptus.msgs.NetworkConfigType" abstract="true">
     <value name="privateMacAddress" field="macAddress" />
     <value name="privateIp" field="ipAddress" />

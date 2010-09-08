@@ -64,4 +64,4 @@ package com.eucalyptus.util;
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 
-public interface HasName extends Nameable {}
+public interface HasName<T> extends Mappable<T,String> {}

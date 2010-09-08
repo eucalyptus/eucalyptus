@@ -59,7 +59,7 @@
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
 package com.eucalyptus.cluster;
@@ -75,17 +75,21 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.BundleCallback;
-import com.eucalyptus.component.Configurations;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.SystemState.Reason;
+import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -99,7 +103,7 @@ import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-public class VmInstance implements HasName {
+public class VmInstance implements HasName<VmInstance> {
   private static Logger LOG          = Logger.getLogger( VmInstance.class );
   public static String  DEFAULT_IP   = "0.0.0.0";
   public static String  DEFAULT_TYPE = "m1.small";
@@ -365,8 +369,7 @@ public class VmInstance implements HasName {
     return m;
   }
   
-  public int compareTo( final Object o ) {
-    VmInstance that = ( VmInstance ) o;
+  public int compareTo( final VmInstance that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
   
@@ -514,7 +517,19 @@ public class VmInstance implements HasName {
     else runningInstance.setKeyName( "" );
     
     runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
-    runningInstance.setPlacement( this.placement );
+    Group g = Iterables.find( Groups.listAllGroups( ), new Predicate<Group>( ) {
+      @Override
+      public boolean apply( Group arg0 ) {
+        return Iterables.any( arg0.getAuthorizations( ), new Predicate<Authorization>( ) {
+          @Override
+          public boolean apply( Authorization arg0 ) {
+            return arg0.check( new AvailabilityZonePermission( VmInstance.this.placement ) );
+          }
+        } );
+      }
+    } );
+
+    runningInstance.setPlacement( g != null ? g.getName( ) : this.placement );
     
     runningInstance.setLaunchTime( this.launchTime );
     
@@ -582,6 +597,10 @@ public class VmInstance implements HasName {
     return consoleOutput;
   }
   
+  public String getConsoleOutputString( ) {
+    return new String( Base64.encode( this.consoleOutput.toString( ).getBytes( ) ) );
+  }
+
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
     this.consoleOutput = consoleOutput;
     if ( this.passwordData == null ) {
@@ -621,6 +640,14 @@ public class VmInstance implements HasName {
   
   public String getPublicAddress( ) {
     return networkConfig.getIgnoredPublicIp( );
+  }
+
+  public String getPrivateDnsName( ) {
+    return networkConfig.getPrivateDnsName( );
+  }
+  
+  public String getPublicDnsName( ) {
+    return networkConfig.getPublicDnsName( );
   }
   
   public NetworkConfigType getNetworkConfig( ) {

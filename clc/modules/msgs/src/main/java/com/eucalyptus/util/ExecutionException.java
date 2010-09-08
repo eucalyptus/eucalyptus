@@ -63,7 +63,7 @@
  */
 package com.eucalyptus.util;
 
-public class ExecutionException extends Exception {
+public class ExecutionException extends java.util.concurrent.ExecutionException {
   private String message;
   
   public ExecutionException( ) {

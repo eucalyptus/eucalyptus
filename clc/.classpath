@@ -158,8 +158,7 @@
 	<classpathentry kind="lib" path="lib/commons-digester-1.8.1.jar"/>
 	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/iText-2.1.7.jar"/>
-	<classpathentry kind="lib" path="lib/vijava220090625.jar"/>
-	<classpathentry kind="lib" path="lib/vim.jar"/>
-	<classpathentry kind="lib" path="lib/vim25.jar"/>
+	<classpathentry kind="lib" path="lib/manageontap.jar"/>
+	<classpathentry kind="lib" path="lib/vijava220090625-euca.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

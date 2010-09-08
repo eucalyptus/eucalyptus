@@ -63,13 +63,26 @@
  */
 package com.eucalyptus.vm;
 
+import java.io.ByteArrayInputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
+import org.w3c.dom.DOMException;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
@@ -80,9 +93,15 @@ import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.SshKeyPair;
+import com.eucalyptus.images.Image;
+import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.util.Messaging;
+import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -91,6 +110,9 @@ import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -104,12 +126,12 @@ public class SystemState {
   public static Integer SHUT_DOWN_TIME = -1;
   
   public enum Reason {
-    NORMAL(""),
+    NORMAL( "" ),
     EXPIRED( "Instance expired after not being reported for %s ms.", SystemState.SHUT_DOWN_TIME ),
     FAILED( "The instance failed to start on the NC." ),
     USER_TERMINATED( "User initiated terminate." ),
     BURIED( "Instance buried after timeout of %s ms.", SystemState.BURY_TIME ),
-    APPEND("");
+    APPEND( "" );
     private String   message;
     private Object[] args;
     
@@ -163,7 +185,7 @@ public class SystemState {
         }
         return;
       } catch ( NoSuchElementException e1 ) {
-        if ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) {
+        if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
           SystemState.restoreInstance( originCluster, runVm );
         }
         return;
@@ -191,7 +213,97 @@ public class SystemState {
       } catch ( Exception e ) {}
     }
   }
+  @Deprecated /** TODO: HACK HACK **/
+  private static String getWalrusUrl( ) throws EucalyptusCloudException {
+    try {
+      return SystemConfiguration.getWalrusUrl( ) + "/";
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Walrus has not been configured.", e );
+    }
+  }  
+  @Deprecated /** TODO: HACK HACK **/
+  private static String getImageUrl( String walrusUrl, final Image diskInfo ) throws EucalyptusCloudException {
+    try {
+      URL url = new URL( getWalrusUrl( ) + diskInfo.getImageLocation( ) );
+      return url.toString( );
+    } catch ( MalformedURLException e ) {
+      throw new EucalyptusCloudException( "Failed to parse image location as URL.", e );
+    }
+  }
+  @Deprecated /** TODO: HACK HACK **/
+  private static VmImageInfo resolveImage( VmInfo vmInfo ) throws EucalyptusCloudException {
+    String walrusUrl = getWalrusUrl( );
+    ArrayList<String> productCodes = Lists.newArrayList( );
+    ImageInfo diskInfo = null, kernelInfo = null, ramdiskInfo = null;
+    String diskUrl = null, kernelUrl = null, ramdiskUrl = null;
   
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    try {
+      diskInfo = db.getUnique( new ImageInfo( vmInfo.getImageId( ) ) );
+      for ( ProductCode p : diskInfo.getProductCodes( ) ) {
+        productCodes.add( p.getValue( ) );
+      }
+      diskUrl = getImageUrl( walrusUrl, diskInfo );
+      db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+    }
+    VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId( ), vmInfo.getKernelId( ), vmInfo.getRamdiskId( ), diskUrl, null, null, productCodes, vmInfo.getPlatform( ) );
+    if( Component.walrus.isLocal( ) ) {
+      ArrayList<String> ancestorIds = getAncestors( vmInfo.getOwnerId( ), diskInfo.getImageLocation( ) );
+      vmImgInfo.setAncestorIds( ancestorIds );
+    } else {//FIXME: handle populating these in a defered way for the remote case.
+      vmImgInfo.setAncestorIds( new ArrayList<String>() );
+    }
+    return vmImgInfo;
+  }
+  public static ArrayList<String> getAncestors( String userId, String manifestPath ) {
+    ArrayList<String> ancestorIds = Lists.newArrayList( );
+    try {
+      String[] imagePathParts = manifestPath.split( "/" );
+      String bucketName = imagePathParts[0];
+      String objectName = imagePathParts[1];
+      GetObjectResponseType reply = null;
+      try {
+        GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
+        msg.setUserId( userId );
+
+        reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Component.walrus ).send( msg );
+      }
+      catch ( Exception e ) {
+        throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
+      }
+      Document inputSource = null;
+      try {
+        DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        inputSource = builder.parse( new ByteArrayInputStream( Hashes.base64decode(reply.getBase64Data() ).getBytes() ));
+      }
+      catch ( Exception e ) {
+        throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
+      }
+
+      XPath xpath = XPathFactory.newInstance( ).newXPath( );
+      NodeList ancestors = null;
+      try {
+        ancestors = ( NodeList ) xpath.evaluate( "/manifest/image/ancestry/ancestor_ami_id/text()", inputSource, XPathConstants.NODESET );
+        if ( ancestors == null ) return ancestorIds;
+        for ( int i = 0; i < ancestors.getLength( ); i++ ) {
+          for ( String ancestorId : ancestors.item( i ).getNodeValue( ).split( "," ) ) {
+            ancestorIds.add( ancestorId );
+          }
+        }
+      } catch ( XPathExpressionException e ) {
+        LOG.error( e, e );
+      }
+    } catch ( EucalyptusCloudException e ) {
+      LOG.error( e, e );
+    } catch ( DOMException e ) {
+      LOG.error( e, e );
+    }
+    return ancestorIds;
+  }
+
   private static void restoreInstance( final String cluster, final VmInfo runVm ) {
     try {
       String instanceId = runVm.getInstanceId( );
@@ -207,16 +319,34 @@ public class SystemState {
       VmImageInfo imgInfo = null;
       //FIXME: really need to populate these asynchronously for multi-cluster/split component... 
       try {
-        imgInfo = ( VmImageInfo ) Messaging.send( "vm://ImageResolve", runVm );
+        imgInfo = resolveImage( runVm );
       } catch ( EucalyptusCloudException e ) {
         imgInfo = new VmImageInfo( runVm.getImageId( ), runVm.getKernelId( ), runVm.getRamdiskId( ), null, null, null, null, runVm.getPlatform( ) );
       }
       VmKeyInfo keyInfo = null;
-      try {
-        keyInfo = ( VmKeyInfo ) Messaging.send( "vm://KeyPairResolve", runVm );
-      } catch ( EucalyptusCloudException e ) {
-        keyInfo = new VmKeyInfo( "unknown", runVm.getKeyValue( ), null );
+      SshKeyPair key = null;
+      if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
+        try {
+          EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );
+          try {
+            SshKeyPair searchKey = new SshKeyPair( runVm.getOwnerId( ) ) {
+              {
+                setPublicKey( runVm.getKeyValue( ) );
+              }
+            };
+            key = db.getUnique( searchKey );
+            db.commit( );
+          } catch ( Throwable e ) {
+            db.rollback( );
+            throw new EucalyptusCloudException( "Failed to find key pair associated with public key " + runVm.getKeyValue( ), e );
+          }
+        } catch ( Throwable e ) {
+          key = SshKeyPair.NO_KEY;
+        }
+      } else {
+        key = SshKeyPair.NO_KEY;
       }
+      keyInfo = new VmKeyInfo( key.getDisplayName( ), key.getPublicKey( ), key.getFingerPrint( ) );
       VmTypeInfo vmType = runVm.getInstanceType( );
       List<Network> networks = new ArrayList<Network>( );
       
@@ -244,7 +374,7 @@ public class SystemState {
           } catch ( EucalyptusCloudException e ) {
             LOG.error( e );
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-            new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
+            Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.trace( e );
           }
@@ -260,7 +390,9 @@ public class SystemState {
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      new TerminateCallback( runVm.getInstanceId( ) ).dispatch( runVm.getPlacement( ) );
+      Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+    } catch ( Throwable t ) {
+      LOG.error( t, t );
     }
   }
   

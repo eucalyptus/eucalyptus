@@ -190,11 +190,11 @@ public class TransientZone extends Zone {
 		}
 		try {
 	      VmInstance instance = VmInstances.getInstance( ).lookupByPublicIp( ipCandidate );
-	      target = new Name(instance.getNetworkConfig().getPublicDnsName() + ".");
+	      target = new Name(instance.getPublicDnsName() + ".");
 	    } catch ( Exception e ) {
 	      try {
 	        VmInstance instance = VmInstances.getInstance( ).lookupByInstanceIp( ipCandidate );
-	        target = new Name(instance.getNetworkConfig().getPrivateDnsName() + ".");
+	        target = new Name(instance.getPrivateDnsName() + ".");
 	      } catch ( Exception e1 ) {
 	        return super.findRecords( name, type );
 	      }

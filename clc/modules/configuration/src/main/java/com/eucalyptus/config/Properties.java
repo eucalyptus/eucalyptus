@@ -32,13 +32,15 @@ public class Properties {
         props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
       }
     } else {
+      Iterable<String> eucas = Iterables.filter( request.getProperties( ), new Predicate<String>() {
+        @Override
+        public boolean apply( String arg0 ) {
+          return arg0.matches( "euca=.*" );
+        }});
+      for( String altValue : eucas ) {
+        props.add( new Property( (altValue = altValue.replaceAll( "euca=","") ), ""+GroovyUtil.eval( altValue ), altValue ) );
+      }
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
-        String altValue = Iterables.find( request.getProperties( ), new Predicate<String>() {
-          @Override
-          public boolean apply( String arg0 ) {
-            return arg0.matches( "euca=\\w*" );
-          }});
-        if( altValue != null ) { props.add( new Property( (altValue = altValue.replaceAll( "euca=","") ), ""+GroovyUtil.eval( altValue ), altValue ) ); }
         if ( request.getProperties( ).contains( entry.getQualifiedName( ) ) ) {
           String value = "********";
           if (!entry.getWidgetType().equals(ConfigurableFieldType.KEYVALUEHIDDEN))
