@@ -71,21 +71,15 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
-
-import com.eucalyptus.cluster.callback.LogDataCallback;
 import com.eucalyptus.entities.VmType;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
-
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.records.EventRecord;
-import edu.ucsb.eucalyptus.msgs.GetLogsResponseType;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -145,7 +139,19 @@ public class ClusterNodeState {
     }
     List<ResourceToken> childTokens = Lists.newArrayList( );
     for( int index = 0; index < token.getAmount( ); index++ ) {
+      NetworkToken primaryNet = token.getPrimaryNetwork( );
       ResourceToken childToken = new ResourceToken( token.getCluster( ), token.getCorrelationId( )+index, token.getUserName( ), 1, this.virtualTimer++, token.getVmType( ) );
+      if( token.getAddresses( ).size( ) > index ) {
+        childToken.getAddresses( ).add( token.getAddresses( ).get( index ) );
+      }
+      if( token.getInstanceIds( ).size( ) > index ) {
+        childToken.getInstanceIds( ).add( token.getInstanceIds( ).get( index ) );
+      }
+      if( primaryNet != null ) {
+        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getUserName( ), primaryNet.getNetworkName( ), primaryNet.getVlan( ) );
+        childNet.getIndexes( ).add( primaryNet.getIndexes( ).pollFirst( ) );
+        childToken.getNetworkTokens( ).add( childNet );
+      }
       EventRecord.caller( ResourceToken.class, EventType.TOKEN_CHILD, childToken.toString( ) ).info( );
       childTokens.add( childToken );
     }
