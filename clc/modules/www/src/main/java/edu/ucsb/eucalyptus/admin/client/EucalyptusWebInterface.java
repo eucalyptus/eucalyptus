@@ -720,8 +720,12 @@ public class EucalyptusWebInterface implements EntryPoint {
                     l.setStyleName("euca-error-hint");
                     g1.setWidget( emailAddress_row, 2, l );
                     formOk = false;
-                }
-
+                } else if ( !emailAddress_box.getText().contains("@") ) {
+                    Label l = new Label( "Email address does not look like an email address!" );
+                    l.setStyleName("euca-error-hint");
+                    g1.setWidget( emailAddress_row, 2, l );
+                    formOk = false;
+		}
                 if ( formOk )
                 {
                     label_box.setText( "Checking with the server..." );
