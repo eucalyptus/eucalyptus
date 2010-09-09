@@ -57,10 +57,8 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
 package com.eucalyptus.ws.util;
@@ -68,11 +66,11 @@ package com.eucalyptus.ws.util;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.NotReadyException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 
 public class RequestQueue {
@@ -86,7 +84,6 @@ public class RequestQueue {
           throw new NotReadyException( "walrus" );
         }
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
         throw new NotReadyException( "walrus" );
       }
     }

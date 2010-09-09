@@ -242,7 +242,7 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
     sb.append( "token = ").append( token == null ? "null" : token ).append( ", " );
     sb.append( "certificates = ");
     for ( X509Cert certificate : getCertificates( ) ) {
-      sb.append( certificate.toString( ) ).append( ", " );
+      sb.append( certificate.getAlias( ) ).append( certificate.getRevoked( )?":revoked":":valid" ).append( ", " );
     }
     sb.append( "eucaGroupIds = " );
     for ( String id : eucaGroupIds ) {

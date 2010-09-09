@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.BroadcastCallback;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
@@ -85,7 +86,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType,Sta
   }
 
   @Override
-  public void verify( StartNetworkResponseType msg ) throws Exception {
+  public void fire( StartNetworkResponseType msg )  {
     try {
       Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
     } catch ( Throwable e ) {
@@ -95,7 +96,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType,Sta
 
 
   @Override
-  public void prepare( StartNetworkType msg ) throws Exception {
+  public void initialize( StartNetworkType msg )  {
     try {
       msg.setNameserver( edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( ) );
       msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );      
@@ -105,7 +106,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType,Sta
   }
 
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
   }

@@ -66,20 +66,20 @@ package com.eucalyptus.cluster.callback;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
-import com.eucalyptus.address.AddressCategory;
-import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.Address.Transition;
-import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 
-public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType,AssignAddressResponseType> {
+public class AssignAddressCallback extends MessageCallback<AssignAddressType, AssignAddressResponseType> {
   private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
   
   private Address       address;
@@ -90,43 +90,31 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
   
   @Override
-  public void prepare( AssignAddressType msg ) throws Exception {
-    if( !this.checkVmState( ) ) {
-      address.clearPending( );
-      try {
-        address.unassign( );
-        if( address.isSystemOwned( ) ) {
-          Addresses.release( address );
-        }
-      } catch ( IllegalStateException e ) {
-      }
-      throw new IllegalStateException( "Ignoring assignment to a vm which is not running: " + this.getRequest( ) );      
-    } else {
-      EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), address.toString( ) ).debug( );
-    }
+  public void initialize( AssignAddressType msg ) {
+    EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), address.toString( ) ).debug( );
   }
   
   @Override
-  public void verify( AssignAddressResponseType msg ) throws Exception {
+  public void fire( AssignAddressResponseType msg ) {
     try {
       this.updateState( );
     } catch ( IllegalStateException e ) {
-      AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      AddressCategory.unassign( address ).dispatch( address.getCluster( ) );
+      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
   
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( e, e );
     this.cleanupState( );
   }
-
+  
   private boolean checkVmState( ) {
     try {
-      VmInstance vm = VmInstances.getInstance( ).lookup( super.getRequest().getInstanceId( ) );
+      VmInstance vm = VmInstances.getInstance( ).lookup( super.getRequest( ).getInstanceId( ) );
       VmState vmState = vm.getState( );
       if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
         vm.updatePublicAddress( VmInstance.DEFAULT_IP );
@@ -141,7 +129,7 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
   }
   
   private void updateState( ) {
-    if( !this.checkVmState( ) ) {
+    if ( !this.checkVmState( ) ) {
       this.address.clearPending( );
       throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
     } else {
@@ -149,17 +137,17 @@ public class AssignAddressCallback extends QueuedEventCallback<AssignAddressType
       this.address.clearPending( );
     }
   }
-
+  
   private void cleanupState( ) {
     EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), LogUtil.FAIL, address.toString( ) ).debug( );
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
-    if( this.address.isPending( ) ) {
+    if ( this.address.isPending( ) ) {
       this.address.clearPending( );
-    } else if( this.address.isSystemOwned( ) ) {
+    } else if ( this.address.isSystemOwned( ) ) {
       Addresses.release( address );
-    } else if( this.address.isAssigned( ) ) {
-      AddressCategory.unassign( address );
+    } else if ( this.address.isAssigned( ) ) {
+      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
-
+  
 }

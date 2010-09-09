@@ -5,14 +5,15 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.util.Messaging;
+import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataType;
 
-public class PasswordDataCallback extends QueuedEventCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
+public class PasswordDataCallback extends MessageCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
   
   private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
   private final GetPasswordDataType msg;
@@ -24,10 +25,10 @@ public class PasswordDataCallback extends QueuedEventCallback<GetConsoleOutputTy
   }
   
   @Override
-  public void prepare( GetConsoleOutputType msg ) throws Exception {}
+  public void initialize( GetConsoleOutputType msg )  {}
   
   @Override
-  public void verify( GetConsoleOutputResponseType reply ) throws Exception {
+  public void fire( GetConsoleOutputResponseType reply )  {
     VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
     String output = null;
     try {
@@ -42,12 +43,12 @@ public class PasswordDataCallback extends QueuedEventCallback<GetConsoleOutputTy
     } else {
       rep.setOutput( null );
     }
-    Messaging.dispatch( "vm://ReplyQueue", rep );
+    ServiceContext.dispatch( "ReplyQueue", rep );
   }
 
 
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
   }

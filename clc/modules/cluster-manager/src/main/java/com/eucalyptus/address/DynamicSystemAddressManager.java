@@ -5,9 +5,12 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callbacks;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   private static Logger LOG = Logger.getLogger( DynamicSystemAddressManager.class );
@@ -17,26 +20,32 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
     List<Address> addressList = Lists.newArrayList( );
     if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
     for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
-      if ( cluster.equals( addr.getCluster( ) ) ) {
-        addressList.add( addr.allocate( Component.eucalyptus.name( ) ) );
-        addr.pendingAssignment( );
-        if ( --count == 0 ) {
-          break;
-        }
+      try {
+        if ( cluster.equals( addr.getCluster( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
+      } catch ( IllegalStateException e ) {
+        LOG.trace( e , e );
       }
     }
     if ( count != 0 ) {
       for( Address addr : addressList ) {
-        addr.release( );
+        try {
+          addr.release( );
+        } catch ( IllegalStateException e ) {
+          LOG.error( e , e );
+        }
       }
       throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
     } 
     return addressList;
   }
   @Override
-  public void assignSystemAddress( VmInstance vm ) throws NotEnoughResourcesAvailable {
-    Address addr = this.allocateNext( Component.eucalyptus.name( ) );
-    AddressCategory.assign( addr, vm ).dispatch( addr.getCluster( ) );
+  public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable {
+    final Address addr = this.allocateSystemAddresses( vm.getPlacement( ), 1 ).get( 0 );
+    Callbacks.newClusterRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
+      public void fire( BaseMessage response ) {
+        vm.updatePublicAddress( addr.getName( ) );
+      }
+    }).dispatch( addr.getCluster( ) );
   }
     
   @Override
@@ -53,16 +62,9 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public void inheritReservedAddresses( List<Address> previouslyReservedAddresses ) {
     for ( final Address addr : previouslyReservedAddresses ) {
-      if( !addr.isAssigned( ) ) {
+      if( !addr.isAssigned( ) && !addr.isPending() && addr.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( addr.getInstanceId() ) ) {
         Addresses.release( addr );
       }
-    }
-  }
-  @Override public void releaseSystemAddress( Address addr ) {
-    try {
-      addr.release( );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
     }
   }
   

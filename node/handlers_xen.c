@@ -100,9 +100,9 @@ static int doInitialize (struct nc_state_t *nc)
 	snprintf (nc->virsh_cmd_path, MAX_PATH, EUCALYPTUS_VIRSH, nc->home);
 	snprintf (nc->xm_cmd_path, MAX_PATH, EUCALYPTUS_XM);
 	snprintf (nc->detach_cmd_path, MAX_PATH, EUCALYPTUS_DETACH, nc->home, nc->home);
-        snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home);
-        snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home);
-        snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home);
+    snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
+    snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
+    snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
 
@@ -156,7 +156,7 @@ doRunInstance(		struct nc_state_t *nc,
 			char *keyName, 
 			//			char *privMac, char *privIp, int vlan, 
 			netConfig *netparams,
-			char *userData, char *launchIndex, char *platform,
+            char *userData, char *launchIndex, char *platform,
 			char **groupNames, int groupNamesSize,
 			ncInstance **outInst)
 {
@@ -512,7 +512,8 @@ doDetachVolume (	struct nc_state_t *nc,
 			char *volumeId,
 			char *remoteDev,
 			char *localDev,
-			int force)
+			int force,
+                        int grab_inst_sem)
 {
     int ret = OK;
     ncInstance * instance;
@@ -524,9 +525,11 @@ doDetachVolume (	struct nc_state_t *nc,
     if (ret)
         return ret;
 
-    sem_p (inst_sem); 
+    if (grab_inst_sem)
+        sem_p (inst_sem); 
     instance = find_instance(&global_instances, instanceId);
-    sem_v (inst_sem);
+    if (grab_inst_sem)
+        sem_v (inst_sem);
     if ( instance == NULL ) 
         return NOT_FOUND;
 
@@ -640,9 +643,11 @@ doDetachVolume (	struct nc_state_t *nc,
     if (ret==OK) {
         ncVolume * volume;
 
-        sem_p (inst_sem);
+        if (grab_inst_sem)
+            sem_p (inst_sem);
         volume = free_volume (instance, volumeId, remoteDev, localDevReal);
-        sem_v (inst_sem);
+        if (grab_inst_sem)
+            sem_v (inst_sem);
         if ( volume == NULL ) {
             logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");
             return ERROR;

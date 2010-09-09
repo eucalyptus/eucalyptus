@@ -12,17 +12,15 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.HasName;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_authorization" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@Inheritance(strategy=InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(
-   name="auth_authorization_class",
-   discriminatorType=DiscriminatorType.STRING
-)
-public class BaseAuthorization<T> extends AbstractPersistent implements Authorization<T>, Serializable{
+@Inheritance( strategy = InheritanceType.SINGLE_TABLE )
+@DiscriminatorColumn( name = "auth_authorization_class", discriminatorType = DiscriminatorType.STRING )
+public class BaseAuthorization<T> extends AbstractPersistent implements Authorization<T>, HasName<T>, Serializable {
   
   @Column( name = "auth_authorization_value" )
   private String value;
@@ -42,7 +40,7 @@ public class BaseAuthorization<T> extends AbstractPersistent implements Authoriz
   public void setValue( String value ) {
     this.value = value;
   }
-
+  
   @Override
   public String getDescription( ) {
     return "Abstract root of all authorization types";
@@ -52,6 +50,7 @@ public class BaseAuthorization<T> extends AbstractPersistent implements Authoriz
   public String getDisplayName( ) {
     return "Abstract Authorization";
   }
+  
   @Deprecated
   public String getName( ) {
     return this.getDisplayName( );
@@ -61,7 +60,9 @@ public class BaseAuthorization<T> extends AbstractPersistent implements Authoriz
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( this.value == null ) ? 0 : this.value.hashCode( ) );
+    result = prime * result + ( ( this.value == null )
+      ? 0
+      : this.value.hashCode( ) );
     return result;
   }
   
@@ -76,10 +77,17 @@ public class BaseAuthorization<T> extends AbstractPersistent implements Authoriz
     } else if ( !this.value.equals( other.value ) ) return false;
     return true;
   }
-
+  
   @Override
   public boolean check( T t ) {
     return false;
+  }
+  
+  @Override
+  public int compareTo( T o ) {
+    return o == null
+      ? 1
+      : Integer.valueOf( this.hashCode( ) ).compareTo( o.hashCode( ) );
   }
   
 }

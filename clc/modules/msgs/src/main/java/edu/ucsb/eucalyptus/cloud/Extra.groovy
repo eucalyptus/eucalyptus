@@ -100,7 +100,7 @@ public class VmAllocationInfo extends EucalyptusMessage {
   
   RunInstancesType request;
   RunInstancesResponseType reply;
-  String userData;
+  byte[] userData;
   Long reservationIndex;
   String reservationId;
   VmImageInfo imageInfo;
@@ -135,6 +135,9 @@ public class VmDescribeResponseType extends EucalyptusMessage {
   
   String originCluster;
   ArrayList<VmInfo> vms = new ArrayList<VmInfo>();
+  public String toString() {
+    return "${this.getClass().getSimpleName()} " + vms*.toString().join("\n${this.getClass().getSimpleName()} ");
+  }
 }
 
 public class VmRunResponseType extends EucalyptusMessage {
@@ -168,12 +171,7 @@ public class VmInfo extends EucalyptusData {
   
   @Override
   public String toString( ) {
-    return String.format(
-    "VmInfo [groupNames=%s, imageId=%s, instanceId=%s, instanceType=%s, kernelId=%s, keyValue=%s, launchIndex=%s, launchTime=%s, netParams=%s, ownerId=%s, placement=%s, productCodes=%s, ramdiskId=%s, reservationId=%s, serviceTag=%s, stateName=%s, userData=%s, volumes=%s]",
-    this.groupNames, this.imageId, this.instanceId, this.instanceType, this.kernelId,
-    this.keyValue, this.launchIndex, this.launchTime, this.netParams, 
-    this.ownerId, this.placement, this.productCodes, this.ramdiskId, this.reservationId,
-    this.serviceTag, this.stateName, this.userData, this.volumes );
+    return "VmInfo ${reservationId} ${instanceId} ${ownerId} ${stateName} ${instanceType} ${imageId} ${kernelId} ${ramdiskId} ${launchIndex} ${serviceTag} ${netParams} ${volumes}";
   }
   
   
@@ -318,7 +316,7 @@ public class VmKeyInfo {
   
 }
 
-public class Network implements HasName {
+public class Network implements HasName<Network> {
   private static Logger LOG = Logger.getLogger( Network.class );
   String name;
   String networkName;
@@ -449,16 +447,21 @@ public class Network implements HasName {
     return (Boolean) this.rules.collect{ pf -> pf.peers.contains( new VmNetworkPeer( peerName, peerNetworkName )) }.max();
   }
   
-  public int compareTo(final Object o) {
-    Network that = (Network) o;
+  public String getName() {
+    return this.name;
+  }
+
+  public int compareTo(final Network that) {
     return this.getName().compareTo(that.getName());
   }
   
   @Override
   public String toString( ) {
-    return String.format("Network [available=%s, assigned=%s, name=%s, networkName=%s, clusterTokens=%s, rules=%s, userName=%s]",
-                         LogUtil.rangedIntegerList( this.availableNetworkIndexes ), LogUtil.rangedIntegerList( this.assignedNetworkIndexes ), 
-                         this.name, this.networkName, this.clusterTokens, this.rules, this.userName );
+    String out = "Network ${name} ${userName} ${networkName} assigned=${LogUtil.rangedIntegerList( this.assignedNetworkIndexes )}\n";
+    out += "Network ${name} ${userName} ${networkName} available=${LogUtil.rangedIntegerList( this.availableNetworkIndexes )}\n";
+    this.clusterTokens.each{ out += "Network ${name} ${userName} ${networkName} ${it}\n" };
+    this.rules.each{ out += "Network ${name} ${userName} ${networkName} ${it}\n" };
+    return out;
   }
   
   
@@ -514,8 +517,7 @@ public class NetworkToken implements Comparable {
   
   @Override
   public String toString( ) {
-    return String.format( "NetworkToken [cluster=%s, indexes=%s, name=%s, networkName=%s, userName=%s, vlan=%s]",
-    this.cluster, this.indexes, this.name, this.networkName, this.userName, this.vlan);
+    return "NetworkToken ${cluster} ${name} ${vlan} ${indexes}";
   }
 }
 
@@ -587,16 +589,29 @@ public class ResourceToken implements Comparable {
 }
 
 public class NodeInfo implements Comparable {
-  
+  String iqn;
   String serviceTag;
   String name;
+  Boolean hasClusterCert = false;
+  Boolean hasNodeCert = false;
   Date lastSeen;
   NodeCertInfo certs = new NodeCertInfo();
   NodeLogInfo logs = new NodeLogInfo();
   
-  def NodeInfo(final String serviceTag) {
-    this.name = (new URI(serviceTag)).getHost();
+  def NodeInfo() {}
+  
+  def NodeInfo(final String serviceTag ) {
     this.serviceTag = serviceTag;
+    this.name = (new URI(this.serviceTag)).getHost();
+    this.lastSeen = new Date();
+    this.certs.setServiceTag(this.serviceTag);
+    this.logs.setServiceTag(this.serviceTag);
+  }
+
+    def NodeInfo(final NodeType nodeType) {
+    this.serviceTag = nodeType.getServiceTag( );
+    this.iqn = nodeType.getIqn( );
+    this.name = (new URI(this.serviceTag)).getHost();
     this.lastSeen = new Date();
     this.certs.setServiceTag(this.serviceTag);
     this.logs.setServiceTag(this.serviceTag);
@@ -647,6 +662,7 @@ public class NodeInfo implements Comparable {
   
   @Override
   public String toString( ) {
-    return String.format( "NodeInfo [name=%s, lastSeen=%s, serviceTag=%s]", this.name, this.lastSeen, this.serviceTag );
+    return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag} iqn=${iqn}";
   }
+
 }

@@ -5,8 +5,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ ElementType.TYPE, ElementType.FIELD })
-@Retention(RetentionPolicy.RUNTIME)
+/**
+ * NOTE: this annotation can only be used with Component values that are
+ * {@link Component#isCloudLocal()}
+ */
+@Target( { ElementType.TYPE, ElementType.FIELD } )
+@Retention( RetentionPolicy.RUNTIME )
 public @interface DependsRemote {
-  Component[] value();
+  Component[] value( );
 }

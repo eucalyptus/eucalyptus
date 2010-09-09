@@ -32,14 +32,14 @@ public class PersistenceContexts {
   static void addEntity( Class entity ) {
     if ( !isDuplicate( entity ) ) {
       String ctxName = Ats.from( entity ).get( PersistenceContext.class ).name( );
-      EventRecord.here( PersistenceContextDiscovery.class, EventType.PERSISTENCE_ENTITY_REGISTERED, ctxName, entity.getCanonicalName( ) ).info( );
+      EventRecord.here( PersistenceContextDiscovery.class, EventType.PERSISTENCE_ENTITY_REGISTERED, ctxName, entity.getCanonicalName( ) ).trace( );
       entities.put( ctxName, entity );
     }
   }
   
   static void addSharedEntity( Class entity ) {
     if ( !isDuplicate( entity ) ) {
-      EventRecord.here( PersistenceContextDiscovery.class, EventType.PERSISTENCE_ENTITY_REGISTERED, "shared", entity.getCanonicalName( ) ).info( );
+      EventRecord.here( PersistenceContextDiscovery.class, EventType.PERSISTENCE_ENTITY_REGISTERED, "shared", entity.getCanonicalName( ) ).trace( );
       sharedEntities.add( entity );
     }
   }
@@ -81,8 +81,8 @@ public class PersistenceContexts {
       } else if ( !emf.containsKey( persistenceContext ) ) {
         illegalAccesses = null;
         EntityManagerFactoryImpl entityManagerFactory = ( EntityManagerFactoryImpl ) config.buildEntityManagerFactory( );
-        LOG.info( "-> Setting up persistence context for : " + persistenceContext );
-        LOG.info( LogUtil.subheader( LogUtil.dumpObject( config ) ) );
+        LOG.trace( "-> Setting up persistence context for : " + persistenceContext );
+        LOG.trace( LogUtil.subheader( LogUtil.dumpObject( config ) ) );
         emf.put( persistenceContext, entityManagerFactory );
       }
       return emf.get( persistenceContext );

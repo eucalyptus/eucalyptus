@@ -364,7 +364,8 @@ public class WalrusDataResponseType extends WalrusResponseType {
 	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	Integer errorCode;
 	String contentType;
-	String contentDisposition;  
+	String contentDisposition;
+	String versionId;
 }
 
 public class WalrusDataGetRequestType extends WalrusDataRequestType {

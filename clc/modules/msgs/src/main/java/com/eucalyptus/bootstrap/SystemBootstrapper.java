@@ -57,24 +57,27 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.bootstrap;
 
 import java.security.Security;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Lifecycles;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
+import com.google.common.collect.Iterables;
 
+/**
+ * Java entry point from eucalyptus-bootstrap
+ */
 public class SystemBootstrapper {
   private static Logger               LOG          = Logger.getLogger( SystemBootstrapper.class );
   
@@ -94,7 +97,8 @@ public class SystemBootstrapper {
   }
   
   public SystemBootstrapper( ) {}
-  
+
+
   public boolean init( ) throws Exception {
     try {
       boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
@@ -111,7 +115,7 @@ public class SystemBootstrapper {
     try {
       Bootstrap.initialize( );
       Bootstrap.Stage stage = Bootstrap.transition( );
-      stage.load();
+      stage.load( );
       return true;
     } catch ( BootstrapException e ) {
       e.printStackTrace( );
@@ -126,11 +130,14 @@ public class SystemBootstrapper {
 
   public boolean load( ) throws Throwable {
     try {
+      // TODO: validation-api
+      /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );
       do {
         stage.load( );
       } while( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( BootstrapException e ) {
+      e.printStackTrace( );
       throw e;
     } catch ( Throwable t ) {
       t.printStackTrace( );
@@ -138,12 +145,13 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    Lifecycles.State.INITIALIZED.to( Lifecycles.State.LOADED ).transition( Components.list( ) );
+    Iterables.all( Components.list( ), Component.Transition.LOAD.getCallback( ) );
     return true;
   }
     
   public boolean start( ) throws Throwable {
     try {
+      /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );
       do {
         stage.start( );
@@ -156,7 +164,7 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    Lifecycles.State.LOADED.to( Lifecycles.State.STARTED ).transition( Components.list( ) );
+    Iterables.all( Components.list( ), Component.Transition.START.getCallback( ) );
     return true;
   }
   

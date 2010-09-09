@@ -59,7 +59,7 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.system;
 
@@ -74,7 +74,7 @@ public class EucaLayout extends PatternLayout {
       LINE_BYTES = Integer.parseInt( System.getenv( "COLUMNS" ) );
     } catch ( NumberFormatException e ) {}
   }
-  public static String PATTERN = "%d{HH:mm:ss} %5p "+(LogLevels.DEBUG?"%-4.4L %-23.23c{1}":"%-23.23c{1}")+"| %m%n";
+  public static String PATTERN = "%d{HH:mm:ss} %5p "+(LogLevels.DEBUG?"%C{1}.%M(%F):%L":"%-23.23c{1}")+" | %m%n";
   private String CONTINUATION = "%m%n";
   private PatternLayout continuation = null;
   

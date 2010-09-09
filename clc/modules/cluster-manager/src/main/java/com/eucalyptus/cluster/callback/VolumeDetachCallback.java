@@ -67,13 +67,14 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
+import com.eucalyptus.util.async.ConnectionException;
+import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 
-public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType,DetachVolumeResponseType> {
+public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,DetachVolumeResponseType> {
   
   private static Logger LOG = Logger.getLogger( VolumeDetachCallback.class );
   
@@ -81,22 +82,32 @@ public class VolumeDetachCallback extends QueuedEventCallback<DetachVolumeType,D
     this.setRequest( request );
   }
   
+  /**
+   * TODO: DOCUMENT
+   * @see com.eucalyptus.util.async.MessageCallback#fire(edu.ucsb.eucalyptus.msgs.BaseMessage)
+   * @param reply
+   */
   @Override
-  public void prepare( DetachVolumeType msg ) throws Exception {
-  }
-  
-  @Override
-  public void verify( DetachVolumeResponseType reply ) throws Exception {
+  public void fire( DetachVolumeResponseType reply ) {
     if ( reply.get_return( ) ) {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
       vm.getVolumes( ).remove( new AttachedVolume( this.getRequest( ).getVolumeId( ) ) );
     }
   }
 
+  /**
+   * TODO: DOCUMENT
+   * @see com.eucalyptus.util.async.MessageCallback#fireException(java.lang.Throwable)
+   * @param e
+   */
   @Override
-  public void fail( Throwable e ) {
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
-    LOG.debug( e, e );
+  public void fireException( Throwable e ) {
+    if( e instanceof FailedRequestException ) {
+      LOG.debug( "Request failed: " + this.getRequest( ).toSimpleString( ) + " because of: " + e.getMessage( ) );
+    } else if( e instanceof ConnectionException ) {
+      LOG.error( e, e );
+    }
+    LOG.trace( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) );
   }
   
 }

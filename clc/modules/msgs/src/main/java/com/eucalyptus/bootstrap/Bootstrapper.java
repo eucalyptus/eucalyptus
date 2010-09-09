@@ -59,71 +59,92 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.bootstrap;
 
 import static com.eucalyptus.system.Ats.From;
 import java.util.List;
 import org.apache.log4j.Logger;
+import java.util.NoSuchElementException;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
+/**
+ * Inheriting classes will be identified by the bootstrap mechanism and invoked appropriately during
+ * the process of starting the system stack ({@link Bootstrap} and {@link SystemBootstrapper}). A
+ * well defined Bootstrapper implementation <b>MUST</b> include at least:
+ * <ol>
+ * <li>The abstract {@link #load()} and {@link #start()} methods.</li>
+ * <li>A {@link RunDuring} annotation declaring the {@link Bootstrap.Stage} during which the
+ * bootstrapper should be executed.</li>
+ * </ol>
+ * 
+ * @see Provides
+ * @see RunDuring
+ * @see DependsLocal
+ * @see DependsRemote
+ * @see Bootstrap.Stage
+ * @see SystemBootstrapper#load()
+ * @see SystemBootstrapper#start()
+ */
 public abstract class Bootstrapper {
+  private List<Component> dependsLocal  = getDependsLocal();
+  private List<Component> dependsRemote = getDependsRemote();
   
-  private static Logger LOG               = Logger.getLogger( Bootstrapper.class );
-  public static String  SERVICES_PROPERTY = "euca.services";
-  public static String  MODEL_PROPERTY    = "euca.model";
-  public static String  VERSION_PROPERTY  = "euca.version";
-  private List<Component> dependsLocal  = null;
-  private List<Component> dependsRemote = null;
+  /**
+   * Perform the {@link SystemBootstrapper#load()} phase of bootstrap.
+   * NOTE: The only code which can execute with uid=0 runs during the
+   * {@link Bootstrap.Stage.PrivilegedConfiguration} stage of the {@link #load()} phase.
+   * 
+   * @see SystemBootstrapper#load()
+   * @return true on successful completion
+   * @throws Exception
+   */
+  public abstract boolean load( ) throws Exception;
   
-  public String getVersion( ) {
-    return System.getProperty( VERSION_PROPERTY );
-  }
-  
-  public abstract boolean load( Stage current ) throws Exception;
-  
+  /**
+   * Perform the {@link SystemBootstrapper#start()} phase of bootstrap.
+   * 
+   * @see SystemBootstrapper#start()
+   * @return true on successful completion
+   * @throws Exception
+   */
+
   public abstract boolean start( ) throws Exception;
   
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
+  /**
+   * Initiate a graceful shutdown.
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @return true on successful completion
+   * @throws Exception
+   */
   public boolean stop( ) throws Exception {
     return true;
   }
   
-  public boolean destroy( ) throws Exception {
+  /**
+   * Initiate a forced shutdown.
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @throws Exception
+   */
+  public void destroy( ) throws Exception {}
+  
+  /**
+   * Check the status of the bootstrapped resource.
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @return true when all is clear
+   * @throws Exception should contain information about any malady which may be present.
+   */
+  public boolean check( ) throws Exception {
     return true;
   }
-  
-  public boolean checkLocal( ) {
-    if ( From( this.getClass( ) ).has( DependsLocal.class ) ) {
-      for ( Component c : From( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
-        if ( !c.isLocal( ) ) return false;
-      }
-    }
-    return true;
-  }
-  
-  @SuppressWarnings( "deprecation" )
-  public boolean checkRemote( ) {
-    if ( From( this.getClass( ) ).has( DependsRemote.class ) ) {
-      for ( Component c : From( this.getClass( ) ).get( DependsRemote.class ).value( ) ) {
-        if ( c.isLocal( ) ) return false;
-      }
-    }
-    return true;
-  }
-  
-  @Override
-  public boolean equals( Object obj ) {
-    return this.getClass( ).equals( obj.getClass( ) );
-  }
-  
   
   /**
    * Get the list of {@link Component}s which must be on the local system for this bootstrapper to
@@ -140,18 +161,12 @@ public abstract class Bootstrapper {
     if ( dependsLocal != null ) {
       return dependsLocal;
     } else {
-      synchronized ( this ) {
-        if ( dependsLocal != null ) {
-          return dependsLocal;
-        } else {
-          if ( !From( this.getClass( ) ).has( DependsLocal.class ) ) {
-            dependsLocal = Lists.newArrayListWithExpectedSize( 0 );
-          } else {
-            dependsLocal = Arrays.asList( From( this.getClass( ) ).get( DependsLocal.class ).value( ) );
-          }
-          return dependsLocal;
-        }
+      if ( !From( this.getClass( ) ).has( DependsLocal.class ) ) {
+        dependsLocal = Lists.newArrayListWithExpectedSize( 0 );
+      } else {
+        dependsLocal = Arrays.asList( From( this.getClass( ) ).get( DependsLocal.class ).value( ) );
       }
+      return dependsLocal;
     }
   }
   
@@ -170,26 +185,19 @@ public abstract class Bootstrapper {
     if ( dependsRemote != null ) {
       return dependsRemote;
     } else {
-      synchronized ( this ) {
-        if ( dependsRemote != null ) {
-          return dependsRemote;
-        } else {
-          if ( !From( this.getClass( ) ).has( DependsRemote.class ) ) {
-            dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
-          } else {
-            dependsRemote = Arrays.asList( From( this.getClass( ) ).get( DependsRemote.class ).value( ) );
-            for ( Component c : dependsRemote ) {
-              if ( !c.isCloudLocal( ) ) {
-                BootstrapException.throwFatal( "DependsRemote specifies a component which is not cloud-local: " + this.getClass( ).getSimpleName( ) );
-              }
-            }
+      if ( !From( this.getClass( ) ).has( DependsRemote.class ) ) {
+        dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
+      } else {
+        dependsRemote = Arrays.asList( From( this.getClass( ) ).get( DependsRemote.class ).value( ) );
+        for ( Component c : dependsRemote ) {
+          if ( !c.isCloudLocal( ) ) {
+            BootstrapException.throwFatal( "DependsRemote specifies a component which is not cloud-local: " + this.getClass( ).getSimpleName( ) );
           }
-          return dependsRemote;
         }
       }
+      return dependsRemote;
     }
   }
-  
   /**
    * The Bootstrap.Stage during which the bootstrapper executes.
    * 
@@ -221,4 +229,67 @@ public abstract class Bootstrapper {
     }
     
   }
+  
+  /**
+   * Check that all DependsLocal components are local.
+   * 
+   * @return true if all local dependencies are satisfied.
+   */
+  public boolean checkLocal( ) {
+    for ( Component c : this.getDependsLocal( ) ) {
+      try {
+        if ( !Components.lookup( c ).isLocal( ) ) {
+          return false;
+        }
+      } catch ( NoSuchElementException ex ) {
+//        return false;
+      }
+    }
+    return true;
+  }
+  
+  /**
+   * Check that all DependsRemote components are remote.
+   * 
+   * @return true if all remote dependencies are satisfied.
+   */
+  public boolean checkRemote( ) {
+    for ( Component c : this.getDependsRemote( ) ) {
+      try {
+        if ( Components.lookup( c ).isLocal( ) ) {
+          return false;
+        }
+      } catch ( NoSuchElementException ex ) {
+//        return false;
+      }
+    }
+    return true;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    return this.getClass( ).equals( obj.getClass( ) );
+  }
+  
+  /**
+   * HARDCORE DEPRECATED: Implement {@link Bootstrapper#load()} instead. To obtain a reference to
+   * the current stage of bootstrap use {@link Bootstrap#getCurrentStage()}.
+   * 
+   * @see Bootstrapper#load()
+   * @see Bootstrap#getCurrentStage()
+   */
+  @Deprecated
+  public boolean load( Stage current ) throws Exception {
+    return this.load( );
+  }
+  
+  /**
+   * @see java.lang.Object#toString()
+   * @return a string
+   */
+  @Override
+  public String toString( ) {
+    return String.format( "Bootstrapper %s dependsLocal=%s dependsRemote=%s", this.getClass( ).getSimpleName( ), this.dependsLocal, this.dependsRemote );
+  }
+  
 }
