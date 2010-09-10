@@ -1310,4 +1310,15 @@ public class OverlayManager implements LogicalStorageManager {
 		volumeManager.add(snapshotInfo);
 		volumeManager.finish();
 	}
+	
+	@Override
+	public String attachVolume(String volumeId, String nodeIqn)
+	throws EucalyptusCloudException {
+		return getVolumeProperty(volumeId);
+	}
+
+	@Override
+	public void detachVolume(String volumeId, String nodeIqn)
+	throws EucalyptusCloudException {
+	}
 }
