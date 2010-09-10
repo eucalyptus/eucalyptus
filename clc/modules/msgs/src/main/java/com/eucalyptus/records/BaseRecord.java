@@ -159,6 +159,7 @@ public class BaseRecord implements Serializable, Record {
     this.others.add( NEXT );
     this.extra = "";
     for ( Object o : this.others ) {
+      if( o == null ) continue;
       this.extra += ":" + o.toString( );
     }
     return this;
