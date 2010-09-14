@@ -46,4 +46,7 @@ public class ClusterAddressInfo implements Comparable<ClusterAddressInfo> {
     return true;
   }  
   
+  public String toString( ) {
+    return String.format( "ClusterAddressInfo %s %s orphanCount=%s", this.address, this.instanceIp, this.orphanCount );
+  }
 }

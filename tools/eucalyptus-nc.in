@@ -152,12 +152,24 @@ do_start() {
 	if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then
 		echo
 		echo "Cannot check Node Controller: missing euca_test_nc."
-	elif ! $EUCALYPTUS/usr/sbin/euca_test_nc $HYPERVISOR > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ; then
-		echo
-		echo "Node Controller cannot be started: errors in $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log"
-		exit 1
+	else
+            # sometimes, libvirtd takes some time to start on init, so retry euca_test_nc a few times before failing
+            for i in 1 2 3 4 5
+            do
+                PASSED=0
+                if ( $EUCALYPTUS/usr/sbin/euca_test_nc $HYPERVISOR > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ); then
+                    PASSED=1
+                else
+                    sleep 1
+                fi
+            done
+            if ( test $PASSED = "0" ); then
+                echo
+                echo "Node Controller cannot be started: errors in $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log"
+                exit 1
+            fi
 	fi
-
+	
 	# on SYSTEM or STATIC mode the bridge needs to exists
 	if [ "$VNET_MODE" = "SYSTEM" -o "$VNET_MODE" = "STATIC" ]; then
 		if [ -n "$BRCTL" -a -x $BRCTL ]; then

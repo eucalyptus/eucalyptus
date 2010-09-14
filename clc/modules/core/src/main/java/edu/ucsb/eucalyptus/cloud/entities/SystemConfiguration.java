@@ -94,7 +94,7 @@ import com.eucalyptus.util.StorageProperties;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "system_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 @ConfigurableClass( root = "config", description = "Basic system configuration." )
 public class SystemConfiguration {
   private static Logger LOG = Logger.getLogger( SystemConfiguration.class );

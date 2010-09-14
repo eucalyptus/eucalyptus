@@ -32,6 +32,8 @@
 %global euca_hypervisor kvm
 %global euca_bridge  br0
 %global euca_java    java-devel >= 1:1.6.0
+%global euca_iscsi_client iscsi-initiator-utils
+%global euca_iscsi_server scsi-target-utils
 %endif
 
 %if %is_centos
@@ -39,7 +41,7 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 %endif
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       main
+Version:       2.0.0
 Release:       1
 License:       GPLv3
 Group:         Applications/System
@@ -61,7 +63,7 @@ eucalyptus-nc (or all of them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus = main, %{euca_java}, lvm2
+Requires:     eucalyptus = 2.0.0, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description common-java
@@ -74,7 +76,7 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2
+Requires:     eucalyptus-common-java = 2.0.0, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description walrus
@@ -89,7 +91,7 @@ cloud controller.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
+Requires:     eucalyptus-common-java = 2.0.0, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
 Group:        Applications/System
 
 %description sc
@@ -104,7 +106,7 @@ alongside the cluster-controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java = main, %{euca_java}, lvm2
+Requires:     eucalyptus-common-java = 2.0.0, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -119,7 +121,7 @@ the cloud clients.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus = main, eucalyptus-gl = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
+Requires:     eucalyptus = 2.0.0, eucalyptus-gl = 2.0.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
 Group:        Applications/System
 
 %description cc
@@ -133,7 +135,7 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus = main, eucalyptus-gl = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}, %{euca_iscsi_client}
+Requires:     eucalyptus = 2.0.0, eucalyptus-gl = 2.0.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}, %{euca_iscsi_client}
 Group:        Applications/System
 
 %description nc
@@ -147,7 +149,7 @@ components that handles the instances.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus = main, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Requires:     eucalyptus = 2.0.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Group:        Applications/System
 
 %description gl
@@ -204,7 +206,6 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/share/eucalyptus/connect_iscsitarget.pl
 /usr/share/eucalyptus/disconnect_iscsitarget.pl
 /usr/share/eucalyptus/get_iscsitarget.pl
-/usr/sbin/euca-add-group
 /usr/sbin/euca-add-user
 /usr/sbin/euca-add-user-group
 /usr/sbin/euca-delete-user
@@ -213,7 +214,6 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/sbin/euca-deregister-storage-controller
 /usr/sbin/euca-deregister-walrus
 /usr/sbin/euca-describe-clusters
-/usr/sbin/euca-describe-groups
 /usr/sbin/euca-describe-properties
 /usr/sbin/euca-describe-storage-controllers
 /usr/sbin/euca-describe-user-groups
@@ -304,7 +304,7 @@ then
 	mkdir -p /root/eucalyptus.backup.$DATESTR
 	cd /root/eucalyptus.backup.$DATESTR
 	EUCABACKUPS=""
-	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version
+	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version $EUCADIR/usr/share/eucalyptus/
 	do
 	    if [ -e $i ]; then
 		EUCABACKUPS="$EUCABACKUPS $i"
@@ -340,7 +340,7 @@ then
 	if [ -f /tmp/eucaback.dir ]; then
 	    BACKDIR=`cat /tmp/eucaback.dir`
 	    if [ -d "$BACKDIR" ]; then
-		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys >/dev/null 2>&1
 		/usr/sbin/euca_conf -setup
 	    fi
 	fi
@@ -356,7 +356,16 @@ then
 	BACKDIR=`cat /tmp/eucaback.dir`
 	if [ -d "$BACKDIR" ]; then
 	    /usr/sbin/euca_conf -setup
-	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+	    if [ -f "$BACKDIR/etc/eucalyptus/eucalyptus-version" -a -f "/etc/eucalyptus/eucalyptus-version" ]; then
+		export OLDVERSION=`cat $BACKDIR/etc/eucalyptus/eucalyptus-version`
+		export NEWVERSION=`cat /etc/eucalyptus/eucalyptus-version`
+		if [ "$OLDVERSION" != "$NEWVERSION" ]; then
+		    rm -f /usr/share/eucalyptus/eucalyptus-*$OLDVERSION*.jar
+		    rm -f /usr/share/eucalyptus/groovy-1.6.3.jar
+		    rm -f /usr/share/eucalyptus/asm2-2.2.3.jar
+		fi
+	    fi
+	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db >/dev/null 2>&1
 	    /usr/sbin/euca_conf -setup
 	fi
     fi
@@ -443,15 +452,15 @@ then
 	fi
 fi
 %endif
-%if %is_suse
-if [ -e /etc/PolicyKit/PolicyKit.conf ]; 
-then
-	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
-	then
-		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalyptus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
-	fi
-fi
-%endif
+#%if %is_suse
+#if [ -e /etc/PolicyKit/PolicyKit.conf ]; 
+#then
+#	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
+#	then
+#		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalyptus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
+#	fi
+#fi
+#%endif
 #if [ "$1" = "2" ];
 #then
 #    if [ -f /tmp/eucaback.dir ]; then

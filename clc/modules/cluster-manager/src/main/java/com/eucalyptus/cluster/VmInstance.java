@@ -59,7 +59,7 @@
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
 package com.eucalyptus.cluster;
@@ -75,16 +75,15 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.component.Configurations;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.SystemState.Reason;
+import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -97,7 +96,7 @@ import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-public class VmInstance implements HasName {
+public class VmInstance implements HasName<VmInstance> {
   private static Logger LOG          = Logger.getLogger( VmInstance.class );
   public static String  DEFAULT_IP   = "0.0.0.0";
   public static String  DEFAULT_TYPE = "m1.small";
@@ -117,6 +116,7 @@ public class VmInstance implements HasName {
   private final AtomicMarkableReference<VmState>      state         = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   private final ConcurrentSkipListSet<AttachedVolume> volumes       = new ConcurrentSkipListSet<AttachedVolume>( );
   private final StopWatch                             stopWatch     = new StopWatch( );
+  private final StopWatch                             updateWatch     = new StopWatch( );
   
   private Date                                        launchTime    = new Date( );
   private String                                      serviceTag;
@@ -144,7 +144,9 @@ public class VmInstance implements HasName {
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
     this.networkConfig.setNetworkIndex( Integer.parseInt( networkIndex ) );
     this.stopWatch.start( );
+    this.updateWatch.start( );
     this.updateDns( );
+    this.store( );
   }
   
   public void updateNetworkIndex( Integer newIndex ) {
@@ -217,6 +219,13 @@ public class VmInstance implements HasName {
   }
   
   public void setState( final VmState newState, SystemState.Reason reason, String... extra ) {
+    this.updateWatch.split( );
+    if( this.updateWatch.getSplitTime( ) > 1000*60*60 ) {
+      this.store( );
+      this.updateWatch.unsplit( );
+    } else {
+      this.updateWatch.unsplit( );
+    }
     this.resetStopWatch( );
     VmState oldState = this.state.getReference( );
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
@@ -260,7 +269,7 @@ public class VmInstance implements HasName {
         } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
           this.state.set( newState, false );
         }
-        EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE,  "user="+this.getOwnerId( ), "instance="+this.getInstanceId( ), "type="+this.getVmTypeInfo( ).getName( ), "state="+ this.state.getReference( ).name( ), "details="+this.reasonDetails.toString( )  ).info();
+        this.store( );
       } else {
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       }
@@ -268,6 +277,13 @@ public class VmInstance implements HasName {
         EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.ownerId, this.state.getReference( ).name( ), this.launchTime );
       }
     }
+  }
+
+  private void store( ) {
+    EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE )
+               .withDetails( this.getOwnerId( ), this.getInstanceId( ), "type", this.getVmTypeInfo( ).getName( ) )
+               .withDetails( "state", this.state.getReference( ).name( ) ).withDetails( "cluster", this.placement )
+               .withDetails( "image", this.imageInfo.getImageId( ) ).withDetails( "started", this.launchTime.getTime( ) + "" ).info( );
   }
   
   public String getByKey( String path ) {
@@ -325,15 +341,18 @@ public class VmInstance implements HasName {
     m.put( "placement/availability-zone", this.getPlacement( ) );
     String dir = "";
     for ( String entry : m.keySet( ) ) {
-      if ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) continue;
+      if ( ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) 
+          || ( "ramdisk-id".equals(entry) && this.getImageInfo( ).getRamdiskId( ) == null ) ) {
+        continue;
+      }
       dir += entry + "\n";
     }
     m.put( "", dir );
     return m;
   }
   
-  public int compareTo( final Object o ) {
-    VmInstance that = ( VmInstance ) o;
+  @Override
+  public int compareTo( final VmInstance that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
   
@@ -442,8 +461,12 @@ public class VmInstance implements HasName {
     return keyInfo;
   }
   
+  public String getConsoleOutputString( ) {
+    return new String( Base64.encode( this.consoleOutput.toString( ).getBytes( ) ) );
+  }
+
   public StringBuffer getConsoleOutput( ) {
-    return consoleOutput;
+    return this.consoleOutput;
   }
   
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
@@ -485,6 +508,14 @@ public class VmInstance implements HasName {
   
   public String getPublicAddress( ) {
     return networkConfig.getIgnoredPublicIp( );
+  }
+
+  public String getPrivateDnsName( ) {
+    return networkConfig.getPrivateDnsName( );
+  }
+  
+  public String getPublicDnsName( ) {
+    return networkConfig.getPublicDnsName( );
   }
   
   public NetworkConfigType getNetworkConfig( ) {

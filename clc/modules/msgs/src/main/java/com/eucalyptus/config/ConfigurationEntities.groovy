@@ -100,7 +100,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
 public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, Comparable {
-  @Column( name = "config_component_name", unique=true )
+  @Column( name = "config_component_name" )
   String name;
   @Column( name = "config_component_hostname" )
   String hostName;
@@ -133,7 +133,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   }
   
   public abstract Component getComponent();
-
+  //REMOVE: maybe?
   public com.eucalyptus.component.Component lookup() {
     return Components.lookup( this.getComponent() );
   }
@@ -182,6 +182,11 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   URI uri;
   Component c;
   
+  public EphemeralConfiguration( String name, Component c, URI uri ) {
+    super( name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+    this.uri = uri;
+    this.c = c;
+  }
   public EphemeralConfiguration( Component c, URI uri ) {
     super( c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
@@ -217,7 +222,7 @@ public class RemoteConfiguration extends EphemeralConfiguration {
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_clusters" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
@@ -266,7 +271,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_sc" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class StorageControllerConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Storage";
@@ -281,7 +286,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_walrus" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class WalrusConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Walrus";
@@ -299,7 +304,7 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_system" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class System implements Serializable {
   @Id
   @GeneratedValue(generator = "system-uuid")

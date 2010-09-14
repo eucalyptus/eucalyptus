@@ -93,12 +93,10 @@ public class DNSBootstrapper extends Bootstrapper {
 	}
 
 	@Override
-	public boolean destroy( ) throws Exception {
-		return true;
-	}
+	public void destroy( ) throws Exception {}
 
 	@Override
-	public boolean load(Stage current ) throws Exception {
+	public boolean load( ) throws Exception {
 		LOG.info("Initializing DNS");
 		DNSControl.initialize();
 		return true;

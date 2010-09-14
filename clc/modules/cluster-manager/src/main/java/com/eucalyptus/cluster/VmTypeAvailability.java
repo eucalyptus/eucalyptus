@@ -126,11 +126,10 @@ public class VmTypeAvailability implements Comparable {
 
   @Override
   public String toString() {
-    return "VmTypeAvailability{" +
-           "type=" + type +
-           ", max=" + max +
-           ", available=" + available +
-           "}\n";
+    return "VmTypeAvailability " +
+           " " + type +
+           " " + available +
+           " / " + max;
   }
 
   public static VmTypeAvailability ZERO = new ZeroTypeAvailability();

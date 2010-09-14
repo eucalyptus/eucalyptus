@@ -77,7 +77,7 @@ import javax.persistence.Table;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "vm_types" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class VmType extends AbstractPersistent implements Serializable, Comparable {
   //TODO: enumerate.
   public static String M1_SMALL  = "m1.small";
@@ -178,6 +178,6 @@ public class VmType extends AbstractPersistent implements Serializable, Comparab
   
   @Override
   public String toString( ) {
-    return "VmType [name='" + name + '\'' + ", cpu=" + cpu + ", disk=" + disk + ", mem=" + memory + "]";
+    return "VmType " + name + " cores=" + cpu + " disk=" + disk + " mem=" + memory;
   }
 }

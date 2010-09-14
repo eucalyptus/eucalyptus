@@ -111,6 +111,11 @@ upgrade_conf() {
     cp --preserve -a ${OLD_EUCA}/etc/eucalyptus/eucalyptus.conf ${NEW_EUCA}/etc/eucalyptus/eucalyptus.conf
     exit 0;
   fi
+
+  if [ -f ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ]; then
+      sed -i "s/DISABLE_ISCSI=\"N\"/DISABLE_ISCSI=\"Y\"/" ${NEW_EUCA}/etc/eucalyptus/eucalyptus.conf
+  fi
+
   if [ ! -x ${NEW_EUCA}/usr/sbin/euca_conf ]; then
     echo "Cannot find new ${NEW_EUCA}/usr/sbin/euca_conf! Skipping automatic upgrade."; exit 1
   fi

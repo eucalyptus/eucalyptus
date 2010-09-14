@@ -72,7 +72,7 @@ import javax.persistence.*;
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "AOEVolumeInfo" )
 @Entity
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
 public class AOEVolumeInfo extends LVMVolumeInfo {
     @Column(name="vbladepid")
 	private Integer vbladePid;

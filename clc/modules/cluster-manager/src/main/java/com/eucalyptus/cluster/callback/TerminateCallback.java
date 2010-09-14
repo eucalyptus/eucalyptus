@@ -66,11 +66,13 @@ package com.eucalyptus.cluster.callback;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-public class TerminateCallback extends QueuedEventCallback<TerminateInstancesType,TerminateInstancesResponseType> {
+public class TerminateCallback extends MessageCallback<TerminateInstancesType,TerminateInstancesResponseType> implements Expendable<TerminateCallback> {
   
   private static Logger LOG = Logger.getLogger( TerminateCallback.class );
   private String        instanceId;
@@ -81,19 +83,24 @@ public class TerminateCallback extends QueuedEventCallback<TerminateInstancesTyp
   }
   
   @Override
-  public void prepare( TerminateInstancesType msg ) throws Exception {
+  public void initialize( TerminateInstancesType msg ) {
     EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATING, LogUtil.dumpObject( msg ) ).info( );
   }
   
   @Override
-  public void verify( TerminateInstancesResponseType reply ) throws Exception {
+  public void fire( TerminateInstancesResponseType reply ) {
     EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATED, LogUtil.dumpObject( reply  ) ).info( );
   }
   
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
+  }
+
+  @Override
+  public boolean duplicateOf( TerminateCallback that ) {
+    return this.getRequest( ).getInstancesSet( ).containsAll( that.getRequest( ).getInstancesSet( ) );
   }
   
 }

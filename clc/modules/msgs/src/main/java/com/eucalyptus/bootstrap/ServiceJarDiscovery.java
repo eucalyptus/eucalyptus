@@ -21,12 +21,16 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 
+/**
+ * TODO: DOCUMENT
+ */
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
   private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
   private static SortedSet<ServiceJarDiscovery> discovery = Sets.newTreeSet( );
@@ -37,7 +41,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     JarFile jar = new JarFile( f );
     Properties props = new Properties( );
     Enumeration<JarEntry> jarList = jar.entries( );
-    LOG.info( "-> Trying to load component info from " + f.getAbsolutePath( ) );
+    LOG.trace( "-> Trying to load component info from " + f.getAbsolutePath( ) );
     while ( jarList.hasMoreElements( ) ) {
       JarEntry j = jarList.nextElement( );
       if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
@@ -49,7 +53,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             try {
               ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
               discovery.add( discover );
-              EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, discovery.getClass( ).getCanonicalName( ) );
+              EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, discover.getClass( ).getCanonicalName( ) ).info( );
             } catch ( Exception e ) {
               LOG.fatal( e, e );
               jar.close( );
@@ -94,7 +98,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   public static void runDiscovery( ) {
     for ( ServiceJarDiscovery s : discovery ) {
-      EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_STARTED, s.getClass( ).getSimpleName( ) ).info( );
+      LOG.info( LogUtil.subheader( s.getClass( ).getSimpleName( ) ) );
       for ( Class c : classList.keySet( ) ) {
         try {
           s.checkClass( c );
@@ -103,12 +107,9 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         }
       }
     }
-    for ( ServiceJarDiscovery s : discovery ) {
-      EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_FINISHED, s.getClass( ).getSimpleName( ) ).info( );
-    }
   }
   
-  public void checkClass( Class candidate ) {
+  private void checkClass( Class candidate ) {
     try {
       if ( this.processClass( candidate ) ) {
         ServiceJarDiscovery.checkUniqueness( candidate );
@@ -122,10 +123,12 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   }
   
   /**
-   * Process the potential bootstrap-related class. Return false or throw an exception if the class is rejected.
+   * Process the potential bootstrap-related class. Return false or throw an exception if the class
+   * is rejected.
    * 
    * @param candidate
-   * @return TODO
+   * @return true if the candidate is accepted.
+   * 
    * @throws Throwable
    */
   public abstract boolean processClass( Class candidate ) throws Throwable;
@@ -189,9 +192,8 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     for ( File f : libDir.listFiles( ) ) {
       if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" ) && !f.getName( ).matches( ".*-ext-.*" ) ) {
 //        LOG.trace( "Found eucalyptus component jar: " + f.getName( ) );
-        JarFile jar = null;
         try {
-          jar = new JarFile( f );
+          JarFile jar = new JarFile( f );
           Enumeration<JarEntry> jarList = jar.entries( );
           while ( jarList.hasMoreElements( ) ) {
             JarEntry j = jarList.nextElement( );
@@ -208,12 +210,6 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           jar.close( );
         } catch ( Throwable e ) {
           LOG.error( e.getMessage( ) );
-          if ( jar != null ) {
-            try {
-              jar.close();	
-            } catch ( IOException ex ) {            
-            }
-          }
           continue;
         }
       }

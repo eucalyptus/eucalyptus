@@ -18,7 +18,7 @@ public class Configuration implements ComponentInformation {
   private URI                      uriLocal;
   private String                   uriPattern;
   private Integer                  port;
-  
+
   Configuration( Component parent ) {
     this.parent = parent;
     this.propertyKey = "euca." + this.parent.getName( ) + ".host";
@@ -26,7 +26,7 @@ public class Configuration implements ComponentInformation {
     this.resource = null;
     this.port = Integer.parseInt( System.getProperty("euca.ws.port") );
     this.uriPattern = "http://%s:%d/internal/%s";
-    this.uriLocal = URI.create( "vm://EucalyptusRequestQueue" );
+    this.uriLocal = URI.create( "vm://"+parent.getName( ).substring( 0, 1 ).toUpperCase( ) + parent.getName( ).substring( 1 )+"RequestQueue" );
   }
   
   Configuration( Component parent, URI u ) {
@@ -83,22 +83,27 @@ public class Configuration implements ComponentInformation {
       if ( NetworkUtil.testLocal( host ) ) {
         return this.getLocalUri( );
       } else {
-        try {
-          uri = String.format( this.getUriPattern( ), host, port );
-        } catch ( MissingFormatArgumentException e ) {
-          uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ) );
-        }
-        try {
-          URI u = new URI( uri );
-          u.parseServerAuthority( );
-          return u;
-        } catch ( URISyntaxException e ) {
-          LOG.error( e, e );
-          return URI.create( uri );
-        }
+        return makeRemoteUri( host, port );
       }
     } catch ( Exception e ) {
       return this.getLocalUri( );
+    }
+  }
+
+  public URI makeRemoteUri( String host, Integer port ) {
+    String uri;
+    try {
+      uri = String.format( this.getUriPattern( ), host, port );
+    } catch ( MissingFormatArgumentException e ) {
+      uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ).replaceAll( "RequestQueue", "Internal" ) );
+    }
+    try {
+      URI u = new URI( uri );
+      u.parseServerAuthority( );
+      return u;
+    } catch ( URISyntaxException e ) {
+      LOG.error( e, e );
+      return URI.create( uri );
     }
   }
 

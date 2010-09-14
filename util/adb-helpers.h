@@ -11,13 +11,15 @@ static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMa
   params->cores = adb_virtualMachineType_get_cores(vm_type, env);
   params->disk = adb_virtualMachineType_get_disk(vm_type, env);
   strncpy(params->name, adb_virtualMachineType_get_name(vm_type, env), sizeof(params->name));
-  int deviceMappingSize = adb_virtualMachineType_sizeof_deviceMapping(vm_type, env);
-  for (i = 0; i<EUCA_MAX_DEVMAPS && i<deviceMappingSize; i++) {
-    adb_deviceMappingType_t * dm_type = adb_virtualMachineType_get_deviceMapping_at (vm_type, env, i);
-    strncpy (params->deviceMapping[i].deviceName, adb_deviceMappingType_get_deviceName(dm_type, env), sizeof(params->deviceMapping[i].deviceName));
-    strncpy (params->deviceMapping[i].virtualName, adb_deviceMappingType_get_virtualName(dm_type, env), sizeof(params->deviceMapping[i].virtualName));
-    params->deviceMapping[i].size = adb_deviceMappingType_get_size(dm_type, env);
-    strncpy (params->deviceMapping[i].format, adb_deviceMappingType_get_format(dm_type, env), sizeof(params->deviceMapping[i].format));
+  int virtualBootRecordSize = adb_virtualMachineType_sizeof_virtualBootRecord(vm_type, env);
+  for (i = 0; i<EUCA_MAX_VBRS && i<virtualBootRecordSize; i++) {
+    adb_virtualBootRecordType_t * vbr_type = adb_virtualMachineType_get_virtualBootRecord_at (vm_type, env, i);
+    strncpy (params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env), sizeof(params->virtualBootRecord[i].resourceLocation));
+    strncpy (params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env), sizeof(params->virtualBootRecord[i].guestDeviceName));
+    params->virtualBootRecord[i].size = adb_virtualBootRecordType_get_size(vbr_type, env);
+    strncpy (params->virtualBootRecord[i].format, adb_virtualBootRecordType_get_format(vbr_type, env), sizeof(params->virtualBootRecord[i].format));
+    strncpy (params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), sizeof(params->virtualBootRecord[i].id));
+    strncpy (params->virtualBootRecord[i].type, adb_virtualBootRecordType_get_type(vbr_type, env), sizeof(params->virtualBootRecord[i].type));
   }
 }
 
@@ -30,15 +32,17 @@ static inline adb_virtualMachineType_t * copy_vm_type_to_adb (const axutil_env_t
   adb_virtualMachineType_set_cores(vm_type, env, params->cores);
   adb_virtualMachineType_set_disk(vm_type, env, params->disk);
   adb_virtualMachineType_set_name(vm_type, env, params->name);
-  for (i=0; i<sizeof(params->deviceMapping)/sizeof(deviceMapping); i++) {
-    deviceMapping * dm = & params->deviceMapping [i];
-    if (strlen(dm->deviceName)>0) {
-      adb_deviceMappingType_t * dm_type = adb_deviceMappingType_create(env);
-      adb_deviceMappingType_set_deviceName(dm_type, env, dm->deviceName);
-      adb_deviceMappingType_set_virtualName(dm_type, env, dm->virtualName);
-      adb_deviceMappingType_set_size(dm_type, env, dm->size);
-      adb_deviceMappingType_set_format(dm_type, env, dm->format);
-      adb_virtualMachineType_add_deviceMapping(vm_type, env, dm_type);
+  for (i=0; i<sizeof(params->virtualBootRecord)/sizeof(virtualBootRecord); i++) {
+    virtualBootRecord * vbr = & params->virtualBootRecord [i];
+    if (strlen(vbr->resourceLocation)>0) {
+      adb_virtualBootRecordType_t * vbr_type = adb_virtualBootRecordType_create(env);
+      adb_virtualBootRecordType_set_resourceLocation(vbr_type, env, vbr->resourceLocation);
+      adb_virtualBootRecordType_set_guestDeviceName(vbr_type, env, vbr->guestDeviceName);
+      adb_virtualBootRecordType_set_size(vbr_type, env, vbr->size);
+      adb_virtualBootRecordType_set_format(vbr_type, env, vbr->format);
+      adb_virtualBootRecordType_set_id(vbr_type, env, vbr->id);
+      adb_virtualBootRecordType_set_type(vbr_type, env, vbr->type);
+      adb_virtualMachineType_add_virtualBootRecord(vm_type, env, vbr_type);
     }
   }
 

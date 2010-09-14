@@ -126,6 +126,7 @@ public abstract class WsSecHandler extends MessageStackHandler {
         try {
           signer.prepare( doc, this.credentials, wsheader );
         } catch ( WSSecurityException e ) {
+          LOG.error( doc );
           LOG.error( e, e );
           Channels.fireExceptionCaught( ctx, e );
         }
@@ -142,6 +143,7 @@ public abstract class WsSecHandler extends MessageStackHandler {
         try {
           signer.addReferencesToSign( v, wsheader );
         } catch ( WSSecurityException e ) {
+          LOG.error( doc );
           LOG.error( e, e );
           Channels.fireExceptionCaught( ctx, e );
         }
@@ -149,6 +151,7 @@ public abstract class WsSecHandler extends MessageStackHandler {
         try {
           signer.computeSignature( );
         } catch ( WSSecurityException e ) {
+          LOG.error( doc );
           LOG.error( e, e );
           Channels.fireExceptionCaught( ctx, e );
         }

@@ -244,16 +244,17 @@ public class FileSystemStorageManager implements StorageManager {
 	public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException {
 		File oldObjectFile = new File (rootDirectory + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
 		File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
-
-		FileInputStream fileInputStream = new FileInputStream(oldObjectFile);
-		FileChannel fileIn = fileInputStream.getChannel();
-		FileOutputStream fileOutputStream = new FileOutputStream(newObjectFile);
-		FileChannel fileOut = fileOutputStream.getChannel();
-		fileIn.transferTo(0, fileIn.size(), fileOut);
-		fileIn.close();
-		fileInputStream.close();
-		fileOut.close();
-		fileOutputStream.close();
+		if(!oldObjectFile.equals(newObjectFile)) {			
+			FileInputStream fileInputStream = new FileInputStream(oldObjectFile);
+			FileChannel fileIn = fileInputStream.getChannel();
+			FileOutputStream fileOutputStream = new FileOutputStream(newObjectFile);
+			FileChannel fileOut = fileOutputStream.getChannel();
+			fileIn.transferTo(0, fileIn.size(), fileOut);
+			fileIn.close();
+			fileInputStream.close();
+			fileOut.close();
+			fileOutputStream.close();
+		}
 	}
 
 	public String getObjectPath(String bucket, String object) {
@@ -366,7 +367,7 @@ public class FileSystemStorageManager implements StorageManager {
 			httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
 		}
 		if(logData != null) {
-		    logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
+			logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
 		}
 		channel.write(httpResponse).addListener(new ChannelFutureListener( ) {
 			@Override public void operationComplete( ChannelFuture future ) throws Exception {

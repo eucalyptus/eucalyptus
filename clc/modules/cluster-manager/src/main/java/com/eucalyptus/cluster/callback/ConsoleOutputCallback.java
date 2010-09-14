@@ -68,12 +68,13 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.util.Messaging;
+import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 
-public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
+public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
   
   private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
   
@@ -82,10 +83,10 @@ public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputT
   }
   
   @Override
-  public void prepare( GetConsoleOutputType msg ) throws Exception {}
+  public void initialize( GetConsoleOutputType msg )  {}
   
   @Override
-  public void verify( GetConsoleOutputResponseType reply ) throws Exception {
+  public void fire( GetConsoleOutputResponseType reply )  {
     VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
     String output = null;
     try {
@@ -96,13 +97,13 @@ public class ConsoleOutputCallback extends QueuedEventCallback<GetConsoleOutputT
     reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
     reply.setTimestamp( new Date( ) );
-    reply.setOutput( new String( Base64.encode( vm.getConsoleOutput( ).toString( ).getBytes( ) ) ) );
-    Messaging.dispatch( "vm://ReplyQueue", reply );
+    reply.setOutput( vm.getConsoleOutputString( ) );
+    ServiceContext.dispatch( "ReplyQueue", reply );
   }
 
 
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
   }

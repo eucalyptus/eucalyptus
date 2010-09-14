@@ -59,11 +59,12 @@
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.ws.client;
 
 import java.security.GeneralSecurityException;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -101,6 +102,7 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.async.NioBootstrap;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
@@ -178,7 +180,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   }
 
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     return true;
   }
 
@@ -223,10 +225,16 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
       }
     } else if ( event instanceof ClockTick ) {
       if ( ( ( ClockTick ) event ).isBackEdge( ) ) {
-        for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
-          hb.send( this.componentMap.get( hb.getHostName( ) ) );
-        }
+        this.fireHeartbeat( );
       }
+    }
+  }
+
+  private void fireHeartbeat( ) {
+    for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
+      Collection<ServiceConfiguration> services = this.componentMap.get( hb.getHostName( ) );
+      LOG.debug( "Sending heartbeat to: " + hb.getHostName( ) + " with " + services ); 
+      hb.send( services );
     }
   }
 
@@ -238,6 +246,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
       } else {
         LOG.info( "--> Queueing start event on all other remote components: " + LogUtil.dumpObject( hb ) );
         hb.addStarted( config );
+        this.fireHeartbeat( );
       }
     }
   }
@@ -249,7 +258,8 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
         hb.send( this.componentMap.get( hb.getHostName( ) ) );
       } else {
         LOG.info( "--> Queueing start event for next clock tick on all other remote components: " + LogUtil.dumpObject( hb ) );
-        hb.addStarted( config );
+        hb.addStopped( config );
+        this.fireHeartbeat( );
       }
     }
   }

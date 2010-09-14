@@ -1033,10 +1033,10 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
 	logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
 
 	int i;
-	for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
-	  deviceMapping * dm = &(params->deviceMapping[i]);
-	  if (strlen(dm->deviceName)>0) {
-	    logprintfl (EUCAINFO, "                         device mapping: %s=%s size=%d format=%s\n", dm->deviceName, dm->virtualName, dm->size, dm->format);
+	for (i=0; i<EUCA_MAX_VBRS; i++) {
+	  virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
+	  if (strlen(vbr->resourceLocation)>0) {
+                  logprintfl (EUCAINFO, "                         device mapping: %s type=%s id=%s dev=%s size=%d format=%s\n", vbr->resourceLocation, vbr->id, vbr->type, vbr->guestDeviceName, vbr->size, vbr->format);
 	  }
 	}
 
@@ -1165,9 +1165,9 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
 
 	if (nc_state.H->doDetachVolume)
-		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force);
+		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, 1);
 	else 
-		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force);
+		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, 1);
 
 	return ret;
 }

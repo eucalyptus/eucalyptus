@@ -63,10 +63,18 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
 import org.jibx.runtime.IMarshallingContext
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.config.EphemeralConfiguration;
 
 //TODO: Remove me
 //public class INTERNAL extends EucalyptusMessage {
@@ -103,6 +111,11 @@ public class ComponentType extends EucalyptusData {
     this.uri = uri;
   }
   public ComponentType( ) {}  
+  public ServiceConfiguration toConfiguration() {
+    URI realUri = URI.create( this.getUri( ) );
+    final com.eucalyptus.bootstrap.Component c = com.eucalyptus.bootstrap.Component.valueOf( component );
+    return new EphemeralConfiguration( name, c, realUri );
+  }
 }
 public class ComponentProperty extends EucalyptusData {
   private String type;
@@ -143,7 +156,6 @@ public class ComponentProperty extends EucalyptusData {
 }
 public class StorageStateType extends EucalyptusMessage{
   private String name;
-  
   def StorageStateType() {
   }
   
@@ -234,10 +246,24 @@ public class DescribeResourcesType extends EucalyptusMessage {
   
   ArrayList<VmTypeInfo> instanceTypes = new ArrayList<VmTypeInfo>();
 }
+public class NodeType extends EucalyptusData {
+  String serviceTag;
+  String iqn;
+  public String toString() {
+    return "NodeType ${URI.create(serviceTag).getHost()} ${iqn}";
+  }
+}
 public class DescribeResourcesResponseType extends EucalyptusMessage {
-  
   ArrayList<ResourceType> resources = new ArrayList<ResourceType>();
-  ArrayList<String> serviceTags = new ArrayList<String>();
+  ArrayList<NodeType> nodes = new ArrayList<NodeType>();
+  ArrayList<String> serviceTags = new ArrayList<String>();  
+  
+  public String toString() {
+    String out = "";
+    resources.each{ out += "${this.getClass().getSimpleName()}: ${it.toString()}\n" };
+    nodes.each{ out += "${this.getClass().getSimpleName()}: ${it.toString()}\n" };
+    return out;
+  }
 }
 
 public class VmTypeInfo extends EucalyptusData {
@@ -246,7 +272,7 @@ public class VmTypeInfo extends EucalyptusData {
   Integer memory;
   Integer disk;
   Integer cores;
-  
+  ArrayList<BlockDeviceMappingItemType> deviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   def VmTypeInfo(){
   }
   
@@ -259,12 +285,7 @@ public class VmTypeInfo extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "VmTypeInfo [" +
-    "name='" + name + '\'' +
-    ", memory=" + memory +
-    ", disk=" + disk +
-    ", cores=" + cores +
-    ']';
+    return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
   
 }
@@ -273,6 +294,9 @@ public class ResourceType extends EucalyptusData {
   VmTypeInfo instanceType;
   int maxInstances;
   int availableInstances;
+  public String toString() {
+    return "ResourceType ${instanceType} ${availableInstances} / ${maxInstances}"; 
+  }
 }
 public class NetworkConfigType extends EucalyptusData {
   String macAddress;
@@ -293,14 +317,7 @@ public class NetworkConfigType extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "NetworkConfigType [" +
-    ", privateIp='" + ipAddress + '\'' +
-    ", publicIp='" + ignoredPublicIp + '\'' +
-    ", privateDnsName='" + privateDnsName + '\'' +
-    ", publicDnsName='" + publicDnsName + '\'' +
-    ", networkIndex='" + networkIndex + '\'' +
-    ", vlan=" + vlan +
-    ']';
+    return "NetworkConfig ${vlan} ${networkIndex} ${ipAddress} ${ignoredPublicIp} ${privateDnsName} ${publicDnsName}";
   }
   
 }
@@ -354,18 +371,11 @@ public class PacketFilterRule extends EucalyptusData {
   
   @Override
   public String toString() {
-    return "PacketFilterRule [" +
-    "destUserName='" + destUserName + '\'' +
-    "destNetworkName='" + destNetworkName + '\'' +
-    ", policy='" + policy + '\'' +
-    ", protocol='" + protocol + '\'' +
-    ", portMin=" + portMin +
-    ", portMax=" + portMax +
-    ((!sourceCidrs.isEmpty())?"":", sourceCidrs=" + sourceCidrs) +
-    ((!peers.isEmpty())?"":", peers=" + peers) +
-    ((!sourceNetworkNames.isEmpty())?"":", sourceNetworkNames=" + sourceNetworkNames) +
-    ((!sourceUserNames.isEmpty())?"":", sourceUserNames=" + sourceUserNames) +
-    ']';
+    return "PacketFilterRule ${destUserName} ${destNetworkName} ${policy} ${protocol} ${portMin}-${portMax} " +
+    ((!sourceCidrs.isEmpty())?"":" source ${sourceCidrs}") +
+    ((!peers.isEmpty())?"":" peers ${peers}") +
+    ((!sourceNetworkNames.isEmpty())?"":" sourceNetworks ${sourceNetworkNames}") +
+    ((!sourceUserNames.isEmpty())?"":" sourceUsers ${sourceUserNames}");
   }
   
   
@@ -497,11 +507,66 @@ public class HeartbeatMessage extends EucalyptusMessage implements Cloneable, Se
 public class VmBundleMessage extends EucalyptusMessage {
 }
 
+public class BundleInstanceType extends VmBundleMessage {
+  String instanceId;
+  @HttpParameterMapping(parameter="Storage.S3.Bucket")
+  String bucket;
+  @HttpParameterMapping(parameter="Storage.S3.Prefix")
+  String prefix;
+  @HttpParameterMapping(parameter="Storage.S3.AWSAccessKeyId")
+  String awsAccessKeyId;
+  @HttpParameterMapping(parameter="Storage.S3.UploadPolicy")
+  String uploadPolicy;  
+  @HttpParameterMapping(parameter="Storage.S3.UploadPolicySignature")
+  String uploadPolicySignature;  
+  String url;
+  String userKey;
+}
+public class BundleInstanceResponseType extends VmBundleMessage {
+  BundleTask task;
+}
+public class CancelBundleTaskType extends VmBundleMessage {
+  String bundleId;
+  String instanceId;
+}
+public class CancelBundleTaskResponseType extends VmBundleMessage {
+  BundleTask task;
+}
+public class BundleTaskState extends EucalyptusData {
+  String instanceId;
+  String state;
+}
+public class BundleTask extends EucalyptusData {
+  String instanceId;
+  String bundleId;
+  String state;
+  Date startTime;
+  Date updateTime;
+  String progress;
+  String bucket;
+  String prefix;
+  String errorMessage;
+  String errorCode;
+  public BundleTask() {}
+  public BundleTask( String bundleId, String instanceId, String bucket, String prefix ) {
+    this.bundleId = bundleId;
+    this.instanceId = instanceId;
+    this.bucket = bucket;
+    this.prefix = prefix;
+    this.state = "pending";
+    this.startTime = new Date();
+    this.updateTime = new Date();
+    this.progress = "0%";
+  }
+}
 public class DescribeBundleTasksType extends VmBundleMessage {
   ArrayList<String> bundleIds = new ArrayList<String>();
 }
 public class DescribeBundleTasksResponseType extends VmBundleMessage {
+  ArrayList<BundleTask> bundleTasks = new ArrayList<BundleTask>();
+  ArrayList<BundleTaskState> bundleTaskStates = new ArrayList<BundleTaskState>();
 }
+
 
 public class StatEventRecord extends EucalyptusMessage {
   

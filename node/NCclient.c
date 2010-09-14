@@ -76,7 +76,7 @@ void usage (void)
 { 
     fprintf (stderr, "usage: NCclient [command] [options]\n"
         "\tcommands:\t\t\trequired options:\n"
-             "\t\trunInstance\t\t[-m -k]\n"
+             "\t\trunInstance\t\t[-m -k OR -b]\n"
              "\t\tterminateInstance\t[-i]\n"
              "\t\tdescribeInstances\n"
              "\t\tdescribeResource\n"
@@ -92,6 +92,7 @@ void usage (void)
              "\t\t-m [id:path] \t- id and manifest path of disk image\n"
              "\t\t-k [id:path] \t- id and manifest path of kernel image\n"
              "\t\t-r [id:path] \t- id and manifest path of ramdisk image\n"
+             "\t\t-b V|V|V... \t- virtual boot record (V=loc,type,id,dev,size,fmt)\n"
              "\t\t-a [address] \t- MAC address for instance to use\n"
              "\t\t-c [number] \t- number of instances to start\n"
              "\t\t-V [name] \t- name of the volume (for reference)\n"
@@ -132,8 +133,10 @@ int main (int argc, char **argv)
 	char * command = NULL;
     int count = 1;
 	int ch;
-    
-	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:V:R:L:FU:I:G:")) != -1) {
+        virtualMachine params = { 64, 64, 1, "m1.small" };
+        int vbr_size = 0;
+
+	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:V:R:L:FU:I:G:b:")) != -1) {
 		switch (ch) {
         case 'c':
             count = atoi (optarg);
@@ -215,6 +218,44 @@ int main (int argc, char **argv)
                 group_names[i] = strtok (NULL, ":");
             break;
         }
+        case 'b':
+        {
+                char * strtok_outer;
+                char * vbr = strtok_r (optarg, "|", &strtok_outer);
+                for (vbr_size=0; vbr!=NULL; vbr_size++) {
+                        char * vbr_copy = strdup (vbr);
+                        char * strtok_inner;
+                        int f = 1;
+#define _GET(_a,_b)     char * _a = strtok_r (_b, ",", &strtok_inner); if ( _a == NULL ) { fprintf (stderr, "ERROR: failed to parse field %d in VBR entry '%s'\n", f, vbr_copy); exit (1); } f++
+                        // loc,type,id,dev,size,fmt
+                        _GET(resourceLocation,vbr);
+                        _GET(type,NULL);
+                        _GET(id,NULL);
+                        _GET(guestDeviceName,NULL);
+                        _GET(size_s,NULL);
+                        _GET(format,NULL);
+                        errno = 0;
+                        long long int size = strtoll (size_s, NULL, 10); 
+                        if (errno!=0) { 
+                                fprintf (stderr, "ERROR: failed to parse size '%s' in VBR entry '%s'\n", size_s, vbr_copy); 
+                                exit (1); 
+                        }
+                        free (vbr_copy);
+
+                        virtualBootRecord * r = params.virtualBootRecord + vbr_size;
+#define _SET(_a)        strncpy (r->_a, _a, sizeof(_a))
+                        _SET(resourceLocation);
+                        _SET(type);
+                        _SET(id);
+                        _SET(guestDeviceName);
+                        _SET(format);
+                        r->size = (int)size;
+
+                        // next iteration
+                        vbr = strtok_r (NULL, "|", &strtok_outer);
+                }
+                break;
+        }
         case 'h':
             usage (); // will exit
         case '?':
@@ -237,10 +278,6 @@ int main (int argc, char **argv)
     }
     
     ncMetadata meta = { "correlate-me-please", "eucalyptus" };
-    virtualMachine params = { 64, 64, 1, "m1.small", 
-			      { { "sda1", "root", 100, "none" }, 
-				{ "sda2", "ephemeral1", 1000, "ext3" },
-				{ "sda3", "swap", 50, "swap" } } };
     ncStub * stub;
     char configFile[1024], policyFile[1024];
     char *euca_home;
@@ -308,8 +345,10 @@ int main (int argc, char **argv)
 
     /***********************************************************/
     if (!strcmp (command, "runInstance")) {
-        CHECK_PARAM(image_id, "image ID and manifest path");
-        CHECK_PARAM(kernel_id, "kernel ID and manifest path");
+            if (vbr_size<2) {
+                    CHECK_PARAM(image_id, "image ID and manifest path (or adequate virtual boot record)");
+                    CHECK_PARAM(kernel_id, "kernel ID and manifest path (or adequate virtual boot record)");
+            }
 
         char *privMac, *pubMac, *privIp;
         int vlan = 3;
@@ -353,8 +392,8 @@ int main (int argc, char **argv)
                                        kernel_id, kernel_url, 
                                        ramdisk_id, ramdisk_url, 
                                        "", /* key */
-									   &netparams,
-									   //                                       privMac, privIp, vlan, 
+                                       &netparams,
+                                       //                                       privMac, privIp, vlan, 
                                        user_data, launch_index, group_names, group_names_size, /* CC stuff */
                                        &outInst);
             if (rc != 0) {
@@ -363,8 +402,8 @@ int main (int argc, char **argv)
             }
 	    // count device mappings
 	    int i, count=0;
-	    for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
-	      if (strlen(outInst->params.deviceMapping[i].deviceName)>0) count++;
+	    for (i=0; i<EUCA_MAX_VBRS; i++) {
+	      if (strlen(outInst->params.virtualBootRecord[i].resourceLocation)>0) count++;
 	    }
             printf("instanceId=%s stateCode=%d stateName=%s deviceMappings=%d\n", outInst->instanceId, outInst->stateCode, outInst->stateName, count);
             free_instance(&outInst);

@@ -2,7 +2,7 @@ package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import javassist.Modifier;
+import java.lang.reflect.Modifier;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Transient;
@@ -120,7 +120,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
       if ( c.isAnnotationPresent( Entity.class ) && 
     		  ((ConfigurableClass)c.getAnnotation(ConfigurableClass.class)).singleton() &&
     		  f.isAnnotationPresent( ConfigurableField.class ) ) {
-        LOG.debug( "Checking field: " + c.getName( ) + "." + f.getName( ) );
+        LOG.trace( "Checking field: " + c.getName( ) + "." + f.getName( ) );//REVIEW: lowered this to trace.. sorry.
         ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
         ConfigurableField annote = f.getAnnotation( ConfigurableField.class );
         String fqPrefix = classAnnote.root( );

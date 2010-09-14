@@ -72,7 +72,6 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.SuccessCallback;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -83,6 +82,10 @@ import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callback.Success;
+import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -147,7 +150,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
         Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
         LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
-      } 
+      }
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
@@ -193,7 +196,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     return address;
   }
-    
+  
   public static Address allocate( String userId, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
     Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( userId );
@@ -213,61 +216,25 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   
   public static void release( final Address addr ) {
     try {
-      addr.clearPending( );//clear the state here irregardless
-    } catch ( IllegalStateException e1 ) {
-    } finally {
-      try {
-        if ( addr.isAssigned( ) ) {
-          SuccessCallback release = getReleaseCallback( addr );
-          AddressCategory.unassign( addr ).then( release ).dispatch( addr.getCluster( ) );
-        } else {
-          try {
-            if( !addr.isSystemOwned( ) ) {
-              addr.release( );
-            } else {
-              Addresses.getAddressManager( ).releaseSystemAddress( addr );
-            }
-          } catch ( Throwable e ) {
-            LOG.debug( e, e );
+      final String instanceId = addr.getInstanceId( );
+      if ( addr.isAssigned( ) ) {
+        Callbacks.newClusterRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+          @Override
+          public void fire( ) {
+            try {
+              final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
+              Addresses.system( vm );
+            } catch ( NoSuchElementException ex ) {}
           }
-        }
-      } catch ( IllegalStateException e ) {
-        LOG.debug( e, e );
+        } ).dispatch( addr.getCluster( ) );
+      } else {
+        addr.release( );
       }
+    } catch ( IllegalStateException e ) {
+      LOG.debug( e, e );
     }
   }
   
-  private static SuccessCallback getReleaseCallback( final Address addr ) {
-    final String instanceId = addr.getInstanceId( );
-    try {
-      final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
-      return new SuccessCallback( ) {
-        public void apply( BaseMessage response ) {
-          try {
-            if( !addr.isSystemOwned( ) ) {
-              addr.release( );
-            } else {
-              Addresses.getAddressManager( ).releaseSystemAddress( addr );
-            }
-          } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
-            LOG.debug( e, e );
-          }
-          Addresses.system( vm );
-        }
-      };
-    } catch ( NoSuchElementException e ) {
-      return new SuccessCallback( ) {
-        public void apply( BaseMessage response ) {
-          if( !addr.isSystemOwned( ) ) {
-            addr.release( );
-          } else {
-            Addresses.getAddressManager( ).releaseSystemAddress( addr );
-          }
-        }
-      };
-    }
-  }
-
   @Override public void advertiseEvent( Event event ) {}
 
   @Override public void fireEvent( Event event ) {

@@ -71,17 +71,19 @@ typedef struct ncMetadata_t {
     char *userId;
 } ncMetadata;
 
-typedef struct deviceMapping_t {
-	char deviceName[64];
-	char virtualName[64];
+typedef struct virtualBootRecord_t {
+	char resourceLocation[64];
+	char guestDeviceName[64];
 	int size;
 	char format[64];
-} deviceMapping;
+        char id [64];
+        char type [64];
+} virtualBootRecord;
 
 typedef struct virtualMachine_t {
 	int mem, cores, disk;
 	char name[64];
-	deviceMapping deviceMapping[EUCA_MAX_DEVMAPS];
+	virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS];
 } virtualMachine;
 int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in);
 

@@ -117,6 +117,11 @@ public class DescribeNetworksResponseType extends EucalyptusMessage {
   Integer mode;
   Integer addrsPerNetwork;
   ArrayList<NetworkInfoType> activeNetworks = new ArrayList<NetworkInfoType>();
+  
+  public String toString() {
+    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNetwork} " \
+      + "\n${this.getClass().getSimpleName()} " + this.activeNetworks*.toString().join( "\n${this.getClass().getSimpleName()} " ); 
+  }
 }
 
 public class NetworkInfoType extends EucalyptusData {
@@ -124,6 +129,9 @@ public class NetworkInfoType extends EucalyptusData {
   String networkName;
   String userName;
   ArrayList<String> allocatedAddresses = new ArrayList<String>();
+  public String toString( ) {
+    return "NetworkInfoType ${userName} ${networkName} ${vlan} ${allocatedAddresses}";
+  }
 }
 
 
@@ -186,6 +194,9 @@ public class DescribePublicAddressesType extends EucalyptusMessage {
 public class DescribePublicAddressesResponseType extends EucalyptusMessage {
   ArrayList<String> addresses = new ArrayList<String>();
   ArrayList<String> mapping = new ArrayList<String>();
+  public String toString() {
+    return "${this.getClass().getSimpleName()} " + addresses.eachWithIndex{ it, i -> "${it} ${mapping[i]}" }.join("\n${this.getClass().getSimpleName()} ");
+  }
 }
 
 public class ConfigureNetworkType extends EucalyptusMessage {
