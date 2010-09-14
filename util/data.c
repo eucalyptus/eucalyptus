@@ -72,8 +72,15 @@ int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in)
     snprintf(out->name, 64, "%s", in->name);
 
     int i;
-    for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
-      out->deviceMapping[i].size = in->deviceMapping[i].size;
+    for (i=0; i<EUCA_MAX_VBRS; i++) {
+            virtualBootRecord * out_r = out->virtualBootRecord + i;
+            virtualBootRecord * in_r = in->virtualBootRecord + i;
+            strncpy (out_r->resourceLocation, in_r->resourceLocation, sizeof (out_r->resourceLocation));
+            strncpy (out_r->guestDeviceName, in_r->guestDeviceName, sizeof (out_r->guestDeviceName));
+            strncpy (out_r->id, in_r->id, sizeof (out_r->id));
+            strncpy (out_r->type, in_r->type, sizeof (out_r->type));
+            out_r->size = in_r->size;
+            strncpy (out_r->format, in_r->format, sizeof (out_r->format));
     }
   }
   return(0);
@@ -187,11 +194,6 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
     }
     if (params) {
       memcpy(&(inst->params), params, sizeof(virtualMachine));
-      /*
-        inst->params.mem = params->mem;
-        inst->params.disk = params->disk;
-        inst->params.cores = params->cores;
-      */
     }
     inst->stateCode = stateCode;
     return inst;

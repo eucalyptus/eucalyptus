@@ -97,18 +97,88 @@ doInitialize (struct nc_state_t *nc)
 }
 
 static int
-doRunInstance (	struct nc_state_t *nc, ncMetadata *meta, char *instanceId,
-		char *reservationId, virtualMachine *params, 
-		char *imageId, char *imageURL, 
-		char *kernelId, char *kernelURL, 
-		char *ramdiskId, char *ramdiskURL, 
-		char *keyName, 
-		netConfig *netparams,
-		char *userData, char *launchIndex,
-		char **groupNames, int groupNamesSize, ncInstance **outInst)
+doRunInstance(	struct nc_state_t *nc,
+        ncMetadata *meta,
+        char *instanceId,
+        char *reservationId,
+        virtualMachine *params, 
+        char *imageId, char *imageURL, 
+        char *kernelId, char *kernelURL, 
+        char *ramdiskId, char *ramdiskURL, 
+        char *keyName, 
+        netConfig *netparams,
+        char *userData, char *launchIndex,
+        char **groupNames, int groupNamesSize,
+        ncInstance **outInst)
 {
-	logprintfl(EUCAERROR, "no default for doRunInstance!\n");
-	return ERROR_FATAL;
+    ncInstance * instance = NULL;
+    * outInst = NULL;
+    pid_t pid;
+    netConfig ncnet;
+    int error;
+
+    memcpy(&ncnet, netparams, sizeof(netConfig));
+
+    /* check as much as possible before forking off and returning */
+    sem_p (inst_sem);
+    instance = find_instance (&global_instances, instanceId);
+    sem_v (inst_sem);
+    if (instance) {
+        logprintfl (EUCAFATAL, "Error: instance %s already running\n", instanceId);
+        return 1; /* TODO: return meaningful error codes? */
+    }
+    if (!(instance = allocate_instance (instanceId, 
+                                        reservationId,
+                                        params, 
+                                        imageId, imageURL,
+                                        kernelId, kernelURL,
+                                        ramdiskId, ramdiskURL,
+                                        instance_state_names[PENDING], 
+                                        PENDING, 
+                                        meta->userId, 
+                                        &ncnet, keyName,
+                                        userData, launchIndex, groupNames, groupNamesSize))) {
+        logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
+        return 2;
+    }
+    instance->launchTime = time (NULL);
+    change_state(instance, STAGING);
+
+    sem_p (inst_sem); 
+    error = add_instance (&global_instances, instance);
+    sem_v (inst_sem);
+    if ( error ) {
+        free_instance (&instance);
+        logprintfl (EUCAFATAL, "Error: could not save instance struct\n");
+        return error;
+    }
+
+    /* do the potentially long tasks in a thread */
+    pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
+    if (!attr) { 
+        free_instance (&instance);
+        logprintfl (EUCAFATAL, "Error: out of memory\n");
+        return 1;
+    }
+    pthread_attr_init(attr);
+    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
+    
+    if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
+        pthread_attr_destroy(attr);
+        logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
+        sem_p (inst_sem);
+        remove_instance (&global_instances, instance);
+        sem_v (inst_sem);
+        free_instance (&instance);
+	if (attr) free(attr);
+        return 1;
+    }
+    pthread_attr_destroy(attr);
+    if (attr) free(attr);
+
+    * outInst = instance;
+    return 0;
+
 }
 
 static int

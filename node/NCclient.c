@@ -92,7 +92,13 @@ void usage (void)
              "\t\t-m [id:path] \t- id and manifest path of disk image\n"
              "\t\t-k [id:path] \t- id and manifest path of kernel image\n"
              "\t\t-r [id:path] \t- id and manifest path of ramdisk image\n"
-             "\t\t-b V|V|V... \t- virtual boot record (V=loc,type,id,dev,size,fmt)\n"
+             "\t\t-b R|R|R... \t- virtual boot record (R='loc,type,id,dev,size,fmt')\n"
+             "\t\t            \t  where loc = 'http://...' or 'iqn://...' or 'aoe://...'\n"
+             "\t\t            \t   and type = root|ramdisk|kernel|ebs|ephemeral[0-3]\n"
+             "\t\t            \t     and id = 'emi-..' or 'eki-..' or 'eri-..' or 'vol-..' or 'none'\n"
+             "\t\t            \t    and dev = '/dev/sda1', '/dev/sda', etc. or 'none'\n"
+             "\t\t            \t   and size = in 512-byte sectors, when creating or '-1'\n"
+             "\t\t            \t and format = 'ntfs' or 'ext2' or 'ext3' or 'none'\n"
              "\t\t-a [address] \t- MAC address for instance to use\n"
              "\t\t-c [number] \t- number of instances to start\n"
              "\t\t-V [name] \t- name of the volume (for reference)\n"
@@ -133,7 +139,7 @@ int main (int argc, char **argv)
 	char * command = NULL;
     int count = 1;
 	int ch;
-        virtualMachine params = { 64, 64, 1, "m1.small" };
+        virtualMachine params = { 512, 1, 1, "m1.small" }; // mem (MB), cores, disk (GB), name
         int vbr_size = 0;
 
 	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:V:R:L:FU:I:G:b:")) != -1) {
@@ -160,6 +166,7 @@ int main (int argc, char **argv)
                 fprintf (stderr, "ERROR: could not parse image [id:manifest] paramters (try -h)\n");
                 exit (1);
             }
+
             break;
         case 'k':
             kernel_id = strtok (optarg, ":");
