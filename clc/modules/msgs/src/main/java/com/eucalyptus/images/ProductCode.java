@@ -63,11 +63,14 @@
  */
 package com.eucalyptus.images;
 
-import org.hibernate.annotations.*;
-
-import javax.persistence.*;
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 @Entity
 @PersistenceContext(name="eucalyptus_general")
