@@ -89,8 +89,8 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.Callbacks;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.state.State;
-//import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
-//import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -103,7 +103,7 @@ import edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteVolumeType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
-//import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 
@@ -335,15 +335,14 @@ public class VolumeManager {
     } else if ( "invalid".equals( volume.getRemoteDevice( ) ) ) {
       throw new EucalyptusCloudException( "Volume is not yet available: " + request.getVolumeId( ) );
     }
-//MERGE    
-//    AttachStorageVolumeResponseType scAttachResponse;
-//    try {
-//      scAttachResponse = StorageUtil.send( sc.getName( ), new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getDisplayName( ) ) );
-//    } catch ( Exception e ) {
-//      LOG.debug( e, e );
-//      throw new EucalyptusCloudException( e.getMessage( ) );
-//    }
-//    request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
+    AttachStorageVolumeResponseType scAttachResponse;
+    try {
+      scAttachResponse = StorageUtil.send( sc.getName( ), new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getDisplayName( ) ) );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
+    request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
     Callbacks.newClusterRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
@@ -405,13 +404,12 @@ public class VolumeManager {
       LOG.error( ex , ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for cluster: " + cluster, ex );
     }
-//MERGE    
-//    try {
-//      StorageUtil.send( scVm.getName( ), new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
-//    } catch ( Exception e ) {
-//      LOG.debug( e, e );
-//      throw new EucalyptusCloudException( e.getMessage( ) );
-//    }
+    try {
+      StorageUtil.send( scVm.getName( ), new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
     request.setVolumeId( volume.getVolumeId( ) );
     request.setRemoteDevice( volume.getRemoteDevice( ) );
     request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );

@@ -100,6 +100,8 @@ import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.ConvertVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.ConvertVolumesType;
@@ -115,6 +117,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetStorageVolumeResponseType;
@@ -571,6 +575,51 @@ public class BlockStorage {
 				LOG.error(e);
 				throw new EucalyptusCloudException(e);
 			}
+		}
+		return reply;
+	}
+
+	public AttachStorageVolumeResponseType attachVolume(AttachStorageVolumeType request) throws EucalyptusCloudException {
+		AttachStorageVolumeResponseType reply = request.getReply();
+		String volumeId = request.getVolumeId();
+		String nodeIqn = request.getNodeIqn();
+
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		try {
+			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));			
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Unable to find volume: " + volumeId + ex);
+			throw new NoSuchEntityException("Unable to find volume: " + volumeId + ex);
+		} finally {
+			db.commit();
+		}
+		try {
+			String deviceName = blockManager.attachVolume(volumeId, nodeIqn);
+			reply.setRemoteDeviceString(deviceName);
+		} catch (EucalyptusCloudException ex) {
+			throw ex;
+		}
+		return reply;
+	}
+
+	public DetachStorageVolumeResponseType detachVolume(DetachStorageVolumeType request) throws EucalyptusCloudException {
+		DetachStorageVolumeResponseType reply = request.getReply();
+		String volumeId = request.getVolumeId();
+		String nodeIqn = request.getNodeIqn();
+
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		try {
+			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));			
+		} catch (EucalyptusCloudException ex) {
+			LOG.error("Unable to find volume: " + volumeId + ex);
+			throw new NoSuchEntityException("Unable to find volume: " + volumeId + ex);
+		} finally {
+			db.commit();
+		}
+		try {
+			blockManager.detachVolume(volumeId, nodeIqn);
+		} catch (EucalyptusCloudException ex) {
+			throw ex;
 		}
 		return reply;
 	}
