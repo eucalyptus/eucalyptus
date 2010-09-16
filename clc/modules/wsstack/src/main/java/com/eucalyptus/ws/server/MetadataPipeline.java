@@ -70,16 +70,18 @@ public class MetadataPipeline extends FilteredPipeline implements UnrollableStag
 
       HttpResponse response = null;
       LOG.info( "Trying to get metadata: " + newUri );
+      Object reply = null;
       try {
-        Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
-      } catch (NoSuchContextException ex) {
-        LOG.trace( ex ); 
+        reply = ServiceContext.send( "VmMetadata", newUri );
+      } catch ( Exception e1 ) {
+        LOG.debug( e1, e1 );
+      } finally {
+        Contexts.clear( request.getCorrelationId( ) );
       }
-      Object reply = ServiceContext.send( "VmMetadata", newUri );
-      if ( !( reply instanceof NullPayload ) ) {
+      if ( reply != null && !( reply instanceof NullPayload ) ) {
         response = new DefaultHttpResponse(request.getProtocolVersion( ),HttpResponseStatus.OK);
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/html" );
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer((byte[])reply);
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ( byte[] ) reply );
         response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
       }
