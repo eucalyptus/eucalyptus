@@ -14,6 +14,13 @@ Users.listAllUsers().each{ User user ->
       userName = user.getName() 
     }
   };
+
+
+/* Incrementally prune any redundant data in the log tables.
+ */
+Pruner pruner = new Pruner( sql )
+pruner.initialPrune()
+
 def query = "SELECT MAX(UNIX_TIMESTAMP(record_timestamp)*1000) as terminate_time, " +
             " MIN(UNIX_TIMESTAMP(record_timestamp)*1000) as start_time, " +
             " record_user_id as user_id, " +
