@@ -98,7 +98,7 @@ public class StorageUtil {
   }
   
   public static <TYPE> TYPE send( String clusterName, EucalyptusMessage message ) throws EucalyptusCloudException {
-    StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( clusterName );
+    StorageControllerConfiguration scConfig = Configuration.lookupSc( clusterName );
     Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
     TYPE reply = (TYPE) sc.send( message );
     return reply;

@@ -114,7 +114,7 @@ public class SnapshotManager {
     Volume vol = db.recast( Volume.class ).getUnique( Volume.named( userName, request.getVolumeId( ) ) );
     StorageControllerConfiguration sc;
     try {
-      sc = Configuration.getStorageControllerConfiguration( vol.getCluster( ) );
+      sc = Configuration.lookupSc( vol.getCluster( ) );
     } catch ( Exception e ) {
       db.rollback( );
       throw new EucalyptusCloudException(
@@ -225,7 +225,7 @@ public class SnapshotManager {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
           try {
-            StorageControllerConfiguration sc = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
+            StorageControllerConfiguration sc = Configuration.lookupSc( v.getCluster( ) );
             DescribeStorageSnapshotsResponseType snapshotInfo = StorageUtil.lookup( sc.getHostName( ) ).send( scRequest,
                                                                                                               DescribeStorageSnapshotsResponseType.class );
             for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
