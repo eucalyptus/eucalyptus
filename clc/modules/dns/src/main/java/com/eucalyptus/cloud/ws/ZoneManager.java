@@ -105,7 +105,17 @@ public class ZoneManager {
 		if(name.toString().endsWith("in-addr.arpa.")) {
 	      //create new transient zone to handle reverse lookups
 		  return TransientZone.getPtrZone(name);
-		}
+		} else {
+		  try {
+        if(!ZoneManager.zones.containsKey(TransientZone.getExternalName())){
+          ZoneManager.registerZone(TransientZone.getExternalName( ),TransientZone.getInstanceExternalZone());
+        } else if(!ZoneManager.zones.containsKey(TransientZone.getInternalName())){
+          ZoneManager.registerZone(TransientZone.getInternalName(),TransientZone.getInstanceInternalZone());
+        }
+      } catch(Exception e) {
+        LOG.debug( e, e );
+      }
+    }
 		return zones.get(name);
 	}
 
