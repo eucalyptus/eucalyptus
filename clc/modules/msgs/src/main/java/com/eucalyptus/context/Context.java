@@ -120,8 +120,10 @@ public class Context {
     EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ).debug( );
     this.channel = null;
     this.httpRequest = null;
-    this.muleEvent.clear( );
-    this.muleEvent = null;
+    if( this.muleEvent != null ) {
+      this.muleEvent.clear( );
+      this.muleEvent = null;
+    }
   }
   
   private final static <TYPE> TYPE check( final TYPE obj ) {
