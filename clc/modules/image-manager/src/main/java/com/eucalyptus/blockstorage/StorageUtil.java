@@ -118,7 +118,7 @@ public class StorageUtil {
     }
     ArrayList<edu.ucsb.eucalyptus.msgs.Volume> reply = Lists.newArrayList( );
     for( String cluster : clusterVolumeMap.keySet( ) ) {
-      StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( cluster );
+      StorageControllerConfiguration scConfig = Configuration.lookupSc( cluster );
       Iterator<String> volumeNames = Iterators.transform( clusterVolumeMap.get( cluster ).iterator( ), new Function<Volume,String>() {
         @Override
         public String apply( Volume arg0 ) {
