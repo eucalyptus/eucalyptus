@@ -13,7 +13,7 @@ import org.apache.log4j.*;
 class Pruner
 	implements Runnable
 {
-	private static Integer QUERY_LIMIT = 4000000  //HACK to avoid MySQL memory leak; @see pruneRepeated
+	private static Integer QUERY_LIMIT = 500000  //HACK to avoid MySQL memory leak; @see initialPrune
 	private static Logger  LOG = Logger.getLogger( Pruner.class )
 
 	private final Sql sql
@@ -95,7 +95,7 @@ class Pruner
 
 			if (! instanceInfoMap.containsKey(it.record_correlation_id)) {
 				instanceInfoMap[it.record_correlation_id]=new InstanceInfo()
-				LOG.debug("Found new instance:" + it.record_correlation_id)
+				LOG.info("Found new instance:" + it.record_correlation_id)
 			}
 			InstanceInfo info = instanceInfoMap[it.record_correlation_id]
 
@@ -144,18 +144,19 @@ class Pruner
 		AND UNIX_TIMESTAMP(record_timestamp) > ?
 		AND UNIX_TIMESTAMP(record_timestamp) < ?
 		"""
-		LOG.debug("Begin deleting")
+		LOG.info("Begin deleting")
 		Integer redundantRowsCnt
 		instanceInfoMap.each { key, value ->
 			redundantRowsCnt = value.rowCnt-(targetRowsNum*2)
-			LOG.debug("INSTANCE id:${key} numRedundant:${redundantRowsCnt}")
+			LOG.info("INSTANCE id:${key} rowsAboveThreshold:${redundantRowsCnt}")
 			if (value.rowCnt-(targetRowsNum*2) > redundantRowsDeleteThreshold) {
 				this.sql.executeUpdate(query, [key, value.latestEarlyTs, value.earliestLateTs])
-				LOG.debug(String.format("DELETE id:%s %d-%d",
+				LOG.info(String.format("DELETE id:%s %d-%d",
 										key, value.latestEarlyTs, value.earliestLateTs))
 			}
 		}
 
+		LOG.info("End prune")
 	}   //end: prune method
 
 
@@ -171,21 +172,21 @@ class Pruner
 	 * This method calls prune repeatedly, so the entire log will be pruned (4M rows at
 	 * a time).
 	 */
-	public void pruneRepeated()
+	public void initialPrune()
 	{
 		def res = sql.firstRow("SELECT count(*) AS cnt FROM records_logs")
 		if (QUERY_LIMIT != null) {
 			for (int i=0; i<res.cnt.intdiv(QUERY_LIMIT); i++) {
-				LOG.debug("Prune iteration ${i}")
+				LOG.info("Prune iteration ${i}")
 				prune()  //prune 4M rows
 			}
 		}
-		LOG.debug("Prune iteration final")
+		LOG.info("Prune iteration final")
 		prune()  //prune remainder of rows less than 4M
 	}
 
 	/** Implements runnable so it can be run in a thread in user_vms.groovy */
-	public void run() { pruneRepeated(); }
+	public void run() { prune(); }
 
 	/**
 	 * Command-line invocation of the prune method
@@ -204,7 +205,7 @@ class Pruner
 		cli.b(args:1, required:false, argName:"onlyBeforeTimestamp", "only prunes before timestamp in secs (default max timestamp)")
 		cli.t(args:1, required:false, argName:"redundantRowsDeleteThreshold", "only prunes instances more than n redundant rows (default 100)")
 		cli.r(args:1, required:false, argName:"targetRowsNum", "how many rows to preserve at the beginning and end for each instance (default 80)")
-		cli.i(args:0, required:false, argName:"pruneRepeated", "performs initial prune")
+		cli.i(args:0, required:false, argName:"initialPrune", "performs initial prune")
 		def options = cli.parse(args)
 		if (!options) System.exit(-1)
 
@@ -228,7 +229,7 @@ class Pruner
 			LOG.setLevel(Level.OFF)
 		}
 
-		LOG.debug(String.format("Using db:%s user:%s host:%s port:%d debug:%s " +
+		LOG.info(String.format("Using db:%s user:%s host:%s port:%d debug:%s " +
 								"after:%d before:%d threshold:%d target:%d i:%b", 
 								optsMap.D, optsMap.u, optsMap.h, optsMap.P, optsMap.g,
 								optsMap.a, optsMap.b, optsMap.t, optsMap.r, optsMap.i))
@@ -240,7 +241,7 @@ class Pruner
 
 		Pruner pruner = new Pruner(sql);
 		if (optsMap['i']) {
-			pruner.pruneRepeated()
+			pruner.initialPrune()
 		} else {
 			pruner.prune(optsMap['t'], optsMap['r'], optsMap['a'], optsMap['b'])
 		}
