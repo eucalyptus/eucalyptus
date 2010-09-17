@@ -686,7 +686,7 @@ doBundleInstance(
 	change_state (instance, BUNDLING_SHUTDOWN);
 	change_bundling_state (instance, BUNDLING_IN_PROGRESS);
 	
-	int err = find_and_terminate_instance (nc, meta, instanceId, &instance, 0);
+	int err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
 	if (err!=OK) {
 	  sem_v (inst_sem);
 	  if (params) free(params);
