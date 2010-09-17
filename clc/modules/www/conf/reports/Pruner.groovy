@@ -1,5 +1,6 @@
 import groovy.sql.*;
 import java.sql.Timestamp;
+import org.apache.log4j.*;
 
 /**
  * This class prunes superfluous data from the records_logs table.
@@ -9,10 +10,11 @@ import java.sql.Timestamp;
  *
  * @author twerges
  */
-class Pruner {
-
-	private static Boolean DEBUG = false
-	private static Integer QUERY_LIMIT = 4000000  //HACK to avoid MySQL memory leak; @see initialPrune
+class Pruner
+	implements Runnable
+{
+	private static Integer QUERY_LIMIT = 4000000  //HACK to avoid MySQL memory leak; @see pruneRepeated
+	private static Logger  LOG = Logger.getLogger( Pruner.class )
 
 	private final Sql sql
 
@@ -54,6 +56,7 @@ class Pruner {
 		assert redundantRowsDeleteThreshold > 0
 		assert targetRowsNum > 0
 
+		LOG.info("Begin prune")
 
 		/* Find earliest and latest Nth rows, according to the following algorithm.
 		 * Establish two lists for each instance: one for the earliest nth rows, and one
@@ -88,18 +91,13 @@ class Pruner {
 
 		def instanceInfoMap = [:]
 
-		def lastSize = 0
 		this.sql.eachRow( query, [onlyAfterTimestamp,onlyBeforeTimestamp] ) {
 
 			if (! instanceInfoMap.containsKey(it.record_correlation_id)) {
 				instanceInfoMap[it.record_correlation_id]=new InstanceInfo()
+				LOG.debug("Found new instance:" + it.record_correlation_id)
 			}
 			InstanceInfo info = instanceInfoMap[it.record_correlation_id]
-
-			if (DEBUG && lastSize!=instanceInfoMap.size()) {
-				println "infoMap size:${instanceInfoMap.size()}"
-				lastSize=instanceInfoMap.size()
-			}
 
 			//latestEarlyTs is only set when earlyList has reached n rows
 			if (info.latestEarlyTs==null) {
@@ -146,17 +144,15 @@ class Pruner {
 		AND UNIX_TIMESTAMP(record_timestamp) > ?
 		AND UNIX_TIMESTAMP(record_timestamp) < ?
 		"""
+		LOG.debug("Begin deleting")
 		Integer redundantRowsCnt
 		instanceInfoMap.each { key, value ->
 			redundantRowsCnt = value.rowCnt-(targetRowsNum*2)
-			if (DEBUG) {
-				printf("key:${key} redundantRows:${redundantRowsCnt}\n")
-			}
+			LOG.debug("INSTANCE id:${key} numRedundant:${redundantRowsCnt}")
 			if (value.rowCnt-(targetRowsNum*2) > redundantRowsDeleteThreshold) {
 				this.sql.executeUpdate(query, [key, value.latestEarlyTs, value.earliestLateTs])
-				if (DEBUG) {
-					printf("DELETE id:%s %d-%d\n", key, value.latestEarlyTs, value.earliestLateTs)
-				}
+				LOG.debug(String.format("DELETE id:%s %d-%d",
+										key, value.latestEarlyTs, value.earliestLateTs))
 			}
 		}
 
@@ -175,19 +171,21 @@ class Pruner {
 	 * This method calls prune repeatedly, so the entire log will be pruned (4M rows at
 	 * a time).
 	 */
-	public void initialPrune()
+	public void pruneRepeated()
 	{
-		new File("/home/twerges/pruneout").append("initialPrune")
 		def res = sql.firstRow("SELECT count(*) AS cnt FROM records_logs")
 		if (QUERY_LIMIT != null) {
 			for (int i=0; i<res.cnt.intdiv(QUERY_LIMIT); i++) {
-				if (DEBUG) println ("---PRUNE ITERATION ${i}")
+				LOG.debug("Prune iteration ${i}")
 				prune()  //prune 4M rows
 			}
 		}
-		if (DEBUG) println ("---PRUNE ITERATION FINAL")
+		LOG.debug("Prune iteration final")
 		prune()  //prune remainder of rows less than 4M
 	}
+
+	/** Implements runnable so it can be run in a thread in user_vms.groovy */
+	public void run() { pruneRepeated(); }
 
 	/**
 	 * Command-line invocation of the prune method
@@ -206,7 +204,7 @@ class Pruner {
 		cli.b(args:1, required:false, argName:"onlyBeforeTimestamp", "only prunes before timestamp in secs (default max timestamp)")
 		cli.t(args:1, required:false, argName:"redundantRowsDeleteThreshold", "only prunes instances more than n redundant rows (default 100)")
 		cli.r(args:1, required:false, argName:"targetRowsNum", "how many rows to preserve at the beginning and end for each instance (default 80)")
-		cli.i(args:0, required:false, argName:"initialPrune", "performs initial prune")
+		cli.i(args:0, required:false, argName:"pruneRepeated", "performs initial prune")
 		def options = cli.parse(args)
 		if (!options) System.exit(-1)
 
@@ -224,14 +222,16 @@ class Pruner {
 		optsMap['r']=options.r ? Integer.parseInt(options.r) : 80
 		optsMap['i']=options.i
 
-		DEBUG = optsMap['g']
-
-		if (DEBUG) {
-			printf("using db:%s user:%s host:%s port:%d debug:%s " +
-					"after:%d before:%d threshold:%d target:%d\n", 
-					optsMap.D, optsMap.u, optsMap.h, optsMap.P, optsMap.g,
-					optsMap.a, optsMap.b, optsMap.t, optsMap.r)
+		if (optsMap['g']) {
+			LOG.setLevel(Level.DEBUG)
+		} else {
+			LOG.setLevel(Level.OFF)
 		}
+
+		LOG.debug(String.format("Using db:%s user:%s host:%s port:%d debug:%s " +
+								"after:%d before:%d threshold:%d target:%d i:%b", 
+								optsMap.D, optsMap.u, optsMap.h, optsMap.P, optsMap.g,
+								optsMap.a, optsMap.b, optsMap.t, optsMap.r, optsMap.i))
 
 
 		/* Create a mysql connection, then prune */
@@ -240,7 +240,7 @@ class Pruner {
 
 		Pruner pruner = new Pruner(sql);
 		if (optsMap['i']) {
-			pruner.initialPrune()
+			pruner.pruneRepeated()
 		} else {
 			pruner.prune(optsMap['t'], optsMap['r'], optsMap['a'], optsMap['b'])
 		}
