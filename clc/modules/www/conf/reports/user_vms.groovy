@@ -1,3 +1,6 @@
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import com.eucalyptus.auth.*;
 import com.eucalyptus.auth.principal.*;
 import com.eucalyptus.entities.EntityWrapper;
@@ -14,6 +17,15 @@ Users.listAllUsers().each{ User user ->
       userName = user.getName() 
     }
   };
+
+
+/* Register a thread executor that will periodically prune the log table
+ */
+if( java.lang.System.getProperties( ).setProperty("euca.periodic.filter", "running" ) == null ) {
+	println "Creating periodic record filter."
+	Executors.newSingleThreadScheduledExecutor( ).scheduleAtFixedRate( new Pruner( sql ), 0l, 1, TimeUnit.HOURS );
+}
+
 def query = "SELECT MAX(UNIX_TIMESTAMP(record_timestamp)*1000) as terminate_time, " +
             " MIN(UNIX_TIMESTAMP(record_timestamp)*1000) as start_time, " +
             " record_user_id as user_id, " +
