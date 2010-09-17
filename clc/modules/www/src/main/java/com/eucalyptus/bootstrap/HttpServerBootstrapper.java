@@ -122,7 +122,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   }
   
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     setupJettyServer( );
     return true;
   }
@@ -136,7 +136,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public static class PortChangeListener extends PassiveEventListener<ConfigurableProperty> {
     @Override
     public void firingEvent( ConfigurableProperty t ) {
-      LOG.info( "Change occurred to property " + t.getQualifiedName( ) + " which requires restarting the web server." );
+      LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " which will restart the servlet container." );
       if ( jettyServer == null ) {
         return;
       } else if ( jettyServer.isRunning( ) ) {

@@ -80,7 +80,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
   *outCCLog = *outNCLog = *outHTTPDLog = *outAxis2Log = NULL;
   if (!service) return(1);
   
-  bufsize = 128 * 1024;
+  bufsize = 1000 * 1024;
   buf = malloc(bufsize);
   if (!buf) {
       printf("Out of memory!\n");

@@ -471,7 +471,14 @@ public class WalrusManager {
 								db.rollback();
 								throw new BucketNotEmptyException(bucketName, logData);
 							}
-
+							//remove any delete markers
+							ObjectInfo searchDeleteMarker = new ObjectInfo();
+							searchDeleteMarker.setBucketName(bucketName);
+							searchDeleteMarker.setDeleted(true);
+							List<ObjectInfo> deleteMarkers = dbObject.query(searchDeleteMarker);
+							for(ObjectInfo deleteMarker : deleteMarkers) {
+								dbObject.delete(deleteMarker);
+							}
 							db.delete(bucketFound);
 							// Actually remove the bucket from the backing store
 							try {
@@ -701,8 +708,7 @@ public class WalrusManager {
 							List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 							objectInfo.addGrants(userId, grantInfos, accessControlList);
 							objectInfo.setGrants(grantInfos);
-							objectName = objectKey.replaceAll("/", "-")
-							+ Hashes.getRandom(4);
+							objectName = UUID.randomUUID().toString();
 							objectInfo.setObjectName(objectName);
 							objectInfo.setSize(0L);
 							versionId = UUID.randomUUID().toString().replaceAll("-", "");
@@ -728,8 +734,7 @@ public class WalrusManager {
 								List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 								objectInfo.addGrants(userId, grantInfos, accessControlList);
 								objectInfo.setGrants(grantInfos);
-								objectName = objectKey.replaceAll("/", "-")
-								+ Hashes.getRandom(4);
+								objectName =  UUID.randomUUID().toString();
 								objectInfo.setObjectName(objectName);
 								objectInfo.setSize(0L);
 							}
@@ -769,8 +774,7 @@ public class WalrusManager {
 									continue;
 								}
 								if (WalrusDataMessage.isStart(dataMessage)) {
-									tempObjectName = objectName + "."
-									+ Hashes.getRandom(12);
+									tempObjectName = UUID.randomUUID().toString();
 									digest = Digest.MD5.get();
 									try {
 										fileIO = storageManager.prepareForWrite(
@@ -851,6 +855,18 @@ public class WalrusManager {
 									foundObject.setLast(true);
 									foundObject.setDeleted(false);
 									reply.setSize(size);
+									ObjectInfo deleteMarker = new ObjectInfo(bucketName, objectKey);
+									deleteMarker.setDeleted(true);
+									try {
+										ObjectInfo foundDeleteMarker = dbObject.getUnique(deleteMarker);
+										dbObject.delete(foundDeleteMarker);
+									} catch(EucalyptusCloudException ex) {
+										//no delete marker found.
+										LOG.trace("No delete marker found for: " + bucketName + "/" + objectKey);
+									}
+									if (bucket.isVersioningEnabled()) {
+										reply.setVersionId(versionId);
+									}
 									EntityWrapper<BucketInfo> dbBucket = dbObject.recast(BucketInfo.class);										
 									try {
 										bucket = dbBucket.getUnique(new BucketInfo(bucketName));
@@ -1064,8 +1080,7 @@ public class WalrusManager {
 							foundObject
 							.addGrants(userId, grantInfos, accessControlList);
 							foundObject.setGrants(grantInfos);
-							objectName = objectKey.replaceAll("/", "-")
-							+ Hashes.getRandom(4);
+							objectName = UUID.randomUUID().toString();
 							foundObject.setObjectName(objectName);
 							dbObject.add(foundObject);
 						} else {
@@ -2023,10 +2038,10 @@ public class WalrusManager {
 										while ((bytesRead = fileIO.read(offset)) > 0) {
 											ByteBuffer buffer = fileIO.getBuffer();
 											if(buffer != null) {
-											    buffer.get(bytes, 0, bytesRead);
-											    base64Data += new String(bytes, 0,
-													bytesRead);
-											    offset += bytesRead;
+												buffer.get(bytes, 0, bytesRead);
+												base64Data += new String(bytes, 0,
+														bytesRead);
+												offset += bytesRead;
 											}
 										}
 										fileIO.finish();
@@ -2403,9 +2418,7 @@ public class WalrusManager {
 										grantInfos, accessControlList);
 								destinationObjectInfo.setGrants(grantInfos);
 								destinationObjectInfo
-								.setObjectName(destinationKey
-										.replaceAll("/", "-")
-										+ Hashes.getRandom(4));
+								.setObjectName(UUID.randomUUID().toString());
 							} else {
 								if (destinationObjectInfo.canWriteACP(userId)) {
 									List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
@@ -2471,13 +2484,24 @@ public class WalrusManager {
 							if(addNew)
 								dbObject.add(destinationObjectInfo);
 
+							//get rid of delete marker
+							ObjectInfo deleteMarker = new ObjectInfo(destinationBucket, destinationKey);
+							deleteMarker.setDeleted(true);
+							try {
+								ObjectInfo foundDeleteMarker = dbObject.getUnique(deleteMarker);
+								dbObject.delete(foundDeleteMarker);
+							} catch(EucalyptusCloudException ex) {
+								//no delete marker found.
+								LOG.trace("No delete marker found for: " + destinationBucket + "/" + destinationKey);
+							}
+
 							reply.setEtag(etag);
 							reply.setLastModified(DateUtils.format(lastModified
 									.getTime(),
 									DateUtils.ISO8601_DATETIME_PATTERN)
 									+ ".000Z");
 
-							if(destinationBucketInfo.isVersioningEnabled()) {
+							if(foundDestinationBucketInfo.isVersioningEnabled()) {
 								reply.setCopySourceVersionId(sourceVersionId);
 								reply.setVersionId(destinationVersionId);
 							}							
@@ -2686,7 +2710,9 @@ public class WalrusManager {
 		if (prefix == null)
 			prefix = "";
 
-		// String marker = request.getMarker();
+		String keyMarker = request.getKeyMarker();
+		String versionIdMarker = request.getVersionIdMarker();
+
 		int maxKeys = -1;
 		String maxKeysString = request.getMaxKeys();
 		if (maxKeysString != null)
@@ -2735,7 +2761,8 @@ public class WalrusManager {
 						if (maxKeys >= 0)
 							reply.setMaxKeys(maxKeys);
 						reply.setPrefix(prefix);
-						// reply.setMarker(marker);
+						reply.setKeyMarker(keyMarker);
+						reply.setVersionIdMarker(versionIdMarker);
 						if (delimiter != null)
 							reply.setDelimiter(delimiter);
 						EntityWrapper<ObjectInfo> dbObject = db
@@ -2745,17 +2772,20 @@ public class WalrusManager {
 						List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 						if (objectInfos.size() > 0) {
 							int howManyProcessed = 0;
-							if (/* marker != null || */objectInfos.size() < maxKeys)
+							if (keyMarker != null || objectInfos.size() < maxKeys)
 								Collections.sort(objectInfos);
 							ArrayList<VersionEntry> versions = new ArrayList<VersionEntry>();
 							ArrayList<DeleteMarkerEntry> deleteMarkers = new ArrayList<DeleteMarkerEntry>();
 
 							for (ObjectInfo objectInfo : objectInfos) {
 								String objectKey = objectInfo.getObjectKey();
-								/*
-								 * if(marker != null) { if(objectKey.compareTo(marker)
-								 * <= 0) continue; }
-								 */
+
+								if(keyMarker != null) { if(objectKey.compareTo(keyMarker)
+										<= 0) continue; } else if (versionIdMarker != null) {
+											if(!objectInfo.getVersionId().equals(versionIdMarker))
+												continue;
+										}
+
 								if (prefix != null) {
 									if (!objectKey.startsWith(prefix)) {
 										continue;

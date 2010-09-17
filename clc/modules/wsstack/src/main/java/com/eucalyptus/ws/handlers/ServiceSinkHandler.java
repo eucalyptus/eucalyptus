@@ -59,7 +59,7 @@
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.ws.handlers;
 
@@ -235,6 +235,9 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     }
   }
   
+  /** 
+   * ASAP: {@link ServiceSinkHandler#dispatchRequest(BaseMessage)
+   */
   private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final BaseMessage msg ) throws NoSuchContextException {
     try {
       final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
@@ -255,6 +258,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   }
   
   private static void dispatchRequest( final BaseMessage msg ) throws MuleException, DispatchException {
+//    ServiceContext.dispatch( "RequestQueue", msg );//ASAP: omg urgent.
     OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
     if ( !endpoint.getConnector( ).isStarted( ) ) {
       endpoint.getConnector( ).start( );

@@ -67,14 +67,18 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.BroadcastCallback;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.StopNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 
-public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopNetworkResponseType> {
+public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopNetworkResponseType> implements Expendable<StopNetworkCallback>{
   private static Logger LOG = Logger.getLogger( StopNetworkCallback.class );
   private NetworkToken  token;
 
@@ -86,10 +90,10 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopN
   }
 
   @Override
-  public void verify( StopNetworkResponseType msg ) throws Exception {}
+  public void fire( StopNetworkResponseType msg ) {}
 
   @Override
-  public void prepare( StopNetworkType msg ) throws Exception {
+  public void initialize( StopNetworkType msg ) throws Exception {
     try {
       Network net = Networks.getInstance( ).lookup( token.getName( ) );
       Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
@@ -110,9 +114,14 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopN
   }
 
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
+  }
+
+  @Override
+  public boolean duplicateOf( StopNetworkCallback that ) {
+    return this.getRequest( ).getNetName( ).equals( that.getRequest( ).getNetName( ) );
   }
 
 }

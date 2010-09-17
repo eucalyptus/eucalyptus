@@ -59,7 +59,7 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.bootstrap;
 
@@ -68,8 +68,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Only used for logging at the moment.  Will be replaced with something more useful forthwith.
+ * @deprecated cause it sucks.
+ */
 @Target({ ElementType.TYPE, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
+@Deprecated
 public @interface Provides {
   Component value( );
 }

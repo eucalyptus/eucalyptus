@@ -16,8 +16,8 @@ import com.eucalyptus.records.EventRecord;
 @ChannelPipelineCoverage( "one" )
 public class ChannelStateMonitor extends SimpleChannelHandler {
   private static Logger    LOG           = Logger.getLogger( ChannelStateMonitor.class );
-  private final AtomicLong readBytes     = new AtomicLong( );
-  private final AtomicLong writeBytes    = new AtomicLong( );
+  private final AtomicLong readBytes     = new AtomicLong( 0l );
+  private final AtomicLong writeBytes    = new AtomicLong( 0l );
   private AtomicLong             openTime      = new AtomicLong( );
   private String           eventUserId   = "unknown";
   private String           correlationId = "unknown";
@@ -26,10 +26,13 @@ public class ChannelStateMonitor extends SimpleChannelHandler {
     Long rb = readBytes.getAndSet( 0l );
     Long wb = writeBytes.getAndSet( 0l );
     Long roundTime = ( System.currentTimeMillis( ) - this.openTime.getAndSet( 0 ) );
-    LOG.trace( EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), 
-                                 EventType.SOCKET_CLOSE, roundTime.toString( ), ctx.getChannel( ).getLocalAddress( ).toString( ), ctx.getChannel( ).getRemoteAddress( ).toString( ), 
-                                 EventType.SOCKET_BYTES_READ.toString( ), rb.toString( ), Float.toString( ( wb * 1024.0f ) / ( roundTime * 1024.0f ) ), 
-                                 EventType.SOCKET_BYTES_WRITE.toString( ), wb.toString( ), Float.toString( ( wb * 1024.0f ) / ( roundTime * 1024.0f ) ) ) );
+    LOG.trace( EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), EventType.SOCKET_CLOSE, ""+roundTime.toString( ), ""+ctx.getChannel( ).getLocalAddress( ), ""+ctx.getChannel( ).getRemoteAddress( ) ) ); 
+    if( rb != null ) {
+      LOG.trace( EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), EventType.SOCKET_BYTES_READ, ""+rb, Float.toString( ( wb * 1024.0f ) / ( roundTime * 1024.0f ) ) ) );
+    }
+    if( wb != null ) {
+      LOG.trace( EventRecord.here( ctx.getPipeline( ).getLast( ).getClass( ), EventType.SOCKET_BYTES_WRITE, ""+wb, Float.toString( ( wb * 1024.0f ) / ( roundTime * 1024.0f ) ) ) );
+    }
   }
   
   @Override

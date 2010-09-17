@@ -3,9 +3,11 @@ package com.eucalyptus.cluster;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
@@ -18,17 +20,7 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.event.NewClusterEvent;
-import com.eucalyptus.cluster.event.TeardownClusterEvent;
-import com.eucalyptus.cluster.handlers.AddressStateHandler;
-import com.eucalyptus.cluster.handlers.ClusterCertificateHandler;
-import com.eucalyptus.cluster.handlers.LogStateHandler;
-import com.eucalyptus.cluster.handlers.NetworkStateHandler;
-import com.eucalyptus.cluster.handlers.ResourceStateHandler;
-import com.eucalyptus.cluster.handlers.VmStateHandler;
-import com.eucalyptus.cluster.util.ClusterUtil;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
@@ -37,13 +29,13 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.Handles;
+import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.EventVetoedException;
-import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.collect.ImmutableList;
+import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
@@ -75,6 +67,30 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     }
   }
   
+  /**
+   * @see com.eucalyptus.component.AbstractServiceBuilder#fireStart(com.eucalyptus.component.ServiceConfiguration)
+   * @param config
+   * @throws ServiceRegistrationException
+   */
+  @Override
+  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
+    LOG.info( "Starting up cluster: " + config );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    try {
+      if( Components.lookup( Components.delegate.eucalyptus ).isLocal( ) ) {
+        try {
+          Clusters.start( ( ClusterConfiguration ) config );
+        } catch ( EucalyptusCloudException ex ) {
+          LOG.error( ex , ex );
+          throw new ServiceRegistrationException( "Registration failed: " + ex.getMessage( ), ex );
+        }
+        super.fireStart( config );
+      }
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+    }
+  }
+
   @Override
   public ClusterConfiguration newInstance( ) {
     return new ClusterConfiguration( );
@@ -126,12 +142,19 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         out.close( );
         
         EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-        ClusterCredentials componentCredentials = new ClusterCredentials( config.getName( ) );
         try {
-          List<ClusterCredentials> ccCreds = credDb.query( componentCredentials );
+          List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
           for ( ClusterCredentials ccert : ccCreds ) {
             credDb.delete( ccert );
           }
+          credDb.commit( );
+        } catch ( Exception e ) {
+          LOG.error( e, e );
+          credDb.rollback( );
+        }
+        credDb = Authentication.getEntityWrapper( );
+        try {          
+          ClusterCredentials componentCredentials = new ClusterCredentials( config.getName( ) );
           componentCredentials.setClusterCertificate( X509Cert.fromCertificate( clusterX509 ) );
           componentCredentials.setNodeCertificate( X509Cert.fromCertificate( nodeX509 ) );
           credDb.add( componentCredentials );
@@ -168,20 +191,21 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
+    LOG.info( "Tearing down cluster: " + config );
     Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
-    ClusterCertificateHandler cc;
+    EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
     try {
-      ClusterUtil.deregisterClusterStateHandler( cluster, new ClusterCertificateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new NetworkStateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new LogStateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new ResourceStateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new VmStateHandler( cluster ) );
-      ClusterUtil.deregisterClusterStateHandler( cluster, new AddressStateHandler( cluster ) );
-    } catch ( BindingException e ) {
+      List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
+      for ( ClusterCredentials ccert : ccCreds ) {
+        credDb.delete( ccert );
+      }
+      credDb.commit( );
+    } catch ( Exception e ) {
       LOG.error( e, e );
-    } catch ( EventVetoedException e ) {
-      LOG.error( e, e );
+      credDb.rollback( );
     }
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    Clusters.stop( cluster.getName( ) );
     for( Group g : Groups.listAllGroups( ) ) {
       for( Authorization auth : g.getAuthorizations( ) ) {
         if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {
@@ -189,7 +213,34 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         }
       }
     }
+    String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
+    File keyDir = new File( directory );
+    if ( keyDir.exists( ) ) {
+      for( File f : keyDir.listFiles( ) ) {
+        if( f.delete( ) ) {
+          LOG.info( "Removing cluster key file: " + f.getAbsolutePath( ) );
+        } else {
+          LOG.info( "Failed to remove cluster key file: " + f.getAbsolutePath( ) );
+        }        
+      }
+      if( keyDir.delete( ) ) {
+        LOG.info( "Removing cluster key directory: " + keyDir.getAbsolutePath( ) );
+      } else {
+        LOG.info( "Failed to remove cluster key directory: " + keyDir.getAbsolutePath( ) );
+      }
+    }    
     super.fireStop( config );
+  }
+
+  /**
+   * @see com.eucalyptus.component.DatabaseServiceBuilder#add(java.net.URI)
+   * @param uri
+   * @return
+   * @throws ServiceRegistrationException
+   */
+  @Override
+  public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
+    return new RemoteConfiguration( this.getComponent( ).getPeer( ), uri );
   }
   
 }

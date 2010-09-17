@@ -205,7 +205,11 @@ public class AttachedVolume extends EucalyptusData implements Comparable<Attache
   public int compareTo( AttachedVolume that ) {
     return this.volumeId.compareTo( that.volumeId );
   }
-
+  
+  public String toString() {
+    return "AttachedVolume ${volumeId} ${instanceId} ${status} ${device} ${remoteDevice} ${attachTime}"
+  }
+  
 }
 
 public class Snapshot extends EucalyptusData {

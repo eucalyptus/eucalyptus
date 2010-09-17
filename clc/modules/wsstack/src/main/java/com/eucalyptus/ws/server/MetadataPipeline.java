@@ -20,6 +20,8 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.transport.NullPayload;
 
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.util.Messaging;
@@ -66,12 +68,19 @@ public class MetadataPipeline extends FilteredPipeline implements UnrollableStag
         newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/", remoteHost + ":" );
 
       HttpResponse response = null;
-      LOG.info( "Trying to get metadata: " + newUri );
-      Object reply = Messaging.send( "vm://VmMetadata", newUri );
-      if ( !( reply instanceof NullPayload ) ) {
+      LOG.trace( "Trying to get metadata: " + newUri );
+      Object reply = null;
+      try {
+        reply = ServiceContext.send( "VmMetadata", newUri );
+      } catch ( Exception e1 ) {
+        LOG.debug( e1, e1 );
+      } finally {
+        Contexts.clear( request.getCorrelationId( ) );
+      }
+      if ( reply != null && !( reply instanceof NullPayload ) ) {
         response = new DefaultHttpResponse(request.getProtocolVersion( ),HttpResponseStatus.OK);
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/html" );
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ((String)reply).getBytes( ) );
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ( byte[] ) reply );
         response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
       }

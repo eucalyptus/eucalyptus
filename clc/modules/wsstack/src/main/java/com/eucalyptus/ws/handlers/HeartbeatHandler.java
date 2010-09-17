@@ -95,6 +95,7 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.StartComponentEvent;
@@ -115,6 +116,7 @@ import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 
@@ -252,7 +254,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
         String resp = "";
         for ( Component c : Components.list( ) ) {
           resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
-                                 c.isInitialized( ) );
+                                 c.isRunning( ) );
         }
         ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
         response.setContent( buf );
@@ -311,7 +313,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     String resp = "";
     for ( Component c : Components.list( ) ) {
       resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
-                             c.isInitialized( ) );
+                             c.isRunning( ) );
     }
     ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
     response.setContent( buf );
@@ -325,6 +327,26 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     HeartbeatType hb = ( HeartbeatType ) request.getMessage( );
     //FIXME: this is needed because we can't dynamically change the mule config, so we need to disable at init time and hup when a new component is loaded.
     List<String> registeredComponents = Lists.newArrayList( );
+    for( ComponentType started : hb.getStarted( ) ) {
+      try {
+        safeLookupComponent( started.getComponent( ) ).buildService( started.toConfiguration( ) );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.error( ex , ex );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      }
+    }
+    for( ComponentType stopped : hb.getStarted( ) ) {
+      if( Components.contains( stopped.getComponent( ) ) ) {
+        try {
+          Components.lookup( stopped.getComponent( ) ).removeService( stopped.toConfiguration( ) );
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex , ex );
+        } catch ( NoSuchElementException ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    }
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
       if ( !initializedComponents.contains( component.getComponent( ) ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
         System.exit( 123 );//HUP

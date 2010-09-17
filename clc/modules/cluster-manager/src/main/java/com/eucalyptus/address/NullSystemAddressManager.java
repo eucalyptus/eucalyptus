@@ -32,6 +32,4 @@ public class NullSystemAddressManager extends AbstractSystemAddressManager {
     }
   }
 
-  @Override public void releaseSystemAddress( Address addr ) {}
-  
 }

@@ -98,7 +98,7 @@ public class StorageUtil {
   }
   
   public static <TYPE> TYPE send( String clusterName, EucalyptusMessage message ) throws EucalyptusCloudException {
-    StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( clusterName );
+    StorageControllerConfiguration scConfig = Configuration.lookupSc( clusterName );
     Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
     TYPE reply = (TYPE) sc.send( message );
     return reply;
@@ -118,7 +118,7 @@ public class StorageUtil {
     }
     ArrayList<edu.ucsb.eucalyptus.msgs.Volume> reply = Lists.newArrayList( );
     for( String cluster : clusterVolumeMap.keySet( ) ) {
-      StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( cluster );
+      StorageControllerConfiguration scConfig = Configuration.lookupSc( cluster );
       Iterator<String> volumeNames = Iterators.transform( clusterVolumeMap.get( cluster ).iterator( ), new Function<Volume,String>() {
         @Override
         public String apply( Volume arg0 ) {
@@ -149,7 +149,7 @@ public class StorageUtil {
         } else if( status != null ) {
           v.setMappedState( status );
         }
-        if( v.getSize() == 0 ) {
+        if( v.getSize() <= 0 ) {
           v.setSize( new Integer( size ) );
         }
         if( "invalid".equals ( v.getRemoteDevice( ) ) || "unknown".equals( v.getRemoteDevice( ) ) || v.getRemoteDevice( ) == null ) {

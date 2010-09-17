@@ -85,7 +85,7 @@ import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.blockstorage.VolumeManager;
+import com.eucalyptus.config.StorageControllerBuilder;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -99,8 +99,8 @@ import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
+import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -178,6 +178,10 @@ public class OverlayManager implements LogicalStorageManager {
 		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
 	}
 
+	private String scanVolumeGroups() throws ExecutionException {
+		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgscan"});
+	}
+
 	private String createLogicalVolume(String vgName, String lvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-l", "100%FREE", vgName});
 	}
@@ -208,6 +212,42 @@ public class OverlayManager implements LogicalStorageManager {
 
 	private String enableLogicalVolume(String lvName) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+	}
+
+	private boolean logicalVolumeExists(String lvName) {
+		boolean success = false;
+		try {
+			String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvdisplay", lvName});
+			if(returnValue.length() > 0) {
+				success = true;
+			}
+		} catch(ExecutionException ex) {			
+		}
+		return success;
+	}
+
+	private boolean volumeGroupExists(String vgName) {
+		boolean success = false;
+		try {
+			String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgdisplay", vgName});
+			if(returnValue.length() > 0) {
+				success = true;
+			}
+		} catch(ExecutionException ex) {			
+		}
+		return success;
+	}
+
+	private boolean physicalVolumeExists(String pvName) {
+		boolean success = false;
+		try {
+			String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "pvdisplay", pvName});
+			if(returnValue.length() > 0) {
+				success = true;
+			}
+		} catch(ExecutionException ex) {			
+		}
+		return success;
 	}
 
 	private int losetup(String absoluteFileName, String loDevName) {
@@ -512,7 +552,7 @@ public class OverlayManager implements LogicalStorageManager {
 					assert(snapshotFile.exists());
 					long absoluteSize;
 					if(size > 0) {
-						absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
+						absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;	
 					} else {
 						size = (int)(snapshotFile.length() / StorageProperties.GB);
 						absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
@@ -585,39 +625,55 @@ public class OverlayManager implements LogicalStorageManager {
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 			volumeManager.unexportVolume(foundLVMVolumeInfo);
 			try {
-				String returnValue = removeLogicalVolume(absoluteLVName);
-				if(returnValue.length() == 0) {
-					throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName);
+				String returnValue;
+				deleteLogicalVolume(loDevName, vgName, absoluteLVName);
+				removeLoopback(loDevName);
+				if(getLoopback(loDevName).length() != 0) {
+					throw new EucalyptusCloudException("Unable to remove loopback device: " + loDevName);
+				} else {
+					LOG.info(loDevName + "was removed.");
 				}
-				returnValue = removeVolumeGroup(vgName);
-				if(returnValue.length() == 0) {
-					throw new EucalyptusCloudException("Unable to remove volume group " + vgName);
-				}
-				returnValue = removePhysicalVolume(loDevName);
-				if(returnValue.length() == 0) {
-					throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName);
-				}
-				returnValue = removeLoopback(loDevName);
-				File rawFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId);
-				if (rawFile.exists()) {
-					if(!rawFile.delete()) {
-						throw new EucalyptusCloudException("Unable to delete: " + rawFile.getAbsolutePath());
-					}
-				}
-				volumeManager.remove(foundLVMVolumeInfo);				
+				volumeManager.remove(foundLVMVolumeInfo);
 				volumeManager.finish();
 			} catch(ExecutionException ex) {
 				volumeManager.abort();
 				String error = "Unable to run command: " + ex.getMessage();
 				LOG.error(error);
 				throw new EucalyptusCloudException(error);
+			} catch(EucalyptusCloudException ex) {
+				volumeManager.abort();
+				throw ex;
 			}
+
 		}  else {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find volume: " + volumeId);
 		}
 	}
 
+	/*LVM is flaky when there are a large number of concurrent removal requests. This workaround serializes lvm cleanup*/
+	private synchronized void deleteLogicalVolume(String loDevName, String vgName,
+			String absoluteLVName) throws ExecutionException,
+			EucalyptusCloudException {
+		if(logicalVolumeExists(absoluteLVName)) {
+			String returnValue = removeLogicalVolume(absoluteLVName);
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to remove logical volume " + absoluteLVName + " " + returnValue);
+			}
+		}
+		if(volumeGroupExists(vgName)) {
+			String returnValue = removeVolumeGroup(vgName);
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to remove volume group " + vgName + " " + returnValue);
+			}
+		}
+		if(physicalVolumeExists(loDevName)) { 
+			String returnValue = removePhysicalVolume(loDevName);
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to remove physical volume " + loDevName + " " + returnValue);
+			}
+		}
+	}
 
 	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
@@ -770,6 +826,12 @@ public class OverlayManager implements LogicalStorageManager {
 			}
 		}
 		//now enable them
+		try {
+			LOG.info("Scanning volume groups. This might take a little while...");
+			scanVolumeGroups();
+		} catch (ExecutionException e) {
+			LOG.error(e);
+		}
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
 			try {
 				volumeManager.exportVolume(foundVolumeInfo);
@@ -838,48 +900,88 @@ public class OverlayManager implements LogicalStorageManager {
 
 		public void exportVolume(LVMVolumeInfo lvmVolumeInfo) throws EucalyptusCloudException {
 			if(exportManager instanceof AOEManager) {
-				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
+				if(lvmVolumeInfo instanceof AOEVolumeInfo) {
+					AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
 
-				int pid = aoeVolumeInfo.getVbladePid();
-				if(pid > 0) {
-					//enable logical volumes
-					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + aoeVolumeInfo.getVgName() + PATH_SEPARATOR + aoeVolumeInfo.getLvName();
-					try {
-						enableLogicalVolume(absoluteLVName);
-					} catch(ExecutionException ex) {
-						String error = "Unable to run command: " + ex.getMessage();
-						LOG.error(error);
-						return;
-					}
-					String returnValue = aoeStatus(pid);
-					if(returnValue.length() == 0) {
-						int majorNumber = aoeVolumeInfo.getMajorNumber();
-						int minorNumber = aoeVolumeInfo.getMinorNumber();
-						pid = exportManager.exportVolume(DirectStorageInfo.getStorageInfo().getStorageInterface(), absoluteLVName, majorNumber, minorNumber);
-						aoeVolumeInfo.setVbladePid(pid);
-						File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
-						FileOutputStream fileOutStream = null;
+					int pid = aoeVolumeInfo.getVbladePid();
+					if(pid > 0) {
+						//enable logical volumes
+						String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + aoeVolumeInfo.getVgName() + PATH_SEPARATOR + aoeVolumeInfo.getLvName();
 						try {
-							fileOutStream = new FileOutputStream(vbladePidFile);
-							String pidString = String.valueOf(pid);
-							fileOutStream.write(pidString.getBytes());
-							fileOutStream.close();
-						} catch (Exception ex) {
-							if(fileOutStream != null)
-								try {
-									fileOutStream.close();
-								} catch (IOException e) {
-									LOG.error(e);
-								}
-								LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+							enableLogicalVolume(absoluteLVName);
+						} catch(ExecutionException ex) {
+							String error = "Unable to run command: " + ex.getMessage();
+							LOG.error(error);
+							return;
 						}
+						String returnValue = aoeStatus(pid);
+						if(returnValue.length() == 0) {
+							int majorNumber = aoeVolumeInfo.getMajorNumber();
+							int minorNumber = aoeVolumeInfo.getMinorNumber();
+							pid = exportManager.exportVolume(DirectStorageInfo.getStorageInfo().getStorageInterface(), absoluteLVName, majorNumber, minorNumber);
+							aoeVolumeInfo.setVbladePid(pid);
+							File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
+							FileOutputStream fileOutStream = null;
+							try {
+								fileOutStream = new FileOutputStream(vbladePidFile);
+								String pidString = String.valueOf(pid);
+								fileOutStream.write(pidString.getBytes());
+								fileOutStream.close();
+							} catch (Exception ex) {
+								if(fileOutStream != null)
+									try {
+										fileOutStream.close();
+									} catch (IOException e) {
+										LOG.error(e);
+									}
+									LOG.error("Could not write pid file vblade-" + majorNumber + minorNumber + ".pid");
+							}
+						}
+					}
+				} else {
+					//convert it
+					AOEVolumeInfo volumeInfo = new AOEVolumeInfo();
+					convertVolumeInfo(lvmVolumeInfo, volumeInfo);
+					try {
+						unexportVolume(lvmVolumeInfo);
+						exportVolume(volumeInfo, volumeInfo.getVgName(), volumeInfo.getLvName());
+						add(volumeInfo);
+						remove(lvmVolumeInfo);
+					} catch(EucalyptusCloudException ex) {
+						LOG.error(ex);
 					}
 				}
 			} else if(exportManager instanceof ISCSIManager) {
-				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
-				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + iscsiVolumeInfo.getVgName() + PATH_SEPARATOR + iscsiVolumeInfo.getLvName();
-				((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
+				if(lvmVolumeInfo instanceof ISCSIVolumeInfo) {
+					ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
+					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + iscsiVolumeInfo.getVgName() + PATH_SEPARATOR + iscsiVolumeInfo.getLvName();
+					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
+				} else {
+					ISCSIVolumeInfo volumeInfo = new ISCSIVolumeInfo();
+					convertVolumeInfo(lvmVolumeInfo, volumeInfo);
+					try {
+						unexportVolume(lvmVolumeInfo);
+						exportVolume(volumeInfo, volumeInfo.getVgName(), volumeInfo.getLvName());
+						add(volumeInfo);
+						remove(lvmVolumeInfo);
+					} catch(EucalyptusCloudException ex) {
+						LOG.error(ex);
+					}
+				}
 			}	
+		}
+
+		private void convertVolumeInfo(LVMVolumeInfo lvmVolumeSource, LVMVolumeInfo lvmVolumeDestination) {
+			lvmVolumeDestination.setScName(lvmVolumeSource.getScName());
+			lvmVolumeDestination.setLoFileName(lvmVolumeSource.getLoFileName());
+			lvmVolumeDestination.setLoDevName(lvmVolumeSource.getLoDevName());
+			lvmVolumeDestination.setLvName(lvmVolumeSource.getLvName());
+			lvmVolumeDestination.setVgName(lvmVolumeSource.getVgName());
+			lvmVolumeDestination.setPvName(lvmVolumeSource.getPvName());
+			lvmVolumeDestination.setSize(lvmVolumeSource.getSize());
+			lvmVolumeDestination.setSnapshotOf(lvmVolumeSource.getSnapshotOf());
+			lvmVolumeDestination.setStatus(lvmVolumeSource.getStatus());
+			lvmVolumeDestination.setVolumeId(lvmVolumeSource.getVolumeId());			
 		}
 
 		public String getVolumeProperty(String volumeId) {
@@ -905,24 +1007,39 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 
 		public void unexportVolume(LVMVolumeInfo volumeInfo) {
+			StorageExportManager manager = exportManager;
 			if(volumeInfo instanceof AOEVolumeInfo) {
 				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) volumeInfo;
+				if(!(exportManager instanceof AOEManager)) {
+					manager = new AOEManager();
+				}
 				int pid = aoeVolumeInfo.getVbladePid();
 				if(pid > 0) {
 					String returnValue = aoeStatus(pid);
 					if(returnValue.length() > 0) {
-						exportManager.unexportVolume(pid);
+						manager.unexportVolume(pid);
 						int majorNumber = aoeVolumeInfo.getMajorNumber();
 						int minorNumber = aoeVolumeInfo.getMinorNumber();
 						File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");
 						if(vbladePidFile.exists()) {
 							vbladePidFile.delete();
 						}
+						while(aoeStatus(pid).length() > 0) {
+							LOG.info("Waiting for volume to be unexported...");
+							try {
+								Thread.sleep(300);
+							} catch (InterruptedException e) {
+								LOG.error(e);
+							}
+						}
 					}
 				}
 			} else if(volumeInfo instanceof ISCSIVolumeInfo) {
+				if(!(exportManager instanceof ISCSIManager)) {
+					manager = new ISCSIManager();
+				}
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
-				((ISCSIManager)exportManager).unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
+				((ISCSIManager)manager).unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
 			}			
 		}
 
@@ -966,14 +1083,10 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 
 		private List<LVMVolumeInfo> getAllVolumeInfos() {
-			if(exportManager instanceof AOEManager) {
-				AOEVolumeInfo AOEVolumeInfo = new AOEVolumeInfo();
-				return entityWrapper.query(AOEVolumeInfo);
-			} else if(exportManager instanceof ISCSIManager) {
-				ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo();
-				return entityWrapper.query(ISCSIVolumeInfo);
-			}
-			return new ArrayList<LVMVolumeInfo>();
+			List<LVMVolumeInfo> volumeInfos = new ArrayList<LVMVolumeInfo>();
+			volumeInfos.addAll(entityWrapper.query(new AOEVolumeInfo()));
+			volumeInfos.addAll(entityWrapper.query(new ISCSIVolumeInfo()));	
+			return volumeInfos;
 		}
 
 		private void add(LVMVolumeInfo volumeInfo) {
@@ -1027,7 +1140,7 @@ public class OverlayManager implements LogicalStorageManager {
 					}
 				}
 				if(!success) {
-					throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " iface: " + DirectStorageInfo.getStorageInfo().getStorageInterface() + " pid: " + pid + " returnValue: " + returnValue);
+					throw new EucalyptusCloudException("Could not export AoE device " + absoluteLVName + " StorageInfo.getStorageInfo().getStorageInterface(): " + DirectStorageInfo.getStorageInfo().getStorageInterface() + " pid: " + pid + " returnValue: " + returnValue);
 				}
 
 				File vbladePidFile = new File(eucaHome + EUCA_VAR_RUN_PATH + "/vblade-" + majorNumber + minorNumber + ".pid");

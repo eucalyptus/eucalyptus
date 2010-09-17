@@ -18,16 +18,16 @@ public class PropertiesDiscovery extends ServiceJarDiscovery {
   @Override
   public boolean processClass( Class c ) throws Throwable {
     if ( (c.getAnnotation( ConfigurableClass.class ) != null) )  {
-      LOG.info( "-> Registrering configuration properties for entry: " + c.getName( ) );
-      LOG.debug( "Checking fields: " + Arrays.asList( c.getDeclaredFields( ) ));
+      LOG.info( "-> Registering configuration properties for entry: " + c.getName( ) );
+      LOG.trace( "Checking fields: " + Arrays.asList( c.getDeclaredFields( ) ));
       for( Field  f : c.getDeclaredFields( ) ) {
-        LOG.debug( "Checking field: " + f );
+        LOG.trace( "Checking field: " + f );
         try {
           ConfigurableProperty prop = PropertyDirectory.buildPropertyEntry( c, f );
           if( prop == null ) {
             continue;
           } else {
-            LOG.info( "--> Adding property: " + prop.getQualifiedName( )  );
+            LOG.info( "--> Registered property: " + prop.getQualifiedName( )  );
           }
         } catch ( Throwable e ) {
           LOG.debug( e, e );

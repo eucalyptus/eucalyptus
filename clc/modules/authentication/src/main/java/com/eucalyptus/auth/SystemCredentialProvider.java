@@ -59,7 +59,7 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.auth;
 
@@ -176,7 +176,7 @@ public class SystemCredentialProvider extends Bootstrapper {
   }
 
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     try {
       if ( !SystemCredentialProvider.check( Component.eucalyptus ) ) {
         SystemCredentialProvider.init( Component.eucalyptus );

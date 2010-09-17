@@ -58,9 +58,6 @@ public abstract class ServiceDispatcher implements Dispatcher {
   public static Collection<Dispatcher> values( ) {
     return proxies.values( );
   }
-  public static Set<Map.Entry<String,Dispatcher>> getEntries() {
-    return proxies.entrySet( );
-  }
 
   private Component     component;
   private String        name;

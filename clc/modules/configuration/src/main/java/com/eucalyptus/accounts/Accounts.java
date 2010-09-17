@@ -196,7 +196,7 @@ public class Accounts {
 
   public GrantGroupAuthorizationResponseType authorize( final GrantGroupAuthorizationType request ) throws EucalyptusCloudException {
     GrantGroupAuthorizationResponseType reply = request.getReply( );
-    if(!Iterables.any( Components.lookup( "cluster" ).list( ), new Predicate<ServiceConfiguration>() {
+    if(!Iterables.any( Components.lookup( Components.delegate.cluster ).list( ), new Predicate<ServiceConfiguration>() {
       @Override
       public boolean apply( ServiceConfiguration arg0 ) {
         return arg0.getName( ).equals( request.getZoneName( ) );

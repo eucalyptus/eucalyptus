@@ -65,13 +65,16 @@ package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -80,7 +83,7 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
 
-public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseType> {
+public class VmRunCallback extends MessageCallback<VmRunType,VmRunResponseType> {
 
   private static Logger LOG = Logger.getLogger( VmRunCallback.class );
 
@@ -91,7 +94,8 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     this.setRequest( msg );
   }
 
-  public void prepare( final VmRunType msg ) throws Exception {
+  @Override
+  public void initialize( final VmRunType msg ) throws Exception {
 //    LOG.trace( LogUtil.subheader( msg.toString( ) ) );
     for( String vmId : msg.getInstanceIds( ) ) {
       try {
@@ -105,40 +109,34 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     }
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().submitToken( token );
-    } catch ( Exception e2 ) {
+    } catch ( NoSuchTokenException e2 ) {
       LOG.debug( e2, e2 );
-      throw e2;
     }
   }
 
   @Override
-  public void verify( VmRunResponseType reply ) throws Exception {
+  public void fire( VmRunResponseType reply ) {
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().redeemToken( token );
     } catch ( Throwable e ) {
-      this.fail( e );
+      this.fireException( e );
       LOG.debug( e, e );
       return;
     } 
-    try {
-      if ( reply != null && reply.get_return() ) {
-        for ( VmInfo vmInfo : reply.getVms() ) {
-          VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
-          vm.updateAddresses( vmInfo.getNetParams().getIpAddress(), vmInfo.getNetParams().getIgnoredPublicIp() );
-          vm.clearPending( );
-        }
-      } else {
-        this.fail( new EucalyptusClusterException( "RunInstances returned false." + this.getRequest( ) ) );
+    for ( VmInfo vmInfo : reply.getVms() ) {
+      try {
+        VmInstance vm = VmInstances.getInstance().lookup( vmInfo.getInstanceId() );
+        vm.updateAddresses( vmInfo.getNetParams().getIpAddress(), vmInfo.getNetParams().getIgnoredPublicIp() );
+        vm.clearPending( );
+      } catch ( NoSuchElementException e ) {
+        LOG.error( e , e );
       }
-    } catch ( Exception e ) { 
-      LOG.debug( e, e );
-      throw e; 
     }
   }
 
 
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( "-> Release resource tokens for unused resources." );
     try {
       Clusters.getInstance().lookup( token.getCluster() ).getNodeState().releaseToken( token );
@@ -159,7 +157,8 @@ public class VmRunCallback extends QueuedEventCallback<VmRunType,VmRunResponseTy
     }
     for( String addr : this.token.getAddresses() ) {
       try {
-        Addresses.release( Addresses.getInstance().lookup( addr ) );
+        Address address = Addresses.getInstance().lookup( addr );
+        address.release( );
         LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
       } catch ( NoSuchElementException e1 ) {}
     }

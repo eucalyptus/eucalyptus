@@ -50,7 +50,7 @@ public class ServiceProcess implements Runnable {
   }
   
   public ServiceProcess exec() {
-    this.threads.getPool( ).submit( this );
+    this.threads.getExecutorService( ).submit( this );
     return this;
   }
 
@@ -61,8 +61,8 @@ public class ServiceProcess implements Runnable {
     this.returnCode = null;
     try {
       this.self = Runtime.getRuntime( ).exec( this.args, this.envp, this.pwd );
-      this.threads.getPool( ).submit( new IOMonitor( this.self.getInputStream( ) ) );
-      this.threads.getPool( ).submit( new IOMonitor( this.self.getErrorStream( ) ) );
+      this.threads.getExecutorService( ).submit( new IOMonitor( this.self.getInputStream( ) ) );
+      this.threads.getExecutorService( ).submit( new IOMonitor( this.self.getErrorStream( ) ) );
       try {
         this.returnCode = this.self.waitFor( );
       } catch ( InterruptedException e ) {
@@ -70,7 +70,7 @@ public class ServiceProcess implements Runnable {
       }
     } catch ( Exception e ) {
       LOG.error( e, e );
-      this.threads.getPool( ).submit( this );
+      this.threads.getExecutorService( ).submit( this );
     }    
   }
   

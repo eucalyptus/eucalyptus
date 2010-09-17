@@ -73,9 +73,11 @@ use FindBin;
 $OUTPUT_AUTOFLUSH = 1; # no output buffering
 
 our $use_ramdisk = 0;
+our $local_kvm="";
+our $use_virtio_net = 0;
+our $use_virtio_root = 0;
 our $use_kernel = 0;
 our $plaindisk = 0;
-our $local_kvm="";
 
 if ( -x "/usr/bin/kvm" ) {
     $local_kvm="/usr/bin/kvm";
@@ -89,6 +91,8 @@ if ( -x "/usr/bin/kvm" ) {
 GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
 	   'kernel'         => sub { $use_kernel = 1; },
            'ephemeral'      => sub { }, # option ignored 
+           'virtionet'      => sub { $use_virtio_net = 1; },
+           'virtioroot'      => sub { $use_virtio_root = 1; },
 		   ) or exit (1);
 
 if (!$use_ramdisk && !$use_kernel) {
@@ -112,8 +116,6 @@ if (!$plaindisk) {
     print "        <cmdline>root=/dev/sda1 console=ttyS0</cmdline>\n";
 }
 
-
-
 print <<EOF;
     </os>
     <features>
@@ -125,17 +127,23 @@ print <<EOF;
         <emulator>$local_kvm</emulator>
 EOF
 
-if ($plaindisk) {
-    print "        <disk type='file'>\n";
-    print "            <source file='BASEPATH/disk'/>\n";
-    print "            <target dev='hda'/>\n";
-    print "        </disk>\n";
+if ( $use_virtio_root ) {
+    print "        <disk type='file' device='disk'>\n";
 } else {
     print "        <disk type='file'>\n";
-    print "            <source file='BASEPATH/disk'/>\n";
-    print "            <target dev='sda'/>\n";
-    print "        </disk>\n";
 }
+print "            <source file='BASEPATH/disk'/>\n";
+
+if ( $use_virtio_root ) { # TODO: not sure whether use_virtio takes priority over plaindisk (aka Windows)
+    print "            <target dev='vda' bus='virtio'/>\n";
+} else {
+    if ($plaindisk) {
+        print "            <target dev='hda'/>\n";
+    } else {
+        print "            <target dev='sda'/>\n";
+    }
+}
+print "        </disk>\n";
 
 if ($plaindisk) {
     print "        <disk type='file' device='floppy'>\n";
@@ -149,11 +157,17 @@ print <<EOF;
             <source bridge='BRIDGEDEV'/>
             <mac address='PRIVMACADDR'/>
 EOF
-if ($plaindisk) {
-    print "            <model type='rtl8139'/>\n";
+
+if ( $use_virtio_net ) { # TODO: again, not sure whether use_virtio takes priority over plaindisk (aka Windows)
+    print "            <model type='virtio'/>\n";
 } else {
-    print "            <model type='e1000'/>\n";
+    if ($plaindisk) {
+        print "            <model type='rtl8139'/>\n";
+    } else {
+        print "            <model type='e1000'/>\n";
+    }
 }
+
 print <<EOF;
         </interface>
         <serial type="file">

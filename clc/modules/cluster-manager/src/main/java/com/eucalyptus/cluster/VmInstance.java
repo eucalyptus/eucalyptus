@@ -59,7 +59,7 @@
  * ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
 package com.eucalyptus.cluster;
@@ -75,17 +75,21 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.BundleCallback;
-import com.eucalyptus.component.Configurations;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.SystemState.Reason;
+import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -99,7 +103,7 @@ import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-public class VmInstance implements HasName {
+public class VmInstance implements HasName<VmInstance> {
   private static Logger LOG          = Logger.getLogger( VmInstance.class );
   public static String  DEFAULT_IP   = "0.0.0.0";
   public static String  DEFAULT_TYPE = "m1.small";
@@ -121,7 +125,7 @@ public class VmInstance implements HasName {
   private final String                                instanceId;
   private final String                                ownerId;
   private final String                                placement;
-  private final String                                userData;
+  private final byte[]                                userData;
   private final List<Network>                         networks      = Lists.newArrayList( );
   private final NetworkConfigType                     networkConfig = new NetworkConfigType( );
   private String                                      platform;
@@ -144,7 +148,7 @@ public class VmInstance implements HasName {
   private Boolean                                     privateNetwork;
   
   public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement,
-                     final String userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks,
+                     final byte[] userData, final VmImageInfo imageInfo, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks,
                      final String networkIndex ) {
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
@@ -342,10 +346,11 @@ public class VmInstance implements HasName {
     }
     m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     
-    m.put( "block-device-mapping/", "emi\nephemeral0\nroot\nswap" );
+    m.put( "block-device-mapping/", "emi\nephemeral\nephemeral0\nroot\nswap" );
     m.put( "block-device-mapping/emi", "sda1" );
     m.put( "block-device-mapping/ami", "sda1" );
     m.put( "block-device-mapping/ephemeral", "sda2" );
+    m.put( "block-device-mapping/ephemeral0", "sda2" );
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
     
@@ -358,15 +363,17 @@ public class VmInstance implements HasName {
     m.put( "placement/availability-zone", this.getPlacement( ) );
     String dir = "";
     for ( String entry : m.keySet( ) ) {
-      if ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) continue;
+      if ( ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) 
+          || ( "ramdisk-id".equals(entry) && this.getImageInfo( ).getRamdiskId( ) == null ) ) {
+        continue;
+      }
       dir += entry + "\n";
     }
     m.put( "", dir );
     return m;
   }
   
-  public int compareTo( final Object o ) {
-    VmInstance that = ( VmInstance ) o;
+  public int compareTo( final VmInstance that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
   
@@ -514,7 +521,19 @@ public class VmInstance implements HasName {
     else runningInstance.setKeyName( "" );
     
     runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
-    runningInstance.setPlacement( this.placement );
+    Group g = Iterables.find( Groups.listAllGroups( ), new Predicate<Group>( ) {
+      @Override
+      public boolean apply( Group arg0 ) {
+        return Iterables.any( arg0.getAuthorizations( ), new Predicate<Authorization>( ) {
+          @Override
+          public boolean apply( Authorization arg0 ) {
+            return arg0.check( new AvailabilityZonePermission( VmInstance.this.placement ) );
+          }
+        } );
+      }
+    } );
+
+    runningInstance.setPlacement( g != null ? g.getName( ) : this.placement );
     
     runningInstance.setLaunchTime( this.launchTime );
     
@@ -570,7 +589,7 @@ public class VmInstance implements HasName {
     return launchTime;
   }
   
-  public String getUserData( ) {
+  public byte[] getUserData( ) {
     return userData;
   }
   
@@ -578,8 +597,12 @@ public class VmInstance implements HasName {
     return keyInfo;
   }
   
+  public String getConsoleOutputString( ) {
+    return new String( Base64.encode( this.consoleOutput.toString( ).getBytes( ) ) );
+  }
+
   public StringBuffer getConsoleOutput( ) {
-    return consoleOutput;
+    return this.consoleOutput;
   }
   
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
@@ -621,6 +644,14 @@ public class VmInstance implements HasName {
   
   public String getPublicAddress( ) {
     return networkConfig.getIgnoredPublicIp( );
+  }
+
+  public String getPrivateDnsName( ) {
+    return networkConfig.getPrivateDnsName( );
+  }
+  
+  public String getPublicDnsName( ) {
+    return networkConfig.getPublicDnsName( );
   }
   
   public NetworkConfigType getNetworkConfig( ) {

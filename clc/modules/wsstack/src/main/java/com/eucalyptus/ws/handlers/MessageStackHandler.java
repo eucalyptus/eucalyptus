@@ -64,7 +64,6 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
@@ -79,7 +78,7 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 
 public abstract class MessageStackHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
-  private static Logger LOG = Logger.getLogger( MessageStackHandler.class );
+  private final Logger LOG = Logger.getLogger( this.getClass() );
 
   @Override
   public void handleDownstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
@@ -95,11 +94,11 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
           LOG.warn( "==> Outbound message is null!: " + LogUtil.dumpObject( channelEvent ) );
         }
       }
+      channelHandlerContext.sendDownstream( channelEvent );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
-      Channels.fireExceptionCaught( channelHandlerContext, e );
+      Channels.fireExceptionCaught( channelHandlerContext.getChannel( ), e );
     }
-    channelHandlerContext.sendDownstream( channelEvent );
   }
 
   public abstract void outgoingMessage( final ChannelHandlerContext ctx, MessageEvent event ) throws Exception;
@@ -110,7 +109,9 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
     Throwable t = exceptionEvent.getCause( );
     if ( t != null && IOException.class.isAssignableFrom( t.getClass( ) ) ) {
       LOG.error( t, t );
+      LOG.debug( t, t );
     } else {
+      LOG.error( t, t );
       LOG.debug( t, t );
     }
     ctx.sendUpstream( exceptionEvent );
@@ -125,12 +126,13 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
       try {
         this.incomingMessage( channelHandlerContext, msgEvent );
+        channelHandlerContext.sendUpstream( channelEvent );
       } catch ( Throwable e ) {
         LOG.error( e, e );
         Channels.fireExceptionCaught( channelHandlerContext, e );
-        return;
       } 
+    } else {
+      channelHandlerContext.sendUpstream( channelEvent );
     }
-    channelHandlerContext.sendUpstream( channelEvent );
   }
 }

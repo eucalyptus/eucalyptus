@@ -26,7 +26,7 @@ public class LdapAuthBootstrapper extends Bootstrapper {
   public static final boolean ENABLE = LdapConfiguration.ENABLE_LDAP;
   
   @Override
-  public boolean load( Stage current ) throws Exception {
+  public boolean load( ) throws Exception {
     if ( ENABLE ) {
       LdapAuthProvider ldapAuth = new LdapAuthProvider( );
       Users.setUserProvider( ldapAuth );

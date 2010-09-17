@@ -188,13 +188,14 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 	}
 
 	time_t t = time(NULL);
-	char * date_str = asctime(localtime(&t)); /* points to a static area */
-	if (date_str==NULL) {
-	       fclose(fp);
-       	       return ERROR;
+	char date_str [26];
+	if (ctime_r(&t, date_str)==NULL) {
+        fclose(fp);
+        return ERROR;
 	}
 	assert (strlen(date_str)+7<=STRSIZE);
-	date_str [strlen(date_str)-1] = '\0'; /* trim off the newline */
+    char * newline = strchr (date_str, '\n');
+    if (newline!=NULL) { * newline = '\0'; } // remove newline that terminates asctime() output
 	char date_hdr [STRSIZE];
 	snprintf (date_hdr, STRSIZE, "Date: %s", date_str);
 	headers = curl_slist_append (headers, date_hdr);
@@ -225,9 +226,9 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
 	curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
     if (walrus_op) {
-        logprintfl (EUCADEBUG, "walrus_request(): writing %s/%s output to %s\n", verb, walrus_op, outfile);
+        logprintfl (EUCADEBUG, "walrus_request(): writing %s/%s output to %s on '%s'\n", verb, walrus_op, outfile, date_str);
     } else {
-        logprintfl (EUCADEBUG, "walrus_request(): writing %s output to %s\n", verb, outfile);
+        logprintfl (EUCADEBUG, "walrus_request(): writing %s output to %s on '%s'\n", verb, outfile, date_str);
 	}
     int retries = TOTAL_RETRIES;
     int timeout = FIRST_TIMEOUT;

@@ -5,12 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRule;
 import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.util.Messaging;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -148,7 +147,7 @@ public class NetworkGroupManager {
       return reply;
     }
     Network changedNetwork = ruleGroup.getVmNetwork( );
-    Messaging.dispatch( "vm://ClusterSink", changedNetwork );
+    ServiceContext.dispatch( "ClusterSink", changedNetwork );
     reply.set_return( true );
     return reply;
   }
@@ -181,7 +180,7 @@ public class NetworkGroupManager {
     db.merge( ruleGroup );
     db.commit( );
     Network changedNetwork = ruleGroup.getVmNetwork( );
-    Messaging.dispatch( "vm://ClusterSink", changedNetwork );
+    ServiceContext.dispatch( "ClusterSink", changedNetwork );
     reply.set_return( true );
     
     return reply;

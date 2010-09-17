@@ -1,26 +1,23 @@
 package com.eucalyptus.ws;
 
-import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.event.SystemClock;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Iterables;
 
 @Provides( com.eucalyptus.bootstrap.Component.any )
-@RunDuring(Bootstrap.Stage.Verification)
+@RunDuring( Bootstrap.Stage.Verification )
 public class ServiceVerifyBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceVerifyBootstrapper.class );
-
+  
   @Override
   public boolean start( ) throws Exception {
     LOG.info( LogUtil.header( "Components" ) );
@@ -41,7 +38,7 @@ public class ServiceVerifyBootstrapper extends Bootstrapper {
   private static void requireComponent( com.eucalyptus.bootstrap.Component comp, String prettyName ) {
     try {
       Component component = Components.lookup( comp );
-      if ( !component.isInitialized( ) || !component.isRunning( ) ) {
+      if ( !component.isRunning( ) ) {
         LOG.warn( LogUtil.header( "Failed to find a " + prettyName + " configuration.  You must register one in order to use Eucalyptus." ) );
       }
     } catch ( NoSuchElementException ex ) {
@@ -52,7 +49,7 @@ public class ServiceVerifyBootstrapper extends Bootstrapper {
   }
   
   @Override
-  public boolean load( Bootstrap.Stage stage ) throws Exception {
+  public boolean load( ) throws Exception {
     try {
       LOG.info( LogUtil.header( "Component Configurations" ) );
       Iterables.all( Components.list( ), Components.componentPrinter( ) );
@@ -61,4 +58,5 @@ public class ServiceVerifyBootstrapper extends Bootstrapper {
     }
     return true;
   }
+
 }

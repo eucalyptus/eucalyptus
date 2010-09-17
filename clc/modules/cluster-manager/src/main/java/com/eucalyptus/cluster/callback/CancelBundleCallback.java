@@ -7,10 +7,11 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.CancelBundleTaskResponseType;
 import edu.ucsb.eucalyptus.msgs.CancelBundleTaskType;
 
-public class CancelBundleCallback extends QueuedEventCallback<CancelBundleTaskType,CancelBundleTaskResponseType> {
+public class CancelBundleCallback extends MessageCallback<CancelBundleTaskType,CancelBundleTaskResponseType> {
 
   private static Logger LOG = Logger.getLogger( CancelBundleCallback.class );
   public CancelBundleCallback( CancelBundleTaskType request ) {
@@ -19,10 +20,10 @@ public class CancelBundleCallback extends QueuedEventCallback<CancelBundleTaskTy
   
 
   @Override
-  public void prepare( CancelBundleTaskType msg ) throws Exception {}
+  public void initialize( CancelBundleTaskType msg ) {}
 
   @Override
-  public void verify( CancelBundleTaskResponseType reply ) throws Exception {
+  public void fire( CancelBundleTaskResponseType reply ) {
     if ( !reply.get_return( ) ) {
       LOG.info( "Attempt to CancelBundleTask for instance " + this.getRequest( ).getBundleId( ) + " has failed." );
     } else {
@@ -37,7 +38,7 @@ public class CancelBundleCallback extends QueuedEventCallback<CancelBundleTaskTy
   }
 
   @Override
-  public void fail( Throwable e ) {
+  public void fireException( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
   }
