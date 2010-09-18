@@ -1148,7 +1148,7 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
     logprintfl (EUCAINFO, "preparing images for instance %s...\n", instanceId);
     
     if (strstr(platform, "windows")) {
-      e = makeWindowsFloppy(euca_home, rundir_path, keyName);
+      e = makeWindowsFloppy(euca_home, rundir_path, keyName, instanceId);
       if (e) {
 	logprintfl(EUCAERROR, "could not create windows bootup script floppy\n");
       }

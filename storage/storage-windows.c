@@ -170,13 +170,14 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize) {
 }
 
 
-int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
+int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *instName) {
   int fd, rc, rbytes, count, encsize, i;
   char *buf, *ptr, *tmp, *newpass, dest_path[1024], source_path[1024], fname[1024], password[16];
   char *encpassword;
+  char *newInstName;
   FILE *FH;
 
-  if (!keyName || !strlen(keyName)) {
+  if (!keyName || !strlen(keyName) || !strlen(instName)) {
     return(0);
   }
   
@@ -215,21 +216,33 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
   count=0;
   tmp = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
   newpass = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
-  if (!tmp || !newpass) {
+  newInstName = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSHOSTNAMEPLACEHOLDER")+1);
+ 
+  if (!tmp || !newpass || !newInstName) {
     if (tmp) free(tmp);
     if (newpass) free(newpass);
+    if (newInstName) free(newInstName);
     if (buf) free(buf);
     return(1);
   }
   bzero(tmp, strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
   bzero(newpass, strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER")+1);
+  bzero(newInstName, strlen("MAGICEUCALYPTUSHOSTNAMEPLACEHOLDER")+1);
+
   snprintf(newpass, strlen(password)+1, "%s", password);
+  snprintf(newInstName, strlen(instName)+1, "%s", instName);
   
   while(count < rbytes) {
     memcpy(tmp, ptr, strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER"));
     if (!strcmp(tmp, "MAGICEUCALYPTUSPASSWORDPLACEHOLDER")) {
       memcpy(ptr, newpass, strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER"));
     }
+	
+    if (!strcmp(tmp, "MAGICEUCALYPTUSHOSTNAMEPLACEHOLDER")) {
+      memcpy(ptr, newInstName, strlen("MAGICEUCALYPTUSHOSTNAMEPLACEHOLDER"));
+    }
+
+
     ptr++;
     count++;
   }
@@ -239,6 +252,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
     if (buf) free(buf);
     if (tmp) free(tmp);
     if (newpass) free(newpass);
+    if (newInstName) free(newInstName);
     return(1);
   }
   rc = write(fd, buf, rbytes);
@@ -246,6 +260,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
     if (buf) free(buf);
     if (tmp) free(tmp);
     if (newpass) free(newpass);
+    if (newInstName) free(newInstName);
     return(1);
   }
   close(fd);
@@ -258,6 +273,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
   if (rc) {
     if (tmp) free(tmp);
     if (newpass) free(newpass);
+    if (newInstName) free(newInstName);
     return(1);
   }
 
@@ -270,10 +286,12 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName) {
     if (encpassword) free(encpassword);
     if (tmp) free(tmp);
     if (newpass) free(newpass);
+    if (newInstName) free(newInstName);
     return(1);
   }
   if (encpassword) free(encpassword);
   if (tmp) free(tmp);
   if (newpass) free(newpass);
+  if (newInstName) free(newInstName);
   return(0);
 }
