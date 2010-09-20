@@ -95,7 +95,7 @@ class Pruner
 
 			if (! instanceInfoMap.containsKey(it.record_correlation_id)) {
 				instanceInfoMap[it.record_correlation_id]=new InstanceInfo()
-				LOG.info("Found new instance:" + it.record_correlation_id)
+				LOG.debug("Found new instance:" + it.record_correlation_id)
 			}
 			InstanceInfo info = instanceInfoMap[it.record_correlation_id]
 
@@ -144,14 +144,14 @@ class Pruner
 		AND UNIX_TIMESTAMP(record_timestamp) > ?
 		AND UNIX_TIMESTAMP(record_timestamp) < ?
 		"""
-		LOG.info("Begin deleting")
+		LOG.debug("Begin deleting")
 		Integer redundantRowsCnt
 		instanceInfoMap.each { key, value ->
 			redundantRowsCnt = value.rowCnt-(targetRowsNum*2)
-			LOG.info("INSTANCE id:${key} rowsAboveThreshold:${redundantRowsCnt}")
+			LOG.debug("INSTANCE id:${key} rowsAboveThreshold:${redundantRowsCnt}")
 			if (value.rowCnt-(targetRowsNum*2) > redundantRowsDeleteThreshold) {
 				this.sql.executeUpdate(query, [key, value.latestEarlyTs, value.earliestLateTs])
-				LOG.info(String.format("DELETE id:%s %d-%d",
+				LOG.debug(String.format("DELETE id:%s %d-%d",
 										key, value.latestEarlyTs, value.earliestLateTs))
 			}
 		}
@@ -177,11 +177,11 @@ class Pruner
 		def res = sql.firstRow("SELECT count(*) AS cnt FROM records_logs")
 		if (QUERY_LIMIT != null) {
 			for (int i=0; i<res.cnt.intdiv(QUERY_LIMIT); i++) {
-				LOG.info("Prune iteration ${i}")
+				LOG.debug("Prune iteration ${i}")
 				prune()  //prune 4M rows
 			}
 		}
-		LOG.info("Prune iteration final")
+		LOG.debug("Prune iteration final")
 		prune()  //prune remainder of rows less than 4M
 	}
 
@@ -229,7 +229,7 @@ class Pruner
 			LOG.setLevel(Level.OFF)
 		}
 
-		LOG.info(String.format("Using db:%s user:%s host:%s port:%d debug:%s " +
+		LOG.debug(String.format("Using db:%s user:%s host:%s port:%d debug:%s " +
 								"after:%d before:%d threshold:%d target:%d i:%b", 
 								optsMap.D, optsMap.u, optsMap.h, optsMap.P, optsMap.g,
 								optsMap.a, optsMap.b, optsMap.t, optsMap.r, optsMap.i))
