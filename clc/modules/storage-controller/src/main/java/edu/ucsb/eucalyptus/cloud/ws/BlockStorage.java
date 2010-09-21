@@ -592,7 +592,7 @@ public class BlockStorage {
 			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));			
 		} catch (EucalyptusCloudException ex) {
 			LOG.error("Unable to find volume: " + volumeId + ex);
-			throw new EntityNotFoundException("Unable to find volume: " + volumeId + ex);
+			throw new NoSuchEntityException("Unable to find volume: " + volumeId + ex);
 		} finally {
 			db.commit();
 		}
@@ -615,7 +615,7 @@ public class BlockStorage {
 			VolumeInfo volumeInfo = db.getUnique(new VolumeInfo(volumeId));			
 		} catch (EucalyptusCloudException ex) {
 			LOG.error("Unable to find volume: " + volumeId + ex);
-			throw new EntityNotFoundException("Unable to find volume: " + volumeId + ex);
+			throw new NoSuchEntityException("Unable to find volume: " + volumeId + ex);
 		} finally {
 			db.commit();
 		}
