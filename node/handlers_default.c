@@ -142,6 +142,9 @@ doRunInstance(	struct nc_state_t *nc,
         return 2;
     }
     instance->launchTime = time (NULL);
+
+    // TODO: parse and verify the virtual boot record
+    
     change_state(instance, STAGING);
 
     sem_p (inst_sem); 

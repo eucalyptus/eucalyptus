@@ -228,12 +228,12 @@ int main (int argc, char **argv)
         case 'b':
         {
                 char * strtok_outer;
-                char * vbr = strtok_r (optarg, "|", &strtok_outer);
+                char * vbr = strtok_r (optarg, "~", &strtok_outer);
                 for (vbr_size=0; vbr!=NULL; vbr_size++) {
                         char * vbr_copy = strdup (vbr);
                         char * strtok_inner;
                         int f = 1;
-#define _GET(_a,_b)     char * _a = strtok_r (_b, ",", &strtok_inner); if ( _a == NULL ) { fprintf (stderr, "ERROR: failed to parse field %d in VBR entry '%s'\n", f, vbr_copy); exit (1); } f++
+#define _GET(_a,_b)     char * _a = strtok_r (_b, "|", &strtok_inner); if ( _a == NULL ) { fprintf (stderr, "ERROR: failed to parse field %d in VBR entry '%s'\n", f, vbr_copy); exit (1); } else { printf ("\tVBR=%s\n", _a); } f++
                         // loc,type,id,dev,size,fmt
                         _GET(resourceLocation,vbr);
                         _GET(type,NULL);
@@ -250,7 +250,7 @@ int main (int argc, char **argv)
                         free (vbr_copy);
 
                         virtualBootRecord * r = params.virtualBootRecord + vbr_size;
-#define _SET(_a)        strncpy (r->_a, _a, sizeof(_a))
+#define _SET(_a)        strcpy (r->_a, _a)
                         _SET(resourceLocation);
                         _SET(type);
                         _SET(id);
@@ -259,7 +259,7 @@ int main (int argc, char **argv)
                         r->size = (int)size;
 
                         // next iteration
-                        vbr = strtok_r (NULL, "|", &strtok_outer);
+                        vbr = strtok_r (NULL, "~", &strtok_outer);
                 }
                 break;
         }

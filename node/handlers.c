@@ -377,6 +377,7 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
 			char *brname,
 			int use_virtio_net,
 			int use_virtio_root,
+                        char * root_iscsi_dev,
 			char **xml)
 {
     char buf [MAX_PATH];
@@ -391,19 +392,22 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
     if (use_virtio_root) {
         strncat(buf, " --virtioroot", MAX_PATH);
     }
-    
+    if (root_iscsi_dev!=NULL) {
+            strncat(buf, " --blockroot", MAX_PATH);
+    }
     if (params->disk > 0) { /* TODO: get this info from scMakeImage */
         strncat (buf, " --ephemeral", MAX_PATH);
     }
     * xml = system_output (buf);
     if ( ( * xml ) == NULL ) {
-        logprintfl (EUCAFATAL, "%s: %s\n", gen_libvirt_cmd_path, strerror (errno));
+            logprintfl (EUCAFATAL, "%s: %s\n", gen_libvirt_cmd_path, strerror (errno));
         return ERROR;
     }
     
     /* the tags better be not substring of other tags: BA will substitute
      * ABABABAB */
     replace_string (xml, "BASEPATH", disk_path);
+    replace_string (xml, "DEVNAME", root_iscsi_dev);
     replace_string (xml, "SWAPPATH", disk_path);
     replace_string (xml, "NAME", instanceId);
     replace_string (xml, "PRIVMACADDR", privMac);
@@ -510,6 +514,7 @@ monitoring_thread (void *arg)
 
 void *startup_thread (void * arg)
 {
+        char * local_iscsi_dev = NULL;
     ncInstance * instance = (ncInstance *)arg;
     virDomainPtr dom = NULL;
     char * disk_path, * xml=NULL;
@@ -539,6 +544,30 @@ void *startup_thread (void * arg)
 				 &disk_path, 
 				 addkey_sem, nc_state.convert_to_disk,
 				 instance->params.disk*1024);
+
+    // prepare iSCSI-backed images
+    for (i=0; i<EUCA_MAX_VBRS; i++) {
+            virtualBootRecord * r = instance->params.virtualBootRecord + i;
+            if (strncmp (r->type, "root", sizeof(r->type))==0) {
+                    logprintfl (EUCAINFO, "found root VBR: %s\n", r->resourceLocation);
+                    char * remoteDev = r->resourceLocation;
+                    local_iscsi_dev = connect_iscsi_target(nc_state.connect_storage_cmd_path, remoteDev);
+                    if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
+                            logprintfl(EUCAERROR, "ERROR: failed to connect to iscsi target for root disk\n");
+                            change_state (instance, SHUTOFF);
+                            return NULL;
+                    }
+                    struct stat statbuf;
+                    int rc = stat (local_iscsi_dev, &statbuf);
+                    if (rc) {
+                            logprintfl(EUCAERROR, "ERROR: cannot locate local block device file '%s'\n", remoteDev);
+                            change_state (instance, SHUTOFF);
+                            return NULL;
+                    }
+                    break;
+            }
+    }
+
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
@@ -566,6 +595,7 @@ void *startup_thread (void * arg)
                               brname,
                               nc_state.config_use_virtio_net,
                               nc_state.config_use_virtio_root,
+                              local_iscsi_dev,
                               &xml);
 
     if (brname) free(brname);

@@ -63,6 +63,7 @@ permission notice:
 #include <pthread.h>
 #include "eucalyptus.h"
 
+#define SMALL_CHAR_BUFFER_SIZE 64
 #define CHAR_BUFFER_SIZE 512
 #define BIG_CHAR_BUFFER_SIZE 1024
 
@@ -72,12 +73,12 @@ typedef struct ncMetadata_t {
 } ncMetadata;
 
 typedef struct virtualBootRecord_t {
-	char resourceLocation[64];
-	char guestDeviceName[64];
+	char resourceLocation[CHAR_BUFFER_SIZE];
+	char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];
 	int size;
-	char format[64];
-        char id [64];
-        char type [64];
+	char format[SMALL_CHAR_BUFFER_SIZE];
+        char id [SMALL_CHAR_BUFFER_SIZE];
+        char type [SMALL_CHAR_BUFFER_SIZE];
 } virtualBootRecord;
 
 typedef struct virtualMachine_t {
