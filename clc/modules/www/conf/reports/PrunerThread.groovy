@@ -13,7 +13,7 @@ class PrunerThread
 	implements Runnable
 {
 
-	private static Integer INTERVAL_NUM_SECS = 120
+	private static Integer INTERVAL_NUM_SECS = 3600
 
 	private static Logger  LOG = Logger.getLogger( PrunerThread.class )
 
