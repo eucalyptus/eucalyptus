@@ -1,5 +1,5 @@
-import groovy.sql.*;
 import java.sql.Timestamp;
+import groovy.sql.*;
 import org.apache.log4j.*;
 
 /**
@@ -11,9 +11,8 @@ import org.apache.log4j.*;
  * @author twerges
  */
 class Pruner
-	implements Runnable
 {
-	private static Integer QUERY_LIMIT = 500000  //HACK to avoid MySQL memory leak; @see initialPrune
+	private static Integer QUERY_LIMIT = 1000000  //HACK to avoid MySQL memory leak; @see pruneRepeatedly
 	private static Logger  LOG = Logger.getLogger( Pruner.class )
 
 	private final Sql sql
@@ -172,21 +171,19 @@ class Pruner
 	 * This method calls prune repeatedly, so the entire log will be pruned (4M rows at
 	 * a time).
 	 */
-	public void initialPrune()
+	public void pruneRepeatedly()
 	{
 		def res = sql.firstRow("SELECT count(*) AS cnt FROM records_logs")
 		if (QUERY_LIMIT != null) {
 			for (int i=0; i<res.cnt.intdiv(QUERY_LIMIT); i++) {
-				LOG.debug("Prune iteration ${i}")
+				LOG.info("Prune iteration ${i}")
 				prune()  //prune 4M rows
 			}
 		}
-		LOG.debug("Prune iteration final")
+		LOG.info("Prune iteration final")
 		prune()  //prune remainder of rows less than 4M
 	}
 
-	/** Implements runnable so it can be run in a thread in user_vms.groovy */
-	public void run() { prune(); }
 
 	/**
 	 * Command-line invocation of the prune method
@@ -205,7 +202,7 @@ class Pruner
 		cli.b(args:1, required:false, argName:"onlyBeforeTimestamp", "only prunes before timestamp in secs (default max timestamp)")
 		cli.t(args:1, required:false, argName:"redundantRowsDeleteThreshold", "only prunes instances more than n redundant rows (default 100)")
 		cli.r(args:1, required:false, argName:"targetRowsNum", "how many rows to preserve at the beginning and end for each instance (default 80)")
-		cli.i(args:0, required:false, argName:"initialPrune", "performs initial prune")
+		cli.e(args:0, required:false, argName:"pruneRepeatedly", "repeatedly prunes one section at a time")
 		def options = cli.parse(args)
 		if (!options) System.exit(-1)
 
@@ -221,7 +218,7 @@ class Pruner
 		optsMap['b']=options.b ? Long.parseLong(options.b) : 9999999999l
 		optsMap['t']=options.t ? Integer.parseInt(options.t) : 100
 		optsMap['r']=options.r ? Integer.parseInt(options.r) : 80
-		optsMap['i']=options.i
+		optsMap['e']=options.e
 
 		if (optsMap['g']) {
 			LOG.setLevel(Level.DEBUG)
@@ -232,7 +229,7 @@ class Pruner
 		LOG.debug(String.format("Using db:%s user:%s host:%s port:%d debug:%s " +
 								"after:%d before:%d threshold:%d target:%d i:%b", 
 								optsMap.D, optsMap.u, optsMap.h, optsMap.P, optsMap.g,
-								optsMap.a, optsMap.b, optsMap.t, optsMap.r, optsMap.i))
+								optsMap.a, optsMap.b, optsMap.t, optsMap.r, optsMap.e))
 
 
 		/* Create a mysql connection, then prune */
@@ -240,8 +237,8 @@ class Pruner
 		Sql sql = Sql.newInstance(connStr, optsMap['u'],optsMap['p'],'com.mysql.jdbc.Driver')
 
 		Pruner pruner = new Pruner(sql);
-		if (optsMap['i']) {
-			pruner.initialPrune()
+		if (optsMap['e']) {
+			pruner.pruneRepeatedly()
 		} else {
 			pruner.prune(optsMap['t'], optsMap['r'], optsMap['a'], optsMap['b'])
 		}

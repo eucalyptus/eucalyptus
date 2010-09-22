@@ -1,16 +1,24 @@
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import com.eucalyptus.auth.*;
 import com.eucalyptus.auth.principal.*;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.BaseRecord;
 import groovy.sql.Sql;
+import org.apache.log4j.*;
+
+Logger  LOG = Logger.getLogger( "user_vms.groovy" )
 
 EntityWrapper db = EntityWrapper.get( BaseRecord.class );
 Sql sql = new Sql( db.getSession( ).connection( ) )
 def groups = [:]
 def accountedFor = new TreeSet()
+
+
+LOG.info("Generating instance report")
+
+/* Periodically prune the log table */
+PrunerThread.startThreadIfNotRunning()
+
+
 List userResults = new ArrayList()
 Users.listAllUsers().each{ User user ->
   def u = new UserVmData() {{
@@ -19,12 +27,6 @@ Users.listAllUsers().each{ User user ->
   };
 
 
-/* Register a thread executor that will periodically prune the log table
- */
-if( java.lang.System.getProperties( ).setProperty("euca.periodic.filter", "running" ) == null ) {
-	println "Creating periodic record filter."
-	Executors.newSingleThreadScheduledExecutor( ).scheduleAtFixedRate( new Pruner( sql ), 0l, 1, TimeUnit.HOURS );
-}
 
 def query = "SELECT MAX(UNIX_TIMESTAMP(record_timestamp)*1000) as terminate_time, " +
             " MIN(UNIX_TIMESTAMP(record_timestamp)*1000) as start_time, " +
@@ -39,7 +41,9 @@ def query = "SELECT MAX(UNIX_TIMESTAMP(record_timestamp)*1000) as terminate_time
             "GROUP BY instance_id " +
             "HAVING start_time < ${notAfter} " +
             "AND terminate_time > ${notBefore};"
-  sql.rows( query ).each{
+  sql.rows( query ).each {
+	LOG.debug(String.format("Instance data: terminate:%d start:%d user_id:%s instance_id:%s",
+							it.terminate_time, it.start_time, it.user_id, it.instance_id))
     if( accountedFor.add( it.instance_id ) ) {
       def type = it.instance_type.replaceAll("\\.","")
       Long startTime = ( it.start_time > notBefore ) ? it.start_time : notBefore;
