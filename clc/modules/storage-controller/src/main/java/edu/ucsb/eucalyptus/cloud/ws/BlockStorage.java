@@ -76,8 +76,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.persistence.EntityNotFoundException;
-
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.mule.RequestContext;
