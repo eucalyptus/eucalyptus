@@ -297,7 +297,7 @@ if [ -n "$NAGIOS" ]; then
 
 	if [ -n "${CLOUD}" ]; then
 		# now for the CLOUD
-		if ! `echo "$CC_HOSTS $NC_HOSTS"|grep $x > /dev/null` ; then
+		if ! `echo "$SC_HOSTS $CC_HOSTS $NC_HOSTS"|grep $CLOUD > /dev/null` ; then
 			print_host ${CLOUD}
 		fi
 		PRINT_HOSTS="${CLOUD}"
@@ -307,7 +307,7 @@ if [ -n "$NAGIOS" ]; then
 
 	if [ -n "${WALRUS}" ]; then
 		# now for the WALRUS
-		if ! `echo "$CC_HOSTS $NC_HOSTS $CLOUD $SC_HOSTS"|grep $x > /dev/null` ; then
+		if ! `echo "$CC_HOSTS $NC_HOSTS $CLOUD $SC_HOSTS"|grep $WALRUS > /dev/null` ; then
 			print_host ${WALRUS}
 		fi
 		PRINT_HOSTS="${WALRUS}"

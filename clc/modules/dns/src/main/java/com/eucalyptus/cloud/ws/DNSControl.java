@@ -135,12 +135,6 @@ public class DNSControl {
 			for(ARecordInfo aRecInfo : aRecInfos) {
 				ZoneManager.addRecord(aRecInfo);
 			}
-			try {
-				ZoneManager.registerZone( TransientZone.getExternalName( ), TransientZone.getInstanceExternalZone( ) );
-				ZoneManager.registerZone( TransientZone.getInternalName( ), TransientZone.getInstanceInternalZone( ) );
-			} catch ( Throwable e ) {
-				LOG.debug( e, e );
-			}
 			db.commit();
 		} catch(EucalyptusCloudException ex) {		
 			db.rollback();
