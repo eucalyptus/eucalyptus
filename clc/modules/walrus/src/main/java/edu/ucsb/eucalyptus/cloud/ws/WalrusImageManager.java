@@ -522,7 +522,12 @@ public class WalrusImageManager {
 		ImageCacher imageCacher = imageCachers.putIfAbsent(bucketName + manifestKey, new ImageCacher(bucketName, manifestKey, decryptedImageKey));
 		if(imageCacher == null) {
 			if(decryptedImageKey == null) {
-				decryptedImageKey = decryptImage(bucketName, manifestKey, userId, isAdministrator);
+				try {
+					decryptedImageKey = decryptImage(bucketName, manifestKey, userId, isAdministrator);
+				} catch(EucalyptusCloudException ex) {
+					imageCachers.remove(bucketName + manifestKey);
+					throw ex;
+				}
 				//decryption worked. Add it.
 				ImageCacheInfo foundImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 				foundImageCacheInfo.setImageName(decryptedImageKey);
