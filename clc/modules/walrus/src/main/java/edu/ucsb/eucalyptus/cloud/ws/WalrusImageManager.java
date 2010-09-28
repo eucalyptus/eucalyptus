@@ -232,11 +232,12 @@ public class WalrusImageManager {
 						try {
 							boolean verified = false;
 							for(User user:Users.listAllUsers( )) {
-								X509Certificate cert = user.getX509Certificate( );
-								if(cert != null)
-									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
-								if(verified)
-									break;
+								for (X509Certificate cert : user.getAllX509Certificates()) {
+									if(cert != null)
+										verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+									if(verified)
+										break;
+								}
 							}
 							if(!verified) {
 								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
@@ -260,8 +261,13 @@ public class WalrusImageManager {
 							throw new AccessDeniedException(userId,e);            
 						}         
 						try {
-							X509Certificate cert = user.getX509Certificate( );
-							signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+							for(X509Certificate cert : user.getAllX509Certificates()) {
+								if(cert != null) {
+									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+								}
+								if(signatureVerified)
+									break;
+							}
 						} catch(Exception ex) {
 							db.rollback();
 							LOG.error(ex, ex);
