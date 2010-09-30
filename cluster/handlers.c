@@ -2027,7 +2027,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 		logprintfl(EUCAERROR, "RunInstances(): could not create console/floppy cache directory '%s'\n", cdir);
 	      } else {
 		// drop encrypted windows password and floppy on filesystem
-		rc = makeWindowsFloppy(config->eucahome, cdir, keyName);
+		rc = makeWindowsFloppy(config->eucahome, cdir, keyName, instId);
 		if (rc) {
 		  logprintfl(EUCAERROR, "RunInstances(): could not create console/floppy cache\n");
 		}

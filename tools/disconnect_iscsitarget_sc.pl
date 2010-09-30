@@ -24,7 +24,7 @@ if (!-x $ISCSIADM || !-x $OPENSSL) {
 # check input params
 $dev_string = untaint(shift @ARGV);
 
-($euca_home, $ip, $store, $encrypted_password) = parse_devstring($dev_string);
+($euca_home, $ip, $store, $encrypted_password, $lun, $auth_mode) = parse_devstring($dev_string);
 
 if(length($euca_home) <= 0) {
     print STDERR "EUCALYPTUS path is not defined.\n";
@@ -40,13 +40,23 @@ if((length($ip) <= 0) || (length($store) <= 0) || length($encrypted_password) <=
     do_exit(1);
 }
 
-$password = decrypt_password($encrypted_password, $sc_pk);
+#$password = decrypt_password($encrypted_password, $sc_pk);
 
-if(length($password) <= 0) {
-    print STDERR "Unable to decrypt target password. Aborting.\n";
+$passwd = "not_required";
+#if(length($password) <= 0) {
+ #   print STDERR "Unable to decrypt target password. Aborting.\n";
+#}
+
+if ((length($lun) > 0) && ($lun > -1)) {
+    delete_lun($store, $lun);
+    rescan_target();
+    if(only_device($store, $lun)) {
+        logout_target($ip, $store, $passwd);
+    }
+} else {
+    logout_target($ip, $store, $passwd);
 }
 
-logout_target($ip, $store, $password);
 
 sub get_storage_pk {
     if(!open GET_KEY, "openssl pkcs12 -in $P12_PATH -name eucalyptus -name 'eucalyptus' -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes | grep -A30 'friendlyName: storage' | grep -A26 'BEGIN RSA' |") {
@@ -69,30 +79,90 @@ sub parse_devstring {
     return split($DELIMITER, $dev_string);
 }
 
+sub delete_lun {
+    my ($store, $lun) = @_;
+    $num_retries = 1;
+
+    for ($i = 0; $i < $num_retries; ++$i) {
+      if(!open GETSESSION, "iscsiadm -m session -P 3 |") {
+          print STDERR "Could not get iscsi session information";
+          do_exit(1)
+      }
+
+      $found_target = 0;
+      $sid = -1;
+      $host_number = -1;
+      while (<GETSESSION>) {
+          if ($_ =~ /Target: (.*)\n/) {
+              $found_target = 1 if $1 eq $store;
+          } elsif ($_ =~ /.*SID: (.*)\n/) {
+              if ($found_target == 1) {
+                $sid = $1;
+              }
+          } elsif ($_ =~ /.*Host Number:\s(.*)\sState.*\n/) {
+              if ($found_target == 1) {
+                $host_number = $1;
+                last;
+              }
+          }
+      }
+      close GETSESSION;
+    }
+    return if $sid < 0 && $host_number < 0;
+    #this path is kernel specific. FIXME.
+    $delete_path = "/sys/class/iscsi_session/session$sid/device/target$host_number:0:0/$host_number:0:0:$lun/delete";
+    if (!open DELETELUN, ">$delete_path") {
+        print STDERR "Unable to write to $delete_path\n";
+        do_exit(1);
+    }
+    print DELETELUN "1";
+    close DELETELUN;
+}
+
+sub only_device {
+    my ($store, $lun) = @_;
+    $num_retries = 5;
+    for ($i = 0; $i < $num_retries; ++$i) {
+      $only = 1;
+      if(!open GETSESSION, "iscsiadm -m session -P 3 |") {
+          print STDERR "Could not get iscsi session information";
+          do_exit(1)
+      }
+
+      $found_target = 0;
+      while (<GETSESSION>) {
+          if ($_ =~ /Target: (.*)\n/) {
+              last if $found_target == 1;
+              if ($1 eq $store) {
+                  $found_target = 1;
+                  $only = 1;
+              }
+          } elsif ($_ =~ /.*Attached scsi disk ([a-zA-Z0-9]+).*\n/) {
+              if ($found_target == 1) {
+                  $only = 0;
+                  last;
+              }
+          }
+      }
+      close GETSESSION;
+    }
+    return $only;
+}
+
+sub rescan_target {
+  if(!open GETSESSION, "iscsiadm -m session -R |") {
+    print STDERR "Could not get iscsi session information";
+    do_exit(1)
+  }
+  close GETSESSION;
+  print "Done rescanning.";
+}
+
 sub logout_target {
     my ($ip, $store, $passwd) = @_;
-    if(!open DISCOVERY, "iscsiadm -m discovery -t sendtargets -p $ip |") {
-	print "Could not discover targets";
-	do_exit(1)
-    }
 
-    while(<DISCOVERY>) {};
 
-    if(!open USERNAME, "$ISCSIADM -m node -T $store --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
-        print "Could not update target username";
-        do_exit(1);
-    }
-
-    while(<USERNAME>) {};
-
-    if(!open PASSWD, "$ISCSIADM -m node -T $store --op=update --name node.session.auth.password --value=$passwd |") {
-        print "Could not update target password";
-        do_exit(1);
-    }
-
-    while(<PASSWD>) {};
-
-    if(!open DISCONNECT, "$ISCSIADM -m node -T $store -u |") {
+    if(!open DISCONNECT, "$ISCSIADM -m node -T $store -p $ip -u |") {
         print "Could not logout from target";
         do_exit(1);
     }
