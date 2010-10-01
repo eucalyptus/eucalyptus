@@ -128,7 +128,7 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 	def GetStorageConfigurationResponseType() {}
 	
 	def GetStorageConfigurationResponseType(String name,
-			List<ComponentProperty> storageParams) {
+	List<ComponentProperty> storageParams) {
 		this.name = name;
 		this.storageParams = storageParams;
 	}

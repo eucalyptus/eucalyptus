@@ -244,7 +244,7 @@ public class ClusterAllocator extends Thread {
         return VmInstances.getAsMAC( instanceId );
       }
     } );
-    List<String> networkIndexes = Lists.newArrayList( Iterables.transform( childToken.getPrimaryNetwork( ).getIndexes( ), Functions.TO_STRING ) );
+    List<String> networkIndexes = ( childToken.getPrimaryNetwork( ) == null ) ? new ArrayList<String>( ) : Lists.newArrayList( Iterables.transform( childToken.getPrimaryNetwork( ).getIndexes( ), Functions.TO_STRING ) );
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), 
                                    imgInfo, vmInfo, keyInfo, 
                                    childToken.getInstanceIds( ), macs, 
