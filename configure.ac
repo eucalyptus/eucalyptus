@@ -188,6 +188,10 @@ AC_CHECK_LIB([virt],[main],true,AC_MSG_ERROR([Cannot find libvirt!]))
 AC_CHECK_LIB([curl],[main],true,AC_MSG_ERROR([Cannot find libcurl!]))
 AC_CHECK_LIB([z],[inflate])
 AC_CHECK_LIB([cap],[cap_from_name],,AC_MSG_WARN([Cannot find sufficiently recent libcap will not use it]))
+AC_CHECK_LIB([xml2],[xmlInitParser],,AC_MSG_ERROR([Cannot find libxml2]))
+AC_CHECK_LIB([xslt],[xsltApplyStylesheet],,AC_MSG_ERROR([Cannot find libxslt]))
+LIBXSLT_LIBS=$(xslt-config --libs)
+LIBXSLT_CFLAGS=$(xslt-config --cflags)
 
 # Checks for header files.
 AC_HEADER_DIRENT
@@ -248,7 +252,7 @@ AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
 AC_SUBST(EXTENSIONS)
 AC_SUBST(INTERFACE_THEME)
-
-
+AC_SUBST(LIBXSLT_LIBS)
+AC_SUBST(LIBXSLT_CFLAGS)
 
 AC_OUTPUT

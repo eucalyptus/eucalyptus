@@ -98,18 +98,18 @@ doInitialize (struct nc_state_t *nc)
 
 static int
 doRunInstance(	struct nc_state_t *nc,
-        ncMetadata *meta,
-        char *instanceId,
-        char *reservationId,
-        virtualMachine *params, 
-        char *imageId, char *imageURL, 
-        char *kernelId, char *kernelURL, 
-        char *ramdiskId, char *ramdiskURL, 
-        char *keyName, 
-        netConfig *netparams,
-        char *userData, char *launchIndex,
-        char **groupNames, int groupNamesSize,
-        ncInstance **outInst)
+                ncMetadata *meta,
+                char *instanceId,
+                char *reservationId,
+                virtualMachine *params, 
+                char *imageId, char *imageURL,  // ignored
+                char *kernelId, char *kernelURL, // ignored
+                char *ramdiskId, char *ramdiskURL, // ignored
+                char *keyName, 
+                netConfig *netparams,
+                char *userData, char *launchIndex,
+                char **groupNames, int groupNamesSize,
+                ncInstance **outInst)
 {
     ncInstance * instance = NULL;
     * outInst = NULL;
@@ -130,21 +130,151 @@ doRunInstance(	struct nc_state_t *nc,
     if (!(instance = allocate_instance (instanceId, 
                                         reservationId,
                                         params, 
-                                        imageId, imageURL,
-                                        kernelId, kernelURL,
-                                        ramdiskId, ramdiskURL,
                                         instance_state_names[PENDING], 
                                         PENDING, 
                                         meta->userId, 
                                         &ncnet, keyName,
                                         userData, launchIndex, groupNames, groupNamesSize))) {
         logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
-        return 2;
+        return ERROR;
     }
     instance->launchTime = time (NULL);
 
-    // TODO: parse and verify the virtual boot record
-    
+    // parse and sanity-check the virtual boot record
+    int i;
+    for (i=0; i<EUCA_MAX_VBRS; i++) {
+        virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
+
+        // get the type (the only mandatory field)
+        if (strstr (vbr->typeName, "image") == vbr->typeName) { 
+            vbr->type = NC_RESOURCE_IMAGE; 
+            params->image = vbr;
+        } else if (strstr (vbr->typeName, "kernel") == vbr->typeName) { 
+            vbr->type = NC_RESOURCE_KERNEL; 
+            params->kernel = vbr;
+        } else if (strstr (vbr->typeName, "ramdisk") == vbr->typeName) { 
+            vbr->type = NC_RESOURCE_RAMDISK; 
+            params->ramdisk = vbr;
+        } else if (strstr (vbr->typeName, "ephemeral") == vbr->typeName) { 
+            vbr->type = NC_RESOURCE_EPHEMERAL; 
+            if (strstr (vbr->typeName, "ephemeral0") == vbr->typeName) {
+                params->ephemeral0 = vbr;
+            }
+        } else if (strstr (vbr->typeName, "swap") == vbr->typeName) { 
+            vbr->type = NC_RESOURCE_SWAP; 
+            params->swap = vbr;
+        } else if (strstr (vbr->typeName, "ebs") == vbr->typeName) { 
+            vbr->type = NC_RESOURCE_EBS;
+        } else {
+            logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
+            free_instance (&instance);
+            return ERROR;
+        }
+        
+        // identify the type of resource location from location string
+        if ((strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation)
+            && (strcasestr (vbr->resourceLocation, "services/walrus") != NULL)) { vbr->locationType = NC_LOCATION_WALRUS; 
+        } else if (strcasestr (vbr->resourceLocation, "iqn:") == vbr->resourceLocation) { vbr->locationType = NC_LOCATION_IQN;
+        } else if (strcasestr (vbr->resourceLocation, "aoe:") == vbr->resourceLocation) { vbr->locationType = NC_LOCATION_AOE;
+        } else if (strcasestr (vbr->resourceLocation, "none") == vbr->resourceLocation) { 
+            if (vbr->type!=NC_RESOURCE_EPHEMERAL && vbr->type!=NC_RESOURCE_SWAP) {
+                logprintfl (EUCAERROR, "Error: resourceLocation not specified for non-ephemeral resource '%s'\n", vbr->resourceLocation);
+                free_instance (&instance);
+                return ERROR;
+            }            
+            vbr->locationType = NC_LOCATION_NONE;
+        } else {
+            logprintfl (EUCAERROR, "Error: failed to parse resource location '%s'\n", vbr->resourceLocation);
+            free_instance (&instance);
+            return ERROR;
+        }
+        
+        // device can be 'none' only for kernel and ramdisk types
+        if (!strcmp (vbr->guestDeviceName, "none")) {
+            if (vbr->type!=NC_RESOURCE_KERNEL &&
+                vbr->type!=NC_RESOURCE_RAMDISK) {
+                logprintfl (EUCAERROR, "Error: guestDeviceName not specified for resource '%s'\n", vbr->resourceLocation);
+                free_instance (&instance);
+                return ERROR;
+            }
+
+        } else { // should be a valid device
+            // trim off "/dev/" prefix, if present, and verify the rest
+            if (strstr (vbr->guestDeviceName, "/dev/") == vbr->guestDeviceName) {
+                logprintfl (EUCAWARN, "Warning: trimming off invalid prefix '/dev/' from guestDeviceName '%s'\n", vbr->guestDeviceName);
+                char buf [10];
+                strncpy (buf, vbr->guestDeviceName + 5, sizeof (buf));
+                strncpy (vbr->guestDeviceName, buf, sizeof (vbr->guestDeviceName));
+            }
+            if (strlen (vbr->guestDeviceName)<3) {
+                logprintfl (EUCAERROR, "Error: invalid guestDeviceName '%s'\n", vbr->guestDeviceName);
+                free_instance (&instance);
+                return ERROR;
+            }
+            {
+                char t = vbr->guestDeviceName [0];
+                char d = vbr->guestDeviceName [1];
+                char n = vbr->guestDeviceName [2];
+                long long int p = 0;
+                if (strlen (vbr->guestDeviceName)>3) {
+                    errno = 0;
+                    p = strtoll (vbr->guestDeviceName + 3, NULL, 10);
+                    if (errno!=0) { 
+                        fprintf (stderr, "ERROR: failed to parse partition number in guestDeviceName '%s'\n", vbr->guestDeviceName);
+                        free_instance (&instance);
+                        return ERROR; 
+                    } 
+                }
+                if (t!='h' && t!='s' && t!='f' && t!='v') {
+                    fprintf (stderr, "ERROR: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
+                    free_instance (&instance);
+                    return ERROR; 
+                }
+                if (d!='d') {
+                    fprintf (stderr, "ERROR: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
+                    free_instance (&instance);
+                    return ERROR; 
+                }
+                if (!(n>='a' && n<='z')) {
+                    fprintf (stderr, "ERROR: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
+                    free_instance (&instance);
+                    return ERROR; 
+                }
+            }
+        }
+
+        // parse ID
+        if (strlen (vbr->id)<4) {
+            fprintf (stderr, "ERROR: failed to parse VBR resource ID '%s' (use 'none' when no ID)\n", vbr->id);
+            free_instance (&instance);
+            return ERROR; 
+        }
+
+        // parse disk formatting instructions (none = do not format)
+        if (strstr (vbr->formatName, "none") == vbr->formatName) { vbr->format = NC_FORMAT_NONE;
+        } else if (strstr (vbr->formatName, "ext2") == vbr->formatName) { vbr->format = NC_FORMAT_EXT2;
+        } else if (strstr (vbr->formatName, "ext3") == vbr->formatName) { vbr->format = NC_FORMAT_EXT3;
+        } else if (strstr (vbr->formatName, "ntfs") == vbr->formatName) { vbr->format = NC_FORMAT_NTFS;
+        } else if (strstr (vbr->formatName, "swap") == vbr->formatName) { vbr->format = NC_FORMAT_SWAP;
+        } else {
+            logprintfl (EUCAERROR, "Error: failed to parse resource format '%s'\n", vbr->formatName);
+            free_instance (&instance);
+            return ERROR;
+        }
+        if (vbr->type==NC_RESOURCE_EPHEMERAL || vbr->type==NC_RESOURCE_SWAP) { // TODO: should we allow ephemeral/swap that reside remotely?
+            if (vbr->size<1) {
+                logprintfl (EUCAERROR, "Error: invalid size '%d' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
+                free_instance (&instance);
+                return ERROR;
+            }
+        } else {
+            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) {
+                logprintfl (EUCAERROR, "Error: invalid size '%d' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName, vbr->resourceLocation);
+                free_instance (&instance);
+                return ERROR;
+            }
+        }
+    }    
     change_state(instance, STAGING);
 
     sem_p (inst_sem); 
@@ -156,7 +286,7 @@ doRunInstance(	struct nc_state_t *nc,
         return error;
     }
 
-    /* do the potentially long tasks in a thread */
+    // do the potentially long tasks in a thread
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
     if (!attr) { 
         free_instance (&instance);
@@ -473,7 +603,8 @@ doDetachVolume(	struct nc_state_t *nc,
 		char *volumeId,
 		char *remoteDev,
 		char *localDev,
-		int force)
+		int force,
+                int grab_inst_sem)
 {
 	logprintfl(EUCAERROR, "no default for doDetachVolume!\n");
 	return ERROR_FATAL;
@@ -491,6 +622,6 @@ struct handlers default_libvirt_handlers = {
     .doStartNetwork      = doStartNetwork,
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
-    .doDetachVolume      = doDetachVolume,
+    .doDetachVolume      = doDetachVolume
 };
 

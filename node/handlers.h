@@ -187,7 +187,7 @@ int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutpu
 int doDescribeResource		(ncMetadata *meta, char *resourceType, ncResource **outRes);
 int doStartNetwork		(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
 #endif /* HANDLERS_FANOUT */
 
 /* helper functions used by the low level handlers */

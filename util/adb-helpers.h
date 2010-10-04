@@ -20,12 +20,12 @@ static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMa
     logprintfl (EUCADEBUG, "   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
     params->virtualBootRecord[i].size = adb_virtualBootRecordType_get_size(vbr_type, env);
     logprintfl (EUCADEBUG, "             size: %d\n", params->virtualBootRecord[i].size);
-    strncpy (params->virtualBootRecord[i].format, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG, "           format: %s\n", params->virtualBootRecord[i].format);
+    strncpy (params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+    logprintfl (EUCADEBUG, "           format: %s\n", params->virtualBootRecord[i].formatName);
     strncpy (params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
     logprintfl (EUCADEBUG, "               id: %s\n", params->virtualBootRecord[i].id);
-    strncpy (params->virtualBootRecord[i].type, adb_virtualBootRecordType_get_type(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG, "             type: %s\n", params->virtualBootRecord[i].type);
+    strncpy (params->virtualBootRecord[i].typeName, adb_virtualBootRecordType_get_type(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+    logprintfl (EUCADEBUG, "             type: %s\n", params->virtualBootRecord[i].typeName);
   }
 }
 
@@ -45,9 +45,9 @@ static inline adb_virtualMachineType_t * copy_vm_type_to_adb (const axutil_env_t
       adb_virtualBootRecordType_set_resourceLocation(vbr_type, env, vbr->resourceLocation);
       adb_virtualBootRecordType_set_guestDeviceName(vbr_type, env, vbr->guestDeviceName);
       adb_virtualBootRecordType_set_size(vbr_type, env, vbr->size);
-      adb_virtualBootRecordType_set_format(vbr_type, env, vbr->format);
+      adb_virtualBootRecordType_set_format(vbr_type, env, vbr->formatName);
       adb_virtualBootRecordType_set_id(vbr_type, env, vbr->id);
-      adb_virtualBootRecordType_set_type(vbr_type, env, vbr->type);
+      adb_virtualBootRecordType_set_type(vbr_type, env, vbr->typeName);
       adb_virtualMachineType_add_virtualBootRecord(vm_type, env, vbr_type);
     }
   }

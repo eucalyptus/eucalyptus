@@ -318,7 +318,7 @@ if [ -z "$EUCA_USER" ] ; then
 fi
 
 # set the library path correctly
-export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus"
 #VERBOSE="yes"
 
 # read services to start

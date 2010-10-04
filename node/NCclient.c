@@ -236,11 +236,11 @@ int main (int argc, char **argv)
 #define _GET(_a,_b)     char * _a = strtok_r (_b, "|", &strtok_inner); if ( _a == NULL ) { fprintf (stderr, "ERROR: failed to parse field %d in VBR entry '%s'\n", f, vbr_copy); exit (1); } else { printf ("\tVBR=%s\n", _a); } f++
                         // loc,type,id,dev,size,fmt
                         _GET(resourceLocation,vbr);
-                        _GET(type,NULL);
+                        _GET(typeName,NULL);
                         _GET(id,NULL);
                         _GET(guestDeviceName,NULL);
                         _GET(size_s,NULL);
-                        _GET(format,NULL);
+                        _GET(formatName,NULL);
                         errno = 0;
                         long long int size = strtoll (size_s, NULL, 10); 
                         if (errno!=0) { 
@@ -252,10 +252,10 @@ int main (int argc, char **argv)
                         virtualBootRecord * r = params.virtualBootRecord + vbr_size;
 #define _SET(_a)        strcpy (r->_a, _a)
                         _SET(resourceLocation);
-                        _SET(type);
+                        _SET(typeName);
                         _SET(id);
                         _SET(guestDeviceName);
-                        _SET(format);
+                        _SET(formatName);
                         r->size = (int)size;
 
                         // next iteration
