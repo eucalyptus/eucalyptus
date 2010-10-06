@@ -99,6 +99,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
+import com.eucalyptus.config.BogoConfig;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.event.EventVetoedException;
@@ -165,18 +166,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       try {
         final Component comp = safeLookupComponent( component.getComponent( ) );
         URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
-        ServiceConfiguration config = new ComponentConfiguration( comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) ) {
-          @Override
-          public com.eucalyptus.bootstrap.Component getComponent( ) {
-            return comp.getPeer( );
-          }
-
-          @Override
-          public Boolean isLocal( ) {
-            return true;
-          }
-          
-        };
+        ServiceConfiguration config = new BogoConfig( comp.getPeer( ), comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) );        
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
         comp.buildService( config );
         initializedComponents.add( component.getComponent( ) );
