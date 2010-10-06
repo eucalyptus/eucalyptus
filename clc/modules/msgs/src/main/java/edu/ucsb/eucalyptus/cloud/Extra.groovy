@@ -447,8 +447,7 @@ public class Network implements HasName<Network> {
     return this.name;
   }
 
-  public int compareTo(final Object o) {
-    Network that = (Network) o;
+  public int compareTo(final Network that) {
     return this.getName().compareTo(that.getName());
   }
   
