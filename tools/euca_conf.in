@@ -1059,6 +1059,7 @@ createCloudURL () {
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
+  DB_PASS=`echo $DB_PASS | sed "s/(stdin)= //g"`
   AKEY=$(print_query_id)
   SKEY=$(print_secret_key)
   
@@ -1149,6 +1150,7 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
+  DB_PASS=`echo $DB_PASS | sed "s/(stdin)= //g"`
   KEY=$(print_token)
   if [ -z "$KEY" ]; then
   	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
