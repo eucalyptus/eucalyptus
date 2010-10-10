@@ -102,6 +102,7 @@ import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.RemoteConfiguration;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.event.EventVetoedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -258,20 +259,24 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     
     @Override
     public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-      if ( e.getMessage( ) instanceof HttpRequest && HttpMethod.GET.equals( ( ( HttpRequest ) e.getMessage( ) ).getMethod( ) ) ) {
-        HttpRequest request = ( HttpRequest ) e.getMessage( );
-        HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
-        String resp = "";
-        for ( Component c : Components.list( ) ) {
-          resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
-                                 c.isRunning( ) );
+      if ( e.getMessage( ) instanceof MappingHttpRequest && HttpMethod.GET.equals( ( ( MappingHttpRequest ) e.getMessage( ) ).getMethod( ) ) ) {
+        MappingHttpRequest request = ( MappingHttpRequest ) e.getMessage( );
+        try {
+          HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
+          String resp = "";
+          for ( Component c : Components.list( ) ) {
+            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
+                                   c.isRunning( ) );
+          }
+          ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
+          response.setContent( buf );
+          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
+          response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
+          ChannelFuture writeFuture = ctx.getChannel( ).write( response );
+          writeFuture.addListener( ChannelFutureListener.CLOSE );
+        } finally {
+          Contexts.clear( request.getCorrelationId( ) );
         }
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
-        response.setContent( buf );
-        response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
-        response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-        ChannelFuture writeFuture = ctx.getChannel( ).write( response );
-        writeFuture.addListener( ChannelFutureListener.CLOSE );
       } else {
         ctx.sendUpstream( e );
       }
@@ -296,22 +301,26 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     Object message = ( ( MessageEvent ) e ).getMessage( );
     if ( message instanceof MappingHttpRequest ) {
       MappingHttpRequest request = ( ( MappingHttpRequest ) message );
-      if ( HttpMethod.GET.equals( request.getMethod( ) ) ) {
-        handleGet( ctx, request );
-      } else if ( !initialized.get( ) && pending.compareAndSet( false, true ) ) {
-        try {
-          handleInitialize( ctx, request );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        } finally {
-          pending.set( false );
+      try {
+        if ( HttpMethod.GET.equals( request.getMethod( ) ) ) {
+          handleGet( ctx, request );
+        } else if ( !initialized.get( ) && pending.compareAndSet( false, true ) ) {
+          try {
+            handleInitialize( ctx, request );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            throw ex;
+          } finally {
+            pending.set( false );
+          }
+        } else if ( initialized.get( ) && request.getMessage( ) instanceof HeartbeatType ) {
+          handleHeartbeat( request );
+        } else {
+          ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );
+          writeFuture.addListener( ChannelFutureListener.CLOSE );
         }
-      } else if ( initialized.get( ) && request.getMessage( ) instanceof HeartbeatType ) {
-        handleHeartbeat( request );
-      } else {
-        ChannelFuture writeFuture = ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_ACCEPTABLE ) );
-        writeFuture.addListener( ChannelFutureListener.CLOSE );
+      } finally {
+        Contexts.clear( request.getCorrelationId( ) );
       }
     } else {
       super.messageReceived( ctx, e );
