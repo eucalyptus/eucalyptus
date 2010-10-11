@@ -158,7 +158,7 @@ public class Registration extends HttpServlet {
       Mac mac = Hmac.HmacSHA256.getInstance( );
       mac.init( signingKey );
       byte[] rawHmac = mac.doFinal( uuid.getBytes( ) );
-      String sig = Hmacs.generateSystemToken( rawHmac );
+      String sig = Hashes.getHexString( rawHmac );
       LOG.warn( "\nkey='" + key + "'\nid='" + uuid + "'\nresult=" + sig );
       return sig;
     } catch ( Exception e ) {
