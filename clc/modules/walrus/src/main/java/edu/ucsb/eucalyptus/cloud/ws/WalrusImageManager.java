@@ -115,6 +115,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPInputStream;
 
@@ -231,11 +232,12 @@ public class WalrusImageManager {
 						try {
 							boolean verified = false;
 							for(User user:Users.listAllUsers( )) {
-								X509Certificate cert = user.getX509Certificate( );
-								if(cert != null)
-									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
-								if(verified)
-									break;
+								for (X509Certificate cert : user.getAllX509Certificates()) {
+									if(cert != null)
+										verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+									if(verified)
+										break;
+								}
 							}
 							if(!verified) {
 								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
@@ -259,8 +261,13 @@ public class WalrusImageManager {
 							throw new AccessDeniedException(userId,e);            
 						}         
 						try {
-							X509Certificate cert = user.getX509Certificate( );
-							signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+							for(X509Certificate cert : user.getAllX509Certificates()) {
+								if(cert != null) {
+									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+								}
+								if(signatureVerified)
+									break;
+							}
 						} catch(Exception ex) {
 							db.rollback();
 							LOG.error(ex, ex);
@@ -297,7 +304,7 @@ public class WalrusImageManager {
 						}
 					}
 					//Assemble parts
-					String encryptedImageKey = imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
+					String encryptedImageKey = UUID.randomUUID().toString() + ".crypt.gz";//imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
 					String encryptedImageName = storageManager.getObjectPath(bucketName, encryptedImageKey);
 					String decryptedImageKey = encryptedImageKey.substring(0, encryptedImageKey.lastIndexOf("crypt.gz")) + "tgz";
 
@@ -495,7 +502,7 @@ public class WalrusImageManager {
 		}
 	}
 
-	private synchronized void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
+	private void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
 
 		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
@@ -515,7 +522,12 @@ public class WalrusImageManager {
 		ImageCacher imageCacher = imageCachers.putIfAbsent(bucketName + manifestKey, new ImageCacher(bucketName, manifestKey, decryptedImageKey));
 		if(imageCacher == null) {
 			if(decryptedImageKey == null) {
-				decryptedImageKey = decryptImage(bucketName, manifestKey, userId, isAdministrator);
+				try {
+					decryptedImageKey = decryptImage(bucketName, manifestKey, userId, isAdministrator);
+				} catch(EucalyptusCloudException ex) {
+					imageCachers.remove(bucketName + manifestKey);
+					throw ex;
+				}
 				//decryption worked. Add it.
 				ImageCacheInfo foundImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 				foundImageCacheInfo.setImageName(decryptedImageKey);
@@ -856,15 +868,15 @@ public class WalrusImageManager {
 					foundImageCacheInfo.setInCache(true);
 					foundImageCacheInfo.setSize(unencryptedSize);
 					db.commit();
-					//wake up waiters
-					notifyWaiters();
 				} else {
 					db.rollback();
 					LOG.error("Could not expand image" + decryptedImageName);
-				}
+				}				
 			} catch (Exception ex) {
 				LOG.error(ex);
 			}
+			//wake up waiters
+			notifyWaiters();
 		}
 	}
 
@@ -1113,13 +1125,15 @@ public class WalrusImageManager {
 									}
 								} while(true);
 							} catch(Exception ex) {
-								LOG.error(ex);
+								LOG.error(ex, ex);
 								semaphore.release();
+								imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 								throw new EucalyptusCloudException("monitor failure");
 							}
 						}
 						if(!cached) {
 							LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
+							imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 							semaphore.release();
 							throw new EucalyptusCloudException("caching failure");
 						}
@@ -1133,6 +1147,7 @@ public class WalrusImageManager {
 						} else {
 							db2.rollback();
 							semaphore.release();
+							imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 							throw new NoSuchEntityException(objectKey);
 						}
 						db2.commit();
@@ -1148,6 +1163,7 @@ public class WalrusImageManager {
 							DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 							objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed(), null, null);                            
 					semaphore.release();
+					imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 					return reply;
 				} else {
 					db.rollback();
