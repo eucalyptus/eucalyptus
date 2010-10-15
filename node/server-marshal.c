@@ -424,7 +424,7 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
                 for (i=0; i<outInstsLen; i++) {
                     adb_instanceType_t * instance = adb_instanceType_create(env);
                     copy_instance_to_adb (instance, env, outInsts[i]); // copy all values outInst->instance
-		    if (outInsts[i]) 
+                    if (outInsts[i])
 		      free(outInsts[i]);
 
                     /* TODO: should we free_instance(&outInst) here or not? currently you only have to free outInsts[] */
