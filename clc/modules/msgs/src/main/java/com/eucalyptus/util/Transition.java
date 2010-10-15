@@ -25,8 +25,8 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
     this.newState = newState;
   }
   
-  public static <A, B extends Comparable, S extends Transition<A, B>> S anonymous( Class<? extends Transition<A, B>> r ) throws Exception {
-    return ( S ) new Transition.anonymously<A, B>( r );
+  public static <A, B extends Comparable> Transition<A, B> anonymous( Class<? extends Transition<A, B>> r ) throws Exception {
+    return ( Transition<A, B> ) new Transition.anonymously<A, B>( r );
   }
   
   public static <A, B extends Comparable, L extends Iterable<A>> Transition<A, B> anonymous( L i, Class<? extends Transition<A, B>> r ) throws Throwable {
@@ -37,7 +37,7 @@ public abstract class Transition<O, T extends Comparable> implements Comparable<
     return ( Transition<A, B> ) anon;
   }
   
-  public static <A, B extends Comparable, S extends Transition<A, B>> Transition<A, B> anonymous( B from, B to, Committor<A> r ) throws Exception {
+  public static <A, B extends Comparable> Transition<A, B> anonymous( B from, B to, Committor<A> r ) throws Exception {
     return ( Transition<A, B> ) new Transition.anonymously<A, B>( from, to, r );
   }
   
