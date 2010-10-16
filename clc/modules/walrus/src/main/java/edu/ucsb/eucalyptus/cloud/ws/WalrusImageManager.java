@@ -502,7 +502,7 @@ public class WalrusImageManager {
 		}
 	}
 
-	private void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
+	private synchronized void cacheImage(String bucketName, String manifestKey, String userId, boolean isAdministrator) throws EucalyptusCloudException {
 
 		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
@@ -868,15 +868,15 @@ public class WalrusImageManager {
 					foundImageCacheInfo.setInCache(true);
 					foundImageCacheInfo.setSize(unencryptedSize);
 					db.commit();
+					//wake up waiters
+					notifyWaiters();
 				} else {
 					db.rollback();
 					LOG.error("Could not expand image" + decryptedImageName);
-				}				
+				}
 			} catch (Exception ex) {
 				LOG.error(ex);
 			}
-			//wake up waiters
-			notifyWaiters();
 		}
 	}
 
@@ -1125,15 +1125,13 @@ public class WalrusImageManager {
 									}
 								} while(true);
 							} catch(Exception ex) {
-								LOG.error(ex, ex);
+								LOG.error(ex);
 								semaphore.release();
-								imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 								throw new EucalyptusCloudException("monitor failure");
 							}
 						}
 						if(!cached) {
 							LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
-							imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 							semaphore.release();
 							throw new EucalyptusCloudException("caching failure");
 						}
@@ -1147,7 +1145,6 @@ public class WalrusImageManager {
 						} else {
 							db2.rollback();
 							semaphore.release();
-							imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 							throw new NoSuchEntityException(objectKey);
 						}
 						db2.commit();
@@ -1163,7 +1160,6 @@ public class WalrusImageManager {
 							DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
 							objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed(), null, null);                            
 					semaphore.release();
-					imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 					return reply;
 				} else {
 					db.rollback();
