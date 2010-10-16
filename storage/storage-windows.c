@@ -1,9 +1,9 @@
+#define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU /* strnlen */
 #include <string.h>
 #include <sys/types.h>
-#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
