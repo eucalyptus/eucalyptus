@@ -57,6 +57,7 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
+#define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
@@ -65,7 +66,6 @@ permission notice:
 #include "misc.h"
 #include <stdarg.h>
 #include <sys/types.h>
-#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>

@@ -58,8 +58,8 @@ permission notice:
   ANY SUCH LICENSES OR RIGHTS.
 */
 
+#define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <sys/types.h>
-#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <unistd.h>
 #include <assert.h>
