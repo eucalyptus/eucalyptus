@@ -98,7 +98,7 @@ import com.eucalyptus.ws.util.ChannelUtil;
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
 @DependsRemote(Component.eucalyptus)
 @ChannelPipelineCoverage( "all" )
-public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPipelineFactory {
+public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPipelineFactory {
   private static Logger                   LOG = Logger.getLogger( RemoteBootstrapperServer.class );
   private int                             port;
   private ServerBootstrap                 bootstrap;
@@ -129,6 +129,45 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
     return true;
   }
   
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy( ) throws Exception {}
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
+  }
+
+  
   @Provides(Component.bootstrap)
   @RunDuring(Bootstrap.Stage.RemoteServicesInit)
   @DependsRemote(Component.eucalyptus)
@@ -154,6 +193,45 @@ public class RemoteBootstrapperServer extends Bootstrapper implements ChannelPip
     public boolean load( ) throws Exception {
       return true;
     }
+
+    /**
+     * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+     */
+    @Override
+    public boolean enable( ) throws Exception {
+      return true;
+    }
+
+    /**
+     * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+     */
+    @Override
+    public boolean stop( ) throws Exception {
+      return true;
+    }
+
+    /**
+     * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+     */
+    @Override
+    public void destroy( ) throws Exception {}
+
+    /**
+     * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+     */
+    @Override
+    public boolean disable( ) throws Exception {
+      return true;
+    }
+
+    /**
+     * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+     */
+    @Override
+    public boolean check( ) throws Exception {
+      return true;
+    }
+
   }
   
   public ChannelPipeline getPipeline( ) throws Exception {
