@@ -14,7 +14,7 @@ import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Iterables;
 
 @Provides( com.eucalyptus.bootstrap.Component.any )
-@RunDuring( Bootstrap.Stage.Verification )
+@RunDuring( Bootstrap.Stage.Final )
 public class ServiceVerifyBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceVerifyBootstrapper.class );
   
