@@ -22,7 +22,7 @@ then
 		if [ -f /tmp/eucaback.dir ]; then
 		    BACKDIR=`cat /tmp/eucaback.dir`
 		    if [ -d "$BACKDIR" ]; then
-			/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys >/dev/null 2>&1
+			/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys --sameversion >/dev/null 2>&1
 		    fi
 		fi
 

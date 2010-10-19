@@ -2,9 +2,6 @@
 
 if [ "$1" = "configure" ]
 then
-#    if dpkg --compare-versions "$2" lt "2.0" ; then
-#        /usr/share/eucalyptus/euca_upgrade --old / --new / --db
-#    fi
     if ! dpkg-statoverride --list /var/lib/eucalyptus/db >/dev/null 2>&1; then
         chown eucalyptus:eucalyptus /var/lib/eucalyptus/db
         chmod 700 /var/lib/eucalyptus/db
