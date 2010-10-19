@@ -115,14 +115,6 @@ public class LdapBootstrapper extends Bootstrapper implements DatabaseBootstrapp
                                               };
   
   @Override
-  public boolean check( ) {
-    return true;
-  }
-  
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  @Override
   public boolean load( ) throws Exception {
     if ( LdapConfiguration.ENABLE_LDAP ) {
       try {
@@ -157,8 +149,41 @@ public class LdapBootstrapper extends Bootstrapper implements DatabaseBootstrapp
     return true;
   }
   
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
   @Override
-  public boolean stop( ) {
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy( ) throws Exception {}
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check( ) throws Exception {
     return true;
   }
   

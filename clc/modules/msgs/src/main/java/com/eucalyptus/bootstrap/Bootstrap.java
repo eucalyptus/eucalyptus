@@ -170,13 +170,9 @@ public class Bootstrap {
     SystemCredentialsInit, /* <-- this means system credentials, not user. */
     RemoteConfiguration,
     DatabaseInit,
-    PersistenceContextInit,
-    DeferredClassInit,
     RemoteServicesInit,
     UserCredentialsInit,
     CloudServiceInit,
-    Verification,
-    Anonymous,
     Final;
     public static List<Stage> list( ) {
       return Arrays.asList( Stage.values( ) );
