@@ -98,7 +98,7 @@ adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, c
 	  adb_ncPowerDownResponseType_set_return(output, env, AXIS2_FALSE);
 	  
 	  // set operation-specific fields in output
-	  adb_ncPowerDownResponseType_set_statusMessage(output, env, 2);
+	  adb_ncPowerDownResponseType_set_statusMessage(output, env, "2");
 	  
         } else {
 	  // set standard fields in output
@@ -107,7 +107,7 @@ adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, c
 	  adb_ncPowerDownResponseType_set_userId(output, env, userId);
 	  
 	  // set operation-specific fields in output
-	  adb_ncPowerDownResponseType_set_statusMessage(output, env, 0);
+	  adb_ncPowerDownResponseType_set_statusMessage(output, env, "0");
         }
     }
 
@@ -153,7 +153,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
 
             // set operation-specific fields in output
             adb_ncStartNetworkResponseType_set_networkStatus(output, env, "FAIL");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, 2);
+            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "2");
 
         } else {
             // set standard fields in output
@@ -163,7 +163,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
 
             // set operation-specific fields in output
             adb_ncStartNetworkResponseType_set_networkStatus(output, env, "SUCCESS");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, 0);
+            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "0");
         }
 
         if (peersLen) 
