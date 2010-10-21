@@ -141,8 +141,9 @@ doRunInstance(	struct nc_state_t *nc,
     instance->launchTime = time (NULL);
 
     // parse and sanity-check the virtual boot record
-    int i;
-    for (i=0; i<EUCA_MAX_VBRS; i++) {
+    int i, j;
+    char parts [6][EUCA_MAX_VBRS]; // record partitions seen
+    for (i=0, j=0; i<EUCA_MAX_VBRS; i++) {
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
 
         // get the type (the only mandatory field)
@@ -167,8 +168,7 @@ doRunInstance(	struct nc_state_t *nc,
             vbr->type = NC_RESOURCE_EBS;
         } else {
             logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
-            free_instance (&instance);
-            return ERROR;
+            goto error;
         }
         
         // identify the type of resource location from location string
@@ -179,14 +179,12 @@ doRunInstance(	struct nc_state_t *nc,
         } else if (strcasestr (vbr->resourceLocation, "none") == vbr->resourceLocation) { 
             if (vbr->type!=NC_RESOURCE_EPHEMERAL && vbr->type!=NC_RESOURCE_SWAP) {
                 logprintfl (EUCAERROR, "Error: resourceLocation not specified for non-ephemeral resource '%s'\n", vbr->resourceLocation);
-                free_instance (&instance);
-                return ERROR;
+                goto error;
             }            
             vbr->locationType = NC_LOCATION_NONE;
         } else {
             logprintfl (EUCAERROR, "Error: failed to parse resource location '%s'\n", vbr->resourceLocation);
-            free_instance (&instance);
-            return ERROR;
+            goto error;
         }
         
         // device can be 'none' only for kernel and ramdisk types
@@ -194,8 +192,7 @@ doRunInstance(	struct nc_state_t *nc,
             if (vbr->type!=NC_RESOURCE_KERNEL &&
                 vbr->type!=NC_RESOURCE_RAMDISK) {
                 logprintfl (EUCAERROR, "Error: guestDeviceName not specified for resource '%s'\n", vbr->resourceLocation);
-                free_instance (&instance);
-                return ERROR;
+                goto error;
             }
 
         } else { // should be a valid device
@@ -208,8 +205,7 @@ doRunInstance(	struct nc_state_t *nc,
             }
             if (strlen (vbr->guestDeviceName)<3) {
                 logprintfl (EUCAERROR, "Error: invalid guestDeviceName '%s'\n", vbr->guestDeviceName);
-                free_instance (&instance);
-                return ERROR;
+                goto error;
             }
             {
                 char t = vbr->guestDeviceName [0];
@@ -220,34 +216,34 @@ doRunInstance(	struct nc_state_t *nc,
                     errno = 0;
                     p = strtoll (vbr->guestDeviceName + 3, NULL, 10);
                     if (errno!=0) { 
-                        fprintf (stderr, "ERROR: failed to parse partition number in guestDeviceName '%s'\n", vbr->guestDeviceName);
-                        free_instance (&instance);
-                        return ERROR; 
+                        logprintfl (EUCAERROR, "Error: failed to parse partition number in guestDeviceName '%s'\n", vbr->guestDeviceName);
+                        goto error; 
                     } 
+                    if (p<1 || p>99) {
+                        logprintfl (EUCAERROR, "Error: unexpected partition number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
+                        goto error;
+                    }
                 }
                 if (t!='h' && t!='s' && t!='f' && t!='v') {
-                    fprintf (stderr, "ERROR: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                    free_instance (&instance);
-                    return ERROR; 
+                    logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
+                    goto error; 
                 }
                 if (d!='d') {
-                    fprintf (stderr, "ERROR: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                    free_instance (&instance);
-                    return ERROR; 
+                    logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
+                    goto error; 
                 }
                 if (!(n>='a' && n<='z')) {
-                    fprintf (stderr, "ERROR: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                    free_instance (&instance);
-                    return ERROR; 
+                    logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
+                    goto error; 
                 }
+                snprintf (parts[j++], 6, "%c%c%c%0lld", t, d, n, p);
             }
         }
 
         // parse ID
         if (strlen (vbr->id)<4) {
-            fprintf (stderr, "ERROR: failed to parse VBR resource ID '%s' (use 'none' when no ID)\n", vbr->id);
-            free_instance (&instance);
-            return ERROR; 
+            logprintfl (EUCAERROR, "Error: failed to parse VBR resource ID '%s' (use 'none' when no ID)\n", vbr->id);
+            goto error;
         }
 
         // parse disk formatting instructions (none = do not format)
@@ -258,40 +254,41 @@ doRunInstance(	struct nc_state_t *nc,
         } else if (strstr (vbr->formatName, "swap") == vbr->formatName) { vbr->format = NC_FORMAT_SWAP;
         } else {
             logprintfl (EUCAERROR, "Error: failed to parse resource format '%s'\n", vbr->formatName);
-            free_instance (&instance);
-            return ERROR;
+            goto error;
         }
         if (vbr->type==NC_RESOURCE_EPHEMERAL || vbr->type==NC_RESOURCE_SWAP) { // TODO: should we allow ephemeral/swap that reside remotely?
             if (vbr->size<1) {
                 logprintfl (EUCAERROR, "Error: invalid size '%d' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
-                free_instance (&instance);
-                return ERROR;
+                goto error;
             }
         } else {
             if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) {
                 logprintfl (EUCAERROR, "Error: invalid size '%d' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName, vbr->resourceLocation);
-                free_instance (&instance);
-                return ERROR;
+                goto error;
             }
         }
-    }    
+    }
+    // run through partitions seen and look for gaps
+    qsort (parts, j, 6, (int(*)(const void *, const void *))strcmp);
+    int k;
+    for (k=0; k<j; k++) {
+        logprintfl (EUCADEBUG, "Found partition %s\n", parts [k]);
+    }
     change_state(instance, STAGING);
 
     sem_p (inst_sem); 
     error = add_instance (&global_instances, instance);
     sem_v (inst_sem);
     if ( error ) {
-        free_instance (&instance);
         logprintfl (EUCAFATAL, "Error: could not save instance struct\n");
-        return error;
+        goto error;
     }
 
     // do the potentially long tasks in a thread
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
     if (!attr) { 
-        free_instance (&instance);
         logprintfl (EUCAFATAL, "Error: out of memory\n");
-        return 1;
+        goto error;
     }
     pthread_attr_init(attr);
     pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
@@ -302,9 +299,8 @@ doRunInstance(	struct nc_state_t *nc,
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
         sem_v (inst_sem);
-        free_instance (&instance);
 	if (attr) free(attr);
-        return 1;
+        goto error;
     }
     pthread_attr_destroy(attr);
     if (attr) free(attr);
@@ -312,6 +308,9 @@ doRunInstance(	struct nc_state_t *nc,
     * outInst = instance;
     return 0;
 
+ error:
+    free_instance (&instance);
+    return ERROR;
 }
 
 static int

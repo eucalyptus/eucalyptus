@@ -519,6 +519,36 @@ void *startup_thread (void * arg)
     char * disk_path, * xml=NULL;
     char *brname=NULL;
     int error, i;
+
+    // prepare iSCSI-backed images
+    char * local_iscsi_dev;
+    for (i=0; i<EUCA_MAX_VBRS; i++) {
+            virtualBootRecord * r = instance->params.virtualBootRecord + i;
+            if (strncmp (r->typeName, "image", sizeof(r->typeName))==0) {
+                    logprintfl (EUCAINFO, "found image VBR: %s\n", r->resourceLocation);
+                    char * remoteDev = r->resourceLocation;
+                    local_iscsi_dev = connect_iscsi_target(nc_state.connect_storage_cmd_path, remoteDev);
+                    if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
+                            logprintfl(EUCAERROR, "ERROR: failed to connect to iscsi target for root disk\n");
+                            change_state (instance, SHUTOFF);
+                            return NULL;
+                    }
+                    struct stat statbuf;
+                    int rc = stat (local_iscsi_dev, &statbuf);
+                    if (rc) {
+                            logprintfl(EUCAERROR, "ERROR: cannot locate local block device file '%s'\n", remoteDev);
+                            change_state (instance, SHUTOFF);
+                            return NULL;
+                    }
+                    break;
+            }
+    }
+
+
+    // TODO: temporarily disable running, until VBR staging is implemented
+    logprintfl(EUCAFATAL, "Good news!  VBR checked out.  Nevertheless, I am preventing instance '%s' from starting because implementation is incomplete.\n", instance->instanceId);
+    change_state (instance, SHUTOFF);
+    return NULL;
     
     if (! check_hypervisor_conn ()) {
         logprintfl (EUCAFATAL, "could not start instance %s, abandoning it\n", instance->instanceId);
@@ -545,30 +575,6 @@ void *startup_thread (void * arg)
 				 addkey_sem, nc_state.convert_to_disk,
 				 instance->params.disk*1024);
     */
-
-    // prepare iSCSI-backed images
-    char * local_iscsi_dev;
-    for (i=0; i<EUCA_MAX_VBRS; i++) {
-            virtualBootRecord * r = instance->params.virtualBootRecord + i;
-            if (strncmp (r->typeName, "image", sizeof(r->typeName))==0) {
-                    logprintfl (EUCAINFO, "found image VBR: %s\n", r->resourceLocation);
-                    char * remoteDev = r->resourceLocation;
-                    local_iscsi_dev = connect_iscsi_target(nc_state.connect_storage_cmd_path, remoteDev);
-                    if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
-                            logprintfl(EUCAERROR, "ERROR: failed to connect to iscsi target for root disk\n");
-                            change_state (instance, SHUTOFF);
-                            return NULL;
-                    }
-                    struct stat statbuf;
-                    int rc = stat (local_iscsi_dev, &statbuf);
-                    if (rc) {
-                            logprintfl(EUCAERROR, "ERROR: cannot locate local block device file '%s'\n", remoteDev);
-                            change_state (instance, SHUTOFF);
-                            return NULL;
-                    }
-                    break;
-            }
-    }
 
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
