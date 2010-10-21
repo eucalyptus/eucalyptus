@@ -16,13 +16,24 @@
 	xmlns:xs="http://www.w3.org/2001/XMLSchema"
 	xmlns:tns="http://eucalyptus.ucsb.edu/">
 
-      <xs:complexType abstract="true" name="eucalyptusMessage">
+      <xs:complexType abstract="true" name="serviceInfoType">
         <xs:sequence>
-          <xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
-          <xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
-          <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:string"/>
-          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="type" type="xs:string"/>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="name" type="xs:string"/>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="uris" type="xs:string"/>
         </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType abstract="true" name="eucalyptusMessage">
+	<xs:sequence>
+	  <xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
+	  <xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
+	  <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:string"/>
+	  <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
+	  <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="epoch" type="xs:int"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
+	</xs:sequence>
       </xs:complexType>
       
       <xs:complexType name="getLogsType">
