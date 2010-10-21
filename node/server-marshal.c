@@ -98,7 +98,7 @@ adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, c
 	  adb_ncPowerDownResponseType_set_return(output, env, AXIS2_FALSE);
 	  
 	  // set operation-specific fields in output
-	  adb_ncPowerDownResponseType_set_statusMessage(output, env, 2);
+	  adb_ncPowerDownResponseType_set_statusMessage(output, env, "2");
 	  
         } else {
 	  // set standard fields in output
@@ -107,7 +107,7 @@ adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, c
 	  adb_ncPowerDownResponseType_set_userId(output, env, userId);
 	  
 	  // set operation-specific fields in output
-	  adb_ncPowerDownResponseType_set_statusMessage(output, env, 0);
+	  adb_ncPowerDownResponseType_set_statusMessage(output, env, "0");
         }
     }
 
@@ -153,7 +153,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
 
             // set operation-specific fields in output
             adb_ncStartNetworkResponseType_set_networkStatus(output, env, "FAIL");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, 2);
+            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "2");
 
         } else {
             // set standard fields in output
@@ -163,7 +163,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
 
             // set operation-specific fields in output
             adb_ncStartNetworkResponseType_set_networkStatus(output, env, "SUCCESS");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, 0);
+            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "0");
         }
 
         if (peersLen) 
@@ -420,7 +420,7 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
                     adb_instanceType_t * instance = adb_instanceType_create(env);
                     copy_instance_to_adb (instance, env, outInsts[i]); // copy all values outInst->instance
                     if (outInsts[i])
-                        free(outInsts[i]);
+		      free(outInsts[i]);
 
                     /* TODO: should we free_instance(&outInst) here or not? currently you only have to free outInsts[] */
                     adb_ncDescribeInstancesResponseType_add_instances(output, env, instance);

@@ -67,9 +67,19 @@ permission notice:
 #define CHAR_BUFFER_SIZE 512
 #define BIG_CHAR_BUFFER_SIZE 1024
 
+typedef struct serviceInfoType_t {
+  char type[32];
+  char name[32];
+  char uris[8][512];
+  int urisLen;
+} serviceInfoType;
+
 typedef struct ncMetadata_t {
     char *correlationId;
     char *userId;
+    int epoch;
+    serviceInfoType services[16];
+    int servicesLen;
 } ncMetadata;
 
 typedef enum _livirtDevType {

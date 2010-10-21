@@ -105,14 +105,6 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   }
 
   @Override
-  public boolean check( ) {
-    return false;
-  }
-
-  @Override
-  public void destroy( ) throws Exception {}
-
-  @Override
   public boolean load( ) throws Exception {
     try {
       LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.util.SslSetup" ) );
@@ -204,11 +196,6 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
     this.db.start( );
   }
 
-  @Override
-  public boolean stop( ) {
-    return false;
-  }
-
   public String getFileName( ) {
     return fileName;
   }
@@ -231,6 +218,44 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
         LOG.fatal( e, e );
       }
     }
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy( ) throws Exception {}
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
   }
 
 }
