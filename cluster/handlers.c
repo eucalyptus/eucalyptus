@@ -1176,7 +1176,6 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
 
   logprintfl(EUCAINFO,"DescribeResources(): called\n");
   logprintfl(EUCADEBUG,"DescribeResources(): params: userId=%s, vmLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), vmLen);
-
   op_start = time(NULL);
 
   rc = initialize();
@@ -2454,7 +2453,7 @@ void *monitor_thread(void *in) {
     logprintfl(EUCAFATAL, "monitor_thread(): out of memory!\n");
     unlock_exit(1);
   }
-  
+
   while(1) {
     // set up default signal handler for this child process (for SIGTERM)
     struct sigaction newsigact;
@@ -2465,7 +2464,7 @@ void *monitor_thread(void *in) {
     sigaction(SIGTERM, &newsigact, NULL);
 
     logprintfl(EUCADEBUG, "monitor_thread(): running\n");
-
+    
     rc = refresh_resources(&ccMeta, 60, 1);
     if (rc) {
       logprintfl(EUCAWARN, "monitor_thread(): call to refresh_resources() failed in monitor thread\n");
@@ -2475,7 +2474,7 @@ void *monitor_thread(void *in) {
     if (rc) {
       logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
     }
-
+    
     sem_mywait(CONFIG);
     if (config->kick_dhcp) {
       rc = vnetKickDHCP(vnetconfig);

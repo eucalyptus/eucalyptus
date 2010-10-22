@@ -68,6 +68,8 @@ permission notice:
 #define MODE 0
 #endif
 
+ncMetadata mymeta;
+
 int main(int argc, char **argv) {
   axutil_env_t * env = NULL;
   axis2_char_t * client_home = NULL;
@@ -75,7 +77,16 @@ int main(int argc, char **argv) {
   axis2_stub_t * stub = NULL;
   int rc, i, port, use_wssec;
   char *euca_home, configFile[1024], policyFile[1024];
-  
+
+  mymeta.userId = strdup("eucalyptus");
+  mymeta.correlationId = strdup("1234abcd");
+  mymeta.epoch = 3;
+  mymeta.servicesLen = 1;
+  snprintf(mymeta.services[0].name, 16, "thewalrus");
+  snprintf(mymeta.services[0].type, 16, "walrus");
+  mymeta.services[0].urisLen = 1;
+  snprintf(mymeta.services[0].uris[0], 512, "http://1.2.3.4/path");
+    
   if (MODE == 0) {
     if (argc != 2 || strcmp(argv[1], "-9")) {
       printf("only runnable from inside euca\n");
