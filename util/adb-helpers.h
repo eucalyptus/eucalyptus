@@ -5,6 +5,7 @@
   {									\
     int i, j;								\
     adb_serviceInfoType_t *sit=NULL;					\
+    bzero(themeta, sizeof(ncMetadata));					\
     themeta->correlationId = adb_##thefunc##_get_correlationId(theadb, env); \
     themeta->userId = adb_##thefunc##_get_userId(theadb, env);		\
     themeta->epoch = adb_##thefunc##_get_epoch(theadb, env);			\
