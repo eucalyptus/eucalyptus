@@ -57,11 +57,11 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
+#define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <semaphore.h>
-#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
