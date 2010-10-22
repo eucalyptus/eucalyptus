@@ -255,9 +255,8 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     // set standard input fields
     adb_ncRunInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
+        if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
         EUCA_MESSAGE_MARSHAL(ncRunInstanceType, request, meta);
-	//        adb_ncRunInstanceType_set_correlationId(request, env, CORRELATION_ID);
-	//        adb_ncRunInstanceType_set_userId(request, env, meta->userId);
     }
 
     // set op-specific input fields
@@ -324,9 +323,8 @@ int ncGetConsoleOutputStub (ncStub *st, ncMetadata *meta, char *instanceId, char
     /* set input fields */
     adb_ncGetConsoleOutputType_set_nodeName(request, env, st->node_name);
     if (meta) {
+      if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
       EUCA_MESSAGE_MARSHAL(ncGetConsoleOutputType, request, meta);
-      //        adb_ncGetConsoleOutputType_set_correlationId(request, env, CORRELATION_ID);
-      //        adb_ncGetConsoleOutputType_set_userId(request, env, meta->userId);
     }
     
     adb_ncGetConsoleOutputType_set_instanceId(request, env, instanceId);
@@ -366,9 +364,8 @@ int ncRebootInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId)
     /* set input fields */
     adb_ncRebootInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
+        if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
         EUCA_MESSAGE_MARSHAL(ncRebootInstanceType, request, meta);
-	//        adb_ncRebootInstanceType_set_correlationId(request, env, CORRELATION_ID);
-	//        adb_ncRebootInstanceType_set_userId(request, env, meta->userId);
     }
     
     adb_ncRebootInstanceType_set_instanceId(request, env, instanceId);
@@ -406,9 +403,8 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int *sh
     /* set input fields */
     adb_ncTerminateInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
+      if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
       EUCA_MESSAGE_MARSHAL(ncTerminateInstanceType, request, meta);
-      //        adb_ncTerminateInstanceType_set_correlationId(request, env, CORRELATION_ID);
-      //        adb_ncTerminateInstanceType_set_userId(request, env, meta->userId);
     }
     adb_ncTerminateInstanceType_set_instanceId(request, env, instId);
     adb_ncTerminateInstance_set_ncTerminateInstance(input, env, request);
@@ -450,9 +446,8 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
     /* set input fields */
     adb_ncDescribeInstancesType_set_nodeName(request, env, st->node_name);
     if (meta) {
+      if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
       EUCA_MESSAGE_MARSHAL(ncDescribeInstancesType, request, meta);
-      //        adb_ncDescribeInstancesType_set_correlationId(request, env, CORRELATION_ID);
-      //        adb_ncDescribeInstancesType_set_userId(request, env, meta->userId);
     }
     int i;
     for (i=0; i<instIdsLen; i++) {
@@ -505,9 +500,8 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
     /* set input fields */
     adb_ncDescribeResourceType_set_nodeName(request, env, st->node_name);
     if (meta) {
+      if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
       EUCA_MESSAGE_MARSHAL(ncDescribeResourceType, request, meta);
-      //        adb_ncDescribeResourceType_set_correlationId(request, env, CORRELATION_ID);
-      //        adb_ncDescribeResourceType_set_userId(request, env, meta->userId);
     }
     if (resourceType) {
         adb_ncDescribeResourceType_set_resourceType(request, env, resourceType);
@@ -559,9 +553,8 @@ int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
   // set standard input fields
   adb_ncPowerDownType_set_nodeName(request, env, st->node_name);
   if (meta) {
+    if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
     EUCA_MESSAGE_MARSHAL(ncPowerDownType, request, meta);
-    //    adb_ncPowerDownType_set_correlationId (request, env, CORRELATION_ID);
-    //    adb_ncPowerDownType_set_userId (request, env, meta->userId);
   }
   
   // set op-specific input fields
@@ -596,9 +589,8 @@ int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char **peers, int peersLe
     // set standard input fields
     adb_ncStartNetworkType_set_nodeName(request, env, st->node_name);
     if (meta) {
+      if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
       EUCA_MESSAGE_MARSHAL(ncStartNetworkType, request, meta);
-      //        adb_ncStartNetworkType_set_correlationId (request, env, CORRELATION_ID);
-      //        adb_ncStartNetworkType_set_userId (request, env, meta->userId);
     }
     
     // set op-specific input fields
@@ -645,9 +637,8 @@ int ncAttachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     // set standard input fields
     adb_ncAttachVolumeType_set_nodeName(request, env, st->node_name);
     if (meta) {
+      if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
       EUCA_MESSAGE_MARSHAL(ncAttachVolumeType, request, meta);
-      //        adb_ncAttachVolumeType_set_correlationId (request, env, CORRELATION_ID);
-      //        adb_ncAttachVolumeType_set_userId (request, env, meta->userId);
     }
     
     // set op-specific input fields
@@ -687,9 +678,8 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     // set standard input fields
     adb_ncDetachVolumeType_set_nodeName(request, env, st->node_name);
     if (meta) {
+      if (meta->correlationId) { free(meta->correlationId); meta->correlationId = NULL; }
       EUCA_MESSAGE_MARSHAL(ncDetachVolumeType, request, meta);
-      //        adb_ncDetachVolumeType_set_correlationId (request, env, CORRELATION_ID);
-      //        adb_ncDetachVolumeType_set_userId (request, env, meta->userId);
     }
     
     // set op-specific input fields
