@@ -1019,33 +1019,116 @@ int doPowerDown(ncMetadata *meta) {
 
 int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
-	int ret;
+    int ret;
+    
+    if (init())
+        return 1;
+    
+    logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
+    logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
+    
+    int i;
+    int found_image = 0;
+    int found_kernel = 0;
+    int found_ramdisk = 0;
+    for (i=0; i<EUCA_MAX_VBRS; i++) {
+        virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
+        if (strlen(vbr->resourceLocation)>0) {
+            logprintfl (EUCAINFO, "                         device mapping: type=%s id=%s dev=%s size=%d format=%s %s\n", vbr->id, vbr->typeName, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
+            if (!strcmp(vbr->typeName, "image")) found_image = 1;
+            if (!strcmp(vbr->typeName, "kernel")) found_kernel = 1;
+            if (!strcmp(vbr->typeName, "ramdisk")) found_ramdisk = 1;
+        } else {
+            break;
+        }
+    }
 
-	if (init())
-		return 1;
+    // legacy support for image{Id|URL}
+    if (imageId && imageURL) {
+        if (found_image) {
+            logprintfl (EUCAINFO, "                         IGNORING image %s passed outside the virtual boot record\n", imageId);
+        } else {
+            logprintfl (EUCAINFO, "                         LEGACY pre-VBR image id=%s URL=%s\n", imageId, imageURL);
+            if (i>=EUCA_MAX_VBRS-2) {
+                logprintfl (EUCAERROR, "Out of room in the Virtual Boot Record for legacy image %s\n", imageId);
+                return ERROR;
+            }
+            {
+                virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+                strncpy (vbr->resourceLocation, imageURL, sizeof (vbr->resourceLocation));
+                strncpy (vbr->guestDeviceName, "sda1", sizeof (vbr->guestDeviceName));
+                strncpy (vbr->id, imageId, sizeof (vbr->id));
+                strncpy (vbr->typeName, "image", sizeof (vbr->typeName));
+                vbr->size = -1;
+                strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+            }
+            {
+                virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+                strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
+                strncpy (vbr->guestDeviceName, "sda2", sizeof (vbr->guestDeviceName));
+                strncpy (vbr->id, "none", sizeof (vbr->id));
+                strncpy (vbr->typeName, "ephemeral0", sizeof (vbr->typeName));
+                vbr->size = 524288; // we cannot compute it here, so pick something
+                strncpy (vbr->formatName, "ext2", sizeof (vbr->formatName));
+            }
+            {
+                virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+                strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
+                strncpy (vbr->guestDeviceName, "sda2", sizeof (vbr->guestDeviceName));
+                strncpy (vbr->id, "none", sizeof (vbr->id));
+                strncpy (vbr->typeName, "swap", sizeof (vbr->typeName));
+                vbr->size = 524288;
+                strncpy (vbr->formatName, "swap", sizeof (vbr->formatName));
+            }
+        }
+    }
 
-	logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
-	logprintfl (EUCAINFO, "                         image=%s at %s\n", imageId, imageURL);
-	if (kernelId && kernelURL)
-	  logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
-	if (ramdiskId && ramdiskURL)
-	  logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
-	logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
+    // legacy support for kernel{Id|URL}
+    if (kernelId && kernelURL) {
+        if (found_kernel) {
+            logprintfl (EUCAINFO, "                         IGNORING kernel %s passed outside the virtual boot record\n", kernelId);
+        } else {
+            logprintfl (EUCAINFO, "                         LEGACY pre-VBR kernel id=%s URL=%s\n", kernelId, kernelURL);
+            if (i==EUCA_MAX_VBRS) {
+                logprintfl (EUCAERROR, "Out of room in the Virtual Boot Record for legacy kernel %s\n", kernelId);
+                return ERROR;
+            }
+            virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+            strncpy (vbr->resourceLocation, kernelURL, sizeof (vbr->resourceLocation));
+            strncpy (vbr->guestDeviceName, "none", sizeof (vbr->guestDeviceName));
+            strncpy (vbr->id, kernelId, sizeof (vbr->id));
+            strncpy (vbr->typeName, "kernel", sizeof (vbr->typeName));
+            vbr->size = -1;
+            strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+        }
+    }
 
-	int i;
-	for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
-	  deviceMapping * dm = &(params->deviceMapping[i]);
-	  if (strlen(dm->deviceName)>0) {
-	    logprintfl (EUCAINFO, "                         device mapping: %s=%s size=%d format=%s\n", dm->deviceName, dm->virtualName, dm->size, dm->format);
-	  }
-	}
-
-	if (nc_state.H->doRunInstance)
- 	  ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
-	else
-	  ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
-
-	return ret;
+    // legacy support for ramdisk{Id|URL}
+    if (ramdiskId && ramdiskURL) {
+        if (found_ramdisk) {
+            logprintfl (EUCAINFO, "                         IGNORING ramdisk %s passed outside the virtual boot record\n", ramdiskId);
+        } else {
+            logprintfl (EUCAINFO, "                         LEGACY pre-VBR ramdisk id=%s URL=%s\n", ramdiskId, ramdiskURL);
+            if (i==EUCA_MAX_VBRS) {
+                logprintfl (EUCAERROR, "Out of room in the Virtual Boot Record for legacy ramdisk %s\n", ramdiskId);
+                return ERROR;
+            }
+            virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+            strncpy (vbr->resourceLocation, ramdiskURL, sizeof (vbr->resourceLocation));
+            strncpy (vbr->guestDeviceName, "none", sizeof (vbr->guestDeviceName));
+            strncpy (vbr->id, ramdiskId, sizeof (vbr->id));
+            strncpy (vbr->typeName, "ramdisk", sizeof (vbr->typeName));
+            vbr->size = -1;
+            strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+        }
+    }
+   
+    if (nc_state.H->doRunInstance)
+        ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+    else
+        ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+    
+    return ret;
 }
 
 int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
