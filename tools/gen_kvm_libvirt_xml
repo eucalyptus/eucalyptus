@@ -76,6 +76,7 @@ our $use_ramdisk = 0;
 our $local_kvm="";
 our $use_virtio_net = 0;
 our $use_virtio_root = 0;
+our $use_block_root = 0;
 
 if ( -x "/usr/bin/kvm" ) {
     $local_kvm="/usr/bin/kvm";
@@ -88,6 +89,7 @@ if ( -x "/usr/bin/kvm" ) {
 # deal with command-line parameters
 GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
            'ephemeral'      => sub { }, # option ignored 
+           'blockroot'      => sub { $use_block_root = 1; },
            'virtionet'      => sub { $use_virtio_net = 1; },
            'virtioroot'      => sub { $use_virtio_root = 1; },
 		   ) or exit (1);
@@ -120,21 +122,22 @@ print <<EOF;
     <devices>
         <emulator>$local_kvm</emulator>
 EOF
+    
+if ( $use_block_root ) {
+    print "        <disk type='block'>";
+  #  print "            <driver name='phy'/>";
+    print "            <source dev='DEVNAME'/>";
+} else {
+    print "        <disk type='file' device='disk'>"; # TODO: is 'device=disk' OK without virtio?
+    print "            <source file='BASEPATH/disk'/>";
+} 
 
 if ( $use_virtio_root ) {
-    print <<EOF;
-        <disk type='file' device='disk'>
-            <source file='BASEPATH/disk'/>
-            <target dev='vda' bus='virtio'/>
-        </disk>
-EOF
+    print "            <target dev='vda' bus='virtio'/>";
+    print "        </disk>";
 } else {
-    print <<EOF;
-        <disk type='file'>
-            <source file='BASEPATH/disk'/>
-            <target dev='sda'/>
-        </disk>
-EOF
+    print "            <target dev='sda'/>";
+    print "        </disk>";
 }
 
 if ( $use_virtio_net ) {

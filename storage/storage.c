@@ -57,12 +57,12 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
+#define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU /* strnlen */
 #include <string.h>
 #include <sys/types.h>
-#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -918,7 +918,7 @@ retry:
         break;
         
     case WAIT:
-        logprintfl (EUCAINFO, "waiting for disapperance of %s...\n", staging_path);
+        logprintfl (EUCAINFO, "waiting for disappearance of %s...\n", staging_path);
         /* wait for staging_path to disappear, which means both either the
          * download succeeded or it failed */
         if ( (e=wait_for_file (NULL, staging_path, 180, "cached image")) ) 
