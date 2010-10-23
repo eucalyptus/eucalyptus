@@ -149,7 +149,6 @@ doRunInstance(	struct nc_state_t *nc,
     // parse and sanity-check the virtual boot record
     int i, j;
     char parts [6][EUCA_MAX_VBRS]; // record partitions seen
-    logprintfl(EUCADEBUG, "ARG: %d\n", params->virtualBootRecordLen);
     for (i=0, j=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
         // get the type (the only mandatory field)
@@ -174,8 +173,8 @@ doRunInstance(	struct nc_state_t *nc,
             vbr->type = NC_RESOURCE_EBS;
         } else {
             logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
-	    //            goto error; // TODO: dan ask dmitrii
-	    break;
+	    goto error; // TODO: dan ask dmitrii
+	    //	    break;
         }
         
         // identify the type of resource location from location string
