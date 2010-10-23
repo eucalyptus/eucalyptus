@@ -1044,7 +1044,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
     int found_image = 0;
     int found_kernel = 0;
     int found_ramdisk = 0;
-    for (i=0; i<EUCA_MAX_VBRS; i++) {
+    for (i=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
         if (strlen(vbr->resourceLocation)>0) {
             logprintfl (EUCAINFO, "                         device mapping: type=%s id=%s dev=%s size=%d format=%s %s\n", vbr->id, vbr->typeName, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
@@ -1074,6 +1074,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
                 strncpy (vbr->typeName, "image", sizeof (vbr->typeName));
                 vbr->size = -1;
                 strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+		params->virtualBootRecordLen++;
             }
             {
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
@@ -1083,6 +1084,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
                 strncpy (vbr->typeName, "ephemeral0", sizeof (vbr->typeName));
                 vbr->size = 524288; // we cannot compute it here, so pick something
                 strncpy (vbr->formatName, "ext2", sizeof (vbr->formatName));
+		params->virtualBootRecordLen++;
             }
             {
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
@@ -1092,6 +1094,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
                 strncpy (vbr->typeName, "swap", sizeof (vbr->typeName));
                 vbr->size = 524288;
                 strncpy (vbr->formatName, "swap", sizeof (vbr->formatName));
+		params->virtualBootRecordLen++;
             }
         }
     }
@@ -1113,6 +1116,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
             strncpy (vbr->typeName, "kernel", sizeof (vbr->typeName));
             vbr->size = -1;
             strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+	    params->virtualBootRecordLen++;
         }
     }
 
@@ -1133,6 +1137,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
             strncpy (vbr->typeName, "ramdisk", sizeof (vbr->typeName));
             vbr->size = -1;
             strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+	    params->virtualBootRecordLen++;
         }
     }
    

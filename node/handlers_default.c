@@ -149,9 +149,9 @@ doRunInstance(	struct nc_state_t *nc,
     // parse and sanity-check the virtual boot record
     int i, j;
     char parts [6][EUCA_MAX_VBRS]; // record partitions seen
-    for (i=0, j=0; i<EUCA_MAX_VBRS; i++) {
+    logprintfl(EUCADEBUG, "ARG: %d\n", params->virtualBootRecordLen);
+    for (i=0, j=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
-
         // get the type (the only mandatory field)
         if (strstr (vbr->typeName, "image") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_IMAGE; 
@@ -174,7 +174,8 @@ doRunInstance(	struct nc_state_t *nc,
             vbr->type = NC_RESOURCE_EBS;
         } else {
             logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
-            goto error;
+	    //            goto error; // TODO: dan ask dmitrii
+	    break;
         }
         
         // identify the type of resource location from location string
@@ -204,7 +205,7 @@ doRunInstance(	struct nc_state_t *nc,
             vbr->locationType = NC_LOCATION_NONE;
         } else {
             logprintfl (EUCAERROR, "Error: failed to parse resource location '%s'\n", vbr->resourceLocation);
-            goto error;
+	    goto error;
         }
         if (error!=OK) {
             logprintfl (EUCAERROR, "Error: URL for resourceLocation '%s' is not in the message\n", vbr->resourceLocation);
@@ -286,7 +287,8 @@ doRunInstance(	struct nc_state_t *nc,
                 goto error;
             }
         } else {
-            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) {
+	    //            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) { // TODO: dan check with dmitrii
+	    if (vbr->format!=NC_FORMAT_NONE) {
                 logprintfl (EUCAERROR, "Error: invalid size '%d' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName, vbr->resourceLocation);
                 goto error;
             }
@@ -298,6 +300,23 @@ doRunInstance(	struct nc_state_t *nc,
     for (k=0; k<j; k++) {
         logprintfl (EUCADEBUG, "Found partition %s\n", parts [k]); // TODO: verify no gaps in partitions
     }
+
+    // TODO: dan ask dmitrii
+    for (i=0; i<EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
+      virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
+      logprintfl(EUCADEBUG, "VBR(%d): %s %s %s\n", i, vbr->resourceLocation, vbr->formatName, vbr->typeName);
+      if (vbr->type == NC_RESOURCE_KERNEL && vbr->locationType == NC_LOCATION_URL) {
+	instance->params.kernel = vbr;
+	logprintfl(EUCADEBUG, "DAN: kernel info: %s %s\n", instance->params.kernel->resourceLocation, instance->params.kernel->preparedResourceLocation);
+      } else if (vbr->type == NC_RESOURCE_RAMDISK && vbr->locationType == NC_LOCATION_URL) {
+	instance->params.ramdisk = vbr;
+	logprintfl(EUCADEBUG, "DAN: ramdisk info: %s %s\n", instance->params.ramdisk->resourceLocation, instance->params.ramdisk->preparedResourceLocation);
+      } else if (vbr->type == NC_RESOURCE_IMAGE && vbr->locationType == NC_LOCATION_URL) {
+	instance->params.image = vbr;
+	logprintfl(EUCADEBUG, "DAN: image info: %s %s\n", instance->params.image->resourceLocation, instance->params.image->preparedResourceLocation);
+      }
+    }
+
     change_state(instance, STAGING);
 
     sem_p (inst_sem); 

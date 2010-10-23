@@ -72,7 +72,7 @@ int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in)
     snprintf(out->name, 64, "%s", in->name);
 
     int i;
-    for (i=0; i<EUCA_MAX_VBRS; i++) {
+    for (i=0; i<EUCA_MAX_VBRS && i<in->virtualBootRecordLen; i++) { // TODO: dan ask dmitrii
             virtualBootRecord * out_r = out->virtualBootRecord + i;
             const virtualBootRecord * in_r = in->virtualBootRecord + i;
             strncpy (out_r->resourceLocation, in_r->resourceLocation, sizeof (out_r->resourceLocation));
