@@ -192,7 +192,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     adb_netConfigType_t * netconf = adb_instanceType_get_netParams(instance, env);
     if (netconf != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
-		ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
+        ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
         strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
         strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
         strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
@@ -208,12 +208,6 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         (char *)adb_instanceType_get_instanceId(instance, env),
         (char *)adb_instanceType_get_reservationId(instance, env),
         &params,
-        (char *)adb_instanceType_get_imageId(instance, env),
-        NULL, // URL is NULL
-        (char *)adb_instanceType_get_kernelId(instance, env),
-        NULL, // URL is NULL
-        (char *)adb_instanceType_get_ramdiskId(instance, env),
-        NULL, // URL is NULL
         (char *)adb_instanceType_get_stateName(instance, env),
         0,
         (char *)adb_instanceType_get_userId(instance, env), 
@@ -237,7 +231,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
             strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
-			strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
+            strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
         }
     }
 

@@ -97,6 +97,12 @@ doInitialize (struct nc_state_t *nc)
 }
 
 static int
+prep_location (virtualBootRecord * vbr, ncMetadata *meta, const char * typeName)
+{
+    return OK; // TODO: lookup of URL in meta based on typeName and construct vbr->preparedResourceLocation by prepending it to vbr->resourceLocation
+}
+
+static int
 doRunInstance(	struct nc_state_t *nc,
                 ncMetadata *meta,
                 char *instanceId,
@@ -115,7 +121,7 @@ doRunInstance(	struct nc_state_t *nc,
     * outInst = NULL;
     pid_t pid;
     netConfig ncnet;
-    int error;
+    int error = OK;
 
     memcpy(&ncnet, netparams, sizeof(netConfig));
 
@@ -172,12 +178,24 @@ doRunInstance(	struct nc_state_t *nc,
         }
         
         // identify the type of resource location from location string
-        if ((strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation)    { vbr->locationType = NC_LOCATION_URL;
-        } else if (strcasestr (vbr->resourceLocation, "iqn:") == vbr->resourceLocation) { vbr->locationType = NC_LOCATION_IQN;
-        } else if (strcasestr (vbr->resourceLocation, "aoe:") == vbr->resourceLocation) { vbr->locationType = NC_LOCATION_AOE;
-        } else if (strcasestr (vbr->resourceLocation, "walrus:") == vbr->resourceLocation) { vbr->locationType = NC_LOCATION_WALRUS;
-        } else if (strcasestr (vbr->resourceLocation, "clc:") == vbr->resourceLocation) { vbr->locationType = NC_LOCATION_CLC;
-        } else if (strcasestr (vbr->resourceLocation, "sc:") == vbr->resourceLocation) { vbr->locationType = NC_LOCATION_SC;
+        if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_URL;
+            strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
+        } else if (strcasestr (vbr->resourceLocation, "iqn:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_IQN;
+            // TODO: prep iqn location?
+        } else if (strcasestr (vbr->resourceLocation, "aoe:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_AOE;
+            // TODO: prep aoe location?
+        } else if (strcasestr (vbr->resourceLocation, "walrus:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_WALRUS;
+            error = prep_location (vbr, meta, "walrus");
+        } else if (strcasestr (vbr->resourceLocation, "clc:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_CLC;
+            error = prep_location (vbr, meta, "clc");
+        } else if (strcasestr (vbr->resourceLocation, "sc:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_SC;
+            error = prep_location (vbr, meta, "sc");
         } else if (strcasestr (vbr->resourceLocation, "none") == vbr->resourceLocation) { 
             if (vbr->type!=NC_RESOURCE_EPHEMERAL && vbr->type!=NC_RESOURCE_SWAP) {
                 logprintfl (EUCAERROR, "Error: resourceLocation not specified for non-ephemeral resource '%s'\n", vbr->resourceLocation);
@@ -188,7 +206,11 @@ doRunInstance(	struct nc_state_t *nc,
             logprintfl (EUCAERROR, "Error: failed to parse resource location '%s'\n", vbr->resourceLocation);
             goto error;
         }
-        
+        if (error!=OK) {
+            logprintfl (EUCAERROR, "Error: URL for resourceLocation '%s' is not in the message\n", vbr->resourceLocation);
+            goto error;
+        }
+
         // device can be 'none' only for kernel and ramdisk types
         if (!strcmp (vbr->guestDeviceName, "none")) {
             if (vbr->type!=NC_RESOURCE_KERNEL &&

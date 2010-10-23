@@ -507,6 +507,15 @@ monitoring_thread (void *arg)
     return NULL;
 }
 
+static void build_id_and_url (const virtualBootRecord * vbr, char * id, char * url)
+{
+    id [0] = '\0';
+    url [0] = '\0';
+    if (vbr) {
+        strncpy (id, vbr->id, SMALL_CHAR_BUFFER_SIZE);
+        strncpy (url, vbr->preparedResourceLocation, CHAR_BUFFER_SIZE);
+    }
+}
 
 void *startup_thread (void * arg)
 {
@@ -529,12 +538,16 @@ void *startup_thread (void * arg)
         return NULL;
     }
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
-    
+
+    char imageURL   [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.image, instance->imageId, imageURL);
+    char kernelURL  [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.kernel, instance->kernelId, kernelURL);
+    char ramdiskURL [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.ramdisk, instance->ramdiskId, ramdiskURL);
+
     error = scMakeInstanceImage (nc_state.home, 
 				 instance->userId, 
-                                 instance->imageId, instance->imageURL, 
-                                 instance->kernelId, instance->kernelURL, 
-                                 instance->ramdiskId, instance->ramdiskURL, 
+                                 instance->imageId, imageURL,
+                                 instance->kernelId, kernelURL,
+                                 instance->ramdiskId, ramdiskURL,
                                  instance->instanceId, instance->keyName, 
 				 &disk_path, 
 				 addkey_sem, nc_state.convert_to_disk,
@@ -1238,7 +1251,7 @@ int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	return ret;
 }
 
-int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem)
 {
 	int ret;
 
@@ -1248,9 +1261,9 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
 
 	if (nc_state.H->doDetachVolume)
-		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, 1);
+		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
 	else 
-		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, 1);
+		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
 
 	return ret;
 }
