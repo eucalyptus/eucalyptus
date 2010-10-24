@@ -26,7 +26,8 @@ import com.eucalyptus.component.Resource;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.event.PassiveEventListener;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
@@ -40,9 +41,9 @@ public class ServiceContext {
   @ConfigurableField( initial = "0", description = "Do a soft reset.", changeListener = HupListener.class )
   public static Integer                        HUP                      = 0;
   
-  public static class HupListener extends PassiveEventListener<ConfigurableProperty> {
+  public static class HupListener implements PropertyChangeListener {
     @Override
-    public void firingEvent( ConfigurableProperty t ) {
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       if ( "123".equals( t.getValue( ) ) ) {
         System.exit( 123 );
       }
