@@ -10,8 +10,9 @@ import java.util.List;
  * 1. checkAdd/checkRemove
  * 2. add/remove
  * 3. fireStart/fireStop
+ * 4. fireEnable/fireDisable
+ * 
  * @author decker
- *
  * @param <T>
  */
 public interface ServiceBuilder<T extends ServiceConfiguration> {
