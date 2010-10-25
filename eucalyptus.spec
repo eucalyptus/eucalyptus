@@ -325,7 +325,7 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	adduser -M eucalyptus
 %endif
 %if %is_fedora
-	adduser -U --system eucalyptus 
+	adduser -U eucalyptus 
 %endif
 fi
 
