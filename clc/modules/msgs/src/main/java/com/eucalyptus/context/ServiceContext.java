@@ -14,15 +14,8 @@ import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
-import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Resource;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -30,11 +23,10 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
-  private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
+  static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
   @ConfigurableField( initial = "16", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
   public static Integer                        MAX_OUTSTANDING_MESSAGES = 16;
@@ -144,94 +136,6 @@ public class ServiceContext {
       ServiceContext.getContext( ).dispose( );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
-    }
-  }
-  
-  @Provides( Component.bootstrap )
-  @RunDuring( Bootstrap.Stage.CloudServiceInit )
-  public static class ServiceBootstrapper extends Bootstrapper {
-    
-    public ServiceBootstrapper( ) {}
-    
-    @Override
-    public boolean load( ) throws Exception {
-      List<ConfigResource> configs = Lists.newArrayList( );
-      for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
-        if ( comp.isEnabled( ) ) {
-          Resource rsc = comp.getConfiguration( ).getResource( );
-          if( rsc != null ) {
-            LOG.info( "-> Preparing cfg: " + rsc );
-            configs.addAll( rsc.getConfigurations( ) );
-          }
-        }
-      }
-      for ( ConfigResource cfg : configs ) {
-        LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );
-      }
-      try {
-        ServiceContext.buildContext( configs );
-      } catch ( Exception e ) {
-        LOG.fatal( "Failed to bootstrap services.", e );
-        return false;
-      }
-      return true;
-    }
-    
-    @Override
-    public boolean start( ) throws Exception {
-      try {
-        LOG.info( "Starting up system bus." );
-        ServiceContext.createContext( );
-      } catch ( Exception e ) {
-        LOG.fatal( "Failed to configure services.", e );
-        return false;
-      }
-      try {
-        ServiceContext.startContext( );
-      } catch ( Exception e ) {
-        LOG.fatal( "Failed to start services.", e );
-        return false;
-      }
-      return true;
-    }
-    
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-     */
-    @Override
-    public boolean enable( ) throws Exception {
-      return true;
-    }
-
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-     */
-    @Override
-    public boolean stop( ) throws Exception {
-      ServiceContext.stopContext( );
-      return true;
-    }
-
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-     */
-    @Override
-    public void destroy( ) throws Exception {}
-
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-     */
-    @Override
-    public boolean disable( ) throws Exception {
-      return true;
-    }
-
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-     */
-    @Override
-    public boolean check( ) throws Exception {
-      return true;
     }
   }
   
