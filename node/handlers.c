@@ -1089,7 +1089,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
             {
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
                 strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
-                strncpy (vbr->guestDeviceName, "sda2", sizeof (vbr->guestDeviceName));
+                strncpy (vbr->guestDeviceName, "sda3", sizeof (vbr->guestDeviceName));
                 strncpy (vbr->id, "none", sizeof (vbr->id));
                 strncpy (vbr->typeName, "swap", sizeof (vbr->typeName));
                 vbr->size = 524288;

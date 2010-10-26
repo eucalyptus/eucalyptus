@@ -160,26 +160,26 @@ doRunInstance(	struct nc_state_t *nc,
     // parse and sanity-check the virtual boot record
     int i, j;
     char parts [6][EUCA_MAX_VBRS]; // record partitions seen
-    for (i=0, j=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
-        virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
+    for (i=0, j=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
+        virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]);
         // get the type (the only mandatory field)
         if (strstr (vbr->typeName, "image") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_IMAGE; 
-            params->image = vbr;
+            instance->params.image = vbr;
         } else if (strstr (vbr->typeName, "kernel") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_KERNEL; 
-            params->kernel = vbr;
+            instance->params.kernel = vbr;
         } else if (strstr (vbr->typeName, "ramdisk") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_RAMDISK; 
-            params->ramdisk = vbr;
+            instance->params.ramdisk = vbr;
         } else if (strstr (vbr->typeName, "ephemeral") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_EPHEMERAL; 
             if (strstr (vbr->typeName, "ephemeral0") == vbr->typeName) {
-                params->ephemeral0 = vbr;
+                instance->params.ephemeral0 = vbr;
             }
         } else if (strstr (vbr->typeName, "swap") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_SWAP; 
-            params->swap = vbr;
+            instance->params.swap = vbr;
         } else if (strstr (vbr->typeName, "ebs") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_EBS;
         } else {
