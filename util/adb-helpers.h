@@ -1,6 +1,47 @@
 #ifndef _ADB_HELPERS_H
 #define _ADB_HELPERS_H
 
+#define EUCA_MESSAGE_UNMARSHAL(thefunc, theadb, themeta)		\
+  {									\
+    int i, j;								\
+    adb_serviceInfoType_t *sit=NULL;					\
+    bzero(themeta, sizeof(ncMetadata));					\
+    themeta->correlationId = adb_##thefunc##_get_correlationId(theadb, env); \
+    themeta->userId = adb_##thefunc##_get_userId(theadb, env);		\
+    themeta->epoch = adb_##thefunc##_get_epoch(theadb, env);			\
+    themeta->servicesLen = adb_##thefunc##_sizeof_services(theadb, env); \
+    for (i=0; i<themeta->servicesLen && i < 16; i++) {			\
+      sit = adb_##thefunc##_get_services_at(theadb, env, i);		\
+      snprintf(themeta->services[i].type,32,"%s",adb_serviceInfoType_get_type(sit, env)); \
+      snprintf(themeta->services[i].name,32,"%s",adb_serviceInfoType_get_name(sit, env)); \
+      themeta->services[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);	\
+      for (j=0; j<themeta->services[i].urisLen && j < 8; j++) {		\
+	snprintf(themeta->services[i].uris[j], 512, "%s",adb_serviceInfoType_get_uris_at(sit, env, j)); \
+      }									\
+    }									\
+  }
+
+
+#define EUCA_MESSAGE_MARSHAL(thefunc, theadb, themeta)		\
+  {									\
+    int i, j;								\
+    adb_serviceInfoType_t *sit=NULL;					\
+    adb_##thefunc##_set_correlationId(theadb, env, themeta->correlationId); \
+    adb_##thefunc##_set_userId(theadb, env, themeta->userId);		\
+    adb_##thefunc##_set_epoch(theadb, env,  themeta->epoch);		\
+    for (i=0; i<themeta->servicesLen && i < 16; i++) {			\
+      sit = adb_serviceInfoType_create(env);				\
+      adb_serviceInfoType_set_type(sit, env, themeta->services[i].type); \
+      adb_serviceInfoType_set_name(sit, env, themeta->services[i].name); \
+      for (j=0; j<themeta->services[i].urisLen && j < 8; j++) {	\
+	adb_serviceInfoType_add_uris(sit, env, themeta->services[i].uris[j]); \
+      }									\
+      adb_##thefunc##_add_services(theadb, env, sit);			\
+    }									\
+    logprintfl(EUCADEBUG, "eucalyptusMessageMarshal: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(themeta->userId), SP(themeta->correlationId), themeta->epoch, SP(themeta->services[0].name), SP(themeta->services[0].type), SP(themeta->services[0].uris[0])); \
+  }
+
+
 static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMachineType_t * vm_type, const axutil_env_t *env)
 {
   int i;

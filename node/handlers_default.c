@@ -57,6 +57,7 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
+#define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU /* strnlen */
@@ -69,7 +70,6 @@ permission notice:
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
-#define _FILE_OFFSET_BITS 64
 #include <sys/stat.h>
 #include <pthread.h>
 #include <sys/vfs.h> /* statfs */
@@ -235,6 +235,8 @@ doDescribeInstances(	struct nc_state_t *nc,
 {
 	ncInstance *instance, *tmp;
 	int total, i, j, k;
+
+	logprintfl(EUCADEBUG, "eucalyptusMessageMarshal: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(meta->userId), SP(meta->correlationId), meta->epoch, SP(meta->services[0].name), SP(meta->services[0].type), SP(meta->services[0].uris[0])); 
 
 	*outInstsLen = 0;
 	*outInsts = NULL;

@@ -80,34 +80,36 @@ adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, c
     adb_ncPowerDownResponseType_t * output = adb_ncPowerDownResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncPowerDownType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncPowerDownType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncPowerDownType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncPowerDownType_get_userId(input, env);
 
     // get operation-specific fields from input
     fprintf(stderr, "powerdown called\n\n");
-    eventlog("NC", userId, correlationId, "PowerDown", "begin");
+    //    eventlog("NC", userId, correlationId, "PowerDown", "begin");
     { // do it
-        ncMetadata meta = { correlationId, userId };
+      //        ncMetadata meta = { correlationId, userId };
+        ncMetadata meta;
+	EUCA_MESSAGE_UNMARSHAL(ncPowerDownType, input, (&meta));
 
         int error = doPowerDown (&meta);
 
         if (error) {
 	  logprintfl (EUCAERROR, "ERROR: doPowerDown() failed error=%d\n", error);
-	  adb_ncPowerDownResponseType_set_correlationId(output, env, correlationId);
-	  adb_ncPowerDownResponseType_set_userId(output, env, userId);
+	  adb_ncPowerDownResponseType_set_correlationId(output, env, meta.correlationId);
+	  adb_ncPowerDownResponseType_set_userId(output, env, meta.userId);
 	  adb_ncPowerDownResponseType_set_return(output, env, AXIS2_FALSE);
 	  
 	  // set operation-specific fields in output
-	  adb_ncPowerDownResponseType_set_statusMessage(output, env, 2);
+	  adb_ncPowerDownResponseType_set_statusMessage(output, env, "2");
 	  
         } else {
 	  // set standard fields in output
 	  adb_ncPowerDownResponseType_set_return(output, env, AXIS2_TRUE);
-	  adb_ncPowerDownResponseType_set_correlationId(output, env, correlationId);
-	  adb_ncPowerDownResponseType_set_userId(output, env, userId);
+	  adb_ncPowerDownResponseType_set_correlationId(output, env, meta.correlationId);
+	  adb_ncPowerDownResponseType_set_userId(output, env, meta.userId);
 	  
 	  // set operation-specific fields in output
-	  adb_ncPowerDownResponseType_set_statusMessage(output, env, 0);
+	  adb_ncPowerDownResponseType_set_statusMessage(output, env, "0");
         }
     }
 
@@ -115,7 +117,7 @@ adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, c
     adb_ncPowerDownResponse_set_ncPowerDownResponse(response, env, output);
     //    pthread_mutex_unlock(&ncHandlerLock);
     
-    eventlog("NC", userId, correlationId, "PowerDown", "end");
+    //    eventlog("NC", userId, correlationId, "PowerDown", "end");
     fprintf(stderr, "powerdown done\n");
     return response;
 }
@@ -128,8 +130,8 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
     adb_ncStartNetworkResponseType_t * output = adb_ncStartNetworkResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncStartNetworkType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncStartNetworkType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncStartNetworkType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncStartNetworkType_get_userId(input, env);
 
     // get operation-specific fields from input
     int port = adb_ncStartNetworkType_get_remoteHostPort(input, env);
@@ -141,10 +143,11 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
         peers[i] = adb_ncStartNetworkType_get_remoteHosts_at(input, env, i);
     }
 
-    eventlog("NC", userId, correlationId, "StartNetwork", "begin");
+    //    eventlog("NC", userId, correlationId, "StartNetwork", "begin");
     { // do it
-        ncMetadata meta = { correlationId, userId };
-
+      //ncMetadata meta = { correlationId, userId };
+        ncMetadata meta;
+	EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
         int error = doStartNetwork (&meta, peers, peersLen, port, vlan);
 
         if (error) {
@@ -153,17 +156,17 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
 
             // set operation-specific fields in output
             adb_ncStartNetworkResponseType_set_networkStatus(output, env, "FAIL");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, 2);
+            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "2");
 
         } else {
             // set standard fields in output
             adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncStartNetworkResponseType_set_correlationId(output, env, correlationId);
-            adb_ncStartNetworkResponseType_set_userId(output, env, userId);
+            adb_ncStartNetworkResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncStartNetworkResponseType_set_userId(output, env, meta.userId);
 
             // set operation-specific fields in output
             adb_ncStartNetworkResponseType_set_networkStatus(output, env, "SUCCESS");
-            adb_ncStartNetworkResponseType_set_statusMessage(output, env, 0);
+            adb_ncStartNetworkResponseType_set_statusMessage(output, env, "0");
         }
 
         if (peersLen) 
@@ -174,7 +177,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
     adb_ncStartNetworkResponse_set_ncStartNetworkResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
     
-    eventlog("NC", userId, correlationId, "StartNetwork", "end");
+    //    eventlog("NC", userId, correlationId, "StartNetwork", "end");
     return response;
 }
 
@@ -186,15 +189,17 @@ adb_ncDescribeResourceResponse_t* ncDescribeResourceMarshal (adb_ncDescribeResou
     adb_ncDescribeResourceResponseType_t * output = adb_ncDescribeResourceResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncDescribeResourceType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncDescribeResourceType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncDescribeResourceType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncDescribeResourceType_get_userId(input, env);
 
     // get operation-specific fields from input
     axis2_char_t * resourceType = adb_ncDescribeResourceType_get_resourceType(input, env);
 
-    eventlog("NC", userId, correlationId, "DescribeResource", "begin");
+    //    eventlog("NC", userId, correlationId, "DescribeResource", "begin");
     { // do it
-        ncMetadata meta = { correlationId, userId };
+      //        ncMetadata meta = { correlationId, userId };
+        ncMetadata meta;
+	EUCA_MESSAGE_UNMARSHAL(ncDescribeResourceType, input, (&meta));
         ncResource * outRes;
 
         int error = doDescribeResource (&meta, resourceType, &outRes);
@@ -206,8 +211,8 @@ adb_ncDescribeResourceResponse_t* ncDescribeResourceMarshal (adb_ncDescribeResou
         } else {
             // set standard fields in output
             adb_ncDescribeResourceResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncDescribeResourceResponseType_set_correlationId(output, env, correlationId);
-            adb_ncDescribeResourceResponseType_set_userId(output, env, userId);
+            adb_ncDescribeResourceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncDescribeResourceResponseType_set_userId(output, env, meta.userId);
 
             // set operation-specific fields in output
             adb_ncDescribeResourceResponseType_set_nodeStatus(output, env, outRes->nodeStatus);
@@ -226,7 +231,7 @@ adb_ncDescribeResourceResponse_t* ncDescribeResourceMarshal (adb_ncDescribeResou
     adb_ncDescribeResourceResponse_set_ncDescribeResourceResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
     
-    eventlog("NC", userId, correlationId, "DescribeResource", "end");
+    //    eventlog("NC", userId, correlationId, "DescribeResource", "end");
     return response;
 }
 
@@ -287,8 +292,8 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     adb_ncRunInstanceResponseType_t * output = adb_ncRunInstanceResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncRunInstanceType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncRunInstanceType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncRunInstanceType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncRunInstanceType_get_userId(input, env);
 
     // get operation-specific fields from input
     axis2_char_t * instanceId = adb_ncRunInstanceType_get_instanceId(input, env);
@@ -323,14 +328,10 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
             groupNames[i] = adb_ncRunInstanceType_get_groupNames_at(input, env, i);
         }
     
-        { // log event
-            char other[256];
-            snprintf(other, 256, "begin,%s", reservationId);
-            eventlog("NC", userId, correlationId, "RunInstance", other);
-        }
-        
         { // do it
-            ncMetadata meta = { correlationId, userId };
+	  //            ncMetadata meta = { correlationId, userId };
+	    ncMetadata meta;
+	    EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
             ncInstance * outInst;
             
             int error = doRunInstance (&meta, instanceId, reservationId, &params, 
@@ -349,8 +350,8 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
             } else {
                 ///// set standard fields in output
                 adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_TRUE);
-                adb_ncRunInstanceResponseType_set_correlationId(output, env, correlationId);
-                adb_ncRunInstanceResponseType_set_userId(output, env, userId);
+                adb_ncRunInstanceResponseType_set_correlationId(output, env, meta.correlationId);
+                adb_ncRunInstanceResponseType_set_userId(output, env, meta.userId);
                 
                 ///// set operation-specific fields in output            
                 adb_instanceType_t * instance = adb_instanceType_create(env);
@@ -369,7 +370,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     adb_ncRunInstanceResponse_set_ncRunInstanceResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
     
-    eventlog("NC", userId, correlationId, "RunInstance", "end");
+    //    eventlog("NC", userId, correlationId, "RunInstance", "end");
     return response;
 }
 
@@ -381,8 +382,8 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
     adb_ncDescribeInstancesResponseType_t * output = adb_ncDescribeInstancesResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncDescribeInstancesType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncDescribeInstancesType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncDescribeInstancesType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncDescribeInstancesType_get_userId(input, env);
 
     // get operation-specific fields from input
     int instIdsLen = adb_ncDescribeInstancesType_sizeof_instanceIds(input, env);
@@ -397,9 +398,11 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
             instIds[i] = adb_ncDescribeInstancesType_get_instanceIds_at(input, env, i);
         }
 
-        eventlog("NC", userId, correlationId, "DescribeInstances", "begin");
+	//        eventlog("NC", userId, correlationId, "DescribeInstances", "begin");
         { // do it
-            ncMetadata meta = { correlationId, userId };
+	  //            ncMetadata meta = { correlationId, userId };
+	    ncMetadata meta;
+	    EUCA_MESSAGE_UNMARSHAL(ncDescribeInstancesType, input, (&meta));
             ncInstance **outInsts;
             int outInstsLen;
 
@@ -412,8 +415,8 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
             } else {
                 // set standard fields in output
                 adb_ncDescribeInstancesResponseType_set_return(output, env, AXIS2_TRUE);
-                adb_ncDescribeInstancesResponseType_set_correlationId(output, env, correlationId);
-                adb_ncDescribeInstancesResponseType_set_userId(output, env, userId);
+                adb_ncDescribeInstancesResponseType_set_correlationId(output, env, meta.correlationId);
+                adb_ncDescribeInstancesResponseType_set_userId(output, env, meta.userId);
 
                 // set operation-specific fields in output
                 for (i=0; i<outInstsLen; i++) {
@@ -431,7 +434,7 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
                     free ( outInsts );
             }
         }
-        eventlog("NC", userId, correlationId, "DescribeInstances", "end");
+	//        eventlog("NC", userId, correlationId, "DescribeInstances", "end");
     }
     
     // set response to output
@@ -448,15 +451,17 @@ adb_ncRebootInstanceResponse_t* ncRebootInstanceMarshal (adb_ncRebootInstance_t*
     adb_ncRebootInstanceResponseType_t * output = adb_ncRebootInstanceResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncRebootInstanceType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncRebootInstanceType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncRebootInstanceType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncRebootInstanceType_get_userId(input, env);
 
     // get operation-specific fields from input
     axis2_char_t * instanceId = adb_ncRebootInstanceType_get_instanceId(input, env);
 
-    eventlog("NC", userId, correlationId, "RebootInstance", "begin");
+    //    eventlog("NC", userId, correlationId, "RebootInstance", "begin");
     { // do it
-        ncMetadata meta = { correlationId, userId };
+      //        ncMetadata meta = { correlationId, userId };
+        ncMetadata meta;
+	EUCA_MESSAGE_UNMARSHAL(ncRebootInstanceType, input, (&meta));
 
         int error = doRebootInstance (&meta, instanceId);
     
@@ -467,8 +472,8 @@ adb_ncRebootInstanceResponse_t* ncRebootInstanceMarshal (adb_ncRebootInstance_t*
         } else {
             // set standard fields in output
             adb_ncRebootInstanceResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncRebootInstanceResponseType_set_correlationId(output, env, correlationId);
-            adb_ncRebootInstanceResponseType_set_userId(output, env, userId);
+            adb_ncRebootInstanceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncRebootInstanceResponseType_set_userId(output, env, meta.userId);
 
             // set operation-specific fields in output
             adb_ncRebootInstanceResponseType_set_status(output, env, 0);
@@ -478,7 +483,7 @@ adb_ncRebootInstanceResponse_t* ncRebootInstanceMarshal (adb_ncRebootInstance_t*
     adb_ncRebootInstanceResponse_set_ncRebootInstanceResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
     
-    eventlog("NC", userId, correlationId, "RebootInstance", "end");
+    //    eventlog("NC", userId, correlationId, "RebootInstance", "end");
     return response;
 }
 
@@ -490,15 +495,17 @@ adb_ncGetConsoleOutputResponse_t* ncGetConsoleOutputMarshal (adb_ncGetConsoleOut
     adb_ncGetConsoleOutputResponseType_t * output = adb_ncGetConsoleOutputResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncGetConsoleOutputType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncGetConsoleOutputType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncGetConsoleOutputType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncGetConsoleOutputType_get_userId(input, env);
 
     // get operation-specific fields from input
     axis2_char_t * instanceId = adb_ncGetConsoleOutputType_get_instanceId(input, env);
 
-    eventlog("NC", userId, correlationId, "GetConsoleOutput", "begin");
+    //    eventlog("NC", userId, correlationId, "GetConsoleOutput", "begin");
     { // do it
-        ncMetadata meta = { correlationId, userId };
+      //        ncMetadata meta = { correlationId, userId };
+        ncMetadata meta;
+	EUCA_MESSAGE_UNMARSHAL(ncGetConsoleOutputType, input, (&meta));
         char * consoleOutput=NULL;
 
         int error = doGetConsoleOutput (&meta, instanceId, &consoleOutput);
@@ -510,8 +517,8 @@ adb_ncGetConsoleOutputResponse_t* ncGetConsoleOutputMarshal (adb_ncGetConsoleOut
         } else {
             // set standard fields in output
             adb_ncGetConsoleOutputResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncGetConsoleOutputResponseType_set_correlationId(output, env, correlationId);
-            adb_ncGetConsoleOutputResponseType_set_userId(output, env, userId);
+            adb_ncGetConsoleOutputResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncGetConsoleOutputResponseType_set_userId(output, env, meta.userId);
 
             // set operation-specific fields in output
             adb_ncGetConsoleOutputResponseType_set_consoleOutput(output, env, consoleOutput);
@@ -522,7 +529,7 @@ adb_ncGetConsoleOutputResponse_t* ncGetConsoleOutputMarshal (adb_ncGetConsoleOut
     adb_ncGetConsoleOutputResponse_set_ncGetConsoleOutputResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
     
-    eventlog("NC", userId, correlationId, "GetConsoleOutput", "end");
+    //    eventlog("NC", userId, correlationId, "GetConsoleOutput", "end");
     return response;
 }
 
@@ -534,15 +541,17 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
     adb_ncTerminateInstanceResponseType_t * output = adb_ncTerminateInstanceResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncTerminateInstanceType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncTerminateInstanceType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncTerminateInstanceType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncTerminateInstanceType_get_userId(input, env);
 
     // get operation-specific fields from input
     axis2_char_t * instanceId = adb_ncTerminateInstanceType_get_instanceId(input, env);
 
-    eventlog("NC", userId, correlationId, "TerminateInstance", "begin");
+    //    eventlog("NC", userId, correlationId, "TerminateInstance", "begin");
     { // do it
-        ncMetadata meta = { correlationId, userId };
+      //        ncMetadata meta = { correlationId, userId };
+        ncMetadata meta;
+	EUCA_MESSAGE_UNMARSHAL(ncTerminateInstanceType, input, (&meta));
         int shutdownState, previousState;
 
         int error = doTerminateInstance (&meta, instanceId, &shutdownState, &previousState);
@@ -554,8 +563,8 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
         } else {
             // set standard fields in output
             adb_ncTerminateInstanceResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncTerminateInstanceResponseType_set_correlationId(output, env, correlationId);
-            adb_ncTerminateInstanceResponseType_set_userId(output, env, userId);
+            adb_ncTerminateInstanceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncTerminateInstanceResponseType_set_userId(output, env, meta.userId);
 
             // set operation-specific fields in output
             adb_ncTerminateInstanceResponseType_set_instanceId(output, env, instanceId);
@@ -572,7 +581,7 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
     adb_ncTerminateInstanceResponse_set_ncTerminateInstanceResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
     
-    eventlog("NC", userId, correlationId, "TerminateInstance", "end");
+    //    eventlog("NC", userId, correlationId, "TerminateInstance", "end");
     return response;
 }
 
@@ -584,8 +593,8 @@ adb_ncAttachVolumeResponse_t* ncAttachVolumeMarshal (adb_ncAttachVolume_t* ncAtt
     adb_ncAttachVolumeResponseType_t * output = adb_ncAttachVolumeResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncAttachVolumeType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncAttachVolumeType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncAttachVolumeType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncAttachVolumeType_get_userId(input, env);
 
     // get operation-specific fields from input
     axis2_char_t * instanceId = adb_ncAttachVolumeType_get_instanceId(input, env);
@@ -593,22 +602,24 @@ adb_ncAttachVolumeResponse_t* ncAttachVolumeMarshal (adb_ncAttachVolume_t* ncAtt
     axis2_char_t * remoteDev = adb_ncAttachVolumeType_get_remoteDev(input, env);
     axis2_char_t * localDev = adb_ncAttachVolumeType_get_localDev(input, env);
 
-    eventlog("NC", userId, correlationId, "AttachVolume", "begin");
+    //    eventlog("NC", userId, correlationId, "AttachVolume", "begin");
     { // do it
-        ncMetadata meta = { correlationId, userId };
+      //        ncMetadata meta = { correlationId, userId };
+	ncMetadata meta;
+	EUCA_MESSAGE_UNMARSHAL(ncAttachVolumeType, input, (&meta));
 
         int error = doAttachVolume (&meta, instanceId, volumeId, remoteDev, localDev);
     
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doAttachVolume() failed error=%d\n", error);
             adb_ncAttachVolumeResponseType_set_return(output, env, AXIS2_FALSE);
-            adb_ncAttachVolumeResponseType_set_correlationId(output, env, correlationId);
-            adb_ncAttachVolumeResponseType_set_userId(output, env, userId);
+            adb_ncAttachVolumeResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncAttachVolumeResponseType_set_userId(output, env, meta.userId);
         } else {
             // set standard fields in output
             adb_ncAttachVolumeResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncAttachVolumeResponseType_set_correlationId(output, env, correlationId);
-            adb_ncAttachVolumeResponseType_set_userId(output, env, userId);
+            adb_ncAttachVolumeResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncAttachVolumeResponseType_set_userId(output, env, meta.userId);
             // no operation-specific fields in output
         }
     }
@@ -616,7 +627,7 @@ adb_ncAttachVolumeResponse_t* ncAttachVolumeMarshal (adb_ncAttachVolume_t* ncAtt
     adb_ncAttachVolumeResponse_set_ncAttachVolumeResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
     
-    eventlog("NC", userId, correlationId, "AttachVolume", "end");
+    //    eventlog("NC", userId, correlationId, "AttachVolume", "end");
     return response;
 }
 
@@ -628,8 +639,8 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
     adb_ncDetachVolumeResponseType_t * output = adb_ncDetachVolumeResponseType_create(env);
 
     // get standard fields from input
-    axis2_char_t * correlationId = adb_ncDetachVolumeType_get_correlationId(input, env);
-    axis2_char_t * userId = adb_ncDetachVolumeType_get_userId(input, env);
+    //    axis2_char_t * correlationId = adb_ncDetachVolumeType_get_correlationId(input, env);
+    //    axis2_char_t * userId = adb_ncDetachVolumeType_get_userId(input, env);
 
     // get operation-specific fields from input
     axis2_char_t * instanceId = adb_ncDetachVolumeType_get_instanceId(input, env);
@@ -638,22 +649,23 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
     axis2_char_t * localDev = adb_ncDetachVolumeType_get_localDev(input, env);
     int force = adb_ncDetachVolumeType_get_force(input, env);
 
-    eventlog("NC", userId, correlationId, "DetachVolume", "begin");
+    //    eventlog("NC", userId, correlationId, "DetachVolume", "begin");
     { // do it
-        ncMetadata meta = { correlationId, userId };
-
+      //        ncMetadata meta = { correlationId, userId };
+        ncMetadata meta;
+	EUCA_MESSAGE_UNMARSHAL(ncDetachVolumeType, input, (&meta));
         int error = doDetachVolume (&meta, instanceId, volumeId, remoteDev, localDev, force);
     
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doDetachVolume() failed error=%d\n", error);
             adb_ncDetachVolumeResponseType_set_return(output, env, AXIS2_FALSE);
-            adb_ncDetachVolumeResponseType_set_correlationId(output, env, correlationId);
-            adb_ncDetachVolumeResponseType_set_userId(output, env, userId);
+            adb_ncDetachVolumeResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncDetachVolumeResponseType_set_userId(output, env, meta.userId);
         } else {
             // set standard fields in output
             adb_ncDetachVolumeResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncDetachVolumeResponseType_set_correlationId(output, env, correlationId);
-            adb_ncDetachVolumeResponseType_set_userId(output, env, userId);
+            adb_ncDetachVolumeResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncDetachVolumeResponseType_set_userId(output, env, meta.userId);
             // no operation-specific fields in output
         }
     }
@@ -661,7 +673,7 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
     adb_ncDetachVolumeResponse_set_ncDetachVolumeResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
     
-    eventlog("NC", userId, correlationId, "DetachVolume", "end");
+    //    eventlog("NC", userId, correlationId, "DetachVolume", "end");
     return response;
 }
 
