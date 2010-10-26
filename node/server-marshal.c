@@ -654,7 +654,7 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
       //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
 	EUCA_MESSAGE_UNMARSHAL(ncDetachVolumeType, input, (&meta));
-        int error = doDetachVolume (&meta, instanceId, volumeId, remoteDev, localDev, force);
+        int error = doDetachVolume (&meta, instanceId, volumeId, remoteDev, localDev, force, 1);
     
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doDetachVolume() failed error=%d\n", error);

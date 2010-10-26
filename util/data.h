@@ -63,6 +63,7 @@ permission notice:
 #include <pthread.h>
 #include "eucalyptus.h"
 
+#define SMALL_CHAR_BUFFER_SIZE 64
 #define CHAR_BUFFER_SIZE 512
 #define BIG_CHAR_BUFFER_SIZE 1024
 
@@ -81,23 +82,106 @@ typedef struct ncMetadata_t {
     int servicesLen;
 } ncMetadata;
 
-typedef struct deviceMapping_t {
-	char deviceName[64];
-	char virtualName[64];
-	int size;
-	char format[64];
-} deviceMapping;
+typedef enum _livirtDevType {
+    DEV_TYPE_DISK = 0,
+    DEV_TYPE_FLOPPY,
+    DEV_TYPE_CDROM
+} libvirtDevType;
+
+static char * libvirtDevTypeNames [] = {
+    "disk",
+    "floppy",
+    "cdrom"
+};
+  
+typedef enum _libvirtBusType {
+    BUS_TYPE_IDE = 0,
+    BUS_TYPE_SCSI,
+    BUS_TYPE_VIRTIO,
+    BUS_TYPE_XEN
+} libvirtBusType;
+
+static char * libvirtBusTypeNames [] = {
+    "ide",
+    "scsi",
+    "virtio",
+    "xen"
+};
+
+typedef enum _libvirtSourceType {
+    SOURCE_TYPE_FILE = 0,
+    SOURCE_TYPE_BLOCK 
+} libvirtSourceType;
+
+static char * libvirtSourceTypeNames [] = {
+    "file",
+    "block"
+};
+
+typedef enum _ncResourceType {
+    NC_RESOURCE_IMAGE,
+    NC_RESOURCE_RAMDISK,
+    NC_RESOURCE_KERNEL,
+    NC_RESOURCE_EPHEMERAL,
+    NC_RESOURCE_SWAP,
+    NC_RESOURCE_EBS 
+} ncResourceType;
+
+typedef enum _ncResourceLocationType {
+    NC_LOCATION_URL,
+    NC_LOCATION_WALRUS,
+    NC_LOCATION_CLC,
+    NC_LOCATION_SC,
+    NC_LOCATION_IQN,
+    NC_LOCATION_AOE,
+    NC_LOCATION_NONE // for ephemeral disks
+} ncResourceLocationType;
+
+typedef enum _ncResourceFormatType {
+    NC_FORMAT_NONE,
+    NC_FORMAT_EXT2,
+    NC_FORMAT_EXT3,
+    NC_FORMAT_NTFS,
+    NC_FORMAT_SWAP
+} ncResourceFormatType;
+
+typedef struct virtualBootRecord_t {
+    // first six fields come in RunInstance request
+    char resourceLocation[CHAR_BUFFER_SIZE];
+    char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];
+    int size;
+    char formatName[SMALL_CHAR_BUFFER_SIZE];
+    char id [SMALL_CHAR_BUFFER_SIZE];
+    char typeName [SMALL_CHAR_BUFFER_SIZE];
+
+    // the remaining fields are set by NC
+    ncResourceType type;
+    ncResourceLocationType locationType;
+    ncResourceFormatType format;
+    libvirtDevType guestDeviceType;
+    libvirtBusType guestDeviceBus;
+    libvirtSourceType backingType;
+    char backingPath [CHAR_BUFFER_SIZE];
+    char preparedResourceLocation[CHAR_BUFFER_SIZE]; // e.g., URL + resourceLocation for Walrus downloads
+} virtualBootRecord;
 
 typedef struct virtualMachine_t {
-	int mem, cores, disk;
-	char name[64];
-	deviceMapping deviceMapping[EUCA_MAX_DEVMAPS];
+    int mem, cores, disk;
+    char name[64];
+    virtualBootRecord * image;
+    virtualBootRecord * kernel;
+    virtualBootRecord * ramdisk;
+    virtualBootRecord * swap;
+    virtualBootRecord * ephemeral0;
+    virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS];
+    int virtualBootRecordLen; // TODO: dan ask dmitrii
 } virtualMachine;
+
 int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in);
 
 typedef struct netConfig_t {
-  int vlan, networkIndex;
-  char privateMac[24], publicIp[24], privateIp[24];
+    int vlan, networkIndex;
+    char privateMac[24], publicIp[24], privateIp[24];
 } netConfig;
 int allocate_netConfig(netConfig *out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex);
 
@@ -111,21 +195,18 @@ typedef struct ncVolume_t {
 
 typedef struct ncInstance_t {
     char instanceId[CHAR_BUFFER_SIZE];
-    char imageId[CHAR_BUFFER_SIZE];
-    char imageURL[CHAR_BUFFER_SIZE];
-    char kernelId[CHAR_BUFFER_SIZE];
-    char kernelURL[CHAR_BUFFER_SIZE];
-    char ramdiskId[CHAR_BUFFER_SIZE];
-    char ramdiskURL[CHAR_BUFFER_SIZE];
     char reservationId[CHAR_BUFFER_SIZE];
     char userId[CHAR_BUFFER_SIZE];
+    char imageId[SMALL_CHAR_BUFFER_SIZE];
+    char kernelId[SMALL_CHAR_BUFFER_SIZE];
+    char ramdiskId[SMALL_CHAR_BUFFER_SIZE];
     int retries;
     
-    /* state as reported to CC & CLC */
-    char stateName[CHAR_BUFFER_SIZE];  /* as string */
-    int stateCode; /* as int */
+    // state as reported to CC & CLC
+    char stateName[CHAR_BUFFER_SIZE];  // as string
+    int stateCode; // as int
 
-    /* state as NC thinks of it */
+    // state as NC thinks of it
     instance_states state;
 
     char keyName[CHAR_BUFFER_SIZE*4];
@@ -139,13 +220,13 @@ typedef struct ncInstance_t {
     netConfig ncnet;
     pthread_t tcb;
 
-    /* passed into NC via runInstances for safekeeping */
+    // passed into NC via runInstances for safekeeping
     char userData[CHAR_BUFFER_SIZE*10];
     char launchIndex[CHAR_BUFFER_SIZE];
     char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE];
     int groupNamesSize;
 
-    /* updated by NC upon Attach/DetachVolume */
+    // updated by NC upon Attach/DetachVolume
     ncVolume volumes[EUCA_MAX_VOLUMES];
     int volumesSize;
 } ncInstance;
@@ -161,10 +242,10 @@ typedef struct ncResource_t {
     char publicSubnets[CHAR_BUFFER_SIZE];
 } ncResource;
 
-/* TODO: make this into something smarter than a linked list */
+// TODO: make this into something smarter than a linked list
 typedef struct bunchOfInstances_t {
     ncInstance * instance;
-    int count; /* only valid on first node */
+    int count; // only valid on first node
     struct bunchOfInstances_t * next;
 } bunchOfInstances;
 
@@ -186,9 +267,6 @@ void free_metadata(ncMetadata ** meta);
 
 ncInstance * allocate_instance(char *instanceId, char *reservationId, 
                                virtualMachine *params, 
-                               char *imageId, char *imageURL, 
-                               char *kernelId, char *kernelURL, 
-                               char *ramdiskId, char *ramdiskURL, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,
                                char *userData, char *launchIndex, char **groupNames, int groupNamesSize);
