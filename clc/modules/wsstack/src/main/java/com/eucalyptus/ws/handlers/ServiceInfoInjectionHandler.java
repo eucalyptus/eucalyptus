@@ -61,37 +61,34 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.ws.client.pipeline;
+package com.eucalyptus.ws.handlers;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.ServiceInfoInjectionHandler;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
-import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import com.eucalyptus.http.MappingHttpMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
-public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
+public class ServiceInfoInjectionHandler extends MessageStackHandler implements ChannelHandler {
+  
+  /**
+   * @see com.eucalyptus.ws.handlers.MessageStackHandler#outgoingMessage(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.MessageEvent)
+   */
   @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-//    ChannelUtil.addPipelineMonitors( pipeline, 60 );
-    pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
-    pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
-    pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
-    pipeline.addLast( "wssec", new ClusterWsSecHandler( ) );
-    pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusCC#" ) );
-    pipeline.addLast( "soap", new SoapHandler( ) );
-    pipeline.addLast( "binding",
-                      new BindingHandler( BindingManager.getBinding( "eucalyptus_ucsb_edu" ) ) );
-    pipeline.addLast( "serviceinfo", new ServiceInfoInjectionHandler( ) ); 
-    return pipeline;
+  public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
+      MappingHttpMessage httpRequest = ( MappingHttpMessage ) event.getMessage( );
+      if( httpRequest.getMessage( ) instanceof EucalyptusErrorMessageType || httpRequest.getMessage( ) == null ) {
+        return;
+      } else if ( httpRequest.getMessage( ) instanceof BaseMessage ) {
+        BaseMessage msg = ( BaseMessage ) httpRequest.getMessage( );
+        
+      }
+    }
   }
+  
+  @Override
+  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {}
+  
 }
