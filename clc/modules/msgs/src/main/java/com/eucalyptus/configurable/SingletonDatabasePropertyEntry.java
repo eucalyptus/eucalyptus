@@ -97,6 +97,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
     try {
       Object o = db.getUnique( this.getQueryObject( ) );
       Object prop = this.getTypeParser( ).parse( s );
+      this.fireChange( prop );
       Method setter = this.getSetter( );
       if ( setter != null ) {
 	    setter.invoke( o, prop );

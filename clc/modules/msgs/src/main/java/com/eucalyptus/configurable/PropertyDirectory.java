@@ -4,7 +4,6 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.event.PassiveEventListener;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -22,10 +21,9 @@ public class PropertyDirectory {
                                                                                           new SingletonDatabasePropertyEntry.DatabasePropertyBuilder( ),
                                                                                           new MultiDatabasePropertyEntry.DatabasePropertyBuilder( )); //FIXME: make this dynamic kkthx.
                                                                                                                                                   
-  public static class NoopEventListener extends PassiveEventListener<ConfigurableProperty> {
+  public static class NoopEventListener implements PropertyChangeListener {
     public static NoopEventListener NOOP = new NoopEventListener( );
-    @Override
-    public void firingEvent( ConfigurableProperty t ) {}
+    @Override public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {}
   }
   @SuppressWarnings( { "unchecked" } )
   public static ConfigurableProperty buildPropertyEntry( Class c, Field field ) {
