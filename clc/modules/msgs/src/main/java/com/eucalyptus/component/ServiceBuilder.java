@@ -40,6 +40,7 @@ public interface ServiceBuilder<T extends ServiceConfiguration> {
   public abstract void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException;
   public abstract void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException;
   public abstract void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException;
+  public abstract void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException;
   public abstract List<T> list() throws ServiceRegistrationException;
   public abstract T lookupByName( String name ) throws ServiceRegistrationException;
   public abstract T lookupByHost( String name ) throws ServiceRegistrationException;
