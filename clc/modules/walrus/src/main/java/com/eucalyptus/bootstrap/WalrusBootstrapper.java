@@ -62,26 +62,21 @@ package com.eucalyptus.bootstrap;
 
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
-import com.eucalyptus.storage.BlockStorageManagerFactory;
-import com.eucalyptus.storage.LogicalStorageManager;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
-
-@Provides(Component.storage)
+@Provides(Component.walrus)
 @RunDuring(Bootstrap.Stage.DatabaseInit)
-@DependsLocal(Component.storage)
-public class BlockStorageBootstrapper extends Bootstrapper {
-	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
-	private static BlockStorageBootstrapper singleton;
+@DependsLocal(Component.walrus)
+public class WalrusBootstrapper extends Bootstrapper {
+	private static Logger LOG = Logger.getLogger( WalrusBootstrapper.class );
+	private static WalrusBootstrapper singleton;
 
 	public static Bootstrapper getInstance( ) {
-		synchronized ( BlockStorageBootstrapper.class ) {
+		synchronized ( WalrusBootstrapper.class ) {
 			if ( singleton == null ) {
-				singleton = new BlockStorageBootstrapper( );
-				LOG.info( "Creating Block Storage Bootstrapper instance." );
+				singleton = new WalrusBootstrapper( );
+				LOG.info( "Creating Walrus Bootstrapper instance." );
 			} else {
-				LOG.info( "Returning Block Storage Bootstrapper instance." );
+				LOG.info( "Returning Walrus Bootstrapper instance." );
 			}
 		}
 		return singleton;
@@ -89,9 +84,6 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean load() throws Exception {
-		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
-		if(blockStorageManager != null)
-			blockStorageManager.checkPreconditions();
 		return true;
 	}
 
@@ -135,6 +127,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean check( ) throws Exception {
+		//check local storage
 		return true;
 	}
 }
