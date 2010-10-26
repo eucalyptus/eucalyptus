@@ -97,9 +97,20 @@ doInitialize (struct nc_state_t *nc)
 }
 
 static int
-prep_location (virtualBootRecord * vbr, ncMetadata *meta, const char * typeName)
+prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName)
 {
-    return OK; // TODO: lookup of URL in meta based on typeName and construct vbr->preparedResourceLocation by prepending it to vbr->resourceLocation
+    int i;
+    
+    for (i=0; i<meta->servicesLen; i++) {
+        serviceInfoType * service = &(meta->services[i]);
+        if (strcmp(service->type, typeName)==0 && service->urisLen>0) {
+            char * l = vbr->resourceLocation + (strlen (typeName) + 1); // +1 for ":", so 'l' points past, e.g., "walrus:"
+            snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s%s", service->uris[0], l); // TODO: for now we just pick the first one
+            return OK;
+        }
+    }
+    logprintfl (EUCAERROR, "failed to find service '%s' in eucalyptusMessage\n", typeName);
+    return ERROR;
 }
 
 static int
@@ -173,8 +184,7 @@ doRunInstance(	struct nc_state_t *nc,
             vbr->type = NC_RESOURCE_EBS;
         } else {
             logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
-	    goto error; // TODO: dan ask dmitrii
-	    //	    break;
+	    goto error;
         }
         
         // identify the type of resource location from location string
@@ -300,6 +310,7 @@ doRunInstance(	struct nc_state_t *nc,
         logprintfl (EUCADEBUG, "Found partition %s\n", parts [k]); // TODO: verify no gaps in partitions
     }
 
+    /*
     // TODO: dan ask dmitrii
     for (i=0; i<EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
       virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
@@ -315,6 +326,7 @@ doRunInstance(	struct nc_state_t *nc,
 	logprintfl(EUCADEBUG, "DAN: image info: %s %s\n", instance->params.image->resourceLocation, instance->params.image->preparedResourceLocation);
       }
     }
+    */
 
     change_state(instance, STAGING);
 
