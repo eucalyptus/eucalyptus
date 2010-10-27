@@ -7,15 +7,18 @@ from optparse import OptionParser
 SERVICE_PATH = '/services/Configuration'
 class Cluster():
   
-  
-  def __init__(self, cluster_name=None, host_name=None, port=None):
+  def __init__(self, cluster_name=None, host_name=None,
+               port=None, partition=None):
     self.cluster_name = cluster_name
     self.host_name = host_name
+    self.port = port
+    self.partition = partition
     self.euca = EucaAdmin(path=SERVICE_PATH)
 
           
   def __repr__(self):
-      return 'CLUSTER\t%s\t%s' % (self.cluster_name, self.host_name) 
+      return 'CLUSTER\t%s\t%s\t%s' % (self.cluster_name, self.partition,
+                                      self.host_name) 
 
   def startElement(self, name, attrs, connection):
       return None
@@ -25,11 +28,14 @@ class Cluster():
       self.host_name = value
     elif name == 'euca:name':
       self.cluster_name = value
+    elif name == 'euca:partition':
+      self.partition = value
     else:
       setattr(self, name, value)
   
   def get_describe_parser(self):
-    parser = OptionParser("usage: %prog [CLUSTERS...]",version="Eucalyptus %prog VERSION")
+    parser = OptionParser("usage: %prog [CLUSTERS...]",
+                          version="Eucalyptus %prog VERSION")
     return parser.parse_args()
   
   def cli_describe(self):
@@ -41,16 +47,22 @@ class Cluster():
     if clusters:
       self.euca.connection.build_list_params(params,clusters,'Name')
     try:
-      list = self.euca.connection.get_list('DescribeClusters', params, [('euca:item', Cluster)])
+      list = self.euca.connection.get_list('DescribeClusters', params,
+                                           [('euca:item', Cluster)])
       for i in list:
         print i
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
   def get_register_parser(self):
-    parser = OptionParser("usage: %prog [options]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-H","--host",dest="cc_host",help="Hostname of the cluster.")
-    parser.add_option("-p","--port",dest="cc_port",type="int",default=8774,help="Port for the cluster.")
+    parser = OptionParser("usage: %prog [options]",
+                          version="Eucalyptus %prog VERSION")
+    parser.add_option("-H","--host",dest="host",
+                      help="Hostname of the cluster.")
+    parser.add_option("-p","--port",dest="port",type="int",default=8774,
+                      help="Port for the cluster.")
+    parser.add_option("-P","--partition",dest="partition",
+                      help="Partition for the cluster.")
     (options,args) = parser.parse_args()    
     if len(args) != 1:
       print "ERROR  Required argument CLUSTERNAME is missing or malformed."
@@ -61,18 +73,26 @@ class Cluster():
 
   def cli_register(self):
     (options,args) = self.get_register_parser()
-    self.register(args[0],options.cc_host,options.cc_port)
+    self.register(args[0], options.host,
+                  options.port, options.partition)
 
-  def register(self, cc_name, cc_host, cc_port=8773):
+  def register(self, name, host, port=8773, partition=None):
+    params = {'Name':name,
+              'Host':host,
+              'Port':port}
+    if partition:
+      params['Partition'] = partition
     try:
-      reply = self.euca.connection.get_object('RegisterCluster', {'Name':cc_name,'Host':cc_host,'Port':cc_port}, BooleanResponse)
+      reply = self.euca.connection.get_object('RegisterCluster',
+                                              BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
 
   def get_deregister_parser(self):
-    parser = OptionParser("usage: %prog [options] CLUSTERNAME",version="Eucalyptus %prog VERSION")
+    parser = OptionParser("usage: %prog [options] CLUSTERNAME",
+                          version="Eucalyptus %prog VERSION")
     (options,args) = parser.parse_args()    
     if len(args) != 1:
       print "ERROR  Required argument CLUSTERNAME is missing or malformed."
@@ -87,7 +107,9 @@ class Cluster():
 
   def deregister(self, cc_name):
     try:
-      reply = self.euca.connection.get_object('DeregisterCluster', {'Name':cc_name},BooleanResponse)
+      reply = self.euca.connection.get_object('DeregisterCluster',
+                                              {'Name':cc_name},
+                                              BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
