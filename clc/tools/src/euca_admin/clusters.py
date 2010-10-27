@@ -3,6 +3,7 @@ from boto.exception import EC2ResponseError
 from euca_admin.generic import BooleanResponse
 from euca_admin import EucaAdmin
 from optparse import OptionParser
+import re
 
 SERVICE_PATH = '/services/Configuration'
 class Cluster():
@@ -105,12 +106,50 @@ class Cluster():
     (options,args) = self.get_deregister_parser()
     self.deregister(args[0])
 
-  def deregister(self, cc_name):
+  def deregister(self, name):
     try:
       reply = self.euca.connection.get_object('DeregisterCluster',
-                                              {'Name':cc_name},
+                                              {'Name' : name},
                                               BooleanResponse)
       print reply
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
         
+  def get_modify_parser(self):
+    parser = OptionParser("usage: %prog [options]",
+                          version="Eucalyptus %prog VERSION")
+    parser.add_option("-p","--property",dest="props",
+                      action="append",
+                      help="Modify KEY to be VALUE.  Can be given multiple times.",
+                      metavar="KEY=VALUE")
+    (options,args) = parser.parse_args()    
+    if len(args) != 1:
+      print "ERROR  Required argument CLUSTERNAME is missing or malformed."
+      parser.print_help()
+      sys.exit(1)
+    if not options.props:
+      print "ERROR No options were specified."
+      parser.print_help()
+      sys.exit(1)
+    for i in options.props:
+      if not re.match("^[\w.]+=[\w\.]+$",i):
+        print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
+        parser.print_help()
+        sys.exit(1)
+    return (options,args)
+
+  def cli_modify(self):
+    (options,args) = self.get_modify_parser()
+    self.modify(options.props)
+
+  def modify(self,modify_list):
+    for entry in modify_list:
+      key, value = entry.split("=")
+      try:
+        reply = self.euca.connection.get_object('ModifyCluster',
+                                                {'Name' : key,'Value' : value},
+                                                BooleanResponse)
+        print reply
+      except EC2ResponseError, ex:
+        self.euca.handle_error(ex)
+

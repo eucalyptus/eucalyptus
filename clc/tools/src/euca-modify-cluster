@@ -3,7 +3,7 @@ import sys
 from euca_admin.clusters import Cluster
 
 def main():
-  c = Cluster().cli_register()
+  c = Cluster().cli_modify()
   sys.exit()
 
 if __name__ == "__main__":
