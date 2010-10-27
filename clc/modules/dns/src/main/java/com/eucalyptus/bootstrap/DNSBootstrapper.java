@@ -100,6 +100,7 @@ public class DNSBootstrapper extends Bootstrapper {
 		LOG.info("Loading DNS records");
 		//populateRecords must be idempotent.
 		DNSControl.populateRecords();
+		DNSControl.populateRecords();
 		return true;
 	}
 
@@ -116,7 +117,6 @@ public class DNSBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean stop( ) throws Exception {
-		//remove records
 		return true;
 	}
 

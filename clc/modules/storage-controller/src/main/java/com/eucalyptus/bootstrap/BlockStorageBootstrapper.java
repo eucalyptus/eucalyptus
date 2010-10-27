@@ -89,14 +89,14 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean load() throws Exception {
-		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
-		if(blockStorageManager != null)
-			blockStorageManager.checkPreconditions();
 		return true;
 	}
 
 	@Override
 	public boolean start( ) throws Exception {
+		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
+		if(blockStorageManager != null)
+			blockStorageManager.checkPreconditions();
 		return true;
 	}
 

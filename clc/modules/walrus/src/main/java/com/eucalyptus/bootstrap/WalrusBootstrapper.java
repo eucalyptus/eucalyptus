@@ -63,6 +63,8 @@ package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
 
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
+
 @Provides(Component.walrus)
 @RunDuring(Bootstrap.Stage.DatabaseInit)
 @DependsLocal(Component.walrus)
@@ -89,6 +91,7 @@ public class WalrusBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean start( ) throws Exception {
+		WalrusControl.configure();
 		return true;
 	}
 
