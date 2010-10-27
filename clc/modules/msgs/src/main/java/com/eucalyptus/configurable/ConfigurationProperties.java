@@ -36,7 +36,7 @@ public class ConfigurationProperties {
       fileReader = new FileReader( propsFile );
 	  props.load( fileReader );
     } catch ( FileNotFoundException e ) {
-      LOG.trace( e, e );
+      LOG.error( e );
     } catch ( IOException e ) {
       LOG.trace( e, e );
     } finally {
