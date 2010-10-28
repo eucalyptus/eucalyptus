@@ -920,6 +920,12 @@ if [ -n "$SETUP" ]; then
 	let $((ret += $?))
 
 	# let's create more needed directory with the right permissions
+	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/dynserv/data
+	let $((ret += $?))
+	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/dynserv
+	let $((ret += $?))
+	chmod -R 700 $EUCALYPTUS/var/lib/eucalyptus/dynserv
+	let $((ret += $?))
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
 	let $((ret += $?))
 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/db

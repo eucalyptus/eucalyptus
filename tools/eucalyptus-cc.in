@@ -242,7 +242,7 @@ do_stop() {
 		return 
 	fi
         # now kill the services
-        pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
+        pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid $EUCALYPTUS/var/run/eucalyptus/httpd-dynserv.pid"
         pids=""
         for pidfile in $pidfiles ; do
             if [ -s $pidfile ]; then
