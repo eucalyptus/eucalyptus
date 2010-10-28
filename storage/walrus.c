@@ -1,38 +1,38 @@
 /*
-Copyright (c) 2009  Eucalyptus Systems, Inc.	
+   Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, only version 3 of the License.  
- 
-This file is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.  
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by 
+   the Free Software Foundation, only version 3 of the License.  
 
-You should have received a copy of the GNU General Public License along
-with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
-if you need additional information or have any questions.
+   This file is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+   FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+   for more details.  
 
-This file may incorporate work covered under the following copyright and
-permission notice:
+   You should have received a copy of the GNU General Public License along
+   with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Software License Agreement (BSD License)
+   Please contact Eucalyptus Systems, Inc., 130 Castilian
+   Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+   if you need additional information or have any questions.
 
-  Copyright (c) 2008, Regents of the University of California
-  
+   This file may incorporate work covered under the following copyright and
+   permission notice:
 
-  Redistribution and use of this software in source and binary forms, with
-  or without modification, are permitted provided that the following
-  conditions are met:
+   Software License Agreement (BSD License)
 
-    Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
+   Copyright (c) 2008, Regents of the University of California
 
-    Redistributions in binary form must reproduce the above copyright
+
+   Redistribution and use of this software in source and binary forms, with
+   or without modification, are permitted provided that the following
+   conditions are met:
+
+   Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+
+   Redistributions in binary form must reproduce the above copyright
     notice, this list of conditions and the following disclaimer in the
     documentation and/or other materials provided with the distribution.
 
@@ -75,6 +75,7 @@ permission notice:
 #include "eucalyptus.h"
 #include "misc.h"
 #include "walrus.h"
+#include <openssl/evp.h>
 
 #define TOTAL_RETRIES 10 /* download is retried in case of connection problems */
 #define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
@@ -104,87 +105,102 @@ struct request {
 #endif
 };
 
+struct header_request {
+    const char * header;
+    char * header_data;
+};
+
 /* downloads a decrypted image from Walrus based on the manifest URL,
  * saves it to outfile */
-static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress)
+static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const char * header, char * header_data, const int do_compress)
 {
 	int code = ERROR;
 	char url [BUFSIZE];
 
-    strncpy (url, requested_url, BUFSIZE);
+	strncpy (url, requested_url, BUFSIZE);
 #if defined(CAN_GZIP)
-    if (do_compress)
-        snprintf (url, BUFSIZE, "%s%s", requested_url, "?IsCompressed=true");
+	if (do_compress)
+		snprintf (url, BUFSIZE, "%s%s", requested_url, "?IsCompressed=true");
 #endif
-    logprintfl (EUCAINFO, "walrus_request(): downloading %s\n", outfile);
-    logprintfl (EUCAINFO, "                  from %s\n", url);
-
+	if(outfile != NULL) {
+		logprintfl (EUCAINFO, "walrus_request(): downloading %s\n", outfile);
+		logprintfl (EUCAINFO, "                  from %s\n", url);
+	}
 	/* isolate the PATH in the URL as it will be needed for signing */
 	char * url_path; 
 	if (strncasecmp (url, "http://", 7)!=0) {
 		logprintfl (EUCAERROR, "walrus_request(): URL must start with http://...\n");
-		return code;
+							  return code;
 	}
 	if ((url_path=strchr(url+7, '/'))==NULL) { /* find first '/' after hostname */
 		logprintfl (EUCAERROR, "walrus_request(): URL has no path\n");
 		return code;
 	}
-	
+
 	if (euca_init_cert()) {
 		logprintfl (EUCAERROR, "walrus_request(): failed to initialize certificate\n");
 		return code;
 	} 
 
-	FILE * fp = fopen64 (outfile, "w");
-	if (fp==NULL) {
-		logprintfl (EUCAERROR, "walrus_request(): failed to open %s for writing\n", outfile);
-		return code;
+	FILE *fp = NULL;
+	if (outfile != NULL) {
+		fp = fopen64 (outfile, "w");
+		if (fp==NULL) {
+			logprintfl (EUCAERROR, "walrus_request(): failed to open %s for writing\n", outfile);
+			return code;
+		}
 	}
-
 	CURL * curl;
 	CURLcode result;
 	curl = curl_easy_init ();
 	if (curl==NULL) {
 		logprintfl (EUCAERROR, "walrus_request(): could not initialize libcurl\n");
-		fclose(fp);
+		if (fp != NULL)
+			fclose(fp);
 		return code;
 	}
 
 	char error_msg [CURL_ERROR_SIZE];
 	curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, error_msg);
 	curl_easy_setopt (curl, CURLOPT_URL, url); 
-	curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
-
-    if (strncmp (verb, "GET", 4)==0) {
-        curl_easy_setopt (curl, CURLOPT_HTTPGET, 1L);
-    } else if (strncmp (verb, "HEAD", 5)==0) {
-        /* TODO: HEAD isn't very useful atm since we don't look at headers */
-        curl_easy_setopt (curl, CURLOPT_NOBODY, 1L);
-    } else {
-	fclose(fp);
-        logprintfl (EUCAERROR, "walrus_request(): invalid HTTP verb %s\n", verb);
-        return ERROR; /* TODO: dealloc structs before returning! */
-    }
-	
-	/* set up the default write function, but possibly override
-     * it below, if compression is desired and possible */
-	struct request params;
-    params.fp = fp;
-    curl_easy_setopt (curl, CURLOPT_WRITEDATA, &params);
-    curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
-#if defined(CAN_GZIP)
-	if (do_compress) {
-		curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data_zlib);
+	if (header_data != NULL) {
+		curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
+		struct header_request header_params;
+		header_params.header = header;
+		header_params.header_data = header_data;
+		curl_easy_setopt(curl, CURLOPT_WRITEHEADER, &header_params);
 	}
+
+	struct request params;
+	if (strncmp (verb, "GET", 4)==0) {
+		curl_easy_setopt (curl, CURLOPT_HTTPGET, 1L);
+		/* set up the default write function, but possibly override
+		 * it below, if compression is desired and possible */
+		params.fp = fp;
+		curl_easy_setopt (curl, CURLOPT_WRITEDATA, &params);
+		curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
+#if defined(CAN_GZIP)
+		if (do_compress) {
+			curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data_zlib);
+		}
 #endif
+	} else if (strncmp (verb, "HEAD", 5)==0) {
+		curl_easy_setopt(curl, CURLOPT_HEADER, 1L);
+		curl_easy_setopt (curl, CURLOPT_NOBODY, 1L);
+	} else {
+		if(fp != NULL)
+			fclose(fp);
+		logprintfl (EUCAERROR, "walrus_request(): invalid HTTP verb %s\n", verb);
+		return ERROR; /* TODO: dealloc structs before returning! */
+	}
 
 	struct curl_slist * headers = NULL; /* beginning of a DLL with headers */
 	headers = curl_slist_append (headers, "Authorization: Euca");
 
 	char op_hdr [STRSIZE];
 	if(walrus_op != NULL) {
-	    snprintf (op_hdr, STRSIZE, "EucaOperation: %s", walrus_op);
-	    headers = curl_slist_append (headers, op_hdr);
+		snprintf (op_hdr, STRSIZE, "EucaOperation: %s", walrus_op);
+		headers = curl_slist_append (headers, op_hdr);
 	}
 
 	time_t t = time(NULL);
@@ -202,22 +218,22 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
 	char * cert_str = euca_get_cert (0); /* read the cloud-wide cert */
 	if (cert_str==NULL) {
-	       fclose(fp);
-       	       return ERROR;
+		if (fp != NULL) fclose(fp);
+		return ERROR;
 	}
 	char * cert64_str = base64_enc ((unsigned char *)cert_str, strlen(cert_str));
 	assert (strlen(cert64_str)+11<=BUFSIZE);
 	char cert_hdr [BUFSIZE];
 	snprintf (cert_hdr, BUFSIZE, "EucaCert: %s", cert64_str);
-    logprintfl (EUCADEBUG2, "walrus_request(): base64 certificate, %s\n", get_string_stats(cert64_str));
+	logprintfl (EUCADEBUG2, "walrus_request(): base64 certificate, %s\n", get_string_stats(cert64_str));
 	headers = curl_slist_append (headers, cert_hdr);
 	free (cert64_str);
 	free (cert_str);
 
 	char * sig_str = euca_sign_url (verb, date_str, url_path); /* create Walrus-compliant sig */
 	if (sig_str==NULL) {
-	       fclose(fp);
-       	       return ERROR;
+		if (fp != NULL) fclose(fp);
+		return ERROR;
 	}
 	assert (strlen(sig_str)+16<=BUFSIZE);
 	char sig_hdr [BUFSIZE];
@@ -312,7 +328,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 /* downloads a Walrus object from the URL, saves it to outfile */
 int walrus_object_by_url (const char * url, const char * outfile, const int do_compress)
 {
-    return walrus_request (NULL, "GET", url, outfile, do_compress);
+    return walrus_request (NULL, "GET", url, outfile, NULL, NULL, do_compress);
 }
 
 /* downloads a Walrus object from the default Walrus endpoint,
@@ -328,7 +344,7 @@ int walrus_object_by_path (const char * path, const char * outfile, const int do
  * saves it to outfile */
 int walrus_image_by_manifest_url (const char * url, const char * outfile, const int do_compress)
 {
-    return walrus_request (GET_IMAGE_CMD, "GET", url, outfile, do_compress);
+    return walrus_request (GET_IMAGE_CMD, "GET", url, outfile, NULL, NULL, do_compress);
 }
 
 /* gets a decrypted image from the default Walrus endpoint, 
@@ -340,36 +356,106 @@ int walrus_image_by_manifest_path (const char * manifest_path, const char * outf
 	return walrus_image_by_manifest_url (url, outfile, do_compress);
 }
 
+int walrus_etag_by_url(char *etag, const char *url) {
+    return walrus_request (NULL, "HEAD", url, NULL, "ETag", etag, 0);
+}
+
+int compute_md5(const char *old_digest, char *etag) {
+
+	ssize_t read_bytes;
+	char data[10240];
+
+	int in_fd = open(old_digest, 0, O_RDONLY);
+
+	if (in_fd < 0)
+		return in_fd;
+
+	EVP_MD_CTX mdctx;
+	unsigned char md_value[EVP_MAX_MD_SIZE];
+	unsigned int md_len;
+
+	EVP_DigestInit(&mdctx, EVP_md5());
+
+	while ((read_bytes = read(in_fd, &data, 10240)) > 0) {
+		EVP_DigestUpdate(&mdctx, &data, (size_t) read_bytes);
+	}
+
+	close(in_fd);
+
+	EVP_DigestFinal_ex(&mdctx, md_value, &md_len);
+
+	EVP_MD_CTX_cleanup(&mdctx);
+
+	int i;
+	char *p = etag;
+	for (i = 0; i < md_len; ++i) {
+		snprintf(p, 4, "%02x", md_value[i]);
+		p += 2;
+	}
+	return 0;
+}
+
 /* downloads a digest of an image and compare it to file at digest_path 
  * returns 0 if same, -N if different, N if error */
 int walrus_verify_digest (const char * url, const char * old_digest)
 {
-    int e = ERROR;
-    char * new_digest = strdup ("/tmp/walrus-digest-XXXXXX");
-    int tmp_fd = mkstemp (new_digest);
-    if (tmp_fd<0) {
-        logprintfl (EUCAERROR, "error: failed to create a digest file %s\n", new_digest); 
-    } else {
-        close (tmp_fd); /* walrus routine will reopen the file */
- 
-        /* download a fresh digest */
-        if ( (e=walrus_object_by_url (url, new_digest, 0)) != 0 ) {
-            logprintfl (EUCAERROR, "error: failed to download digest to %s\n", new_digest);
+	if (strstr(url, "services/Walrus")) {
+		//get etag and compare
+		char etag[128];
+		char expected_etag[128];
+		if (!compute_md5(old_digest, expected_etag)) {
+			walrus_etag_by_url(etag, url);
+			int rc = strcmp(etag, expected_etag);
+			if (!rc) {
+				logprintfl (EUCAINFO, "tags match, not downloading image.");
+			} else {
+				logprintfl (EUCAINFO, "tags do not match, downloading image.");
+			}
+			return rc;
+		} else {
+			return -1;
+		}
+	} else {
+		int e = ERROR;
+		char * new_digest = strdup ("/tmp/walrus-digest-XXXXXX");
+		int tmp_fd = mkstemp (new_digest);
+		if (tmp_fd<0) {
+			logprintfl (EUCAERROR, "error: failed to create a digest file %s\n", new_digest); 
+		} else {
+			close (tmp_fd); /* walrus routine will reopen the file */
 
-        } else {
-            /* compare the two */
-            e = diff (new_digest, old_digest);
-        }
-    }
-    unlink (new_digest);
-    free (new_digest);
-    return e;
+			/* download a fresh digest */
+
+			char manifestURL[1024];
+			snprintf(manifestURL, 1024, "%s.manifest.xml", url);
+			e=http_get(manifestURL, new_digest);
+		}
+		if ( e != 0 ) {
+			logprintfl (EUCAERROR, "error: failed to download digest to %s\n", new_digest);
+
+		} else {
+			/* compare the two */
+			e = diff (new_digest, old_digest);
+		}
+		unlink (new_digest);
+		free (new_digest);
+		return e;
+	}
 }
-
 /* libcurl header write handler */
-static size_t write_header (void *buffer, size_t size, size_t nmemb, void *params)
+static size_t write_header (void *buffer, size_t size, size_t nmemb, void *header_params)
 {
-    /* here in case we want to do something with headers */
+	char header[128];
+	snprintf(header, 128, "%s: ", ((struct header_request *)header_params)->header);
+	char *result = strstr((char *)buffer, header);
+	if(result != NULL) {
+		result += strlen(header);
+		char *result_end = strstr(result, "\r\n");
+		if(result_end != NULL) {
+			int len = result_end - result + 1;
+			snprintf(((struct header_request *)header_params)->header_data, len, "%s", result);
+		}
+	}
 	return size * nmemb;
 }
 
@@ -467,3 +553,105 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
 
 #endif /* CAN_GZIP */
 
+int http_get (const char * url, const char * outfile)
+{
+	int code = ERROR;
+
+	logprintfl (EUCAINFO, "http_get(): downloading %s\n", outfile);
+	logprintfl (EUCAINFO, "            from %s\n", url);
+
+	/* isolate the PATH in the URL as it will be needed for signing */
+	if (strncasecmp (url, "http://", 7)!=0) {
+		logprintfl (EUCAERROR, "http_get(): URL must start with http://...\n");
+		return code;
+	}
+
+	FILE * fp = fopen64 (outfile, "w");
+	if (fp==NULL) {
+		logprintfl (EUCAERROR, "http_get(): failed to open %s for writing\n", outfile);
+		return code;
+	}
+
+	CURL * curl;
+	CURLcode result;
+	curl = curl_easy_init ();
+	if (curl==NULL) {
+		logprintfl (EUCAERROR, "http_get(): could not initialize libcurl\n");
+		fclose(fp);
+		return code;
+	}
+
+	char error_msg [CURL_ERROR_SIZE];
+	curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, error_msg);
+	curl_easy_setopt (curl, CURLOPT_URL, url); 
+	//	curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
+	
+        curl_easy_setopt (curl, CURLOPT_HTTPGET, 1L);
+	
+	/* set up the default write function, but possibly override it below, if compression is desired and possible */
+	struct request params;
+	params.fp = fp;
+	curl_easy_setopt (curl, CURLOPT_WRITEDATA, &params);
+	curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
+
+	//	curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
+
+        logprintfl (EUCADEBUG, "http_get(): writing %s output to %s\n", "GET", outfile);
+
+	int retries = TOTAL_RETRIES;
+	int timeout = FIRST_TIMEOUT;
+	do {
+	  params.total_wrote = 0L;
+	  params.total_calls = 0L;
+
+	  result = curl_easy_perform (curl); /* do it */
+	  logprintfl (EUCADEBUG, "http_get(): wrote %ld bytes in %ld writes\n", params.total_wrote, params.total_calls);
+
+
+	  if (result) { // curl error (connection or transfer failed)
+            logprintfl (EUCAERROR,     "http_get(): %s (%d)\n", error_msg, result);
+	    
+	  } else {
+            long httpcode;
+            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcode);
+            /* TODO: pull out response message, too */
+
+            switch (httpcode) {
+            case 200L: /* all good */
+                logprintfl (EUCAINFO, "http_get(): saved image in %s\n", outfile);
+                code = OK;
+                break;
+	    case 408L: /* timeout, retry */
+	      logprintfl (EUCAWARN, "http_get(): server responded with HTTP code %ld (timeout)\n", httpcode);
+	      //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+	      break;
+	    case 404L:
+	      logprintfl (EUCAWARN, "http_get(): server responded with HTTP code %ld (file not found)\n", httpcode);
+	      break;
+            default: /* some kind of error */
+                logprintfl (EUCAERROR, "http_get(): server responded with HTTP code %ld\n", httpcode);
+                //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+                retries=0;
+            }
+	  }
+        
+	  if (code!=OK && retries>0) {
+            logprintfl (EUCAERROR, "                  download retry %d of %d will commence in %d seconds\n", retries, TOTAL_RETRIES, timeout);
+            sleep (timeout);
+            fseek (fp, 0L, SEEK_SET);
+            timeout <<= 1;
+	  }
+        
+	  retries--;
+	} while (code!=OK && retries>0);
+	fclose (fp);
+	
+	if ( code != OK ) {
+	  logprintfl (EUCAINFO, "http_get(): due to error, removing %s\n", outfile);
+	  remove (outfile);
+	}
+	
+	//	curl_slist_free_all (headers);
+	curl_easy_cleanup (curl);
+	return code;
+}
