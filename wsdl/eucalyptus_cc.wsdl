@@ -146,6 +146,7 @@
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
 	      <xs:element maxOccurs="unbounded" minOccurs="0" name="resources" type="tns:ccResourceType"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="serviceTags" type="xs:string"/>
 	      <xs:element maxOccurs="unbounded" minOccurs="0" name="nodes" type="tns:ccNodeType"/>
 	    </xs:sequence>
 	  </xs:extension>
