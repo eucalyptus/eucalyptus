@@ -91,6 +91,24 @@ public class HeartbeatType extends EucalyptusMessage {
   ArrayList<ComponentType> started = new ArrayList<ComponentType>();
   ArrayList<ComponentType> stopped = new ArrayList<ComponentType>();
 }
+public class ServiceInfoType extends EucalyptusData {
+  String name;
+  String type;
+  ArrayList<String> uris = new ArrayList<String>();
+}
+public class ServiceStatusType extends EucalyptusData {
+  String name;
+  String type;
+  String uri;
+  String state;
+  Integer epoch;
+  ArrayList<String> details = new ArrayList<String>( );
+}
+public class DescribeServicesType extends EucalyptusMessage {}
+public class DescribeServicesResponseType extends EucalyptusMessage {
+  ArrayList<ServiceStatusType> registered = new ArrayList<ServiceStatusType>();
+}
+
 public class HeartbeatResponseType extends EucalyptusMessage {}
 public class HeartbeatComponentType extends EucalyptusData {
   String component;

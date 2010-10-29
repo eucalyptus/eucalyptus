@@ -63,12 +63,19 @@
  */
 package edu.ucsb.eucalyptus.msgs;
 
+import java.util.ArrayList;
+
 public class ComponentInfoType extends EucalyptusData {
+  String partition;
   String name;
-  String detail;
+  String state;//really an enum
+  String uri;
+  ArrayList<String> details = new ArrayList<String>( );
+  String detail;//TODO: remove me.
   public ComponentInfoType(){}
   public ComponentInfoType(String name, String detail){this.name = name; this.detail = detail;}
 }
+
 public class NodeComponentInfoType extends EucalyptusData {
   String name;
   String clusterName;  

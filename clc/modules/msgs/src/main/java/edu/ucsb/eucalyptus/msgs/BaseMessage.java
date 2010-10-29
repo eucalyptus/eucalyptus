@@ -1,19 +1,23 @@
 package edu.ucsb.eucalyptus.msgs;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.UUID;
 import org.apache.log4j.Logger;
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
+import com.google.common.collect.Lists;
 
 public class BaseMessage {
-  String                correlationId;
-  String                userId;
-  String                effectiveUserId;
-  Boolean               _return;
-  String                statusMessage;
+  String                     correlationId;
+  String                     userId;
+  String                     effectiveUserId;
+  Boolean                    _return;
+  String                     statusMessage;
+  Integer                    epoch;
+  ArrayList<ServiceInfoType> services = Lists.newArrayList( );
   
   public BaseMessage( ) {
     super( );
@@ -27,30 +31,39 @@ public class BaseMessage {
     this.effectiveUserId = userId;
     this.statusMessage = null;
   }
+  
   public String getCorrelationId( ) {
     return this.correlationId;
   }
+  
   public void setCorrelationId( String correlationId ) {
     this.correlationId = correlationId;
   }
+  
   public String getUserId( ) {
     return this.userId;
   }
+  
   public void setUserId( String userId ) {
     this.userId = userId;
   }
+  
   public void setEffectiveUserId( String effectiveUserId ) {
     this.effectiveUserId = effectiveUserId;
   }
+  
   public Boolean get_return( ) {
     return this._return;
   }
+  
   public void set_return( Boolean return1 ) {
     this._return = return1;
   }
+  
   public String getStatusMessage( ) {
     return this.statusMessage;
   }
+  
   public void setStatusMessage( String statusMessage ) {
     this.statusMessage = statusMessage;
   }
@@ -92,8 +105,12 @@ public class BaseMessage {
   
   public String toString( ) {
     String str = this.toString( "msgs_eucalyptus_com" );
-    str = ( str != null ) ? str : this.toString( "eucalyptus_ucsb_edu" );
-    str = ( str != null ) ? str : "Failed to bind message of type: " + this.getClass( ).getName( ) + " at "
+    str = ( str != null )
+      ? str
+      : this.toString( "eucalyptus_ucsb_edu" );
+    str = ( str != null )
+      ? str
+      : "Failed to bind message of type: " + this.getClass( ).getName( ) + " at "
                                   + Thread.currentThread( ).getStackTrace( )[1].toString( );
     return str;
   }
@@ -116,7 +133,7 @@ public class BaseMessage {
       mctx.setIndent( 2 );
       mctx.marshalDocument( this, "UTF-8", null, temp );
     } catch ( JiBXException e ) {
-      Logger.getLogger(BaseMessage.class).debug( e, e );
+      Logger.getLogger( BaseMessage.class ).debug( e, e );
       return null;
     }
     return temp.toString( );
@@ -133,7 +150,7 @@ public class BaseMessage {
       Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( replyType );
       reply = ( TYPE ) responseClass.newInstance( );
     } catch ( Exception e ) {
-      Logger.getLogger(BaseMessage.class).debug( e, e );
+      Logger.getLogger( BaseMessage.class ).debug( e, e );
       throw new TypeNotPresentException( correlationId, e );
     }
     reply.setCorrelationId( this.getCorrelationId( ) );
@@ -143,6 +160,7 @@ public class BaseMessage {
   }
   
   public String toSimpleString( ) {
-    return String.format("%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.getUserId( ), this.getEffectiveUserId( ), this.get_return( ), this.getStatusMessage( ) );
+    return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.getUserId( ), this.getEffectiveUserId( ),
+                          this.get_return( ), this.getStatusMessage( ) );
   }
 }
