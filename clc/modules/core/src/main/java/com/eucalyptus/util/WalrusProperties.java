@@ -143,6 +143,8 @@ public class WalrusProperties {
 	public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
+	public static String eucaHome = System.getProperty("euca.home");
+	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 
 	static { GroovyUtil.loadConfig("walrusprops.groovy"); }
 
