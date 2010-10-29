@@ -220,6 +220,7 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/sbin/euca-describe-users
 /usr/sbin/euca-describe-walruses
 /usr/sbin/euca-get-credentials
+/usr/sbin/euca-modify-cluster
 /usr/sbin/euca-modify-property
 /usr/sbin/euca-register-cluster
 /usr/sbin/euca-register-storage-controller
