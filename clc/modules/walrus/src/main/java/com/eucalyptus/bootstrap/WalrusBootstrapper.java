@@ -57,61 +57,41 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************
- * @author: chris grzegorczyk <grze@eucalyptus.com>
- */
-package com.eucalyptus.ws;
+ *******************************************************************************/
+package com.eucalyptus.bootstrap;
 
-import java.util.List;
-import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
-import com.eucalyptus.configurable.PropertyDirectory;
-import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.collect.Lists;
-import com.eucalyptus.records.EventRecord;
 
-@Provides( com.eucalyptus.bootstrap.Component.any )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-public class DeferredPropertiesBootstrapper extends Bootstrapper {
-	private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
-	@Override
-	public boolean start( ) throws Exception {
-		for ( Component comp : Components.list( ) ) {
-			for ( ServiceConfiguration s : comp.list( ) ) {
-				if(!s.isLocal()) {
-					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponent().name());
-					for ( ConfigurableProperty prop : props ) {
-						ConfigurableProperty addProp = null;
-						if (prop instanceof SingletonDatabasePropertyEntry) {
-							addProp = prop;
-						} else if (prop instanceof MultiDatabasePropertyEntry) {
-							addProp = ((MultiDatabasePropertyEntry) prop).getClone(s.getName());
-						}
-						if ( addProp != null ) {
-							PropertyDirectory.addProperty(addProp);
-						}
-					}
-				}
+import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
+
+@Provides(Component.walrus)
+@RunDuring(Bootstrap.Stage.DatabaseInit)
+@DependsLocal(Component.walrus)
+public class WalrusBootstrapper extends Bootstrapper {
+	private static Logger LOG = Logger.getLogger( WalrusBootstrapper.class );
+	private static WalrusBootstrapper singleton;
+
+	public static Bootstrapper getInstance( ) {
+		synchronized ( WalrusBootstrapper.class ) {
+			if ( singleton == null ) {
+				singleton = new WalrusBootstrapper( );
+				LOG.info( "Creating Walrus Bootstrapper instance." );
+			} else {
+				LOG.info( "Returning Walrus Bootstrapper instance." );
 			}
 		}
+		return singleton;
+	}
+
+	@Override
+	public boolean load() throws Exception {
 		return true;
 	}
+
 	@Override
-	public boolean load( ) throws Exception {
+	public boolean start( ) throws Exception {
+		WalrusControl.configure();
 		return true;
 	}
 
@@ -128,7 +108,6 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean stop( ) throws Exception {
-		//unload properties
 		return true;
 	}
 
@@ -151,6 +130,7 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean check( ) throws Exception {
+		//check local storage
 		return true;
 	}
 }
