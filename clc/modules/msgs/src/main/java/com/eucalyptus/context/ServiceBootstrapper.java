@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,84 +57,72 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-package com.eucalyptus.bootstrap;
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
 
-import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+package com.eucalyptus.context;
+
+import java.util.List;
 import org.apache.log4j.Logger;
-import org.mortbay.jetty.Server;
-import org.mortbay.xml.XmlConfiguration;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.ConfigurablePropertyException;
-import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.system.Threads;
-import java.util.concurrent.TimeUnit;
+import org.mule.config.ConfigResource;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Resource;
+import com.google.common.collect.Lists;
 
-@Provides( Component.jetty )
+@Provides( Component.bootstrap )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
-@DependsLocal( Component.eucalyptus )
-@ConfigurableClass( root = "www", description = "Parameters controlling the web UI's http server." )
-public class HttpServerBootstrapper extends Bootstrapper {  
-  private static Logger LOG        = Logger.getLogger( HttpServerBootstrapper.class );
-  @ConfigurableField( description = "Listen to HTTPs on this port.", initial = "" + 8443, changeListener = PortChangeListener.class, displayName="euca.https.port" )
-  public static Integer HTTPS_PORT = 8443;
-  @ConfigurableField( description = "Listen to HTTP on this port.", initial = "" + 8080, changeListener = PortChangeListener.class, displayName="euca.http.port" )
-  public static Integer HTTP_PORT  = 8080;
-  private static Server jettyServer;
-  private static Thread serverThread;
-  @ConfigurableField( initial = "", description = "Http Proxy Host" )
-  public static String httpProxyHost;
-  @ConfigurableField( initial = "", description = "Http Proxy Port" )
-  public static String httpProxyPort;
- 
-  private static void setupJettyServer( ) throws Exception {
-    //http proxy setup
-	if(System.getProperty("http.proxyHost") != null) {
-		httpProxyHost = System.getProperty("http.proxyHost");
-	}
-	if(System.getProperty("http.proxyPort") != null) {
-		httpProxyPort = System.getProperty("http.proxyPort");
-	} 
-	jettyServer = new org.mortbay.jetty.Server( );
-    System.setProperty( "euca.http.port", "" + HTTP_PORT );
-    System.setProperty( "euca.https.port", "" + HTTPS_PORT );
-    URL defaultConfig = ClassLoader.getSystemResource( "eucalyptus-jetty.xml" );
-    XmlConfiguration jettyConfig = new XmlConfiguration( defaultConfig );
-    jettyConfig.configure( jettyServer );
-  }
-  
-  private static void startJettyServer( ) {
-    serverThread = Threads.newThread( new Runnable( ) {
-      @Override
-      public void run( ) {
-        try {
-          jettyServer.start( );
-        } catch ( Exception e ) {
-          LOG.debug( e, e );
-        }
-      }
-    }, "jetty" );
-    serverThread.start( );
-  }
+public class ServiceBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
+  public ServiceBootstrapper( ) {}
   
   @Override
   public boolean load( ) throws Exception {
-    setupJettyServer( );
+    List<ConfigResource> configs = Lists.newArrayList( );
+    for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
+      if ( comp.isEnabled( ) ) {
+        Resource rsc = comp.getConfiguration( ).getResource( );
+        if( rsc != null ) {
+          ServiceContext.LOG.info( "-> Preparing cfg: " + rsc );
+          configs.addAll( rsc.getConfigurations( ) );
+        }
+      }
+    }
+    for ( ConfigResource cfg : configs ) {
+      ServiceContext.LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );
+    }
+    try {
+      ServiceContext.buildContext( configs );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.fatal( "Failed to bootstrap services.", e );
+      return false;
+    }
     return true;
   }
   
   @Override
   public boolean start( ) throws Exception {
-    LOG.info( "Starting admin interface." );
-    startJettyServer( );
+    try {
+      ServiceContext.LOG.info( "Starting up system bus." );
+      ServiceContext.createContext( );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.fatal( "Failed to configure services.", e );
+      return false;
+    }
+    try {
+      ServiceContext.startContext( );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.fatal( "Failed to start services.", e );
+      return false;
+    }
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
    */
@@ -148,6 +136,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean stop( ) throws Exception {
+    ServiceContext.stopContext( );
     return true;
   }
 
@@ -172,37 +161,4 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public boolean check( ) throws Exception {
     return true;
   }
-  
-  public static class PortChangeListener implements PropertyChangeListener {
-   /**
-    * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty, java.lang.Object)
-    */
-   @Override
-   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " which will restart the servlet container." );
-      if ( jettyServer == null ) {
-        return;
-      } else if ( jettyServer.isRunning( ) ) {
-        try {
-          jettyServer.stop( );
-          for ( int i = 0; i < 10 && !jettyServer.isStopped( ) && jettyServer.isStopping( ); i++ ) {
-            try {
-              TimeUnit.MILLISECONDS.sleep( 500 );
-            } catch ( InterruptedException e ) {}
-          }
-          jettyServer.destroy( );
-        } catch ( Exception e ) {
-          LOG.debug( e, e );
-        }
-        try {
-          System.setProperty( t.getDisplayName( ), ( String ) newValue );
-          setupJettyServer( );
-          startJettyServer( );
-        } catch ( Exception e ) {
-          LOG.debug( e, e );
-        }
-      }
-    }
-  }
-
 }

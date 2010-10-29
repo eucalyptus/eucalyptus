@@ -559,4 +559,20 @@ public class ImageInfo implements Image {
       return arg0.getAsImageDetails( );
     }
   }
+
+  /**
+   * @see com.eucalyptus.util.Mappable#getName()
+   */
+  @Override
+  public String getName( ) {
+    return this.getImageId( );
+  }
+
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( Image o ) {
+    return this.getImageId( ).compareTo( o.getImageId( ) );
+  }
 }
