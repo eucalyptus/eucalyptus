@@ -1196,9 +1196,9 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
     }
    
     if (nc_state.H->doRunInstance)
-        ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+      ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
     else
-        ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+      ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
     
     return ret;
 }
