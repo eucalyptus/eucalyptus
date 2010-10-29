@@ -90,7 +90,7 @@ if ( -x "/usr/bin/kvm" ) {
 
 # deal with command-line parameters
 GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
-	   'kernel'         => sub { $use_kernel = 1; },
+           'kernel'         => sub { $use_kernel = 1; },
            'ephemeral'      => sub { }, # option ignored 
            'blockroot'      => sub { $use_block_root = 1; },
            'virtionet'      => sub { $use_virtio_net = 1; },
@@ -110,12 +110,17 @@ EOF
 
 if (!$plaindisk) {
     if ($use_kernel) {
-	print "        <kernel>BASEPATH/kernel</kernel>\n";
+        print "        <kernel>BASEPATH/kernel</kernel>\n";
     }
     if ( $use_ramdisk ) {
 	print "        <initrd>BASEPATH/ramdisk</initrd>\n";
     }
-    print "        <cmdline>root=/dev/sda1 console=ttyS0</cmdline>\n";
+
+    if ( $use_virtio_root ) {
+	print "        <cmdline>root=/dev/vda1 console=ttyS0</cmdline>\n";
+    } else {
+	print "        <cmdline>root=/dev/sda1 console=ttyS0</cmdline>\n";
+    }
 }
 
 print <<EOF;
@@ -139,22 +144,16 @@ if ( $use_block_root ) {
 } 
 
 if ( $use_virtio_root ) {
-    print "        <disk type='file' device='disk'>\n";
-} else {
-    print "        <disk type='file'>\n";
-}
-print "            <source file='BASEPATH/disk'/>\n";
-
-if ( $use_virtio_root ) { # TODO: not sure whether use_virtio takes priority over plaindisk (aka Windows)
     print "            <target dev='vda' bus='virtio'/>\n";
+    print "        </disk>\n";
 } else {
     if ($plaindisk) {
-        print "            <target dev='hda'/>\n";
+	print "            <target dev='hda'/>\n";
     } else {
-        print "            <target dev='sda'/>\n";
+	print "            <target dev='sda'/>\n";
     }
+    print "        </disk>\n";
 }
-print "        </disk>\n";
 
 if ($plaindisk) {
     print "        <disk type='file' device='floppy'>\n";
@@ -169,13 +168,13 @@ print <<EOF;
             <mac address='PRIVMACADDR'/>
 EOF
 
-if ( $use_virtio_net ) { # TODO: again, not sure whether use_virtio takes priority over plaindisk (aka Windows)
+if ( $use_virtio_net ) {
     print "            <model type='virtio'/>\n";
 } else {
     if ($plaindisk) {
-        print "            <model type='rtl8139'/>\n";
+	print "            <model type='rtl8139'/>\n";
     } else {
-        print "            <model type='e1000'/>\n";
+	print "            <model type='e1000'/>\n";
     }
 }
 
