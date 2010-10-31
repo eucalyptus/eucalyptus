@@ -1007,6 +1007,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
       
       it = adb_ccInstanceType_create(env);
   
+      myInstance->ccvm.virtualBootRecordLen = 0;
       rc = ccInstanceUnmarshal(it, myInstance, env);
       adb_describeInstancesResponseType_add_instances(dirt, env, it);
     }
@@ -1192,6 +1193,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
       
       it = adb_ccInstanceType_create(env);
       
+      myInstance->ccvm.virtualBootRecordLen = 0;
       rc = ccInstanceUnmarshal(it, myInstance, env);
       adb_runInstancesResponseType_add_instances(rirt, env, it);
     }

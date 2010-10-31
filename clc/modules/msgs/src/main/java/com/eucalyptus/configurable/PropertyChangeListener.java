@@ -57,42 +57,18 @@
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.cloud.ws;
+package com.eucalyptus.configurable;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.event.StartComponentEvent;
-import com.eucalyptus.component.event.StopComponentEvent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.WalrusProperties;
-import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+public abstract interface PropertyChangeListener {
 
-public class WalrusEventListener implements EventListener {
-	private static Logger LOG  = Logger.getLogger( WalrusEventListener.class );
-
-	public static void register() {
-		ListenerRegistry.getInstance( ).register( Component.walrus, new WalrusEventListener() );
-	}
-
-	@Override
-	public void advertiseEvent(Event event) {
-	}
-
-	@Override
-	public void fireEvent(Event event) {
-		if(event instanceof StartComponentEvent) {
-			if(((StartComponentEvent) event).isLocal())
-				WalrusControl.configure();
-		} 
-	}
-
+  /**
+   * Receiver for setValue events.  Invoked before the underlying value has been changed.  Throwing an exception will cause the property to not be set.
+   * @param t reference to the underlying ConfigurableProperty
+   * @param newValue new value which will be set
+   * @throws ConfigurablePropertyException
+   */
+  public abstract void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException;  
 }

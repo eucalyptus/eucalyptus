@@ -177,10 +177,7 @@ int main(int argc, char **argv) {
       if (argv[10]) ramdiskId = argv[10];
       if (argv[11]) ramdiskURL = argv[11];
 
-      virtualMachine params = { 64, 1, 64, "m1.small", 
-				{ { "sda1", "root", 100, "none" }, 
-				  { "sda2", "ephemeral1", 1000, "ext3" },
-				  { "sda3", "swap", 50, "swap" } } };
+      virtualMachine params = { 64, 1, 64, "m1.small" };
 
       rc = cc_runInstances(amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, atoi(argv[7]), atoi(argv[8]), argv[9], &params, env, stub);
       if (rc != 0) {

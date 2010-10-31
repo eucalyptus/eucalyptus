@@ -75,6 +75,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
@@ -166,6 +167,15 @@ public class WalrusControl {
 	private static WalrusManager walrusManager;
 	private static WalrusBlockStorageManager walrusBlockStorageManager;
 	private static WalrusImageManager walrusImageManager;
+
+	public static void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
+		// TODO Auto-generated method stub
+		String returnValue;
+		returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
+		if(returnValue.length() == 0) {
+			throw new EucalyptusCloudException("drbdadm not found: Is drbd installed?");
+		}
+	}
 
 	public static void configure() {
 		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
@@ -373,4 +383,5 @@ public class WalrusControl {
 	public GetWalrusSnapshotSizeResponseType GetWalrusSnapshotSize(GetWalrusSnapshotSizeType request) throws EucalyptusCloudException {
 		return walrusBlockStorageManager.getWalrusSnapshotSize(request);
 	}
+
 }

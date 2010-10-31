@@ -125,5 +125,5 @@ int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *
 
 int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
-    return doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force);
+    return doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force, 1);
 }

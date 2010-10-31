@@ -929,7 +929,7 @@ retry:
         break;
         
     case WAIT:
-        logprintfl (EUCAINFO, "waiting for disapperance of %s...\n", staging_path);
+        logprintfl (EUCAINFO, "waiting for disappearance of %s...\n", staging_path);
         /* wait for staging_path to disappear, which means both either the
          * download succeeded or it failed */
         if ( (e=wait_for_file (NULL, staging_path, 180, "cached image")) ) 
@@ -1118,7 +1118,6 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
     int e = ERROR;
     
     logprintfl (EUCAINFO, "retrieving images for instance %s (disk limit=%lldMB)...\n", instanceId, total_disk_limit_mb);
-    
     /* get the necessary files from Walrus, caching them if possible */
     char * image_name;
     int mount_offset = 0;
