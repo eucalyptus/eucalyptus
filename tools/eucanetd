@@ -15,6 +15,7 @@ my $polltime = 1;
 my $iptpath = "/";
 my $iptmode = "iptables";
 my $dodhcpd = 0;
+my $vnetmode = "";
 my $cloudip = "169.254.169.254";
 
 if ($ENV{'EUCALYPTUS'}) {
@@ -211,6 +212,10 @@ sub write_global_net() {
 }
 
 sub check_environment() {
+    if ($vnetmode ne "STATIC-DYNMAC") {
+	exit(0);
+    }
+
     $cmd = "ebtables -h >/dev/null 2>&1";
     if (system($cmd)) {
 	print "ERROR: eucanetd: cannot run ebtables\n";
@@ -278,6 +283,9 @@ sub parse_eucalyptus_conf() {
             }
             if ($var eq "EUCANETD_DHCPDMODE") {
                 $dodhcpd = "$val";
+            }
+            if ($var eq "VNET_MODE") {
+                $vnetmode = "$val";
             }
 	}
     }
