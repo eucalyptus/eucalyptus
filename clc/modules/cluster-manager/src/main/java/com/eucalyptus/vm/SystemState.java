@@ -214,51 +214,6 @@ public class SystemState {
       } catch ( Exception e ) {}
     }
   }
-  @Deprecated /** TODO: HACK HACK **/
-  private static String getWalrusUrl( ) throws EucalyptusCloudException {
-    try {
-      return SystemConfiguration.getWalrusUrl( ) + "/";
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Walrus has not been configured.", e );
-    }
-  }  
-  @Deprecated /** TODO: HACK HACK **/
-  private static String getImageUrl( String walrusUrl, final Image diskInfo ) throws EucalyptusCloudException {
-    try {
-      URL url = new URL( getWalrusUrl( ) + diskInfo.getImageLocation( ) );
-      return url.toString( );
-    } catch ( MalformedURLException e ) {
-      throw new EucalyptusCloudException( "Failed to parse image location as URL.", e );
-    }
-  }
-  @Deprecated /** TODO: HACK HACK **/
-  private static VmImageInfo resolveImage( VmInfo vmInfo ) throws EucalyptusCloudException {
-    String walrusUrl = getWalrusUrl( );
-    ArrayList<String> productCodes = Lists.newArrayList( );
-    ImageInfo diskInfo = null, kernelInfo = null, ramdiskInfo = null;
-    String diskUrl = null, kernelUrl = null, ramdiskUrl = null;
-  
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-    try {
-      diskInfo = db.getUnique( new ImageInfo( vmInfo.getImageId( ) ) );
-      for ( ProductCode p : diskInfo.getProductCodes( ) ) {
-        productCodes.add( p.getValue( ) );
-      }
-      diskUrl = getImageUrl( walrusUrl, diskInfo );
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-    }
-    VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId( ), vmInfo.getKernelId( ), vmInfo.getRamdiskId( ), diskUrl, null, null, productCodes );
-    if( Component.walrus.isLocal( ) ) {
-      ArrayList<String> ancestorIds = getAncestors( vmInfo.getOwnerId( ), diskInfo.getImageLocation( ) );
-      vmImgInfo.setAncestorIds( ancestorIds );
-    } else {//FIXME: handle populating these in a defered way for the remote case.
-      vmImgInfo.setAncestorIds( new ArrayList<String>() );
-    }
-    return vmImgInfo;
-  }
   public static ArrayList<String> getAncestors( String userId, String manifestPath ) {
     ArrayList<String> ancestorIds = Lists.newArrayList( );
     try {
@@ -319,14 +274,7 @@ public class SystemState {
       try {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
-      
-      VmImageInfo imgInfo = null;
-      //FIXME: really need to populate these asynchronously for multi-cluster/split component... 
-      try {
-        imgInfo = resolveImage( runVm );
-      } catch ( EucalyptusCloudException e ) {
-        imgInfo = new VmImageInfo( runVm.getImageId( ), runVm.getKernelId( ), runVm.getRamdiskId( ), null, null, null, null );
-      }
+      //ASAP: FIXME: GRZE: HANDLING OF PRODUCT CODES AND ANCESTOR IDs
       VmKeyInfo keyInfo = null;
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {

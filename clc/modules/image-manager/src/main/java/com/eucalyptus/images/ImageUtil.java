@@ -220,22 +220,6 @@ public class ImageUtil {
       throw new EucalyptusCloudException( "Failed check! Invalidating registration: " + imgInfo.getImageLocation( ) );
     }
   }
-  public static String getImageUrl( String walrusUrl, final Image diskInfo ) throws EucalyptusCloudException {
-    try {
-      URL url = new URL( ImageUtil.getWalrusUrl( ) + diskInfo.getImageLocation( ) );
-      return url.toString( );
-    } catch ( MalformedURLException e ) {
-      throw new EucalyptusCloudException( "Failed to parse image location as URL.", e );
-    }
-  }
-  public static String getWalrusUrl( ) throws EucalyptusCloudException {
-    try {
-      return SystemConfiguration.getWalrusUrl( ) + "/";
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Walrus has not been configured.", e );
-    }
-  }
   public static boolean isSet( String id ) {
     return id != null && !"".equals( id );
   }
@@ -258,17 +242,6 @@ public class ImageUtil {
       db.rollback( );
       throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
     }
-  }
-  public static VmImageInfo getVmImageInfo( final String walrusUrl, final Image diskInfo, final Image kernelInfo, final Image ramdiskInfo, final ArrayList<String> productCodes ) throws EucalyptusCloudException {
-    String diskUrl = getImageUrl( walrusUrl, diskInfo );
-    String kernelUrl = kernelInfo != null ? getImageUrl( walrusUrl, kernelInfo ) : null;
-    String ramdiskUrl = ramdiskInfo != null ? getImageUrl( walrusUrl, ramdiskInfo ) : null;
-    //:: create the response assets now since we might not have a ramdisk anyway :://
-    VmImageInfo vmImgInfo = new VmImageInfo( diskInfo.getImageId( ), kernelInfo == null ? null : kernelInfo.getImageId( ),
-      ramdiskInfo == null ? null : ramdiskInfo.getImageId( ), diskUrl, kernelUrl, ramdiskInfo == null ? null
-                                                                                                     : ramdiskUrl,
-      productCodes );
-    return vmImgInfo;
   }
   public static Image getImageInfobyId( String searchId ) throws EucalyptusCloudException {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
@@ -478,31 +451,5 @@ public class ImageUtil {
     } catch ( Throwable e1 ) {
       db.rollback( );
     }
-  }
-  public static VmImageInfo resolveImage( VmInfo vmInfo ) throws EucalyptusCloudException {
-    String walrusUrl = getWalrusUrl( );
-    ArrayList<String> productCodes = Lists.newArrayList( );
-    ImageInfo diskInfo = null, kernelInfo = null, ramdiskInfo = null;
-    String diskUrl = null, kernelUrl = null, ramdiskUrl = null;
-  
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-    try {
-      diskInfo = db.getUnique( new ImageInfo( vmInfo.getImageId( ) ) );
-      for ( ProductCode p : diskInfo.getProductCodes( ) ) {
-        productCodes.add( p.getValue( ) );
-      }
-      diskUrl = getImageUrl( walrusUrl, diskInfo );
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-    }
-    VmImageInfo vmImgInfo = new VmImageInfo( vmInfo.getImageId( ), vmInfo.getKernelId( ), vmInfo.getRamdiskId( ), diskUrl, null, null, productCodes );
-    if( Component.walrus.isLocal( ) ) {
-      ArrayList<String> ancestorIds = getAncestors( vmInfo.getOwnerId( ), diskInfo.getImageLocation( ) );
-      vmImgInfo.setAncestorIds( ancestorIds );
-    } else {//FIXME: handle populating these in a defered way for the remote case.
-      vmImgInfo.setAncestorIds( new ArrayList<String>() );
-    }
-    return vmImgInfo;
   }
 }

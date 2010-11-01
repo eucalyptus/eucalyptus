@@ -99,6 +99,7 @@ import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 @Entity
@@ -469,6 +470,19 @@ public class ImageInfo implements Image {
     i.setRamdiskId( this.getRamdiskId( ) );
     i.setPlatform( this.getPlatform( ) );
     return i;
+  }
+  
+  public VirtualBootRecord getAsVirtualBootRecord( ) {
+    return new VirtualBootRecord( ) {{
+      this.setId( ImageInfo.this.imageId );
+      this.setType( ImageInfo.this.imageType );
+//ASAP: FIXME: GRZE:      this.setSize( ImageInfo.this. );
+      this.setResourceLocation( ImageInfo.this.imageLocation );
+      if( "machine".equals( ImageInfo.this.imageType ) ) {
+        //ASAP: FIXME: GRZE: fix this temporary workaround.
+        this.setGuestDeviceName( "/dev/sda" );
+      }
+    }};
   }
   
   /**
