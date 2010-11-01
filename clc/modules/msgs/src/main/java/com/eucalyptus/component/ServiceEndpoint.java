@@ -87,6 +87,8 @@ import com.eucalyptus.util.async.Request;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
 
 public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<Service> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );
@@ -158,6 +160,17 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
           if ( ( event = ServiceEndpoint.this.msgQueue.poll( ServiceEndpoint.this.pollInterval, TimeUnit.MILLISECONDS ) ) != null ) {
             EventRecord.here( ServiceEndpointWorker.class, EventType.DEQUEUE, event.getCallback( ).getClass( ).getSimpleName( ), event.getRequest( ).getRequest( ).toSimpleString( ) ).debug( );
             final long start = System.nanoTime( );
+            {//ASAP: FIXME: GRZE: clean up this implementation
+              BaseMessage m = event.getRequest( ).getRequest( );
+              m.getServices( ).clear( );
+              Component walrus = Components.lookup( "walrus" );
+              final Service activeWalrus = walrus.getServices( ).first( );
+              m.getServices( ).add( new ServiceInfoType( ) {{
+                this.setName( activeWalrus.getName( ) );
+                this.setType( activeWalrus.getParent( ).getName( ) );
+                this.getUris( ).add( activeWalrus.getUri( ).toASCIIString( ) );
+              }} );
+            }
             event.getRequest( ).sendSync( ServiceEndpoint.this );
             EventRecord.here( ServiceEndpointWorker.class, EventType.QUEUE, ServiceEndpoint.this.getParent( ).getName( ) )//
             .append( event.getCallback( ).getClass( ).getSimpleName( ) )//

@@ -75,6 +75,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.EphemeralConfiguration;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 
 //TODO: Remove me
 //public class INTERNAL extends EucalyptusMessage {
@@ -100,7 +101,7 @@ public class ServiceStatusType extends EucalyptusData {
   String name;
   String type;
   String uri;
-  String state;
+  String state;//    DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED;
   Integer epoch;
   ArrayList<String> details = new ArrayList<String>( );
 }
@@ -193,6 +194,8 @@ public class WalrusStateType extends EucalyptusMessage{
   }
 }
 
+public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
+}
 
 public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
     
@@ -291,6 +294,7 @@ public class VmTypeInfo extends EucalyptusData {
   Integer disk;
   Integer cores;
   ArrayList<BlockDeviceMappingItemType> deviceMappings = new ArrayList<BlockDeviceMappingItemType>();
+  ArrayList<VirtualBootRecord> virtualBootRecord = new ArrayList<VirtualBootRecord>();
   def VmTypeInfo(){
   }
   

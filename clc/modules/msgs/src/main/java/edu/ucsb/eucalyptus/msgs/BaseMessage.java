@@ -163,4 +163,32 @@ public class BaseMessage {
     return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.getUserId( ), this.getEffectiveUserId( ),
                           this.get_return( ), this.getStatusMessage( ) );
   }
+
+  /**
+   * @return the epoch
+   */
+  public Integer getEpoch( ) {
+    return this.epoch;
+  }
+
+  /**
+   * @param epoch the epoch to set
+   */
+  public void setEpoch( Integer epoch ) {
+    this.epoch = epoch;
+  }
+
+  /**
+   * @return the services
+   */
+  public ArrayList<ServiceInfoType> getServices( ) {
+    return this.services;
+  }
+
+  /**
+   * @param services the services to set
+   */
+  public void setServices( ArrayList<ServiceInfoType> services ) {
+    this.services = services;
+  }
 }

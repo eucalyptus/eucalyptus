@@ -65,7 +65,9 @@
 
 package edu.ucsb.eucalyptus.ic;
 
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
@@ -85,11 +87,13 @@ public class Eucalyptus {
     }
     if ( msg instanceof DescribeRegionsType ) {
       DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) msg.getReply( );
+      SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
+      reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
       try {
-        SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
-        reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
-        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", SystemConfiguration.getWalrusUrl( ) ) );
-      } catch ( EucalyptusCloudException e ) {}
+        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupServiceByName( "walrus" ).getUri( ).toASCIIString( ) ) );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      }
       return reply;
     }
     return new EucalyptusErrorMessageType( "Eucalyptus", msg, "Unknown request of type: " + msg.getClass( ).getSimpleName( ) );
