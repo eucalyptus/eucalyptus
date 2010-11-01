@@ -66,6 +66,7 @@ package com.eucalyptus.config;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.principal.Authorization;
@@ -81,6 +82,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
@@ -88,6 +90,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
 import edu.ucsb.eucalyptus.msgs.DescribeNodesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNodesType;
+import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeType;
 import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
@@ -178,6 +182,18 @@ public class Configuration {
     return reply;
   }
   
+  private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
+  public ModifyComponentAttributeResponseType registerComponent( ModifyComponentAttributeType request ) throws EucalyptusCloudException {
+    ModifyComponentAttributeResponseType reply = request.getReply( );
+    if( !attributes.contains( request.getAttribute( ) ) ) {
+      throw new EucalyptusCloudException( "Request to modify unknown attribute: " + request.getAttribute() );
+    }
+    ServiceBuilder builder = builders.get( request.getClass( ) );
+    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
+
+    return reply;
+  }
+  
   public DescribeNodesResponseType listComponents( DescribeNodesType request ) throws EucalyptusCloudException {
     DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
     reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
@@ -188,7 +204,7 @@ public class Configuration {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
     for( ComponentConfiguration conf : builders.get( request.getClass( ) ).list( ) ) {
-      listConfigs.add( new ComponentInfoType( conf.getName( ), conf.getHostName( ) ) );
+      listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), /** LIES LIES LIES **/ "everything is FINE!", conf.getHostName( ) ) );
     }
     return reply;
   }

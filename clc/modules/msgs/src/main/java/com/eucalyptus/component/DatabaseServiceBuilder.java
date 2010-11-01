@@ -74,7 +74,7 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   private static Logger LOG = Logger.getLogger( DatabaseServiceBuilder.class );
   protected abstract T newInstance( );
   
-  protected abstract T newInstance( String name, String host, Integer port );
+  protected abstract T newInstance( String partition, String name, String host, Integer port );
   
   @Override
   public List<T> list( ) throws ServiceRegistrationException {
@@ -136,7 +136,7 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
 
   @Override
   public T add( String name, String host, Integer port ) throws ServiceRegistrationException {
-    T config = this.newInstance( name, host, port );
+    T config = this.newInstance( null, name, host, port );
     ServiceConfigurations.getInstance( ).store( config );
     return config;
   }

@@ -18,8 +18,8 @@ public class WalrusBuilder extends DatabaseServiceBuilder<WalrusConfiguration> {
   }
   
   @Override
-  public WalrusConfiguration newInstance( String name, String host, Integer port ) {
-    return new WalrusConfiguration( name, host, port );
+  public WalrusConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new WalrusConfiguration( partition, name, host, port );
   }
 
   @Override

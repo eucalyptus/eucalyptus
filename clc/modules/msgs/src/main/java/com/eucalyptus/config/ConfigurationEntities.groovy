@@ -102,6 +102,8 @@ import com.eucalyptus.entities.AbstractPersistent;
 public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, Comparable {
   @Column( name = "config_component_name" )
   String name;
+  @Column( name = "config_component_partition" )
+  String partition;
   @Column( name = "config_component_hostname" )
   String hostName;
   @Column( name = "config_component_port" )
@@ -111,13 +113,15 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   
   public ComponentConfiguration( ) {}
   
-  public ComponentConfiguration( String name, String hostName, String servicePath ) {
+  public ComponentConfiguration( String partition, String name, String hostName, String servicePath ) {
     super( );
+    this.partition = partition;
     this.name = name;
     this.hostName = hostName;
     this.servicePath = servicePath;
   }
-  public ComponentConfiguration( String name, String hostName, Integer port, String servicePath ) {
+  public ComponentConfiguration( String partition, String name, String hostName, Integer port, String servicePath ) {
+    this.partition = partition;
     this.name = name;
     this.hostName = hostName;
     this.port = port;
@@ -253,11 +257,11 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   Integer maxVlan;
   
   public ClusterConfiguration( ) {}
-  public ClusterConfiguration( String name, String hostName, Integer port ) {
-    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
-  public ClusterConfiguration( String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
-    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  public ClusterConfiguration( String partition, String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
     this.minVlan = minVlan;
     this.maxVlan = maxVlan;
   }
@@ -295,7 +299,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Storage";
   public StorageControllerConfiguration( ) {}
-  public StorageControllerConfiguration( String name, String hostName, Integer port ) {
+  public StorageControllerConfiguration( String partition, String name, String hostName, Integer port ) {
     super( name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public Component getComponent() {
@@ -311,7 +315,7 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   private static String DEFAULT_SERVICE_PATH = "/services/Walrus";
   public WalrusConfiguration( ) {
   }
-  public WalrusConfiguration( String name, String hostName, Integer port ) {
+  public WalrusConfiguration( String partition, String name, String hostName, Integer port ) {
     super( name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public Component getComponent() {

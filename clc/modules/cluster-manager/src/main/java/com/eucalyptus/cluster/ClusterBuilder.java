@@ -97,8 +97,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public ClusterConfiguration newInstance( String name, String host, Integer port ) {
-    return new ClusterConfiguration( name, host, port );
+  public ClusterConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new ClusterConfiguration( partition, name, host, port );
   }
   
   @Override

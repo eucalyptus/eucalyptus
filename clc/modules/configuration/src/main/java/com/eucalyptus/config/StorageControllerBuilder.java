@@ -32,8 +32,8 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   }
   
   @Override
-  public StorageControllerConfiguration newInstance( String name, String host, Integer port ) {
-    return new StorageControllerConfiguration( name, host, port );
+  public StorageControllerConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new StorageControllerConfiguration( partition, name, host, port );
   }
   
   @Override
