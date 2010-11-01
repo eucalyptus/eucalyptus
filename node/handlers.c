@@ -160,7 +160,6 @@ int convert_dev_names(	char *localDev,
         bzero(localDevTag, 256);
         snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
     }
-
     return 0;
 }
 
@@ -300,7 +299,7 @@ refresh_instance_info(	struct nc_state_t *nc,
     int error = virDomainGetInfo(dom, &info);
     sem_v(hyp_sem);
     if (error < 0 || info.state == VIR_DOMAIN_NOSTATE) {
-        logprintfl (EUCAWARN, "warning: failed to get informations for domain %s\n", instance->instanceId);
+        logprintfl (EUCAWARN, "warning: failed to get information for domain %s\n", instance->instanceId);
         /* what to do? hopefully we'll find out more later */
 	sem_p(hyp_sem);
         virDomainFree (dom);
@@ -457,8 +456,18 @@ monitoring_thread (void *arg)
     for (;;) {
         bunchOfInstances *head;
         time_t now = time(NULL);
+	FILE *FP=NULL;
+	char nfile[MAX_PATH], nfilefinal[MAX_PATH];
+
         sem_p (inst_sem);
 
+	snprintf(nfile, MAX_PATH, "%s/var/log/eucalyptus/local-net.stage", nc_state.home);
+	snprintf(nfilefinal, MAX_PATH, "%s/var/log/eucalyptus/local-net", nc_state.home);
+	FP=fopen(nfile, "w");
+	if (!FP) {
+	  logprintfl(EUCAWARN, "monitoring_thread(): could not open file %s for writing\n", nfile);
+	}
+	
         for ( head = global_instances; head; head = head->next ) {
             ncInstance * instance = head->instance;
 
@@ -471,7 +480,14 @@ monitoring_thread (void *arg)
                 instance->state!=SHUTDOWN &&
 		instance->state!=BUNDLING_SHUTDOWN &&
 		instance->state!=BUNDLING_SHUTOFF &&
-                instance->state!=TEARDOWN) continue;
+                instance->state!=TEARDOWN) {
+	      
+	      if (FP && !strcmp(instance->stateName, "Extant")) {
+		// have a running instance, write its information to local state file
+		fprintf(FP, "%s %s %s %d %s %s %s\n", instance->instanceId, nc_state.vnetconfig->pubInterface, "NA", instance->ncnet.vlan, instance->ncnet.privateMac, instance->ncnet.publicIp, instance->ncnet.privateIp);
+	      }
+	      continue;
+	    }
 
             if (instance->state==TEARDOWN) {
                 /* it's been long enough, we can forget the instance */
@@ -498,11 +514,11 @@ monitoring_thread (void *arg)
 	      if (scCleanupInstanceImage(instance->userId, instance->instanceId)) {
                 logprintfl (EUCAWARN, "warning: failed to cleanup instance image %s\n", instance->instanceId);
 	      }
-			} else {
-				logprintfl (EUCAINFO, "cleaning up state for instance %s (but keeping the files)\n", instance->instanceId);
-			}
+	    } else {
+	      logprintfl (EUCAINFO, "cleaning up state for instance %s (but keeping the files)\n", instance->instanceId);
+	    }
             
-            /* check to see if this is the last instance running on vlan */
+            /* check to see if this is the last instance running on vlan, handle local networking information drop */
             int left = 0;
             bunchOfInstances * vnhead;
             for (vnhead = global_instances; vnhead; vnhead = vnhead->next ) {
@@ -519,6 +535,10 @@ monitoring_thread (void *arg)
             change_state (instance, TEARDOWN); /* TEARDOWN = no more resources */
             instance->terminationTime = time (NULL);
         }
+	if (FP) {
+	  fclose(FP);
+	  rename (nfile, nfilefinal);
+	}
         sem_v (inst_sem);
 
 	if (head) {
@@ -563,6 +583,13 @@ void *startup_thread (void * arg)
         change_state (instance, SHUTOFF);
         return NULL;
     }
+    error = vnetStartInstanceNetwork(nc_state.vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
+    if (error) {
+      logprintfl(EUCAFATAL, "start instance network failed for instance %s, terminating it\n", instance->instanceId);
+      change_state(instance, SHUTOFF);
+      return(NULL);
+    }
+
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
 
     char imageURL   [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.image, instance->imageId, imageURL);
@@ -903,7 +930,7 @@ static int init (void)
 	bridge = getConfString(configFiles, 2, "VNET_BRIDGE");
 	tmp = getConfString(configFiles, 2, "VNET_MODE");
 	
-	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL, NULL);
+	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL, NULL);
 	if (hypervisor) free(hypervisor);
 	if (bridge) free(bridge);
 	if (tmp) free(tmp);
@@ -957,6 +984,24 @@ static int init (void)
 	  free(tmp);
 	} else {
 	  snprintf (nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", EUCALYPTUS_NC_DELETE_BUNDLE); // default value
+	}
+
+	// find and set iqn
+	{
+	  snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "UNSET");
+	  char *ptr=NULL, *iqn=NULL, *tmp=NULL, cmd[MAX_PATH];
+	  snprintf(cmd, MAX_PATH, "%s cat /etc/iscsi/initiatorname.iscsi", nc_state.rootwrap_cmd_path);
+	  ptr = system_output(cmd);
+	  if (ptr) {
+	    iqn = strstr(ptr, "InitiatorName=");
+	    if (iqn) {
+	      iqn+=strlen("InitiatorName=");
+	      tmp=strstr(iqn, "\n");
+	      if (tmp) *tmp='\0';
+	      snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "%s", iqn);
+	    } 
+	    free(ptr);
+	  }
 	}
 
 	/* start the monitoring thread */

@@ -196,6 +196,7 @@ void free_instance (ncInstance ** instp)
 
 /* resource is used to return information about resources */
 ncResource * allocate_resource (char *nodeStatus,
+				char *iqn,
                                 int memorySizeMax, int memorySizeAvailable, 
                                 int diskSizeMax, int diskSizeAvailable,
                                 int numberOfCoresMax, int numberOfCoresAvailable,
@@ -205,7 +206,11 @@ ncResource * allocate_resource (char *nodeStatus,
     
     if (!nodeStatus) return NULL;
     if (!(res = malloc(sizeof(ncResource)))) return NULL;
+    bzero(res, sizeof(ncResource));
     strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
+    if (iqn) {
+      strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
+    }
     if (publicSubnets) {
       strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
     }

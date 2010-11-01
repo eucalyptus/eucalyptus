@@ -460,12 +460,17 @@ doTerminateInstance(	struct nc_state_t *nc,
 	int err;
 
 	sem_p (inst_sem);
-	err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
+        err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
 	if (err!=OK) {
 		sem_v(inst_sem);
 		return err;
 	}
 
+	err = vnetStopInstanceNetwork(nc->vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
+	if (err) {
+	  logprintfl(EUCAFATAL, "stop instance network failed for instance %s, terminating it\n", instance->instanceId);
+	}
+	
 	// change the state and let the monitoring_thread clean up state
 	if (instance->state!=TEARDOWN) { // do not leave TEARDOWN
 	  if (instance->state==STAGING) {
@@ -589,7 +594,7 @@ doDescribeResource(	struct nc_state_t *nc,
         return 10;
     }
     
-    res = allocate_resource ("OK", nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, "none");
+    res = allocate_resource ("OK", nc->iqn, nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, "none");
     if (res == NULL) {
         logprintfl (EUCAERROR, "Out of memory\n");
         return 1;

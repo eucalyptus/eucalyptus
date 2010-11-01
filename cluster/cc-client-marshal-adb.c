@@ -864,6 +864,7 @@ int cc_describeResources(axutil_env_t *env, axis2_stub_t *stub) {
   adb_DescribeResourcesResponse_t *drOut=NULL;
   adb_describeResourcesResponseType_t *drrt=NULL;
   adb_ccResourceType_t *rt=NULL;
+  adb_ccNodeType_t *nt=NULL;
 
   adb_DescribeResources_t *drIn=NULL;
   adb_describeResourcesType_t *drt=NULL;
@@ -936,11 +937,17 @@ int cc_describeResources(axutil_env_t *env, axis2_stub_t *stub) {
   if (status == AXIS2_FALSE) {
     printf("operation fault '%s'\n", adb_describeResourcesResponseType_get_statusMessage(drrt, env));
   } else {
-    
-    for (i=0; i<adb_describeResourcesResponseType_sizeof_serviceTags(drrt, env); i++) {
-      printf("%s ", adb_describeResourcesResponseType_get_serviceTags_at(drrt, env, i));
+    for (i=0; i<adb_describeResourcesResponseType_sizeof_nodes(drrt, env); i++) {
+      nt = adb_describeResourcesResponseType_get_nodes_at(drrt, env, i);
+      printf(":%s,%s:", adb_ccNodeType_get_serviceTag(nt, env), adb_ccNodeType_get_iqn(nt, env));
     }
     printf("\n");
+
+    /*    for (i=0; i<adb_describeResourcesResponseType_sizeof_serviceTags(drrt, env); i++) {
+      printf(":%s:", adb_describeResourcesResponseType_get_serviceTags_at(drrt, env, i));
+    }
+    printf("\n");*/
+    
     for (i=0; i<adb_describeResourcesResponseType_sizeof_resources(drrt, env); i++) {
       rt = adb_describeResourcesResponseType_get_resources_at(drrt, env, i);
       printf("DescribeResources: %d %d\n", adb_ccResourceType_get_maxInstances(rt, env), adb_ccResourceType_get_availableInstances(rt, env));

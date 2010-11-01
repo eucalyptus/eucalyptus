@@ -83,6 +83,7 @@ struct nc_state_t {
 	char admin_user_id[CHAR_BUFFER_SIZE];
 	int save_instance_files;
 	char uri[CHAR_BUFFER_SIZE];
+        char iqn[CHAR_BUFFER_SIZE];
 	virConnectPtr conn;
 	int convert_to_disk;
 	// defined max
@@ -182,6 +183,7 @@ struct handlers {
 				char *localDev,
 				int force,
                                 int grab_inst_sem);
+
     int (*doBundleInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
 				char *instanceId,

@@ -238,6 +238,7 @@ typedef struct ncInstance_t {
 
 typedef struct ncResource_t {
     char nodeStatus[CHAR_BUFFER_SIZE];
+    char iqn[CHAR_BUFFER_SIZE];
     int memorySizeMax;
     int memorySizeAvailable;
     int diskSizeMax;
@@ -278,6 +279,7 @@ ncInstance * allocate_instance(char *instanceId, char *reservationId,
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 
+			       char *iqn,
                                int memorySizeMax, int memorySizeAvailable, 
                                int diskSizeMax, int diskSizeAvailable,
                                int numberOfCoresMax, int numberOfCoresAvailable,

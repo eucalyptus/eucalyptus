@@ -49,8 +49,18 @@ if ((length($lun) > 0) && ($lun > -1)) {
     login_target($ip, $store, $password, $auth_mode);
   }
   # get dev from lun
-  sleep 1;
-  print get_device_name_from_lun($store, $lun);
+  sleep(1);
+  $localdevname = get_device_name_from_lun($store, $lun);
+  print "$localdevname";
+
+  # make sure device exists on the filesystem
+  for ($trycount=0; $trycount < 12; $trycount++) { 
+    if ( -e "$localdevname" ) {
+      $trycount=12;
+    } else {
+      sleep(1);
+    }
+  }
 } else {
   $password = decrypt_password($encrypted_password);
 
@@ -59,8 +69,18 @@ if ((length($lun) > 0) && ($lun > -1)) {
   }
   login_target($ip, $store, $password);
   #wait for device to be ready
-  sleep 1;
-  print get_device_name($store);
+  sleep(1);
+  $localdevname = get_device_name($store);
+  print "$localdevname";
+
+  # make sure device exists on the filesystem
+  for ($trycount=0; $trycount < 12; $trycount++) { 
+    if ( -e "$localdevname" ) {
+      $trycount=12;
+    } else {
+      sleep(1);
+    }
+  }
 }
 
 sub parse_devstring {
@@ -168,7 +188,7 @@ sub get_device_name {
 	      $attach_seen = 0;
 	  } elsif($_ =~ /.*Attached scsi disk ([a-zA-Z0-9]+).*\n/) {
 	      if($found_target == 1) {
-		return "/dev/", $1;
+		return "/dev/" . $1;
 	      }
 	      $attach_seen = 1;
 	  }
@@ -198,7 +218,7 @@ sub get_device_name_from_lun {
               $found_lun = 0;
           } elsif ($_ =~ /.*Attached scsi disk ([a-zA-Z0-9]+).*\n/) {
               if ($found_target == 1 && $found_lun == 1) {
-                return "/dev/", $1;
+                return "/dev/" . $1;
               }
               $attach_seen = 1;
           } elsif ($_ =~ /.*Lun: (.*)\n/) {
