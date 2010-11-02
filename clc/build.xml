@@ -103,10 +103,10 @@
 		<ant dir="modules/dns" inheritall="false" target="builder" />
 		<ant dir="modules/www" inheritall="false" target="builder" />
 		<!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-    <ant dir="modules/image-manager" inheritall="false" target="builder" />
-		<ant dir="modules/group-manager" inheritall="false" target="builder" />
-		<ant dir="modules/interface" inheritall="false" target="builder" />
-		<ant dir="modules/key-manager" inheritall="false" target="builder" />
+    <ant dir=".deprecated/image-manager" inheritall="false" target="builder" />
+		<ant dir=".deprecated/group-manager" inheritall="false" target="builder" />
+		<ant dir=".deprecated/interface" inheritall="false" target="builder" />
+		<ant dir=".deprecated/key-manager" inheritall="false" target="builder" />
 		<!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 		<ant dir="." inheritall="false" target="jar" />
 	</target>
@@ -127,10 +127,10 @@
 		<ant dir="modules/dns" inheritall="false" target="jar" />
 		<ant dir="modules/www" inheritall="false" target="jar" />
     <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-    <ant dir="modules/image-manager" inheritall="false" target="jar" />
-    <ant dir="modules/group-manager" inheritall="false" target="jar" />
-    <ant dir="modules/interface" inheritall="false" target="jar" />
-    <ant dir="modules/key-manager" inheritall="false" target="jar" />
+    <ant dir=".deprecated/image-manager" inheritall="false" target="jar" />
+    <ant dir=".deprecated/group-manager" inheritall="false" target="jar" />
+    <ant dir=".deprecated/interface" inheritall="false" target="jar" />
+    <ant dir=".deprecated/key-manager" inheritall="false" target="jar" />
     <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 	</target>
 	<target name="shouldBind">
@@ -182,10 +182,10 @@
 		<ant dir="modules/dns" inheritall="false" target="clean" />
 		<ant dir="modules/www" inheritall="false" target="clean" />
     <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-    <ant dir="modules/image-manager" inheritall="false" target="clean" />
-    <ant dir="modules/group-manager" inheritall="false" target="clean" />
-    <ant dir="modules/interface" inheritall="false" target="clean" />
-    <ant dir="modules/key-manager" inheritall="false" target="clean" />
+    <ant dir=".deprecated/image-manager" inheritall="false" target="clean" />
+    <ant dir=".deprecated/group-manager" inheritall="false" target="clean" />
+    <ant dir=".deprecated/interface" inheritall="false" target="clean" />
+    <ant dir=".deprecated/key-manager" inheritall="false" target="clean" />
     <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 		<delete dir="${target.dir}" />
 	</target>
@@ -248,10 +248,10 @@
 		<ant dir="modules/dns" inheritall="false" target="install" />
 		<ant dir="modules/www" inheritall="false" target="install" />
     <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-    <ant dir="modules/image-manager" inheritall="false" target="install" />
-    <ant dir="modules/group-manager" inheritall="false" target="install" />
-    <ant dir="modules/interface" inheritall="false" target="install" />
-    <ant dir="modules/key-manager" inheritall="false" target="install" />
+    <ant dir=".deprecated/image-manager" inheritall="false" target="install" />
+    <ant dir=".deprecated/group-manager" inheritall="false" target="install" />
+    <ant dir=".deprecated/interface" inheritall="false" target="install" />
+    <ant dir=".deprecated/key-manager" inheritall="false" target="install" />
     <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 	</target>
 	<!--================================== unzipping target ==================================-->
