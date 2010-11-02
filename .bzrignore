@@ -5,6 +5,7 @@ clc/lib
 clc/bind.log
 *.class
 clc/modules/*/build
+clc/.deprecated/*/build
 clc/modules/bootstrap/eucalyptus-cloud
 clc/modules/msgs/src/main/resources/msgs-binding.xml
 clc/modules/storage-controller/include/**
