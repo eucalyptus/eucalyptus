@@ -300,7 +300,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
   private static String DEFAULT_SERVICE_PATH = "/services/Storage";
   public StorageControllerConfiguration( ) {}
   public StorageControllerConfiguration( String partition, String name, String hostName, Integer port ) {
-    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public Component getComponent() {
     return Component.storage;
@@ -316,7 +316,7 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   public WalrusConfiguration( ) {
   }
   public WalrusConfiguration( String partition, String name, String hostName, Integer port ) {
-    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public Component getComponent() {
     return Component.walrus;
