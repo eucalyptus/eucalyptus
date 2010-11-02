@@ -879,10 +879,11 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
 
   // working vars
   int i, rc, *outTypesMax=NULL, *outTypesAvail=NULL;
-  int vmLen=0, outTypesLen=0, outServiceTagsLen=0;
+  int vmLen=0, outTypesLen=0;
+  ccResource *outNodes=NULL;
+  int outNodesLen=0;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char **outServiceTags=NULL;
   virtualMachine *vms=NULL;
   adb_virtualMachineType_t *vm=NULL;
   ncMetadata ccMeta;
@@ -907,7 +908,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   
   rc=1;
   if (!DONOTHING) {
-    rc = doDescribeResources(&ccMeta, &vms, vmLen, &outTypesMax, &outTypesAvail, &outTypesLen, &outServiceTags, &outServiceTagsLen);
+    rc = doDescribeResources(&ccMeta, &vms, vmLen, &outTypesMax, &outTypesAvail, &outTypesLen, &outNodes, &outNodesLen);
   }
   
   if (rc) {
@@ -915,13 +916,17 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     status = AXIS2_FALSE;
     snprintf(statusMessage, 255, "ERROR");
   } else {
-    for (i=0; i<outServiceTagsLen; i++) {
-      if (outServiceTags[i]) {
-	adb_describeResourcesResponseType_add_serviceTags(drrt, env, outServiceTags[i]);
-	free(outServiceTags[i]);
-      }
+    for (i=0; i<outNodesLen; i++) {
+      adb_describeResourcesResponseType_add_serviceTags(drrt, env, outNodes[i].ncURL);
+      /*      adb_ccNodeType_t *nt=NULL;
+      
+      nt = adb_ccNodeType_create(env);
+      adb_ccNodeType_set_serviceTag(nt, env, outNodes[i].ncURL);
+      adb_ccNodeType_set_iqn(nt, env, outNodes[i].iqn);
+      adb_describeResourcesResponseType_add_nodes(drrt, env, nt);
+      */
     }
-    if (outServiceTags) free(outServiceTags);
+    if (outNodes) free(outNodes);
 
     for (i=0; i<outTypesLen; i++) {
       adb_ccResourceType_t *rt=NULL;
@@ -1002,6 +1007,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
       
       it = adb_ccInstanceType_create(env);
   
+      myInstance->ccvm.virtualBootRecordLen = 0;
       rc = ccInstanceUnmarshal(it, myInstance, env);
       adb_describeInstancesResponseType_add_instances(dirt, env, it);
     }
@@ -1148,6 +1154,9 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   netNamesLen = adb_runInstancesType_sizeof_netNames(rit, env);
   netNames = malloc(sizeof(char *) * netNamesLen);  
+  if (netNamesLen > 1) {
+     netNamesLen = 1;
+  }
   for (i=0; i<netNamesLen; i++) {
     netNames[i] = adb_runInstancesType_get_netNames_at(rit, env, i);
   }
@@ -1184,6 +1193,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
       
       it = adb_ccInstanceType_create(env);
       
+      myInstance->ccvm.virtualBootRecordLen = 0;
       rc = ccInstanceUnmarshal(it, myInstance, env);
       adb_runInstancesResponseType_add_instances(rirt, env, it);
     }

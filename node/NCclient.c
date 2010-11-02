@@ -238,10 +238,7 @@ int main (int argc, char **argv)
     }
     
     ncMetadata meta = { "correlate-me-please", "eucalyptus" };
-    virtualMachine params = { 64, 64, 1, "m1.small", 
-			      { { "sda1", "root", 100, "none" }, 
-				{ "sda2", "ephemeral1", 1000, "ext3" },
-				{ "sda3", "swap", 50, "swap" } } };
+    virtualMachine params = { 64, 64, 1, "m1.small" };
     ncStub * stub;
     char configFile[1024], policyFile[1024];
     char *euca_home;
@@ -365,8 +362,8 @@ int main (int argc, char **argv)
             }
 	    // count device mappings
 	    int i, count=0;
-	    for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
-	      if (strlen(outInst->params.deviceMapping[i].deviceName)>0) count++;
+	    for (i=0; i<EUCA_MAX_VBRS; i++) {
+	      if (strlen(outInst->params.virtualBootRecord[i].typeName)>0) count++;
 	    }
             printf("instanceId=%s stateCode=%d stateName=%s deviceMappings=%d\n", outInst->instanceId, outInst->stateCode, outInst->stateName, count);
             free_instance(&outInst);

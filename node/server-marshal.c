@@ -218,6 +218,7 @@ adb_ncDescribeResourceResponse_t* ncDescribeResourceMarshal (adb_ncDescribeResou
 
             // set operation-specific fields in output
             adb_ncDescribeResourceResponseType_set_nodeStatus(output, env, outRes->nodeStatus);
+            adb_ncDescribeResourceResponseType_set_iqn(output, env, outRes->iqn);
             adb_ncDescribeResourceResponseType_set_memorySizeMax(output, env, outRes->memorySizeMax);
             adb_ncDescribeResourceResponseType_set_memorySizeAvailable(output, env, outRes->memorySizeAvailable);
             adb_ncDescribeResourceResponseType_set_diskSizeMax(output, env, outRes->diskSizeMax);
@@ -658,7 +659,7 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
       //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
 	EUCA_MESSAGE_UNMARSHAL(ncDetachVolumeType, input, (&meta));
-        int error = doDetachVolume (&meta, instanceId, volumeId, remoteDev, localDev, force);
+        int error = doDetachVolume (&meta, instanceId, volumeId, remoteDev, localDev, force, 1);
     
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doDetachVolume() failed error=%d\n", error);

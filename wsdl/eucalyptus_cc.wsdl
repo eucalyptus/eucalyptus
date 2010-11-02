@@ -36,7 +36,7 @@
 	  <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string"/>
 	  
 	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
-	  <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="groupNames" type="xs:string"/>
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="volumes" type="tns:volumeType"/>
 	</xs:sequence>
       </xs:complexType>
@@ -46,6 +46,13 @@
 	  <xs:element minOccurs="0" name="instanceType" type="tns:virtualMachineType"/>
 	  <xs:element minOccurs="0" name="maxInstances" type="xs:int"/>
 	  <xs:element minOccurs="0" name="availableInstances" type="xs:int"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="ccNodeType">
+	<xs:sequence>
+      	  <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
+	  <xs:element minOccurs="0" name="iqn" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
 
@@ -64,16 +71,18 @@
 	  <xs:element minOccurs="0" name="memory" type="xs:int"/>
 	  <xs:element minOccurs="0" name="cores" type="xs:int"/>
 	  <xs:element minOccurs="0" name="disk" type="xs:int"/>
-	  <xs:element minOccurs="0" maxOccurs="unbounded" name="deviceMapping" type="tns:deviceMappingType"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="virtualBootRecord" type="tns:virtualBootRecordType"/>
 	</xs:sequence>
       </xs:complexType>
 
-      <xs:complexType name="deviceMappingType">
+      <xs:complexType name="virtualBootRecordType">
 	<xs:sequence>
-	  <xs:element minOccurs="0" name="deviceName" type="xs:string"/>
-	  <xs:element minOccurs="0" name="virtualName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="resourceLocation" type="xs:string"/>
+	  <xs:element minOccurs="0" name="guestDeviceName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="size" type="xs:int"/>
 	  <xs:element minOccurs="0" name="format" type="xs:string"/>
+	  <xs:element minOccurs="0" name="id" type="xs:string"/>
+	  <xs:element minOccurs="0" name="type" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
 
@@ -140,6 +149,7 @@
 	    <xs:sequence>
 	      <xs:element maxOccurs="unbounded" minOccurs="0" name="resources" type="tns:ccResourceType"/>
 	      <xs:element maxOccurs="unbounded" minOccurs="0" name="serviceTags" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="nodes" type="tns:ccNodeType"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

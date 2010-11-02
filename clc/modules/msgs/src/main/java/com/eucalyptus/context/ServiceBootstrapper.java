@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,89 +57,108 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-package com.eucalyptus.bootstrap;
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
 
+package com.eucalyptus.context;
 
+import java.util.List;
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.auth.util.EucaKeyStore;
+import org.mule.config.ConfigResource;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
-import com.eucalyptus.cloud.ws.DNSControl;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Resource;
+import com.google.common.collect.Lists;
 
-@Provides(Component.dns)
-@RunDuring(Bootstrap.Stage.PrivilegedConfiguration)
-@DependsLocal(Component.dns)
-public class DNSBootstrapper extends Bootstrapper {
-	private static Logger LOG = Logger.getLogger( DNSBootstrapper.class );
-	private static DNSBootstrapper singleton;
+@Provides( Component.bootstrap )
+@RunDuring( Bootstrap.Stage.CloudServiceInit )
+public class ServiceBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
+  public ServiceBootstrapper( ) {}
+  
+  @Override
+  public boolean load( ) throws Exception {
+    List<ConfigResource> configs = Lists.newArrayList( );
+    for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
+      if ( comp.isEnabled( ) ) {
+        Resource rsc = comp.getConfiguration( ).getResource( );
+        if( rsc != null ) {
+          ServiceContext.LOG.info( "-> Preparing cfg: " + rsc );
+          configs.addAll( rsc.getConfigurations( ) );
+        }
+      }
+    }
+    for ( ConfigResource cfg : configs ) {
+      ServiceContext.LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );
+    }
+    try {
+      ServiceContext.buildContext( configs );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.fatal( "Failed to bootstrap services.", e );
+      return false;
+    }
+    return true;
+  }
+  
+  @Override
+  public boolean start( ) throws Exception {
+    try {
+      ServiceContext.LOG.info( "Starting up system bus." );
+      ServiceContext.createContext( );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.fatal( "Failed to configure services.", e );
+      return false;
+    }
+    try {
+      ServiceContext.startContext( );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.fatal( "Failed to start services.", e );
+      return false;
+    }
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
 
-	public static Bootstrapper getInstance( ) {
-		synchronized ( DNSBootstrapper.class ) {
-			if ( singleton == null ) {
-				singleton = new DNSBootstrapper( );
-				LOG.info( "Creating DNS Bootstrapper instance." );
-			} else {
-				LOG.info( "Returning DNS Bootstrapper instance." );
-			}
-		}
-		return singleton;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop( ) throws Exception {
+    ServiceContext.stopContext( );
+    return true;
+  }
 
-	@Override
-	public boolean load( ) throws Exception {
-		LOG.info("Initializing DNS");
-		//The following call binds DNS ports. Must be in a privileged context.
-		DNSControl.initialize();
-		return true;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy( ) throws Exception {}
 
-	@Override
-	public boolean start( ) throws Exception {
-		LOG.info("Loading DNS records");
-		//populateRecords must be idempotent.
-		DNSControl.populateRecords();
-		return true;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-	 */
-	@Override
-	public boolean enable( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-	 */
-	@Override
-	public boolean stop( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-	 */
-	@Override
-	public void destroy( ) throws Exception {}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-	 */
-	@Override
-	public boolean disable( ) throws Exception {
-		//Don't bring down service but don't process requests.
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-	 */
-	@Override
-	public boolean check( ) throws Exception {
-		return true;
-	}
-
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
+  }
 }

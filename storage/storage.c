@@ -822,7 +822,13 @@ retry:
     /* while still under lock, decide whether to cache */
     int should_cache = 0;
     if (action==STAGE) { 
-        e = walrus_object_by_url (url, tmp_digest_path, 0); /* get the digest to see how big the file is */
+        if (strstr(url, "services/Walrus")) {
+	  e = walrus_object_by_url (url, tmp_digest_path, 0); /* get the digest to see how big the file is */
+	} else {
+	  char manifestURL[1024];
+	  snprintf(manifestURL, 1024, "%s.manifest.xml", url);
+	  e = http_get(manifestURL, tmp_digest_path);
+	}
         if (e==OK && stat (tmp_digest_path, &mystat)) {
             digest_size_b = (long long)mystat.st_size;
         }
@@ -864,7 +870,11 @@ retry:
     switch (action) {
     case STAGE:
         logprintfl (EUCAINFO, "downloading and preparing image into %s...\n", file_path);		
-        e = walrus_image_by_manifest_url (url, file_path, 1);
+        if (strstr(url, "services/Walrus")) {
+	  e = walrus_image_by_manifest_url (url, file_path, 1);
+	} else {
+	  e = http_get(url, file_path);
+	}
 
         /* for KVM, convert partition into disk */
         if (e==OK && convert_to_disk) { 
@@ -919,7 +929,7 @@ retry:
         break;
         
     case WAIT:
-        logprintfl (EUCAINFO, "waiting for disapperance of %s...\n", staging_path);
+        logprintfl (EUCAINFO, "waiting for disappearance of %s...\n", staging_path);
         /* wait for staging_path to disappear, which means both either the
          * download succeeded or it failed */
         if ( (e=wait_for_file (NULL, staging_path, 180, "cached image")) ) 
@@ -1108,7 +1118,6 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
     int e = ERROR;
     
     logprintfl (EUCAINFO, "retrieving images for instance %s (disk limit=%lldMB)...\n", instanceId, total_disk_limit_mb);
-    
     /* get the necessary files from Walrus, caching them if possible */
     char * image_name;
     int mount_offset = 0;
