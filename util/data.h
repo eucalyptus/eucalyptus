@@ -74,6 +74,15 @@ typedef struct serviceInfoType_t {
   int urisLen;
 } serviceInfoType;
 
+typedef struct serviceStatusType_t {
+  char name[32];
+  char type[32];
+  char uri[512];
+  char state[32];
+  int epoch;
+  char details[1024];
+} serviceStatusType;
+
 typedef struct ncMetadata_t {
     char *correlationId;
     char *userId;

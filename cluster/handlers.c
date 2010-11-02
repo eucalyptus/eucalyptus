@@ -112,6 +112,34 @@ int mylocks[ENDLOCK];
 
 //ccBundleCache *bundleCache=NULL;
 
+int doDescribeServices(ncMetadata *ccMeta, char **uris, int urisLen, serviceStatusType **outStatuses, int *outStatusesLen) {
+  int i;
+
+  *outStatusesLen = urisLen;
+  *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
+  for (i=0; i<*outStatusesLen; i++) {
+    snprintf((*outStatuses)[i].name, 32, "%s", "thename");
+    snprintf((*outStatuses)[i].type, 32, "%s", "thetype");
+    snprintf((*outStatuses)[i].state, 32, "%s", "thestate");
+    snprintf((*outStatuses)[i].uri, 512, "%s", uris[i]);
+    snprintf((*outStatuses)[i].details, 1024, "%s", "thedetails");
+    (*outStatuses)[i].epoch = 0;    
+  }
+  return(0);
+}
+int doStartService(ncMetadata *ccMeta) {
+  return(0);
+}
+int doStopService(ncMetadata *ccMeta) {
+  return(0);
+}
+int doEnableService(ncMetadata *ccMeta) {
+  return(0);
+}
+int doDisableService(ncMetadata *ccMeta) {
+  return(0);
+}
+
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig) {
   int i, j, rc, start = 0, stop = 0, ret=0, timeout, done;
   ccInstance *myInstance;
