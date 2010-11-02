@@ -78,7 +78,7 @@ public class BuildBindings extends Task {
     System.setOut( oldOut );
     System.setErr( oldErr );
     e.printStackTrace( System.err );
-    log( "ERROR See clc/bind.log for additional information: " + e.getMessage( ), e, 0 );
+    log( "ERROR See clc/bind.log for additional information: " + e.getMessage( ) );
     System.exit( -1 );
   }
   
