@@ -9,7 +9,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeWalrusesType;
 import edu.ucsb.eucalyptus.msgs.RegisterWalrusType;
 
 @DiscoverableServiceBuilder(com.eucalyptus.bootstrap.Component.walrus)
-@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class } )
+@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, WalrusConfiguration.class } )
 public class WalrusBuilder extends DatabaseServiceBuilder<WalrusConfiguration> {
   
   @Override

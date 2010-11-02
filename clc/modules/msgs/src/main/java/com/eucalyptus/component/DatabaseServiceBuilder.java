@@ -135,7 +135,7 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   }
 
   @Override
-  public T add( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public T add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     T config = this.newInstance( null, name, host, port );
     ServiceConfigurations.getInstance( ).store( config );
     return config;

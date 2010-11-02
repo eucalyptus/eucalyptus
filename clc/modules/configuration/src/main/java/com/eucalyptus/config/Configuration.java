@@ -65,7 +65,6 @@ package com.eucalyptus.config;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
@@ -81,7 +80,6 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
@@ -102,63 +100,60 @@ public class Configuration {
   static String         CLUSTER_KEY_FSTRING = "cc-%s";
   static String         NODE_KEY_FSTRING    = "nc-%s";
 
-  private static Map<Class,ServiceBuilder<ComponentConfiguration>> builders = Maps.newConcurrentHashMap( );
-  public static void addBuilder( Class c, ServiceBuilder b ) {
-    builders.put( c, b );
-  }
-  
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
+    ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
-    reply.set_return( false );
     String name = request.getName( );
     String hostName = request.getHost();
     Integer port = request.getPort( );
-    ServiceBuilder builder = builders.get( request.getClass( ) );
+    reply.set_return( register( builder, "default" /** ASAP: FIXME: GRZE **/, name, hostName, port ) );
+    return reply;
+  }
+
+  private boolean register( ServiceBuilder builder, String partition, String name, String hostName, Integer port ) throws ServiceRegistrationException {
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + name + "@" + hostName + ":" + port );
     if( !builder.checkAdd( name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
-      return reply;
+      return false;
     }
     try {
-      ServiceConfiguration newComponent = builder.add( name, hostName, port );
+      ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       builder.getComponent( ).buildService( newComponent );
       builder.getComponent( ).startService( newComponent );
-      reply.set_return( true );
-    } catch( EucalyptusCloudException e ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
-      LOG.info( e.getMessage( ) );
-      LOG.error( e, e );
-      throw e;
+      return true;
     } catch ( Throwable e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
       LOG.info( e.getMessage( ) );
       LOG.error( e, e );
-      throw new ServiceRegistrationException( e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": add failed with message: " + e.getMessage( ), e );
     }
-    return reply;
   }
     
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
+    ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
-    reply.set_return( false );
-    ServiceBuilder builder = builders.get( request.getClass( ) );
+    reply.set_return( deregister( request.getName( ), builder ) );
+    return reply;
+  }
+
+  private boolean deregister( String name, ServiceBuilder builder ) throws ServiceRegistrationException, EucalyptusCloudException {
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     try {
-      if( !builder.checkRemove( request.getName( ) ) ) {
+      if( !builder.checkRemove( name ) ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
-        return reply;
+        throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove returned false.  It is unsafe to currently deregister, please check the logs for additional information." );
       }
     } catch ( Exception e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
-      throw new ServiceRegistrationException( e.getMessage( ), e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: " + e.getMessage( ), e );
     }
     ServiceConfiguration conf;
     try {
-      conf = builder.lookupByName( request.getName( ) );
+      conf = builder.lookupByName( name );
     } catch ( ServiceRegistrationException e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": lookupByName failed." );
       LOG.error( e, e );
-      return reply;
+      throw e;
     }
     try {
       try {
@@ -167,19 +162,13 @@ public class Configuration {
         LOG.error( ex , ex );
       }
       builder.remove( conf );
-      reply.set_return( true );
-    } catch( EucalyptusCloudException e ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": remove failed." );
-      LOG.info( e.getMessage( ) );
-      LOG.error( e, e );
-      throw e;
+      return true;
     } catch ( Throwable e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": remove failed." );
       LOG.info( e.getMessage( ) );
       LOG.error( e, e );
-      throw new ServiceRegistrationException( e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": remove failed with message: " + e.getMessage( ), e );
     }
-    return reply;
   }
   
   private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
@@ -188,7 +177,7 @@ public class Configuration {
     if( !attributes.contains( request.getAttribute( ) ) ) {
       throw new EucalyptusCloudException( "Request to modify unknown attribute: " + request.getAttribute() );
     }
-    ServiceBuilder builder = builders.get( request.getClass( ) );
+    ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
 
     return reply;
@@ -203,7 +192,7 @@ public class Configuration {
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
-    for( ComponentConfiguration conf : builders.get( request.getClass( ) ).list( ) ) {
+    for( ComponentConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
       listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), /** LIES LIES LIES **/ "everything is FINE!", conf.getHostName( ) ) );
     }
     return reply;

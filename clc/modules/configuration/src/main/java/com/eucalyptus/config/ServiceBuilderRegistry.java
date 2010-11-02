@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,54 +57,32 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.sla;
 
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+package com.eucalyptus.config;
 
-public class CreateVmInstances {
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import com.eucalyptus.component.ServiceBuilder;
+import com.google.common.collect.Maps;
+//ASAP: TODO: GRZE: move up in deps tree
+public class ServiceBuilderRegistry {
+
+  private static Map<Class,ServiceBuilder<ComponentConfiguration>> builders = Maps.newConcurrentHashMap( );
+
+  public static void addBuilder( Class c, ServiceBuilder b ) {
+    builders.put( c, b );
+  }
+
+  public static Set<Entry<Class, ServiceBuilder<ComponentConfiguration>>> entrySet( ) {
+    return builders.entrySet( );
+  }
+
+  public static ServiceBuilder<ComponentConfiguration> get( Class arg0 ) {
+    return builders.get( arg0 );
+  }
   
-  public VmAllocationInfo allocate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
-    int vmIndex = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
-    for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
-      if( Clusters.getInstance( ).hasNetworking( ) ) {
-        for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
-          VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, networkIndex );
-          VmInstances.getInstance( ).register( vmInst );
-          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
-        }
-      } else {
-        for ( int i = 0; i < token.getAmount( ); i++ ) {
-          VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, -1 );
-          VmInstances.getInstance( ).register( vmInst );
-          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
-        }
-      }
-    }
-    vmAllocInfo.setReservationId( reservationId );
-    return vmAllocInfo;
-  }
-
-  private VmInstance getVmInstance( VmAllocationInfo vmAllocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
-    VmInstance vmInst = new VmInstance( reservationId,
-                                        index - 1,
-                                        VmInstances.getId( vmAllocInfo.getReservationIndex(), index ),
-                                        vmAllocInfo.getRequest().getUserId(),
-                                        token.getCluster(),
-                                        vmAllocInfo.getUserData(),
-                                        vmAllocInfo.getKeyInfo(),
-                                        vmAllocInfo.getVmTypeInfo(),
-                                        vmAllocInfo.getNetworks(),
-                                        networkIndex.toString( ) );
-    return vmInst;
-  }
 }

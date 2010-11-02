@@ -36,7 +36,7 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   }
   
   @Override
-  public ServiceConfiguration add( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public ServiceConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     throw new RuntimeException( "Not implemented yet." );
   }
 

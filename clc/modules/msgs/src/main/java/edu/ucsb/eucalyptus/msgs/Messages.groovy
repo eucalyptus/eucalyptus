@@ -77,16 +77,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.EphemeralConfiguration;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 
-//TODO: Remove me
-//public class INTERNAL extends EucalyptusMessage {
-//  
-//  def INTERNAL() {
-//    super();
-//    this.userId = "eucalyptus";
-//    this.effectiveUserId = "eucalyptus";
-//  }
-//}
-
 public class HeartbeatType extends EucalyptusMessage {
   ArrayList<HeartbeatComponentType> components = new ArrayList<HeartbeatComponentType>();
   ArrayList<ComponentType> started = new ArrayList<ComponentType>();
