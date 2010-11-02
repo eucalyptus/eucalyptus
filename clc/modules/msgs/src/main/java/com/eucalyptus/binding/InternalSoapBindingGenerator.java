@@ -93,9 +93,13 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     this.out.write( "</binding>" );
     this.out.flush( );
     this.out.close( );
-    XMLSerializer xmlSerializer = new XMLSerializer();  
-    JSON json = xmlSerializer.readFromFile( this.outFile );  
-    System.out.println( json.toString(2) );    
+    try {
+      XMLSerializer xmlSerializer = new XMLSerializer();  
+      JSON json = xmlSerializer.readFromFile( this.outFile );  
+      System.out.println( json.toString(2) );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+    }    
   }
   
   public TypeBinding getTypeBinding( Field field ) {
