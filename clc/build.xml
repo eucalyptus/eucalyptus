@@ -100,7 +100,6 @@
 		<ant dir="modules/group-manager" inheritall="false" target="builder" />
 		<ant dir="modules/cluster-manager" inheritall="false" target="builder" />
 		<ant dir="modules/image-manager" inheritall="false" target="builder" />
-		<ant dir="modules/key-manager" inheritall="false" target="builder" />
 		<ant dir="modules/storage-common" inheritall="false" target="builder" />
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
@@ -175,7 +174,6 @@
 		<ant dir="modules/cluster-manager" inheritall="false" target="clean" />
 		<ant dir="modules/image-manager" inheritall="false" target="clean" />
 		<ant dir="modules/group-manager" inheritall="false" target="clean" />
-		<ant dir="modules/key-manager" inheritall="false" target="clean" />
 		<ant dir="modules/storage-common" inheritall="false" target="clean" />
 		<ant dir="modules/walrus" inheritall="false" target="clean" />
 		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
