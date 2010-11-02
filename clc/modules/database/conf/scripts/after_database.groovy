@@ -30,7 +30,7 @@ default_pool_props = [
     'proxool.maximum-connection-count': '256',
     'proxool.house-keeping-test-sql': 'SELECT 1=1;',
     'proxool.house-keeping-sleep-time': '300000',
-    'user': 'eucalyptus',
+    'user': 'sa',
     'password': db_pass,
 ]
 
