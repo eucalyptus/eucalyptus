@@ -14,7 +14,7 @@ Logger LOG = Logger.getLogger( "after_database" );
 //Base config for hibernate and proxool
 String dbDriver = 'org.hsqldb.jdbcDriver';
 String db_pass = Hmacs.generateSystemSignature( );
-String db_url = "jdbc:" + Component.db.uri.toASCIIString( );
+String db_url = "jdbc:hsqldb:" + Component.db.uri.toASCIIString( );
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
 default_hiber_config = [
   'hibernate.archive.autodetection': 'jar, class, hbm',
