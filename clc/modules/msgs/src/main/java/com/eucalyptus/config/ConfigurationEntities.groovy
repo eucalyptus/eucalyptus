@@ -96,14 +96,15 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.HasName;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
-public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, Comparable {
-  @Column( name = "config_component_name" )
-  String name;
+public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, HasName<ComponentConfiguration> {
   @Column( name = "config_component_partition" )
   String partition;
+  @Column( name = "config_component_name" )
+  String name;
   @Column( name = "config_component_hostname" )
   String hostName;
   @Column( name = "config_component_port" )
@@ -168,16 +169,20 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     if ( obj == null ) return false;
     if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     ComponentConfiguration other = ( ComponentConfiguration ) obj;
-    if ( hostName == null ) {
-      if ( other.hostName != null ) return false;
-    } else if ( !hostName.equals( other.hostName ) ) return false;
+//    if ( hostName == null ) {
+//      if ( other.hostName != null ) return false;
+//    } else if ( !hostName.equals( other.hostName ) ) return false;
     if ( name == null ) {
       if ( other.name != null ) return false;
     } else if ( !name.equals( other.name ) ) return false;
+    if ( partition == null ) {
+      if ( other.partition != null ) return false;
+    } else if ( !partition.equals( other.partition ) ) return false;
     return true;
   }
 
   public int compareTo(Object o) {
+    //ASAP: FIXME: GRZE useful ordering here plox.
 	  return name.compareTo(((ComponentConfiguration) o).getName());
   }
 }
@@ -188,7 +193,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 public class BogoConfig extends ComponentConfiguration {
   Component c;
   public BogoConfig( Component c, String name, String hostName, Integer port, String servicePath ) {
-    super( name, hostName, port, servicePath );
+    super( null /* ASAP: FIXME: GRZE */, name, hostName, port, servicePath );
     this.c = c;
   }
   @Override
@@ -206,12 +211,12 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   Component c;
   
   public EphemeralConfiguration( String name, Component c, URI uri ) {
-    super( name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+    super( null /* ASAP:FIXME:GRZE */, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }
   public EphemeralConfiguration( Component c, URI uri ) {
-    super( c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+    super( null /* ASAP:FIXME:GRZE */, c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }  
