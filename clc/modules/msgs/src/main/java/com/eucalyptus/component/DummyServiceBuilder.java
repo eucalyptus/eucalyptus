@@ -44,12 +44,12 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
     try {
       if( uri.getScheme( ).matches( ".*vm.*" ) || ( uri.getHost( ) != null && NetworkUtil.testLocal( uri.getHost( ) ) ) ) {
-        return new LocalConfiguration( this.component.getPeer( ), uri );      
+        return new LocalConfiguration( null, this.component.getPeer( ), uri );      
       } else {
-        return new RemoteConfiguration( this.component.getPeer( ), uri );      
+        return new RemoteConfiguration( null, this.component.getPeer( ), uri );      
       }
     } catch ( Throwable t ) {
-      return new LocalConfiguration( this.component.getPeer( ), uri );      
+      return new LocalConfiguration( null, this.component.getPeer( ), uri );      
     }
   }
 

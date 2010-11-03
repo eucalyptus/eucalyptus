@@ -145,12 +145,12 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
     try {
       if( "vm".equals( uri.getScheme( ) ) || NetworkUtil.testLocal( uri.getHost( ) ) ) {
-        return new LocalConfiguration( this.getComponent( ).getPeer( ), uri );      
+        return new LocalConfiguration( null, this.getComponent( ).getPeer( ), uri );      
       } else {
-        return new RemoteConfiguration( this.getComponent( ).getPeer( ), uri );
+        return new RemoteConfiguration( null, this.getComponent( ).getPeer( ), uri );
       }
     } catch ( Exception e ) {
-      return new LocalConfiguration( this.getComponent( ).getPeer( ), uri );
+      return new LocalConfiguration( null, this.getComponent( ).getPeer( ), uri );
     }
   }
 
