@@ -210,13 +210,13 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   URI uri;
   Component c;
   
-  public EphemeralConfiguration( String name, Component c, URI uri ) {
-    super( null /* ASAP:FIXME:GRZE */, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+  public EphemeralConfiguration( String partition, String name, Component c, URI uri ) {
+    super( partition, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }
-  public EphemeralConfiguration( Component c, URI uri ) {
-    super( null /* ASAP:FIXME:GRZE */, c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+  public EphemeralConfiguration( String partition, Component c, URI uri ) {
+    super( partition, c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }  
@@ -231,16 +231,16 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   }  
 }
 public class LocalConfiguration extends EphemeralConfiguration {
-  public LocalConfiguration( Component c, URI uri ) {
-    super( c, uri );
+  public LocalConfiguration( String partition, Component c, URI uri ) {
+    super( partition, c, uri );
   }
   public Boolean isLocal() {
     return true;
   }
 }
 public class RemoteConfiguration extends EphemeralConfiguration {
-  public RemoteConfiguration( Component c, URI uri ) {
-    super( c, uri );
+  public RemoteConfiguration( String partition, Component c, URI uri ) {
+    super( partition, c, uri );
   }
   public Boolean isLocal() {
     return false;
