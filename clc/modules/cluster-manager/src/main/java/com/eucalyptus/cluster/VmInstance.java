@@ -377,10 +377,23 @@ public class VmInstance implements HasName<VmInstance> {
     runningInstance.setStateName( this.state.getReference( ).getName( ) );
     runningInstance.setInstanceId( this.instanceId );
 //ASAP:FIXME:GRZE: restore.
-//    runningInstance.setImageId( this.imageInfo.getImageId( ) );
-//    runningInstance.setKernel( this.imageInfo.getKernelId( ) );
-//    runningInstance.setRamdisk( this.imageInfo.getRamdiskId( ) );
 //    runningInstance.setProductCodes( this.imageInfo.getProductCodes( ) );
+    try {
+      runningInstance.setImageId( this.vmTypeInfo.lookupRoot( ).getId( ) );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
+    try {
+      runningInstance.setKernel( this.vmTypeInfo.lookupKernel( ).getId( ) );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
+    try {
+      runningInstance.setRamdisk( this.vmTypeInfo.lookupRamdisk( ).getId( ) );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
+
     
     if ( dns ) {
       runningInstance.setDnsName( this.getNetworkConfig( ).getPublicDnsName( ) );

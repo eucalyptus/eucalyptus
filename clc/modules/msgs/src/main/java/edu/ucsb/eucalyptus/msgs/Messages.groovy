@@ -67,6 +67,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.jibx.runtime.BindingDirectory
 import org.jibx.runtime.IBindingFactory
@@ -300,6 +301,30 @@ public class VmTypeInfo extends EucalyptusData {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
   
+  public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
+    VirtualBootRecord ret;
+    if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
+      throw new NoSuchElementException( "Failed to find virtual boot record of type machine among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
+    } else {
+      return ret;
+    }
+  }
+  public VirtualBootRecord lookupKernel( ) throws NoSuchElementException {
+    VirtualBootRecord ret;
+    if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "kernel" })==null ) {
+      throw new NoSuchElementException( "Failed to find virtual boot record of type kernel among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
+    } else {
+      return ret;
+    }
+  }
+  public VirtualBootRecord lookupRamdisk( ) throws NoSuchElementException {
+    VirtualBootRecord ret;
+    if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ramdisk" })==null ) {
+      throw new NoSuchElementException( "Failed to find virtual boot record of type ramdisk among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
+    } else {
+      return ret;
+    }
+  }
 }
 public class ResourceType extends EucalyptusData {
   
