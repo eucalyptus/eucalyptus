@@ -177,9 +177,12 @@ public class WalrusControl {
 		}
 	}
 
+	
+	
 	public static void configure() {
 		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
-		storageManager = new FileSystemStorageManager(walrusInfo.getStorageDir());
+		storageManager = StorageManagerFactory.getStorageManager();
+		storageManager.setRootDirectory(walrusInfo.getStorageDir());
 		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
 		walrusManager = new WalrusManager(storageManager, walrusImageManager);
 		WalrusManager.configure();
