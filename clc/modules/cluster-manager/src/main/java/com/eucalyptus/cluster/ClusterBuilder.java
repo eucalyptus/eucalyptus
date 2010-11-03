@@ -240,7 +240,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
    */
   @Override
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    return new RemoteConfiguration( this.getComponent( ).getPeer( ), uri );
+    return new RemoteConfiguration( null, this.getComponent( ).getPeer( ), uri );
   }
   
 }
