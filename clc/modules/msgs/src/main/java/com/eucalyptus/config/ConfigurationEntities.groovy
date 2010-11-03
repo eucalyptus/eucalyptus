@@ -181,9 +181,9 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     return true;
   }
 
-  public int compareTo(Object o) {
+  public int compareTo(ComponentConfiguration that) {
     //ASAP: FIXME: GRZE useful ordering here plox.
-	  return name.compareTo(((ComponentConfiguration) o).getName());
+    return (partition + name).compareTo( that.partition + that.name );
   }
 }
 /**
