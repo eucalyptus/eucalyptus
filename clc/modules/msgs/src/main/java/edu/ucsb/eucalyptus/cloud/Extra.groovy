@@ -201,7 +201,6 @@ public class VmRunType extends EucalyptusMessage {
     this.min = amount;
     this.max = amount;
     this.vlan = vlan;
-    this.imageInfo = imageInfo;
     this.vmTypeInfo = vmTypeInfo;
     this.keyInfo = keyInfo;
     this.instanceIds = instanceIds;
@@ -248,12 +247,12 @@ public class VmRunType extends EucalyptusMessage {
 }
 
 public class VirtualBootRecord {
-  String id;
-  String resourceLocation;
+  String id = "none";
+  String resourceLocation = "none";
   String type;
-  String guestDeviceName;
-  Integer size;
-  String format;
+  String guestDeviceName = "none";
+  Long size = -1l;
+  String format = "none";
 }
 
 public class VmKeyInfo {

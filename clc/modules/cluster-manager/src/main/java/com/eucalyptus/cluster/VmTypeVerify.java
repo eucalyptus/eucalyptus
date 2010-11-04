@@ -79,7 +79,7 @@ public class VmTypeVerify {
       throw new EucalyptusCloudException( "instance type does not exist: " + vmAllocInfo.getRequest().getInstanceType() );
     }
 
-    vmAllocInfo.setVmTypeInfo( new VmTypeInfo( v.getName(),v.getMemory(),v.getDisk(),v.getCpu() ) );
+    vmAllocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
     return vmAllocInfo;
   }
 

@@ -221,12 +221,14 @@ public class ImageManager {
     
     ImageUtil.checkStoredImage( kernelInfo );
     ImageUtil.checkStoredImage( diskInfo );
-    vmType.getVirtualBootRecord( ).add( diskInfo.getAsVirtualBootRecord( ) );
+    VirtualBootRecord ref = null;
+    vmType.setRoot( diskInfo.getImageId( ), diskInfo.getImageLocation( ), "ext2" /**ASAP:FIXME:GRZE**/, imgSize*1024 );
+    ref.setSize( imgSize );
     if( kernelInfo != null ) {
-      vmType.getVirtualBootRecord( ).add( kernelInfo.getAsVirtualBootRecord( ) );
+      vmType.setKernel( kernelInfo.getImageId( ), kernelInfo.getImageLocation( ) );
     }
     if( ramdiskInfo != null ) {
-      vmType.getVirtualBootRecord( ).add( ramdiskInfo.getAsVirtualBootRecord( ) );
+      vmType.setRamdisk( ramdiskInfo.getImageId( ), ramdiskInfo.getImageLocation( ) );
     }
     return vmAllocInfo;
   }

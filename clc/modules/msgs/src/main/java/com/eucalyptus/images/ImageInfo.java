@@ -472,19 +472,6 @@ public class ImageInfo implements Image {
     return i;
   }
   
-  public VirtualBootRecord getAsVirtualBootRecord( ) {
-    return new VirtualBootRecord( ) {{
-      this.setId( ImageInfo.this.imageId );
-      this.setType( ImageInfo.this.imageType );
-//ASAP: FIXME: GRZE:      this.setSize( ImageInfo.this. );
-      this.setResourceLocation( ImageInfo.this.imageLocation );
-      if( "machine".equals( ImageInfo.this.imageType ) ) {
-        //ASAP: FIXME: GRZE: fix this temporary workaround.
-        this.setGuestDeviceName( "/dev/sda" );
-      }
-    }};
-  }
-  
   /**
    * @see com.eucalyptus.images.Image#getProductCodes()
    * @return
