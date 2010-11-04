@@ -73,6 +73,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -161,15 +162,9 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
             EventRecord.here( ServiceEndpointWorker.class, EventType.DEQUEUE, event.getCallback( ).getClass( ).getSimpleName( ), event.getRequest( ).getRequest( ).toSimpleString( ) ).debug( );
             final long start = System.nanoTime( );
             {//ASAP: FIXME: GRZE: clean up this implementation
-              BaseMessage m = event.getRequest( ).getRequest( );
-              m.getServices( ).clear( );
-              Component walrus = Components.lookup( "walrus" );
-              final Service activeWalrus = walrus.getServices( ).first( );
-              m.getServices( ).add( new ServiceInfoType( ) {{
-                this.setName( activeWalrus.getName( ) );
-                this.setType( activeWalrus.getParent( ).getName( ) );
-                this.getUris( ).add( activeWalrus.getUri( ).toASCIIString( ) );
-              }} );
+              Components.dumpState( );
+              ServiceInfoType activeWalrus = Components.lookup( Component.walrus ).getUnorderedIterator( ).next( );
+              event.getRequest( ).getRequest( ).getServices( ).add( activeWalrus );
             }
             event.getRequest( ).sendSync( ServiceEndpoint.this );
             EventRecord.here( ServiceEndpointWorker.class, EventType.QUEUE, ServiceEndpoint.this.getParent( ).getName( ) )//

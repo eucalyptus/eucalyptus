@@ -83,24 +83,6 @@ public class HeartbeatType extends EucalyptusMessage {
   ArrayList<ComponentType> started = new ArrayList<ComponentType>();
   ArrayList<ComponentType> stopped = new ArrayList<ComponentType>();
 }
-public class ServiceInfoType extends EucalyptusData {
-  String name;
-  String type;
-  ArrayList<String> uris = new ArrayList<String>();
-}
-public class ServiceStatusType extends EucalyptusData {
-  String name;
-  String type;
-  String uri;
-  String state;//    DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED;
-  Integer epoch;
-  ArrayList<String> details = new ArrayList<String>( );
-}
-public class DescribeServicesType extends EucalyptusMessage {}
-public class DescribeServicesResponseType extends EucalyptusMessage {
-  ArrayList<ServiceStatusType> registered = new ArrayList<ServiceStatusType>();
-}
-
 public class HeartbeatResponseType extends EucalyptusMessage {}
 public class HeartbeatComponentType extends EucalyptusData {
   String component;
@@ -111,6 +93,32 @@ public class HeartbeatComponentType extends EucalyptusData {
     this.name = name;
   }
 }
+public class ServiceInfoType extends EucalyptusData {
+  String partition;
+  String name;
+  String type;
+  ArrayList<String> uris = new ArrayList<String>( );
+}
+public class ServiceId extends EucalyptusData {
+  String uuid;/** A UUID of the registration **/
+  String partition;/** The resource partition name **/
+  String name;/** The registration name **/
+  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
+  String uri;/** this is here to account for possibly overlapping private subnets allow for multiple **/
+}
+public class ServiceStatusType extends EucalyptusData {
+  ServiceId serviceId;
+  String localState;/** one of DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED **/
+  Integer localEpoch;
+  ArrayList<String> details = new ArrayList<String>( );
+}
+public class DescribeServicesType extends EucalyptusMessage {
+  ArrayList<ServiceId> ids = new ArrayList<ServiceId>();
+}
+public class DescribeServicesResponseType extends EucalyptusMessage {
+  ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>();
+}
+
 public class ComponentType extends EucalyptusData {
   String component;
   String name;

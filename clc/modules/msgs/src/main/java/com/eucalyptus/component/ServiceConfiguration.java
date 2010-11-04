@@ -3,6 +3,8 @@ package com.eucalyptus.component;
 import java.io.Serializable;
 
 public interface ServiceConfiguration extends Serializable {
+  public abstract String getId( );
+  
   public abstract String getName( );
   
   public abstract void setName( String name );

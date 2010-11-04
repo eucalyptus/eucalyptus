@@ -88,6 +88,11 @@
       <value name="uris" type="java.lang.String" />
     </collection>
   </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.ServiceId" abstract="true">
+    <value name="name" field="name" />
+    <value name="type" field="type" />
+    <value name="uri" field="uri" />
+  </mapping>
   <mapping class="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" abstract="true">
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="shutdownStateCode" field="shutdownStateCode" usage="optional" />
