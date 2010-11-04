@@ -113,12 +113,17 @@ int mylocks[ENDLOCK];
 //ccBundleCache *bundleCache=NULL;
 
 int doDescribeServices(ncMetadata *ccMeta, char **uris, int urisLen, serviceStatusType **outStatuses, int *outStatusesLen) {
-  int i, rc;
+  int i, rc, ret=0;
 
   rc = initialize();
   if (rc || isEnabled()) {
     return(1);
   }
+
+  logprintfl(EUCAINFO, "DescribeServices(): called\n");
+  logprintfl(EUCADEBUG, "DescribeServices(): params: userId=%s, urisLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), urisLen);
+
+  // go through input service descriptions and match with self and node states
 
   *outStatusesLen = urisLen;
   *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
@@ -130,59 +135,82 @@ int doDescribeServices(ncMetadata *ccMeta, char **uris, int urisLen, serviceStat
     snprintf((*outStatuses)[i].details, 1024, "%s", "thedetails");
     (*outStatuses)[i].epoch = 0;    
   }
-  return(0);
+
+  logprintfl(EUCAINFO, "DescribeServices(): done\n");
+  return(ret);
 }
 
 int doStartService(ncMetadata *ccMeta) {
-  int i, rc;
+  int i, rc, ret=0;
 
   rc = initialize();
   if (rc) {
     return(1);
   }
 
+  logprintfl(EUCAINFO, "StartService(): called\n");
+  logprintfl(EUCADEBUG, "StartService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+
+  // this is actually a NOP
   config->ccState = DISABLED;
 
-  return(0);
+  logprintfl(EUCAINFO, "StartService(): done\n");
+
+  return(ret);
 }
 
 int doStopService(ncMetadata *ccMeta) {
-  int i, rc;
+  int i, rc, ret=0;
 
   rc = initialize();
   if (rc) {
     return(1);
   }
+
+  logprintfl(EUCAINFO, "StopService(): called\n");
+  logprintfl(EUCADEBUG, "StopService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   config->ccState = STOPPED;
 
-  return(0);
+  logprintfl(EUCAINFO, "StopService(): done\n");
+
+  return(ret);
 }
 
 int doEnableService(ncMetadata *ccMeta) {
-  int i, rc;
+  int i, rc, ret=0;
 
   rc = initialize();
   if (rc) {
     return(1);
   }
+
+  logprintfl(EUCAINFO, "EnableService(): called\n");
+  logprintfl(EUCADEBUG, "EnableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   config->ccState = ENABLED;
 
-  return(0);
+  logprintfl(EUCAINFO, "EnableService(): done\n");
+
+  return(ret);
 }
 
 int doDisableService(ncMetadata *ccMeta) {
-  int i, rc;
+  int i, rc, ret=0;
 
   rc = initialize();
   if (rc) {
     return(1);
   }
 
+  logprintfl(EUCAINFO, "DisableService(): called\n");
+  logprintfl(EUCADEBUG, "DisableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+
   config->ccState = DISABLED;
 
-  return(0);
+  logprintfl(EUCAINFO, "DisableService(): done\n");
+
+  return(ret);
 }
 
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig) {
