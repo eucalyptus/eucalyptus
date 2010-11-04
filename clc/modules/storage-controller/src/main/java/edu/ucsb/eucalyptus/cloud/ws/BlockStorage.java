@@ -180,6 +180,10 @@ public class BlockStorage {
 		}
 	}
 
+	public static void checkReady() throws EucalyptusCloudException {
+		blockManager.checkReady();
+	}
+	
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
 		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))

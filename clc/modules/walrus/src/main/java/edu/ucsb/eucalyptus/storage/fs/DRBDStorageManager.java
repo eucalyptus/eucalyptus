@@ -151,7 +151,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		}
 	}
 
-	private boolean checkMount() throws ExecutionException {
+	private boolean isMounted() throws ExecutionException {
 		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "mount"});
 		if(returnValue.length() > 0) {
 			if(returnValue.contains(DRBDInfo.getDRBDInfo().getBlockDevice())) {
@@ -177,8 +177,4 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	//check status
 
 	//verify consistency
-
-	//passive -> active
-
-	//active -> passive
 }

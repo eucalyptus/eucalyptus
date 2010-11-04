@@ -135,6 +135,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean check( ) throws Exception {
+		BlockStorage.checkReady();
 		return true;
 	}
 }

@@ -1321,4 +1321,21 @@ public class OverlayManager implements LogicalStorageManager {
 	public void detachVolume(String volumeId, String nodeIqn)
 	throws EucalyptusCloudException {
 	}
+
+	@Override
+	public void checkReady() throws EucalyptusCloudException {
+		//check if binaries exist, commands can be executed, etc.
+		String eucaHomeDir = System.getProperty("euca.home");
+		if(eucaHomeDir == null) {
+			throw new EucalyptusCloudException("euca.home not set");
+		}
+		eucaHome = eucaHomeDir;
+		if(!new File(eucaHome + StorageProperties.EUCA_ROOT_WRAPPER).exists()) {
+			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + eucaHome + StorageProperties.EUCA_ROOT_WRAPPER);
+		}
+		File varDir = new File(eucaHome + EUCA_VAR_RUN_PATH);
+		if(!varDir.exists()) {
+			varDir.mkdirs();
+		}
+	}
 }
