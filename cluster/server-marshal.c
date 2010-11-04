@@ -71,6 +71,247 @@ permission notice:
 #define DONOTHING 0
 #define EVENTLOG 0
 
+adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *describeServices, const axutil_env_t *env) {
+  adb_DescribeServicesResponse_t *ret=NULL;
+  adb_describeServicesResponseType_t *adbresp=NULL;
+  adb_describeServicesType_t *adbinput=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  ncMetadata ccMeta;
+
+  char **uris=NULL;
+  serviceStatusType *outStatuses=NULL;
+  int urisLen=0, outStatusesLen=0, i;
+  
+  adbinput = adb_DescribeServices_get_DescribeServices(describeServices, env);
+  adbresp = adb_describeServicesResponseType_create(env);
+  
+  EUCA_MESSAGE_UNMARSHAL(describeServicesType, adbinput, (&ccMeta));
+
+  adb_describeServicesResponseType_set_correlationId(adbresp, env, adb_describeServicesType_get_correlationId(adbinput, env));
+  adb_describeServicesResponseType_set_userId(adbresp, env, adb_describeServicesType_get_userId(adbinput, env));
+    
+  //  localDev = adb_describeServicesType_get_localDev(adbinput, env);
+  urisLen = adb_describeServicesType_sizeof_uris(adbinput, env);
+  uris = malloc(sizeof(char *) * urisLen);
+  for (i=0; i<urisLen; i++) {
+    uris[i] = adb_describeServicesType_get_uris_at(adbinput, env, i);
+  }
+
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doDescribeServices(&ccMeta, uris, urisLen, &outStatuses, &outStatusesLen);
+    if (uris) free(uris);
+    if (rc) {
+      logprintf("ERROR: doDescribeServices() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+
+  for (i=0; i<outStatusesLen; i++) {
+    adb_serviceStatusType_t *stt;
+    stt = adb_serviceStatusType_create(env);
+
+    adb_serviceStatusType_set_name(stt, env, outStatuses[i].name);
+    adb_serviceStatusType_set_type(stt, env, outStatuses[i].type);
+    adb_serviceStatusType_set_uri(stt, env, outStatuses[i].uri);
+    adb_serviceStatusType_set_state(stt, env, outStatuses[i].state);
+    adb_serviceStatusType_set_epoch(stt, env, outStatuses[i].epoch);
+    adb_serviceStatusType_add_details(stt, env, outStatuses[i].details);
+
+    adb_describeServicesResponseType_add_serviceStatuses(adbresp, env, stt);
+  }
+  
+  adb_describeServicesResponseType_set_return(adbresp, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_describeServicesResponseType_set_statusMessage(adbresp, env, statusMessage);
+  }
+
+  ret = adb_DescribeServicesResponse_create(env);
+  adb_DescribeServicesResponse_set_DescribeServicesResponse(ret, env, adbresp);
+
+  return(ret);
+}
+
+adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t *startService, const axutil_env_t *env) {
+  adb_StartServiceResponse_t *ret=NULL;
+  adb_startServiceResponseType_t *adbresp=NULL;
+  adb_startServiceType_t *adbinput=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  ncMetadata ccMeta;
+  
+  adbinput = adb_StartService_get_StartService(startService, env);
+  adbresp = adb_startServiceResponseType_create(env);
+  
+  // unmarshal eucalyptusMessage into ccMeta
+  EUCA_MESSAGE_UNMARSHAL(startServiceType, adbinput, (&ccMeta));
+
+  // set the fields that are simply carried through between input and output messages
+  adb_startServiceResponseType_set_correlationId(adbresp, env, adb_startServiceType_get_correlationId(adbinput, env));
+  adb_startServiceResponseType_set_userId(adbresp, env, adb_startServiceType_get_userId(adbinput, env));
+  adb_startServiceResponseType_set_type(adbresp, env, adb_startServiceType_get_type(adbinput, env));
+  adb_startServiceResponseType_set_name(adbresp, env, adb_startServiceType_get_name(adbinput, env));
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doStartService(&ccMeta);
+    if (rc) {
+      logprintf("ERROR: doStartService() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+
+  adb_startServiceResponseType_set_return(adbresp, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_startServiceResponseType_set_statusMessage(adbresp, env, statusMessage);
+  }
+
+  ret = adb_StartServiceResponse_create(env);
+  adb_StartServiceResponse_set_StartServiceResponse(ret, env, adbresp);
+
+  return(ret);
+}
+
+adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t *stopService, const axutil_env_t *env) {
+  adb_StopServiceResponse_t *ret=NULL;
+  adb_stopServiceResponseType_t *adbresp=NULL;
+  adb_stopServiceType_t *adbinput=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  ncMetadata ccMeta;
+  
+  adbinput = adb_StopService_get_StopService(stopService, env);
+  adbresp = adb_stopServiceResponseType_create(env);
+  
+  // unmarshal eucalyptusMessage into ccMeta
+  EUCA_MESSAGE_UNMARSHAL(stopServiceType, adbinput, (&ccMeta));
+
+  // set the fields that are simply carried through between input and output messages
+  adb_stopServiceResponseType_set_correlationId(adbresp, env, adb_stopServiceType_get_correlationId(adbinput, env));
+  adb_stopServiceResponseType_set_userId(adbresp, env, adb_stopServiceType_get_userId(adbinput, env));
+  adb_stopServiceResponseType_set_type(adbresp, env, adb_stopServiceType_get_type(adbinput, env));
+  adb_stopServiceResponseType_set_name(adbresp, env, adb_stopServiceType_get_name(adbinput, env));
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doStopService(&ccMeta);
+    if (rc) {
+      logprintf("ERROR: doStopService() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+
+  adb_stopServiceResponseType_set_return(adbresp, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_stopServiceResponseType_set_statusMessage(adbresp, env, statusMessage);
+  }
+
+  ret = adb_StopServiceResponse_create(env);
+  adb_StopServiceResponse_set_StopServiceResponse(ret, env, adbresp);
+
+  return(ret);
+}
+
+adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t *enableService, const axutil_env_t *env) {
+  adb_EnableServiceResponse_t *ret=NULL;
+  adb_enableServiceResponseType_t *adbresp=NULL;
+  adb_enableServiceType_t *adbinput=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  ncMetadata ccMeta;
+  
+  adbinput = adb_EnableService_get_EnableService(enableService, env);
+  adbresp = adb_enableServiceResponseType_create(env);
+  
+  // unmarshal eucalyptusMessage into ccMeta
+  EUCA_MESSAGE_UNMARSHAL(enableServiceType, adbinput, (&ccMeta));
+
+  // set the fields that are simply carried through between input and output messages
+  adb_enableServiceResponseType_set_correlationId(adbresp, env, adb_enableServiceType_get_correlationId(adbinput, env));
+  adb_enableServiceResponseType_set_userId(adbresp, env, adb_enableServiceType_get_userId(adbinput, env));
+  adb_enableServiceResponseType_set_type(adbresp, env, adb_enableServiceType_get_type(adbinput, env));
+  adb_enableServiceResponseType_set_name(adbresp, env, adb_enableServiceType_get_name(adbinput, env));
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doEnableService(&ccMeta);
+    if (rc) {
+      logprintf("ERROR: doEnableService() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+
+  adb_enableServiceResponseType_set_return(adbresp, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_enableServiceResponseType_set_statusMessage(adbresp, env, statusMessage);
+  }
+
+  ret = adb_EnableServiceResponse_create(env);
+  adb_EnableServiceResponse_set_EnableServiceResponse(ret, env, adbresp);
+
+  return(ret);
+}
+
+adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t *disableService, const axutil_env_t *env) {
+  adb_DisableServiceResponse_t *ret=NULL;
+  adb_disableServiceResponseType_t *adbresp=NULL;
+  adb_disableServiceType_t *adbinput=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  ncMetadata ccMeta;
+  
+  adbinput = adb_DisableService_get_DisableService(disableService, env);
+  adbresp = adb_disableServiceResponseType_create(env);
+  
+  // unmarshal eucalyptusMessage into ccMeta
+  EUCA_MESSAGE_UNMARSHAL(disableServiceType, adbinput, (&ccMeta));
+
+  // set the fields that are simply carried through between input and output messages
+  adb_disableServiceResponseType_set_correlationId(adbresp, env, adb_disableServiceType_get_correlationId(adbinput, env));
+  adb_disableServiceResponseType_set_userId(adbresp, env, adb_disableServiceType_get_userId(adbinput, env));
+  adb_disableServiceResponseType_set_type(adbresp, env, adb_disableServiceType_get_type(adbinput, env));
+  adb_disableServiceResponseType_set_name(adbresp, env, adb_disableServiceType_get_name(adbinput, env));
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doDisableService(&ccMeta);
+    if (rc) {
+      logprintf("ERROR: doDisableService() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+
+  adb_disableServiceResponseType_set_return(adbresp, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_disableServiceResponseType_set_statusMessage(adbresp, env, statusMessage);
+  }
+
+  ret = adb_DisableServiceResponse_create(env);
+  adb_DisableServiceResponse_set_DisableServiceResponse(ret, env, adbresp);
+
+  return(ret);
+}
+
 adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume, const axutil_env_t *env) {
   adb_AttachVolumeResponse_t *ret=NULL;
   adb_attachVolumeResponseType_t *avrt=NULL;
