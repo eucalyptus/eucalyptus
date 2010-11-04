@@ -223,7 +223,6 @@ public class ImageManager {
     ImageUtil.checkStoredImage( diskInfo );
     VirtualBootRecord ref = null;
     vmType.setRoot( diskInfo.getImageId( ), diskInfo.getImageLocation( ), "ext2" /**ASAP:FIXME:GRZE**/, imgSize*1024 );
-    ref.setSize( imgSize );
     if( kernelInfo != null ) {
       vmType.setKernel( kernelInfo.getImageId( ), kernelInfo.getImageLocation( ) );
     }
