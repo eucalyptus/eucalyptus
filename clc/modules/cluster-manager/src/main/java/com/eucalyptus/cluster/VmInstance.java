@@ -85,6 +85,7 @@ import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
@@ -276,6 +277,7 @@ public class VmInstance implements HasName<VmInstance> {
           this.state.set( newState, false );
         } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
           this.state.set( newState, false );
+          Exceptions.eat( "Instance transitioned from PENDING -> TERMINATED" );
           VmInstances.getInstance( ).disable( this.getName( ) );
           VmInstances.cleanUp( this );
         } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
