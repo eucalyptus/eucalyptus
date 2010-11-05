@@ -163,7 +163,7 @@ doRunInstance(	struct nc_state_t *nc,
     for (i=0, j=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]);
         // get the type (the only mandatory field)
-        if (strstr (vbr->typeName, "image") == vbr->typeName) { 
+        if (strstr (vbr->typeName, "machine") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_IMAGE; 
             instance->params.image = vbr;
         } else if (strstr (vbr->typeName, "kernel") == vbr->typeName) { 
