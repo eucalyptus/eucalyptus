@@ -14,11 +14,11 @@ public class BaseMessage {
   String                     correlationId;
   String                     userId;
   String                     effectiveUserId;
-  Boolean                    _return;
+  Boolean                    _return = true;
   String                     statusMessage;
-  Integer                    epoch;
+  Integer                    epoch = currentEpoch++;
   ArrayList<ServiceInfoType> services = Lists.newArrayList( );
-  
+  private static Integer currentEpoch = 0;
   public BaseMessage( ) {
     super( );
     this.correlationId = UUID.randomUUID( ).toString( );
