@@ -103,7 +103,7 @@ prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName
     
     for (i=0; i<meta->servicesLen; i++) {
         serviceInfoType * service = &(meta->services[i]);
-        if (strcmp(service->type, typeName)==0 && service->urisLen>0) {
+        if (strncmp(service->type, typeName, strlen(typeName)-3)==0 && service->urisLen>0) {
             char * l = vbr->resourceLocation + (strlen (typeName) + 3); // +3 for "://", so 'l' points past, e.g., "walrus:"
             snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s%s", service->uris[0], l); // TODO: for now we just pick the first one
             return OK;
