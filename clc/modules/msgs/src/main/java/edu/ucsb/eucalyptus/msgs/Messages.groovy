@@ -313,15 +313,15 @@ public class VmTypeInfo extends EucalyptusData {
   }
   
   public void setRoot( String imageId, String location, String diskFormat, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : location, guestDeviceName : this.rootDeviceName, format : diskFormat, type : "machine" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, format : diskFormat, type : "machine" ) );
   }
   
   public void setKernel( String imageId, String location ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "kernel" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "kernel" ) );
   }
 
   public void setRamdisk( String imageId, String location ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "ramdisk" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "ramdisk" ) );
   }
 
   public void setSwap( String deviceName, Long sizeKb ) {
