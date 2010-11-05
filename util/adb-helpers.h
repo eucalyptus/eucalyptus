@@ -121,6 +121,7 @@ static inline void copy_service_info_type_from_adb(serviceInfoType * input, adb_
   }
 }
 
+/*
 static inline adb_serviceStatusType_t * copy_service_status_type_to_adb(const axutil_env_t *env, serviceStatusType * input) {
   adb_serviceStatusType_t *sst = adb_serviceStatusType_create(env);
   adb_serviceInfoType_t *sit=NULL;
@@ -146,5 +147,5 @@ static inline void copy_service_status_type_from_adb(serviceStatusType *input, a
   copy_service_info_type_from_adb(&(input->serviceId), sit, env);
 
 }
-
+*/
 #endif // _ADB_HELPERS_H
