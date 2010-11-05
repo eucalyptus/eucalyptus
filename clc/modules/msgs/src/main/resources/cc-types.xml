@@ -71,11 +71,11 @@
   </mapping>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
-    <value name="correlationId" field="correlationId" />
+    <value name="correlationId" field="correlationId" usage="optional" />
     <value name="userId" field="userId" usage="optional" />
     <value name="statusMessage" field="statusMessage" usage="optional" />
     <value name="return" field="_return" usage="optional" />
-    <value name="epoch" field="epoch" />
+    <value name="epoch" field="epoch" usage="optional" />
     <collection field="services" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="services" map-as="edu.ucsb.eucalyptus.msgs.ServiceInfoType" />
     </collection>
