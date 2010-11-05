@@ -293,21 +293,22 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 
-	public void initialize() {
+	public void initialize() throws EucalyptusCloudException {
+		File storageRootDir = new File(getStorageRootDirectory());
+		if(!storageRootDir.exists()) {
+			if(!storageRootDir.mkdirs()) {
+				throw new EucalyptusCloudException("Unable to make volume root directory: " + getStorageRootDirectory());
+			}
+		}
+		//The following should be executed only once during the entire lifetime of the VM.
 		if(!initialized) {
 			System.loadLibrary("lvm2control");
 			registerSignals();
-			File storageRootDir = new File(getStorageRootDirectory());
-			if(!storageRootDir.exists()) {
-				if(!storageRootDir.mkdirs()) {
-					LOG.fatal("Unable to make volume root directory: " + getStorageRootDirectory());
-				}
-			}
 			initialized = true;
 		}
 	}
 
-	public void configure() {
+	public void configure() throws EucalyptusCloudException {
 		exportManager.configure();
 		//First call to StorageInfo.getStorageInfo will add entity if it does not exist
 		LOG.info(StorageInfo.getStorageInfo().getName());
@@ -1341,6 +1342,18 @@ public class OverlayManager implements LogicalStorageManager {
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void disable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void enable() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
 		
 	}

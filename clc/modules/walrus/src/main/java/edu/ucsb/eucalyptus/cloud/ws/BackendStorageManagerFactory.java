@@ -75,6 +75,9 @@ public class BackendStorageManagerFactory {
 
 	public static StorageManager getStorageManager() {
 		String storageManager = "FileSystemStorageManager";
+		if(System.getProperty("walrus.storage.manager") != null) {
+			storageManager = System.getProperty("walrus.storage.manager");
+		}
 		try {
 			storageManager = "edu.ucsb.eucalyptus.storage.fs." + storageManager;
 			return (StorageManager) ClassLoader.getSystemClassLoader().loadClass(storageManager).newInstance();

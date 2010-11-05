@@ -65,6 +65,8 @@
 
 package edu.ucsb.eucalyptus.storage.fs;
 
+import java.io.File;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -161,18 +163,27 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		return false;
 	}
 	
-	private void checkLocalDisk() {
-		
+	private void checkLocalDisk() throws EucalyptusCloudException {		
+		String blockDevice = DRBDInfo.getDRBDInfo().getBlockDevice();
+		File mount = new File(blockDevice);
+		if(!mount.exists()) {
+			throw new EucalyptusCloudException("Block device " + blockDevice + " not found."); 
+		}
+		String storageDir = WalrusInfo.getWalrusInfo().getStorageDir();
+		File root = new File(storageDir);
+		if(!root.exists()) {
+			throw new EucalyptusCloudException("Storage directory " + storageDir + " not found."); 			
+		}
 	}
 	
-	public void becomeMaster() {
-		//check mount point, block device, role, cstate, dstate
+	public void becomeMaster() throws EucalyptusCloudException {		
+		//role, cstate, dstate
 		//make primary
 		//mount
 		//verify state
 	}
 
-	public void becomeSlave() {
+	public void becomeSlave() throws EucalyptusCloudException {
 		checkLocalDisk();
 		//check mount point, block device, role, cstate, dstate
 		//make primary
@@ -182,15 +193,20 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	//check status
 
 	@Override
-	public void enable() {
+	public void enable() throws EucalyptusCloudException {
 		becomeMaster();
 	}
 
 	@Override
-	public void disable() {
+	public void disable() throws EucalyptusCloudException {
 		becomeSlave();
 	}
 	//verify consistency
 	
+	@Override
+	public void check() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

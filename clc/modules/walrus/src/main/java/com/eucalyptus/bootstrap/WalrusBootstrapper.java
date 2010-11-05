@@ -110,6 +110,7 @@ public class WalrusBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean stop( ) throws Exception {
+		WalrusControl.stop();
 		return true;
 	}
 

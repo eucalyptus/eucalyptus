@@ -126,7 +126,11 @@ public interface StorageManager {
 	
     public void setRootDirectory(String rootDirectory);
 
-	public void disable();
+	public void disable() throws EucalyptusCloudException ;
 
-	public void enable();
+	public void enable() throws EucalyptusCloudException;
+
+	public void stop() throws EucalyptusCloudException;
+
+	public void check() throws EucalyptusCloudException;
 }

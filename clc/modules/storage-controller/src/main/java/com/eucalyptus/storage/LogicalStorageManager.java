@@ -74,9 +74,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public interface LogicalStorageManager {
-	public void initialize();
+	public void initialize() throws EucalyptusCloudException;
 
-	public void configure();
+	public void configure() throws EucalyptusCloudException;
 
 	public void checkPreconditions() throws EucalyptusCloudException;
 
@@ -133,4 +133,8 @@ public interface LogicalStorageManager {
 	public void checkReady() throws EucalyptusCloudException;
 
 	public void stop() throws EucalyptusCloudException;
+
+	public void enable() throws EucalyptusCloudException;;
+
+	public void disable() throws EucalyptusCloudException;;
 }

@@ -80,4 +80,8 @@ public class VolumeService {
 	public void add(VolumeTask creator) {
 		pool.execute(creator);
 	}
+	
+	public void shutdown() {
+		pool.shutdownNow();
+	}
 }

@@ -465,12 +465,25 @@ public class FileSystemStorageManager implements StorageManager {
 	}
 
 	@Override
-	public void enable() {
+	public void enable() throws EucalyptusCloudException {
 		//Nothing to do yet.
 	}
 
 	@Override
-	public void disable() {
+	public void disable() throws EucalyptusCloudException {
 		//Nothing to do yet.
 	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	@Override
+	public void check() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
 }
