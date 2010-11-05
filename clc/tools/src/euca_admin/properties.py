@@ -4,6 +4,7 @@ from euca_admin.generic import BooleanResponse
 from euca_admin import EucaAdmin
 from optparse import OptionParser
 from string import split
+import pdb
 
 SERVICE_PATH = '/services/Properties'
 VERBOSE = False
@@ -82,16 +83,19 @@ class Property():
     (options,args) = parser.parse_args()
     if options.verbose:
       VERBOSE = True
-    if not options.props:
+    if not options.props and not options.files:
       print "ERROR No options were specified."
       parser.print_help()
       sys.exit(1)
     else:
-      for i in options.props:
-        if not re.match("^[\w.]+=[\w\.]+$",i):
-          print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
-          parser.print_help()
-          sys.exit(1)
+      if options.props:
+        for i in opts:
+          if not re.match("^[\w.]+=[\.]+$",i):
+            print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
+            parser.print_help()
+            sys.exit(1)
+      elif options.files:
+        pass
     return (options,args)
 
   def cli_modify(self):
@@ -109,27 +113,29 @@ class Property():
       self.euca.handle_error(ex)
 
   def modify(self,modify_list):
-    for i in modify_list:
-      new_prop = split(i,"=")
-      if not len(new_prop) == 2:
-        print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
-        sys.exit(1)
-      self._modify(new_prop[0], new_prop[1])
+    if modify_list:
+      for i in modify_list:
+        new_prop = split(i,"=")
+        if not len(new_prop) == 2:
+          print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
+          sys.exit(1)
+        self._modify(new_prop[0], new_prop[1])
 
-  def modify(self,modify_list):
-    for i in modify_list:
-      new_prop = split(i,"=")
-      if not len(new_prop) == 2:
-        print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
-        sys.exit(1)
-      file_path = new_prop[1]
-      file_path = os.expanduser(file_path)
-      file_path = os.expandvars(file_path)
-      if not os.path.isfile(file_path):
-        print "ERROR File %s does not exist" % file_path
-        sys.exit(1)
-      fp = open(file_path)
-      value = fp.read()
-      fp.close()
-      self._modify(new_prop[0], value)
+  def modify_from_file(self,modify_list):
+    if modify_list:
+      for i in modify_list:
+        new_prop = split(i,"=")
+        if not len(new_prop) == 2:
+          print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
+          sys.exit(1)
+        file_path = new_prop[1]
+        file_path = os.path.expanduser(file_path)
+        file_path = os.path.expandvars(file_path)
+        if not os.path.isfile(file_path):
+          print "ERROR File %s does not exist" % file_path
+          sys.exit(1)
+        fp = open(file_path)
+        value = fp.read()
+        fp.close()
+        self._modify(new_prop[0], value)
 
