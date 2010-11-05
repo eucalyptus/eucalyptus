@@ -1,0 +1,199 @@
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, only version 3 of the License.
+  ~
+  ~
+  ~ This file is distributed in the hope that it will be useful, but WITHOUT
+  ~ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  ~ FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  ~ for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License along
+  ~ with this program.  If not, see http://www.gnu.org/licenses/.
+  ~
+  ~ Please contact Eucalyptus Systems, Inc., 130 Castilian
+  ~ Dr., Goleta, CA 93101 USA or visit http://www.eucalyptus.com/licenses/
+  ~ if you need additional information or have any questions.
+  ~
+  ~ This file may incorporate work covered under the following copyright and
+  ~ permission notice:
+  ~
+  ~   Software License Agreement (BSD License)
+  ~
+  ~   Copyright (c) 2008, Regents of the University of California
+  ~   All rights reserved.
+  ~
+  ~   Redistribution and use of this software in source and binary forms, with
+  ~   or without modification, are permitted provided that the following
+  ~   conditions are met:
+  ~
+  ~     Redistributions of source code must retain the above copyright notice,
+  ~     this list of conditions and the following disclaimer.
+  ~
+  ~     Redistributions in binary form must reproduce the above copyright
+  ~     notice, this list of conditions and the following disclaimer in the
+  ~     documentation and/or other materials provided with the distribution.
+  ~
+  ~   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+  ~   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+  ~   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  ~   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+  ~   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  ~   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  ~   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+  ~   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  ~   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  ~   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  ~   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+  ~   THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+  ~   LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+  ~   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+  ~   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+  ~   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+  ~   THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  ~   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+  ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+  ~   ANY SUCH LICENSES OR RIGHTS.
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~ Author: chris grzegorczyk <grze@eucalyptus.com>
+  -->
+<project name="eucalyptus-module-import">
+	<!--================================== euca defines ==================================-->
+	<property environment="localenv" />
+	<property name="euca.home.0" value="${localenv.EUCALYPTUS}" />
+	<condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
+		<contains string="${euca.home.0}" substring="localenv" />
+	</condition>
+	<property name="DESTDIR.0" value="${localenv.DESTDIR}" />
+	<condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
+		<contains string="${DESTDIR.0}" substring="localenv" />
+	</condition>
+	<property name="project.basedir" value="${basedir}/../../" />
+	<loadfile srcfile="${project.basedir}/../VERSION" property="euca.version">
+		<filterchain>
+			<filterreader classname="org.apache.tools.ant.filters.StripLineBreaks" />
+		</filterchain>
+	</loadfile>
+	<property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d" />
+	<property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus" />
+	<property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus" />
+	<property name="euca.run.dir" value="${euca.home}/var/run/eucalyptus" />
+	<property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus" />
+	<propertyset id="euca-props">
+		<propertyref prefix="euca" />
+	</propertyset>
+	<!--================================== module-dir defines ==================================-->
+	<property name="build.dir" value="${basedir}/build" />
+	<property name="src.dir" value="${basedir}/src/main/java" />
+	<property name="conf.dir" value="${basedir}/conf" />
+	<property name="rsrc.dir" value="${basedir}/src/main/resources" />
+	<property name="target.dir" value="${project.basedir}/target" />
+	<property name="jar.file" value="${target.dir}/${ant.project.name}-${euca.version}.jar" />
+	<property name="lib.dir" value="${project.basedir}/lib" />
+	<property name="modules.dir" value="${project.basedir}/modules" />
+	<!--================================== classpaths ==================================-->
+	<path id="classpath">
+		<pathelement path="${conf.dir}" />
+		<dirset dir="${modules.dir}">
+			<include name="**/build" />
+		</dirset>
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+			<exclude name="**/openjdk-crypto.jar" />
+		</fileset>
+	</path>
+	<path id="runtimeclasspath">
+		<pathelement path="${euca.conf.dir}" />
+		<fileset dir="${euca.lib.dir}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+	<path id="srcpath">
+		<fileset dir="${build.dir}">
+			<include name="**/*" />
+		</fileset>
+	</path>
+	<!--================================== copy conf ==================================-->
+	<target name="copy-conf">
+		<copy todir="${DESTDIR}${euca.conf.dir}">
+			<fileset dir="conf">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+	</target>
+	<!--================================== init target ==================================-->
+	<target name="builder" description="--> build the jar file from source.">
+		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
+			<isset property="builder.suffix" />
+		</condition>
+    <echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
+		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
+	</target>
+	<target name="build-java">
+		<uptodate property="build.notRequired" targetfile="${jar.file}">
+			<srcfiles dir="${src.dir}" includes="**/*" />
+		</uptodate>
+		<antcall target="do-build-java" />
+	</target>
+	<target name="do-build-java" unless="build.notRequired">
+    <echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
+		<antcall target="clean" />
+		<mkdir dir="${build.dir}" />
+		<javac srcdir="src/main/java/" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5" listfiles="true" />
+	</target>
+	<target name="build-groovy">
+		<uptodate property="build.notRequired" targetfile="${jar.file}">
+			<srcfiles dir="${src.dir}" includes="**/*" />
+		</uptodate>
+		<antcall target="do-build-groovy" />
+	</target>
+	<target name="do-build-groovy" unless="build.notRequired">
+    <echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
+		<antcall target="clean" />
+		<mkdir dir="${build.dir}" />
+		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
+		<groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
+			<javac target="1.5" debug="true" />
+		</groovyc>
+	</target>
+	<!--================================== jar target ==================================-->
+	<target name="jar">
+		<mkdir dir="${target.dir}" />
+		<uptodate property="jar.notRequired" targetfile="${jar.file}">
+			<srcfiles dir="${build.dir}" includes="**/*" />
+			<srcfiles dir="${rsrc.dir}" includes="**/*" />
+		</uptodate>
+		<antcall target="do-jar" />
+	</target>
+	<target name="do-jar" unless="jar.notRequired">
+		<echo message="[JARFILE] target/${ant.project.name}-${euca.version}.jar" />
+		<delete file="${jar.file}" />
+		<jar destfile="${jar.file}">
+			<fileset dir="${build.dir}">
+				<include name="**/*" />
+			</fileset>
+			<fileset dir="${rsrc.dir}">
+				<include name="**/*" />
+			</fileset>
+		</jar>
+	</target>
+	<target name="install">
+		<copy todir="${DESTDIR}${euca.conf.dir}">
+			<fileset dir="conf">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+		<copy todir="${DESTDIR}${euca.lib.dir}">
+			<fileset file="${jar.file}" />
+		</copy>
+	</target>
+	<!--================================== clean target ==================================-->
+	<target name="clean">
+		<delete dir="${build.dir}" />
+		<delete file="${jar.file}" />
+	</target>
+
+</project>

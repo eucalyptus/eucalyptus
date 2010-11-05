@@ -337,11 +337,13 @@ public class ClusterEndpoint implements Startable {
   
   public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
+    SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
+    reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
     try {
-      SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
-      reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
-      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", SystemConfiguration.getWalrusUrl( ) ) );
-    } catch ( EucalyptusCloudException e ) {}
+      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupServiceByName( "walrus" ).getUri( ).toASCIIString( ) ) );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+    }
     return reply;
   }
 }

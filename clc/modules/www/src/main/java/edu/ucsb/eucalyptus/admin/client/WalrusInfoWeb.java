@@ -65,7 +65,8 @@ import java.util.ArrayList;
 import com.google.gwt.user.client.rpc.IsSerializable;
 
 public class WalrusInfoWeb implements IsSerializable {
-	private String name;
+  private String partition;
+  private String name;
 	private String host;
 	private Integer port;
 	private Boolean committed;
@@ -145,4 +146,18 @@ public class WalrusInfoWeb implements IsSerializable {
 	{
 		return name.hashCode();
 	}
+
+  /**
+   * @return the partition
+   */
+  public String getPartition( ) {
+    return this.partition;
+  }
+
+  /**
+   * @param partition the partition to set
+   */
+  public void setPartition( String partition ) {
+    this.partition = partition;
+  }
 }

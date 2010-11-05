@@ -74,7 +74,7 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   private static Logger LOG = Logger.getLogger( DatabaseServiceBuilder.class );
   protected abstract T newInstance( );
   
-  protected abstract T newInstance( String name, String host, Integer port );
+  protected abstract T newInstance( String partition, String name, String host, Integer port );
   
   @Override
   public List<T> list( ) throws ServiceRegistrationException {
@@ -135,8 +135,8 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   }
 
   @Override
-  public T add( String name, String host, Integer port ) throws ServiceRegistrationException {
-    T config = this.newInstance( name, host, port );
+  public T add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+    T config = this.newInstance( null, name, host, port );
     ServiceConfigurations.getInstance( ).store( config );
     return config;
   }
@@ -145,12 +145,12 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
     try {
       if( "vm".equals( uri.getScheme( ) ) || NetworkUtil.testLocal( uri.getHost( ) ) ) {
-        return new LocalConfiguration( this.getComponent( ).getPeer( ), uri );      
+        return new LocalConfiguration( null, this.getComponent( ).getPeer( ), uri );      
       } else {
-        return new RemoteConfiguration( this.getComponent( ).getPeer( ), uri );
+        return new RemoteConfiguration( null, this.getComponent( ).getPeer( ), uri );
       }
     } catch ( Exception e ) {
-      return new LocalConfiguration( this.getComponent( ).getPeer( ), uri );
+      return new LocalConfiguration( null, this.getComponent( ).getPeer( ), uri );
     }
   }
 
