@@ -244,7 +244,7 @@ public class ClusterAllocator extends Thread {
     } );
     List<String> networkIndexes = ( childToken.getPrimaryNetwork( ) == null ) ? new ArrayList<String>( ) : Lists.newArrayList( Iterables.transform( childToken.getPrimaryNetwork( ).getIndexes( ), Functions.TO_STRING ) );
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), 
-                                   vmInfo, keyInfo, platform,
+                                   vmInfo, keyInfo, platform != null ? platform : "linux",/**ASAP:FIXME:GRZE**/
                                    childToken.getInstanceIds( ), macs, 
                                    vlan, networkNames, networkIndexes ).regardingUserRequest( request );
     Request<VmRunType, VmRunResponseType> req = Callbacks.newClusterRequest( new VmRunCallback( run, childToken ) );
