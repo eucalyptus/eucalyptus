@@ -175,13 +175,11 @@ public class WalrusControl {
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("drbdadm not found: Is drbd installed?");
 		}
-	}
-
-	
+	}	
 	
 	public static void configure() {
 		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
-		storageManager = StorageManagerFactory.getStorageManager();
+		storageManager = BackendStorageManagerFactory.getStorageManager();
 		storageManager.setRootDirectory(walrusInfo.getStorageDir());
 		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
 		walrusManager = new WalrusManager(storageManager, walrusImageManager);
@@ -207,6 +205,19 @@ public class WalrusControl {
 
 	public static <T> EntityWrapper<T> getEntityWrapper( ) {
 		return new EntityWrapper<T>( WalrusProperties.DB_NAME );
+	}
+
+	public static void enable() throws EucalyptusCloudException {
+		storageManager.enable();
+	}
+
+	public static void disable() throws EucalyptusCloudException {
+		storageManager.disable();
+	}
+
+	public static void check() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
 	}
 
 	public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {

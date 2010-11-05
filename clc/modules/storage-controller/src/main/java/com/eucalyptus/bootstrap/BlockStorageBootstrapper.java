@@ -97,6 +97,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
 		if(blockStorageManager != null)
 			blockStorageManager.checkPreconditions();
+		BlockStorage.configure();
 		return true;
 	}
 
@@ -105,6 +106,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean enable( ) throws Exception {
+		BlockStorage.enable();
 		return true;
 	}
 
@@ -113,6 +115,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean stop( ) throws Exception {
+		BlockStorage.stop();
 		return true;
 	}
 
@@ -127,6 +130,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean disable( ) throws Exception {
+		BlockStorage.disable();
 		return true;
 	}
 
@@ -135,7 +139,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean check( ) throws Exception {
-		BlockStorage.checkReady();
+		BlockStorage.check();
 		return true;
 	}
 }

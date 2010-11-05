@@ -131,4 +131,6 @@ public interface LogicalStorageManager {
 	public void detachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
 	public void checkReady() throws EucalyptusCloudException;
+
+	public void stop() throws EucalyptusCloudException;
 }

@@ -1058,4 +1058,10 @@ public class DASManager implements LogicalStorageManager {
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
 }

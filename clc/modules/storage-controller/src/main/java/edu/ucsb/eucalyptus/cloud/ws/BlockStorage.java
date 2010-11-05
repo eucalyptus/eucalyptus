@@ -180,7 +180,7 @@ public class BlockStorage {
 		}
 	}
 
-	public static void checkReady() throws EucalyptusCloudException {
+	public static void check() throws EucalyptusCloudException {
 		blockManager.checkReady();
 	}
 	
@@ -994,5 +994,25 @@ public class BlockStorage {
 				StorageProperties.enableStorage = StorageProperties.enableSnapshots = true;
 			}
 		}
+	}
+
+	public static void stop() throws EucalyptusCloudException {
+		blockManager.stop();
+		//clean all state.
+		blockManager = null;
+		checker = null;
+		blockStorageStatistics = null;
+		volumeService = null;
+		snapshotService = null;
+	}
+
+	public static void enable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	public static void disable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
 	}
 }

@@ -125,4 +125,8 @@ public interface StorageManager {
 			String lastModified, String contentType, String contentDisposition, String versionId, BucketLogData logData);
 	
     public void setRootDirectory(String rootDirectory);
+
+	public void disable();
+
+	public void enable();
 }

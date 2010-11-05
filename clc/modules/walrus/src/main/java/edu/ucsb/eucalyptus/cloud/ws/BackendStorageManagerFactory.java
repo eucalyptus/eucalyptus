@@ -69,12 +69,12 @@ import org.apache.log4j.Logger;
 
 import edu.ucsb.eucalyptus.storage.StorageManager;
 
-public class StorageManagerFactory {
+public class BackendStorageManagerFactory {
 
-	private static Logger LOG = Logger.getLogger( StorageManagerFactory.class );
+	private static Logger LOG = Logger.getLogger( BackendStorageManagerFactory.class );
 
 	public static StorageManager getStorageManager() {
-		String storageManager = "DRBDStorageManager";
+		String storageManager = "FileSystemStorageManager";
 		try {
 			storageManager = "edu.ucsb.eucalyptus.storage.fs." + storageManager;
 			return (StorageManager) ClassLoader.getSystemClassLoader().loadClass(storageManager).newInstance();

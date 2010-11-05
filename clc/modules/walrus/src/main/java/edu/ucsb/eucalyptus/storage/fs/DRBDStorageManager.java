@@ -161,6 +161,10 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		return false;
 	}
 	
+	private void checkLocalDisk() {
+		
+	}
+	
 	public void becomeMaster() {
 		//check mount point, block device, role, cstate, dstate
 		//make primary
@@ -169,6 +173,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 
 	public void becomeSlave() {
+		checkLocalDisk();
 		//check mount point, block device, role, cstate, dstate
 		//make primary
 		//mount
@@ -176,5 +181,16 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 	//check status
 
+	@Override
+	public void enable() {
+		becomeMaster();
+	}
+
+	@Override
+	public void disable() {
+		becomeSlave();
+	}
 	//verify consistency
+	
+	
 }

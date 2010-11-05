@@ -551,5 +551,10 @@ public class SANManager implements LogicalStorageManager {
 	public void checkReady() throws EucalyptusCloudException {
 		connectionManager.checkConnection();		
 	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		connectionManager.stop();
+	}
 }
 

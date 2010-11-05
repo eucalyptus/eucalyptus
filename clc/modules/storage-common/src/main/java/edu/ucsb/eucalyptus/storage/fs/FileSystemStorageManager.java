@@ -463,4 +463,14 @@ public class FileSystemStorageManager implements StorageManager {
 		}
 		return loDevName;
 	}
+
+	@Override
+	public void enable() {
+		//Nothing to do yet.
+	}
+
+	@Override
+	public void disable() {
+		//Nothing to do yet.
+	}
 }

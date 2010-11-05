@@ -1338,4 +1338,10 @@ public class OverlayManager implements LogicalStorageManager {
 			varDir.mkdirs();
 		}
 	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
 }
