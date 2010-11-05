@@ -23,8 +23,8 @@ public class VMwareBrokerBuilder extends DatabaseServiceBuilder<VMwareBrokerConf
   }
   
   @Override
-  public VMwareBrokerConfiguration newInstance( String name, String host, Integer port ) {
-    return new VMwareBrokerConfiguration( name, host, port );
+  public VMwareBrokerConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new VMwareBrokerConfiguration( partition, name, host, port );
   }
 
   @Override

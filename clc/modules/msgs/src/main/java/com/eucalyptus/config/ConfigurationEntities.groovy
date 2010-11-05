@@ -356,8 +356,8 @@ public class VMwareBrokerConfiguration extends ComponentConfiguration implements
   private static String DEFAULT_SERVICE_PATH = "/services/VMwareBroker";
   public VMwareBrokerConfiguration( ) {
   }
-  public VMwareBrokerConfiguration( String name, String hostName, Integer port ) {
-    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  public VMwareBrokerConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public Component getComponent() {
     return Component.vmwarebroker;
