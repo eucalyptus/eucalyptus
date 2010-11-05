@@ -140,7 +140,7 @@ public class ImageManager {
       db.rollback( );
       throw new EucalyptusCloudException( "Failed to find disk image: " + msg.getImageId( ) );
     }
-    
+    vmAllocInfo.setPlatform( diskInfo.getPlatform( ) );
     UserInfo user = null;
     try {
       user = UserInfoStore.getUserInfo( new UserInfo( msg.getUserId( ) ) );
