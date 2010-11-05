@@ -60,9 +60,9 @@
 #
 #set -o nounset
 set -e
-unset UP_DB UP_KEYS UP_CONF UP_FORCE UP_LOG
+unset UP_DB UP_KEYS UP_CONF UP_FORCE UP_LOG UP_SAMEVERSION
 unset NEW_EUCA OLD_EUCA NEW_EUCA_VERSION OLD_EUCA_VERSION
-LEGAL_LONG_OPTS="old new conf keys db force product"
+LEGAL_LONG_OPTS="old new conf keys db force copyonly sameversion"
 KEYDIR="/var/lib/eucalyptus/keys"
 DBDIR="/var/lib/eucalyptus/db"
 
@@ -79,7 +79,7 @@ usage() {
 	echo "   -c|--conf                   Upgrade the conf file"
 	echo "   -d|--db                     Upgrade the database"
 	echo "   -k|--keys                   Upgrade the keys"
-	echo "   -p|--product                Work with productized code"
+	echo "   -s|--sameversion            Versions unchanged or no db changes."
 	echo
 }
 
@@ -106,10 +106,14 @@ get_euca_version() {
   fi  
 }
 
+sameversion() {
+  SAME_VERSION=1
+}
+
 upgrade_conf() {
   if [ -n "${SAME_VERSION}" ]; then 
     cp --preserve -a ${OLD_EUCA}/etc/eucalyptus/eucalyptus.conf ${NEW_EUCA}/etc/eucalyptus/eucalyptus.conf
-    exit 0;
+    return
   fi
   if [ ! -x ${NEW_EUCA}/usr/sbin/euca_conf ]; then
     echo "Cannot find new ${NEW_EUCA}/usr/sbin/euca_conf! Skipping automatic upgrade."; exit 1
@@ -124,14 +128,17 @@ upgrade_keys() {
   done
 }
 
-upgrade_product() {
-  PRODUCT=1
-}
-
 upgrade_db() {
   if ! (ls ${OLD_EUCA}/${DBDIR}/* >/dev/null 2>&1); then 
     log "Cannot locate previous database files in ${OLD_EUCA}/${DBDIR}! Skipping DB upgrade.";    
     exit 1; 
+  fi
+  
+  if [ -n "${SAME_VERSION}" ]; then
+    for x in $(\ls -ad ${OLD_EUCA}/${DBDIR}/* 2>&1 | grep eucalyptus) ; do
+      cp -a --preserve $x ${NEW_EUCA}/${DBDIR}/
+    done
+    return
   fi
 
   # setup the classpath
@@ -159,11 +166,7 @@ upgrade_db() {
   UPGRADE_OUTPUT="egrep -v 'java.lang.ClassNotFoundException|PERSISTENCE_ENTITY_REGISTERED|DISCOVERY_LOADED_ENTRY'" #egrep -v '(TRACE)|(Resource)|(Bootstrap)|(istenceContextDiscovery)|(ServiceJarDiscovery)'" 
   # Setup commands 
   UPGRADE_ARGS=$( for arg in ${UPGRADE_DEST_DIR} ${UPGRADE_SRC_DIR} ${UPGRADE_SRC_DB} ${UPGRADE_DEST_DB} ${UPGRADE_DEST_VERSION} ${UPGRADE_SRC_VERSION}; do echo " -D${arg}"; done; )
-  PRODUCT_OPTS=""
-  if [ -n "$PRODUCT" ]; then
-      PRODUCT_OPTS="-Djava.system.class.loader=net.jsecurity.classguard.bootstrap.ClassGuard -Deuca.home=${NEW_EUCA}"
-  fi
-  UPGRADE_CMD="java ${PRODUCT_OPTS} -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} ${UPGRADE_OPTS} ${UPGRADE_ARGS} ${UPGRADE_CLASS}" 
+  UPGRADE_CMD="java -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} ${UPGRADE_OPTS} ${UPGRADE_ARGS} ${UPGRADE_CLASS}" 
   echo "${UPGRADE_CMD}" >> ${UP_LOG} 
   
   echo "Upgrading your database..." | tee -a ${UP_LOG} 2>&1
@@ -178,7 +181,7 @@ upgrade_db() {
 NEW_ARGS=$(echo "${@}" | sed 's/--\(.\)\w*/-\1/g')
 for f in $(echo "${@}" | sed 's/ /\n/g' | awk ' $1 ~ /--\w*/' | sed 's/--//g'); do if ! echo ${LEGAL_LONG_OPTS} | grep $f >/dev/null 2>&1; then echo "Illegal option: --$f"; FAIL="true"; fi; done
 if [ -n "${FAIL}" ]; then exit 1;fi
-while getopts ":hn:fo:ckdp" flag ${NEW_ARGS} ; do
+while getopts ":hn:fo:ckdps" flag ${NEW_ARGS} ; do
   case $flag in
     h) usage; exit 0;;
     n) 
@@ -193,7 +196,7 @@ while getopts ":hn:fo:ckdp" flag ${NEW_ARGS} ; do
     d) UP_DB="upgrade_db";;
     k) UP_KEYS="upgrade_keys";;
     c) UP_CONF="upgrade_conf";;
-    p) UP_PRODUCT="upgrade_product";;
+    s) UP_SAMEVERSION="sameversion";;
   esac
 done
 ## After this point guaranteed that NEW_EUCA and OLD_EUCA are set.
@@ -209,9 +212,9 @@ log "# New Version:              %-12.12s" "${NEW_EUCA_VERSION}"
 log "# Upgrade keys:             %-12.12s       using: %-15.15s" "$(boole ${UP_KEYS})" ${UP_KEYS}
 log "# Upgrade configuration:    %-12.12s       using: %-15.15s" "$(boole ${UP_CONF})" ${UP_CONF}
 log "# Upgrade database:         %-12.12s       using: %-15.15s" "$(boole ${UP_DB})" ${UP_DB}
-log "# Upgrade product:          %-12.12s       using: %-15.15s" "$(boole ${UP_PRODUCT})" ${UP_PRODUCT}
+log "# Same version:             %-12.12s       using: %-15.15s" "$(boole ${UP_SAMEVERSION})" ${UP_SAMEVERSION}
 
-for f in $(echo ${UP_PRODUCT} ${UP_KEYS} ${UP_DB} ${UP_CONF}); do
+for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB} ${UP_CONF}); do
   log "$(echo "# Start upgrading: ${f}" | sed 's/upgrade_//g')"
   if ! $f; then
     log "ERROR:  Upgrading failed for ${f//upgrade_/}.  See ${UP_LOG} for details."
