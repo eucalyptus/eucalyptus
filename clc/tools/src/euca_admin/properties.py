@@ -1,4 +1,4 @@
-import boto,sys,euca_admin,re
+import boto,sys,euca_admin,re,os
 from boto.exception import EC2ResponseError
 from euca_admin.generic import BooleanResponse
 from euca_admin import EucaAdmin
