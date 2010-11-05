@@ -105,7 +105,7 @@ public class VmAllocationInfo extends EucalyptusMessage {
   String reservationId;
   VmKeyInfo keyInfo;
   VmTypeInfo vmTypeInfo;
-  
+  String platform;
   List<Network> networks = new ArrayList<Network>();
   
   List<ResourceToken> allocationTokens = new ArrayList<ResourceToken>();

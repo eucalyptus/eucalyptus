@@ -101,6 +101,8 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.google.common.base.Function;
@@ -274,6 +276,7 @@ public class SystemState {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
       //ASAP: FIXME: GRZE: HANDLING OF PRODUCT CODES AND ANCESTOR IDs
+      ImageInfo img = Transactions.one( ImageInfo.named( runVm.getImageId( ) ), Tx.NOOP );
       VmKeyInfo keyInfo = null;
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
@@ -336,7 +339,7 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, keyInfo, vmType, networks,
+      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, keyInfo, vmType, img.getPlatform( ), networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
       vm.setLaunchTime( runVm.getLaunchTime( ) );

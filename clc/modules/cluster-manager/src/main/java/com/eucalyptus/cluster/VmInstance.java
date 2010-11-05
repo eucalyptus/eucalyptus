@@ -76,7 +76,12 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -91,6 +96,7 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.BundleTask;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -100,6 +106,18 @@ public class VmInstance implements HasName<VmInstance> {
   public static String  DEFAULT_IP   = "0.0.0.0";
   public static String  DEFAULT_TYPE = "m1.small";
   
+  public enum BundleState {
+    none( "none" ), pending( null ), storing( "bundling" ), canceling( null ), complete( "succeeded" ), failed( "failed" );
+    private String mappedState;
+    
+    BundleState( String mappedState ) {
+      this.mappedState = mappedState;
+    }
+    
+    public String getMappedState( ) {
+      return this.mappedState;
+    }
+  }
   private final String                                reservationId;
   private final int                                   launchIndex;
   private final String                                instanceId;
@@ -108,10 +126,12 @@ public class VmInstance implements HasName<VmInstance> {
   private final byte[]                                userData;
   private final List<Network>                         networks      = Lists.newArrayList( );
   private final NetworkConfigType                     networkConfig = new NetworkConfigType( );
+  private String                                      platform;
   private VmKeyInfo                                   keyInfo;
   private VmTypeInfo                                  vmTypeInfo;
   
   private final AtomicMarkableReference<VmState>      state         = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  private final AtomicMarkableReference<BundleTask>   bundleTask    = new AtomicMarkableReference<BundleTask>( null, false );
   private final ConcurrentSkipListSet<AttachedVolume> volumes       = new ConcurrentSkipListSet<AttachedVolume>( );
   private final StopWatch                             stopWatch     = new StopWatch( );
   private final StopWatch                             updateWatch     = new StopWatch( );
@@ -125,7 +145,7 @@ public class VmInstance implements HasName<VmInstance> {
   private Boolean                                     privateNetwork;
   
   public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement,
-                     final byte[] userData, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks,
+                     final byte[] userData, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final String platform, final List<Network> networks,
                      final String networkIndex ) {
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
@@ -133,6 +153,7 @@ public class VmInstance implements HasName<VmInstance> {
     this.ownerId = ownerId;
     this.placement = placement;
     this.userData = userData;
+    this.platform = platform;
     this.keyInfo = keyInfo;
     this.vmTypeInfo = vmTypeInfo;
     this.networks.addAll( networks );
@@ -368,11 +389,114 @@ public class VmInstance implements HasName<VmInstance> {
     this.stopWatch.unsplit( );
     return ret;
   }
-  
+
+  public Boolean isBundling( ) {
+     return this.bundleTask.getReference( ) != null;
+   }
+   
+   public BundleTask resetBundleTask( ) {
+     BundleTask oldTask = this.bundleTask.getReference( );
+     this.bundleTask.set( null, false );
+     EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESET, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ) ).info( );
+     return oldTask;
+   }
+   
+   private BundleState getBundleTaskState( ) {
+     if ( this.bundleTask.getReference( ) != null ) {
+       return BundleState.valueOf( this.getBundleTask( ).getState( ) );
+     } else {
+       return null;
+     }
+   }
+   
+   public void setBundleTaskState( String state ) {
+     BundleState next = null;
+     if ( BundleState.storing.getMappedState( ).equals( state ) ) {
+       next = BundleState.storing;
+     } else if ( BundleState.complete.getMappedState( ).equals( state ) ) {
+       next = BundleState.complete;
+     } else if ( BundleState.failed.getMappedState( ).equals( state ) ) {
+       next = BundleState.failed;
+     } else {
+       next = BundleState.none;
+     }
+     if ( this.bundleTask.getReference( ) != null ) {
+       if ( !this.bundleTask.isMarked( ) ) {
+         BundleState current = BundleState.valueOf( this.getBundleTask( ).getState( ) );
+         if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) ) {
+           return; //already finished, wait and timeout the state along with the instance.
+         } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
+           this.getBundleTask( ).setState( next.name( ) );
+           EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+                             this.getBundleTask( ).getState( ) ).info( );
+           this.getBundleTask( ).setUpdateTime( new Date( ) );
+         } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
+           this.resetBundleTask( );
+         }
+       } else {
+         this.getBundleTask( ).setUpdateTime( new Date( ) );
+       }
+     }
+   }
+   
+   public Boolean cancelBundleTask( ) {
+     if ( this.getBundleTask( ) != null ) {
+       this.bundleTask.set( this.getBundleTask( ), true );
+       this.getBundleTask( ).setState( BundleState.canceling.name( ) );
+       EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+                         this.getBundleTask( ).getState( ) ).info( );
+       return true;
+     } else {
+       return false;
+     }
+   }
+   
+   public Boolean clearPendingBundleTask( ) {
+     if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) )
+          && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
+       this.getBundleTask( ).setState( BundleState.storing.name( ) );
+       EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+                         this.getBundleTask( ).getState( ) ).info( );
+       return true;
+     } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) )
+                 && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
+       EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+                         this.getBundleTask( ).getState( ) ).info( );
+       this.resetBundleTask( );
+       return true;
+     } else {
+       return false;
+     }
+   }
+   
+   public Boolean startBundleTask( BundleTask task ) {
+     if ( this.bundleTask.compareAndSet( null, task, false, true ) ) {
+       return true;
+     } else {
+       if ( this.getBundleTask( ) != null && BundleState.failed.equals( BundleState.valueOf( this.getBundleTask( ).getState( ) ) ) ) {
+         this.resetBundleTask( );
+         this.bundleTask.set( task, true );
+         return true;
+       } else {
+         return false;
+       }
+     }
+   }
+   
+
   public RunningInstancesItemType getAsRunningInstanceItemType( boolean dns ) {
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
     
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
+    if ( this.getBundleTaskState( ) != null && !BundleState.none.equals( this.getBundleTaskState( ) ) ) {
+      runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
+      runningInstance.setStateName( VmState.TERMINATED.getName( ) );
+    } else {
+      runningInstance.setStateCode( Integer.toString( this.state.getReference( ).getCode( ) ) );
+      runningInstance.setStateName( this.state.getReference( ).getName( ) );
+    }
+    runningInstance.setPlatform( this.getPlatform( ) );
+
     runningInstance.setStateCode( Integer.toString( this.state.getReference( ).getCode( ) ) );
     runningInstance.setStateName( this.state.getReference( ).getName( ) );
     runningInstance.setInstanceId( this.instanceId );
@@ -413,7 +537,19 @@ public class VmInstance implements HasName<VmInstance> {
     else runningInstance.setKeyName( "" );
     
     runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
-    runningInstance.setPlacement( this.placement );
+    Group g = Iterables.find( Groups.listAllGroups( ), new Predicate<Group>( ) {
+      @Override
+      public boolean apply( Group arg0 ) {
+        return Iterables.any( arg0.getAuthorizations( ), new Predicate<Authorization>( ) {
+          @Override
+          public boolean apply( Authorization arg0 ) {
+            return arg0.check( new AvailabilityZonePermission( VmInstance.this.placement ) );
+          }
+        } );
+      }
+    } );
+
+    runningInstance.setPlacement( g != null ? g.getName( ) : this.placement );
     
     runningInstance.setLaunchTime( this.launchTime );
     
@@ -600,6 +736,27 @@ public class VmInstance implements HasName<VmInstance> {
   
   public int getNetworkIndex( ) {
     return this.getNetworkConfig( ).getNetworkIndex( );
+  }
+
+  /**
+   * @return the platform
+   */
+  public String getPlatform( ) {
+    return this.platform;
+  }
+
+  /**
+   * @param platform the platform to set
+   */
+  public void setPlatform( String platform ) {
+    this.platform = platform;
+  }
+
+  /**
+   * @return the bundleTask
+   */
+  public BundleTask getBundleTask( ) {
+    return this.bundleTask.getReference();
   }
   
 }
