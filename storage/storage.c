@@ -1107,7 +1107,6 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
     int e = ERROR;
     
     logprintfl (EUCAINFO, "retrieving images for instance %s (disk limit=%lldMB)...\n", instanceId, total_disk_limit_mb);
-    
     /* get the necessary files from Walrus, caching them if possible */
     char * image_name;
     int mount_offset = 0;

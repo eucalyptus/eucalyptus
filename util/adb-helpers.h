@@ -52,8 +52,8 @@ static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMa
   params->cores = adb_virtualMachineType_get_cores(vm_type, env);
   params->disk = adb_virtualMachineType_get_disk(vm_type, env);
   strncpy(params->name, adb_virtualMachineType_get_name(vm_type, env), sizeof(params->name));
-  int virtualBootRecordSize = adb_virtualMachineType_sizeof_virtualBootRecord(vm_type, env);
-  for (i = 0; i<EUCA_MAX_VBRS && i<virtualBootRecordSize; i++) {
+  params->virtualBootRecordLen = adb_virtualMachineType_sizeof_virtualBootRecord(vm_type, env);
+  for (i = 0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
     adb_virtualBootRecordType_t * vbr_type = adb_virtualMachineType_get_virtualBootRecord_at (vm_type, env, i);
     strncpy (params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env), CHAR_BUFFER_SIZE);
     logprintfl (EUCADEBUG, "resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
@@ -79,7 +79,8 @@ static inline adb_virtualMachineType_t * copy_vm_type_to_adb (const axutil_env_t
   adb_virtualMachineType_set_cores(vm_type, env, params->cores);
   adb_virtualMachineType_set_disk(vm_type, env, params->disk);
   adb_virtualMachineType_set_name(vm_type, env, params->name);
-  for (i=0; i<sizeof(params->virtualBootRecord)/sizeof(virtualBootRecord); i++) {
+  //  for (i=0; i<sizeof(params->virtualBootRecord)/sizeof(virtualBootRecord); i++) { // TODO: dan ask dmitrii
+  for (i=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
     virtualBootRecord * vbr = & params->virtualBootRecord [i];
     if (strlen(vbr->resourceLocation)>0) {
       adb_virtualBootRecordType_t * vbr_type = adb_virtualBootRecordType_create(env);

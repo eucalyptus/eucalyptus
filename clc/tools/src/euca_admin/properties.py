@@ -1,4 +1,4 @@
-import boto,sys,euca_admin,re
+import boto,sys,euca_admin,re,os
 from boto.exception import EC2ResponseError
 from euca_admin.generic import BooleanResponse
 from euca_admin import EucaAdmin
@@ -63,7 +63,8 @@ class Property():
     if props:
       self.euca.connection.build_list_params(params,props,'Properties')
     try:
-      list = self.euca.connection.get_list('DescribeProperties', params, [('euca:item', Property)])
+      list = self.euca.connection.get_list('DescribeProperties',
+                                           params, [('euca:item', Property)])
       for i in list:
         print i
     except EC2ResponseError, ex:
@@ -71,7 +72,12 @@ class Property():
 
   def get_parse_modify(self):
     parser = self.get_parser()
-    parser.add_option("-p","--property",dest="props",action="append",help="Modify KEY to be VALUE.  Can be given multiple times.",metavar="KEY=VALUE")
+    parser.add_option("-p","--property",dest="props",action="append",
+                      help="Modify KEY to be VALUE.  Can be given multiple times.",
+                      metavar="KEY=VALUE")
+    parser.add_option("-f","--property-from-file",dest="files",action="append",
+                      help="Modify KEY to be modified with content of a file.",
+                      metavar="KEY=<path to file>")
     global VERBOSE
     (options,args) = parser.parse_args()
     if options.verbose:
@@ -91,6 +97,16 @@ class Property():
   def cli_modify(self):
     (options,args) = self.get_parse_modify()
     self.modify(options.props)
+    self.modify_from_file(options.files)
+
+  def _modify(self, name, value):
+    try:
+      result = self.euca.connection.get_object('ModifyPropertyValue',
+                                               {'Name' : name, 'Value' : value},
+                                               Property)
+      print result
+    except EC2ResponseError, ex:
+      self.euca.handle_error(ex)
 
   def modify(self,modify_list):
     for i in modify_list:
@@ -98,8 +114,22 @@ class Property():
       if not len(new_prop) == 2:
         print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
         sys.exit(1)
-      try:
-        result = self.euca.connection.get_object('ModifyPropertyValue', {'Name':new_prop[0],'Value':new_prop[1]},Property)
-        print result
-      except EC2ResponseError, ex:
-        self.euca.handle_error(ex)
+      self._modify(new_prop[0], new_prop[1])
+
+  def modify(self,modify_list):
+    for i in modify_list:
+      new_prop = split(i,"=")
+      if not len(new_prop) == 2:
+        print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
+        sys.exit(1)
+      file_path = new_prop[1]
+      file_path = os.expanduser(file_path)
+      file_path = os.expandvars(file_path)
+      if not os.path.isfile(file_path):
+        print "ERROR File %s does not exist" % file_path
+        sys.exit(1)
+      fp = open(file_path)
+      value = fp.read()
+      fp.close()
+      self._modify(new_prop[0], value)
+

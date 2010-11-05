@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -58,99 +58,107 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws;
+
+package com.eucalyptus.context;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import org.mule.config.ConfigResource;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
-import com.eucalyptus.configurable.PropertyDirectory;
-import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.eucalyptus.component.Resource;
 import com.google.common.collect.Lists;
-import com.eucalyptus.records.EventRecord;
 
-@Provides( com.eucalyptus.bootstrap.Component.any )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-public class DeferredPropertiesBootstrapper extends Bootstrapper {
-	private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
-	@Override
-	public boolean start( ) throws Exception {
-		for ( Component comp : Components.list( ) ) {
-			for ( ServiceConfiguration s : comp.list( ) ) {
-				if(!s.isLocal()) {
-					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponent().name());
-					for ( ConfigurableProperty prop : props ) {
-						ConfigurableProperty addProp = null;
-						if (prop instanceof SingletonDatabasePropertyEntry) {
-							addProp = prop;
-						} else if (prop instanceof MultiDatabasePropertyEntry) {
-							addProp = ((MultiDatabasePropertyEntry) prop).getClone(s.getName());
-						}
-						if ( addProp != null ) {
-							PropertyDirectory.addProperty(addProp);
-						}
-					}
-				}
-			}
-		}
-		return true;
-	}
-	@Override
-	public boolean load( ) throws Exception {
-		return true;
-	}
+@Provides( Component.bootstrap )
+@RunDuring( Bootstrap.Stage.CloudServiceInit )
+public class ServiceBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
+  public ServiceBootstrapper( ) {}
+  
+  @Override
+  public boolean load( ) throws Exception {
+    List<ConfigResource> configs = Lists.newArrayList( );
+    for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
+      if ( comp.isEnabled( ) ) {
+        Resource rsc = comp.getConfiguration( ).getResource( );
+        if( rsc != null ) {
+          ServiceContext.LOG.info( "-> Preparing cfg: " + rsc );
+          configs.addAll( rsc.getConfigurations( ) );
+        }
+      }
+    }
+    for ( ConfigResource cfg : configs ) {
+      ServiceContext.LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );
+    }
+    try {
+      ServiceContext.buildContext( configs );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.fatal( "Failed to bootstrap services.", e );
+      return false;
+    }
+    return true;
+  }
+  
+  @Override
+  public boolean start( ) throws Exception {
+    try {
+      ServiceContext.LOG.info( "Starting up system bus." );
+      ServiceContext.createContext( );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.fatal( "Failed to configure services.", e );
+      return false;
+    }
+    try {
+      ServiceContext.startContext( );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.fatal( "Failed to start services.", e );
+      return false;
+    }
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-	 */
-	@Override
-	public boolean enable( ) throws Exception {
-		return true;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop( ) throws Exception {
+    ServiceContext.stopContext( );
+    return true;
+  }
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-	 */
-	@Override
-	public boolean stop( ) throws Exception {
-		//unload properties
-		return true;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy( ) throws Exception {}
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-	 */
-	@Override
-	public void destroy( ) throws Exception {}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-	 */
-	@Override
-	public boolean disable( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-	 */
-	@Override
-	public boolean check( ) throws Exception {
-		return true;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
+  }
 }

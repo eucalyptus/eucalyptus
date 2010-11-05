@@ -102,4 +102,14 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {}
 
+  /**
+   * TODO: DOCUMENT
+   * @see com.eucalyptus.component.ServiceBuilder#fireCheck(com.eucalyptus.component.ServiceConfiguration)
+   * @param config
+   * @throws ServiceRegistrationException
+   */
+  @Override
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
+  
 }

@@ -12,7 +12,7 @@ SERVICE_SO=libEucalyptusNC.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
-NC_LIBS 		= $(LIBS) -lvirt -lcurl -lssl $(LIBXSLT_LIBS)
+NC_LIBS 		= $(LIBS) -lvirt -lcurl -lssl
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o
 
 all: server client clientlib test_nc test
@@ -34,7 +34,7 @@ generated/stubs: $(NCWSDL)
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(LIBXSLT_CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 server: $(SERVICE_SO)
 
@@ -56,7 +56,7 @@ server: $(SERVICE_SO)
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o xml.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
+$(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
 	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/walrus.o ../storage/storage.o ../net/*.o ../util/*.o
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
@@ -74,9 +74,6 @@ test: test.c ../util/misc.o ../util/data.o
 
 test_nc: test_nc.c ../util/misc.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o
-
-test_xml: xml.c ../util/misc.o
-	$(CC) -Wno-deprecated-warnings $(CFLAGS) $(LIBXSLT_CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_xml -D__STANDALONE xml.c ../util/misc.o
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/

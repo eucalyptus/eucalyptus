@@ -128,7 +128,10 @@ typedef enum _ncResourceType {
 } ncResourceType;
 
 typedef enum _ncResourceLocationType {
+    NC_LOCATION_URL,
     NC_LOCATION_WALRUS,
+    NC_LOCATION_CLC,
+    NC_LOCATION_SC,
     NC_LOCATION_IQN,
     NC_LOCATION_AOE,
     NC_LOCATION_NONE // for ephemeral disks
@@ -159,6 +162,7 @@ typedef struct virtualBootRecord_t {
     libvirtBusType guestDeviceBus;
     libvirtSourceType backingType;
     char backingPath [CHAR_BUFFER_SIZE];
+    char preparedResourceLocation[CHAR_BUFFER_SIZE]; // e.g., URL + resourceLocation for Walrus downloads
 } virtualBootRecord;
 
 typedef struct virtualMachine_t {
@@ -170,6 +174,7 @@ typedef struct virtualMachine_t {
     virtualBootRecord * swap;
     virtualBootRecord * ephemeral0;
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS];
+    int virtualBootRecordLen; // TODO: dan ask dmitrii
 } virtualMachine;
 
 int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in);

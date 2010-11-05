@@ -219,7 +219,6 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *brname,
 				int use_virtio_net,
 				int use_virtio_root,
-                                char * root_iscsi_dev,
 				char **xml);
 void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);

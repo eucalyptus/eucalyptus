@@ -97,6 +97,23 @@ doInitialize (struct nc_state_t *nc)
 }
 
 static int
+prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName)
+{
+    int i;
+    
+    for (i=0; i<meta->servicesLen; i++) {
+        serviceInfoType * service = &(meta->services[i]);
+        if (strcmp(service->type, typeName)==0 && service->urisLen>0) {
+            char * l = vbr->resourceLocation + (strlen (typeName) + 1); // +1 for ":", so 'l' points past, e.g., "walrus:"
+            snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s%s", service->uris[0], l); // TODO: for now we just pick the first one
+            return OK;
+        }
+    }
+    logprintfl (EUCAERROR, "failed to find service '%s' in eucalyptusMessage\n", typeName);
+    return ERROR;
+}
+
+static int
 doRunInstance(	struct nc_state_t *nc,
                 ncMetadata *meta,
                 char *instanceId,
@@ -115,7 +132,7 @@ doRunInstance(	struct nc_state_t *nc,
     * outInst = NULL;
     pid_t pid;
     netConfig ncnet;
-    int error;
+    int error = OK;
 
     memcpy(&ncnet, netparams, sizeof(netConfig));
 
@@ -143,39 +160,52 @@ doRunInstance(	struct nc_state_t *nc,
     // parse and sanity-check the virtual boot record
     int i, j;
     char parts [6][EUCA_MAX_VBRS]; // record partitions seen
-    for (i=0, j=0; i<EUCA_MAX_VBRS; i++) {
-        virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
-
+    for (i=0, j=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
+        virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]);
         // get the type (the only mandatory field)
         if (strstr (vbr->typeName, "image") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_IMAGE; 
-            params->image = vbr;
+            instance->params.image = vbr;
         } else if (strstr (vbr->typeName, "kernel") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_KERNEL; 
-            params->kernel = vbr;
+            instance->params.kernel = vbr;
         } else if (strstr (vbr->typeName, "ramdisk") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_RAMDISK; 
-            params->ramdisk = vbr;
+            instance->params.ramdisk = vbr;
         } else if (strstr (vbr->typeName, "ephemeral") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_EPHEMERAL; 
             if (strstr (vbr->typeName, "ephemeral0") == vbr->typeName) {
-                params->ephemeral0 = vbr;
+                instance->params.ephemeral0 = vbr;
             }
         } else if (strstr (vbr->typeName, "swap") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_SWAP; 
-            params->swap = vbr;
+            instance->params.swap = vbr;
         } else if (strstr (vbr->typeName, "ebs") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_EBS;
         } else {
             logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
-            goto error;
+	    goto error;
         }
         
         // identify the type of resource location from location string
-        if ((strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation)
-            && (strcasestr (vbr->resourceLocation, "services/walrus") != NULL)) { vbr->locationType = NC_LOCATION_WALRUS; 
-        } else if (strcasestr (vbr->resourceLocation, "iqn:") == vbr->resourceLocation) { vbr->locationType = NC_LOCATION_IQN;
-        } else if (strcasestr (vbr->resourceLocation, "aoe:") == vbr->resourceLocation) { vbr->locationType = NC_LOCATION_AOE;
+        if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_URL;
+            strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
+        } else if (strcasestr (vbr->resourceLocation, "iqn:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_IQN;
+            // TODO: prep iqn location?
+        } else if (strcasestr (vbr->resourceLocation, "aoe:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_AOE;
+            // TODO: prep aoe location?
+        } else if (strcasestr (vbr->resourceLocation, "walrus:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_WALRUS;
+            error = prep_location (vbr, meta, "walrus");
+        } else if (strcasestr (vbr->resourceLocation, "clc:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_CLC;
+            error = prep_location (vbr, meta, "clc");
+        } else if (strcasestr (vbr->resourceLocation, "sc:") == vbr->resourceLocation) { 
+            vbr->locationType = NC_LOCATION_SC;
+            error = prep_location (vbr, meta, "sc");
         } else if (strcasestr (vbr->resourceLocation, "none") == vbr->resourceLocation) { 
             if (vbr->type!=NC_RESOURCE_EPHEMERAL && vbr->type!=NC_RESOURCE_SWAP) {
                 logprintfl (EUCAERROR, "Error: resourceLocation not specified for non-ephemeral resource '%s'\n", vbr->resourceLocation);
@@ -184,9 +214,13 @@ doRunInstance(	struct nc_state_t *nc,
             vbr->locationType = NC_LOCATION_NONE;
         } else {
             logprintfl (EUCAERROR, "Error: failed to parse resource location '%s'\n", vbr->resourceLocation);
+	    goto error;
+        }
+        if (error!=OK) {
+            logprintfl (EUCAERROR, "Error: URL for resourceLocation '%s' is not in the message\n", vbr->resourceLocation);
             goto error;
         }
-        
+
         // device can be 'none' only for kernel and ramdisk types
         if (!strcmp (vbr->guestDeviceName, "none")) {
             if (vbr->type!=NC_RESOURCE_KERNEL &&
@@ -262,7 +296,8 @@ doRunInstance(	struct nc_state_t *nc,
                 goto error;
             }
         } else {
-            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) {
+	    //            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) { // TODO: dan check with dmitrii
+	    if (vbr->format!=NC_FORMAT_NONE) {
                 logprintfl (EUCAERROR, "Error: invalid size '%d' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName, vbr->resourceLocation);
                 goto error;
             }
@@ -272,8 +307,27 @@ doRunInstance(	struct nc_state_t *nc,
     qsort (parts, j, 6, (int(*)(const void *, const void *))strcmp);
     int k;
     for (k=0; k<j; k++) {
-        logprintfl (EUCADEBUG, "Found partition %s\n", parts [k]);
+        logprintfl (EUCADEBUG, "Found partition %s\n", parts [k]); // TODO: verify no gaps in partitions
     }
+
+    /*
+    // TODO: dan ask dmitrii
+    for (i=0; i<EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
+      virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
+      logprintfl(EUCADEBUG, "VBR(%d): %s %s %s\n", i, vbr->resourceLocation, vbr->formatName, vbr->typeName);
+      if (vbr->type == NC_RESOURCE_KERNEL && vbr->locationType == NC_LOCATION_URL) {
+	instance->params.kernel = vbr;
+	logprintfl(EUCADEBUG, "DAN: kernel info: %s %s\n", instance->params.kernel->resourceLocation, instance->params.kernel->preparedResourceLocation);
+      } else if (vbr->type == NC_RESOURCE_RAMDISK && vbr->locationType == NC_LOCATION_URL) {
+	instance->params.ramdisk = vbr;
+	logprintfl(EUCADEBUG, "DAN: ramdisk info: %s %s\n", instance->params.ramdisk->resourceLocation, instance->params.ramdisk->preparedResourceLocation);
+      } else if (vbr->type == NC_RESOURCE_IMAGE && vbr->locationType == NC_LOCATION_URL) {
+	instance->params.image = vbr;
+	logprintfl(EUCADEBUG, "DAN: image info: %s %s\n", instance->params.image->resourceLocation, instance->params.image->preparedResourceLocation);
+      }
+    }
+    */
+
     change_state(instance, STAGING);
 
     sem_p (inst_sem); 
@@ -604,8 +658,7 @@ doDetachVolume(	struct nc_state_t *nc,
 		char *volumeId,
 		char *remoteDev,
 		char *localDev,
-		int force,
-                int grab_inst_sem)
+		int force)
 {
 	logprintfl(EUCAERROR, "no default for doDetachVolume!\n");
 	return ERROR_FATAL;

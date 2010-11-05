@@ -31,9 +31,7 @@ if(length($euca_home) <= 0) {
 
 $KEY_PATH = $euca_home."/var/lib/eucalyptus/keys/node-pk.pem";
 
-#TODO: put back in
-#$password = decrypt_password($encrypted_password);
-$password = "hi";
+$password = decrypt_password($encrypted_password);
 
 login_target($ip, $store, $password);
 
@@ -57,20 +55,19 @@ sub login_target {
 
     while(<DISCOVERY>) {};
 
-#TODO: put back in
-#     if(!open USERNAME, "iscsiadm -m node -T $store --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
-#         print "Could not update target username";
-#         do_exit(1)
-#     }
+    if(!open USERNAME, "iscsiadm -m node -T $store --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
+        print "Could not update target username";
+        do_exit(1)
+    }
 
-#     while(<USERNAME>) {};
+    while(<USERNAME>) {};
 
-#     if(!open PASSWD, "iscsiadm -m node -T $store --op=update --name node.session.auth.password --value=$passwd |") {
-#         print "Could not update target password";
-#         do_exit(1)
-#     }
+    if(!open PASSWD, "iscsiadm -m node -T $store --op=update --name node.session.auth.password --value=$passwd |") {
+        print "Could not update target password";
+        do_exit(1)
+    }
 
-#    while(<PASSWD>) {};
+    while(<PASSWD>) {};
 
     if(!open LOGIN, "iscsiadm -m node -T $store -l |") {
 	print "Could not login to target";

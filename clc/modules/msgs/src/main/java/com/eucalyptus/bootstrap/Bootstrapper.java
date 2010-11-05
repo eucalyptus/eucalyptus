@@ -153,7 +153,7 @@ public abstract class Bootstrapper {
    * 
    * @note Intended for future use. May become {@code abstract}.
    * @return true when all is clear
-   * @throws Exception should contain information about any malady which may be present.
+   * @throws Exception should contain detail any malady which may be present.
    */
   public abstract boolean check( ) throws Exception;
   

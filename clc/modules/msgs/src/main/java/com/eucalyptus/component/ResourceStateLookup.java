@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -58,99 +58,15 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws;
 
-import java.util.List;
-import java.util.NoSuchElementException;
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
-import com.eucalyptus.configurable.PropertyDirectory;
-import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.collect.Lists;
-import com.eucalyptus.records.EventRecord;
+package com.eucalyptus.component;
 
-@Provides( com.eucalyptus.bootstrap.Component.any )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-public class DeferredPropertiesBootstrapper extends Bootstrapper {
-	private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
-	@Override
-	public boolean start( ) throws Exception {
-		for ( Component comp : Components.list( ) ) {
-			for ( ServiceConfiguration s : comp.list( ) ) {
-				if(!s.isLocal()) {
-					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponent().name());
-					for ( ConfigurableProperty prop : props ) {
-						ConfigurableProperty addProp = null;
-						if (prop instanceof SingletonDatabasePropertyEntry) {
-							addProp = prop;
-						} else if (prop instanceof MultiDatabasePropertyEntry) {
-							addProp = ((MultiDatabasePropertyEntry) prop).getClone(s.getName());
-						}
-						if ( addProp != null ) {
-							PropertyDirectory.addProperty(addProp);
-						}
-					}
-				}
-			}
-		}
-		return true;
-	}
-	@Override
-	public boolean load( ) throws Exception {
-		return true;
-	}
+import com.eucalyptus.util.ExecutionException;
+import com.eucalyptus.util.concurrent.AbstractListenableFuture;
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-	 */
-	@Override
-	public boolean enable( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-	 */
-	@Override
-	public boolean stop( ) throws Exception {
-		//unload properties
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-	 */
-	@Override
-	public void destroy( ) throws Exception {}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-	 */
-	@Override
-	public boolean disable( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-	 */
-	@Override
-	public boolean check( ) throws Exception {
-		return true;
-	}
+public abstract class ResourceStateLookup extends AbstractListenableFuture<Integer> {
+  @Override
+  public abstract Integer get( ) throws InterruptedException, ExecutionException;
 }

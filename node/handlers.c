@@ -377,7 +377,6 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
 			char *brname,
 			int use_virtio_net,
 			int use_virtio_root,
-                        char * root_iscsi_dev,
 			char **xml)
 {
     char buf [MAX_PATH];
@@ -392,22 +391,19 @@ get_instance_xml(	const char *gen_libvirt_cmd_path,
     if (use_virtio_root) {
         strncat(buf, " --virtioroot", MAX_PATH);
     }
-    if (root_iscsi_dev!=NULL) {
-            strncat(buf, " --blockroot", MAX_PATH);
-    }
+    
     if (params->disk > 0) { /* TODO: get this info from scMakeImage */
         strncat (buf, " --ephemeral", MAX_PATH);
     }
     * xml = system_output (buf);
     if ( ( * xml ) == NULL ) {
-            logprintfl (EUCAFATAL, "%s: %s\n", gen_libvirt_cmd_path, strerror (errno));
+        logprintfl (EUCAFATAL, "%s: %s\n", gen_libvirt_cmd_path, strerror (errno));
         return ERROR;
     }
     
     /* the tags better be not substring of other tags: BA will substitute
      * ABABABAB */
     replace_string (xml, "BASEPATH", disk_path);
-    replace_string (xml, "DEVNAME", root_iscsi_dev);
     replace_string (xml, "SWAPPATH", disk_path);
     replace_string (xml, "NAME", instanceId);
     replace_string (xml, "PRIVMACADDR", privMac);
@@ -511,6 +507,15 @@ monitoring_thread (void *arg)
     return NULL;
 }
 
+static void build_id_and_url (const virtualBootRecord * vbr, char * id, char * url)
+{
+    id [0] = '\0';
+    url [0] = '\0';
+    if (vbr) {
+        strncpy (id, vbr->id, SMALL_CHAR_BUFFER_SIZE);
+        strncpy (url, vbr->preparedResourceLocation, CHAR_BUFFER_SIZE);
+    }
+}
 
 void *startup_thread (void * arg)
 {
@@ -519,36 +524,6 @@ void *startup_thread (void * arg)
     char * disk_path, * xml=NULL;
     char *brname=NULL;
     int error, i;
-
-    // prepare iSCSI-backed images
-    char * local_iscsi_dev;
-    for (i=0; i<EUCA_MAX_VBRS; i++) {
-            virtualBootRecord * r = instance->params.virtualBootRecord + i;
-            if (strncmp (r->typeName, "image", sizeof(r->typeName))==0) {
-                    logprintfl (EUCAINFO, "found image VBR: %s\n", r->resourceLocation);
-                    char * remoteDev = r->resourceLocation;
-                    local_iscsi_dev = connect_iscsi_target(nc_state.connect_storage_cmd_path, remoteDev);
-                    if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
-                            logprintfl(EUCAERROR, "ERROR: failed to connect to iscsi target for root disk\n");
-                            change_state (instance, SHUTOFF);
-                            return NULL;
-                    }
-                    struct stat statbuf;
-                    int rc = stat (local_iscsi_dev, &statbuf);
-                    if (rc) {
-                            logprintfl(EUCAERROR, "ERROR: cannot locate local block device file '%s'\n", remoteDev);
-                            change_state (instance, SHUTOFF);
-                            return NULL;
-                    }
-                    break;
-            }
-    }
-
-
-    // TODO: temporarily disable running, until VBR staging is implemented
-    logprintfl(EUCAFATAL, "Good news!  VBR checked out.  Nevertheless, I am preventing instance '%s' from starting because implementation is incomplete.\n", instance->instanceId);
-    change_state (instance, SHUTOFF);
-    return NULL;
     
     if (! check_hypervisor_conn ()) {
         logprintfl (EUCAFATAL, "could not start instance %s, abandoning it\n", instance->instanceId);
@@ -564,18 +539,19 @@ void *startup_thread (void * arg)
     }
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
 
-    /*    
+    char imageURL   [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.image, instance->imageId, imageURL);
+    char kernelURL  [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.kernel, instance->kernelId, kernelURL);
+    char ramdiskURL [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.ramdisk, instance->ramdiskId, ramdiskURL);
+
     error = scMakeInstanceImage (nc_state.home, 
 				 instance->userId, 
-                                 instance->imageId, instance->imageURL, 
-                                 instance->kernelId, instance->kernelURL, 
-                                 instance->ramdiskId, instance->ramdiskURL, 
+                                 instance->imageId, imageURL,
+                                 instance->kernelId, kernelURL,
+                                 instance->ramdiskId, ramdiskURL,
                                  instance->instanceId, instance->keyName, 
 				 &disk_path, 
 				 addkey_sem, nc_state.convert_to_disk,
 				 instance->params.disk*1024);
-    */
-
     if (error) {
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
@@ -603,7 +579,6 @@ void *startup_thread (void * arg)
                               brname,
                               nc_state.config_use_virtio_net,
                               nc_state.config_use_virtio_root,
-                              local_iscsi_dev,
                               &xml);
 
     if (brname) free(brname);
@@ -1069,7 +1044,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
     int found_image = 0;
     int found_kernel = 0;
     int found_ramdisk = 0;
-    for (i=0; i<EUCA_MAX_VBRS; i++) {
+    for (i=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
         if (strlen(vbr->resourceLocation)>0) {
             logprintfl (EUCAINFO, "                         device mapping: type=%s id=%s dev=%s size=%d format=%s %s\n", vbr->id, vbr->typeName, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
@@ -1099,6 +1074,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
                 strncpy (vbr->typeName, "image", sizeof (vbr->typeName));
                 vbr->size = -1;
                 strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+		params->virtualBootRecordLen++;
             }
             {
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
@@ -1108,15 +1084,17 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
                 strncpy (vbr->typeName, "ephemeral0", sizeof (vbr->typeName));
                 vbr->size = 524288; // we cannot compute it here, so pick something
                 strncpy (vbr->formatName, "ext2", sizeof (vbr->formatName));
+		params->virtualBootRecordLen++;
             }
             {
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
                 strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
-                strncpy (vbr->guestDeviceName, "sda2", sizeof (vbr->guestDeviceName));
+                strncpy (vbr->guestDeviceName, "sda3", sizeof (vbr->guestDeviceName));
                 strncpy (vbr->id, "none", sizeof (vbr->id));
                 strncpy (vbr->typeName, "swap", sizeof (vbr->typeName));
                 vbr->size = 524288;
                 strncpy (vbr->formatName, "swap", sizeof (vbr->formatName));
+		params->virtualBootRecordLen++;
             }
         }
     }
@@ -1138,6 +1116,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
             strncpy (vbr->typeName, "kernel", sizeof (vbr->typeName));
             vbr->size = -1;
             strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+	    params->virtualBootRecordLen++;
         }
     }
 
@@ -1158,6 +1137,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
             strncpy (vbr->typeName, "ramdisk", sizeof (vbr->typeName));
             vbr->size = -1;
             strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+	    params->virtualBootRecordLen++;
         }
     }
    
