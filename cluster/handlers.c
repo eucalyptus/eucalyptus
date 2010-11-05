@@ -116,7 +116,7 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   int i, rc, ret=0;
 
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
 
@@ -127,7 +127,8 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
 
   *outStatusesLen = serviceIdsLen;
   *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
-  for (i=0; i<*outStatusesLen; i++) {
+  for (i=0; i<serviceIdsLen; i++) {
+    logprintfl(EUCADEBUG, "DescribeServices(): serviceId=%d type=%s name=%s urisLen=%d\n", i, serviceIds[i].type, serviceIds[i].name, serviceIds[i].urisLen);
     snprintf((*outStatuses)[i].localState, 32, "%s", "thestate");
     snprintf((*outStatuses)[i].details, 1024, "%s", "thedetails");
     (*outStatuses)[i].localEpoch = 0;    
@@ -223,7 +224,7 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO, "BundleInstance(): called\n");
@@ -281,7 +282,7 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO, "CancelBundleTask(): called\n");
@@ -338,7 +339,7 @@ int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bu
   op_timer = OP_TIMEOUT;
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
 
@@ -821,7 +822,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -879,7 +880,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO, "DetachVolume(): called\n");
@@ -928,7 +929,7 @@ int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **source
   int rc, i, fail;
 
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -996,7 +997,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   ccInstance *myInstance=NULL;
 
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"AssignAddress(): called\n");
@@ -1068,7 +1069,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
   int rc, ret;
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -1098,7 +1099,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   ccInstance *myInstance=NULL;
 
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"UnassignAddress(): called\n");
@@ -1162,7 +1163,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   int rc, ret;
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -1195,7 +1196,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   int rc, i, j;
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
 
@@ -1228,7 +1229,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver
   op_start = time(NULL);
 
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -1282,7 +1283,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   op_start = time(NULL);
 
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -1704,7 +1705,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   op_start = time(NULL);
 
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
 
@@ -2071,7 +2072,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"RunInstances(): called\n");
@@ -2352,7 +2353,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
   *outConsoleOutput = NULL;
 
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
 
@@ -2428,7 +2429,7 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
   op_start = time(NULL);
 
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"RebootInstances(): called\n");
@@ -2485,7 +2486,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc || isEnabled()) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"TerminateInstances(): called\n");
@@ -2661,12 +2662,48 @@ int initialize(void) {
   return(ret);
 }
 
-int isEnabled() {
+int ccIsEnabled() {
   // initialized, but ccState is disabled (refuse to service operations)
 
   if (!config || config->ccState != ENABLED) {
     return(1);
   }
+  return(0);
+}
+
+int ccIsDisabled() {
+  // initialized, but ccState is disabled (refuse to service operations)
+
+  if (!config || config->ccState != DISABLED) {
+    return(1);
+  }
+  return(0);
+}
+
+int ccChangeState(int newstate) {
+  if (config) {
+    config->ccState = newstate;
+    return(0);
+  }
+  return(1);
+}
+
+int ccCheckState() {
+  char localDetails[1024];
+  if (!config) {
+    return(1);
+  }
+  snprintf(localDetails, 1023, "OK");
+
+  // check local configuration
+  // configuration
+  // shellouts
+  // filesystem
+  // network
+
+  sem_mywait(CONFIG);
+  snprintf(config->ccStateDetails, 1023, "%s", localDetails);
+  sem_mypost(CONFIG);
   return(0);
 }
 
@@ -2715,7 +2752,11 @@ void *monitor_thread(void *in) {
       
       sem_mywait(CONFIG);
       snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", config->eucahome);
-      pidstr = file2str(pidfile);
+      if (!check_file(pidfile)) {
+	pidstr = file2str(pidfile);
+      } else {
+	pidstr = NULL;
+      }
       if (config->kick_dhcp || !pidstr || check_process(atoi(pidstr), "euca-dhcp.pid")) {
 	rc = vnetKickDHCP(vnetconfig);
 	if (rc) {
@@ -2750,6 +2791,11 @@ void *monitor_thread(void *in) {
 	}
       }
     }
+
+    if (ccCheckState()) {
+      logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() failed\n");
+    }
+    
     shawn();
     
     logprintfl(EUCADEBUG, "monitor_thread(): done\n");

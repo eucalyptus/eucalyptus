@@ -1246,3 +1246,162 @@ int cc_registerImage(char *imageloc, axutil_env_t *env, axis2_stub_t *stub) {
   return 0;
 }
 */
+
+int cc_describeServices(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_DescribeServices_t *adbrequest;
+  adb_describeServicesType_t *adbinput;
+
+  adb_DescribeServicesResponse_t *adbresponse;
+  adb_describeServicesResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_describeServicesType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(describeServicesType, adbinput, (&mymeta));
+  
+  adbrequest = adb_DescribeServices_create(env);
+  adb_DescribeServices_set_DescribeServices(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_DescribeServices(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: DescribeServices failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_DescribeServicesResponse_get_DescribeServicesResponse(adbresponse, env);
+    status = adb_describeServicesResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_describeServicesResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_startService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_StartService_t *adbrequest;
+  adb_startServiceType_t *adbinput;
+
+  adb_StartServiceResponse_t *adbresponse;
+  adb_startServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_startServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(startServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_StartService_create(env);
+  adb_StartService_set_StartService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_StartService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: StartService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_StartServiceResponse_get_StartServiceResponse(adbresponse, env);
+    status = adb_startServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_startServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_stopService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_StopService_t *adbrequest;
+  adb_stopServiceType_t *adbinput;
+
+  adb_StopServiceResponse_t *adbresponse;
+  adb_stopServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_stopServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(stopServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_StopService_create(env);
+  adb_StopService_set_StopService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_StopService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: StopService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_StopServiceResponse_get_StopServiceResponse(adbresponse, env);
+    status = adb_stopServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_stopServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_enableService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_EnableService_t *adbrequest;
+  adb_enableServiceType_t *adbinput;
+
+  adb_EnableServiceResponse_t *adbresponse;
+  adb_enableServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_enableServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(enableServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_EnableService_create(env);
+  adb_EnableService_set_EnableService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_EnableService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: EnableService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_EnableServiceResponse_get_EnableServiceResponse(adbresponse, env);
+    status = adb_enableServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_enableServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_disableService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_DisableService_t *adbrequest;
+  adb_disableServiceType_t *adbinput;
+
+  adb_DisableServiceResponse_t *adbresponse;
+  adb_disableServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_disableServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(disableServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_DisableService_create(env);
+  adb_DisableService_set_DisableService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_DisableService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: DisableService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_DisableServiceResponse_get_DisableServiceResponse(adbresponse, env);
+    status = adb_disableServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_disableServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
