@@ -547,14 +547,12 @@
 	  </xs:extension>
 	</xs:complexContent>
       </xs:complexType>
-
+      
       <xs:complexType name="serviceStatusType">
 	<xs:sequence>
-	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="name" type="xs:string" />
-	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="type" type="xs:string" />
-	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="uri" type="xs:string" />
-	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="state" type="xs:string" />
-	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="epoch" type="xs:int" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="serviceId" type="tns:serviceInfoType" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localState" type="xs:string" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localEpoch" type="xs:int" />
 	  <xs:element maxOccurs="unbounded" minOccurs="0" name="details" type="xs:string" />
 	</xs:sequence>
       </xs:complexType>
@@ -563,7 +561,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="uris" type="xs:string" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="serviceIds" type="tns:serviceInfoType" />
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -583,8 +581,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-              <xs:element nillable="false" minOccurs="0" name="type" type="xs:string" />
-              <xs:element nillable="false" minOccurs="0" name="name" type="xs:string" />
+              <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="serviceIds" type="tns:serviceInfoType" />
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

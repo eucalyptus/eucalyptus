@@ -86,6 +86,12 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
 adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *cancelBundleInstance, const axutil_env_t *env);
 adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundleTasks_t *describeBundleTasks, const axutil_env_t *env);
 
+adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *describeServices, const axutil_env_t *env);
+adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t *startService, const axutil_env_t *env);
+adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t *stopService, const axutil_env_t *env);
+adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t *enableService, const axutil_env_t *env);
+adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t *disableService, const axutil_env_t *env);
+
 void print_adb_ccInstanceType(adb_ccInstanceType_t *in);
 int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil_env_t *env);
 

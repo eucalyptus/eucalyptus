@@ -75,12 +75,10 @@ typedef struct serviceInfoType_t {
 } serviceInfoType;
 
 typedef struct serviceStatusType_t {
-  char name[32];
-  char type[32];
-  char uri[512];
-  char state[32];
-  int epoch;
+  char localState[32];
+  int localEpoch;
   char details[1024];
+  serviceInfoType serviceId;
 } serviceStatusType;
 
 typedef struct ncMetadata_t {

@@ -83,7 +83,8 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
 
   char **uris=NULL;
   serviceStatusType *outStatuses=NULL;
-  int urisLen=0, outStatusesLen=0, i;
+  serviceInfoType *serviceIds=NULL;
+  int serviceIdsLen=0, outStatusesLen=0, i;
   
   adbinput = adb_DescribeServices_get_DescribeServices(describeServices, env);
   adbresp = adb_describeServicesResponseType_create(env);
@@ -94,15 +95,15 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
   adb_describeServicesResponseType_set_userId(adbresp, env, adb_describeServicesType_get_userId(adbinput, env));
     
   //  localDev = adb_describeServicesType_get_localDev(adbinput, env);
-  urisLen = adb_describeServicesType_sizeof_uris(adbinput, env);
-  uris = malloc(sizeof(char *) * urisLen);
-  for (i=0; i<urisLen; i++) {
-    uris[i] = adb_describeServicesType_get_uris_at(adbinput, env, i);
+  serviceIdsLen = adb_describeServicesType_sizeof_serviceIds(adbinput, env);
+  serviceIds = malloc(sizeof(serviceInfoType) * serviceIdsLen);
+  for (i=0; i<serviceIdsLen; i++) {
+    copy_service_info_type_from_adb(&(serviceIds[i]), adb_describeServicesType_get_serviceIds_at(adbinput, env, i), env);
   }
 
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doDescribeServices(&ccMeta, uris, urisLen, &outStatuses, &outStatusesLen);
+    rc = doDescribeServices(&ccMeta, serviceIds, serviceIdsLen, &outStatuses, &outStatusesLen);
     if (uris) free(uris);
     if (rc) {
       logprintf("ERROR: doDescribeServices() returned FAIL\n");
@@ -113,14 +114,15 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
 
   for (i=0; i<outStatusesLen; i++) {
     adb_serviceStatusType_t *stt;
+    adb_serviceInfoType_t *sit;
+    
     stt = adb_serviceStatusType_create(env);
 
-    adb_serviceStatusType_set_name(stt, env, outStatuses[i].name);
-    adb_serviceStatusType_set_type(stt, env, outStatuses[i].type);
-    adb_serviceStatusType_set_uri(stt, env, outStatuses[i].uri);
-    adb_serviceStatusType_set_state(stt, env, outStatuses[i].state);
-    adb_serviceStatusType_set_epoch(stt, env, outStatuses[i].epoch);
+    adb_serviceStatusType_set_localState(stt, env, outStatuses[i].localState);
+    adb_serviceStatusType_set_localEpoch(stt, env, outStatuses[i].localEpoch);
     adb_serviceStatusType_add_details(stt, env, outStatuses[i].details);
+    sit = copy_service_info_type_to_adb(env, &(outStatuses[i].serviceId));
+    adb_serviceStatusType_set_serviceId(stt, env, sit);
 
     adb_describeServicesResponseType_add_serviceStatuses(adbresp, env, stt);
   }
@@ -141,7 +143,7 @@ adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t *startService
   adb_startServiceResponseType_t *adbresp=NULL;
   adb_startServiceType_t *adbinput=NULL;
   
-  int rc;
+  int rc, i;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
   ncMetadata ccMeta;
@@ -155,8 +157,8 @@ adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t *startService
   // set the fields that are simply carried through between input and output messages
   adb_startServiceResponseType_set_correlationId(adbresp, env, adb_startServiceType_get_correlationId(adbinput, env));
   adb_startServiceResponseType_set_userId(adbresp, env, adb_startServiceType_get_userId(adbinput, env));
-  adb_startServiceResponseType_set_type(adbresp, env, adb_startServiceType_get_type(adbinput, env));
-  adb_startServiceResponseType_set_name(adbresp, env, adb_startServiceType_get_name(adbinput, env));
+  for (i=0; i<adb_startServiceType_sizeof_serviceIds(adbinput, env); i++) { adb_startServiceResponseType_add_serviceIds(adbresp, env, adb_startServiceType_get_serviceIds_at(adbinput, env, i)); }
+
   
   status = AXIS2_TRUE;
   if (!DONOTHING) {
@@ -185,7 +187,7 @@ adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t *stopService, co
   adb_stopServiceResponseType_t *adbresp=NULL;
   adb_stopServiceType_t *adbinput=NULL;
   
-  int rc;
+  int rc, i;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
   ncMetadata ccMeta;
@@ -199,8 +201,7 @@ adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t *stopService, co
   // set the fields that are simply carried through between input and output messages
   adb_stopServiceResponseType_set_correlationId(adbresp, env, adb_stopServiceType_get_correlationId(adbinput, env));
   adb_stopServiceResponseType_set_userId(adbresp, env, adb_stopServiceType_get_userId(adbinput, env));
-  adb_stopServiceResponseType_set_type(adbresp, env, adb_stopServiceType_get_type(adbinput, env));
-  adb_stopServiceResponseType_set_name(adbresp, env, adb_stopServiceType_get_name(adbinput, env));
+  for (i=0; i<adb_stopServiceType_sizeof_serviceIds(adbinput, env); i++) { adb_stopServiceResponseType_add_serviceIds(adbresp, env, adb_stopServiceType_get_serviceIds_at(adbinput, env, i)); }
   
   status = AXIS2_TRUE;
   if (!DONOTHING) {
@@ -229,7 +230,7 @@ adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t *enableSer
   adb_enableServiceResponseType_t *adbresp=NULL;
   adb_enableServiceType_t *adbinput=NULL;
   
-  int rc;
+  int rc, i;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
   ncMetadata ccMeta;
@@ -243,8 +244,7 @@ adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t *enableSer
   // set the fields that are simply carried through between input and output messages
   adb_enableServiceResponseType_set_correlationId(adbresp, env, adb_enableServiceType_get_correlationId(adbinput, env));
   adb_enableServiceResponseType_set_userId(adbresp, env, adb_enableServiceType_get_userId(adbinput, env));
-  adb_enableServiceResponseType_set_type(adbresp, env, adb_enableServiceType_get_type(adbinput, env));
-  adb_enableServiceResponseType_set_name(adbresp, env, adb_enableServiceType_get_name(adbinput, env));
+  for (i=0; i<adb_enableServiceType_sizeof_serviceIds(adbinput, env); i++) { adb_enableServiceResponseType_add_serviceIds(adbresp, env, adb_enableServiceType_get_serviceIds_at(adbinput, env, i)); }
   
   status = AXIS2_TRUE;
   if (!DONOTHING) {
@@ -273,7 +273,7 @@ adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t *disabl
   adb_disableServiceResponseType_t *adbresp=NULL;
   adb_disableServiceType_t *adbinput=NULL;
   
-  int rc;
+  int rc, i;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
   ncMetadata ccMeta;
@@ -287,8 +287,7 @@ adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t *disabl
   // set the fields that are simply carried through between input and output messages
   adb_disableServiceResponseType_set_correlationId(adbresp, env, adb_disableServiceType_get_correlationId(adbinput, env));
   adb_disableServiceResponseType_set_userId(adbresp, env, adb_disableServiceType_get_userId(adbinput, env));
-  adb_disableServiceResponseType_set_type(adbresp, env, adb_disableServiceType_get_type(adbinput, env));
-  adb_disableServiceResponseType_set_name(adbresp, env, adb_disableServiceType_get_name(adbinput, env));
+  for (i=0; i<adb_disableServiceType_sizeof_serviceIds(adbinput, env); i++) { adb_disableServiceResponseType_add_serviceIds(adbresp, env, adb_disableServiceType_get_serviceIds_at(adbinput, env, i)); }
   
   status = AXIS2_TRUE;
   if (!DONOTHING) {
