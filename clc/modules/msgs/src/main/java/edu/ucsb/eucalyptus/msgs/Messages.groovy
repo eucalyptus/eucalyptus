@@ -312,8 +312,8 @@ public class VmTypeInfo extends EucalyptusData {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
   
-  public void setRoot( String imageId, String location, String diskFormat, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, format : diskFormat, type : "machine" ) );
+  public void setRoot( String imageId, String location, Long sizeKb ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
   
   public void setKernel( String imageId, String location ) {
