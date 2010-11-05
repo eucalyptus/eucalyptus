@@ -173,7 +173,7 @@ typedef struct ccConfig_t {
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
 static char *SCHEDPOLICIES[SCHEDLAST] = {"GREEDY", "ROUNDROBIN", "POWERSAVE"};
 
-int doDescribeServices(ncMetadata *ccMeta, char **uris, int urisLen, serviceStatusType **outStatuses, int *outStatusesLen);
+int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen);
 int doStartService(ncMetadata *ccMeta);
 int doStopService(ncMetadata *ccMeta);
 int doEnableService(ncMetadata *ccMeta);

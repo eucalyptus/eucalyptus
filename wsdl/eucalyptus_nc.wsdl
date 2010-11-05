@@ -33,6 +33,15 @@
         </xs:sequence>
       </xs:complexType>
 
+      <xs:complexType name="serviceStatusType">
+	<xs:sequence>
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="serviceId" type="tns:serviceInfoType" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localState" type="xs:string" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localEpoch" type="xs:int" />
+	  <xs:element maxOccurs="unbounded" minOccurs="0" name="details" type="xs:string" />
+	</xs:sequence>
+      </xs:complexType>
+
     <xs:complexType abstract="true" name="eucalyptusMessage">
       <xs:sequence>
 	<xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>

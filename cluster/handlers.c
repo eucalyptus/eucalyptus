@@ -112,7 +112,7 @@ int mylocks[ENDLOCK];
 
 //ccBundleCache *bundleCache=NULL;
 
-int doDescribeServices(ncMetadata *ccMeta, char **uris, int urisLen, serviceStatusType **outStatuses, int *outStatusesLen) {
+int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen) {
   int i, rc, ret=0;
 
   rc = initialize();
@@ -121,19 +121,17 @@ int doDescribeServices(ncMetadata *ccMeta, char **uris, int urisLen, serviceStat
   }
 
   logprintfl(EUCAINFO, "DescribeServices(): called\n");
-  logprintfl(EUCADEBUG, "DescribeServices(): params: userId=%s, urisLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), urisLen);
+  logprintfl(EUCADEBUG, "DescribeServices(): params: userId=%s, serviceIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), serviceIdsLen);
 
   // go through input service descriptions and match with self and node states
 
-  *outStatusesLen = urisLen;
+  *outStatusesLen = serviceIdsLen;
   *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
   for (i=0; i<*outStatusesLen; i++) {
-    snprintf((*outStatuses)[i].name, 32, "%s", "thename");
-    snprintf((*outStatuses)[i].type, 32, "%s", "thetype");
-    snprintf((*outStatuses)[i].state, 32, "%s", "thestate");
-    snprintf((*outStatuses)[i].uri, 512, "%s", uris[i]);
+    snprintf((*outStatuses)[i].localState, 32, "%s", "thestate");
     snprintf((*outStatuses)[i].details, 1024, "%s", "thedetails");
-    (*outStatuses)[i].epoch = 0;    
+    (*outStatuses)[i].localEpoch = 0;    
+    memcpy(&((*outStatuses)[i].serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
   }
 
   logprintfl(EUCAINFO, "DescribeServices(): done\n");
