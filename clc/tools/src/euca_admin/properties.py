@@ -11,7 +11,8 @@ VERBOSE = False
 class Property():
   
   
-  def __init__(self, property_name=None, property_value=None, property_description=None, property_old_value=None):
+  def __init__(self, property_name=None, property_value=None,
+               property_description=None, property_old_value=None):
     self.property_name = property_name
     self.property_value = property_value
     self.property_description = property_description
@@ -108,7 +109,7 @@ class Property():
     try:
       result = self.euca.connection.get_object('ModifyPropertyValue',
                                                {'Name' : name, 'Value' : value},
-                                               Property)
+                                               Property, verb='POST')
       print result
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
