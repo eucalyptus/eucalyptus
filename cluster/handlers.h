@@ -168,6 +168,7 @@ typedef struct ccConfig_t {
   int threads[3];
   int ncFanout;
   int ccState;
+  char ccStateDetails[1024];
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
@@ -259,7 +260,10 @@ int maintainNetworkState();
 int powerDown(ncMetadata *ccMeta, ccResource *node);
 int powerUp(ccResource *node);
 int changeState(ccResource *in, int newstate);
-int isEnabled(void);
+
+int ccIsEnabled(void);
+int ccIsDisabled(void);
+int ccChangeState(int newstate);
 
 void *monitor_thread(void *);
 
