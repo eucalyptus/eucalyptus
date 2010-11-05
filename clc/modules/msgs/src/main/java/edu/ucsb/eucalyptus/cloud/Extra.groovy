@@ -195,7 +195,7 @@ public class VmRunType extends EucalyptusMessage {
   }
   
   def VmRunType(final String reservationId, final String userData, final int amount,
-  final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
+  final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo, final String platform,
   final List<String> instanceIds, final List<String> macAddresses,
   final int vlan, final List<String> networkNames, final List<String> networkIndexList ) {
     this.reservationId = reservationId;
@@ -209,7 +209,7 @@ public class VmRunType extends EucalyptusMessage {
     this.macAddresses = macAddresses;
     this.networkNames = networkNames;
     this.networkIndexList = networkIndexList;
-    this.platform = imageInfo.getPlatform();
+    this.platform = platform;
   }
   
   def VmRunType(RunInstancesType request) {
