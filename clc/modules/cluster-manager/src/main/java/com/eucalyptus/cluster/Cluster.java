@@ -282,7 +282,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
       host = uri.getHost( );
       port = uri.getPort( );
     } catch ( URISyntaxException e ) {}
-    return new RegisterClusterType( this.getName( ), host, port );
+    return new RegisterClusterType( this.getConfiguration( ).getPartition( ), this.getName( ), host, port );
   }
   
   public ClusterState getState( ) {

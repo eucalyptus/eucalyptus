@@ -65,6 +65,7 @@ package com.eucalyptus.component;
 import java.net.URI;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.NetworkUtil;
+import edu.ucsb.eucalyptus.msgs.ServiceId;
 
 public class Service implements ComponentInformation, Comparable<Service>, HasParent<Component> {
   public static String               LOCAL_HOSTNAME = "@localhost";
@@ -74,6 +75,16 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   private final ServiceEndpoint      endpoint;
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
+
+  public final ServiceId getServiceId( ) {
+    return new ServiceId() {{
+      this.setUuid( serviceConfiguration.getId( ) );
+      this.setPartition( serviceConfiguration.getPartition( ) ); 
+      this.setName( serviceConfiguration.getName( ) );
+      this.setType( parent.getName( ) );
+      this.setUri( serviceConfiguration.getUri( ) );
+    }};
+  }
   
   public Service( Component parent, ServiceConfiguration serviceConfig ) {
     this.parent = parent;
@@ -176,4 +187,5 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
     return String.format( "Service %s name=%s endpoint=%s dispatcher=%s serviceConfiguration=%s keys=%s", this.parent.getPeer( ), this.name, 
                           this.endpoint, this.dispatcher, this.serviceConfiguration, this.keys );
   }
+
 }

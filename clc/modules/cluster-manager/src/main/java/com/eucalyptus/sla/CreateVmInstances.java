@@ -69,7 +69,6 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.VmInfo;
 
 public class CreateVmInstances {
   
@@ -102,7 +101,6 @@ public class CreateVmInstances {
                                         vmAllocInfo.getRequest().getUserId(),
                                         token.getCluster(),
                                         vmAllocInfo.getUserData(),
-                                        vmAllocInfo.getImageInfo(),
                                         vmAllocInfo.getKeyInfo(),
                                         vmAllocInfo.getVmTypeInfo(),
                                         vmAllocInfo.getNetworks(),

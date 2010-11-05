@@ -1048,7 +1048,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
         if (strlen(vbr->resourceLocation)>0) {
             logprintfl (EUCAINFO, "                         device mapping: type=%s id=%s dev=%s size=%d format=%s %s\n", vbr->id, vbr->typeName, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
-            if (!strcmp(vbr->typeName, "image")) found_image = 1;
+            if (!strcmp(vbr->typeName, "machine")) found_image = 1;
             if (!strcmp(vbr->typeName, "kernel")) found_kernel = 1;
             if (!strcmp(vbr->typeName, "ramdisk")) found_ramdisk = 1;
         } else {
@@ -1071,7 +1071,7 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
                 strncpy (vbr->resourceLocation, imageURL, sizeof (vbr->resourceLocation));
                 strncpy (vbr->guestDeviceName, "sda1", sizeof (vbr->guestDeviceName));
                 strncpy (vbr->id, imageId, sizeof (vbr->id));
-                strncpy (vbr->typeName, "image", sizeof (vbr->typeName));
+                strncpy (vbr->typeName, "machine", sizeof (vbr->typeName));
                 vbr->size = -1;
                 strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
 		params->virtualBootRecordLen++;
