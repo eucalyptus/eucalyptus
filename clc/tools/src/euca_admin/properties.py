@@ -44,8 +44,9 @@ class Property():
       setattr(self, name, value)
 
   def get_parser(self):
-    parser = OptionParser("usage: %prog [PROPERTY...]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-v","--verbose",dest="verbose",action="store_true",help="Show property descriptions.")
+    parser = OptionParser("usage: %prog [PROPERTY...]", version="Eucalyptus %prog VERSION")
+    parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
+                      help="Show property descriptions.")
     return parser
         
   def parse_describe(self):
@@ -129,13 +130,16 @@ class Property():
           print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
           sys.exit(1)
         file_path = new_prop[1]
-        file_path = os.path.expanduser(file_path)
-        file_path = os.path.expandvars(file_path)
-        if not os.path.isfile(file_path):
-          print "ERROR File %s does not exist" % file_path
-          sys.exit(1)
-        fp = open(file_path)
-        value = fp.read()
-        fp.close()
+        if file_path == '-':
+          value = sys.stdin.read()
+        else:
+          file_path = os.path.expanduser(file_path)
+          file_path = os.path.expandvars(file_path)
+          if not os.path.isfile(file_path):
+            print "ERROR File %s does not exist" % file_path
+            sys.exit(1)
+          fp = open(file_path)
+          value = fp.read()
+          fp.close()
         self._modify(new_prop[0], value)
 
