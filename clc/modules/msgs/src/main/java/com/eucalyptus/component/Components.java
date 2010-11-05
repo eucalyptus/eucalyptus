@@ -119,7 +119,7 @@ public class Components {
     return ( Map<String, T> ) componentInformation.get( getRealType( type ) );
   }
   
-  private static void dumpState( ) {
+  static void dumpState( ) {
     for ( Class c : componentInformation.keySet( ) ) {
       for ( Entry<String, ComponentInformation> e : (Set<Entry<String, ComponentInformation>>)componentInformation.get( c ).entrySet( ) ) {
         LOG.info( EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTRY_DUMP, c.getSimpleName( ), e.getKey( ), e.getValue( ).getClass( )

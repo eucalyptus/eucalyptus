@@ -9,7 +9,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeWalrusesType;
 import edu.ucsb.eucalyptus.msgs.RegisterWalrusType;
 
 @DiscoverableServiceBuilder(com.eucalyptus.bootstrap.Component.walrus)
-@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class } )
+@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, WalrusConfiguration.class } )
 public class WalrusBuilder extends DatabaseServiceBuilder<WalrusConfiguration> {
   
   @Override
@@ -18,8 +18,8 @@ public class WalrusBuilder extends DatabaseServiceBuilder<WalrusConfiguration> {
   }
   
   @Override
-  public WalrusConfiguration newInstance( String name, String host, Integer port ) {
-    return new WalrusConfiguration( name, host, port );
+  public WalrusConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new WalrusConfiguration( partition, name, host, port );
   }
 
   @Override

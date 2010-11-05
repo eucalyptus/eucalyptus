@@ -70,6 +70,7 @@ import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
+import com.eucalyptus.ws.handlers.ServiceInfoInjectionHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.handlers.soap.AddressingHandler;
@@ -90,6 +91,7 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
     pipeline.addLast( "soap", new SoapHandler( ) );
     pipeline.addLast( "binding",
                       new BindingHandler( BindingManager.getBinding( "eucalyptus_ucsb_edu" ) ) );
+    pipeline.addLast( "serviceinfo", new ServiceInfoInjectionHandler( ) ); 
     return pipeline;
   }
 }
