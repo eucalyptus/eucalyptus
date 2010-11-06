@@ -41,7 +41,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 @DiscoverableServiceBuilder( com.eucalyptus.bootstrap.Component.cluster )
-@Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class } )
+@Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class } )
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   private static Logger LOG = Logger.getLogger( ClusterBuilder.class );
   @Override
@@ -97,8 +97,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public ClusterConfiguration newInstance( String name, String host, Integer port ) {
-    return new ClusterConfiguration( name, host, port );
+  public ClusterConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new ClusterConfiguration( partition, name, host, port );
   }
   
   @Override
@@ -109,8 +109,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   private static String         NODE_KEY_FSTRING    = "nc-%s";
   
   @Override
-  public ClusterConfiguration add( String name, String host, Integer port ) throws ServiceRegistrationException {
-    ClusterConfiguration config = super.add( name, host, port );
+  public ClusterConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+    ClusterConfiguration config = super.add( partition, name, host, port );
     try {
       /** generate the Component keys **/
       String ccAlias = String.format( CLUSTER_KEY_FSTRING, config.getName( ) );
@@ -240,7 +240,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
    */
   @Override
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    return new RemoteConfiguration( this.getComponent( ).getPeer( ), uri );
+    return new RemoteConfiguration( null, this.getComponent( ).getPeer( ), uri );
   }
   
 }

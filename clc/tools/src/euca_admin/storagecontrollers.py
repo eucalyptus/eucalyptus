@@ -17,8 +17,8 @@ class StorageController():
     self.euca = EucaAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
-      return 'STORAGE\t%s\t%s\t%s' % (self.storage_name, self.partition,
-                                      self.host_name) 
+      return 'STORAGE\t%s\t%s\t%s\t%s' % (self.storage_name, self.partition,
+                                      self.host_name, self.state) 
 
   def startElement(self, name, attrs, connection):
       return None
@@ -116,3 +116,40 @@ class StorageController():
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
         
+  def get_modify_parser(self):
+    parser = OptionParser("usage: %prog [options]",
+                          version="Eucalyptus %prog VERSION")
+    parser.add_option("-p","--property",dest="props",
+                      action="append",
+                      help="Modify KEY to be VALUE.  Can be given multiple times.",
+                      metavar="KEY=VALUE")
+    (options,args) = parser.parse_args()    
+    if len(args) != 1:
+      print "ERROR  Required argument SCNAME is missing or malformed."
+      parser.print_help()
+      sys.exit(1)
+    if not options.props:
+      print "ERROR No options were specified."
+      parser.print_help()
+      sys.exit(1)
+    for i in options.props:
+      if not re.match("^[\w.]+=[\w\.]+$",i):
+        print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
+        parser.print_help()
+        sys.exit(1)
+    return (options,args)
+
+  def cli_modify(self):
+    (options,args) = self.get_modify_parser()
+    self.modify(args(1),options.props)
+
+  def modify(self,name,modify_list):
+    for entry in modify_list:
+      key, value = entry.split("=")
+      try:
+        reply = self.euca.connection.get_object('ModifyStorageControllerAttribute',
+                                                {'Name' : name, 'Attribute' : key,'Value' : value},
+                                                BooleanResponse)
+        print reply
+      except EC2ResponseError, ex:
+        self.euca.handle_error(ex)

@@ -158,6 +158,9 @@ public class Binding {
     final OMFactory factory = HoldMe.getOMFactory( );
     final IMarshallable mrshable = ( IMarshallable ) param;
     final int index = mrshable.JiBX_getIndex( );
+    if( this.bindingFactory == null || this.bindingFactory.getElementNamespaces( ) == null ) {
+      throw new BindingException( "Failed to prepare binding factory for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + altNs );
+    }
     final String origNs = this.bindingFactory.getElementNamespaces( )[index];
     final String useNs = altNs != null ? altNs : origNs;
     final ByteArrayOutputStream bos = new ByteArrayOutputStream( );

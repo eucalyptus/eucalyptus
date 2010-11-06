@@ -14,11 +14,11 @@ public class BaseMessage {
   String                     correlationId;
   String                     userId;
   String                     effectiveUserId;
-  Boolean                    _return;
+  Boolean                    _return = true;
   String                     statusMessage;
-  Integer                    epoch;
+  Integer                    epoch = currentEpoch++;
   ArrayList<ServiceInfoType> services = Lists.newArrayList( );
-  
+  private static Integer currentEpoch = 0;
   public BaseMessage( ) {
     super( );
     this.correlationId = UUID.randomUUID( ).toString( );
@@ -162,5 +162,33 @@ public class BaseMessage {
   public String toSimpleString( ) {
     return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.getUserId( ), this.getEffectiveUserId( ),
                           this.get_return( ), this.getStatusMessage( ) );
+  }
+
+  /**
+   * @return the epoch
+   */
+  public Integer getEpoch( ) {
+    return this.epoch;
+  }
+
+  /**
+   * @param epoch the epoch to set
+   */
+  public void setEpoch( Integer epoch ) {
+    this.epoch = epoch;
+  }
+
+  /**
+   * @return the services
+   */
+  public ArrayList<ServiceInfoType> getServices( ) {
+    return this.services;
+  }
+
+  /**
+   * @param services the services to set
+   */
+  public void setServices( ArrayList<ServiceInfoType> services ) {
+    this.services = services;
   }
 }

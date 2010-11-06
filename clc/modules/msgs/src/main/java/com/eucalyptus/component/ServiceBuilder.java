@@ -28,7 +28,7 @@ public interface ServiceBuilder<T extends ServiceConfiguration> {
   public abstract Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException;
   public abstract Boolean checkRemove( String name ) throws ServiceRegistrationException;
   public abstract ServiceConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException;
-  public abstract ServiceConfiguration add( String name, String host, Integer port ) throws ServiceRegistrationException;
+  public abstract ServiceConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException;
   /**
    * NOTE: This method does not necessarily return the cannonical copy of the service configuration.
    * @param uri
