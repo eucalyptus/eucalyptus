@@ -103,10 +103,9 @@ public class VmAllocationInfo extends EucalyptusMessage {
   byte[] userData;
   Long reservationIndex;
   String reservationId;
-  VmImageInfo imageInfo;
   VmKeyInfo keyInfo;
   VmTypeInfo vmTypeInfo;
-  
+  String platform;
   List<Network> networks = new ArrayList<Network>();
   
   List<ResourceToken> allocationTokens = new ArrayList<ResourceToken>();
@@ -184,7 +183,6 @@ public class VmRunType extends EucalyptusMessage {
   String reservationId, userData, platform;
   int min, max, vlan, launchIndex;
   
-  VmImageInfo imageInfo;
   VmTypeInfo vmTypeInfo;
   VmKeyInfo keyInfo;
   
@@ -197,7 +195,7 @@ public class VmRunType extends EucalyptusMessage {
   }
   
   def VmRunType(final String reservationId, final String userData, final int amount,
-  final VmImageInfo imageInfo, final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
+  final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo, final String platform,
   final List<String> instanceIds, final List<String> macAddresses,
   final int vlan, final List<String> networkNames, final List<String> networkIndexList ) {
     this.reservationId = reservationId;
@@ -205,14 +203,13 @@ public class VmRunType extends EucalyptusMessage {
     this.min = amount;
     this.max = amount;
     this.vlan = vlan;
-    this.imageInfo = imageInfo;
     this.vmTypeInfo = vmTypeInfo;
     this.keyInfo = keyInfo;
     this.instanceIds = instanceIds;
     this.macAddresses = macAddresses;
     this.networkNames = networkNames;
     this.networkIndexList = networkIndexList;
-    this.platform = imageInfo.getPlatform();
+    this.platform = platform;
   }
   
   def VmRunType(RunInstancesType request) {
@@ -222,7 +219,7 @@ public class VmRunType extends EucalyptusMessage {
   }
   
   public VmRunType(RunInstancesType request, String reservationId, String userData,
-  int amount, VmImageInfo imageInfo, VmTypeInfo vmTypeInfo, VmKeyInfo keyInfo,
+  int amount, VmTypeInfo vmTypeInfo, VmKeyInfo keyInfo,
   ArrayList<String> instanceIds, List<String> macAddresses, int vlan,
   List<String> networkNames, ArrayList<String> networkIndexList) {
     this.correlationId = request.correlationId;
@@ -233,7 +230,6 @@ public class VmRunType extends EucalyptusMessage {
     this.min = amount;
     this.max = amount;
     this.vlan = vlan;
-    this.imageInfo = imageInfo;
     this.vmTypeInfo = vmTypeInfo;
     this.keyInfo = keyInfo;
     this.instanceIds = instanceIds;
@@ -246,51 +242,21 @@ public class VmRunType extends EucalyptusMessage {
   @Override
   public String toString( ) {
     return String.format(
-    "VmRunType [imageInfo=%s, instanceIds=%s, keyInfo=%s, launchIndex=%s, macAddresses=%s, max=%s, min=%s, networkIndexList=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
-    this.imageInfo, this.instanceIds, this.keyInfo, this.launchIndex, this.macAddresses,
+    "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, macAddresses=%s, max=%s, min=%s, networkIndexList=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
+    this.instanceIds, this.keyInfo, this.launchIndex, this.macAddresses,
     this.max, this.min, this.networkIndexList, this.networkNames, this.reservationId,
     this.userData, this.vlan, this.vmTypeInfo );
   }  
   
-  
 }
 
-public class VmImageInfo {
-  
-  String imageId;
-  String kernelId;
-  String ramdiskId;
-  String imageLocation;
-  String kernelLocation;
-  String ramdiskLocation;
-  String platform;
-  ArrayList<String> productCodes = new ArrayList<String>();
-  ArrayList<String> ancestorIds = new ArrayList<String>();
-  Long size = 0l;
-  
-  def VmImageInfo(final imageId, final kernelId, final ramdiskId, final imageLocation, final kernelLocation, final ramdiskLocation, final productCodes, final platform) {
-    this.imageId = imageId;
-    this.kernelId = kernelId;
-    this.ramdiskId = ramdiskId;
-    this.imageLocation = imageLocation;
-    this.kernelLocation = kernelLocation;
-    this.ramdiskLocation = ramdiskLocation;
-    this.productCodes = productCodes;
-    this.platform = platform;
-  }
-  
-  def VmImageInfo() {
-  }
-  
-  @Override
-  public String toString( ) {
-    return String.format(
-    "VmImageInfo [ancestorIds=%s, imageId=%s, imageLocation=%s, kernelId=%s, kernelLocation=%s, productCodes=%s, ramdiskId=%s, ramdiskLocation=%s, size=%s]",
-    this.ancestorIds, this.imageId, this.imageLocation, this.kernelId, this.kernelLocation,
-    this.productCodes, this.ramdiskId, this.ramdiskLocation, this.size );
-  }
-  
-  
+public class VirtualBootRecord {
+  String id = "none";
+  String resourceLocation = "none";
+  String type;
+  String guestDeviceName = "none";
+  Long size = -1l;
+  String format = "none";
 }
 
 public class VmKeyInfo {

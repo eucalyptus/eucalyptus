@@ -68,9 +68,6 @@
 
   <mapping name="RunInstances" class="edu.ucsb.eucalyptus.cloud.VmRunType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-    <structure usage="optional">
-      <structure field="imageInfo" map-as="edu.ucsb.eucalyptus.cloud.VmImageInfo"/>
-    </structure>
     <structure name="instanceType" usage="optional">
       <structure field="vmTypeInfo" map-as="edu.ucsb.eucalyptus.msgs.VmTypeInfo"/>
     </structure>
