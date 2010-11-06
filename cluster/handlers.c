@@ -128,9 +128,13 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   *outStatusesLen = serviceIdsLen;
   *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
   for (i=0; i<serviceIdsLen; i++) {
+    char statestr[32];
     logprintfl(EUCADEBUG, "DescribeServices(): serviceId=%d type=%s name=%s urisLen=%d\n", i, serviceIds[i].type, serviceIds[i].name, serviceIds[i].urisLen);
-    snprintf((*outStatuses)[i].localState, 32, "%s", "thestate");
-    snprintf((*outStatuses)[i].details, 1024, "%s", "thedetails");
+    
+    ccGetStateString(statestr, 32);
+    snprintf((*outStatuses)[i].localState, 32, "%s", statestr);
+    
+    snprintf((*outStatuses)[i].details, 1024, "%s", config->ccStateDetails);
     (*outStatuses)[i].localEpoch = 0;    
     memcpy(&((*outStatuses)[i].serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
   }
@@ -2688,23 +2692,72 @@ int ccChangeState(int newstate) {
   return(1);
 }
 
+int ccGetStateString(char *statestr, int n) {
+  if (config->ccState == ENABLED) {
+    snprintf(statestr, n, "ENABLED");
+  } else if (config->ccState == DISABLED) {
+    snprintf(statestr, n, "DISABLED");
+  } else if (config->ccState == STOPPED) {
+    snprintf(statestr, n, "STOPPED");
+  } else if (config->ccState == LOADED) {
+    snprintf(statestr, n, "LOADED");
+  } else if (config->ccState == INITIALIZED) {
+    snprintf(statestr, n, "INITIALIZED");
+  } else if (config->ccState == PRIMORDIAL) {
+    snprintf(statestr, n, "PRIMORDIAL");
+  }
+  return(0);
+}
+
 int ccCheckState() {
   char localDetails[1024];
+  int ret=0;
+
   if (!config) {
     return(1);
   }
-  snprintf(localDetails, 1023, "OK");
-
   // check local configuration
+  
   // configuration
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "%s", config->eucahome);
+    if (check_directory(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find directory '%s'\n", cmd);
+      ret++;
+    }
+  }
+  
   // shellouts
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", config->eucahome);
+    if (check_file(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      ret++;
+    }
+
+    snprintf(cmd, MAX_PATH, "%s/usr/share/eucalyptus/dynserv.pl", config->eucahome);
+    if (check_file(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      ret++;
+    }
+    
+    snprintf(cmd, MAX_PATH, "ip addr show");
+    if (system(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot run shellout '%s'\n", cmd);
+      ret++;
+    }    
+  }
   // filesystem
+  
   // network
 
+  snprintf(localDetails, 1023, "ERRORS=%d", ret);
   sem_mywait(CONFIG);
   snprintf(config->ccStateDetails, 1023, "%s", localDetails);
   sem_mypost(CONFIG);
-  return(0);
+  return(ret);
 }
 
 /* 
