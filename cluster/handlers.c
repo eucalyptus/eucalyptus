@@ -87,6 +87,8 @@ permission notice:
 #include <storage-windows.h>
 #include <euca_auth.h>
 
+#include <handlers-state.h>
+
 #define SUPERUSER "eucalyptus"
 
 // local globals
@@ -2582,6 +2584,7 @@ int ccIsDisabled() {
 
 int ccChangeState(int newstate) {
   if (config) {
+    config->ccLastState = config->ccState;
     config->ccState = newstate;
     return(0);
   }
@@ -2698,8 +2701,25 @@ void *monitor_thread(void *in) {
       if (rc) {
 	logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
       }
-      
+
       sem_mywait(CONFIG);
+
+      if (config->kick_network) {
+	logprintfl(EUCADEBUG, "monitor_thread(): refreshing network cache\n");
+	rc = map_instanceCache(validCmp, NULL, instNetParamsSet, NULL);
+	if (rc) {
+	  logprintfl(EUCAERROR, "monitor_thread(): man_instanceCache() failed to reset networkparams from instanceCache\n");
+	} else {
+	  rc = restoreNetworkState();
+	  if (rc) {
+	    // failed to restore network state, continue 
+	    logprintfl(EUCAWARN, "monitor_thread(): restoreNetworkState returned false (may be already restored)\n");
+	  } else {
+	    config->kick_network = 0;
+	  }
+	}
+      }
+      
       snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", config->eucahome);
       if (!check_file(pidfile)) {
 	pidstr = file2str(pidfile);
@@ -2739,6 +2759,14 @@ void *monitor_thread(void *in) {
 	  }
 	}
       }
+
+      
+    } else {
+      // this CC is not enabled, ensure that local network state is disabled
+      rc = clean_network_state();
+      if (rc) {
+	logprintfl(EUCAERROR, "monitor_thread(): could not cleanup network state\n");
+      }
     }
 
     if (ccCheckState()) {
@@ -2771,6 +2799,7 @@ int init_pthreads() {
       sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
       sigaction(SIGTERM, &newsigact, NULL);
       config->kick_dhcp = 1;
+      config->kick_network = 1;
       monitor_thread(NULL);
       exit(0);
     } else {
@@ -2999,6 +3028,7 @@ int init_config(void) {
   }
   
   if (config->initialized) {
+    /*
     // some other thread has already initialized the configuration
     logprintfl(EUCAINFO, "init_config():  another thread has already set up config, skipping\n");
     rc = restoreNetworkState();
@@ -3006,6 +3036,7 @@ int init_config(void) {
       // failed to restore network state, continue 
       logprintfl(EUCAWARN, "init_config(): restoreNetworkState returned false (may be already restored)\n");
     }
+    */
     config_init = 1;
     return(0);
   }
@@ -3385,6 +3416,7 @@ int init_config(void) {
   config->ncFanout = ncFanout;
   locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
   config->initialized = 1;
+  config->ccLastState = DISABLED;
   config->ccState = ENABLED;
   snprintf(config->configFiles[0], MAX_PATH, "%s", configFiles[0]);
   snprintf(config->configFiles[1], MAX_PATH, "%s", configFiles[1]);

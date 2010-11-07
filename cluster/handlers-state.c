@@ -137,7 +137,9 @@ int doStartService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "StartService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   // this is actually a NOP
-  config->ccState = DISABLED;
+  sem_mywait(CONFIG);
+  ccChangeState(DISABLED);
+  sem_mypost(CONFIG);
 
   logprintfl(EUCAINFO, "StartService(): done\n");
 
@@ -155,7 +157,9 @@ int doStopService(ncMetadata *ccMeta) {
   logprintfl(EUCAINFO, "StopService(): called\n");
   logprintfl(EUCADEBUG, "StopService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
-  config->ccState = STOPPED;
+  sem_mywait(CONFIG);
+  ccChangeState(STOPPED);
+  sem_mypost(CONFIG);
 
   logprintfl(EUCAINFO, "StopService(): done\n");
 
@@ -173,10 +177,15 @@ int doEnableService(ncMetadata *ccMeta) {
   logprintfl(EUCAINFO, "EnableService(): called\n");
   logprintfl(EUCADEBUG, "EnableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
-  config->ccState = ENABLED;
+  sem_mywait(CONFIG);
+  // set state to ENABLED
+  config->kick_network = 1;
+  config->kick_dhcp = 1;
+  ccChangeState(ENABLED);
+  sem_mypost(CONFIG);  
 
   logprintfl(EUCAINFO, "EnableService(): done\n");
-
+  
   return(ret);
 }
 
@@ -191,10 +200,120 @@ int doDisableService(ncMetadata *ccMeta) {
   logprintfl(EUCAINFO, "DisableService(): called\n");
   logprintfl(EUCADEBUG, "DisableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
-  config->ccState = DISABLED;
+  sem_mywait(CONFIG);
+  ccChangeState(DISABLED);
+  sem_mypost(CONFIG);
 
   logprintfl(EUCAINFO, "DisableService(): done\n");
 
   return(ret);
 }
 
+int validCmp(ccInstance *inst, void *in) {
+  if (!inst) {
+    return(1);
+  }
+  
+  if (inst->instanceId[0] == '\0') {
+    return(1);
+  }
+  
+  return(0);
+}
+
+int instNetParamsSet(ccInstance *inst, void *in) {
+  int rc, ret=0, i;
+
+  if (!inst) {
+    return(1);
+  }
+
+  sem_mywait(VNET);
+  if (inst->ccnet.vlan >= 0) {
+    // activate network
+    vnetconfig->networks[inst->ccnet.vlan].active = 1;
+    
+    // set up groupName and userName
+    if (inst->groupNames[0][0] != '\0' && inst->ownerId[0] != '\0') {
+      if ( (vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, inst->groupNames[0])) || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->ownerId)) ) {
+	// this means that there is a pre-existing network with the passed in vlan tag, but with a different netName or userName
+	ret = 1;
+      } else {
+	snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 32, "%s", inst->groupNames[0]);
+	snprintf(vnetconfig->users[inst->ccnet.vlan].userName, 32, "%s", inst->ownerId);
+      }
+    }
+  }
+
+  if (!ret) {
+    // so far so good
+    rc = vnetGenerateNetworkParams(vnetconfig, inst->instanceId, inst->ccnet.vlan, inst->ccnet.networkIndex, inst->ccnet.privateMac, inst->ccnet.publicIp, inst->ccnet.privateIp);
+    if (rc) {
+      print_ccInstance("instNetParamsSet(): failed to (re)generate network parameters: ", inst);
+      ret = 1;
+    }
+  }
+  sem_mypost(VNET);
+
+  return(0);
+}
+
+int clean_network_state(void) {
+  int rc, i;
+  char cmd[MAX_PATH], file[MAX_PATH], rootwrap[MAX_PATH];
+  struct stat statbuf;
+  vnetConfig *tmpvnetconfig;
+
+  tmpvnetconfig = malloc(sizeof(vnetConfig));
+  memcpy(tmpvnetconfig, vnetconfig, sizeof(vnetConfig));
+  
+  // clean up assigned addrs, iptables, dhcpd (and configs)
+  rc = vnetApplySingleTableRule(tmpvnetconfig, "filter", "-F");
+  if (rc) {
+  }
+  rc = vnetApplySingleTableRule(tmpvnetconfig, "nat", "-F");
+  if (rc) {
+  }
+  rc = vnetApplySingleTableRule(tmpvnetconfig, "filter", "-P FORWARD ACCEPT");
+  if (rc) {
+  }
+  
+  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254/32 dev %s", config->eucahome, tmpvnetconfig->pubInterface);
+  logprintfl(EUCAINFO,"clean_network_state(): running cmd %s\n", cmd);
+  rc = system(cmd);
+  if (rc) {
+    logprintfl(EUCAWARN, "clean_network_state(): cannot remove ip 169.254.169.254\n");
+  }
+  for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
+    if (tmpvnetconfig->publicips[i].ip != 0) {
+      logprintfl(EUCADEBUG, "clean_network_state(): IP addr: %s\n", hex2dot(tmpvnetconfig->publicips[i].ip));
+      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, hex2dot(tmpvnetconfig->publicips[i].ip), tmpvnetconfig->pubInterface);
+      logprintfl(EUCAINFO,"clean_network_state(): running cmd %s\n", cmd);
+      rc = system(cmd);
+      if (rc) {
+	logprintfl(EUCAWARN, "clean_network_state(): cannot remove ip %s\n", hex2dot(tmpvnetconfig->publicips[i].ip));
+      }
+    }
+  }
+
+
+  // dhcp
+  snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
+  snprintf(rootwrap, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", tmpvnetconfig->eucahome);
+  rc = safekillfile(file, tmpvnetconfig->dhcpdaemon, 9, rootwrap);
+  if (rc) {
+    logprintfl(EUCAERROR, "clean_network_state(): could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
+  }
+
+  for (i=2; i<NUMBER_OF_VLANS; i++) {
+    if (tmpvnetconfig->networks[i].active) {
+      rc = vnetStopNetwork(tmpvnetconfig, i, tmpvnetconfig->users[i].userName, tmpvnetconfig->users[i].netName);
+      if (rc) {
+	logprintfl(EUCADEBUG, "clean_network_state(): failed to tear down network %d\n");
+      }
+    }
+  }
+
+  if (tmpvnetconfig) free(tmpvnetconfig);
+  return(0);
+}
