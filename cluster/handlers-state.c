@@ -113,14 +113,12 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
     char statestr[32];
     logprintfl(EUCADEBUG, "DescribeServices(): serviceId=%d type=%s name=%s urisLen=%d\n", i, serviceIds[i].type, serviceIds[i].name, serviceIds[i].urisLen);
     
-    ccGetStateString(statestr, 32);
-    snprintf((*outStatuses)[i].localState, 32, "%s", statestr);
-    
-    snprintf((*outStatuses)[i].details, 1024, "%s", config->ccStateDetails);
-    (*outStatuses)[i].localEpoch = 0;    
+    snprintf((*outStatuses)[i].localState, 32, "%s", config->ccStatus.localState);    
+    snprintf((*outStatuses)[i].details, 1024, "%s", config->ccStatus.details);
+    (*outStatuses)[i].localEpoch = config->ccStatus.localEpoch;    
     memcpy(&((*outStatuses)[i].serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
   }
-
+  
   logprintfl(EUCAINFO, "DescribeServices(): done\n");
   return(ret);
 }
@@ -140,23 +138,23 @@ int doStartService(ncMetadata *ccMeta) {
   sem_mywait(CONFIG);
   ccChangeState(DISABLED);
   sem_mypost(CONFIG);
-
+  
   logprintfl(EUCAINFO, "StartService(): done\n");
-
+  
   return(ret);
 }
 
 int doStopService(ncMetadata *ccMeta) {
   int i, rc, ret=0;
-
+  
   rc = initialize();
   if (rc) {
     return(1);
   }
-
+  
   logprintfl(EUCAINFO, "StopService(): called\n");
   logprintfl(EUCADEBUG, "StopService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
-
+  
   sem_mywait(CONFIG);
   ccChangeState(STOPPED);
   sem_mypost(CONFIG);
