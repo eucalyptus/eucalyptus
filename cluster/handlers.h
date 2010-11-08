@@ -77,7 +77,7 @@ permission notice:
 
 enum {SHARED_MEM, SHARED_FILE};
 enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, RESCACHESTAGE, REFRESHLOCK, BUNDLECACHE, NCCALL0, NCCALL1, NCCALL2, NCCALL3, NCCALL4, NCCALL5, NCCALL6, NCCALL7, NCCALL8, NCCALL9, NCCALL10, NCCALL11, NCCALL12, NCCALL13, NCCALL14, NCCALL15, NCCALL16, NCCALL17, NCCALL18, NCCALL19, NCCALL20, NCCALL21, NCCALL22, NCCALL23, NCCALL24, NCCALL25, NCCALL26, NCCALL27, NCCALL28, NCCALL29, NCCALL30, NCCALL31, ENDLOCK};
-enum {PRIMORIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED};
+enum {PRIMORDIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED};
 
 typedef struct instance_t {
   char instanceId[16];
@@ -167,17 +167,12 @@ typedef struct ccConfig_t {
   time_t configMtime, instanceTimeout, ncPollingFrequency;
   int threads[3];
   int ncFanout;
-  int ccState;
+  int ccState, ccLastState, kick_network;
+  char ccStateDetails[1024];
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
 static char *SCHEDPOLICIES[SCHEDLAST] = {"GREEDY", "ROUNDROBIN", "POWERSAVE"};
-
-int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen);
-int doStartService(ncMetadata *ccMeta);
-int doStopService(ncMetadata *ccMeta);
-int doEnableService(ncMetadata *ccMeta);
-int doDisableService(ncMetadata *ccMeta);
 
 int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen);
 int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort);
@@ -259,7 +254,11 @@ int maintainNetworkState();
 int powerDown(ncMetadata *ccMeta, ccResource *node);
 int powerUp(ccResource *node);
 int changeState(ccResource *in, int newstate);
-int isEnabled(void);
+
+int ccIsEnabled(void);
+int ccIsDisabled(void);
+int ccChangeState(int newstate);
+int ccGetStateString(char *outstr, int n);
 
 void *monitor_thread(void *);
 

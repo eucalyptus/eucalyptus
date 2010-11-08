@@ -190,6 +190,36 @@ int main(int argc, char **argv) {
 	printf("cc_describeInstances() failed\n");
 	exit(1);
       }
+    } else if (!strcmp(argv[2], "describeServices")) {
+      rc = cc_describeServices(env, stub);
+      if (rc != 0) {
+	printf("cc_describeServices() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "startService")) {
+      rc = cc_startService(env, stub);
+      if (rc != 0) {
+	printf("cc_startService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "stopService")) {
+      rc = cc_stopService(env, stub);
+      if (rc != 0) {
+	printf("cc_stopService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "enableService")) {
+      rc = cc_enableService(env, stub);
+      if (rc != 0) {
+	printf("cc_enableService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "disableService")) {
+      rc = cc_disableService(env, stub);
+      if (rc != 0) {
+	printf("cc_disableService() failed\n");
+	exit(1);
+      }
     } else if (!strcmp(argv[2], "describeBundleTasks")) {
       char **meh;
       meh = argv;
