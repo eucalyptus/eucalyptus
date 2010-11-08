@@ -107,6 +107,10 @@ public class FileSystemStorageManager implements StorageManager {
 	private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
 	private String rootDirectory;
+	
+	public FileSystemStorageManager() {
+	}
+	
 	public FileSystemStorageManager(String rootDirectory) {
 		this.rootDirectory = rootDirectory;
 	}
