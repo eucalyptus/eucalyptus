@@ -68,15 +68,15 @@ import java.util.ArrayList;
 public class ComponentInfoType extends EucalyptusData {
   String partition;
   String name;
+  String hostName;
   String state;//really an enum
-  String uri;
-  ArrayList<String> details = new ArrayList<String>( );
   String detail;//TODO: remove me.
   public ComponentInfoType(){}
-  public ComponentInfoType(String partition, String name, String state, String detail){
+  public ComponentInfoType(String partition, String name, String host, String state, String detail){
     this.partition = partition; 
     this.name = name; 
     this.state = state; 
+    this.hostName = host;
     this.detail = detail;
   }
 }

@@ -19,14 +19,18 @@ class Cluster():
 
           
   def __repr__(self):
-      return 'CLUSTER\t%s\t%s\t%s\t%s' % (self.cluster_name, self.partition,
-                                      self.host_name, self.state) 
+      return 'CLUSTER\t%s\t%s\t%s\t%s\t%s' % (self.partition, self.cluster_name,
+                                      self.host_name, self.state, self.detail) 
 
   def startElement(self, name, attrs, connection):
       return None
 
   def endElement(self, name, value, connection):
     if name == 'euca:detail':
+      self.detail = value
+    elif name == 'euca:state':
+      self.state = value
+    elif name == 'euca:hostName':
       self.host_name = value
     elif name == 'euca:name':
       self.cluster_name = value

@@ -198,7 +198,7 @@ public class Configuration {
     for( ComponentConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
       for( Service s : Components.lookup( conf.getComponent( ) ).getServices( ) ) {
         if( s.getServiceConfiguration( ).equals( conf ) ) {
-          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), s.getState( ).toString( ), "everything is fine"/**ASAP:FIXME:GRZE**/ ) );
+          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), s.getUri( ).getHost( ), s.getState( ).toString( ), "everything is fine"/**ASAP:FIXME:GRZE**/ ) );
         }
       }
     }

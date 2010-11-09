@@ -18,14 +18,18 @@ class StorageController():
     self.euca = EucaAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
-      return 'STORAGE\t%s\t%s\t%s\t%s' % (self.storage_name, self.partition,
-                                      self.host_name, self.state) 
+      return 'STORAGE\t%s\t%s\t%s\t%s\t%s' % (self.partition, self.storage_name,
+                                      self.host_name, self.state, self.detail) 
 
   def startElement(self, name, attrs, connection):
       return None
 
   def endElement(self, name, value, connection):
     if name == 'euca:detail':
+      self.detail = value
+    elif name == 'euca:state':
+      self.state = value
+    elif name == 'euca:hostName':
       self.host_name = value
     elif name == 'euca:name':
       self.storage_name = value

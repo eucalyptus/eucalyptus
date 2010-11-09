@@ -17,14 +17,18 @@ class Walrus():
     self.euca = EucaAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
-      return 'WALRUS\t%s\t%s\t%s\t%s' % (self.walrus_name, self.partition,
-                                     self.host_name, self.state) 
+      return 'WALRUS\t%s\t%s\t%s\t%s\t%s' % (self.partition, self.walrus_name, 
+                                      self.host_name, self.state, self.detail) 
 
   def startElement(self, name, attrs, connection):
       return None
 
   def endElement(self, name, value, connection):
     if name == 'euca:detail':
+      self.detail = value
+    elif name == 'euca:state':
+      self.state = value
+    elif name == 'euca:hostName':
       self.host_name = value
     elif name == 'euca:name':
       self.walrus_name = value
