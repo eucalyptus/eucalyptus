@@ -100,6 +100,8 @@ class Cluster():
   def get_deregister_parser(self):
     parser = OptionParser("usage: %prog [options] CLUSTERNAME",
                           version="Eucalyptus %prog VERSION")
+    parser.add_option("-P","--partition",dest="partition",
+                      help="Partition for the cluster.")                          
     (options,args) = parser.parse_args()    
     if len(args) != 1:
       print "ERROR  Required argument CLUSTERNAME is missing or malformed."
@@ -112,10 +114,13 @@ class Cluster():
     (options,args) = self.get_deregister_parser()
     self.deregister(args[0])
 
-  def deregister(self, name):
+  def deregister(self, name, partition=None):
+    params = {'Name':name}
+    if partition:
+      params['Partition'] = partition
     try:
       reply = self.euca.connection.get_object('DeregisterCluster',
-                                              {'Name' : name},
+                                              params,
                                               BooleanResponse)
       print reply
     except EC2ResponseError, ex:
@@ -128,6 +133,8 @@ class Cluster():
                       action="append",
                       help="Modify KEY to be VALUE.  Can be given multiple times.",
                       metavar="KEY=VALUE")
+    parser.add_option("-P","--partition",dest="partition",
+                      help="Partition for the cluster.")                          
     (options,args) = parser.parse_args()    
     if len(args) != 1:
       print "ERROR  Required argument CLUSTERNAME is missing or malformed."
@@ -148,12 +155,12 @@ class Cluster():
     (options,args) = self.get_modify_parser()
     self.modify(args(1),options.props)
 
-  def modify(self,name,modify_list):
+  def modify(self,partition,name,modify_list):
     for entry in modify_list:
       key, value = entry.split("=")
       try:
         reply = self.euca.connection.get_object('ModifyClusterAttribute',
-                                                {'Name' : name, 'Attribute' : key,'Value' : value},
+                                                {'Partition' : partition, 'Name' : name, 'Attribute' : key,'Value' : value},
                                                 BooleanResponse)
         print reply
       except EC2ResponseError, ex:

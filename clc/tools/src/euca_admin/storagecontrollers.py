@@ -68,7 +68,7 @@ class StorageController():
     parser.add_option("-p","--port",dest="port",type="int",default=8773,
                       help="Port for the storage.")
     parser.add_option("-P","--partition",dest="partition",
-                      help="Partition for the cluster.")
+                      help="Partition for the storage.")
     (options,args) = parser.parse_args()    
     if options.host == None:
       self.euca.handle_error("You must provide a hostname (-H or --host)")
@@ -100,6 +100,8 @@ class StorageController():
   def get_deregister_parser(self):
     parser = OptionParser("usage: %prog [options] NAME",
                           version="Eucalyptus %prog VERSION")
+    parser.add_option("-P","--partition",dest="partition",
+                      help="Partition for the storage.")                          
     (options,args) = parser.parse_args()    
     if len(args) != 1:
       print "ERROR  Required argument NAME is missing or malformed."
@@ -111,11 +113,14 @@ class StorageController():
   def cli_deregister(self):
     (options, args) = self.get_deregister_parser()
     self.deregister(args[0])
-            
-  def deregister(self, name):
+
+  def deregister(self, name, partition=None):
+    params = {'Name':name}
+    if partition:
+      params['Partition'] = partition
     try:
       reply = self.euca.connection.get_object('DeregisterStorageController',
-                                              {'Name':name},
+                                              params,
                                               BooleanResponse)
       print reply
     except EC2ResponseError, ex:
@@ -128,6 +133,8 @@ class StorageController():
                       action="append",
                       help="Modify KEY to be VALUE.  Can be given multiple times.",
                       metavar="KEY=VALUE")
+    parser.add_option("-P","--partition",dest="partition",
+                      help="Partition for the storage.")                          
     (options,args) = parser.parse_args()    
     if len(args) != 1:
       print "ERROR  Required argument SCNAME is missing or malformed."
@@ -148,12 +155,12 @@ class StorageController():
     (options,args) = self.get_modify_parser()
     self.modify(args(1),options.props)
 
-  def modify(self,name,modify_list):
+  def modify(self,partition,name,modify_list):
     for entry in modify_list:
       key, value = entry.split("=")
       try:
         reply = self.euca.connection.get_object('ModifyStorageControllerAttribute',
-                                                {'Name' : name, 'Attribute' : key,'Value' : value},
+                                                {'Partition' : partition, 'Name' : name, 'Attribute' : key,'Value' : value},
                                                 BooleanResponse)
         print reply
       except EC2ResponseError, ex:

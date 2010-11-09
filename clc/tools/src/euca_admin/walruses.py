@@ -57,7 +57,7 @@ class Walrus():
     parser.add_option("-p","--port",dest="port",type="int",
                       default=8773,help="Port for the walrus.")
     parser.add_option("-P","--partition",dest="partition",
-                      help="Partition for the cluster.")
+                      help="Partition for the walrus.")
     (options,args) = parser.parse_args()    
     if options.host == None:
       self.euca.handle_error("You must provide a hostname (-H or --host)")
@@ -90,9 +90,15 @@ class Walrus():
   def get_deregister_parser(self):
     parser = OptionParser("usage: %prog [options] NAME",
                           version="Eucalyptus %prog VERSION")
-    parser.add_option("-n","--name",dest="name",help="Name of the walrus.")
+    parser.add_option("-P","--partition",dest="partition",
+                      help="Partition for the walrus.")                          
     (options,args) = parser.parse_args()    
-    return (options,args)  
+    if len(args) != 1:
+      print "ERROR  Required argument NAME is missing or malformed."
+      parser.print_help()
+      sys.exit(1)
+    else:
+      return (options,args)  
 
   def cli_deregister(self):
     (options, args) = self.get_deregister_parser()
@@ -101,7 +107,10 @@ class Walrus():
     else:
       self.deregister(args[0])
             
-  def deregister(self, name='walrus'):
+  def deregister(self, name, partition='walrus'):
+    params = {'Name':name}
+    if partition:
+      params['Partition'] = partition
     try:
       reply = self.euca.connection.get_object('DeregisterWalrus',
                                               {'Name':name},BooleanResponse)
@@ -116,6 +125,8 @@ class Walrus():
                       action="append",
                       help="Modify KEY to be VALUE.  Can be given multiple times.",
                       metavar="KEY=VALUE")
+    parser.add_option("-P","--partition",dest="partition",
+                      help="Partition for the storage.")                          
     (options,args) = parser.parse_args()    
     if len(args) != 1:
       print "ERROR  Required argument WALRUSNAME is missing or malformed."
@@ -136,12 +147,12 @@ class Walrus():
     (options,args) = self.get_modify_parser()
     self.modify(args(1),options.props)
 
-  def modify(self,name,modify_list):
+  def modify(self,partition,name,modify_list):
     for entry in modify_list:
       key, value = entry.split("=")
       try:
         reply = self.euca.connection.get_object('ModifyWalrusAttribute',
-                                                {'Name' : name, 'Attribute' : key,'Value' : value},
+                                                {'Partition' : partition, 'Name' : name, 'Attribute' : key,'Value' : value},
                                                 BooleanResponse)
         print reply
       except EC2ResponseError, ex:

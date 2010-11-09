@@ -139,14 +139,14 @@ public class Configuration {
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
     ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
-    reply.set_return( deregister( request.getName( ), builder ) );
+    reply.set_return( deregister( request.getPartition( ) != null ? request.getPartition( ) : request.getName( ), request.getName( ), builder ) );
     return reply;
   }
 
-  private boolean deregister( String name, ServiceBuilder builder ) throws ServiceRegistrationException, EucalyptusCloudException {
+  private boolean deregister( String partition, String name, ServiceBuilder builder ) throws ServiceRegistrationException, EucalyptusCloudException {
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     try {
-      if( !builder.checkRemove( null, name ) ) {
+      if( !builder.checkRemove( partition, name ) ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
         throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove returned false.  It is unsafe to currently deregister, please check the logs for additional information." );
       }
@@ -189,14 +189,28 @@ public class Configuration {
   }
   
   private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
-  public ModifyComponentAttributeResponseType registerComponent( ModifyComponentAttributeType request ) throws EucalyptusCloudException {
+  public ModifyComponentAttributeResponseType modify( ModifyComponentAttributeType request ) throws EucalyptusCloudException {
     ModifyComponentAttributeResponseType reply = request.getReply( );
     if( !attributes.contains( request.getAttribute( ) ) ) {
       throw new EucalyptusCloudException( "Request to modify unknown attribute: " + request.getAttribute() );
     }
     ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
-
+    if( "state".equals( request.getAttribute( ) ) ) {
+      ServiceConfiguration conf;
+      try {
+        conf = builder.lookupByName( request.getName( ) );
+      } catch ( ServiceRegistrationException e ) {
+        LOG.info( builder.getClass( ).getSimpleName( ) + ": lookupByName failed." );
+        LOG.error( e, e );
+        throw e;
+      }
+      if( "enabled".startsWith( request.getValue( ).toLowerCase( ) ) ) {
+        builder.getComponent( ).enableService( conf );
+      } else if( "disabled".startsWith( request.getValue( ).toLowerCase( ) ) ) {
+        builder.getComponent( ).disableService( conf );
+      }
+    }
     return reply;
   }
   

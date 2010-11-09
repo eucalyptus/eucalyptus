@@ -143,6 +143,7 @@ public class RegisterComponentType extends ConfigurationMessage {
 public class RegisterComponentResponseType extends ConfigurationMessage {}
 public class DeregisterComponentType extends ConfigurationMessage {
   String name;
+  String partition;
 }
 public class DeregisterComponentResponseType extends ConfigurationMessage {}
 
