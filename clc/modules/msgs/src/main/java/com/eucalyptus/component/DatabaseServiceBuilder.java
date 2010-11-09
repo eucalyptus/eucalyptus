@@ -109,7 +109,7 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
     try {
       if ( !NetworkUtil.testGoodAddress( host ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );
-      } else if ( NetworkUtil.testLocal( host ) && !this.getComponent( ).isLocal( ) ) {
+      } else if ( NetworkUtil.testLocal( host ) && !this.getComponent( ).isEnabled( ) ) {
         throw new EucalyptusCloudException( "You do not have a local " + this.newInstance( ).getClass( ).getSimpleName( ).replaceAll( "Configuration", "" )
                                             + " enabled (or it is not installed)." );
       }
