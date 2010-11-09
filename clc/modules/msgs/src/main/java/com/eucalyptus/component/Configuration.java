@@ -13,7 +13,6 @@ public class Configuration implements ComponentInformation {
   private static Logger LOG = Logger.getLogger( Configuration.class );
   private final Component          parent;
   private final Resource           resource;
-  private final List<Bootstrapper> bootstrappers = Lists.newArrayList( );
   private final String             propertyKey;
   private URI                      uriLocal;
   private String                   uriPattern;
@@ -47,10 +46,6 @@ public class Configuration implements ComponentInformation {
     return this.resource;
   }
   
-  public List<Bootstrapper> getBootstrappers( ) {
-    return this.bootstrappers;
-  }
-  
   public String getPropertyKey( ) {
     return this.propertyKey;
   }
@@ -63,10 +58,6 @@ public class Configuration implements ComponentInformation {
       System.exit( -1 );
     }
     return this.uriLocal;
-  }
-  
-  public void addBootstrapper( Bootstrapper bootstrap ) {
-    this.bootstrappers.add( bootstrap );
   }
   
   public String getUriPattern( ) {
@@ -131,9 +122,6 @@ public class Configuration implements ComponentInformation {
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "Configuration [" );
-    if ( this.bootstrappers != null ) {
-      builder.append( "bootstrappers=" ).append( this.bootstrappers ).append( ", " );
-    }
     if ( this.parent.getName( ) != null ) {
       builder.append( "name=" ).append( this.parent.getName( ) ).append( ", " );
     }

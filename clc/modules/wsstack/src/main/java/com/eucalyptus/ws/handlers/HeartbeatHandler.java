@@ -146,7 +146,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   
   private void prepareComponent( String componentName, String hostName ) throws ServiceRegistrationException {
     final Component c = safeLookupComponent( componentName );
-    c.buildService( c.getUri( hostName, c.getConfiguration( ).getDefaultPort( ) ) );
+    c.buildService( c.getBuilder( ).toConfiguration( c.getUri( hostName, c.getConfiguration( ).getDefaultPort( ) ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -338,7 +338,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     List<String> registeredComponents = Lists.newArrayList( );
     for( ComponentType started : hb.getStarted( ) ) {
       try {
-        safeLookupComponent( started.getComponent( ) ).buildService( started.toConfiguration( ) );
+        Component c = safeLookupComponent( started.getComponent( ) );
+        c.buildService( started.toConfiguration( ) );
       } catch ( ServiceRegistrationException ex ) {
         LOG.error( ex , ex );
       } catch ( NoSuchElementException ex ) {

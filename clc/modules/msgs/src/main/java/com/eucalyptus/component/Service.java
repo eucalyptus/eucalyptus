@@ -76,7 +76,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   private final ServiceEndpoint      endpoint;
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
-  private final Component.State      state = State.RUNNING/**ASAP:FIXME:GRZE**/;
+  private final Component.State      state = State.ENABLED/**ASAP:FIXME:GRZE**/;
 
   public final ServiceId getServiceId( ) {
     return new ServiceId() {{

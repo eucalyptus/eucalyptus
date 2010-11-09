@@ -325,14 +325,26 @@ public class Bootstrap {
    */
   @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
+    for( com.eucalyptus.bootstrap.Component comp : com.eucalyptus.bootstrap.Component.values( ) ) {
+      if( !Components.contains( comp ) ) {
+        try {
+          Components.create( comp.name( ), null );
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    }
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
       com.eucalyptus.bootstrap.Component comp;
       String bc = bootstrap.getClass( ).getCanonicalName( );
       Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
       comp = bootstrap.getProvides( );
       if ( Components.delegate.any.equals( comp ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, currentStage.name( ), bc, "Provides", comp.name( ),
-                          "Component." + comp.name( ) + ".isEnabled", "true" ).info( );
+        for( Component c : Components.list( ) ) {
+          c.getBootstrapper( ).addBootstrapper( bootstrap );
+        }
+      } else if ( Components.delegate.bootstrap.equals( comp ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + comp.name( ) ).info( );
         stage.addBootstrapper( bootstrap );
       } else if ( !comp.isCloudLocal( ) && !comp.isEnabled( ) && Components.contains( comp ) ) { //report skipping a bootstrapper for an enabled component
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "Provides", comp.name( ),
@@ -343,25 +355,9 @@ public class Bootstrap {
       } else if ( !bootstrap.checkRemote( ) ) {
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
                           "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
-      } else if ( !Components.contains( comp ) ) {
-        Exceptions.eat( "Bootstrap class provides a component for which registration failed: " + bc + " provides " + comp.name( ) );
-        //        throw BootstrapException.throwFatal
-        try {
-          Component realComponent = Components.create( comp.name( ), null );
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, currentStage.name( ), bc, "Provides", comp.name( ),
-                            "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
-          realComponent.getConfiguration( ).addBootstrapper( bootstrap );
-          stage.addBootstrapper( bootstrap );          
-        } catch ( ServiceRegistrationException ex ) {
-          LOG.error( ex , ex );
-        }
       } else {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, currentStage.name( ), bc, "Provides", comp.name( ),
-                          "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
-        Component realComponent = Components.lookup( comp );
-        realComponent.getConfiguration( ).addBootstrapper( bootstrap );
-        stage.addBootstrapper( bootstrap );
-      }
+        Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
+      } 
     }
   }
   
@@ -457,7 +453,7 @@ public class Bootstrap {
   public static void initialize( ) throws Throwable {
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
     Iterables.all( Stage.list( ), loadConfigs );
-    Iterables.all( Components.list( ), Component.Transition.EARLYRUNTIME.getCallback( ) );
+    Iterables.all( Components.list( ), Component.Transition.INITIALIZING.getCallback( ) );
     
     LOG.info( LogUtil.header( "Initial component configuration:" ) );
     Iterables.all( Components.list( ), Components.configurationPrinter( ) );

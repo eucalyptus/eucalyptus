@@ -75,6 +75,7 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;

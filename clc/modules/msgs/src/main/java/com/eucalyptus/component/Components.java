@@ -237,7 +237,7 @@ public class Components {
                         + ( comp.getConfiguration( ).getResource( ) != null
                           ? comp.getConfiguration( ).getResource( ).getOrigin( )
                           : "null" ) ).append( "\n" );
-            for ( Bootstrapper b : comp.getConfiguration( ).getBootstrappers( ) ) {
+            for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
             buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
@@ -362,7 +362,7 @@ public class Components {
                                          ? comp.getConfiguration( ).getResource( ).getOrigin( )
                                          : "null" ) ) ).append( "\n" );
             buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),
-                                       Iterables.transform( comp.getConfiguration( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
+                                       Iterables.transform( comp.getBootstrapper( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
             return buf.toString( );
           }
         };
