@@ -73,7 +73,12 @@ public class ComponentInfoType extends EucalyptusData {
   ArrayList<String> details = new ArrayList<String>( );
   String detail;//TODO: remove me.
   public ComponentInfoType(){}
-  public ComponentInfoType(String partition, String name, String state, String detail){this.partition = partition; this.name = name; this.state = state; this.detail = detail;}
+  public ComponentInfoType(String partition, String name, String state, String detail){
+    this.partition = partition; 
+    this.name = name; 
+    this.state = state; 
+    this.detail = detail;
+  }
 }
 
 public class NodeComponentInfoType extends EucalyptusData {

@@ -71,6 +71,8 @@ import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -194,7 +196,11 @@ public class Configuration {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
     for( ComponentConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
-      listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), /** LIES LIES LIES **/ "everything is FINE!", conf.getHostName( ) ) );
+      for( Service s : Components.lookup( conf.getComponent( ) ).getServices( ) ) {
+        if( s.getName( ).equals( conf.getName( ) ) ) {
+          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), s.getState( ).toString( ), "everything is fine"/**ASAP:FIXME:GRZE**/ ) );
+        }
+      }
     }
     return reply;
   }
