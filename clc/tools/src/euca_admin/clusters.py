@@ -18,8 +18,8 @@ class Cluster():
 
           
   def __repr__(self):
-      return 'CLUSTER\t%s\t%s\t%s' % (self.cluster_name, self.partition,
-                                      self.host_name) 
+      return 'CLUSTER\t%s\t%s\t%s\t%s' % (self.cluster_name, self.partition,
+                                      self.host_name, self.state) 
 
   def startElement(self, name, attrs, connection):
       return None
@@ -140,14 +140,14 @@ class Cluster():
 
   def cli_modify(self):
     (options,args) = self.get_modify_parser()
-    self.modify(options.props)
+    self.modify(args(1),options.props)
 
-  def modify(self,modify_list):
+  def modify(self,name,modify_list):
     for entry in modify_list:
       key, value = entry.split("=")
       try:
-        reply = self.euca.connection.get_object('ModifyCluster',
-                                                {'Name' : key,'Value' : value},
+        reply = self.euca.connection.get_object('ModifyClusterAttribute',
+                                                {'Name' : name, 'Attribute' : key,'Value' : value},
                                                 BooleanResponse)
         print reply
       except EC2ResponseError, ex:

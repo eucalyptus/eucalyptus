@@ -17,7 +17,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageControllersType;
 import edu.ucsb.eucalyptus.msgs.RegisterStorageControllerType;
 
 @DiscoverableServiceBuilder( com.eucalyptus.bootstrap.Component.storage )
-@Handles( { RegisterStorageControllerType.class, DeregisterStorageControllerType.class, DescribeStorageControllersType.class } )
+@Handles( { RegisterStorageControllerType.class, DeregisterStorageControllerType.class, DescribeStorageControllersType.class, StorageControllerConfiguration.class } )
 public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageControllerConfiguration> {
   private static Logger LOG = Logger.getLogger( StorageControllerBuilder.class );
 
@@ -32,8 +32,8 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   }
   
   @Override
-  public StorageControllerConfiguration newInstance( String name, String host, Integer port ) {
-    return new StorageControllerConfiguration( name, host, port );
+  public StorageControllerConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new StorageControllerConfiguration( partition, name, host, port );
   }
   
   @Override

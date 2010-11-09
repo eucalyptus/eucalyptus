@@ -97,4 +97,55 @@ static inline adb_virtualMachineType_t * copy_vm_type_to_adb (const axutil_env_t
   return vm_type;
 }
 
+static inline adb_serviceInfoType_t * copy_service_info_type_to_adb(const axutil_env_t *env, serviceInfoType * input) {
+  int i;
+  adb_serviceInfoType_t *sit = adb_serviceInfoType_create(env);
+
+  adb_serviceInfoType_set_type(sit, env, input->type);
+  adb_serviceInfoType_set_name(sit, env, input->name);
+  for (i=0; i<input->urisLen; i++) {
+    adb_serviceInfoType_add_uris(sit, env, input->uris[i]);
+  }
+  
+  return (sit);
+}
+
+static inline void copy_service_info_type_from_adb(serviceInfoType * input, adb_serviceInfoType_t * sit, const axutil_env_t *env) {
+  int i;
+
+  snprintf(input->type, 32, "%s", adb_serviceInfoType_get_type(sit, env));
+  snprintf(input->name, 32, "%s", adb_serviceInfoType_get_name(sit, env));
+  input->urisLen = adb_serviceInfoType_sizeof_uris(sit, env);
+  for (i=0; i<input->urisLen && i<8; i++) {
+    snprintf(input->uris[i], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, i));
+  }
+}
+
+/*
+static inline adb_serviceStatusType_t * copy_service_status_type_to_adb(const axutil_env_t *env, serviceStatusType * input) {
+  adb_serviceStatusType_t *sst = adb_serviceStatusType_create(env);
+  adb_serviceInfoType_t *sit=NULL;
+
+  adb_serviceStatusType_set_localState(sst, env, input->localState);
+  adb_serviceStatusType_set_localEpoch(sst, env, input->localEpoch);
+  adb_serviceStatusType_add_details(sst, env, input->details);
+  
+  sit = copy_service_info_type_to_adb(env, &(input->serviceId));
+  adb_serviceStatusType_set_serviceId(sst, env, sit);
+
+  return (sst);
+}
+
+static inline void copy_service_status_type_from_adb(serviceStatusType *input, adb_serviceStatusType_t *sst, const axutil_env_t *env) {
+  adb_serviceInfoType_t *sit=NULL;
+
+  snprintf(input->localState, 32, "%s", adb_serviceStatusType_get_localState(sst, env));
+  input->localEpoch = adb_serviceStatusType_get_localEpoch(sst, env);
+  snprintf(input->details, 1024, "%s", adb_serviceStatusType_get_details_at(sst, env, 0));
+	   
+  sit = adb_serviceStatusType_get_serviceId(sst, env);
+  copy_service_info_type_from_adb(&(input->serviceId), sit, env);
+
+}
+*/
 #endif // _ADB_HELPERS_H

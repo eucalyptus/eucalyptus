@@ -87,6 +87,8 @@ permission notice:
 #include <storage-windows.h>
 #include <euca_auth.h>
 
+#include <handlers-state.h>
+
 #define SUPERUSER "eucalyptus"
 
 // local globals
@@ -124,7 +126,7 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO, "BundleInstance(): called\n");
@@ -182,7 +184,7 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO, "CancelBundleTask(): called\n");
@@ -239,7 +241,7 @@ int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bu
   op_timer = OP_TIMEOUT;
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
 
@@ -722,7 +724,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -780,7 +782,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO, "DetachVolume(): called\n");
@@ -829,7 +831,7 @@ int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **source
   int rc, i, fail;
 
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -897,7 +899,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   ccInstance *myInstance=NULL;
 
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"AssignAddress(): called\n");
@@ -969,7 +971,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
   int rc, ret;
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -999,7 +1001,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   ccInstance *myInstance=NULL;
 
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"UnassignAddress(): called\n");
@@ -1063,7 +1065,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   int rc, ret;
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -1096,7 +1098,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   int rc, i, j;
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
 
@@ -1129,7 +1131,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver
   op_start = time(NULL);
 
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -1183,7 +1185,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   op_start = time(NULL);
 
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   
@@ -1605,7 +1607,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   op_start = time(NULL);
 
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
 
@@ -1972,7 +1974,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"RunInstances(): called\n");
@@ -2253,7 +2255,7 @@ int doGetConsoleOutput(ncMetadata *meta, char *instId, char **outConsoleOutput) 
   *outConsoleOutput = NULL;
 
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
 
@@ -2329,7 +2331,7 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen) {
   op_start = time(NULL);
 
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"RebootInstances(): called\n");
@@ -2386,7 +2388,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   op_start = time(NULL);
   
   rc = initialize();
-  if (rc) {
+  if (rc || ccIsEnabled()) {
     return(1);
   }
   logprintfl(EUCAINFO,"TerminateInstances(): called\n");
@@ -2562,6 +2564,101 @@ int initialize(void) {
   return(ret);
 }
 
+int ccIsEnabled() {
+  // initialized, but ccState is disabled (refuse to service operations)
+
+  if (!config || config->ccState != ENABLED) {
+    return(1);
+  }
+  return(0);
+}
+
+int ccIsDisabled() {
+  // initialized, but ccState is disabled (refuse to service operations)
+
+  if (!config || config->ccState != DISABLED) {
+    return(1);
+  }
+  return(0);
+}
+
+int ccChangeState(int newstate) {
+  if (config) {
+    config->ccLastState = config->ccState;
+    config->ccState = newstate;
+    return(0);
+  }
+  return(1);
+}
+
+int ccGetStateString(char *statestr, int n) {
+  if (config->ccState == ENABLED) {
+    snprintf(statestr, n, "ENABLED");
+  } else if (config->ccState == DISABLED) {
+    snprintf(statestr, n, "DISABLED");
+  } else if (config->ccState == STOPPED) {
+    snprintf(statestr, n, "STOPPED");
+  } else if (config->ccState == LOADED) {
+    snprintf(statestr, n, "LOADED");
+  } else if (config->ccState == INITIALIZED) {
+    snprintf(statestr, n, "INITIALIZED");
+  } else if (config->ccState == PRIMORDIAL) {
+    snprintf(statestr, n, "PRIMORDIAL");
+  }
+  return(0);
+}
+
+int ccCheckState() {
+  char localDetails[1024];
+  int ret=0;
+
+  if (!config) {
+    return(1);
+  }
+  // check local configuration
+  
+  // configuration
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "%s", config->eucahome);
+    if (check_directory(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find directory '%s'\n", cmd);
+      ret++;
+    }
+  }
+  
+  // shellouts
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", config->eucahome);
+    if (check_file(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      ret++;
+    }
+
+    snprintf(cmd, MAX_PATH, "%s/usr/share/eucalyptus/dynserv.pl", config->eucahome);
+    if (check_file(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      ret++;
+    }
+    
+    snprintf(cmd, MAX_PATH, "ip addr show");
+    if (system(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot run shellout '%s'\n", cmd);
+      ret++;
+    }    
+  }
+  // filesystem
+  
+  // network
+
+  snprintf(localDetails, 1023, "ERRORS=%d", ret);
+  sem_mywait(CONFIG);
+  snprintf(config->ccStateDetails, 1023, "%s", localDetails);
+  sem_mypost(CONFIG);
+  return(ret);
+}
+
 /* 
    As of 1.6.2, the CC will start a background thread to poll its
    collection of nodes.  This thread populates an in-memory cache of
@@ -2594,53 +2691,88 @@ void *monitor_thread(void *in) {
 
     logprintfl(EUCADEBUG, "monitor_thread(): running\n");
     
-    rc = refresh_resources(&ccMeta, 60, 1);
-    if (rc) {
-      logprintfl(EUCAWARN, "monitor_thread(): call to refresh_resources() failed in monitor thread\n");
-    }
-    
-    rc = refresh_instances(&ccMeta, 60, 1);
-    if (rc) {
-      logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
-    }
-    
-    sem_mywait(CONFIG);
-    snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", config->eucahome);
-    pidstr = file2str(pidfile);
-    if (config->kick_dhcp || !pidstr || check_process(atoi(pidstr), "euca-dhcp.pid")) {
-      rc = vnetKickDHCP(vnetconfig);
+    if (config->ccState == ENABLED) {
+      rc = refresh_resources(&ccMeta, 60, 1);
       if (rc) {
-	logprintfl(EUCAERROR, "monitor_thread(): cannot start DHCP daemon\n");
-      } else {
-	config->kick_dhcp = 0;
-      }
-    }
-    sem_mypost(CONFIG);
-
-    if (config->use_proxy) {
-      rc = image_cache_invalidate();
-      if (rc) {
-	logprintfl(EUCAERROR, "monitor_thread(): cannot invalidate image cache\n");
+	logprintfl(EUCAWARN, "monitor_thread(): call to refresh_resources() failed in monitor thread\n");
       }
       
-      snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/httpd-dynserv.pid", config->eucahome);
-      pidstr = file2str(pidfile);
-      if (pidstr) {
-	if (check_process(atoi(pidstr), "dynserv-httpd.conf")) {
+      rc = refresh_instances(&ccMeta, 60, 1);
+      if (rc) {
+	logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
+      }
+
+      sem_mywait(CONFIG);
+
+      if (config->kick_network) {
+	logprintfl(EUCADEBUG, "monitor_thread(): refreshing network cache\n");
+	rc = map_instanceCache(validCmp, NULL, instNetParamsSet, NULL);
+	if (rc) {
+	  logprintfl(EUCAERROR, "monitor_thread(): man_instanceCache() failed to reset networkparams from instanceCache\n");
+	} else {
+	  rc = restoreNetworkState();
+	  if (rc) {
+	    // failed to restore network state, continue 
+	    logprintfl(EUCAWARN, "monitor_thread(): restoreNetworkState returned false (may be already restored)\n");
+	  } else {
+	    config->kick_network = 0;
+	  }
+	}
+      }
+      
+      snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", config->eucahome);
+      if (!check_file(pidfile)) {
+	pidstr = file2str(pidfile);
+      } else {
+	pidstr = NULL;
+      }
+      if (config->kick_dhcp || !pidstr || check_process(atoi(pidstr), "euca-dhcp.pid")) {
+	rc = vnetKickDHCP(vnetconfig);
+	if (rc) {
+	  logprintfl(EUCAERROR, "monitor_thread(): cannot start DHCP daemon\n");
+	} else {
+	  config->kick_dhcp = 0;
+	}
+      }
+      sem_mypost(CONFIG);
+      
+      if (config->use_proxy) {
+	rc = image_cache_invalidate();
+	if (rc) {
+	  logprintfl(EUCAERROR, "monitor_thread(): cannot invalidate image cache\n");
+	}
+	
+	snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/httpd-dynserv.pid", config->eucahome);
+	pidstr = file2str(pidfile);
+	if (pidstr) {
+	  if (check_process(atoi(pidstr), "dynserv-httpd.conf")) {
+	    rc = image_cache_proxykick(resourceCache->resources, &(resourceCache->numResources));
+	    if (rc) {
+	      logprintfl(EUCAERROR, "monitor_thread(): could not start proxy cache\n");
+	    }
+	  }
+	  free(pidstr);
+	} else {
 	  rc = image_cache_proxykick(resourceCache->resources, &(resourceCache->numResources));
 	  if (rc) {
 	    logprintfl(EUCAERROR, "monitor_thread(): could not start proxy cache\n");
 	  }
 	}
-	free(pidstr);
-      } else {
-	rc = image_cache_proxykick(resourceCache->resources, &(resourceCache->numResources));
-	if (rc) {
-	  logprintfl(EUCAERROR, "monitor_thread(): could not start proxy cache\n");
-	}
+      }
+
+      
+    } else {
+      // this CC is not enabled, ensure that local network state is disabled
+      rc = clean_network_state();
+      if (rc) {
+	logprintfl(EUCAERROR, "monitor_thread(): could not cleanup network state\n");
       }
     }
 
+    if (ccCheckState()) {
+      logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() failed\n");
+    }
+    
     shawn();
     
     logprintfl(EUCADEBUG, "monitor_thread(): done\n");
@@ -2667,6 +2799,7 @@ int init_pthreads() {
       sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
       sigaction(SIGTERM, &newsigact, NULL);
       config->kick_dhcp = 1;
+      config->kick_network = 1;
       monitor_thread(NULL);
       exit(0);
     } else {
@@ -2895,6 +3028,7 @@ int init_config(void) {
   }
   
   if (config->initialized) {
+    /*
     // some other thread has already initialized the configuration
     logprintfl(EUCAINFO, "init_config():  another thread has already set up config, skipping\n");
     rc = restoreNetworkState();
@@ -2902,6 +3036,7 @@ int init_config(void) {
       // failed to restore network state, continue 
       logprintfl(EUCAWARN, "init_config(): restoreNetworkState returned false (may be already restored)\n");
     }
+    */
     config_init = 1;
     return(0);
   }
@@ -3281,6 +3416,8 @@ int init_config(void) {
   config->ncFanout = ncFanout;
   locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
   config->initialized = 1;
+  config->ccLastState = DISABLED;
+  config->ccState = ENABLED;
   snprintf(config->configFiles[0], MAX_PATH, "%s", configFiles[0]);
   snprintf(config->configFiles[1], MAX_PATH, "%s", configFiles[1]);
   

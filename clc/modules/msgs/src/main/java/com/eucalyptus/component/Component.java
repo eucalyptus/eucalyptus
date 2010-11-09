@@ -63,6 +63,7 @@
 package com.eucalyptus.component;
 
 import java.net.URI;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -79,8 +80,13 @@ import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.msgs.ServiceId;
+import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
 
 /**
  * TODO: DOCUMENT. yes pls.
@@ -118,6 +124,20 @@ public class Component implements ComponentInformation, HasName<Component> {
   private final Map<String, Service>                            services = Maps.newConcurrentHashMap( );
   private ServiceBuilder<ServiceConfiguration>                  builder;                                //TODO: lonely mutable is lonely.
                                                                                                          
+  public final Iterator<ServiceInfoType> getUnorderedIterator( ) {
+    return Iterables.transform( this.services.values( ), new Function<Service,ServiceInfoType>(){
+
+      @Override
+      public ServiceInfoType apply( final Service arg0 ) {
+        return new ServiceInfoType() {{
+          setPartition( arg0.getServiceConfiguration( ).getPartition( ) ); 
+          setName( arg0.getServiceConfiguration( ).getName( ) );
+          setType( Component.this.getName( ) );
+          getUris( ).add( arg0.getServiceConfiguration( ).getUri( ) );
+        }};
+      }} ).iterator( );
+  }
+
   Component( String name, URI configFile ) throws ServiceRegistrationException {
     this.name = name;
     this.component = initComponent( );
