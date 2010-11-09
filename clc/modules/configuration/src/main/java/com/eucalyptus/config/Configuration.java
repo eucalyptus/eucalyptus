@@ -82,6 +82,7 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
@@ -198,7 +199,7 @@ public class Configuration {
     for( ComponentConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
       for( Service s : Components.lookup( conf.getComponent( ) ).getServices( ) ) {
         if( s.getServiceConfiguration( ).equals( conf ) ) {
-          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), s.getUri( ).getHost( ), s.getState( ).toString( ), "everything is fine"/**ASAP:FIXME:GRZE**/ ) );
+          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), s.getUri( ).getHost( ), s.getState( ).toString( ), Lists.newArrayList( "everything is fine" ).toString()/**ASAP:FIXME:GRZE**/ ) );
         }
       }
     }
