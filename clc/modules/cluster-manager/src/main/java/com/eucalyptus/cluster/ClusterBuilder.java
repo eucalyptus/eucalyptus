@@ -45,11 +45,11 @@ import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   private static Logger LOG = Logger.getLogger( ClusterBuilder.class );
   @Override
-  public Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     if ( !testClusterCredentialsDirectory( name ) ) {
       throw new ServiceRegistrationException( "Cluster registration failed because the key directory cannot be created." );
     } else {
-      return super.checkAdd( name, host, port );
+      return super.checkAdd( partition, name, host, port );
     }
   }
   
@@ -180,7 +180,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public Boolean checkRemove( String name ) throws ServiceRegistrationException {
+  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     try {
       Configuration.getStorageControllerConfiguration( name );
       throw new ServiceRegistrationException( "Cannot deregister a cluster controller when there is a storage controller registered." );

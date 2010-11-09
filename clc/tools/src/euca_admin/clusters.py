@@ -9,11 +9,12 @@ SERVICE_PATH = '/services/Configuration'
 class Cluster():
   
   def __init__(self, cluster_name=None, host_name=None,
-               port=None, partition=None):
+               port=None, partition=None, state=None):
     self.cluster_name = cluster_name
     self.host_name = host_name
     self.port = port
     self.partition = partition
+    self.state = state
     self.euca = EucaAdmin(path=SERVICE_PATH)
 
           
@@ -85,6 +86,7 @@ class Cluster():
       params['Partition'] = partition
     try:
       reply = self.euca.connection.get_object('RegisterCluster',
+                                              params,
                                               BooleanResponse)
       print reply
     except EC2ResponseError, ex:

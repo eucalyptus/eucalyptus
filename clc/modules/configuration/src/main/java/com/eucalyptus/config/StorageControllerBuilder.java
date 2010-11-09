@@ -37,14 +37,14 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   }
   
   @Override
-  public Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     try {
       Configuration.getClusterConfiguration( name );
     } catch ( Exception e1 ) {
       throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
                                               + "  No cluster found with the name: " + name );
     }
-    return super.checkAdd( name, host, port );
+    return super.checkAdd( partition, name, host, port );
   }
 
   @Override
@@ -57,8 +57,8 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   }
 
   @Override
-  public Boolean checkRemove( String name ) throws ServiceRegistrationException {
-    return super.checkRemove( name );
+  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
+    return super.checkRemove( partition, name );
   }
 
   @Override

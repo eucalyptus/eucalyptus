@@ -8,11 +8,12 @@ SERVICE_PATH = '/services/Configuration'
 class Walrus():
   
   def __init__(self, walrus_name=None, host_name=None,
-               port=None, partition=None):
+               port=None, partition=None, state=None):
     self.walrus_name = walrus_name
     self.host_name = host_name
     self.port = port
     self.partition = partition
+    self.state = state
     self.euca = EucaAdmin(path=SERVICE_PATH)
           
   def __repr__(self):

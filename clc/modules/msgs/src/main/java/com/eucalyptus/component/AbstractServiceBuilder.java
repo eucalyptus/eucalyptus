@@ -16,7 +16,7 @@ import com.eucalyptus.util.NetworkUtil;
 public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
   private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
   @Override
-  public Boolean checkRemove( String name ) throws ServiceRegistrationException {
+  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     try {
       this.lookupByName( name );
       return true;

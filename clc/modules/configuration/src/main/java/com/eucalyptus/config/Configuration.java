@@ -104,15 +104,16 @@ public class Configuration {
     ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     String name = request.getName( );
+    String partition = request.getPartition( );
     String hostName = request.getHost();
     Integer port = request.getPort( );
-    reply.set_return( register( builder, "default" /** ASAP: FIXME: GRZE **/, name, hostName, port ) );
+    reply.set_return( register( builder, partition != null ? partition : "default", name, hostName, port ) );
     return reply;
   }
 
   private boolean register( ServiceBuilder builder, String partition, String name, String hostName, Integer port ) throws ServiceRegistrationException {
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + name + "@" + hostName + ":" + port );
-    if( !builder.checkAdd( name, hostName, port ) ) {
+    if( !builder.checkAdd( null, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
       return false;
     }
@@ -139,7 +140,7 @@ public class Configuration {
   private boolean deregister( String name, ServiceBuilder builder ) throws ServiceRegistrationException, EucalyptusCloudException {
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     try {
-      if( !builder.checkRemove( name ) ) {
+      if( !builder.checkRemove( null, name ) ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
         throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove returned false.  It is unsafe to currently deregister, please check the logs for additional information." );
       }
