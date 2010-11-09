@@ -3,6 +3,7 @@ package com.eucalyptus.config;
 import java.util.List;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;

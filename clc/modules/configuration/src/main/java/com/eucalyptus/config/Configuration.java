@@ -124,7 +124,7 @@ public class Configuration {
     }
     try {
       ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
-      builder.getComponent( ).buildService( newComponent );
+      builder.getComponent( ).loadService( newComponent );
       builder.getComponent( ).startService( newComponent );
       return true;
     } catch ( Throwable e ) {
@@ -163,7 +163,17 @@ public class Configuration {
     }
     try {
       try {
-        builder.getComponent( ).removeService( conf );
+        builder.getComponent( ).disableService( conf );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+      }
+      try {
+        builder.getComponent( ).stopService( conf );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+      }
+      try {
+        builder.getComponent( ).destroyService( conf );
       } catch ( Throwable ex ) {
         LOG.error( ex , ex );
       }
@@ -198,7 +208,7 @@ public class Configuration {
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
-    for( ComponentConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
+    for( ServiceConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
       try {
         Service s = Components.lookup( conf );
         listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), Lists.newArrayList( "everything is fine" ).toString()/**ASAP:FIXME:GRZE**/ ) );

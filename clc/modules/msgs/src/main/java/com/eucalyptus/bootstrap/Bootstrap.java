@@ -326,7 +326,7 @@ public class Bootstrap {
   @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
     for( com.eucalyptus.bootstrap.Component comp : com.eucalyptus.bootstrap.Component.values( ) ) {
-      if( !Components.contains( comp ) ) {
+      if( !Components.contains( comp ) && !comp.any.equals( comp ) ) {
         try {
           Components.create( comp.name( ), null );
         } catch ( ServiceRegistrationException ex ) {
@@ -441,7 +441,7 @@ public class Bootstrap {
    * <li><b>Print configurations</b>: The configuration is printed for review.</li>
    * </ol>
    * 
-   * @see Component#buildService()
+   * @see Component#initService()
    * @see Component#startService(com.eucalyptus.component.ServiceConfiguration)
    * @see ServiceJarDiscovery
    * @see Bootstrap#loadConfigs
@@ -451,12 +451,6 @@ public class Bootstrap {
    * @throws Throwable
    */
   public static void initialize( ) throws Throwable {
-    LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    Iterables.all( Stage.list( ), loadConfigs );
-    Iterables.all( Components.list( ), Component.Transition.INITIALIZING.getCallback( ) );
-    
-    LOG.info( LogUtil.header( "Initial component configuration:" ) );
-    Iterables.all( Components.list( ), Components.configurationPrinter( ) );
 
     /**
      * run discovery to find (primarily) bootstrappers, msg typs, bindings, util-providers, etc. See
@@ -466,6 +460,13 @@ public class Bootstrap {
      */
     LOG.info( LogUtil.header( "Initializing discoverable bootstrap resources." ) );
     Bootstrap.doDiscovery( );
+
+    LOG.info( LogUtil.header( "Initializing component resources:" ) );
+    Iterables.all( Stage.list( ), loadConfigs );
+    Iterables.all( Components.list( ), Component.Transition.INITIALIZING.getCallback( ) );
+    
+    LOG.info( LogUtil.header( "Initial component configuration:" ) );
+    Iterables.all( Components.list( ), Components.configurationPrinter( ) );
 
     /**
      * Create the component stubs (but do not startService) to do dependency checks on bootstrappers
@@ -477,7 +478,7 @@ public class Bootstrap {
       public void fire( Component comp ) {
         if( ( comp.getPeer( ).isEnabled( ) && comp.getPeer( ).isAlwaysLocal( ) ) || ( Components.delegate.eucalyptus.isLocal( ) && comp.getPeer( ).isCloudLocal( ) ) ){
           try {
-            comp.buildService( );
+            comp.initService( );
           } catch ( ServiceRegistrationException ex ) {
             BootstrapException.throwFatal( ex.getMessage( ), ex );
           }
@@ -487,7 +488,8 @@ public class Bootstrap {
     
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
-    Iterables.all( Components.list( ), Component.Transition.INITIALIZE.getCallback( ) );
+    /** ASAP:FIXME:GRZE **/
+    Iterables.all( Components.list( ), Component.Transition.INITIALIZING.getCallback( ) );
     LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
   }
   
@@ -510,10 +512,10 @@ public class Bootstrap {
                                                                        props.load( u.toURL( ).openStream( ) );
                                                                        String name = props.getProperty( "name" );
                                                                        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_CONFIGURATION, name ).trace( );
-                                                                       if ( Components.contains( name ) /** make this not use a string? **/ ) {
-                                                                         throw BootstrapException.throwFatal( "Duplicate component definition in: "
-                                                                                                              + u.toASCIIString( ) );
-                                                                       } else {
+//                                                                       if ( Components.contains( name ) /** make this not use a string? **/ ) {
+//                                                                         throw BootstrapException.throwFatal( "Duplicate component definition in: "
+//                                                                                                              + u.toASCIIString( ) );
+//                                                                       } else {
                                                                          try {
                                                                            Components.create( name, u );
                                                                            LOG.debug( "Loaded " + name + " from " + u );
@@ -522,7 +524,7 @@ public class Bootstrap {
                                                                            throw BootstrapException.throwFatal( "Error in component bootstrap: "
                                                                                                                     + e.getMessage( ), e );
                                                                          }
-                                                                       }
+//                                                                       }
                                                                        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_COMPONENT, name ).info( );
                                                                      }
                                                                    } catch ( IOException e ) {

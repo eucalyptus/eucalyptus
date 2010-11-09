@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTSÕ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -215,7 +215,7 @@ public class ComponentState {
         on( Transition.DESTROYING ).from( State.STOPPED ).to( State.LOADED ).error( State.BROKEN ).run( destroyTransition );
         on( Transition.READY_CHECK ).from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).run( checkTransition );
         on( Transition.DISABLED_CHECK ).from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).run( checkTransition );
-        on( Transition.ENABLED_CHECK ).from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).run( checkTransition );
+        on( Transition.ENABLED_CHECK ).from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).run( checkTransition );
       }
     }.newAtomicState( );
   }

@@ -2,8 +2,8 @@ package com.eucalyptus.component;
 
 import java.lang.reflect.Modifier;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.config.Handles;
 import com.eucalyptus.system.Ats;
 
 public class ServiceBuilderDiscovery extends ServiceJarDiscovery {

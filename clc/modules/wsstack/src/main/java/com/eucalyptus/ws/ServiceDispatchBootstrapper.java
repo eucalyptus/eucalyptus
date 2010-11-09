@@ -80,7 +80,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
-@Provides( com.eucalyptus.bootstrap.Component.any )
+@Provides( com.eucalyptus.bootstrap.Component.bootstrap )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
@@ -114,7 +114,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       for ( ServiceConfiguration s : comp.list( ) ) {
         if ( euca.isLocal( ) && euca.getPeer( ).hasDispatcher( ) ) {
           try {
-            comp.buildService( s );
+            comp.loadService( s );
           } catch ( ServiceRegistrationException ex ) {
             LOG.error( ex, ex );
             failed = true;

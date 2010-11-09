@@ -1,6 +1,7 @@
 package com.eucalyptus.config;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;

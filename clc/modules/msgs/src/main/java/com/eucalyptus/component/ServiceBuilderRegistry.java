@@ -66,18 +66,21 @@ package com.eucalyptus.component;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
 import com.google.common.collect.Maps;
 public class ServiceBuilderRegistry {
-
+  private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );
   private static Map<Class,ServiceBuilder<ServiceConfiguration>> builders = Maps.newConcurrentHashMap( );
   private static Map<Component,ServiceBuilder<ServiceConfiguration>> componentBuilders = Maps.newConcurrentHashMap( );
 
   public static void addBuilder( Class c, ServiceBuilder b ) {
+    LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     builders.put( c, b );
   }
 
   public static void addBuilder( Component c, ServiceBuilder b ) {
+    LOG.info( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     componentBuilders.put( c, b );
   }
 
