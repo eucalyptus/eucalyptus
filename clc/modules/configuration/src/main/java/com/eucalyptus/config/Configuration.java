@@ -111,7 +111,7 @@ public class Configuration {
     String partition = request.getPartition( );
     String hostName = request.getHost();
     Integer port = request.getPort( );
-    reply.set_return( register( builder, partition != null ? partition : "default", name, hostName, port ) );
+    reply.set_return( register( builder, partition != null ? partition : name, name, hostName, port ) );
     return reply;
   }
 
