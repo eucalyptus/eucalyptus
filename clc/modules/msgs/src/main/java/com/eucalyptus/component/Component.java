@@ -191,7 +191,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   public void loadService( ServiceConfiguration config ) throws ServiceRegistrationException {
     Service service = new Service( this, config );
     this.setupService( service );
-    if( service.isLocal( ) ) {
+    if( service.isLocal( ) && State.INITIALIZED.equals( this.getState( ) ) ) {
       this.stateMachine.transition( Transition.LOADING );
     }
   }

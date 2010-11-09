@@ -145,8 +145,21 @@ public class ServiceContext {
 
   static boolean loadContext( ) {
     List<ConfigResource> configs = Lists.newArrayList( );
+    configs.addAll( Components.lookup( Component.bootstrap ).getConfiguration( ).getResource( ).getConfigurations( ) );
+    if( Components.lookup( Component.eucalyptus ).isAvailableLocally( ) ) {
+//      configs.addAll( Components.lookup( Component.eucalyptus ).getConfiguration( ).getResource( ).getConfigurations( ) );
+      for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
+        if ( comp.getPeer( ).isCloudLocal( ) ) {
+          Resource rsc = comp.getConfiguration( ).getResource( );
+          if ( rsc != null ) {
+            LOG.info( "-> Preparing cfg: " + rsc );
+            configs.addAll( rsc.getConfigurations( ) );
+          }
+        }
+      }
+    }
     for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
-      if ( comp.isRunningLocally( ) || Component.bootstrap.equals( comp ) ) {
+      if ( comp.isRunningLocally( ) ) {
         Resource rsc = comp.getConfiguration( ).getResource( );
         if ( rsc != null ) {
           LOG.info( "-> Preparing cfg: " + rsc );
@@ -167,6 +180,13 @@ public class ServiceContext {
   }
 
   static boolean startup( ) {
+    try {
+      LOG.info( "Loading system bus." );
+      loadContext( );
+    } catch ( Exception e ) {
+      LOG.fatal( "Failed to configure services.", e );
+      return false;
+    }
     try {
       LOG.info( "Starting up system bus." );
       createContext( );

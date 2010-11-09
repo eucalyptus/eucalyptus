@@ -512,19 +512,17 @@ public class Bootstrap {
                                                                        props.load( u.toURL( ).openStream( ) );
                                                                        String name = props.getProperty( "name" );
                                                                        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_CONFIGURATION, name ).trace( );
-//                                                                       if ( Components.contains( name ) /** make this not use a string? **/ ) {
-//                                                                         throw BootstrapException.throwFatal( "Duplicate component definition in: "
-//                                                                                                              + u.toASCIIString( ) );
-//                                                                       } else {
-                                                                         try {
-                                                                           Components.create( name, u );
-                                                                           LOG.debug( "Loaded " + name + " from " + u );
-                                                                         } catch ( ServiceRegistrationException e ) {
-                                                                           LOG.debug( e, e );
-                                                                           throw BootstrapException.throwFatal( "Error in component bootstrap: "
-                                                                                                                    + e.getMessage( ), e );
-                                                                         }
-//                                                                       }
+                                                                       if ( Components.contains( name ) ) {
+                                                                         Components.deregister( Components.lookup( name ) );
+                                                                       }
+                                                                       try {
+                                                                         Components.create( name, u );
+                                                                         LOG.debug( "Loaded " + name + " from " + u );
+                                                                       } catch ( ServiceRegistrationException e ) {
+                                                                         LOG.debug( e, e );
+                                                                         throw BootstrapException.throwFatal( "Error in component bootstrap: "
+                                                                                                                  + e.getMessage( ), e );
+                                                                       }
                                                                        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_COMPONENT, name ).info( );
                                                                      }
                                                                    } catch ( IOException e ) {

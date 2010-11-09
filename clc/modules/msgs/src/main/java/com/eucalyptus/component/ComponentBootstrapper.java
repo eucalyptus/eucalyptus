@@ -110,11 +110,11 @@ public class ComponentBootstrapper {
     String name = transition.name( ).substring( 10 ).toLowerCase( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
       for ( Bootstrapper b : this.bootstrappers.get( s ) ) {
-        EventRecord.here( Bootstrap.class, transition, "stage", s.name( ), this.component.getName( ), b.getClass( ).getCanonicalName( ) ).info( );
+        EventRecord.here( Bootstrap.class, transition, this.component.getName( ), "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).info( );
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {
-            throw BootstrapException.throwError( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name + "( ): terminating bootstrap." );
+            throw BootstrapException.throwError( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ) );
           }
         } catch ( Throwable e ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.component.getName( ), b.getClass( ).getCanonicalName( ) ).info( );

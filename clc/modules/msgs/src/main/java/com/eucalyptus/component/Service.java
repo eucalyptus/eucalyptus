@@ -194,7 +194,11 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
    * @return the state
    */
   public Component.State getState( ) {
-    return this.state;
+    if( this.serviceConfiguration.isLocal( ) ) {
+      return this.parent.getState( );
+    } else {
+      return this.state;
+    }
   }
 
 }

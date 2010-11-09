@@ -103,8 +103,8 @@ public class ComponentState {
           parent.getBootstrapper( ).load( );
           transitionCallback.fire( );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          ComponentState.this.details.add( ex.getMessage( ) );
+          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
+          ComponentState.this.details.add( ex.toString( ) );
           transitionCallback.fireException( ex );
         }
       }
@@ -119,8 +119,8 @@ public class ComponentState {
           parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
           transitionCallback.fire( );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          ComponentState.this.details.add( ex.getMessage( ) );
+          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
+          ComponentState.this.details.add( ex.toString( ) );
           transitionCallback.fireException( ex );
         }
       }
@@ -139,8 +139,8 @@ public class ComponentState {
           parent.getBuilder( ).fireEnable( parent.getLocalService( ).getServiceConfiguration( ) );
           transitionCallback.fire( );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          ComponentState.this.details.add( ex.getMessage( ) );
+          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
+          ComponentState.this.details.add( ex.toString( ) );
           transitionCallback.fireException( ex );
         }
       }
@@ -155,8 +155,8 @@ public class ComponentState {
           parent.getBuilder( ).fireDisable( parent.getLocalService( ).getServiceConfiguration( ) );
           transitionCallback.fire( );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          ComponentState.this.details.add( ex.getMessage( ) );
+          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
+          ComponentState.this.details.add( ex.toString( ) );
           transitionCallback.fireException( ex );
         }
       }
@@ -171,8 +171,8 @@ public class ComponentState {
           parent.getBuilder( ).fireStop( parent.getLocalService( ).getServiceConfiguration( ) );
           transitionCallback.fire( );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          ComponentState.this.details.add( ex.getMessage( ) );
+          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
+          ComponentState.this.details.add( ex.toString( ) );
           transitionCallback.fireException( ex );
         }
       }
@@ -187,8 +187,8 @@ public class ComponentState {
           parent.getBuilder( ).fireCheck( parent.getLocalService( ).getServiceConfiguration( ) );
           transitionCallback.fire( );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          ComponentState.this.details.add( ex.getMessage( ) );
+          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
+          ComponentState.this.details.add( ex.toString( ) );
           if( State.ENABLED.equals( ComponentState.this.stateMachine.getState( ) ) ) {
             try {
               parent.getBootstrapper( ).disable( );
@@ -210,8 +210,8 @@ public class ComponentState {
           parent.getBootstrapper( ).destroy( );
           transitionCallback.fire( );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          ComponentState.this.details.add( ex.getMessage( ) );
+          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
+          ComponentState.this.details.add( ex.toString( ) );
           transitionCallback.fireException( ex );
         }
       }
