@@ -119,34 +119,16 @@ public class Component implements ComponentInformation, HasName<Component> {
     }
   }
   
-  private final String                                          name;
-  private final com.eucalyptus.bootstrap.Component              component;
-  private final Configuration                                   configuration;
-  private final AtomicMarkedState<Component, State, Transition> stateMachine;
-  private final AtomicBoolean                                   enabled      = new AtomicBoolean( false );
-  private final AtomicBoolean                                   local        = new AtomicBoolean( false );
-  private final Map<String, Service>                            services     = Maps.newConcurrentHashMap( );
-  private final ServiceBuilder<ServiceConfiguration>            builder;                                            //TODO: lonely mutable is lonely.
-  private final ComponentBootstrapper                           bootstrapper;
-  private final NavigableSet<String>                            details      = new ConcurrentSkipListSet<String>( );
-  private final AtomicReference<Service>                        localService = new AtomicReference( null );
-  
-  public final Iterator<ServiceInfoType> getUnorderedIterator( ) {
-    return Iterables.transform( this.services.values( ), new Function<Service, ServiceInfoType>( ) {
-      
-      @Override
-      public ServiceInfoType apply( final Service arg0 ) {
-        return new ServiceInfoType( ) {
-          {
-            setPartition( arg0.getServiceConfiguration( ).getPartition( ) );
-            setName( arg0.getServiceConfiguration( ).getName( ) );
-            setType( Component.this.getName( ) );
-            getUris( ).add( arg0.getServiceConfiguration( ).getUri( ) );
-          }
-        };
-      }
-    } ).iterator( );
-  }
+  private final String                               name;
+  private final com.eucalyptus.bootstrap.Component   component;
+  private final Configuration                        configuration;
+  private final AtomicBoolean                        enabled      = new AtomicBoolean( false );
+  private final AtomicBoolean                        local        = new AtomicBoolean( false );
+  private final Map<String, Service>                 services     = Maps.newConcurrentHashMap( );
+  private final ServiceBuilder<ServiceConfiguration> builder;
+  private final ComponentBootstrapper                bootstrapper;
+  private final ComponentState                       stateMachine;
+  private final AtomicReference<Service>             localService = new AtomicReference( null );
   
   Component( String name, URI configFile ) throws ServiceRegistrationException {
     this.name = name;
@@ -169,133 +151,6 @@ public class Component implements ComponentInformation, HasName<Component> {
     }
     this.bootstrapper = new ComponentBootstrapper( this );
     this.stateMachine = this.buildStateMachine( );
-  }
-  
-  private AtomicMarkedState<Component, State, Transition> buildStateMachine( ) {
-    final SimpleTransitionListener<Component> loadTransition = new SimpleTransitionListener<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        Component.this.details.clear( );
-        try {
-          Component.this.bootstrapper.load( );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          Component.this.details.add( ex.getMessage( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final SimpleTransitionListener<Component> startTransition = new SimpleTransitionListener<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        Component.this.details.clear( );
-        try {
-          Component.this.bootstrapper.start( );
-          Component.this.builder.fireStart( Component.this.getLocalService( ).getServiceConfiguration( ) );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          Component.this.details.add( ex.getMessage( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final SimpleTransitionListener<Component> enableTransition = new SimpleTransitionListener<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        Component.this.details.clear( );
-        try {
-          Component.this.bootstrapper.enable( );
-          Component.this.builder.fireEnable( Component.this.getLocalService( ).getServiceConfiguration( ) );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          Component.this.details.add( ex.getMessage( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final SimpleTransitionListener<Component> disableTransition = new SimpleTransitionListener<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        Component.this.details.clear( );
-        try {
-          Component.this.bootstrapper.disable( );
-          Component.this.builder.fireDisable( Component.this.getLocalService( ).getServiceConfiguration( ) );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          Component.this.details.add( ex.getMessage( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final SimpleTransitionListener<Component> stopTransition = new SimpleTransitionListener<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        Component.this.details.clear( );
-        try {
-          Component.this.bootstrapper.stop( );
-          Component.this.builder.fireStop( Component.this.getLocalService( ).getServiceConfiguration( ) );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          Component.this.details.add( ex.getMessage( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final SimpleTransitionListener<Component> checkTransition = new SimpleTransitionListener<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        Component.this.details.clear( );
-        try {
-          Component.this.bootstrapper.check( );
-          Component.this.builder.fireCheck( Component.this.getLocalService( ).getServiceConfiguration( ) );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          Component.this.details.add( ex.getMessage( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final SimpleTransitionListener<Component> destroyTransition = new SimpleTransitionListener<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        Component.this.details.clear( );
-        try {
-          Component.this.bootstrapper.destroy( );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-          Component.this.details.add( ex.getMessage( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    return new StateMachineBuilder<Component, State, Transition>( this, State.PRIMORDIAL ) {
-      {
-        on( Transition.INITIALIZING ).from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).noop( );
-        on( Transition.LOADING ).from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).run( loadTransition );
-        on( Transition.STARTING ).from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).run( startTransition );
-        on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).run( enableTransition );
-        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).run( disableTransition );
-        on( Transition.STOPPING ).from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).run( stopTransition );
-        on( Transition.DESTROYING ).from( State.STOPPED ).to( State.LOADED ).error( State.BROKEN ).run( destroyTransition );
-        on( Transition.READY_CHECK ).from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).run( checkTransition );
-        on( Transition.DISABLED_CHECK ).from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).run( checkTransition );
-        on( Transition.ENABLED_CHECK ).from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).run( checkTransition );
-      }
-    }.newAtomicState( );
   }
   
   protected Service getLocalService( ) {
@@ -355,7 +210,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @throws ServiceRegistrationException
    */
   private Service setupService( Service service ) throws ServiceRegistrationException {
-    if( service.getServiceConfiguration( ).isLocal( ) ) {
+    if ( service.getServiceConfiguration( ).isLocal( ) ) {
       this.localService.set( service );
     }
     this.services.put( service.getName( ), service );
@@ -379,6 +234,25 @@ public class Component implements ComponentInformation, HasName<Component> {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     this.builder.fireStart( service );
   }
+  
+  public final Iterator<ServiceInfoType> getUnorderedIterator( ) {
+    return Iterables.transform( this.services.values( ), new Function<Service, ServiceInfoType>( ) {
+      
+      @Override
+      public ServiceInfoType apply( final Service arg0 ) {
+        return new ServiceInfoType( ) {
+          {
+            setPartition( arg0.getServiceConfiguration( ).getPartition( ) );
+            setName( arg0.getServiceConfiguration( ).getName( ) );
+            setType( Component.this.getName( ) );
+            getUris( ).add( arg0.getServiceConfiguration( ).getUri( ) );
+          }
+        };
+      }
+    } ).iterator( );
+  }
+  
+
   
   /**
    * @see com.eucalyptus.util.fsm.AtomicMarkedState#getState()
