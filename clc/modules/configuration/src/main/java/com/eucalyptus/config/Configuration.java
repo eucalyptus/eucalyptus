@@ -126,6 +126,7 @@ public class Configuration {
       ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       builder.getComponent( ).loadService( newComponent );
       builder.getComponent( ).startService( newComponent );
+      builder.getComponent( ).enableService( newComponent );
       return true;
     } catch ( Throwable e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );

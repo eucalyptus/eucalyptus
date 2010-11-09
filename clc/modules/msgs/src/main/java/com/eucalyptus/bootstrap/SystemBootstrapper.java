@@ -186,7 +186,7 @@ public class SystemBootstrapper {
     LOG.warn( "Shutting down Eucalyptus." );
     EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
     EventRecord.flush( );
-    ServiceContext.stopContext( );
+    ServiceContext.shutdown( );
     return true;
   }
   

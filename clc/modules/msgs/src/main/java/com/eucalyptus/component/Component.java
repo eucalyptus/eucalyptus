@@ -74,6 +74,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Record;
@@ -218,6 +222,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     if( service.isLocal( ) ) {
       this.stateMachine.transition( Transition.STARTING );
+      this.stateMachine.transition( Transition.READY_CHECK );
     } else {
       this.builder.fireStart( service );
     }
@@ -226,6 +231,9 @@ public class Component implements ComponentInformation, HasName<Component> {
   public void enableService( ServiceConfiguration service ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     if( service.isLocal( ) ) {
+      if( State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
+        this.stateMachine.transition( Transition.READY_CHECK );
+      }
       this.stateMachine.transition( Transition.ENABLING );
     } else {
       this.builder.fireStart( service );
@@ -235,7 +243,9 @@ public class Component implements ComponentInformation, HasName<Component> {
   public void disableService( ServiceConfiguration service ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     if( service.isLocal( ) ) {
-      this.stateMachine.transition( Transition.DISABLING );
+      if( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+        this.stateMachine.transition( Transition.DISABLING );
+      }
     } else {
       this.builder.fireStart( service );
     }
@@ -244,6 +254,9 @@ public class Component implements ComponentInformation, HasName<Component> {
   public void stopService( ServiceConfiguration service ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     if( service.isLocal( ) ) {
+      if( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+        this.stateMachine.transition( Transition.DISABLING );
+      }
       this.stateMachine.transition( Transition.STOPPING );
     } else {
       this.builder.fireStart( service );
@@ -312,7 +325,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    * 
    * @return true if the component could be run locally.
    */
-  public Boolean isEnabled( ) {
+  public Boolean isAvailableLocally( ) {
     return this.enabled.get( );
   }
   
@@ -471,4 +484,27 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.bootstrapper;
   }
   
+  public static class CheckEvent implements EventListener {
+    public static void register( ) {
+      ListenerRegistry.getInstance( ).register( ClockTick.class, new CheckEvent( ) );
+    }
+
+    @Override
+    public void fireEvent( Event event ) {
+      for( Component c : Components.list( ) ) {
+        try {
+          if( c.isAvailableLocally( ) && (c.getState( ).equals( State.NOTREADY ) ) ) {
+            c.stateMachine.transition( Transition.READY_CHECK );          
+          } else if( c.isAvailableLocally( ) && (c.getState( ).equals( State.ENABLED ) ) ) {
+            c.stateMachine.transition( Transition.ENABLED_CHECK );          
+          } else if( c.isAvailableLocally( ) && (c.getState( ).equals( State.DISABLED ) ) ) {
+            c.stateMachine.transition( Transition.DISABLED_CHECK );          
+          }
+        } catch ( Throwable ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    }
+    public void advertiseEvent( Event event ) {}
+  }
 }

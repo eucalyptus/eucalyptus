@@ -225,7 +225,7 @@ public class Components {
           public String apply( Component comp ) {
             final StringBuilder buf = new StringBuilder( );
             buf.append( LogUtil.header( comp.getName( ) + " component configuration" ) ).append( "\n" );
-            buf.append( "-> Enabled/Local:      " + comp.isEnabled( ) + "/" + comp.isLocal( ) ).append( "\n" );
+            buf.append( "-> Enabled/Local:      " + comp.isAvailableLocally( ) + "/" + comp.isLocal( ) ).append( "\n" );
             buf.append( "-> State/Running:      " + comp.getState( ) + "/" + comp.isRunningLocally( ) ).append( "\n" );
             buf.append( "-> Builder:            "
                         + comp.getBuilder( ).getClass( ).getSimpleName( ) ).append( "\n" );
@@ -356,7 +356,7 @@ public class Components {
                                        System.getProperty( String.format( "euca.%s.disable", comp.getPeer( ).name( ) ) ),
                                        System.getProperty( String.format( "euca.%s.remote", comp.getPeer( ).name( ) ) ) ) ).append( "\n" );
             buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
-                                       comp.getName( ), comp.isEnabled( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
+                                       comp.getName( ), comp.isAvailableLocally( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
             buf.append( String.format( "%s -> configuration:        %s",
                                        comp.getName( ), ( comp.getConfiguration( ).getResource( ) != null
                                          ? comp.getConfiguration( ).getResource( ).getOrigin( )

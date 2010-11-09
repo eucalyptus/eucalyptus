@@ -65,6 +65,7 @@ package com.eucalyptus.component;
 
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
+import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
@@ -130,6 +131,10 @@ public class ComponentState {
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
         try {
+          if( State.NOTREADY.equals( ComponentState.this.stateMachine.getState( ) ) ) {
+            parent.getBootstrapper( ).check( );
+            parent.getBuilder( ).fireCheck( parent.getLocalService( ).getServiceConfiguration( ) );
+          }
           parent.getBootstrapper( ).enable( );
           parent.getBuilder( ).fireEnable( parent.getLocalService( ).getServiceConfiguration( ) );
           transitionCallback.fire( );
@@ -184,6 +189,14 @@ public class ComponentState {
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
           ComponentState.this.details.add( ex.getMessage( ) );
+          if( State.ENABLED.equals( ComponentState.this.stateMachine.getState( ) ) ) {
+            try {
+              parent.getBootstrapper( ).disable( );
+              parent.getBuilder( ).fireDisable( parent.getLocalService( ).getServiceConfiguration( ) );
+            } catch ( ServiceRegistrationException ex1 ) {
+              LOG.error( ex1 , ex1 );
+            }
+          } 
           transitionCallback.fireException( ex );
         }
       }

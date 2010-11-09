@@ -110,7 +110,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     boolean failed = false;
     Component euca = Components.lookup( Components.delegate.eucalyptus );
     for ( Component comp : Components.list( ) ) {
-      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
+      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
         if ( euca.isLocal( ) && euca.getPeer( ).hasDispatcher( ) ) {
           try {
@@ -136,7 +136,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     boolean failed = false;
     Component euca = Components.lookup( Components.delegate.eucalyptus );
     for ( Component comp : Components.list( ) ) {
-      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
+      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
         if ( euca.isLocal( ) && euca.getPeer( ).hasDispatcher( ) ) {
           try {

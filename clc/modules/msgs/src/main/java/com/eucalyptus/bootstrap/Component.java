@@ -109,7 +109,7 @@ public enum Component {
   
   public Boolean isEnabled( ) {
     try {
-      return Components.lookup( this ).isEnabled( );
+      return Components.lookup( this ).isAvailableLocally( );
     } catch ( NoSuchElementException ex ) {
       return false;
     }
