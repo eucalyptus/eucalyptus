@@ -200,7 +200,7 @@ public class Configuration {
     for( ComponentConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
       try {
         Service s = Components.lookup( conf );
-        listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), s.getUri( ).getHost( ), s.getState( ).toString( ), Lists.newArrayList( "everything is fine" ).toString()/**ASAP:FIXME:GRZE**/ ) );
+        listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), Lists.newArrayList( "everything is fine" ).toString()/**ASAP:FIXME:GRZE**/ ) );
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex , ex );
       }
