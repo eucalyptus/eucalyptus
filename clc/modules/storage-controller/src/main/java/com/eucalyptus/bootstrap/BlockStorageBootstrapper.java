@@ -98,7 +98,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean start( ) throws Exception {
-		BlockStorage.configure();
+		//BlockStorage.configure();
 		return true;
 	}
 
