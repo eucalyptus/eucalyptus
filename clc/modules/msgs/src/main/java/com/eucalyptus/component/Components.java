@@ -189,6 +189,15 @@ public class Components {
     return Components.lookup( Component.class, component.name( ) );
   }
   
+  public static Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
+    for( Service s : Components.lookup( config.getComponent( ) ).getServices( ) ) {
+      if( s.getServiceConfiguration( ).equals( config ) ) {
+        return s;
+      }
+    }
+    throw new NoSuchElementException( "Failed to find service corresponding to " + config.toString( ) );
+  }
+
   public static boolean contains( String componentName ) {
     return Components.contains( Component.class, componentName );
   }

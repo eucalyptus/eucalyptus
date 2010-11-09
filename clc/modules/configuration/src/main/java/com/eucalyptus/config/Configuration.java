@@ -65,6 +65,7 @@ package com.eucalyptus.config;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
@@ -197,10 +198,11 @@ public class Configuration {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
     for( ComponentConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
-      for( Service s : Components.lookup( conf.getComponent( ) ).getServices( ) ) {
-        if( s.getServiceConfiguration( ).equals( conf ) ) {
-          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), s.getUri( ).getHost( ), s.getState( ).toString( ), Lists.newArrayList( "everything is fine" ).toString()/**ASAP:FIXME:GRZE**/ ) );
-        }
+      try {
+        Service s = Components.lookup( conf );
+        listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), s.getUri( ).getHost( ), s.getState( ).toString( ), Lists.newArrayList( "everything is fine" ).toString()/**ASAP:FIXME:GRZE**/ ) );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
       }
     }
     return reply;
