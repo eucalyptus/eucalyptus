@@ -65,6 +65,8 @@
 
 package edu.ucsb.eucalyptus.cloud.ws.tests;
 
+import com.eucalyptus.util.EucalyptusCloudException;
+
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
@@ -96,6 +98,10 @@ public class DeleteSnapshotTest extends TestCase {
 
     public void setUp() {
         blockStorage = new BlockStorage();
-        BlockStorage.configure();
+        try {
+			BlockStorage.configure();
+		} catch (EucalyptusCloudException e) {
+			e.printStackTrace();
+		}
     }    
 }

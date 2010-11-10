@@ -58,30 +58,82 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.ws;
+package edu.ucsb.eucalyptus.cloud.entities;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import org.apache.log4j.Logger;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.WalrusProperties;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.SnapshotTask;
+import javax.persistence.*;
 
-public class SnapshotService {
-	private Logger LOG = Logger.getLogger( SnapshotService.class );
+@Entity
+@PersistenceContext(name="eucalyptus_walrus")
+@Table( name = "drbd_info" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ConfigurableClass(root = "walrus", alias = "drbd", description = "DRBD configuration.", deferred = true)
+public class DRBDInfo {
+	@Id
+	@GeneratedValue
+	@Column( name = "drbd_info_id" )
+	private Long id = -1l;
+	@Column(name = "walrus_name", unique=true)
+	private String name;
+	@ConfigurableField( description = "DRBD block device", displayName = "Block Device" )
+	@Column( name = "block_device" )
+	private String blockDevice;
+	@ConfigurableField( description = "DRBD resource name", displayName = "DRBD Resource" )
+	@Column( name = "resource_name" )
+	private String resource;
 
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 3;
+	public DRBDInfo() {}
 
-	public SnapshotService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
+	public DRBDInfo(final String name,
+			final String blockDevice) {
+		this.name = name;
+		this.blockDevice = blockDevice;
 	}
 
-	public void add(SnapshotTask creator) {
-		pool.execute(creator);
+	public String getName() {
+		return name;
 	}
 
-	public void shutdown() {
-		pool.shutdownNow();
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getBlockDevice() {
+		return blockDevice;
+	}
+
+	public void setBlockDevice(String blockDevice) {
+		this.blockDevice = blockDevice;
+	}
+
+	public String getResource() {
+		return resource;
+	}
+
+	public void setResource(String resource) {
+		this.resource = resource;
+	}
+
+	public static DRBDInfo getDRBDInfo() {
+		EntityWrapper<DRBDInfo> db = new EntityWrapper<DRBDInfo>(WalrusProperties.DB_NAME);
+		DRBDInfo drbdInfo;
+		try {
+			drbdInfo = db.getUnique(new DRBDInfo());
+		} catch(EucalyptusCloudException ex) {
+			drbdInfo = new DRBDInfo(WalrusProperties.NAME, 
+					"/dev/unknown");
+			db.add(drbdInfo);     
+		} finally {
+			db.commit();
+		}
+		return drbdInfo;
 	}
 }
