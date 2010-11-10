@@ -179,6 +179,15 @@ public class DeregisterVMwareBrokerResponseType extends DeregisterComponentRespo
 public class DescribeVMwareBrokersType extends DescribeComponentsType {}
 public class DescribeVMwareBrokersResponseType extends DescribeComponentsResponseType {}
 
+public class RegisterArbitratorType extends RegisterComponentType {}
+public class RegisterArbitratorResponseType extends RegisterComponentResponseType {}
+public class DeregisterArbitratorType extends DeregisterComponentType {}
+public class DeregisterArbitratorResponseType extends DeregisterComponentResponseType {}
+public class ModifyArbitratorAttributeType extends ModifyComponentAttributeType{}
+public class ModifyArbitratorAttributeResponseType extends ModifyComponentAttributeResponseType {}
+public class DescribeArbitratorType extends DescribeComponentsType {}
+public class DescribeArbitratorResponseType extends DescribeComponentsResponseType {}
+
 public class GetComponentLogsType extends DescribeComponentsType {}
 public class GetComponentLogsResponseType extends DescribeComponentsResponseType {}
 
