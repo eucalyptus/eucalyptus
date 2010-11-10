@@ -18,8 +18,8 @@ class Arbitrator():
 
           
   def __repr__(self):
-      return 'ARBITRATOR\t%s\t%s\t%s\t%s' % (self.arbitrator_name, self.partition,
-                                      self.host_name, self.state) 
+      return 'ARBITRATOR\t%s\t%s\t%s' % (self.arbitrator_name, self.partition,
+                                      self.host_name) 
 
   def startElement(self, name, attrs, connection):
       return None
@@ -85,6 +85,7 @@ class Arbitrator():
       params['Partition'] = partition
     try:
       reply = self.euca.connection.get_object('RegisterArbitrator',
+                                              params,
                                               BooleanResponse)
       print reply
     except EC2ResponseError, ex:

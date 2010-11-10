@@ -66,6 +66,7 @@ package com.eucalyptus.config;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -94,17 +95,25 @@ public class ArbitratorControl  {
 					try {
 						error = null;
 						List<ArbitratorConfiguration> configs = Configuration.getArbitratorConfigurations();
+						List<String> unreachable = new ArrayList<String>();
 						for(ArbitratorConfiguration config : configs) {						
 							try {
 								InetAddress addr = InetAddress.getByName(config.getHostName());
 								if(!addr.isReachable(2000)) {
-									error = new EucalyptusCloudException("Arbitrator: " + config.getHostName() + " is not reachable.");
+									unreachable.add(config.getHostName());
 								}
 							} catch (UnknownHostException e) {
 								error = e;
 							} catch (IOException e) {
 								error = e;
 							}
+						}
+						if(unreachable.size() > 0) {
+							String errorMessage = "Arbitrators not reachable: ";
+							for(String fail : unreachable) {
+								errorMessage += " " + fail;
+							}
+							error = new EucalyptusCloudException(errorMessage);
 						}
 					} catch (EucalyptusCloudException e) {
 						error = e;

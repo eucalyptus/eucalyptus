@@ -185,8 +185,8 @@ public class DeregisterArbitratorType extends DeregisterComponentType {}
 public class DeregisterArbitratorResponseType extends DeregisterComponentResponseType {}
 public class ModifyArbitratorAttributeType extends ModifyComponentAttributeType{}
 public class ModifyArbitratorAttributeResponseType extends ModifyComponentAttributeResponseType {}
-public class DescribeArbitratorType extends DescribeComponentsType {}
-public class DescribeArbitratorResponseType extends DescribeComponentsResponseType {}
+public class DescribeArbitratorsType extends DescribeComponentsType {}
+public class DescribeArbitratorsResponseType extends DescribeComponentsResponseType {}
 
 public class GetComponentLogsType extends DescribeComponentsType {}
 public class GetComponentLogsResponseType extends DescribeComponentsResponseType {}
