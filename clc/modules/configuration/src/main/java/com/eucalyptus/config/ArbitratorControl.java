@@ -81,33 +81,37 @@ public class ArbitratorControl  {
 	private static Exception error;
 	private static ScheduledExecutorService monitor;
 	private final static int CHECK_PERIODICITY = 60;
+	private static boolean initialized;
 
 	public ArbitratorControl() {}
 
 	public static void start() {
-		monitor = Executors.newSingleThreadScheduledExecutor();
-		monitor.scheduleAtFixedRate(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					error = null;
-					List<ArbitratorConfiguration> configs = Configuration.getArbitratorConfigurations();
-					for(ArbitratorConfiguration config : configs) {						
-						try {
-							InetAddress addr = InetAddress.getByName(config.getHostName());
-							if(!addr.isReachable(2000)) {
-								error = new EucalyptusCloudException("Arbitrator: " + config.getHostName() + " is not reachable.");
+		if(!initialized) {
+			monitor = Executors.newSingleThreadScheduledExecutor();
+			monitor.scheduleAtFixedRate(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						error = null;
+						List<ArbitratorConfiguration> configs = Configuration.getArbitratorConfigurations();
+						for(ArbitratorConfiguration config : configs) {						
+							try {
+								InetAddress addr = InetAddress.getByName(config.getHostName());
+								if(!addr.isReachable(2000)) {
+									error = new EucalyptusCloudException("Arbitrator: " + config.getHostName() + " is not reachable.");
+								}
+							} catch (UnknownHostException e) {
+								error = e;
+							} catch (IOException e) {
+								error = e;
 							}
-						} catch (UnknownHostException e) {
-							error = e;
-						} catch (IOException e) {
-							error = e;
 						}
+					} catch (EucalyptusCloudException e) {
+						error = e;
 					}
-				} catch (EucalyptusCloudException e) {
-					error = e;
-				}
-			}}, 1, CHECK_PERIODICITY, TimeUnit.SECONDS);
+				}}, 1, CHECK_PERIODICITY, TimeUnit.SECONDS);
+			initialized = true;
+		}
 
 	}
 

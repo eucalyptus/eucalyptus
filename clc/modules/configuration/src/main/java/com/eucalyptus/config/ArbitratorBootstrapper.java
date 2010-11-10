@@ -88,7 +88,6 @@ public class ArbitratorBootstrapper extends Bootstrapper {
   
   @Override
   public boolean start( ) throws Exception {
-	ArbitratorControl.start();
     return true;
   }
   
