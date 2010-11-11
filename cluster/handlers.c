@@ -2584,8 +2584,11 @@ int ccIsDisabled() {
 
 int ccChangeState(int newstate) {
   if (config) {
+    char localState[32];
     config->ccLastState = config->ccState;
     config->ccState = newstate;
+    ccGetStateString(localState, 32);
+    snprintf(config->ccStatus.localState, 32, "%s", localState);
     return(0);
   }
   return(1);
@@ -2654,7 +2657,7 @@ int ccCheckState() {
 
   snprintf(localDetails, 1023, "ERRORS=%d", ret);
   sem_mywait(CONFIG);
-  snprintf(config->ccStateDetails, 1023, "%s", localDetails);
+  snprintf(config->ccStatus.details, 1023, "%s", localDetails);
   sem_mypost(CONFIG);
   return(ret);
 }
@@ -3416,8 +3419,7 @@ int init_config(void) {
   config->ncFanout = ncFanout;
   locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
   config->initialized = 1;
-  config->ccLastState = DISABLED;
-  config->ccState = ENABLED;
+  ccChangeState(ENABLED);
   snprintf(config->configFiles[0], MAX_PATH, "%s", configFiles[0]);
   snprintf(config->configFiles[1], MAX_PATH, "%s", configFiles[1]);
   
