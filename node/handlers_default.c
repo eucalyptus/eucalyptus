@@ -736,9 +736,9 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 	        // if the result was failed or cancelled, clean up walrus state
 	        if (result == BUNDLING_FAILED || result == BUNDLING_CANCELLED) {
 		  if (!instance->bundleBucketExists) {
-		    snprintf(cmd, MAX_PATH, "%s -b %s --euca-auth --clear", params->ncDeleteBundleCmd, params->bucketName);
+		    snprintf(cmd, MAX_PATH, "%s -b %s -p %s --euca-auth", params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
 		  } else {
-		    snprintf(cmd, MAX_PATH, "%s -b %s -p %s --euca-auth ", params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
+		    snprintf(cmd, MAX_PATH, "%s -b %s -p %s --euca-auth --clear", params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
 		  }
 		  // set up environment for euca2ools
 		  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);

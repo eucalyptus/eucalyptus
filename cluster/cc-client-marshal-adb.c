@@ -1253,6 +1253,9 @@ int cc_describeServices(axutil_env_t *env, axis2_stub_t *stub) {
 
   adb_DescribeServicesResponse_t *adbresponse;
   adb_describeServicesResponseType_t *adboutput;
+
+  adb_serviceInfoType_t *sit=NULL;
+
   int i;
   axis2_bool_t status;
 
@@ -1260,6 +1263,14 @@ int cc_describeServices(axutil_env_t *env, axis2_stub_t *stub) {
 
   EUCA_MESSAGE_MARSHAL(describeServicesType, adbinput, (&mymeta));
   
+  sit = adb_serviceInfoType_create(env);
+  
+  adb_serviceInfoType_set_type(sit, env, "cc");
+  adb_serviceInfoType_set_name(sit, env, "self");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:8774");
+  
+  adb_describeServicesType_add_serviceIds(adbinput, env, sit);
+
   adbrequest = adb_DescribeServices_create(env);
   adb_DescribeServices_set_DescribeServices(adbrequest, env, adbinput);
   
@@ -1273,6 +1284,14 @@ int cc_describeServices(axutil_env_t *env, axis2_stub_t *stub) {
     if (status == AXIS2_FALSE) {
       printf("operation fault '%s'\n", adb_describeServicesResponseType_get_statusMessage(adboutput, env));
     } else {
+      for (i=0; i<adb_describeServicesResponseType_sizeof_serviceStatuses(adboutput, env); i++) {
+	adb_serviceStatusType_t *sst=NULL;
+	adb_serviceInfoType_t *sit=NULL;
+	sst = adb_describeServicesResponseType_get_serviceStatuses_at(adboutput, env, i);
+	printf("localState=%s localEpoch=%d details=%s\n", adb_serviceStatusType_get_localState(sst, env), adb_serviceStatusType_get_localEpoch(sst, env), adb_serviceStatusType_get_details_at(sst, env, 0));
+	sit = adb_serviceStatusType_get_serviceId(sst, env);
+	printf("\ttype=%s name=%s uris[0]=%s\n", adb_serviceInfoType_get_type(sit, env), adb_serviceInfoType_get_name(sit, env), adb_serviceInfoType_get_uris_at(sit, env, 0));
+      }
     }
   }
   return(!status);  

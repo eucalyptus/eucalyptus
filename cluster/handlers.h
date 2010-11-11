@@ -168,7 +168,7 @@ typedef struct ccConfig_t {
   int threads[3];
   int ncFanout;
   int ccState, ccLastState, kick_network;
-  char ccStateDetails[1024];
+  serviceStatusType ccStatus;
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
