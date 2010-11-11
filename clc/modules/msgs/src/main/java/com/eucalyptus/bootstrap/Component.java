@@ -130,8 +130,10 @@ public enum Component {
   public URI getUri( ) {
     com.eucalyptus.component.Component c = Components.lookup( this );
     NavigableSet<Service> services = c.getServices( );
-    if( this.isCloudLocal( ) && services.size( ) != 1 ) {
-        throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
+    if( this.isCloudLocal( ) && services.size( ) != 1 && !db.equals( this ) ) {
+      throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
+    } else if( this.isCloudLocal( ) && services.size( ) != 1 && db.equals( this ) ) {
+      return this.getLocalUri( );
     } else if( this.isCloudLocal( ) && services.size( ) == 1 ) {
       return services.first( ).getUri( );
     } else {

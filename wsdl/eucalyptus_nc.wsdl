@@ -203,12 +203,12 @@
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
-	    <xs:element name="imageId" type="xs:string"/>
-	    <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
-	    <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
-	    <xs:element name="imageURL" type="xs:string"/>
-	    <xs:element minOccurs="0" name="kernelURL" type="xs:string"/>
-	    <xs:element minOccurs="0" name="ramdiskURL" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="imageId" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="kernelId" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="ramdiskId" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="imageURL" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="kernelURL" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="ramdiskURL" type="xs:string"/>
 	    <xs:element name="reservationId" type="xs:string"/>
 	    <xs:element name="instanceId" type="xs:string"/>
 	    <xs:element name="instanceType" type="tns:virtualMachineType"/>

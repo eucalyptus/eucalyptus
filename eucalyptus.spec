@@ -41,7 +41,7 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 %endif
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       2.0.0
+Version:       2.0.1
 Release:       1
 License:       GPLv3
 Group:         Applications/System
@@ -63,7 +63,7 @@ eucalyptus-nc (or all of them).
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus = 2.0.0, %{euca_java}, lvm2
+Requires:     eucalyptus = 2.0.1, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description common-java
@@ -76,7 +76,7 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java = 2.0.0, %{euca_java}, lvm2
+Requires:     eucalyptus-common-java = 2.0.1, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description walrus
@@ -91,7 +91,7 @@ cloud controller.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-common-java = 2.0.0, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
+Requires:     eucalyptus-common-java = 2.0.1, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
 Group:        Applications/System
 
 %description sc
@@ -106,7 +106,7 @@ alongside the cluster-controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java = 2.0.0, %{euca_java}, lvm2
+Requires:     eucalyptus-common-java = 2.0.1, %{euca_java}, lvm2
 Group:        Applications/System
 
 %description cloud
@@ -121,7 +121,7 @@ the cloud clients.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus = 2.0.0, eucalyptus-gl = 2.0.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
+Requires:     eucalyptus = 2.0.1, eucalyptus-gl = 2.0.1, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
 Group:        Applications/System
 
 %description cc
@@ -135,7 +135,7 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus = 2.0.0, eucalyptus-gl = 2.0.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}, %{euca_iscsi_client}
+Requires:     eucalyptus = 2.0.1, eucalyptus-gl = 2.0.1, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}, %{euca_iscsi_client}
 Group:        Applications/System
 
 %description nc
@@ -149,7 +149,7 @@ components that handles the instances.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus = 2.0.0, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Requires:     eucalyptus = 2.0.1, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Group:        Applications/System
 
 %description gl
@@ -220,6 +220,7 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/sbin/euca-describe-users
 /usr/sbin/euca-describe-walruses
 /usr/sbin/euca-get-credentials
+/usr/sbin/euca-modify-cluster
 /usr/sbin/euca-modify-property
 /usr/sbin/euca-register-cluster
 /usr/sbin/euca-register-storage-controller
@@ -325,7 +326,7 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	adduser -M eucalyptus
 %endif
 %if %is_fedora
-	adduser -U --system eucalyptus 
+	adduser -U eucalyptus 
 %endif
 fi
 

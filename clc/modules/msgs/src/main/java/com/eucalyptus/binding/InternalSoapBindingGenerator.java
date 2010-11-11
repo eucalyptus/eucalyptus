@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import net.sf.json.JSON;
+import net.sf.json.xml.XMLSerializer;
 import org.apache.log4j.Logger;
 import java.lang.reflect.Modifier;
 import com.google.common.base.Predicate;
@@ -91,6 +93,13 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     this.out.write( "</binding>" );
     this.out.flush( );
     this.out.close( );
+    try {
+      XMLSerializer xmlSerializer = new XMLSerializer();  
+      JSON json = xmlSerializer.readFromFile( this.outFile );  
+      System.out.println( json.toString(2) );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+    }    
   }
   
   public TypeBinding getTypeBinding( Field field ) {
