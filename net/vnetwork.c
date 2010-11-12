@@ -1932,15 +1932,15 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
   return(rc);
 }
 
-int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip) {
-  return(vnetSetPublicIP(vnetconfig, ip, dstip, 1));
+int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip) {
+  return(vnetSetPublicIP(vnetconfig, uuid, ip, dstip, 1));
 }
 
-int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip) {
-  return(vnetSetPublicIP(vnetconfig, ip, NULL, 0));
+int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip) {
+  return(vnetSetPublicIP(vnetconfig, uuid, ip, NULL, 0));
 }
 
-int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval) {
+int vnetSetPublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip, int setval) {
   int i, done;
   uint32_t hip;
   
@@ -1957,6 +1957,15 @@ int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval) {
 	vnetconfig->publicips[i].dstip = 0;
       }
       vnetconfig->publicips[i].allocated = setval;
+      if (uuid) {
+	if (setval) {
+	  snprintf(vnetconfig->publicips[i].uuid, 48, "%s", uuid);
+	} else {
+	  bzero(vnetconfig->publicips[i].uuid, sizeof(char) * 48);
+	}
+      } else {
+	bzero(vnetconfig->publicips[i].uuid, sizeof(char) * 48);
+      }
       done++;
     }
   }

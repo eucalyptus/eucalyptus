@@ -1030,7 +1030,7 @@ int doPowerDown(ncMetadata *meta) {
 	return ret;
 }
 
-int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
     int ret;
     
@@ -1142,9 +1142,9 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
     }
    
     if (nc_state.H->doRunInstance)
-        ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+        ret = nc_state.H->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
     else
-        ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+        ret = nc_state.D->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
     
     return ret;
 }
@@ -1219,6 +1219,7 @@ int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource **outRe
 
 int
 doStartNetwork (	ncMetadata *ccMeta,
+			char *uuid,
 			char **remoteHosts,
 			int remoteHostsLen,
 			int port,
@@ -1232,9 +1233,9 @@ doStartNetwork (	ncMetadata *ccMeta,
 	logprintfl(EUCADEBUG, "doStartNetwork() invoked\n");
 
 	if (nc_state.H->doStartNetwork) 
-		ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+	        ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	else 
-		ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+	        ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	
 	return ret;
 }

@@ -97,6 +97,7 @@ typedef struct publicip_t {
   uint32_t ip;
   uint32_t dstip;
   int allocated;
+  char uuid[48];
 } publicip;
 
 typedef struct tunnelData_t {
@@ -177,9 +178,9 @@ int vnetSaveTablesToMemory(vnetConfig *vnetconfig);
 
 int vnetAddPublicIP(vnetConfig *vnetconfig, char *ip);
 int vnetCheckPublicIP(vnetConfig *vnetconfig, char *ip);
-int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip);
-int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip);
-int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval);
+int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip);
+int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip);
+int vnetSetPublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip, int setval);
 int vnetGetPublicIP(vnetConfig *vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
 
 int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst);
