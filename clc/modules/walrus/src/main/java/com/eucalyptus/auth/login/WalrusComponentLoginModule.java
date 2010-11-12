@@ -71,8 +71,8 @@ import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.api.BaseLoginModule;
@@ -131,16 +131,16 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 				User user;
 				String queryId = credentials.getQueryId();
 				if(queryId != null) {
-					user = Users.lookupQueryId(queryId);  
+					user = Users.lookupUserByAccessKeyId(queryId);  
 				} else {
-					user = Users.lookupUser( "admin" );			
-					user.setAdministrator(true);
+					user = Users.lookupSystemAdmin( );	
+					//user.setAdministrator(true);
 				}
 				super.setCredential(queryId);
 				super.setPrincipal(user);
-				super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
+				//super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
 				return true;	
-			} catch (NoSuchUserException e) {
+			} catch (AuthException e) {
 				LOG.error(e);
 				return false;
 			}

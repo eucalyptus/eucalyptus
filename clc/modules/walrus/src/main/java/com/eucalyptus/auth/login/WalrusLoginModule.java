@@ -88,13 +88,13 @@ public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials>
 	@Override
 	public boolean authenticate( WalrusWrappedCredentials credentials ) throws Exception {
 		String signature = credentials.getSignature().replaceAll("=", "");
-		User user = Users.lookupQueryId( credentials.getQueryId() );  
-		String queryKey = user.getSecretKey( );
+		User user = Users.lookupUserByAccessKeyId( credentials.getQueryId() );  
+		String queryKey = user.getSecretKey( credentials.getQueryId() );
 		String authSig = checkSignature( queryKey, credentials.getLoginData() );
 		if (authSig.equals(signature)) {
 			super.setCredential(credentials.getQueryId());
 			super.setPrincipal(user);
-			super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
+			//super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
 			return true;	
 		}
 		return false;

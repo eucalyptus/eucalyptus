@@ -99,7 +99,8 @@ public class HmacHandler extends MessageStackHandler {
       if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.toString( ) ) && !internal ) {
         throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
       } else if ( internal ) {
-        parameters.put( SecurityParameter.AWSAccessKeyId.toString( ), Users.lookupUser( "admin" ).getQueryId( ) );
+        // YE TODO: can we just pick any active secret key of admin?
+        parameters.put( SecurityParameter.AWSAccessKeyId.toString( ), Users.lookupSystemAdmin( ).getFirstActiveSecretKeyId( ) );
       }
       if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) {
         throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );

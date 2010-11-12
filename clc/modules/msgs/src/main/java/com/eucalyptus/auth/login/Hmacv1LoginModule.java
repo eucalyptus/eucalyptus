@@ -31,8 +31,8 @@ public class Hmacv1LoginModule extends BaseLoginModule<HmacCredentials> {
   public boolean authenticate( HmacCredentials credentials ) throws Exception {
     String sig = credentials.getSignature( );
     SecurityContext.enqueueSignature( sig );
-    User user = Users.lookupQueryId( credentials.getQueryId( ) );
-    String secretKey = user.getSecretKey( );
+    User user = Users.lookupUserByAccessKeyId( credentials.getQueryId( ) );
+    String secretKey = user.getSecretKey( credentials.getQueryId( ) );
 
     String canonicalString = this.makeSubjectString( credentials.getParameters( ) );
     String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );
@@ -42,7 +42,7 @@ public class Hmacv1LoginModule extends BaseLoginModule<HmacCredentials> {
     }
     super.setCredential( credentials.getQueryId( ) );
     super.setPrincipal( user );
-    super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
+    //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
     return true;
   }
 

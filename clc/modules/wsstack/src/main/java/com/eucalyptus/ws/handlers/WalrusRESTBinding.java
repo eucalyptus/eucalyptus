@@ -367,7 +367,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	private void setRequiredParams(final GroovyObject msg, User user) {
 		if(user != null) {
-			msg.setProperty("accessKeyID", user.getQueryId());
+		  // YE TODO: can we just use any key here?
+			msg.setProperty("accessKeyID", user.getFirstActiveSecretKeyId( ));
 		}
 		msg.setProperty("timeStamp", new Date());
 	}

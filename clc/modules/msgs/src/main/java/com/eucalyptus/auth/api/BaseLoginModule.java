@@ -20,7 +20,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
   private boolean         authenticated = false;
   private CallbackHandler callbackHandler;
   private Object          credential;
-  private List<Group>     groups = Lists.newArrayList( );
+  //private List<Group>     groups = Lists.newArrayList( );
   private User            principal;
   private Subject         subject;
   private CB              wrappedCredentials;
@@ -38,7 +38,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
       return false;
     }
     this.getSubject( ).getPrincipals( ).add( this.getPrincipal( ) );
-    this.getSubject( ).getPrincipals( ).addAll( this.getGroups( ) );
+    //this.getSubject( ).getPrincipals( ).addAll( this.getGroups( ) );
     this.getSubject( ).getPublicCredentials( ).add( this.getCredential( ) );
     try {
       Contexts.lookup( this.getWrappedCredentials( ).getCorrelationId( ) ).setUser( this.getPrincipal( ) );
@@ -57,11 +57,11 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
   public Object getCredential( ) {
     return this.credential;
   }
-  
+  /*
   public List<Group> getGroups( ) {
     return this.groups;
   }
-  
+  */
   public User getPrincipal( ) {
     return this.principal;
   }
@@ -145,7 +145,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
     this.wrappedCredentials = null;
     this.authenticated = false;
     this.callbackHandler = null;
-    this.groups = Lists.newArrayList( );
+    //this.groups = Lists.newArrayList( );
   }
   
 }

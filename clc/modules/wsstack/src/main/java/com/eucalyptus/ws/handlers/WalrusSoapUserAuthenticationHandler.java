@@ -149,8 +149,8 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
 		signature = signature.replaceAll("=", "");
 		try {
-      User user = Users.lookupQueryId( accessKeyID );  
-      String queryKey = user.getSecretKey( );
+      User user = Users.lookupUserByAccessKeyId( accessKeyID );  
+      String queryKey = user.getSecretKey( accessKeyID );
 			String authSig = checkSignature( queryKey, data );
 			if (!authSig.equals(signature))
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
