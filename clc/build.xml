@@ -168,7 +168,6 @@
 		<delete file="${bind.timestamp}"/>
 		<ant dir="modules/msgs" inheritall="false" target="clean" />
 		<ant dir="modules/mysql" inheritall="false" target="clean" />
-		<ant dir="modules/ldap" inheritall="false" target="clean" />
 		<ant dir="modules/cloud" inheritall="false" target="clean" />
 		<ant dir="modules/authentication" inheritall="false" target="clean" />
 		<ant dir="modules/configuration" inheritall="false" target="clean" />
