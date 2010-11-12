@@ -234,7 +234,7 @@ public class ComponentState {
   }
 
   public void transition( Transition transition ) {
-    this.stateMachine.transition( transition );
+    this.stateMachine.startTransition( transition ).fire( );
   }
   
 }
