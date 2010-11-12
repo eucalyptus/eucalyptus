@@ -116,9 +116,7 @@ public class ComponentState {
         ComponentState.this.details.clear( );
         try {
           parent.getBootstrapper( ).start( );
-          if( parent.getLocalService( ) != null ) {
-            parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
-          }
+          parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
           transitionCallback.fire( );
         } catch ( Throwable ex ) {
           LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
