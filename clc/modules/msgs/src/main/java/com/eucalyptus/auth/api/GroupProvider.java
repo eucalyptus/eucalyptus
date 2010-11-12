@@ -1,27 +1,28 @@
 package com.eucalyptus.auth.api;
 
-import java.util.List;
-import com.eucalyptus.auth.GroupExistsException;
-import com.eucalyptus.auth.NoSuchGroupException;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.User;
 
 public interface GroupProvider {
+
   /**
-   * Get a list of all the groups for which <tt>user</tt> is a member.
-   * @param user
-   * @return
+   * Add a new group.
+   * 
+   * @param groupName The name of the new group.
+   * @param path The path of the new group.
+   * @param accountName The name of the group added to.
+   * @return The newly created group.
+   * @throws AuthException for any error.
    */
-  public abstract List<Group> lookupUserGroups( User user );
-  public abstract List<Group> listAllGroups( );
-  /**
-   * Get the group named <tt>groupName</tt>
-   * @param groupName
-   * @return
-   * @throws NoSuchGroupException
-   */
-  public abstract Group lookupGroup( String groupName ) throws NoSuchGroupException;
-  public abstract Group addGroup( String groupName ) throws GroupExistsException;
-  public abstract void deleteGroup( String groupName ) throws NoSuchGroupException;
+  public Group addGroup( String groupName, String path, String accountName ) throws AuthException;
   
+  /**
+   * Delete a group and its policies if recursive.
+   * 
+   * @param groupName The name of the group to be deleted.
+   * @param accountName The name of the group's account.
+   * @param recursive Whether to delete the group's attached resources, e.g. policies.
+   * @throws AuthException for any error.
+   */
+  public void deleteGroup( String groupName, String accountName, boolean recursive ) throws AuthException;
 }

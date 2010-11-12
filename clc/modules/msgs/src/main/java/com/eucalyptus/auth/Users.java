@@ -64,6 +64,7 @@ package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.UserProvider;
 import com.eucalyptus.auth.principal.User;
@@ -93,38 +94,49 @@ public class Users {
      return users;
   }
 
-  public static User addUser( String userName, Boolean admin, Boolean enabled ) throws UserExistsException, UnsupportedOperationException {
-    EventRecord.here( Users.class, EventClass.USER, EventType.USER_ADDED ).withDetails( userName, userName, "admin="+admin, "enabled="+enabled );
-    return Users.getUserProvider().addUser( userName, admin, enabled );
+  public static User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info,
+                                     boolean createKey, boolean createCert, boolean createPassword, String accountName ) throws AuthException {
+    return Users.getUserProvider( ).addUser( userName, path, skipRegistration, enabled, info, createKey, createCert, createPassword, accountName );
   }
 
-  public static void deleteUser( String userName ) throws NoSuchUserException, UnsupportedOperationException {
-    EventRecord.here( Users.class, EventClass.USER, EventType.USER_DELETED, userName ).info();
-    Users.getUserProvider().deleteUser( userName );
-  }
-
-  public static List<User> listAllUsers( ) {
-    return Users.getUserProvider().listAllUsers( );
-  }
-
-  public static List<User> listEnabledUsers( ) {
-    return Users.getUserProvider().listEnabledUsers( );
-  }
-
-  public static User lookupCertificate( X509Certificate cert ) throws NoSuchUserException {
-    return Users.getUserProvider().lookupCertificate( cert );
-  }
-
-  public static User lookupQueryId( String queryId ) throws NoSuchUserException {
-    return Users.getUserProvider().lookupQueryId( queryId );
-  }
-
-  public static User lookupUser( String userName ) throws NoSuchUserException {
-    return Users.getUserProvider( ).lookupUser( userName );
+  public static void deleteUser( String userName, String accountName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {
+    Users.getUserProvider( ).deleteUser( userName, accountName, forceDeleteAdmin, recursive );
   }
   
-  public static void updateUser( String userName, Tx<User> userTx ) throws NoSuchUserException {
-    Users.getUserProvider( ).updateUser( userName, userTx );
+  public static User lookupUserByAccessKeyId( String keyId ) throws AuthException {
+    return Users.getUserProvider( ).lookupUserByAccessKeyId( keyId );
   }
-
+  
+  public static User lookupUserByCertificate( X509Certificate cert ) throws AuthException {
+    return Users.getUserProvider( ).lookupUserByCertificate( cert );
+  }
+ 
+  public static User lookupUserByName( String userName, String accountName ) throws AuthException {
+    return Users.getUserProvider( ).lookupUserByName( userName, accountName );
+  }
+  
+  public static User lookupSystemAdmin( ) throws AuthException {
+    return Users.getUserProvider( ).lookupSystemAdmin( );
+  }
+  
+  public static User lookupAccountAdmin( String accountName ) throws AuthException {
+    return Users.getUserProvider( ).lookupAccountAdmin( accountName );
+  }
+  
+  public static User lookupUserById( String userId ) throws AuthException {
+    return Users.getUserProvider( ).lookupUserById( userId );
+  }
+  
+  public static boolean shareSameAccount( String userId1, String userId2 ) {
+    return Users.getUserProvider( ).shareSameAccount( userId1, userId2 );
+  }
+ 
+  public static List<User> listAllUsers( ) throws AuthException {
+    return Users.getUserProvider( ).listAllUsers( );
+  }
+  
+  public static void addSystemAdmin( ) throws AuthException {
+    Users.getUserProvider( ).addSystemAdmin( );
+  }
+  
 }

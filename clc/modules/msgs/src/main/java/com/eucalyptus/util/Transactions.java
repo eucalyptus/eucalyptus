@@ -1,6 +1,9 @@
 package com.eucalyptus.util;
 
 import java.util.List;
+
+import javax.persistence.EntityManager;
+
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.EntityWrapper;
 
@@ -112,6 +115,29 @@ public class Transactions {
       c.fire( res );
       db.commit( );
       return res;
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new TransactionException( e.getMessage( ), e );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new TransactionFireException( e.getMessage( ), e );
+    }
+  }
+  
+  public static <T> T one( Class<T> type, String id, Tx<T> c ) throws TransactionException {
+    if ( id == null ) {
+      TransactionException ex = new TransactionException( "An search ID must be supplied" );
+      LOG.warn( ex.getMessage( ), ex );
+      throw ex;
+    }
+    EntityWrapper<T> db = EntityWrapper.get( type );
+    EntityManager em = db.getEntityManager( );
+    try {
+      T entity = em.find( type, id );
+      c.fire( entity );
+      db.commit( );
+      return entity;
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw new TransactionException( e.getMessage( ), e );

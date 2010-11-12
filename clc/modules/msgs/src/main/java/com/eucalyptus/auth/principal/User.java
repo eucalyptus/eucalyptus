@@ -62,21 +62,70 @@
  */
 package com.eucalyptus.auth.principal;
 
+import java.util.List;
+import java.util.Map;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.credential.HmacPrincipal;
 import com.eucalyptus.auth.principal.credential.X509Principal;
 
 /**
+ * The interface for a user in Eucalyptus.
+ * 
  * @author decker
  *
  */
-public abstract interface User extends BasePrincipal, X509Principal, HmacPrincipal {
-  public abstract Boolean isAdministrator( );
-  public abstract void setAdministrator( Boolean admin );
-  public abstract Boolean isEnabled( );
-  public abstract void setEnabled( Boolean enabled );
-  public abstract String getToken( );
-  public abstract boolean checkToken( String testToken );
-  public abstract User getDelegate( );
-  public abstract String getPassword( );
-  public abstract void setPassword( String password );
+public interface User extends BasePrincipal, X509Principal, HmacPrincipal {
+  
+  public static final String USER_GROUP_PREFIX = "_";  
+  public static final String SYSTEM_ADMIN_ACCOUNT_NAME = "system";
+  public static final String ACCOUNT_ADMIN_USER_NAME = "admin";
+  
+  public static enum RegistrationStatus {
+    REGISTERED,
+    APPROVED,
+    CONFIRMED,
+  }
+  
+  public String getUserId( );
+  
+  public void setName( String name ) throws AuthException;
+  
+  public User getDelegate( );
+  
+  public String getPath( );
+    
+  public RegistrationStatus getRegistrationStatus( );
+  
+  public void setRegistrationStatus( RegistrationStatus stat ) throws AuthException;
+
+  public Boolean isEnabled( );
+
+  public void setEnabled( Boolean enabled ) throws AuthException;
+  
+  public boolean checkToken( String testToken );
+  
+  public String getConfirmationCode( );
+    
+  public String getPassword( );
+  
+  public Long getPasswordExpires( );
+
+  public void setPasswordExpires( Long time ) throws AuthException;
+  
+  public void setPassword( String password ) throws AuthException;
+  
+  public String getInfo( String key );
+  
+  public Map<String, String> getInfoMap( );
+  
+  public void setInfo( String key, String value ) throws AuthException;
+  
+  public void setInfo( Map<String, String> newInfo ) throws AuthException;
+  
+  public List<? extends Group> getGroups( );
+  
+  public Account getAccount( );
+  
+  public boolean isSystemAdmin( );
+    
 }

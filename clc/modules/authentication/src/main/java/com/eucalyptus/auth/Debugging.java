@@ -15,13 +15,13 @@ public class Debugging {
     return sb.toString( );
   }
   
-  public static String getEucaStackTraceString( int start ) {
-    StringBuilder sb = ( new StringBuilder( ) ).append( " STACK || ");
-    StackTraceElement[] stes = ( new Throwable( ) ).getStackTrace( );
+  public static String getEucaStackTraceString( int start, Throwable t ) {
+    StringBuilder sb = ( new StringBuilder( ) ).append( " | ");
+    StackTraceElement[] stes = t.getStackTrace( );
     for ( int i = start; i < stes.length; i++ ) {
       String steStr = stes[i].toString( );
       if ( steStr.contains( "eucalyptus" ) ) {
-        sb.append( steStr ).append( " || " );
+        sb.append( steStr ).append( " | " );
       }
     }
     return sb.toString( );
@@ -40,6 +40,10 @@ public class Debugging {
         sb.append( obj.toString( ) ).append( " " );
       }
     }
-    logger.debug( sb.toString( ) + " @ " +  getEucaStackTraceString( 2 ) );
+    logger.debug( sb.toString( ) + " @ " +  getEucaStackTraceString( 1, new Throwable( ) ) );
+  }
+  
+  public static void logError( Logger logger, Throwable t, String message ) {
+    logger.error( message + " with " + t + " @ " +  getEucaStackTraceString( 0, t ) );
   }
 }

@@ -1,7 +1,7 @@
 package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.util.AuthBootstrapHelper;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
@@ -12,31 +12,22 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
-import com.eucalyptus.ldap.LdapConfiguration;
 
 @Provides( Component.bootstrap )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
 public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
-  
-  public static boolean ENABLE = !LdapConfiguration.ENABLE_LDAP;
-  
+    
   public boolean load( ) throws Exception {
-    if (ENABLE) {
-      DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
-      Users.setUserProvider( dbAuth );
-      Groups.setGroupProvider( dbAuth );
-      UserInfoStore.setUserInfoProvider( dbAuth );
-    }
+  	DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
+  	Users.setUserProvider( dbAuth );
+  	Groups.setGroupProvider( dbAuth );
+  	Policies.setPolicyProvider( dbAuth );
     return true;
   }
   
   public boolean start( ) throws Exception {
-    if (ENABLE) {
-      this.checkUserEnabled( );
-      AuthBootstrapHelper.ensureStandardGroupsExists( );
-      AuthBootstrapHelper.ensureAdminExists( );
-    }
+    this.eusureSystemAdminExist( );
     this.ensureCountersExist( );
     this.ensureVmTypesExist( );
     return true;
@@ -79,16 +70,6 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   public boolean check( ) throws Exception {
     return true;
   }
-
-  
-  private void checkUserEnabled( ) {
-    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
-    for ( UserEntity u : db.query( new UserEntity( ) ) ) {
-      if ( u.isEnabled( ) != Boolean.FALSE ) {
-        u.setEnabled( Boolean.TRUE );
-      }
-    }
-  }
   
   private void ensureVmTypesExist( ) {
     EntityWrapper<VmType> db = new EntityWrapper<VmType>( "eucalyptus_general" );
@@ -109,4 +90,19 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   private void ensureCountersExist( ) {
     Counters.getNextId( );
   }
+  
+  private void eusureSystemAdminExist( ) throws Exception {
+    try {
+      User user = Users.lookupSystemAdmin( );
+      if ( user != null ) {
+        return;
+      }
+    } catch ( AuthException e ) {
+      LOG.warn( "System admin does not exist. Adding it now.", e );
+    }
+    // Order matters.
+    Accounts.addSystemAccount( );
+    Users.addSystemAdmin( );
+  }
+
 }

@@ -1,41 +1,22 @@
 package com.eucalyptus.auth.principal;
 
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.domain.UserDomain;
-import com.google.common.collect.ImmutableList;
 
 /**
  * @author decker
  *
  */
 public interface Group extends java.security.acl.Group, Cloneable, UserDomain {
-  /**
-   * @see java.security.Principal#getName()
-   * @return
-   */
-  public abstract String getName( );
+
+  public String getName( );
   
-  /**
-   * TODO: DOCUMENT Group.java
-   * @return
-   */
-  public ImmutableList<User> getMembers( );
+  public void setName( String name ) throws AuthException;
   
-  /**
-   * TODO: DOCUMENT Group.java
-   * @return
-   */
-  public ImmutableList<Authorization> getAuthorizations( );
+  public String getPath( );
   
-  /**
-   * TODO: DOCUMENT Group.java
-   * @param auth
-   */
-  public boolean addAuthorization( Authorization auth );
+  public Boolean isUserGroup( );
   
-  /**
-   * TODO: DOCUMENT Group.java
-   * @param auth
-   */
-  public boolean removeAuthorization( Authorization auth );
+  public Account getAccount( );
   
 }

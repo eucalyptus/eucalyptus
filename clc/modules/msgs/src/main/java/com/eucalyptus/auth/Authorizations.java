@@ -29,10 +29,10 @@ public class Authorizations {
    * @param resourceName the canonical name of the resource (e.g., emi-ABCDEFGH for an Image)
    * @param lookup function provided by the service implementation to perform the lookup
    * @return instance of the resource refered to by resourceName
-   * @throws AuthorizationException
+   * @throws AuthException
    * @throws ResourceLookupException
    */
-  public static <T extends HasName<T>> T lookupPrivileged( String resourceName, ResourceLookup<T> resolver ) throws AuthorizationException, ResourceLookupException {
+  public static <T extends HasName<T>> T lookupPrivileged( String resourceName, ResourceLookup<T> resolver ) throws AuthException, ResourceLookupException {
     /** Check the policy; see implementation example for context lookup, etc. **/
     PolicyEngine.evaluate( resourceName );
     /** If policy allows, perform resource lookup **/
@@ -67,10 +67,10 @@ public class Authorizations {
    * @param quantity number of resources to allocate
    * @param allocator service implementation which performs the allocation
    * @return immutable list of the resources which were allocated
-   * @throws AuthorizationException 
+   * @throws AuthException 
    * @throws ResourceAllocationException 
    */
-  public static <T extends HasName<T>> Set<ResourceLease<T>> allocatePrivileged( Integer quantity, ResourceAllocator<T> allocator ) throws AuthorizationException, ResourceAllocationException {
+  public static <T extends HasName<T>> Set<ResourceLease<T>> allocatePrivileged( Integer quantity, ResourceAllocator<T> allocator ) throws AuthException, ResourceAllocationException {
     try {
       NavigableSet<T> resources = allocator.allocate( quantity );
       final Date expires = !resources.isEmpty( )
@@ -94,7 +94,7 @@ public class Authorizations {
     } catch ( ResourceAllocationException ex ) {
       LOG.error( ex, ex );
       throw ex;
-    } catch ( AuthorizationException ex ) {
+    } catch ( AuthException ex ) {
       LOG.error( ex , ex );
       throw ex;
     }
@@ -106,7 +106,7 @@ public class Authorizations {
    */
   public static class PolicyEngine {
     
-    public static void evaluate( String resourceName ) throws AuthorizationException {
+    public static void evaluate( String resourceName ) throws AuthException {
       try {
         Context requestContext = Contexts.lookup( );
         User user = requestContext.getUser( );
@@ -114,23 +114,23 @@ public class Authorizations {
         SocketAddress remoteAddress = requestContext.getChannel( ).getRemoteAddress( );
         boolean authorized = true;
         if ( !authorized ) {
-          throw new AuthorizationException( "Authorization failed for some specific reason" );
+          throw new AuthException( "Authorization failed for some specific reason" );
         }
-      } catch ( AuthorizationException ex ) {//throw by the policy engine implementation 
+      } catch ( AuthException ex ) {//throw by the policy engine implementation 
         throw ex;
       } catch ( IllegalContextAccessException ex ) {//this would happen if Contexts.lookup() is invoked outside of mule.
-        throw new AuthorizationException( "Cannot invoke Authorizations.resolve without a corresponding service context available.", ex );
+        throw new AuthException( "Cannot invoke Authorizations.resolve without a corresponding service context available.", ex );
       } catch ( Throwable ex ) {
-        throw new AuthorizationException( "An error occurred while trying to evaluate a policy" );
+        throw new AuthException( "An error occurred while trying to evaluate a policy" );
       }
     }
     
-    public static <T> void evaluate( String resourceName, Class<T> resourceType ) throws AuthorizationException {
+    public static <T> void evaluate( String resourceName, Class<T> resourceType ) throws AuthException {
       /** maybe have an optimization that makes use of resourceType **/
       evaluate( resourceName );
     }
     
-    public static <T> Date lookupExpiration( Class<T> resourceType ) throws AuthorizationException {
+    public static <T> Date lookupExpiration( Class<T> resourceType ) throws AuthException {
       return new Date( );
     }
   }
