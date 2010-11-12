@@ -81,18 +81,11 @@ import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.NoSuchGroupException;
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.UserExistsException;
-import com.eucalyptus.auth.UserInfo;
-import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.WrappedUser;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
@@ -133,6 +126,7 @@ public class EucalyptusManagement {
 	/* TODO: for now 'pattern' is ignored and all users are returned */
 	public static List <UserInfoWeb> getWebUsers (String pattern) throws SerializableException
 	{
+	  /*
 	  final List<UserInfoWeb> webUsersList = Lists.newArrayList();
 	  for( User u : Users.listAllUsers( ) ) {
       try {
@@ -143,6 +137,8 @@ public class EucalyptusManagement {
       }
 	  }
 		return webUsersList;
+		*/
+	  return null;
 	}
 
 	/* TODO: for now 'pattern' is ignored and all images are returned */
@@ -155,21 +151,29 @@ public class EucalyptusManagement {
 	}
 
 	public static UserInfoWeb getWebUser( String userName ) throws SerializableException {
-	  return EucalyptusManagement.getWebUserByExample( new UserInfo( userName ) );
+	  //return EucalyptusManagement.getWebUserByExample( new UserInfo( userName ) );
+	  return null;
 	}
 
   public static UserInfoWeb getWebUserByEmail( String emailAddress ) throws SerializableException {
+    /*
     UserInfo s = new UserInfo( );
     s.setEmail( emailAddress );
     return EucalyptusManagement.getWebUserByExample( s );
+    */
+    return null;
   }
 
   public static UserInfoWeb getWebUserByCode( String confCode ) throws SerializableException {
+    /*
     UserInfo s = new UserInfo( );
     s.setConfirmationCode( confCode );
     return EucalyptusManagement.getWebUserByExample( s );
+    */
+    return null;
   }
-  
+
+  /*
   private static UserInfoWeb getWebUserByExample( UserInfo ex ) throws SerializableException {
     try {
       UserInfo userInfo = UserInfoStore.getUserInfo( ex );
@@ -180,9 +184,11 @@ public class EucalyptusManagement {
       throw EucalyptusManagement.makeFault( "User does not exist" );
     }
   }
+  */
 
 	public static synchronized void addWebUser( UserInfoWeb webUser ) throws SerializableException
 	{
+	  /*
 	  User user = null;
 	  try {
       user = Users.lookupUser( webUser.getUserName( ) );
@@ -210,7 +216,8 @@ public class EucalyptusManagement {
         LOG.error( e1, e1 );
         throw EucalyptusManagement.makeFault("Error adding user: " + e1.getMessage( ) );
       }
-    }	  
+    }	
+    */  
 	}
 
 	private static SerializableException makeFault(String message)
@@ -228,6 +235,7 @@ public class EucalyptusManagement {
 
 	public static void deleteUser( String userName ) throws SerializableException
 	{
+	  /*
 	  try {
       Users.deleteUser( userName );
       UserInfoStore.deleteUserInfo( userName );
@@ -238,10 +246,12 @@ public class EucalyptusManagement {
       LOG.debug( e1, e1 );
       throw EucalyptusManagement.makeFault("Error while deleting user: " + e1.getMessage( ) );      
     }
+    */
 	}
 
 	public static void commitWebUser( final UserInfoWeb webUser ) throws SerializableException
 	{
+	  /*
 	  String userName = webUser.getUserName( );
     try {
       Users.updateUser( userName, new Tx<User>( ) {
@@ -261,10 +271,12 @@ public class EucalyptusManagement {
       LOG.error( e1, e1 );
       throw EucalyptusManagement.makeFault("Error while updating user: " + e1.getMessage( ) );      
     }
+    */
 	}
 
 	public static String getAdminEmail() throws SerializableException
 	{
+	  /*
 		String addr = null;
 		try {
       UserInfo adminUser = UserInfoStore.getUserInfo( new UserInfo("admin") );
@@ -276,6 +288,8 @@ public class EucalyptusManagement {
       throw EucalyptusManagement.makeFault( "Email address is not set" );
     }
 		return addr;
+		*/
+	  return null;
 	}
 
 	public static void deleteImage(String imageId)
@@ -450,6 +464,7 @@ public class EucalyptusManagement {
 	}
 
 	private static List<String> getGroupZones(Group group) {
+	  /*
 		List<String> zones = new ArrayList<String>();
 		for (Authorization auth : group.getAuthorizations()) {
 			if (auth instanceof AvailabilityZonePermission) {
@@ -457,9 +472,12 @@ public class EucalyptusManagement {
 			}
 		}
 		return zones;
+		*/
+	  return null;
 	}
 
 	public static List<GroupInfoWeb> getAllGroups() {
+	  /*
 		List<GroupInfoWeb> result = new ArrayList<GroupInfoWeb>();
 		List<Group> groups = Groups.listAllGroups();
 		if (groups != null) {
@@ -471,9 +489,12 @@ public class EucalyptusManagement {
 			}
 		}
 		return result;
+		*/
+	  return null;
 	}
 	
 	public static GroupInfoWeb getGroup(String name) {
+	  /*
 		try {
 			Group group = Groups.lookupGroup(name);
 			GroupInfoWeb gi = new GroupInfoWeb();
@@ -484,9 +505,12 @@ public class EucalyptusManagement {
 		} catch (NoSuchGroupException nge) {
 		}
 		return null;
+		*/
+	  return null;
 	}
 	
 	public static List<UserInfoWeb> getGroupMembers(String groupName) {
+	  /*
 		final List<UserInfoWeb> uis = new ArrayList<UserInfoWeb>();
 		Group group = null;
 		try {
@@ -506,26 +530,34 @@ public class EucalyptusManagement {
 			}
 		}
 		return uis;
+		*/
+	  return null;
 	}
 	
 	public static List<String> getUserGroups(String userName) throws Exception {
+	  /*
 		final List<String> groupNames = new ArrayList<String>();
 		List<Group> groups = Groups.lookupUserGroups(Users.lookupUser(userName));
 		for (Group group : groups) {
 			groupNames.add(group.getName());
 		}
 		return groupNames;
+		*/
+	  return null;
 	}
 	
 	public static void addGroup(GroupInfoWeb gi) throws Exception {
+	  /*
 	  Groups.checkNotRestricted( gi.getName( ) );
 		Group group = Groups.addGroup(gi.name);
 		for (String zone : gi.zones) {
 			group.addAuthorization(new AvailabilityZonePermission(zone));
 		}
+		*/
 	}
 	
 	public static void updateGroup(GroupInfoWeb gi) throws Exception {
+	  /*
 	  Groups.checkNotRestricted( gi.getName( ) );
 		try {
 			Group group = Groups.lookupGroup(gi.name);
@@ -542,18 +574,22 @@ public class EucalyptusManagement {
 		} catch (NoSuchGroupException nsge) {
 			throw new Exception("Can not find the group");
 		}
+		*/
 	}
 	
 	public static void deleteGroup(String groupName) throws Exception {
+	  /*
     Groups.checkNotRestricted( groupName );
 		try {
 			Groups.deleteGroup(groupName);
 		} catch (NoSuchGroupException nsge) {
 			throw new Exception("No such group");
 		}
+		*/
 	}
 	
 	public static void addUserToGroup(String userName, String groupName) throws Exception {
+	  /*
     Groups.checkNotRestricted( groupName );
     if (Groups.NAME_ALL.equalsIgnoreCase(groupName)) {
       throw new Exception("Group 'all' cannot be added to");
@@ -573,9 +609,11 @@ public class EucalyptusManagement {
 		if (!group.addMember(user)) {
 			throw new Exception("Failed to add user " + userName + " to " + groupName);
 		}
+		*/
 	}
 	
 	public static void removeUserFromGroup(String userName, String groupName) throws Exception {
+	  /*
 		if (Groups.NAME_ALL.equalsIgnoreCase(groupName)) {
 			throw new Exception("Group 'all' cannot be removed from");
 		}
@@ -594,9 +632,11 @@ public class EucalyptusManagement {
 		if (!group.removeMember(user)) {
 			throw new Exception("Failed to remove user " + userName + " from " + groupName);
 		}
+		*/
 	}
 	
 	public static void updateUserGroups(String userName, List<String> updateGroups) throws Exception {
+	  /*
 		User user = null;
 		try {
 			user = Users.lookupUser(userName);
@@ -615,5 +655,6 @@ public class EucalyptusManagement {
 				group.removeMember(user);
 			}
 		}
+		*/
 	}
 }

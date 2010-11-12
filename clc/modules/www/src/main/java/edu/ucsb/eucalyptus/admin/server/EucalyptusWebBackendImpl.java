@@ -88,7 +88,6 @@ import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
@@ -418,7 +417,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 		if (verifyPasswordAge) {
 			if (isPasswordExpired(user) && 
-					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY))) { // first-time config will catch that
+					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase("n/a"))) { // first-time config will catch that
 				throw new SerializableException("Password expired");
 			}
 		}
@@ -702,7 +701,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 
 		// set expiration for admin setting password for the first time
-		if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY)) {
+		if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase("n/a")) {
 			long now = System.currentTimeMillis();
 			oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
 		}
@@ -943,7 +942,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		addUserRecord(sessionId, user);
 		boolean inDefaultGroup = false;
 		for (String groupName : groupNames) {
-		  if ( Groups.NAME_DEFAULT.equals( groupName ) ) {
+		  if ( "default".equals( groupName ) ) {
 		    inDefaultGroup = true;
 		  }
 			try {
@@ -954,7 +953,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			}
 		}
 		if ( !inDefaultGroup && groupNames.size( ) > 0 ) {
-		  EucalyptusManagement.removeUserFromGroup( user.getUserName( ), Groups.NAME_DEFAULT );
+		  EucalyptusManagement.removeUserFromGroup( user.getUserName( ), "default" );
 		}
 	}
 

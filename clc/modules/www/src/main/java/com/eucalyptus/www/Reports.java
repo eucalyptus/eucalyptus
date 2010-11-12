@@ -254,11 +254,11 @@ public class Reports extends HttpServlet {
       session = EucalyptusWebBackendImpl.verifySession( sessionId );
       User user = null;
       try {
-        user = Users.lookupUser( session.getUserId( ) );
+        user = Users.lookupUserById( session.getUserId( ) );
       } catch ( Exception e ) {
         throw new RuntimeException( "User does not exist" );
       }
-      if ( !user.isAdministrator( ) ) {
+      if ( !user.isSystemAdmin( ) ) {
         throw new RuntimeException( "Only administrators can view reports." );
       }
     } catch ( SerializableException e1 ) {

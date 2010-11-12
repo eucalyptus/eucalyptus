@@ -112,7 +112,12 @@ public class X509Download extends HttpServlet {
     
     User user = null;
     try {
-      user = Users.lookupUser( userName );
+      if ( "admin".equals( userName ) ) {
+        user = Users.lookupSystemAdmin( );
+        userName = user.getUserId( );
+      } else {
+        user = Users.lookupUserById( userName );
+      }
     } catch ( Exception e ) {
       hasError( "User does not exist", response );
       return;
@@ -151,24 +156,23 @@ public class X509Download extends HttpServlet {
   public static byte[] getX509Zip( String userName, String newKeyName ) throws Exception {
     X509Certificate cloudCert = null;
     final X509Certificate x509;
-    User u = Users.lookupUser( userName );
-    String userAccessKey = u.getQueryId( );
-    String userSecretKey = u.getSecretKey( );
+    User u = Users.lookupUserById( userName );
+    String userAccessKey = u.getFirstActiveSecretKeyId( );
+    String userSecretKey = u.getSecretKey( userAccessKey );
     KeyPair keyPair = null;
     try {
       keyPair = Certs.generateKeyPair( );
       x509 = Certs.generateCertificate( keyPair, userName );
       x509.checkValidity( );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
-      u.revokeX509Certificate( );
-      u.setX509Certificate( x509 );
+      u.addX509Certificate( x509 );
       //      Transactions.one( new UserEntity( userName ), new Tx<UserEntity>() {
       //        public void fire( UserEntity user ) throws Throwable {
       //          user.revokeX509Certificate( );
       //          user.setCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
       //        }});
-      User now = Users.lookupUser( userName );
-      LOG.info( "Current user certificate: " + now.getX509Certificate( ) != null ? now.getX509Certificate( ).getSerialNumber( ) : null );
+      User now = Users.lookupUserById( userName );
+      //LOG.info( "Current user certificate: " + now.getX509Certificate( ) != null ? now.getX509Certificate( ).getSerialNumber( ) : null );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
@@ -182,7 +186,7 @@ public class X509Download extends HttpServlet {
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
       StringBuffer sb = new StringBuffer( );
       
-      BigInteger number = Users.lookupUser( userName ).getNumber( );
+      BigInteger number = Users.lookupUserById( userName ).getNumber( );
       String userNumber = null;
       if ( number != null ) {
 	    userNumber = number.toString( );
