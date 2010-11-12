@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.NavigableMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
@@ -33,7 +32,8 @@ public class NodeResourceAllocator implements ResourceAllocator {
     String vmTypeName = vmInfo.getRequest( ).getInstanceType( );
     final int amount = vmInfo.getRequest( ).getMinCount( );
     Context ctx = Contexts.lookup( );
-    if ( ctx.getGroups( ).isEmpty( ) ) {
+    //if ( ctx.getGroups( ).isEmpty( ) ) {
+    if ( false ) {
       throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName );
     } else {
       String zoneName = ( clusterName != null )
@@ -62,7 +62,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
             int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
               ? state.getAvailability( vmTypeName ).getAvailable( )
               : remaining;
-            ResourceToken token = state.getResourceAllocation( ctx.getCorrelationId( ), ctx.getUser( ).getName( ), vmTypeName, tryAmount );
+            ResourceToken token = state.getResourceAllocation( ctx.getCorrelationId( ), ctx.getUser( ).getUserId( ), vmTypeName, tryAmount );
             remaining -= token.getAmount( );
             tokens.add( token );
           } catch ( Throwable t ) {
@@ -94,16 +94,19 @@ public class NodeResourceAllocator implements ResourceAllocator {
   
   private List<Cluster> doPrivilegedLookup( String clusterName, String vmTypeName ) throws NotEnoughResourcesAvailable {
     if ( "default".equals( clusterName ) ) {
-      Group group = Contexts.lookup( ).getGroups( ).get( 0 );
+      //Group group = Contexts.lookup( ).getGroups( ).get( 0 );
       Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
         @Override
         public boolean apply( final Cluster c ) {
+          /*
           return Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
             @Override
             public boolean apply( Authorization arg0 ) {
               return arg0.check( new AvailabilityZonePermission( c.getName( ) ) );
             }
           } );
+          */
+          return true;
         }
       } );
       Multimap<VmTypeAvailability, Cluster> sorted = Multimaps.newTreeMultimap( );
@@ -117,12 +120,15 @@ public class NodeResourceAllocator implements ResourceAllocator {
       }
     } else {
       final Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+      /*
       if ( Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
         @Override
         public boolean apply( Authorization arg0 ) {
           return arg0.check( new AvailabilityZonePermission( cluster.getName( ) ) );
         }
       } ) ) {
+      */
+      if ( true ) {
         return Lists.newArrayList( cluster );
       } else {
         if ( Clusters.getInstance( ).contains( clusterName ) ) {

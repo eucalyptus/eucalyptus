@@ -69,7 +69,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.User;
@@ -123,7 +123,7 @@ public class VolumeManager {
     }
     StorageControllerConfiguration sc = Configuration.lookupSc( request.getAvailabilityZone( ) );
     try {
-      User u = Users.lookupUser( request.getUserId( ) );
+      User u = Users.lookupUserById( request.getUserId( ) );
 //      List<Group> groups = Groups.lookupUserGroups( u );
 //      if( ! Iterables.any( groups, new Predicate<Group>() {
 //        @Override
@@ -137,7 +137,7 @@ public class VolumeManager {
 //        }} ) ) {
 //        throw new EucalyptusCloudException( "Permission denied when trying to use resource: " + request.getAvailabilityZone( ) );
 //      }
-    } catch ( NoSuchUserException e ) {
+    } catch ( AuthException e ) {
       throw new EucalyptusCloudException( "Failed to lookup your user information.", e );
     }
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper( );

@@ -81,11 +81,10 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
@@ -143,11 +142,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
@@ -256,8 +253,8 @@ public class WalrusImageManager {
 						boolean signatureVerified = false;
 						User user = null;
 						try {
-							user = Users.lookupUser( userId );
-						} catch ( NoSuchUserException e ) {
+							user = Users.lookupUserById( userId );
+						} catch ( AuthException e ) {
 							throw new AccessDeniedException(userId,e);            
 						}         
 						try {
@@ -394,8 +391,8 @@ public class WalrusImageManager {
 
 					User user = null;
 					try {
-						user = Users.lookupUser( userId );
-					} catch ( NoSuchUserException e ) {
+						user = Users.lookupUserById( userId );
+					} catch ( AuthException e ) {
 						throw new AccessDeniedException(userId,e);            
 					}         
 					boolean signatureVerified = false;
@@ -409,11 +406,13 @@ public class WalrusImageManager {
 					}
 
 					try {
-						X509Certificate cert = user.getX509Certificate( );
-						PublicKey publicKey = cert.getPublicKey();
-						sigVerifier.initVerify(publicKey);
-						sigVerifier.update((machineConfiguration + image).getBytes());
-						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+						for ( X509Certificate cert : user.getAllX509Certificates( ) ) {
+  						PublicKey publicKey = cert.getPublicKey();
+  						sigVerifier.initVerify(publicKey);
+  						sigVerifier.update((machineConfiguration + image).getBytes());
+  						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+  						if ( signatureVerified ) break;
+						}
 					} catch(Exception ex) {
 						db.rollback();
 						LOG.error(ex, ex);

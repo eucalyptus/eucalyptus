@@ -79,7 +79,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Users;
 
 @Entity
@@ -185,8 +185,8 @@ public class GrantInfo {
 						if(id == null || id.length() == 0)
 							continue;
 						try {
-							displayName = Users.lookupQueryId(id).getName();
-						} catch ( NoSuchUserException e ) {
+							displayName = Users.lookupUserByAccessKeyId(id).getUserId();
+						} catch ( AuthException e ) {
               LOG.warn(e,e);
             }
 						if(displayName == null)

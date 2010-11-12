@@ -67,7 +67,7 @@ public class Context {
   
   public void setUser( User user ) {
     if ( user != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getName( ) ).debug( );
+      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getUserId( ) ).debug( );
       this.user = user;
     }
   }
@@ -76,6 +76,7 @@ public class Context {
     return check( this.user );
   }
   
+  /*
   public List<Group> getGroups( ) {
     return Groups.lookupUserGroups( this.getUser( ) );
   }
@@ -87,6 +88,7 @@ public class Context {
     }
     return auths;
   }
+  */
   
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {

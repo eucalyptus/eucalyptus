@@ -79,13 +79,11 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.NoSuchGroupException;
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.GroupEntity;
-import com.eucalyptus.auth.UserInfo;
-import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.principal.ImageUserGroup;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.bootstrap.Component;
@@ -222,15 +220,17 @@ public class ImageUtil {
   public static boolean isSet( String id ) {
     return id != null && !"".equals( id );
   }
+  /*
   private static boolean userHasImagePermission( final UserInfo user, final ImageInfo img ) {
     try {
-      if ( /*img.getUserGroups( ).isEmpty( ) && */!user.getUserName( ).equals( img.getImageOwnerId( ) )
+      if ( !user.getUserName( ).equals( img.getImageOwnerId( ) )
            && !Users.lookupUser( user.getUserName( ) ).isAdministrator( ) && !img.getPermissions( ).contains( user ) ) return true;
     } catch ( NoSuchUserException e ) {
       return false;
     }
     return false;
   }
+  */
   private static void invalidateImageById( String searchId ) throws EucalyptusCloudException {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     if ( isSet( searchId ) ) try {
@@ -325,22 +325,22 @@ public class ImageUtil {
       if ( perm.isGroup( ) ) {
         try {
           if( adding ) {
-            imgInfo.grantPermission( Groups.lookupGroup( perm.getGroup( ) ) );
+            imgInfo.grantPermission( new ImageUserGroup( perm.getGroup( ) ) );
           } else {
-            imgInfo.revokePermission( Groups.lookupGroup( perm.getGroup( ) ) );
+            imgInfo.revokePermission( new ImageUserGroup( perm.getGroup( ) ) );
           }
-        } catch ( NoSuchGroupException e ) {
+        } catch ( Exception e ) {
           LOG.debug( e, e );
           throw new EucalyptusCloudException( "Modify image attribute failed because of: " + e.getMessage( ) );
         }
       } else if ( perm.isUser( ) ) {
         try {
           if( adding ) {
-            imgInfo.grantPermission( Users.lookupUser( perm.getUserId( ) ) );
+            imgInfo.grantPermission( Users.lookupUserById( perm.getUserId( ) ) );
           } else {
-            imgInfo.revokePermission( Users.lookupUser( perm.getUserId( ) ) );
+            imgInfo.revokePermission( Users.lookupUserById( perm.getUserId( ) ) );
           }
-        } catch ( NoSuchUserException e ) {
+        } catch ( AuthException e ) {
           LOG.debug( e, e );
           throw new EucalyptusCloudException( "Modify image attribute failed because of: " + e.getMessage( ) );
         }
@@ -377,7 +377,7 @@ public class ImageUtil {
     }
     return inputSource;
   }
-  public static List<ImageDetails> getImageOwnedByUser( List<ImageInfo> imgList, UserInfo user ) {
+  public static List<ImageDetails> getImageOwnedByUser( List<ImageInfo> imgList, User user ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     List<ImageDetails> repList = Lists.newArrayList( );
     try {
@@ -395,10 +395,10 @@ public class ImageUtil {
     }
     return repList;
   }
-  public static List<ImageDetails> getImagesByOwner( final List<ImageInfo> imgList, final UserInfo user, final ArrayList<String> owners ) {
+  public static List<ImageDetails> getImagesByOwner( final List<ImageInfo> imgList, final User user, final ArrayList<String> owners ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     List<ImageDetails> repList = Lists.newArrayList( );
-    if ( owners.remove( "self" ) ) owners.add( user.getUserName( ) );
+    if ( owners.remove( "self" ) ) owners.add( user.getUserId( ) );
     try {
       for ( String userName : owners ) {
         Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.byOwnerId( userName ) ), new Predicate<ImageInfo>( ) {
@@ -416,13 +416,13 @@ public class ImageUtil {
     }
     return repList;
   }
-  public static List<ImageDetails> getImagesByExec( UserInfo user, ArrayList<String> executable ) {
+  public static List<ImageDetails> getImagesByExec( User user, ArrayList<String> executable ) {
     List<ImageDetails> repList = Lists.newArrayList( );
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
       for ( String execUserId : executable ) {
         if ( "all".equals( execUserId ) ) continue;
-        final UserInfo execUser = UserInfoStore.getUserInfo( new UserInfo( execUserId ) );
+        final User execUser = Users.lookupUserById( execUserId );
         Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.ALL ), new Predicate<ImageInfo>( ) {
           @Override public boolean apply( ImageInfo arg0 ) {
             return arg0.isAllowed( execUser ) || arg0.getImagePublic( );
@@ -431,7 +431,7 @@ public class ImageUtil {
         repList.addAll( Lists.transform( Lists.newArrayList( results ), ImageInfo.TO_IMAGE_DETAILS ) );
       }
       db.commit( );
-    } catch ( NoSuchUserException e ) {
+    } catch ( AuthException e ) {
       LOG.debug( e, e );
       db.commit( );
     }

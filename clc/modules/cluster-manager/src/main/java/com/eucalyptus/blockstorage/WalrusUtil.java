@@ -71,10 +71,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
 
-import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
@@ -180,8 +179,8 @@ public class WalrusUtil {
 		String machineConfiguration = parser.getXML( "machine_configuration" );
 		User user = null;
 		try {
-			user = Users.lookupUser( imgInfo.getImageOwnerId( ) );
-		} catch ( NoSuchUserException e ) {
+			user = Users.lookupUserById( imgInfo.getImageOwnerId( ) );
+		} catch ( AuthException e ) {
 			throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature because of missing (deleted?) user certificate.", e );
 		}
 		boolean found = false;

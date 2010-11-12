@@ -71,7 +71,7 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
-import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Cluster;
@@ -293,8 +293,8 @@ public class VmControl {
     String instanceId = request.getInstanceId( );
     User user = null;
     try {
-      user = Users.lookupUser( request.getUserId( ) );
-    } catch ( NoSuchUserException e1 ) {
+      user = Users.lookupUserById( request.getUserId( ) );
+    } catch ( AuthException e1 ) {
       throw new EucalyptusCloudException( "Failed to lookup the specified user's information: " + request.getUserId( ) );
     }
     try {
@@ -322,7 +322,7 @@ public class VmControl {
                              .here( BundleCallback.class, EventType.BUNDLE_PENDING, request.getUserId( ), v.getBundleTask( ).getBundleId( ), v.getInstanceId( ) ) );
         BundleCallback callback = new BundleCallback( request );
         request.setUrl( walrusUrl );
-        request.setAwsAccessKeyId( user.getQueryId( ) );
+        request.setAwsAccessKeyId( user.getFirstActiveSecretKeyId( ) );
         Callbacks.newClusterRequest( callback ).dispatch( v.getPlacement( ) );
         return reply;
       } else {
