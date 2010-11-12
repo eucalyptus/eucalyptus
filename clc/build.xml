@@ -236,7 +236,6 @@
 		<mkdir dir="${DESTDIR}${euca.run.dir}" />
 		<ant dir="modules/msgs" inheritall="false" target="install" />
 		<ant dir="modules/mysql" inheritall="false" target="install" />
-		<ant dir="modules/ldap" inheritall="false" target="install" />
 		<ant dir="modules/cloud" inheritall="false" target="install" />
 		<ant dir="modules/authentication" inheritall="false" target="install" />
 		<ant dir="modules/configuration" inheritall="false" target="install" />
