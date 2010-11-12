@@ -25,14 +25,10 @@ public class ClusterCredentials extends AbstractPersistent implements Serializab
   @Column( name = "auth_cluster_name", unique=true )
   String clusterName;
   
-  @OneToOne(cascade = CascadeType.ALL)
-  @JoinColumn(name="auth_cluster_x509_certificate")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  @Column(name="auth_cluster_x509_certificate")
   String clusterCertificate;
   
-  @OneToOne(cascade = CascadeType.ALL)
-  @JoinColumn(name="auth_cluster_node_x509_certificate")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  @Column(name="auth_cluster_node_x509_certificate")
   String nodeCertificate;
   
   public ClusterCredentials( ) {
