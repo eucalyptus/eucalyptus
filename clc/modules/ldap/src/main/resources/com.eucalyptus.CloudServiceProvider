@@ -1,6 +1,0 @@
-name=ldap
-euca.model.dns=ldap-model.xml
-euca.model.dns.services=ldap-services.xml
-euca.url.local=mysql://127.0.0.1:8777/eucalyptus
-euca.url.pattern=mysql://%s:%d/eucalyptus
-euca.url.port=8777

@@ -89,7 +89,6 @@
 	<target name="build">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder" />
-		<ant dir="modules/ldap" inheritall="false" target="builder" />
 		<ant dir="modules/authentication" inheritall="false" target="builder" />
 		<ant dir="modules/configuration" inheritall="false" target="builder" />
 		<ant dir="modules/core" inheritall="false" target="builder" />
@@ -114,7 +113,6 @@
 	<target name="jar" depends="bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
 		<ant dir="modules/mysql" inheritall="false" target="jar" />
-		<ant dir="modules/ldap" inheritall="false" target="jar" />
 		<ant dir="modules/authentication" inheritall="false" target="jar" />
 		<ant dir="modules/cloud" inheritall="false" target="jar" />
 		<ant dir="modules/configuration" inheritall="false" target="jar" />
