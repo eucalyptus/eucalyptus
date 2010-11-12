@@ -298,7 +298,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element name="uuid" type="xs:string"/>
+	      <xs:element minOccurs="0" name="uuid" type="xs:string"/>
 	      <xs:element name="source" type="xs:string"/>
 	      <xs:element name="dest" type="xs:string"/>
 	    </xs:sequence>
