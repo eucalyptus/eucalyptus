@@ -3,8 +3,5 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="com.google.gwt.eclipse.core.GWT_CONTAINER/GWT"/>
-	<classpathentry kind="lib" path="/Users/rusvika/Eucalyptus/euca/bzr/main-vika-web/clc/target/eucalyptus-auth-2.0.1.jar"/>
-	<classpathentry kind="lib" path="/Users/rusvika/Eucalyptus/euca/bzr/main-vika-web/clc/target/eucalyptus-msgs-2.0.1.jar"/>
-	<classpathentry kind="lib" path="/Users/rusvika/Eucalyptus/euca/bzr/main-vika-web/clc/lib/groovy-1.7.0.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
