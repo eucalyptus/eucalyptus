@@ -42,7 +42,7 @@ public class PolicyEntity extends AbstractPersistent implements Policy, Serializ
   String name;
   
   @Column( name = "auth_policy_version" )
-  String version;
+  String policyVersion;
   
   // The original policy text in JSON
   @Column( name = "auth_policy_text" )
@@ -67,7 +67,7 @@ public class PolicyEntity extends AbstractPersistent implements Policy, Serializ
   }
 
   public PolicyEntity( String version, String text, List<StatementEntity> statements ) {
-    this.version = version;
+    this.policyVersion = version;
     this.text = text;
     this.statements = statements;
   }
@@ -101,7 +101,7 @@ public class PolicyEntity extends AbstractPersistent implements Policy, Serializ
 
   @Override
   public String getPolicyVersion( ) {
-    return this.version;
+    return this.policyVersion;
   }
   
 }
