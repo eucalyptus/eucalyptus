@@ -696,7 +696,7 @@ int doFlushNetwork(ncMetadata *ccMeta, char *destName) {
   return(rc);
 }
 
-int doAssignAddress(ncMetadata *ccMeta, char *src, char *dst) {
+int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
   int rc, allocated, addrdevno, ret;
   char cmd[MAX_PATH];
   ccInstance *myInstance=NULL;
@@ -926,7 +926,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   return(0);
 }
 
-int doStartNetwork(ncMetadata *ccMeta, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen) {
+int doStartNetwork(ncMetadata *ccMeta, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen) {
   int rc, ret;
   time_t op_start;
   char *brname;
@@ -1662,11 +1662,11 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
   return(0);
 }
 
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
   int rc=0, i=0, done=0, runCount=0, resid=0, foundnet=0, error=0, networkIdx=0, nidx=0, thenidx=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
-  char instId[16];
+  char instId[16], uuid[48];
   time_t op_start=0;
   ccResource *res=NULL;
   char mac[32], privip[32], pubip[32];
@@ -1729,6 +1729,11 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   done=0;
   for (i=0; i<maxCount && !done; i++) {
     snprintf(instId, 16, "%s", instIds[i]);
+    if (uuidsLen > i) {
+      snprintf(uuid, 48, "%s", uuids[i]);
+    } else {
+      snprintf(uuid, 48, "UNSET");
+    }
 
     logprintfl(EUCADEBUG,"RunInstances(): running instance %s with emiId %s...\n", instId, amiId);
     
