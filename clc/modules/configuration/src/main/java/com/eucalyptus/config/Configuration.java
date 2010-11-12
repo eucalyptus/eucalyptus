@@ -68,9 +68,7 @@ import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -200,6 +198,8 @@ public class Configuration {
   }
   
   public static StorageControllerConfiguration lookupSc( final String requestedZone ) throws EucalyptusCloudException {
+    return getStorageControllerConfiguration( requestedZone );
+    /*
     try {
       return getStorageControllerConfiguration( requestedZone );
     } catch ( Exception e ) {
@@ -236,6 +236,7 @@ public class Configuration {
         throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone: " + requestedZone, ex );
       }
     }
+    */
   }
   
   public static List<ClusterConfiguration> getClusterConfigurations( ) throws EucalyptusCloudException {
