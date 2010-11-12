@@ -222,7 +222,11 @@ public class Component implements ComponentInformation, HasName<Component> {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     if( service.isLocal( ) ) {
       this.stateMachine.transition( Transition.STARTING );
-      this.stateMachine.transition( Transition.READY_CHECK );
+      try {
+        this.stateMachine.transition( Transition.READY_CHECK );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+      }
     } else {
       this.builder.fireStart( service );
     }
