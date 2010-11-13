@@ -103,7 +103,7 @@ public class GroupEntity extends AbstractPersistent implements Group, Serializab
     sb.append( "Group[" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
-    sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
+    sb.append( "path=" ).append( this.getPath( ) );
     sb.append( "]" );
     return sb.toString( );
   }

@@ -28,6 +28,18 @@ public class AuthTest {
       Group group = Groups.addGroup( "group1", "/", "account1" );
       group.addMember( user );
       
+      for ( User u : group.getUsers( ) ) {
+        LOG.debug( MARK + "group1 user: " + u.getName( ) );
+      }
+      
+      for ( Group g : user.getGroups( ) ) {
+        LOG.debug( MARK + "user11 group: " + g.getName( ) );
+      }
+      LOG.debug( MARK + "user11 info: " + user.getInfoMap ( ) );
+      LOG.debug( MARK + "user11 certs: " + user.getAllX509Certificates( ) );
+      LOG.debug( MARK + "user11 key: " + user.getSecretKey( user.getFirstActiveSecretKeyId( ) ) );
+      LOG.debug( MARK + "user11 account: " + user.getAccount( ).getName( ) );
+      
       printUsers( "account1" );
       printGroups( "account1" );
       
@@ -67,9 +79,6 @@ public class AuthTest {
     LOG.debug( MARK + "---Groups for " + accountName + "---" );
     for ( Group group : Accounts.listAllGroups( accountName ) ) {
       LOG.debug( MARK + group.toString( ) );
-      for ( User u : group.getUsers( ) ) {
-        LOG.debug( MARK + u.getName( ) );
-      }
     }
   }
   
