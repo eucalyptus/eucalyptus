@@ -366,7 +366,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   dpart = adb_describePublicAddressesResponseType_create(env);
   for (i=0; i<outAddressesLen; i++) {
     if (outAddresses[i].ip) {
-      //      adb_describePublicAddressesResponseType_add_uuids(dpart, env, outAddresses[i].uuid);
+      //adb_describePublicAddressesResponseType_add_uuids(dpart, env, outAddresses[i].uuid);
       ipstr = hex2dot(outAddresses[i].ip);
       adb_describePublicAddressesResponseType_add_sourceAddresses(dpart, env, ipstr);
       if (ipstr) free(ipstr);
