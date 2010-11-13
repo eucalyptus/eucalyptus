@@ -143,7 +143,7 @@ public class DatabaseGroupProxy implements Group {
   
   @Override
   public String toString( ) {
-    return this.toString( );
+    return this.delegate.toString( );
   }
 
   @Override
