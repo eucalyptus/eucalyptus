@@ -17,6 +17,7 @@ import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 public class DatabaseUserProxy implements User {
 
@@ -41,13 +42,33 @@ public class DatabaseUserProxy implements User {
   }
   
   @Override
-  public X509Certificate getX509Certificate( String id ) {
-    return this.delegate.getX509Certificate( id );
+  public X509Certificate getX509Certificate( final String id ) {
+    final List<X509Certificate> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.add( t.getX509Certificate( id ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getX509Certificate for " + this.delegate );
+    }
+    return results.get( 0 );
   }
   
   @Override
   public List<X509Certificate> getAllX509Certificates( ) {
-    return this.delegate.getAllX509Certificates( );
+    final List<X509Certificate> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.addAll( t.getAllX509Certificates( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAllX509Certificates for " + this.delegate );
+    }
+    return results;
   }
   
   @Override
@@ -59,7 +80,7 @@ public class DatabaseUserProxy implements User {
         }
       } );
     } catch ( TransactionException e ) {
-      Debugging.logError( LOG, e, "Failed to setX509Certificate for " + this.delegate );
+      Debugging.logError( LOG, e, "Failed to addX509Certificate for " + this.delegate );
     }
   }
   
@@ -108,8 +129,18 @@ public class DatabaseUserProxy implements User {
   }
   
   @Override
-  public String getSecretKey( String id ) {
-    return this.delegate.getSecretKey( id );
+  public String getSecretKey( final String id ) {
+    final List<String> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.add( t.getSecretKey( id ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getSecretKey for " + this.delegate );
+    }
+    return results.get( 0 );
   }
   
   @Override
@@ -257,8 +288,18 @@ public class DatabaseUserProxy implements User {
   }
   
   @Override
-  public String getInfo( String key ) {
-    return this.delegate.getInfo( key );
+  public String getInfo( final String key ) {
+    final List<String> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.add( t.getInfo( key ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getInfo for " + this.delegate );
+    }
+    return results.get( 0 );
   }
   
   @Override
@@ -290,14 +331,24 @@ public class DatabaseUserProxy implements User {
       }
       db.commit( );
     } catch ( Throwable e ) {
-      Debugging.logError( LOG, e, "Failed to change user name for " + this.delegate.getName( ) );
+      Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
       db.rollback( );
     }
   }
 
   @Override
   public Map<String, String> getInfoMap( ) {
-    return this.delegate.getInfoMap( );
+    final Map<String, String> results = Maps.newHashMap( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.putAll( t.getInfoMap( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getInfoMap for " + this.delegate );
+    }
+    return results;
   }
 
   @Override
@@ -315,39 +366,87 @@ public class DatabaseUserProxy implements User {
   
   @Override
   public List<? extends Group> getGroups( ) {
-    List<DatabaseGroupProxy> groups = Lists.newArrayList( );
-    for ( Group g : this.delegate.getGroups( ) ) {
-      GroupEntity ge = ( GroupEntity ) g;
-      if ( !ge.isUserGroup( ) ) {
-        groups.add( new DatabaseGroupProxy( ge ) );
-      }
+    final List<DatabaseGroupProxy> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          for ( Group g : t.getGroups( ) ) {
+            GroupEntity ge = ( GroupEntity ) g;
+            if ( !ge.isUserGroup( ) ) {
+              results.add( new DatabaseGroupProxy( ge ) );
+            }
+          }
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getGroups for " + this.delegate );
     }
-    return groups;
+    return results;
   }
   
   @Override
   public Account getAccount( ) {
-    return new DatabaseAccountProxy( ( AccountEntity ) this.delegate.getAccount( ) );
+    final List<DatabaseAccountProxy> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.add( new DatabaseAccountProxy( ( AccountEntity) t.getAccount( ) ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAccount for " + this.delegate );
+    }
+    return results.get( 0 );
   }
 
   @Override
-  public String lookupX509Certificate( X509Certificate cert ) {
-    return this.delegate.lookupX509Certificate( cert );
+  public String lookupX509Certificate( final X509Certificate cert ) {
+    final List<String> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.add( t.lookupX509Certificate( cert ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to lookupX509Certificate for " + this.delegate );
+    }
+    return results.get( 0 );
   }
 
   @Override
-  public String lookupSecretKeyId( String key ) {
-    return this.delegate.lookupSecretKeyId( key );
+  public String lookupSecretKeyId( final String key ) {
+    final List<String> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.add( t.lookupSecretKeyId( key ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to lookupSecretKeyId for " + this.delegate );
+    }
+    return results.get( 0 );
   }
 
   @Override
   public boolean isSystemAdmin( ) {
-    return this.delegate.isSystemAdmin( );
+    return SYSTEM_ADMIN_ACCOUNT_NAME.equals( this.getAccount( ).getName( ) );
   }
 
   @Override
   public String getFirstActiveSecretKeyId( ) {
-    return this.delegate.getFirstActiveSecretKeyId( );
+    final List<String> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.add( t.getFirstActiveSecretKeyId( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getFirstActiveSecretKeyId for " + this.delegate );
+    }
+    return results.get( 0 );
   }
   
   @Override

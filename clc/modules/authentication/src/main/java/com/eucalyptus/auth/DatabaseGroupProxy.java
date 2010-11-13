@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.UserEntity;
@@ -42,7 +43,7 @@ public class DatabaseGroupProxy implements Group {
     EntityManager em = db.getEntityManager( );
     try {
       GroupEntity group = em.find( GroupEntity.class, this.delegate.getId( ) );
-      UserEntity userEntity = DatabaseAuthProvider.getUniqueUser( db.getSession( ), user.getName( ), this.delegate.getAccount( ).getName( ) );
+      UserEntity userEntity = DatabaseAuthProvider.getUniqueUser( db.getSession( ), user.getName( ), group.getAccount( ).getName( ) );
       group.addMember( userEntity );
       //userEntity.addGroup( group );
       db.commit( );
@@ -59,14 +60,11 @@ public class DatabaseGroupProxy implements Group {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     Session session = db.getSession( );
     try {
-      Example accountExample = Example.create( new AccountEntity( this.delegate.getAccount( ).getName( ) ) ).enableLike( MatchMode.EXACT );
-      Example groupExample = Example.create( new GroupEntity( this.delegate.getName( ) ) ).enableLike( MatchMode.EXACT );
       Example userExample = Example.create( new UserEntity( member.getName( ) ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<UserEntity> users = ( List<UserEntity> ) session
           .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
-          .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
-          .createCriteria( "account" ).setCacheable( true ).add( accountExample )
+          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.idEq( this.delegate.getId( ) ) )
           .list( );
       db.commit( );
       return users.size( ) > 0;
@@ -88,7 +86,7 @@ public class DatabaseGroupProxy implements Group {
     EntityManager em = db.getEntityManager( );
     try {
       GroupEntity group = em.find( GroupEntity.class, this.delegate.getId( ) );
-      UserEntity userEntity = DatabaseAuthProvider.getUniqueUser( db.getSession( ), user.getName( ), this.delegate.getAccount( ).getName( ) );
+      UserEntity userEntity = DatabaseAuthProvider.getUniqueUser( db.getSession( ), user.getName( ), group.getAccount( ).getName( ) );
       group.removeMember( userEntity );
       //userEntity.getGroups( ).remove( group );
       db.commit( );
@@ -125,7 +123,17 @@ public class DatabaseGroupProxy implements Group {
   
   @Override
   public Account getAccount( ) {
-    return new DatabaseAccountProxy( ( AccountEntity ) this.delegate.getAccount( ) );
+    final List<DatabaseAccountProxy> results = Lists.newArrayList( );
+    try {
+      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) throws Throwable {
+          results.add( new DatabaseAccountProxy( ( AccountEntity) t.getAccount( ) ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAccount for " + this.delegate );
+    }
+    return results.get( 0 );
   }
 
   @Override
@@ -140,11 +148,19 @@ public class DatabaseGroupProxy implements Group {
 
   @Override
   public List<? extends User> getUsers( ) {
-    List<DatabaseUserProxy> users = Lists.newArrayList( );
-    for ( UserEntity u : this.delegate.getUsers( ) ) {
-      users.add( new DatabaseUserProxy( u ) );
+    final List<DatabaseUserProxy> results = Lists.newArrayList( );
+    try {
+      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) throws Throwable {
+          for ( UserEntity u : t.getUsers( ) ) {
+            results.add( new DatabaseUserProxy( u ) );
+          }
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getUsers for " + this.delegate );
     }
-    return users;
+    return results;
   }
   
 }

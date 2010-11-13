@@ -4,8 +4,12 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
+import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
+import com.eucalyptus.util.TransactionException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
 public class DatabaseAuthorizationProxy implements Authorization {
@@ -47,9 +51,17 @@ public class DatabaseAuthorizationProxy implements Authorization {
 
   @Override
   public List<? extends Condition> getConditions( ) {
-    List<DatabaseConditionProxy> results = Lists.newArrayList( );
-    for ( Condition c : this.delegate.getConditions( ) ) {
-      results.add( new DatabaseConditionProxy( ( ConditionEntity ) c ) );
+    final List<DatabaseConditionProxy> results = Lists.newArrayList( );
+    try {
+      Transactions.one( AuthorizationEntity.class, this.delegate.getId( ), new Tx<AuthorizationEntity>( ) {
+        public void fire( AuthorizationEntity t ) throws Throwable {
+          for ( Condition c : t.getConditions( ) ) {
+            results.add( new DatabaseConditionProxy( ( ConditionEntity ) c ) );
+          }
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getConditions for " + this.delegate );
     }
     return results;
   }
