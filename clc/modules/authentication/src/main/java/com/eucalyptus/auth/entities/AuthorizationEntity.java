@@ -85,6 +85,7 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
     sb.append( "Authorization(" );
+    sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "actionPattern=" ).append( this.actionPattern ).append( ", " );
     sb.append( "effect=" ).append( this.effect ).append( ", " );
     sb.append( "resourceType=" ).append( this.resourceType ).append( ", " );

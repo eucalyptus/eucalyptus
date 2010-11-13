@@ -25,4 +25,24 @@ public interface GroupProvider {
    * @throws AuthException for any error.
    */
   public void deleteGroup( String groupName, String accountName, boolean recursive ) throws AuthException;
+  
+  /**
+   * Lookup a group by its name and account name.
+   * 
+   * @param groupName The name of the group
+   * @param accountName The name of the account
+   * @return the found group
+   * @throws AuthException for any error
+   */
+  public Group lookupGroupByName( String groupName, String accountName ) throws AuthException;
+  
+  /**
+   * Lookup a group by its ID.
+   * 
+   * @param groupId The ID of the group
+   * @return the found group
+   * @throws AuthException for any error
+   */
+  public Group lookupGroupById( String groupId ) throws AuthException;
+  
 }

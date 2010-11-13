@@ -55,6 +55,16 @@ public class AccountEntity extends AbstractPersistent implements Account, Serial
   }
 
   @Override
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "Account(" );
+    sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
+    sb.append( "name=" ).append( this.getName( ) );
+    sb.append( ")" );
+    return sb.toString( );
+  }
+  
+  @Override
   public String getName( ) {
     return this.name;
   }

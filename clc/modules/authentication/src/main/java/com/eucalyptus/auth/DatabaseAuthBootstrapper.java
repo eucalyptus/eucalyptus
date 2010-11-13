@@ -31,6 +31,10 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     this.eusureSystemAdminExist( );
     this.ensureCountersExist( );
     this.ensureVmTypesExist( );
+    
+    // Remove once done.
+    AuthTest.test( );
+    
     return true;
   }
   

@@ -115,6 +115,14 @@ public interface UserProvider {
    * @throws AuthException for any error.
    */
   public List<User> listAllUsers( ) throws AuthException;
+  
+  /**
+   * List all users in an account
+   * @param accountName The name of the account
+   * @return the list of users in the account
+   * @throws AuthException for any error
+   */
+  public List<User> listAllUsers( String accountName ) throws AuthException;
 
   /**
    * Add system admin user.
@@ -122,5 +130,14 @@ public interface UserProvider {
    * @throws AuthException for any error
    */
   public void addSystemAdmin( ) throws AuthException;
+  
+  /**
+   * Add an account admin user.
+   * 
+   * @param accountName The name of the account
+   * @param password The admin password
+   * @throws AuthException for any error
+   */
+  public void addAccountAdmin( String accountName, String password ) throws AuthException;
   
 }

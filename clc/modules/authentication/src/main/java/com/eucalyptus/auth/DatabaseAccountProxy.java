@@ -28,4 +28,9 @@ public class DatabaseAccountProxy implements Account {
     return this.delegate.getAccountId( );
   }
   
+  @Override
+  public String toString( ) {
+    return this.delegate.toString( );
+  }
+  
 }

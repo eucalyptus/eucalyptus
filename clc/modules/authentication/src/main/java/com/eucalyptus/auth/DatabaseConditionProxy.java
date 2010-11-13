@@ -32,4 +32,9 @@ public class DatabaseConditionProxy implements Condition {
     return this.delegate.getValues( );
   }
 
+  @Override
+  public String toString( ) {
+    return this.delegate.toString( );
+  }
+  
 }

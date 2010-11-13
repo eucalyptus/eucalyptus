@@ -104,4 +104,12 @@ public class PolicyEntity extends AbstractPersistent implements Policy, Serializ
     return this.policyVersion;
   }
   
+  @Override
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
+    sb.append( "name=" ).append( this.getName( ) );
+    return sb.toString( );
+  }
+  
 }

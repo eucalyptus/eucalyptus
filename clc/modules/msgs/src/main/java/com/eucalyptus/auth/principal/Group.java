@@ -1,5 +1,6 @@
 package com.eucalyptus.auth.principal;
 
+import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.domain.UserDomain;
 
@@ -18,5 +19,7 @@ public interface Group extends java.security.acl.Group, Cloneable, UserDomain {
   public Boolean isUserGroup( );
   
   public Account getAccount( );
+  
+  public List<? extends User> getUsers( );
   
 }

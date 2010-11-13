@@ -16,6 +16,7 @@ public class AuthException extends BaseException {
   public static final String EMPTY_USER_NAME = "Empty user name";
   public static final String EMPTY_USER_ID = "Empty user ID";
   public static final String EMPTY_GROUP_NAME = "Empty group name";
+  public static final String EMPTY_GROUP_ID = "Empty group ID";
   public static final String EMPTY_ACCOUNT_NAME = "Empty account name";
   public static final String USER_DELETE_CONFLICT = "User has resources attached and can not be deleted";
   public static final String GROUP_DELETE_CONFLICT = "Group has resources attached and can not be deleted";

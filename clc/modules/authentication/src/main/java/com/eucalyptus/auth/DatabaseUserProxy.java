@@ -350,4 +350,9 @@ public class DatabaseUserProxy implements User {
     return this.delegate.getFirstActiveSecretKeyId( );
   }
   
+  @Override
+  public String toString( ) {
+    return this.delegate.toString( );
+  }
+  
 }

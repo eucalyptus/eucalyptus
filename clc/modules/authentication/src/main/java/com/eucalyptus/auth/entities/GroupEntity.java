@@ -74,7 +74,6 @@ public class GroupEntity extends AbstractPersistent implements Group, Serializab
   public GroupEntity( ) {
     this.users = Lists.newArrayList( );
     this.policies = Lists.newArrayList( );
-    this.userGroup = false;
   }
   
   public GroupEntity( String name ) {

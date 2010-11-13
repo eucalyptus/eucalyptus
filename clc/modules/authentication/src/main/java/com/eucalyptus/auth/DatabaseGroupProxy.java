@@ -13,6 +13,7 @@ import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
@@ -78,11 +79,7 @@ public class DatabaseGroupProxy implements Group {
   
   @Override
   public Enumeration<? extends Principal> members( ) {
-    List<DatabaseUserProxy> users = Lists.newArrayList( );
-    for ( UserEntity u : this.delegate.getUsers( ) ) {
-      users.add( new DatabaseUserProxy( u ) );
-    }
-    return Iterators.asEnumeration( users.iterator( ) );
+    return Iterators.asEnumeration( this.getUsers( ).iterator( ) );
   }
   
   @Override
@@ -135,4 +132,19 @@ public class DatabaseGroupProxy implements Group {
   public Boolean isUserGroup( ) {
     return this.delegate.isUserGroup( );
   }
+  
+  @Override
+  public String toString( ) {
+    return this.toString( );
+  }
+
+  @Override
+  public List<? extends User> getUsers( ) {
+    List<DatabaseUserProxy> users = Lists.newArrayList( );
+    for ( UserEntity u : this.delegate.getUsers( ) ) {
+      users.add( new DatabaseUserProxy( u ) );
+    }
+    return users;
+  }
+  
 }

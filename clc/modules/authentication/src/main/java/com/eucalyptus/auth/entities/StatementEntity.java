@@ -5,7 +5,6 @@ import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -73,6 +72,10 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Table( name = "auth_statement" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StatementEntity extends AbstractPersistent implements Serializable {
+
+  @Transient
+  private static final long serialVersionUID = 1L;
+
   @Transient
   private static Logger LOG = Logger.getLogger( StatementEntity.class );
   
@@ -124,6 +127,14 @@ public class StatementEntity extends AbstractPersistent implements Serializable 
   
   public void setPolicy( PolicyEntity policy ) {
     this.policy = policy;
+  }
+  
+  @Override
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
+    sb.append( "sid=" ).append( this.getSid( ) );
+    return sb.toString( );
   }
   
 }

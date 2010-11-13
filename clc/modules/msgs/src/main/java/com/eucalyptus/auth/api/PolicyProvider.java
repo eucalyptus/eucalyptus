@@ -27,6 +27,19 @@ public interface PolicyProvider {
   public String attachGroupPolicy( String policy, String groupName, String accountName ) throws AuthException, PolicyException;
   
   /**
+   * Attach a new policy (in JSON text) to a user.
+   * 
+   * @param policy The policy in JSON.
+   * @param userName The name of the user to attach.
+   * @param accountName The name of the account of the user.
+   * @return The new policy ID
+   * @throws AuthException for auth data errors
+   * @throws PolicyException for policy parsing errors
+   */
+  public String attachUserPolicy( String policy, String userName, String accountName ) throws AuthException, PolicyException;
+  
+ 
+  /**
    * Remove a policy from a group.
    * 
    * @param policyId The ID of the policy to remove

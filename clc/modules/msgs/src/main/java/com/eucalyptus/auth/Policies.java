@@ -27,6 +27,10 @@ public class Policies {
     return Policies.getPolicyProvider( ).attachGroupPolicy( policy, groupName, accountName );
   }
   
+  public static String attachUserPolicy( String policy, String userName, String accountName ) throws AuthException, PolicyException {
+    return Policies.getPolicyProvider( ).attachUserPolicy( policy, userName, accountName );
+  }
+  
   public static void removeGroupPolicy( String policyId, String groupName, String accountName ) throws AuthException {
     Policies.getPolicyProvider( ).removeGroupPolicy( policyId, groupName, accountName );
   }

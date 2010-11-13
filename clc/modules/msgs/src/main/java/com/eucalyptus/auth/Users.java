@@ -139,4 +139,8 @@ public class Users {
     Users.getUserProvider( ).addSystemAdmin( );
   }
   
+  public static void addAccountAdmin( String accountName, String password ) throws AuthException {
+    Users.getUserProvider( ).addAccountAdmin( accountName, password );
+  }
+  
 }

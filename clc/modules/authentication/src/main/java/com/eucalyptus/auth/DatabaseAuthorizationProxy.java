@@ -53,5 +53,10 @@ public class DatabaseAuthorizationProxy implements Authorization {
     }
     return results;
   }
+
+  @Override
+  public String toString( ) {
+    return this.delegate.toString( );
+  }
   
 }

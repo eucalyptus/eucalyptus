@@ -231,7 +231,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
     try {
       UserEntity user = em.find( UserEntity.class, userId );
       db.commit( );
-      return user;
+      return new DatabaseUserProxy( user );
     } catch ( Throwable e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user by ID " + userId );
@@ -373,6 +373,45 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
     } catch ( Throwable e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to delete group " + groupName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_GROUP, e );
+    }
+  }
+  
+  @Override
+  public Group lookupGroupByName( String groupName, String accountName ) throws AuthException {
+    if ( groupName == null ) {
+      throw new AuthException( AuthException.EMPTY_GROUP_NAME );
+    }
+    if ( accountName == null ) {
+      throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
+    }
+    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
+    Session session = db.getSession( );
+    try {
+      GroupEntity group = getUniqueGroup( session, groupName, accountName );
+      db.commit( );
+      return new DatabaseGroupProxy( group );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to get group " + groupName + " for " + accountName );
+      throw new AuthException( "Failed to get group", e );
+    }
+  }
+  
+  @Override
+  public Group lookupGroupById( String groupId ) throws AuthException {
+    if ( groupId == null ) {
+      throw new AuthException( AuthException.EMPTY_GROUP_ID );
+    }
+    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
+    EntityManager em = db.getEntityManager( );
+    try {
+      GroupEntity group = em.find( GroupEntity.class, groupId );
+      db.commit( );
+      return new DatabaseGroupProxy( group );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find group by ID " + groupId );
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
     }
   }
@@ -559,6 +598,11 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   }
   
   @Override
+  public String attachUserPolicy( String policy, String userName, String accountName ) throws AuthException, PolicyException {
+    return this.attachGroupPolicy( policy, getUserGroupName( userName ), accountName );
+  }
+  
+  @Override
   public void removeGroupPolicy( String policyId, String groupName, String accountName ) throws AuthException {
     if ( policyId == null ) {
       throw new AuthException( "Empty policy ID" );
@@ -659,7 +703,13 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   
   @Override
   public void addSystemAdmin( ) throws AuthException {
-    this.addUser( User.ACCOUNT_ADMIN_USER_NAME, null, true, true, null, true, true, true, User.SYSTEM_ADMIN_ACCOUNT_NAME );
+    this.addUser( User.ACCOUNT_ADMIN_USER_NAME, "/", true, true, null, true, true, true, User.SYSTEM_ADMIN_ACCOUNT_NAME );
+  }
+  
+  @Override
+  public void addAccountAdmin( String accountName, String password ) throws AuthException {
+    User admin = this.addUser( User.ACCOUNT_ADMIN_USER_NAME, "/", true, true, null, true, true, true, accountName );
+    admin.setPassword( password );
   }
   
   /**
@@ -697,7 +747,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
    */
   public static GroupEntity getUniqueGroup( Session session, String groupName, String accountName ) throws Exception {
     Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
-    Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
+    Example groupExample = Example.create( new GroupEntity( groupName ) ).enableLike( MatchMode.EXACT );
     @SuppressWarnings( "unchecked" )
     List<GroupEntity> groups = ( List<GroupEntity> ) session
         .createCriteria( GroupEntity.class ).setCacheable( true ).add( groupExample )

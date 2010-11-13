@@ -1,5 +1,6 @@
 package com.eucalyptus.auth;
 
+import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.GroupProvider;
 import com.eucalyptus.auth.principal.Group;
@@ -26,6 +27,14 @@ public class Groups {
   
   public static void deleteGroup( String groupName, String accountName, boolean recursive ) throws AuthException {
     Groups.getGroupProvider( ).deleteGroup( groupName, accountName, recursive );
+  }
+  
+  public static Group lookupGroupByName( String groupName, String accountName ) throws AuthException {
+    return Groups.getGroupProvider( ).lookupGroupByName( groupName, accountName );
+  }
+  
+  public static Group lookupGroupById( String groupId ) throws AuthException {
+    return Groups.getGroupProvider( ).lookupGroupById( groupId );
   }
   
 }

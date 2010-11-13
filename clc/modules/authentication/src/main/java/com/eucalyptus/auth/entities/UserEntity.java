@@ -56,7 +56,7 @@ public class UserEntity extends AbstractPersistent implements User, Serializable
   @Column( name = "auth_user_name" )
   String name;
   
-  // User path (prefix to organize user name space, see AWS  spec)
+  // User path (prefix to organize user name space, see AWS spec)
   @Column( name = "auth_user_path" )
   String path;
   
