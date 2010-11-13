@@ -2,6 +2,7 @@ package com.eucalyptus.auth.principal;
 
 import java.security.Principal;
 import java.util.Enumeration;
+import java.util.List;
 import com.eucalyptus.auth.AuthException;
 
 /**
@@ -69,6 +70,12 @@ public class ImageUserGroup implements Group {
   
   @Override
   public Account getAccount( ) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public List<? extends User> getUsers( ) {
     // TODO Auto-generated method stub
     return null;
   }
