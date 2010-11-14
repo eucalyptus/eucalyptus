@@ -25,9 +25,19 @@ public class AuthTest {
       info.put( "Full name", "User 11" );
       info.put( "Email", "user11@foobar.com" );
       User user = Users.addUser( "user11", "/", true, true, info, true, true, true, "account1" );
+      user.setInfo( "Department", "sales" );
       
       user.addSecretKey( "testkey" );
+      String keyId = user.lookupSecretKeyId( "testkey" );
+      LOG.debug( MARK + "testkey id = " + keyId );
+      
+      LOG.debug( MARK + "The user who has 'testkey' key is " + Users.lookupUserByAccessKeyId( keyId ) );
+      
+      LOG.debug( MARK + "The first active key: " + user.getFirstActiveSecretKeyId( ) );
+      
       user.addX509Certificate( X509CertHelper.createCertificate( "testcert" ) );
+      
+      user.deactivateSecretKey( keyId );
       
       Group group = Groups.addGroup( "group1", "/", "account1" );
       group.addMember( user );
@@ -43,6 +53,9 @@ public class AuthTest {
       LOG.debug( MARK + "user11 account: " + user.getAccount( ).getName( ) );
       for ( String id : user.getActiveX509CertificateIds( ) ) {
         LOG.debug( MARK + "user11 active cert: " + id + "=" + user.getX509Certificate( id ) );
+      }
+      for ( String id : user.getInactiveX509CertificateIds( ) ) {
+        LOG.debug( MARK + "user11 inactive cert: " + id + "=" + user.getX509Certificate( id ) );
       }
       for ( String id : user.getActiveSecretKeyIds( ) ) {
         LOG.debug( MARK + "user11 active key: " + id + "=" + user.getSecretKey( id ) );
