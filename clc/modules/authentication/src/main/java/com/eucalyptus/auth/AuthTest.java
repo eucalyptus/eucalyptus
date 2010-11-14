@@ -60,6 +60,22 @@ public class AuthTest {
       for ( String id : user.getActiveSecretKeyIds( ) ) {
         LOG.debug( MARK + "user11 active key: " + id + "=" + user.getSecretKey( id ) );
       }
+      for ( String id : user.getInactiveSecretKeyIds( ) ) {
+        LOG.debug( MARK + "user11 inactive key: " + id + "=" + user.getSecretKey( id ) );
+      }
+      
+      printUsers( "account1" );
+      printGroups( "account1" );
+
+      user = Users.addUser( "user12", "/", true, true, info, true, true, true, "account1" );
+      group.addMember( user );
+      
+      Users.deleteUser( "user11", "account1", false, true );
+      
+      printUsers( "account1" );
+      printGroups( "account1" );
+      
+      Groups.deleteGroup( "group1", "account1", true );
       
       printUsers( "account1" );
       printGroups( "account1" );
@@ -69,11 +85,11 @@ public class AuthTest {
       Users.addAccountAdmin( "account2", "foobar" );
       
       info = Maps.newHashMap( );
-      info.put( "Full name", "User 21" );
-      info.put( "Email", "user21@foobar.com" );
-      Users.addUser( "user21", "/", true, true, info, true, true, true, "account2" );
+      info.put( "Full name", "User 12" );
+      info.put( "Email", "user12@foobar.com" );
+      Users.addUser( "user12", "/", true, true, info, true, true, true, "account2" );
       printUsers( "account2" );
-
+      
       printAccounts( );
       
       
