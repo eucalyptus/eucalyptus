@@ -453,5 +453,65 @@ public class DatabaseUserProxy implements User {
   public String toString( ) {
     return this.delegate.toString( );
   }
+
+  @Override
+  public List<String> getActiveX509CertificateIds( ) {
+    final List<String> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.addAll( t.getActiveX509CertificateIds( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getActiveX509CertificateIds for " + this.delegate );
+    }
+    return results;
+  }
+
+  @Override
+  public List<String> getInactiveX509CertificateIds( ) {
+    final List<String> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.addAll( t.getInactiveX509CertificateIds( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getInactiveX509CertificateIds for " + this.delegate );
+    }
+    return results;
+  }
+
+  @Override
+  public List<String> getActiveSecretKeyIds( ) {
+    final List<String> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.addAll( t.getActiveSecretKeyIds( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getActiveSecretKeyIds for " + this.delegate );
+    }
+    return results;
+  }
+
+  @Override
+  public List<String> getInactiveSecretKeyIds( ) {
+    final List<String> results = Lists.newArrayList( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          results.addAll( t.getInactiveSecretKeyIds( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getInactiveSecretKeyIds for " + this.delegate );
+    }
+    return results;
+  }
   
 }

@@ -1,5 +1,6 @@
 package com.eucalyptus.auth.principal.credential;
 
+import java.util.List;
 import com.eucalyptus.auth.AuthException;
 
 /**
@@ -55,4 +56,18 @@ public interface HmacPrincipal extends CredentialPrincipal {
    */
   public String getFirstActiveSecretKeyId( );
 
+  /**
+   * Get active secret key IDs.
+   * 
+   * @return the list secret key IDs.
+   */
+  public List<String> getActiveSecretKeyIds( );
+  
+  /**
+   * Get inactive secret key IDs.
+   * 
+   * @return the list of secret key IDs.
+   */
+  public List<String> getInactiveSecretKeyIds( );
+  
 }

@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.google.common.collect.Maps;
 
 public class AuthTest {
@@ -25,6 +26,9 @@ public class AuthTest {
       info.put( "Email", "user11@foobar.com" );
       User user = Users.addUser( "user11", "/", true, true, info, true, true, true, "account1" );
       
+      user.addSecretKey( "testkey" );
+      user.addX509Certificate( X509CertHelper.createCertificate( "testcert" ) );
+      
       Group group = Groups.addGroup( "group1", "/", "account1" );
       group.addMember( user );
       
@@ -36,9 +40,13 @@ public class AuthTest {
         LOG.debug( MARK + "user11 group: " + g.getName( ) );
       }
       LOG.debug( MARK + "user11 info: " + user.getInfoMap ( ) );
-      LOG.debug( MARK + "user11 certs: " + user.getAllX509Certificates( ) );
-      LOG.debug( MARK + "user11 key: " + user.getSecretKey( user.getFirstActiveSecretKeyId( ) ) );
       LOG.debug( MARK + "user11 account: " + user.getAccount( ).getName( ) );
+      for ( String id : user.getActiveX509CertificateIds( ) ) {
+        LOG.debug( MARK + "user11 active cert: " + id + "=" + user.getX509Certificate( id ) );
+      }
+      for ( String id : user.getActiveSecretKeyIds( ) ) {
+        LOG.debug( MARK + "user11 active key: " + id + "=" + user.getSecretKey( id ) );
+      }
       
       printUsers( "account1" );
       printGroups( "account1" );
@@ -56,7 +64,7 @@ public class AuthTest {
       printAccounts( );
       
       
-    } catch ( AuthException e ) {
+    } catch ( Exception e ) {
       LOG.error( MARK + "Exception in test" );
     }
   }

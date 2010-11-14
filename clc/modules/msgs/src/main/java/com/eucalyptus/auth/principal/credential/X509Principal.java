@@ -59,4 +59,18 @@ public interface X509Principal extends CredentialPrincipal, Serializable {
    */
   public String lookupX509Certificate( X509Certificate cert );
   
+  /**
+   * Get IDs of active certificates.
+   * 
+   * @return the list of IDs of the certificates.
+   */
+  public List<String> getActiveX509CertificateIds( );
+  
+  /**
+   * Get IDs of inactive certificates.
+   * 
+   * @return the list of IDs of the certificates.
+   */
+  public List<String> getInactiveX509CertificateIds( );
+  
 }

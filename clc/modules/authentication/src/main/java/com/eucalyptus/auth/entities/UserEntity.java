@@ -434,5 +434,49 @@ public class UserEntity extends AbstractPersistent implements User, Serializable
     }
     return null;
   }
+
+  @Override
+  public List<String> getActiveX509CertificateIds( ) {
+    List<String> results = Lists.newArrayList( );
+    for ( CertificateEntity c : this.certificates ) {
+      if ( !c.isRevoked( ) && c.isActive( ) ) {
+        results.add( c.getId( ) );
+      }
+    }
+    return results;
+  }
+
+  @Override
+  public List<String> getActiveSecretKeyIds( ) {
+    List<String> results = Lists.newArrayList( );
+    for ( AccessKeyEntity k : this.keys ) {
+      if ( k.isActive( ) ) {
+        results.add( k.getId( ) );
+      }
+    }
+    return results;
+  }
+
+  @Override
+  public List<String> getInactiveX509CertificateIds( ) {
+    List<String> results = Lists.newArrayList( );
+    for ( CertificateEntity c : this.certificates ) {
+      if ( !c.isRevoked( ) && !c.isActive( ) ) {
+        results.add( c.getId( ) );
+      }
+    }
+    return results;
+  }
+
+  @Override
+  public List<String> getInactiveSecretKeyIds( ) {
+    List<String> results = Lists.newArrayList( );
+    for ( AccessKeyEntity k : this.keys ) {
+      if ( !k.isActive( ) ) {
+        results.add( k.getId( ) );
+      }
+    }
+    return results;
+  }
   
 }
