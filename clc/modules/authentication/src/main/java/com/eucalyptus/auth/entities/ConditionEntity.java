@@ -55,7 +55,7 @@ public class ConditionEntity extends AbstractPersistent implements Condition, Se
   
   // The owning statement
   @ManyToOne
-  @JoinColumn( name = "auth_authorization_owning_statement" )
+  @JoinColumn( name = "auth_condition_owning_statement" )
   StatementEntity statement;
   
   public ConditionEntity( ) {

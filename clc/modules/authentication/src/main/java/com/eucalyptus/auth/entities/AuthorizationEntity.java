@@ -45,6 +45,10 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   @Column( name = "auth_auth_effect" )
   EffectType effect;
 
+  // If action list is negated, i.e. NotAction
+  @Column( name = "auth_auth_not_action" )
+  Boolean notAction;
+  
   // The action pattern of the authorization
   @Column( name = "auth_auth_action_pattern" )
   String actionPattern;
@@ -53,9 +57,9 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   @Column( name = "auth_auth_resource_type" )
   String resourceType;
   
-  // If the resource pattern is negated, i.e. NotResource
-  @Column( name = "auth_auth_negative" )
-  Boolean negative;
+  // If resource list is negated, i.e. NotResource
+  @Column( name = "auth_auth_not_resource" )
+  Boolean notResource;
   
   // The resource pattern
   @Column( name = "auth_auth_resource_pattern" )
@@ -69,12 +73,13 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   public AuthorizationEntity( ) {
   }
 
-  public AuthorizationEntity( EffectType effect, String actionPattern, String resourceType, String resourcePattern, Boolean negative ) {
+  public AuthorizationEntity( EffectType effect, String actionPattern, Boolean notAction, String resourceType, String resourcePattern, Boolean notResource ) {
     this.effect = effect;
     this.actionPattern = actionPattern;
+    this.notAction = notAction;
     this.resourceType = resourceType;
     this.resourcePattern = resourcePattern;
-    this.negative = negative;
+    this.notResource = notResource;
   }
   
   public AuthorizationEntity( String resourceType ) {
@@ -87,10 +92,11 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
     sb.append( "Authorization(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "actionPattern=" ).append( this.actionPattern ).append( ", " );
+    sb.append( "notAction=" ).append( this.isNotAction( ) ).append( ", " );
     sb.append( "effect=" ).append( this.effect ).append( ", " );
     sb.append( "resourceType=" ).append( this.resourceType ).append( ", " );
     sb.append( "resourcePattern=" ).append( this.resourcePattern ).append( ", " );
-    sb.append( "negative=" ).append( this.negative );
+    sb.append( "notResource=" ).append( this.isNotResource( ) );
     sb.append( ")" );
     return sb.toString( );
   }
@@ -116,17 +122,22 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   }
 
   @Override
-  public Boolean isNegative( ) {
-    return this.negative;
-  }
-  
-  @Override
   public List<? extends Condition> getConditions( ) {
     return this.statement.getConditions( );
   }
   
   public void setStatement( StatementEntity statement ) {
     this.statement = statement;
+  }
+
+  @Override
+  public Boolean isNotAction( ) {
+    return this.notAction;
+  }
+
+  @Override
+  public Boolean isNotResource( ) {
+    return this.notResource;
   }
   
 }

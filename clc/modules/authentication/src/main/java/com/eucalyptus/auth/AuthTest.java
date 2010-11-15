@@ -1,9 +1,12 @@
 package com.eucalyptus.auth;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
@@ -87,14 +90,48 @@ public class AuthTest {
       info = Maps.newHashMap( );
       info.put( "Full name", "User 12" );
       info.put( "Email", "user12@foobar.com" );
-      Users.addUser( "user12", "/", true, true, info, true, true, true, "account2" );
+      user = Users.addUser( "user12", "/", true, true, info, true, true, true, "account2" );
+      
+      group = Groups.addGroup( "group1", "/", "account1" );
+      group.addMember( user );
+      
       printUsers( "account2" );
+      printGroups( "account2" );
       
       printAccounts( );
       
+      String policy =
+        "{" +
+          "'Version':'2010-11-14'," +
+          "'Statement':[{" +
+            "'Sid':'1'," +
+            "'Effect':'Allow'," +
+            "'Action':'ec2:RunInstances'," +
+            "'Resource':'*'," +
+            "'Condition':{" +
+              "'DateEquals':{" +
+                "'aws:currenttime':'2010-11-14'" +
+              "}" +
+            "}" +
+          "}]" +
+        "}";
+      
+      Policies.attachGroupPolicy( policy, "group1", "account2" );
+      
+      List<? extends Authorization> auths = Policies.lookupAuthorizations( "ec2:image", user.getUserId( ) );
+      printAuths( auths );
       
     } catch ( Exception e ) {
       LOG.error( MARK + "Exception in test" );
+    }
+  }
+  
+  private static void printAuths( List<? extends Authorization> auths ) throws AuthException {
+    for ( Authorization a : auths ) {
+      LOG.debug( MARK + a );
+      for ( Condition c : a.getConditions( ) ) {
+        LOG.debug( MARK + c );
+      }
     }
   }
   

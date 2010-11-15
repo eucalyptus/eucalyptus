@@ -45,11 +45,6 @@ public class DatabaseAuthorizationProxy implements Authorization {
   }
 
   @Override
-  public Boolean isNegative( ) {
-    return this.delegate.isNegative( );
-  }
-
-  @Override
   public List<? extends Condition> getConditions( ) {
     final List<DatabaseConditionProxy> results = Lists.newArrayList( );
     try {
@@ -69,6 +64,16 @@ public class DatabaseAuthorizationProxy implements Authorization {
   @Override
   public String toString( ) {
     return this.delegate.toString( );
+  }
+
+  @Override
+  public Boolean isNotAction( ) {
+    return this.delegate.isNotAction( );
+  }
+
+  @Override
+  public Boolean isNotResource( ) {
+    return this.delegate.isNotResource( );
   }
   
 }

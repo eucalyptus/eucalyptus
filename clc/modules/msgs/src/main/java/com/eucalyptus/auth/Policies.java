@@ -39,6 +39,10 @@ public class Policies {
     return Policies.getPolicyProvider( ).lookupAuthorizations( resourceType, userId );
   }
   
+  public static List<? extends Authorization> lookupQuotas( String resourceType, String userId ) throws AuthException {
+    return Policies.getPolicyProvider( ).lookupQuotas( resourceType, userId );
+  }
+  
   public static boolean isCertificateActive( X509Certificate cert ) throws AuthException {
     return Policies.getPolicyProvider( ).isCertificateActive( cert );
   }

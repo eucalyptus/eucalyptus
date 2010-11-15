@@ -19,7 +19,7 @@ public class PolicySpecConstants {
   public static final String RESOURCE = "Resource";
   public static final String NOTRESOURCE = "NotResource";
   public static final String CONDITION = "Condition";
-  
+    
   // Effect
   public static final Set<String> EFFECTS = Sets.newHashSet( );
   
@@ -41,6 +41,8 @@ public class PolicySpecConstants {
     VENDORS.add( VENDOR_EC2 );
     VENDORS.add( VENDOR_S3 );
   }
+  
+  public static final String ALL_ACTION = "*";
   
   // IAM actions, based on API version 2010-05-08
   public static final String IAM_ADDUSERTOGROUP = "addusertogroup";
@@ -333,15 +335,15 @@ public class PolicySpecConstants {
   }
   
   // Action syntax
-  public static final Pattern ACTION_PATTERN = Pattern.compile( "(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "):(\\S+)" );
+  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "):(\\S+))" );
   
   // Resource ARN syntax
   public static final Pattern ARN_PATTERN =
       Pattern.compile( "\\*" + 
                        "|(?:arn:aws:(?:" +
-                           "(?:(" + VENDOR_IAM + ")::(\\S+):(user|group)/(\\S+))" +
-                           "|(?:(" + VENDOR_EC2 + "):::([^\\s/]+)/(\\S+))" +
-                           "|(?:(" + VENDOR_S3 + "):::([^\\s/]+)(?:/(\\S+))?)" +
+                           "(?:(" + VENDOR_IAM + ")::([a-z0-9]+):(user|group)(/\\S+))" +
+                           "|(?:(" + VENDOR_EC2 + "):::([a-z0-9_]+)/(\\S+))" +
+                           "|(?:(" + VENDOR_S3 + "):::([^\\s/]+)(?:(/\\S+))?)" +
                            ")" +
                        ")" );
 

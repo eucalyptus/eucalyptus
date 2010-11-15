@@ -74,8 +74,13 @@ public class PolicyParser {
   
   private StatementEntity parseStatement( JSONObject statement ) throws JSONException {
     String sid = JsonUtils.getByType( String.class, statement, PolicySpecConstants.SID );
-    List<AuthorizationEntity> authorizations = parseAuthorizations( statement );
-    List<ConditionEntity> conditions = parseConditions( statement );
+
+    JsonUtils.checkRequired( statement, PolicySpecConstants.EFFECT );
+    String effect = JsonUtils.getByType( String.class, statement, PolicySpecConstants.EFFECT );
+    checkEffect( effect );
+
+    List<AuthorizationEntity> authorizations = parseAuthorizations( statement, effect );
+    List<ConditionEntity> conditions = parseConditions( statement, effect );
     
     StatementEntity statementEntity = new StatementEntity( sid );
     statementEntity.setAuthorizations( authorizations );
@@ -83,16 +88,18 @@ public class PolicyParser {
     return statementEntity;
   }
   
-  private List<AuthorizationEntity> parseAuthorizations( JSONObject statement ) throws JSONException {
-    JsonUtils.checkRequired( statement, PolicySpecConstants.EFFECT );
-    String effect = JsonUtils.getByType( String.class, statement, PolicySpecConstants.EFFECT );
-    checkEffect( effect );
-
+  private List<AuthorizationEntity> parseAuthorizations( JSONObject statement, String effect ) throws JSONException {
     String actionElement = JsonUtils.checkBinaryOption( statement, PolicySpecConstants.ACTION, PolicySpecConstants.NOTACTION );
     List<String> actions = JsonUtils.parseStringOrStringList( statement, actionElement );
+    if ( EffectType.Limit.name( ).equals( effect ) && PolicySpecConstants.NOTACTION.equals( actionElement ) ) {
+      throw new JSONException( "Quota statement does not allow NotAction" );
+    }
 
     String resourceElement = JsonUtils.checkBinaryOption( statement, PolicySpecConstants.RESOURCE, PolicySpecConstants.NOTRESOURCE );
     List<String> resources = JsonUtils.parseStringOrStringList( statement, resourceElement );
+    if ( EffectType.Limit.name( ).equals( effect ) && PolicySpecConstants.NOTRESOURCE.equals( resourceElement ) ) {
+      throw new JSONException( "Quota statement does not allow NotResource" );
+    }
     
     List<AuthorizationEntity> results = Lists.newArrayList( );
     for ( String action : actions ) {
@@ -102,6 +109,7 @@ public class PolicyParser {
         if ( actionMatchesResourceType( action, resType ) ) {
           results.add( new AuthorizationEntity( EffectType.valueOf( effect ),
                                                 action,
+                                                Boolean.valueOf( PolicySpecConstants.NOTACTION.equals( actionElement ) ),
                                                 resType,
                                                 resource,
                                                 Boolean.valueOf( PolicySpecConstants.NOTRESOURCE.equals( resourceElement ) ) ) );
@@ -111,12 +119,17 @@ public class PolicyParser {
     return results;
   }
   
-  private List<ConditionEntity> parseConditions( JSONObject statement ) throws JSONException {
+  private List<ConditionEntity> parseConditions( JSONObject statement, String effect ) throws JSONException {
     JSONObject condsObj = JsonUtils.getByType( JSONObject.class, statement, PolicySpecConstants.CONDITION );
+    boolean isQuota = EffectType.Limit.name( ).equals( effect );
     List<ConditionEntity> results = Lists.newArrayList( );
     if ( condsObj != null ) {    
       for ( Object t : condsObj.keySet( ) ) {
         String type = ( String ) t;
+        // Ignore non quota condition if it is a quota statement (i.e. Effect is Limit)
+        if ( isQuota && !Conditions.QUOTA.equals( type ) ) {
+          continue;
+        }
         checkConditionType( type );
         JSONObject paramsObj = JsonUtils.getByType( JSONObject.class, condsObj, type );
         for ( Object k : paramsObj.keySet( ) ) {
@@ -136,16 +149,23 @@ public class PolicyParser {
     if ( !matcher.matches( ) ) {
       throw new JSONException( "'" + action + "' is not a valid action" );
     }
+    if ( PolicySpecConstants.ALL_ACTION.equals( action ) ) {
+      return;
+    }
     String prefix = matcher.group( 1 );
     String pattern = matcher.group( 2 );
     for ( String defined : PolicySpecConstants.VENDOR_ACTIONS.get( prefix ) ) {
-      if ( Pattern.matches( pattern, defined ) ) {
-        throw new JSONException( "'" + pattern + "' does not match any defined action" );
+      if ( Pattern.matches( PatternUtils.toJavaPattern( pattern ), defined ) ) {
+        return;
       }
     }
+    throw new JSONException( "'" + pattern + "' does not match any defined action" );
   }
   
   private boolean actionMatchesResourceType( String action, String resourceType ) {
+    if ( PolicySpecConstants.ALL_ACTION.equals( action ) || PolicySpecConstants.ALL_RESOURCE.equals( resourceType ) ) {
+      return true;
+    }
     String actionVendor = getVendor( action );
     String resourceVendor = getVendor( resourceType );
     return actionVendor.equals( resourceVendor );
@@ -169,7 +189,7 @@ public class PolicyParser {
     } else if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 ) != null ) {
       vendor = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 );
       type = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
-      if ( PolicySpecConstants.EC2_RESOURCES.contains( type ) ) {
+      if ( !PolicySpecConstants.EC2_RESOURCES.contains( type ) ) {
         throw new JSONException( "EC2 type '" + type + "' is not supported" );
       }
     } else if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3 ) != null ) {

@@ -54,10 +54,20 @@ public interface PolicyProvider {
    * 
    * @param resourceType Search by resource type
    * @param userId Search by user ID
-   * @return The list of authorizations that are potentially applied to the user
+   * @return The list of authorizations that can be potentially applied to the user
    * @throws AuthException for any error
    */
   public List<? extends Authorization> lookupAuthorizations( String resourceType, String userId ) throws AuthException;
+  
+  /**
+   * Lookup a user's quota.
+   * 
+   * @param resourceType Search by resource type
+   * @param userId Search by user ID
+   * @return The list of quotas that can be potentially applied to the user
+   * @throws AuthException for any error
+   */
+  public List<? extends Authorization> lookupQuotas( String resourceType, String userId ) throws AuthException;
   
   /**
    * Check if a certificate is active (not revoked and active).

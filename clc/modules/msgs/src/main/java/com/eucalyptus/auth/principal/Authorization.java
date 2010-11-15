@@ -23,7 +23,9 @@ public interface Authorization extends Serializable {
   
   public String getResourcePattern( );
   
-  public Boolean isNegative( );
+  public Boolean isNotAction( );
+  
+  public Boolean isNotResource( );
   
   public List<? extends Condition> getConditions( );
   

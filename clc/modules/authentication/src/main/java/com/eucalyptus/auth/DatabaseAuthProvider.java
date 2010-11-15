@@ -88,6 +88,7 @@ import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
@@ -630,20 +631,19 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   
   @Override
   public List<? extends Authorization> lookupAuthorizations( String resourceType, String userId ) throws AuthException {
-    AuthorizationEntity searchAuth = new AuthorizationEntity( resourceType );
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
     Session session = db.getSession( );
     try {
-      Example authExample = Example.create( searchAuth ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
-          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( authExample )
+          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( 
+              Restrictions.or( 
+                  Restrictions.eq( "effect", EffectType.Allow ),
+                  Restrictions.eq( "effect", EffectType.Deny ) ) )
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true )
-          .createCriteria( "users" ).add(
-              Restrictions.and(
-                  Restrictions.idEq( userId ), Restrictions.eq( "enabled", true ) ) )
+          .createCriteria( "users" ).add(Restrictions.idEq( userId ) )
           .list( );
       db.commit( );
       List<DatabaseAuthorizationProxy> results = Lists.newArrayList( );
@@ -656,6 +656,33 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       Debugging.logError( LOG, e, "Failed to lookup authorization for user with ID "
           + userId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup auth", e );
+    }
+  }
+  
+  @Override
+  public List<? extends Authorization> lookupQuotas( String resourceType, String userId ) throws AuthException {
+    EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
+    Session session = db.getSession( );
+    try {
+      @SuppressWarnings( "unchecked" )
+      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
+          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( Restrictions.eq( "effect", EffectType.Limit ) )
+          .createCriteria( "statement" ).setCacheable( true )
+          .createCriteria( "policy" ).setCacheable( true )
+          .createCriteria( "group" ).setCacheable( true )
+          .createCriteria( "users" ).add(Restrictions.idEq( userId ) )
+          .list( );
+      db.commit( );
+      List<DatabaseAuthorizationProxy> results = Lists.newArrayList( );
+      for ( AuthorizationEntity auth : authorizations ) {
+        results.add( new DatabaseAuthorizationProxy( auth ) );
+      }
+      return results;
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to lookup quotas for user with ID "
+          + userId + ", type=" + resourceType);
+      throw new AuthException( "Failed to lookup quota", e );
     }
   }
   

@@ -71,6 +71,9 @@ public class Conditions {
   
   public static final String NOTIPADDRESS = "NotIpAddress";
   
+  // Eucalyptus extensions
+  public static final String QUOTA = "Quota";
+  
   public static final Map<String, ConditionOp> CONDITION_MAP = Maps.newHashMap( );
   
   static {
@@ -134,5 +137,8 @@ public class Conditions {
     CONDITION_MAP.put( IPADDRESS, new IpAddress( ) );
       
     CONDITION_MAP.put( NOTIPADDRESS, new NotIpAddress( ) );
+    
+    CONDITION_MAP.put( QUOTA, new Quota( ) );
   }
+  
 }
