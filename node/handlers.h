@@ -231,6 +231,8 @@ char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 char* get_iscsi_target(const char *storage_cmd_path, char *dev_string);
 
+int get_instance_stats(virDomainPtr dom, ncInstance *instance);
+
 // bundling structure
 struct bundling_params_t {
 	ncInstance * instance;

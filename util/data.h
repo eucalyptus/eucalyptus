@@ -230,6 +230,8 @@ typedef struct ncInstance_t {
     // updated by NC upon Attach/DetachVolume
     ncVolume volumes[EUCA_MAX_VOLUMES];
     int volumesSize;
+  
+    long long blkbytes, netbytes;
 } ncInstance;
 
 typedef struct ncResource_t {

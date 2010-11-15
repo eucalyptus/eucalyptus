@@ -287,6 +287,13 @@ refresh_instance_info(	struct nc_state_t *nc,
         /* else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED */
         return;
     }
+
+    int rc;
+    rc = get_instance_stats(dom, instance);
+    if (rc) {
+      logprintfl(EUCAWARN, "refresh_instances(): cannot get instance stats (block, network)\n");
+    }
+
     virDomainInfo info;
     sem_p(hyp_sem);
     int error = virDomainGetInfo(dom, &info);
@@ -1327,3 +1334,97 @@ char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     return retval;
 }
 
+int get_instance_stats(virDomainPtr dom, ncInstance *instance)
+{
+  char *xml;
+  int ret=1;
+  long long b=0, i=0;
+	      
+  sem_p(hyp_sem);
+  xml = virDomainGetXMLDesc(dom, 0);
+  //      logprintfl(EUCADEBUG, "MEH: '%s'\n", xml);
+  if (xml) {
+    char *el;
+    //	blkdev = xpath_content(xml, "domain/devices/disk[1]/target/@dev");
+    el = xpath_content(xml, "domain/devices/disk");
+    if (el) {
+      char *start, *end;
+      //	  logprintfl(EUCADEBUG, "FOOMEH: %s\n", el);
+      start = strstr(el, "target dev='");
+      if (start) {
+	start += strlen("target dev='");
+	end = strstr(start, "'");
+	if (end) {
+	  *end = '\0';
+	  //	      logprintfl(EUCADEBUG, "WOOTMEH: %s\n", start);
+	  int rc;
+	  virDomainBlockStatsStruct bstats;
+	  b = 0;
+	  rc = virDomainBlockStats(dom, start, &bstats, sizeof(virDomainBlockStatsStruct));
+	  if (rc) {
+	    char cmd[MAX_PATH], *output;
+	    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b %s", nc_state.home, nc_state.home, instance->instanceId, start);
+	    output = system_output(cmd);
+	    if (output) {
+	      sscanf(output, "OUTPUT %lld %lld", &b, &i);
+	      if (b > 0) {
+		rc = 0;
+	      }
+	      free(output);
+	    }
+	  } else {
+	    b = bstats.rd_bytes + bstats.wr_bytes;
+	  }
+	  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, dev=%s, bytes=%lld\n", instance->instanceId, start, b);
+	  instance->blkbytes = b;
+	  if (!rc) {
+	    ret = 0;
+	  }
+	}
+      }
+      free(el);
+    }
+    
+    el = xpath_content(xml, "domain/devices/interface");
+    if (el) {
+      char *start, *end;
+      //	  logprintfl(EUCADEBUG, "FOOMEH: %s\n", el);
+      start = strstr(el, "target dev='");
+      if (start) {
+	start += strlen("target dev='");
+	end = strstr(start, "'");
+	if (end) {
+	  *end = '\0';
+	  //	      logprintfl(EUCADEBUG, "WOOTMEH: %s\n", start);
+	  int rc;
+	  virDomainInterfaceStatsStruct istats;
+	  rc = virDomainInterfaceStats(dom, start, &istats, sizeof(virDomainInterfaceStatsStruct));
+	  if (rc) {
+	    char cmd[MAX_PATH], *output;
+	    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -n %s", nc_state.home, nc_state.home, instance->instanceId, start);
+	    output = system_output(cmd);
+	    if (output) {
+	      sscanf(output, "OUTPUT %lld %lld", &b, &i);
+	      if (i > 0) {
+		rc = 0;
+	      }
+	      free(output);
+	    }
+	  } else {
+	    i = istats.rx_bytes + istats.tx_bytes;
+	  }
+	  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, dev=%s, bytes=%lld\n", instance->instanceId, start, i);
+	  instance->netbytes = i;
+	  if (!rc) {
+	    ret = 0;
+	  }
+	}
+      }
+      free(el);
+    }
+
+    free(xml);
+  }
+  sem_v(hyp_sem);
+  return(ret);
+}
