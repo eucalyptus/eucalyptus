@@ -294,6 +294,19 @@ public class Configuration {
     }
   }
   
+  public static List<ArbitratorConfiguration> getArbitratorConfigurations( ) throws EucalyptusCloudException {
+	EntityWrapper<ArbitratorConfiguration> db = ServiceConfigurations.getEntityWrapper( );
+    try {
+      List<ArbitratorConfiguration> componentList = db.query( new ArbitratorConfiguration( ) );
+      db.commit( );
+      return componentList;
+    } catch ( Exception e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+  }
+
   public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException {
     List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
     for ( StorageControllerConfiguration sc : scs ) {

@@ -363,3 +363,20 @@ public class VMwareBrokerConfiguration extends ComponentConfiguration implements
     return Component.vmwarebroker;
   }
 }
+
+@Entity
+@PersistenceContext(name="eucalyptus_config")
+@Table( name = "config_arbitrator" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class ArbitratorConfiguration extends ComponentConfiguration implements Serializable {
+  @Transient
+  private static String DEFAULT_SERVICE_PATH = "/services/Arbitrator";
+  public ArbitratorConfiguration( ) {
+  }
+  public ArbitratorConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+  }
+  public Component getComponent() {
+    return Component.bootstrap;
+  }
+}

@@ -81,6 +81,12 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 public class DRBDStorageManager extends FileSystemStorageManager {
 
 	private static Logger LOG = Logger.getLogger( DRBDStorageManager.class );
+	private static final String PRIMARY_ROLE = "Primary";
+	private static final String SECONDARY_ROLE = "Secondary";
+	private static final String DSTATE_UPTODATE = "UpToDate";
+	private static final String DSTATE_UNKNOWN = "Unknown";
+	private static final String CSTATE_WFCONNECTION = "WFConnection";
+	private static final String CSTATE_CONNECTED = "Connected";
 
 	public DRBDStorageManager(String rootDirectory) {
 		super(rootDirectory);
@@ -162,7 +168,57 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		}
 		return false;
 	}
-	
+
+	private boolean isPrimary() throws EucalyptusCloudException, ExecutionException {
+		String roleString = getRole();
+		String[] roleParts = roleString.split("/");
+		if(roleParts.length > 1) {
+			if(PRIMARY_ROLE.equals(roleParts[0])) {
+				return true;
+			} else {
+				return false;
+			}			 
+		} else {
+			throw new EucalyptusCloudException("Unable to parse role.");
+		}
+	}
+
+	private boolean isSecondary() throws EucalyptusCloudException, ExecutionException {
+		String roleString = getRole();
+		String[] roleParts = roleString.split("/");
+		if(roleParts.length > 1) {
+			if(SECONDARY_ROLE.equals(roleParts[0])) {
+				return true;
+			} else {
+				return false;
+			}			 
+		} else {
+			throw new EucalyptusCloudException("Unable to parse role.");
+		}
+	}
+
+	private boolean isConnected() throws ExecutionException, EucalyptusCloudException {
+		String cstateString = getConnectionStatus();
+		if(CSTATE_CONNECTED.equals(cstateString)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	private boolean isUpToDate() throws EucalyptusCloudException, ExecutionException {
+		String dstateString = getDataStatus();
+		String[] dstateParts = dstateString.split("/");
+		if(dstateParts.length > 1) {
+			if(DSTATE_UPTODATE.equals(dstateParts[0])) {
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			throw new EucalyptusCloudException("Unable to get resource dstate.");
+		}		
+	}
 	private void checkLocalDisk() throws EucalyptusCloudException {		
 		String blockDevice = DRBDInfo.getDRBDInfo().getBlockDevice();
 		File mount = new File(blockDevice);
@@ -175,38 +231,66 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			throw new EucalyptusCloudException("Storage directory " + storageDir + " not found."); 			
 		}
 	}
-	
-	public void becomeMaster() throws EucalyptusCloudException {		
+
+	public void becomeMaster() throws EucalyptusCloudException, ExecutionException {		
+		checkLocalDisk();
 		//role, cstate, dstate
+		if(isPrimary()) {
+			return;
+		}
+		if(!isConnected()) {
+			throw new EucalyptusCloudException("Resource not connected to peer.");
+		}
 		//make primary
+		makePrimary();
 		//mount
+		if(!isMounted()) {
+			mountPrimary();
+		}
 		//verify state
 	}
 
-	public void becomeSlave() throws EucalyptusCloudException {
+	public void becomeSlave() throws EucalyptusCloudException, ExecutionException {
 		checkLocalDisk();
 		//check mount point, block device, role, cstate, dstate
-		//make primary
-		//mount
+		if(isSecondary()) {
+			return;
+		}
+		if(!isConnected()) {
+			throw new EucalyptusCloudException("Resource not connected to peer.");
+		}
+		if(isMounted()) {
+			unmountPrimary();
+		}
+		//make secondary
+		makeSecondary();
 		//verify state
 	}
 	//check status
 
 	@Override
 	public void enable() throws EucalyptusCloudException {
-		becomeMaster();
+		try {
+			becomeMaster();
+		} catch (ExecutionException e) {
+			throw new EucalyptusCloudException(e);
+		}
 	}
 
 	@Override
 	public void disable() throws EucalyptusCloudException {
-		becomeSlave();
+		try {
+			becomeSlave();
+		} catch (ExecutionException e) {
+			throw new EucalyptusCloudException(e);
+		}
 	}
 	//verify consistency
-	
+
 	@Override
 	public void check() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
-	
+
 }
