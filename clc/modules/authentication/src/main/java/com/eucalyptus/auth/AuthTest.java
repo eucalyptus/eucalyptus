@@ -92,7 +92,7 @@ public class AuthTest {
       info.put( "Email", "user12@foobar.com" );
       user = Users.addUser( "user12", "/", true, true, info, true, true, true, "account2" );
       
-      group = Groups.addGroup( "group1", "/", "account1" );
+      group = Groups.addGroup( "group1", "/", "account2" );
       group.addMember( user );
       
       printUsers( "account2" );
