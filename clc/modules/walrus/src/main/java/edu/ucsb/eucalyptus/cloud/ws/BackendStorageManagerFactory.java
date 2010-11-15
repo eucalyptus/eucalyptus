@@ -58,30 +58,36 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.ws;
+/*
+ *
+ * Author: Neil Soman neil@eucalyptus.com
+ */
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.SnapshotTask;
+import edu.ucsb.eucalyptus.storage.StorageManager;
 
-public class SnapshotService {
-	private Logger LOG = Logger.getLogger( SnapshotService.class );
+public class BackendStorageManagerFactory {
 
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 3;
+	private static Logger LOG = Logger.getLogger( BackendStorageManagerFactory.class );
 
-	public SnapshotService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
-	}
-
-	public void add(SnapshotTask creator) {
-		pool.execute(creator);
-	}
-
-	public void shutdown() {
-		pool.shutdownNow();
+	public static StorageManager getStorageManager() {
+		String storageManager = "FileSystemStorageManager";
+		if(System.getProperty("walrus.storage.manager") != null) {
+			storageManager = System.getProperty("walrus.storage.manager");
+		}
+		try {
+			storageManager = "edu.ucsb.eucalyptus.storage.fs." + storageManager;
+			return (StorageManager) ClassLoader.getSystemClassLoader().loadClass(storageManager).newInstance();
+		} catch (InstantiationException e) {
+			LOG.error(e, e); 
+		} catch (IllegalAccessException e) {
+			LOG.error(e, e); 
+		} catch (ClassNotFoundException e) {
+			LOG.error(e, e); 
+		}
+		return null;
 	}
 }
