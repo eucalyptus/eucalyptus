@@ -82,7 +82,7 @@ class StorageController():
   def cli_register(self):
     (options, args) = self.get_register_parser()
     self.register(args[0], options.host,
-                  options.port, options.parition)
+                  options.port, options.partition)
 
   def register(self, name, host, port=8773, partition=None):
     params = {'Name':name,

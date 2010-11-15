@@ -341,20 +341,36 @@ public class Bootstrap {
       comp = bootstrap.getProvides( );
       if ( Components.delegate.any.equals( comp ) ) {
         for( Component c : Components.list( ) ) {
-          c.getBootstrapper( ).addBootstrapper( bootstrap );
+          if ( !bootstrap.checkLocal( ) ) {
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
+                              "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+          } else if ( !bootstrap.checkRemote( ) ) {
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
+                              "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+          } else {
+            c.getBootstrapper( ).addBootstrapper( bootstrap );
+          }
         }
       } else if ( Components.delegate.bootstrap.equals( comp ) ) {
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + comp.name( ) ).info( );
-        stage.addBootstrapper( bootstrap );
-      } else if ( !comp.isCloudLocal( ) && !comp.isEnabled( ) && Components.contains( comp ) ) { //report skipping a bootstrapper for an enabled component
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "Provides", comp.name( ),
-                          "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
-      } else if ( !bootstrap.checkLocal( ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
-                          "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
-      } else if ( !bootstrap.checkRemote( ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
-                          "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+        if ( !bootstrap.checkLocal( ) ) {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
+                            "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+        } else if ( !bootstrap.checkRemote( ) ) {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
+                            "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+        } else {
+          stage.addBootstrapper( bootstrap );
+        }
+//      } else if ( !comp.isCloudLocal( ) && !comp.isEnabled( ) && Components.contains( comp ) ) { //report skipping a bootstrapper for an enabled component
+//        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "Provides", comp.name( ),
+//                          "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
+//      } else if ( !bootstrap.checkLocal( ) ) {
+//        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
+//                          "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+//      } else if ( !bootstrap.checkRemote( ) ) {
+//        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
+//                          "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
       } else {
         Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
       } 
