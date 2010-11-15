@@ -134,7 +134,7 @@ public class ServiceContext {
     return ServiceContext.getContext( ).getRegistry( );
   }
   
-  public static void shutdown( ) {
+  public static synchronized void shutdown( ) {
     try {
       ServiceContext.getContext( ).stop( );
       ServiceContext.getContext( ).dispose( );
@@ -180,7 +180,7 @@ public class ServiceContext {
     return true;
   }
 
-  public static boolean startup( ) {
+  public static synchronized boolean startup( ) {
     try {
       LOG.info( "Loading system bus." );
       loadContext( );
