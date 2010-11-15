@@ -1480,6 +1480,9 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
 
   memcpy(&(dst->ccvm), &(src->params), sizeof(virtualMachine));
 
+  dst->blkbytes = src->blkbytes;
+  dst->netbytes = src->netbytes;
+
   return(0);
 }
 

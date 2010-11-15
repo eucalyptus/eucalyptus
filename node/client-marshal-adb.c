@@ -219,6 +219,9 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         groupNames, groupNamesSize
         );
 
+    outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
+    outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
+
     axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);
     if (dt!=NULL) {
         outInst->launchTime = datetime_to_unix (dt, env);

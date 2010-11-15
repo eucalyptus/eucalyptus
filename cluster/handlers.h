@@ -109,6 +109,8 @@ typedef struct instance_t {
 
   ncVolume volumes[EUCA_MAX_VOLUMES];
   int volumesSize;
+
+  long long blkbytes, netbytes;
 } ccInstance;
 
 int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char groupNames[][32], ncVolume *volumes, int volumesSize);

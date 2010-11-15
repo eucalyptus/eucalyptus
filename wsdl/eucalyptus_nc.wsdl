@@ -255,6 +255,8 @@
         <!-- reported by NC -->
 	    <xs:element minOccurs="1" name="stateName" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchTime" type="xs:dateTime" />
+	    <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
+	    <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
 
         <!-- passed into RunInstances for safekeeping by NC -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
