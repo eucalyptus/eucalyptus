@@ -293,21 +293,22 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 
-	public void initialize() {
+	public void initialize() throws EucalyptusCloudException {
+		File storageRootDir = new File(getStorageRootDirectory());
+		if(!storageRootDir.exists()) {
+			if(!storageRootDir.mkdirs()) {
+				throw new EucalyptusCloudException("Unable to make volume root directory: " + getStorageRootDirectory());
+			}
+		}
+		//The following should be executed only once during the entire lifetime of the VM.
 		if(!initialized) {
 			System.loadLibrary("lvm2control");
 			registerSignals();
-			File storageRootDir = new File(getStorageRootDirectory());
-			if(!storageRootDir.exists()) {
-				if(!storageRootDir.mkdirs()) {
-					LOG.fatal("Unable to make volume root directory: " + getStorageRootDirectory());
-				}
-			}
 			initialized = true;
 		}
 	}
 
-	public void configure() {
+	public void configure() throws EucalyptusCloudException {
 		exportManager.configure();
 		//First call to StorageInfo.getStorageInfo will add entity if it does not exist
 		LOG.info(StorageInfo.getStorageInfo().getName());
@@ -675,7 +676,7 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 	}
 
-	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException {
+	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		ArrayList<String> returnValues = new ArrayList<String>();
@@ -1310,7 +1311,7 @@ public class OverlayManager implements LogicalStorageManager {
 		volumeManager.add(snapshotInfo);
 		volumeManager.finish();
 	}
-	
+
 	@Override
 	public String attachVolume(String volumeId, String nodeIqn)
 	throws EucalyptusCloudException {
@@ -1320,5 +1321,40 @@ public class OverlayManager implements LogicalStorageManager {
 	@Override
 	public void detachVolume(String volumeId, String nodeIqn)
 	throws EucalyptusCloudException {
+	}
+
+	@Override
+	public void checkReady() throws EucalyptusCloudException {
+		//check if binaries exist, commands can be executed, etc.
+		String eucaHomeDir = System.getProperty("euca.home");
+		if(eucaHomeDir == null) {
+			throw new EucalyptusCloudException("euca.home not set");
+		}
+		eucaHome = eucaHomeDir;
+		if(!new File(eucaHome + StorageProperties.EUCA_ROOT_WRAPPER).exists()) {
+			throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist in " + eucaHome + StorageProperties.EUCA_ROOT_WRAPPER);
+		}
+		File varDir = new File(eucaHome + EUCA_VAR_RUN_PATH);
+		if(!varDir.exists()) {
+			varDir.mkdirs();
+		}
+	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void disable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void enable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
 	}
 }
