@@ -1,17 +1,20 @@
 #!/usr/bin/perl
 
-$id = shift @ARGV;
-$blkdevstr = shift @ARGV;
-$ifacestr = shift @ARGV;
+use Getopt::Std;
 
-$blkbytes = 0;
-$ifbytes = 0;
+my $blkbytes = 0;
+my $ifbytes = 0;
 
-@blkdevs = split(",", $blkdevstr);
-@ifaces = split(",", $ifacestr);
+getopts('i:b:n:', \%opts);
+my $id = $opts{'i'};
+my $blkdevstr = $opts{'b'};
+my $ifacestr = $opts{'n'};
+
+my @blkdevs = split(",", $blkdevstr);
+my @ifaces = split(",", $ifacestr);
 
 foreach $blkdev (@blkdevs) {
-    open(RFH, "virsh domblkstat $id $blkdev|");
+    open(RFH, "virsh domblkstat $id $blkdev 2>/dev/null|");
     while(<RFH>) {
 	chomp;
 	my $line = $_;
@@ -23,7 +26,7 @@ foreach $blkdev (@blkdevs) {
 }
 
 foreach $iface (@ifaces) {
-    open(RFH, "virsh domifstat $id $iface|");
+    open(RFH, "virsh domifstat $id $iface 2>/dev/null |");
     while(<RFH>) {
 	chomp;
 	my $line = $_;
