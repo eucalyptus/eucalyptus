@@ -122,7 +122,7 @@ public class AuthTest {
       printAuths( auths );
       
     } catch ( Exception e ) {
-      LOG.error( MARK + "Exception in test" );
+      Debugging.logError( LOG, e, "Test failed" );
     }
   }
   
