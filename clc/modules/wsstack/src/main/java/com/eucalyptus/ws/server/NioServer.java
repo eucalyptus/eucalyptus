@@ -86,7 +86,9 @@ public class NioServer {
   }
 
   public void start( ) {
-    this.serverChannel = ChannelUtil.getServerChannel();
+    if( this.serverChannel != null ) {
+      this.serverChannel = ChannelUtil.getServerChannel();
+    }
   }
 
 }
