@@ -86,7 +86,7 @@ public class ServiceBootstrapper extends Bootstrapper implements EventListener {
   
   @Override
   public boolean load( ) throws Exception {
-    return ServiceContext.loadContext( );
+    return true;
   }
   
   @Override

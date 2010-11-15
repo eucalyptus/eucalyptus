@@ -153,7 +153,7 @@ public class ServiceContext {
         if ( comp.getPeer( ).isCloudLocal( ) ) {
           Resource rsc = comp.getConfiguration( ).getResource( );
           if ( rsc != null ) {
-            LOG.info( "-> Preparing cfg: " + rsc );
+            LOG.info( "-> Preparing cloud-local cfg: " + rsc );
             configs.addAll( rsc.getConfigurations( ) );
           }
         }
@@ -163,7 +163,7 @@ public class ServiceContext {
       if ( comp.isRunningLocally( ) ) {
         Resource rsc = comp.getConfiguration( ).getResource( );
         if ( rsc != null ) {
-          LOG.info( "-> Preparing cfg: " + rsc );
+          LOG.info( "-> Preparing component cfg: " + rsc );
           configs.addAll( rsc.getConfigurations( ) );
         }
       }
