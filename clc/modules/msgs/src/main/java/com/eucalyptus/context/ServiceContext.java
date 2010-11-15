@@ -179,7 +179,7 @@ public class ServiceContext {
     return true;
   }
 
-  static boolean startup( ) {
+  public static boolean startup( ) {
     try {
       LOG.info( "Loading system bus." );
       loadContext( );
