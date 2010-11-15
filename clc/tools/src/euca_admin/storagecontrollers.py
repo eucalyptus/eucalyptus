@@ -1,4 +1,4 @@
-import boto,sys,euca_admin
+import boto,sys,euca_admin,re
 from boto.exception import EC2ResponseError
 from euca_admin.generic import BooleanResponse
 from euca_admin import EucaAdmin
@@ -153,7 +153,7 @@ class StorageController():
 
   def cli_modify(self):
     (options,args) = self.get_modify_parser()
-    self.modify(args(1),options.props)
+    self.modify(options.partition,args[0],options.props)
 
   def modify(self,partition,name,modify_list):
     for entry in modify_list:

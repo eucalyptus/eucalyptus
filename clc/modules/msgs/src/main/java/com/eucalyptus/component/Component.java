@@ -493,7 +493,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       ListenerRegistry.getInstance( ).register( ClockTick.class, new CheckEvent( ) );
     }
 
-    @Override
+    @Override 
     public void fireEvent( Event event ) {
       for( Component c : Components.list( ) ) {
         try {

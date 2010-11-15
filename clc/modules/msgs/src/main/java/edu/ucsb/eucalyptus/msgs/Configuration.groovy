@@ -152,6 +152,7 @@ public class DescribeComponentsResponseType extends ConfigurationMessage {
   ArrayList<ComponentInfoType> registered = new ArrayList<ComponentInfoType>();
 }
 public class ModifyComponentAttributeType extends ComponentMessageType {
+  String partition;
   String name;
   String attribute; //{partition,state}
   String value;

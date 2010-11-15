@@ -3,7 +3,6 @@ from boto.exception import EC2ResponseError
 from euca_admin.generic import BooleanResponse
 from euca_admin import EucaAdmin
 from optparse import OptionParser
-import re
 
 SERVICE_PATH = '/services/Configuration'
 class Cluster():
@@ -153,7 +152,7 @@ class Cluster():
 
   def cli_modify(self):
     (options,args) = self.get_modify_parser()
-    self.modify(args(1),options.props)
+    self.modify(options.partition,args[0],options.props)
 
   def modify(self,partition,name,modify_list):
     for entry in modify_list:
