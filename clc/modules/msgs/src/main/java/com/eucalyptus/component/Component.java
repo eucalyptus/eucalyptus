@@ -118,7 +118,9 @@ public class Component implements ComponentInformation, HasName<Component> {
       return new Callback.Success<Component>( ) {
         @Override
         public void fire( Component t ) {
-          t.stateMachine.transition( Transition.this );
+          if( t.isAvailableLocally( ) ) {
+            t.stateMachine.transition( Transition.this );
+          }
         }
       };
     }
