@@ -128,12 +128,6 @@ public class Configuration {
       builder.getComponent( ).loadService( newComponent );
       builder.getComponent( ).startService( newComponent );
       builder.getComponent( ).enableService( newComponent );
-      try {
-        ServiceContext.shutdown( );
-        ServiceContext.startup( );
-      } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
-      }
       return true;
     } catch ( Throwable e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
@@ -182,12 +176,6 @@ public class Configuration {
       }
       try {
         builder.getComponent( ).destroyService( conf );
-      } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
-      }
-      try {
-        ServiceContext.shutdown( );
-        ServiceContext.startup( );
       } catch ( Throwable ex ) {
         LOG.error( ex , ex );
       }

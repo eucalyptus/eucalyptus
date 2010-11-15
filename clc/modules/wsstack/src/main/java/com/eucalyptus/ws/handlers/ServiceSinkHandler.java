@@ -109,8 +109,11 @@ import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
+import edu.ucsb.eucalyptus.msgs.ServiceTransitionType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
@@ -147,6 +150,14 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
         BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
+        if( RegisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || DeregisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || ServiceTransitionType.class.isAssignableFrom( reply.getClass( ) ) ) {
+          try {
+            ServiceContext.shutdown( );
+            ServiceContext.startup( );
+          } catch ( Throwable ex ) {
+            LOG.error( ex , ex );
+          }
+        }
         if ( reply instanceof WalrusDataGetResponseType
              && !( reply instanceof GetObjectResponseType && ( ( GetObjectResponseType ) reply ).getBase64Data( ) != null ) ) {
           e.getFuture( ).cancel( );
