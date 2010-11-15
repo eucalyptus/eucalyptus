@@ -138,6 +138,7 @@ public class ServiceContext {
     try {
       ServiceContext.getContext( ).stop( );
       ServiceContext.getContext( ).dispose( );
+      context.set( null );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
