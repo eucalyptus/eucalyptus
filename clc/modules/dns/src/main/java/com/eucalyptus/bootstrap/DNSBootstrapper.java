@@ -68,7 +68,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.cloud.ws.DNSControl;
 
-@Provides(Component.bootstrap)
+@Provides(Component.dns)
 @RunDuring(Bootstrap.Stage.PrivilegedConfiguration)
 @DependsLocal(Component.dns)
 public class DNSBootstrapper extends Bootstrapper {

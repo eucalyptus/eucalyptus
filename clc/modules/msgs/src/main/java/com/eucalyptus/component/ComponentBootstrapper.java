@@ -79,7 +79,7 @@ import com.google.common.collect.Multimaps;
 
 public class ComponentBootstrapper {
   private static Logger LOG = Logger.getLogger( ComponentBootstrapper.class );
-  private final Multimap<Stage, Bootstrapper> bootstrappers = Multimaps.newArrayListMultimap( );
+  private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers = Multimaps.newArrayListMultimap( );
   private final Component component; 
   
   ComponentBootstrapper( Component component ) {
@@ -108,6 +108,7 @@ public class ComponentBootstrapper {
 
   private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) throws BootstrapException {
     String name = transition.name( ).substring( 10 ).toLowerCase( );
+    this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
       for ( Bootstrapper b : this.bootstrappers.get( s ) ) {
         EventRecord.here( Bootstrap.class, transition, this.component.getName( ), "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).info( );
