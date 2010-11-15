@@ -125,8 +125,16 @@ public class Configuration {
     }
     try {
       ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
-      builder.getComponent( ).loadService( newComponent );
-      builder.getComponent( ).startService( newComponent );
+      try {
+        builder.getComponent( ).loadService( newComponent );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
+      try {
+        builder.getComponent( ).startService( newComponent );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       builder.getComponent( ).enableService( newComponent );
       return true;
     } catch ( Throwable e ) {
