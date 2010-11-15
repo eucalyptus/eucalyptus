@@ -242,7 +242,11 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			throw new EucalyptusCloudException("Resource not connected to peer.");
 		}
 		//make primary
+		makePrimary();
 		//mount
+		if(!isMounted()) {
+			mountPrimary();
+		}
 		//verify state
 	}
 
@@ -252,8 +256,14 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		if(isSecondary()) {
 			return;
 		}
-		//make primary
-		//mount
+		if(!isConnected()) {
+			throw new EucalyptusCloudException("Resource not connected to peer.");
+		}
+		if(isMounted()) {
+			unmountPrimary();
+		}
+		//make secondary
+		makeSecondary();
 		//verify state
 	}
 	//check status
