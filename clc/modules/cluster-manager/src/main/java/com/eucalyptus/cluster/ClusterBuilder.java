@@ -38,10 +38,11 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
+import edu.ucsb.eucalyptus.msgs.ModifyClusterAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 @DiscoverableServiceBuilder( com.eucalyptus.bootstrap.Component.cluster )
-@Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class } )
+@Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   private static Logger LOG = Logger.getLogger( ClusterBuilder.class );
   @Override
