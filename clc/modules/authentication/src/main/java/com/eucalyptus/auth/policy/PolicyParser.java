@@ -103,6 +103,7 @@ public class PolicyParser {
     
     List<AuthorizationEntity> results = Lists.newArrayList( );
     for ( String action : actions ) {
+      action = action.toLowerCase( );
       checkAction( action );
       for ( String resource : resources ) {
         String resType = checkResourceType( resource );
