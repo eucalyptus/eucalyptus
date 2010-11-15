@@ -71,7 +71,7 @@ public class VolumeService {
 	private Logger LOG = Logger.getLogger( VolumeService.class );
 	
 	private final ExecutorService pool;
-	private final int NUM_THREADS = 5;
+	private final int NUM_THREADS = 10;
 	
 	public VolumeService() {
 		pool = Executors.newFixedThreadPool(NUM_THREADS);
@@ -79,5 +79,9 @@ public class VolumeService {
 	
 	public void add(VolumeTask creator) {
 		pool.execute(creator);
+	}
+	
+	public void shutdown() {
+		pool.shutdownNow();
 	}
 }

@@ -74,9 +74,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public interface LogicalStorageManager {
-	public void initialize();
+	public void initialize() throws EucalyptusCloudException;
 
-	public void configure();
+	public void configure() throws EucalyptusCloudException;
 
 	public void checkPreconditions() throws EucalyptusCloudException;
 
@@ -86,9 +86,9 @@ public interface LogicalStorageManager {
 
 	public void cleanVolume(String volumeId);
 
-	public void cleanSnapshot(String volumeId);
+	public void cleanSnapshot(String snapshotId);
 
-	public List<String> createSnapshot(String volumeId, String snapshotId) throws EucalyptusCloudException;
+	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException;
 
 	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
 
@@ -125,8 +125,16 @@ public interface LogicalStorageManager {
 	public String getSnapshotPath(String snapshotId) throws EucalyptusCloudException;
 
 	public void importSnapshot(String snapshotId, String snapPath, String volumeId, int size) throws EucalyptusCloudException;
-	
+
 	public String attachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
 	public void detachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+
+	public void checkReady() throws EucalyptusCloudException;
+
+	public void stop() throws EucalyptusCloudException;
+
+	public void enable() throws EucalyptusCloudException;;
+
+	public void disable() throws EucalyptusCloudException;;
 }
