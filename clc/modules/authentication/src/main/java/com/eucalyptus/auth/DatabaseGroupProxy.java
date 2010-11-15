@@ -10,6 +10,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.entities.AccountEntity;
+import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
@@ -143,7 +144,27 @@ public class DatabaseGroupProxy implements Group {
   
   @Override
   public String toString( ) {
-    return this.delegate.toString( );
+    final StringBuilder sb = new StringBuilder( );
+    try {
+      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) throws Throwable {
+          sb.append( "Group(" );
+          sb.append( "ID=" ).append( t.getId( ) ).append( ", " );
+          sb.append( "name=" ).append( t.getName( ) ).append( ", " );
+          sb.append( "path=" ).append( t.getPath( ) ).append( ", " );
+          sb.append( "users=" );
+          for ( UserEntity u : t.getUsers( ) ) {
+            sb.append( u.getName( ) );
+            sb.append( " " );
+          }
+          sb.append( ")" );
+
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
+    }
+    return sb.toString( );
   }
 
   @Override

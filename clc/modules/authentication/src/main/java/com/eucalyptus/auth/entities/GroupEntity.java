@@ -100,11 +100,11 @@ public class GroupEntity extends AbstractPersistent implements Group, Serializab
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
-    sb.append( "Group[" );
+    sb.append( "Group(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
     sb.append( "path=" ).append( this.getPath( ) );
-    sb.append( "]" );
+    sb.append( ")" );
     return sb.toString( );
   }
   

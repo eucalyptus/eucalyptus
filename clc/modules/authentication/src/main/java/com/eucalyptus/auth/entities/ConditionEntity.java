@@ -74,8 +74,7 @@ public class ConditionEntity extends AbstractPersistent implements Condition, Se
     sb.append( "Condition(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "type=" ).append( this.type ).append( ", " );
-    sb.append( "key=" ).append( this.key ).append( ", " );
-    sb.append( "value=" ).append( this.values );
+    sb.append( "key=" ).append( this.key );
     sb.append( ")" );
     return sb.toString( );
   }
