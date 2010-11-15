@@ -294,6 +294,13 @@ refresh_instance_info(	struct nc_state_t *nc,
         /* else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED */
         return;
     }
+
+    int rc;
+    rc = get_instance_stats(dom, instance);
+    if (rc) {
+      logprintfl(EUCAWARN, "refresh_instances(): cannot get instance stats (block, network)\n");
+    }
+
     virDomainInfo info;
     sem_p(hyp_sem);
     int error = virDomainGetInfo(dom, &info);
@@ -1045,7 +1052,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 
 	for (i=0; i < (*outInstsLen); i++) {
 	  ncInstance *instance = (*outInsts)[i];
-	  logprintfl(EUCADEBUG, "doDescribeInstances(): instanceId=%s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d platform=%s\n", instance->instanceId, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex, instance->platform);
+	  logprintfl(EUCADEBUG, "doDescribeInstances(): instanceId=%s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d blkbytes=%d netbytes=%d platform=%s\n", instance->instanceId, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex, instance->blkbytes, instance->netbytes, instance->platform);
 	}
 
 	/* allocate enough memory */
@@ -1476,3 +1483,72 @@ char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     return retval;
 }
 
+int get_instance_stats(virDomainPtr dom, ncInstance *instance)
+{
+  char *xml;
+  int ret=1;
+
+  sem_p(hyp_sem);
+  xml = virDomainGetXMLDesc(dom, 0);
+  //      logprintfl(EUCADEBUG, "MEH: '%s'\n", xml);
+  if (xml) {
+    char *el;
+    //	blkdev = xpath_content(xml, "domain/devices/disk[1]/target/@dev");
+    el = xpath_content(xml, "domain/devices/disk");
+    if (el) {
+      char *start, *end;
+      //	  logprintfl(EUCADEBUG, "FOOMEH: %s\n", el);
+      start = strstr(el, "target dev='");
+      if (start) {
+	start += strlen("target dev='");
+	end = strstr(start, "'");
+	if (end) {
+	  *end = '\0';
+	  //	      logprintfl(EUCADEBUG, "WOOTMEH: %s\n", start);
+	  int rc;
+	  virDomainBlockStatsStruct bstats;
+	  rc = virDomainBlockStats(dom, start, &bstats, sizeof(virDomainBlockStatsStruct));
+	  if (!rc) {
+	    logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, dev=%s, rd_bytes=%lld, wr_bytes=%lld\n", instance->instanceId, start, bstats.rd_bytes, bstats.wr_bytes);
+	    if (bstats.rd_bytes > 0 && bstats.wr_bytes > 0) {
+	      instance->blkbytes = bstats.rd_bytes + bstats.wr_bytes;
+	    }
+	    ret = 0;
+	  }
+	}
+      }
+      free(el);
+    }
+    
+    el = xpath_content(xml, "domain/devices/interface");
+    if (el) {
+      char *start, *end;
+      //	  logprintfl(EUCADEBUG, "FOOMEH: %s\n", el);
+      start = strstr(el, "target dev='");
+      if (start) {
+	start += strlen("target dev='");
+	end = strstr(start, "'");
+	if (end) {
+	  *end = '\0';
+	  //	      logprintfl(EUCADEBUG, "WOOTMEH: %s\n", start);
+	  int rc;
+	  virDomainInterfaceStatsStruct istats;
+	  rc = virDomainInterfaceStats(dom, start, &istats, sizeof(virDomainInterfaceStatsStruct));
+	  if (!rc) {
+	    logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, dev=%s, rx_bytes=%lld, tx_bytes=%lld\n", instance->instanceId, start, istats.rx_bytes, istats.tx_bytes);
+	    if (istats.rx_bytes > 0 && istats.tx_bytes > 0) {
+	      instance->netbytes = istats.rx_bytes + istats.tx_bytes;
+	    }
+
+	    ret = 0;
+	  }
+	}
+      }
+      free(el);
+    }
+
+    free(xml);
+  }
+  sem_v(hyp_sem);
+  return(ret);
+}
