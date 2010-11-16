@@ -115,36 +115,47 @@ public abstract class Bootstrapper {
    */
 
   public abstract boolean start( ) throws Exception;
+
+  /**
+   * Perform the enable phase of bootstrap -- this occurs when the service associated with this bootstrapper is made active and should bring the resource to an active operational state.
+   * @return
+   * @throws Exception
+   */
+  public abstract boolean enable( ) throws Exception;
   
   /**
-   * Initiate a graceful shutdown.
+   * Initiate a graceful shutdown 
    * 
    * @note Intended for future use. May become {@code abstract}.
    * @return true on successful completion
    * @throws Exception
    */
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-  
+  public abstract boolean stop( ) throws Exception;
+
   /**
-   * Initiate a forced shutdown.
+   * Initiate a forced shutdown releasing all used resources and effectively unloading the this bootstrapper.
    * 
    * @note Intended for future use. May become {@code abstract}.
    * @throws Exception
    */
-  public void destroy( ) throws Exception {}
+  public abstract void destroy( ) throws Exception;
   
+  /**
+   * Enter an idle/passive state. 
+   * 
+   * @return
+   * @throws Exception
+   */
+  public abstract boolean disable( ) throws Exception;
+
   /**
    * Check the status of the bootstrapped resource.
    * 
    * @note Intended for future use. May become {@code abstract}.
    * @return true when all is clear
-   * @throws Exception should contain information about any malady which may be present.
+   * @throws Exception should contain detail any malady which may be present.
    */
-  public boolean check( ) throws Exception {
-    return true;
-  }
+  public abstract boolean check( ) throws Exception;
   
   /**
    * Get the list of {@link Component}s which must be on the local system for this bootstrapper to

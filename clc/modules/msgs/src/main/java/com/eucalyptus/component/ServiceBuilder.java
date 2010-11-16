@@ -10,8 +10,9 @@ import java.util.List;
  * 1. checkAdd/checkRemove
  * 2. add/remove
  * 3. fireStart/fireStop
+ * 4. fireEnable/fireDisable
+ * 
  * @author decker
- *
  * @param <T>
  */
 public interface ServiceBuilder<T extends ServiceConfiguration> {
@@ -27,7 +28,7 @@ public interface ServiceBuilder<T extends ServiceConfiguration> {
   public abstract Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException;
   public abstract Boolean checkRemove( String name ) throws ServiceRegistrationException;
   public abstract ServiceConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException;
-  public abstract ServiceConfiguration add( String name, String host, Integer port ) throws ServiceRegistrationException;
+  public abstract ServiceConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException;
   /**
    * NOTE: This method does not necessarily return the cannonical copy of the service configuration.
    * @param uri
@@ -37,7 +38,11 @@ public interface ServiceBuilder<T extends ServiceConfiguration> {
   public abstract ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException;
   public abstract void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException;
   public abstract void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException;
+  public abstract void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException;
+  public abstract void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException;
+  public abstract void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException;
   public abstract List<T> list() throws ServiceRegistrationException;
   public abstract T lookupByName( String name ) throws ServiceRegistrationException;
   public abstract T lookupByHost( String name ) throws ServiceRegistrationException;
+  
 }

@@ -83,6 +83,7 @@ struct nc_state_t {
 	char admin_user_id[CHAR_BUFFER_SIZE];
 	int save_instance_files;
 	char uri[CHAR_BUFFER_SIZE];
+        char iqn[CHAR_BUFFER_SIZE];
 	virConnectPtr conn;
 	int convert_to_disk;
 	// defined max
@@ -182,6 +183,7 @@ struct handlers {
 				char *localDev,
 				int force,
                                 int grab_inst_sem);
+
     int (*doBundleInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
 				char *instanceId,
@@ -212,7 +214,7 @@ int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutpu
 int doDescribeResource		(ncMetadata *meta, char *resourceType, ncResource **outRes);
 int doStartNetwork		(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
@@ -247,7 +249,6 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *disk_path,
 				virtualMachine *params,
 				char *privMac,
-				//				char *pubMac,
 				char *brname,
 				int use_virtio_net,
 				int use_virtio_root,

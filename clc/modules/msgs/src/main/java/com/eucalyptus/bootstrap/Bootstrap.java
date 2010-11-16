@@ -152,7 +152,19 @@ public class Bootstrap {
    * @see SystemBootstrapper#start()
    */
   public enum Stage {
-    SystemInit,
+    SystemInit {
+      /**
+       * Nothing is allowed to execute during the start phase of this {@link Bootstrap.Stage}
+       * 
+       * @see com.eucalyptus.bootstrap.Bootstrap.Stage#start()
+       */
+      @Override
+      public void start( ) {
+        for ( Bootstrapper b : this.getBootstrappers( ) ) {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, this.name( ), "SKIPPING start()", b.getClass( ).getCanonicalName( ) ).warn( );
+        }
+      }
+    },
     PrivilegedConfiguration {
       /**
        * Nothing is allowed to execute during the start phase of this {@link Bootstrap.Stage}
@@ -170,13 +182,9 @@ public class Bootstrap {
     SystemCredentialsInit, /* <-- this means system credentials, not user. */
     RemoteConfiguration,
     DatabaseInit,
-    PersistenceContextInit,
-    DeferredClassInit,
     RemoteServicesInit,
     UserCredentialsInit,
     CloudServiceInit,
-    Verification,
-    Anonymous,
     Final;
     public static List<Stage> list( ) {
       return Arrays.asList( Stage.values( ) );

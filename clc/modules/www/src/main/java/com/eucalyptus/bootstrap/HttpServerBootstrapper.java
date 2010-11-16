@@ -70,9 +70,10 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.event.PassiveEventListener;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.system.Threads;
-import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeUnit;
 
 @Provides( Component.jetty )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
@@ -133,9 +134,51 @@ public class HttpServerBootstrapper extends Bootstrapper {
     startJettyServer( );
     return true;
   }
-  public static class PortChangeListener extends PassiveEventListener<ConfigurableProperty> {
-    @Override
-    public void firingEvent( ConfigurableProperty t ) {
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy( ) throws Exception {}
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
+  }
+  
+  public static class PortChangeListener implements PropertyChangeListener {
+   /**
+    * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty, java.lang.Object)
+    */
+   @Override
+   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " which will restart the servlet container." );
       if ( jettyServer == null ) {
         return;
@@ -152,7 +195,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
           LOG.debug( e, e );
         }
         try {
-          System.setProperty( t.getDisplayName( ), t.getValue( ) );
+          System.setProperty( t.getDisplayName( ), ( String ) newValue );
           setupJettyServer( );
           startJettyServer( );
         } catch ( Exception e ) {

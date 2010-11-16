@@ -88,15 +88,8 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	}
 
 	@Override
-	public boolean check( ) throws Exception {
-		return true;
-	}
-
-	@Override
-	public void destroy( ) throws Exception {}
-
-	@Override
 	public boolean load() throws Exception {
+		//privileged context (loads modules if necessary, etc).
 		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
 		if(blockStorageManager != null)
 			blockStorageManager.checkPreconditions();
@@ -105,12 +98,49 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean start( ) throws Exception {
+		//BlockStorage.configure();
 		return true;
 	}
 
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+	 */
+	@Override
+	public boolean enable( ) throws Exception {
+		BlockStorage.enable();
+		return true;
+	}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+	 */
 	@Override
 	public boolean stop( ) throws Exception {
+		BlockStorage.stop();
 		return true;
 	}
 
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+	 */
+	@Override
+	public void destroy( ) throws Exception {}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+	 */
+	@Override
+	public boolean disable( ) throws Exception {
+		BlockStorage.disable();
+		return true;
+	}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+	 */
+	@Override
+	public boolean check( ) throws Exception {
+		BlockStorage.check();
+		return true;
+	}
 }

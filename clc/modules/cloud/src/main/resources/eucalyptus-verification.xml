@@ -84,7 +84,7 @@
             <component class="com.eucalyptus.sla.VmAdmissionControl"/>
             <outbound>
                 <outbound-pass-through-router>
-                    <outbound-endpoint ref="ImageVerifyWS"/>
+                    <outbound-endpoint ref="VmTypeVerifyWS"/>
                 </outbound-pass-through-router>
             </outbound>
         </service>
@@ -97,6 +97,18 @@
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="UpdateSystemWS"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+        <service name="VmTypeVerify">
+            <inbound>
+                <inbound-endpoint ref="VmTypeVerifyWS"/>
+            </inbound>
+            <component class="com.eucalyptus.cluster.VmTypeVerify"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="ImageVerifyWS"/>
                 </outbound-pass-through-router>
             </outbound>
         </service>
@@ -118,18 +130,6 @@
                 <inbound-endpoint ref="KeyPairVerifyWS"/>
             </inbound>
             <component class="com.eucalyptus.keys.KeyPairManager"/>
-            <outbound>
-                <outbound-pass-through-router>
-                    <outbound-endpoint ref="VmTypeVerifyWS"/>
-                </outbound-pass-through-router>
-            </outbound>
-        </service>
-
-        <service name="VmTypeVerify">
-            <inbound>
-                <inbound-endpoint ref="VmTypeVerifyWS"/>
-            </inbound>
-            <component class="com.eucalyptus.cluster.VmTypeVerify"/>
             <outbound>
                 <outbound-pass-through-router>
                     <outbound-endpoint ref="GroupsVerifyWS"/>

@@ -89,4 +89,10 @@ int cc_rebootInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stu
 int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
 int cc_killallInstances(axutil_env_t *, axis2_stub_t *);
 
+int cc_describeServices(axutil_env_t *, axis2_stub_t *);
+int cc_startService(axutil_env_t *, axis2_stub_t *);
+int cc_stopService(axutil_env_t *, axis2_stub_t *);
+int cc_enableService(axutil_env_t *, axis2_stub_t *);
+int cc_disableService(axutil_env_t *, axis2_stub_t *);
+
 #endif

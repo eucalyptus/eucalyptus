@@ -99,6 +99,7 @@ import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 @Entity
@@ -558,5 +559,21 @@ public class ImageInfo implements Image {
     public ImageDetails apply( ImageInfo arg0 ) {
       return arg0.getAsImageDetails( );
     }
+  }
+
+  /**
+   * @see com.eucalyptus.util.Mappable#getName()
+   */
+  @Override
+  public String getName( ) {
+    return this.getImageId( );
+  }
+
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( Image o ) {
+    return this.getImageId( ).compareTo( o.getImageId( ) );
   }
 }

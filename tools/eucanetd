@@ -1,0 +1,696 @@
+#!/usr/bin/perl
+
+use Getopt::Std;
+use POSIX qw(setsid);
+use File::Compare;
+
+# globals
+my %localnets;
+my $localpubdev;
+my %secrules;
+my %secgroups;
+my %eucaconf;
+my $eucalyptus = "/";
+my $polltime = 1;
+my $iptpath = "/";
+my $iptmode = "iptables";
+my $dodhcpd = 0;
+my $vnetmode = "";
+my $cloudip = "169.254.169.254";
+
+if ($ENV{'EUCALYPTUS'}) {
+    $eucalyptus = $ENV{'EUCALYPTUS'};
+}
+
+$rc = parse_eucalyptus_conf("$eucalyptus/etc/eucalyptus/eucalyptus.conf");
+if ($rc) {
+    print "ERROR: eucanetd: cannot parse config file\n";
+    exit(1);
+}
+
+getopts('cdp:l:m:', \%opts);
+my $logfile = $opts{'l'} || "$eucalyptus/var/log/eucalyptus/eucanetd.log";
+my $pidfile = $opts{'p'} || "$eucalyptus/var/run/eucalyptus/eucanetd.pid";
+my $debug = $opts{'d'} || 0;
+$iptmode = $opts{'m'} || $iptmode;
+$dodhcpd = $opts{'c'} || $dodhcpd;
+
+$rc = check_environment();
+if ($rc) {
+    print "ERROR: eucanetd: cannot start eucanetd\n";
+    exit(1);
+}
+
+if (!$debug) {
+    chdir ('/') or die "Can't chdir to /: $!";
+    umask (0);
+    open STDIN, '/dev/null' or die "Can't read /dev/null: $!";
+    open STDOUT, '>/dev/null' or die "Can't write to /dev/null: $!";
+    open STDERR, '>/dev/null' or die "Can't write to /dev/null: $!";
+    defined(my $pid = fork)   or die "Can't fork: $!";
+    exit if $pid;
+    setsid() or die "Can't start a new session: $!";
+}
+
+if (open(PFH, ">$pidfile")) {
+    print PFH "$$\n";
+    close(PFH);
+}
+
+# main loop
+open(LFH, ">$logfile");
+while(1) {
+    close(LFH);
+    sleep($polltime);
+    open(LFH, ">$logfile");
+    print LFH "INIT: iptmode=$iptmode iptpath=$iptpath dodhcpd=$dodhcpd polltime=$polltime cloudip=$cloudip\n";
+
+# read local information
+    %localnets = ();
+    $rc = read_local_net();
+    if ($rc) {
+	print LFH "ERROR: eucanetd: could not read local net information\n";
+	next;
+    }
+    print_local_net();
+
+# write global network information
+    $rc = write_global_net();
+    if ($rc) {
+	print LFH "ERROR: eucanetd: could not access/write global net information\n";
+    }
+
+# read global network information
+    %secgroups = ();
+    %secrules = ();
+    $rc = read_global_net();
+    if ($rc) {
+	print LFH "ERROR: eucanetd: could not read global net information\n";
+	next;
+    }
+    print_global_net();
+    print LFH "-----------------------------\n\n";
+    
+    $file = write_iptrules();
+    if ( ! -f "$file" ) {
+	print LFH "ERROR: eucanetd: could not write iptables rules\n";
+	next;
+    }
+    
+    $restorefile = read_iptrules();
+    if ( ! -f "$restorefile" ) {
+	print LFH "ERROR: eucanetd: could not save previous iptables rules ('$cmd')\n";
+	next;
+    }
+
+    $rc = deploy_iptrules($file);
+    system("cat $file > /tmp/euca-iptables-rules");
+    unlink($file);
+    if ($rc) {
+	print LFH "ERROR: eucanetd: could not install new iptables rules ('$cmd')\n";
+	print LFH "INFO: restoring old iptables rules\n";
+
+	$rc = deploy_iptrules($restorefile);
+	unlink($restorefile);
+	if ($rc) {
+	    print LFH "ERROR: eucanetd: could not restore previous iptables rules, flushing tables\n";
+	    system("$iptpath/sbin/iptables -t filter -F >/dev/null 2>&1");
+	}
+	print LFH "INFO: old iptables rules successfully restored\n";
+	next;
+    }
+    unlink($restorefile);
+
+    $efile = write_ebtrules();
+    $rc = deploy_ebtrules($efile);
+    unlink($efile);
+    if ($rc) {
+	print LFH "ERROR: eucanetd: could not deploy ebtrules\n";
+    }
+    
+    if ($dodhcpd) {
+	$dfile = write_dhcpconf();
+	if ( ! -f "$dfile" ) {
+	    print LFH "ERROR: could not write DHCP config file\n";
+	} else {
+	    $rc = deploy_dhcpd($dfile);
+	    if ($rc) {
+		print LFH "ERROR: could not deploy DHCP daemon\n";
+	    }
+	}
+    }
+    
+}
+
+sub write_dhcpconf() {
+
+    my $retfile = "$eucalyptus/var/run/eucalyptus/net/euca-dhcp.conf.stage";
+
+    open(DOFH, ">$retfile");
+    
+    print DOFH "# automatically generated config file for DHCP server\ndefault-lease-time 1200;\nmax-lease-time 1200;\nddns-update-style none;\n\nshared-network euca {\nsubnet $eucaconf{VNET_SUBNET} netmask $eucaconf{VNET_NETMASK} {\n  option subnet-mask $eucaconf{VNET_NETMASK};\n  option broadcast-address $eucaconf{VNET_BROADCAST};\n  option domain-name-servers $eucaconf{VNET_DNS};\n  option routers $eucaconf{VNET_ROUTER};\n}\n";
+
+    my ($a, $b, $c, $d) = split('\.', $eucaconf{VNET_NETMASK});
+    my $mask = sprintf("0x%02x%02x%02x%02x", $a, $b, $c, $d);
+    my $hexmask = hex("$mask");
+
+    my ($a, $b, $c, $d) = split('\.', $eucaconf{VNET_SUBNET});
+    my $subnet = sprintf("0x%02x%02x%02x%02x", $a, $b, $c, $d);
+    my $hexsubnet = hex("$subnet");
+    
+    foreach $group (keys(%secgroups)) {
+	@ret = ();
+	foreach $ip (keys( %{$secgroups{$group}})) {
+	    my ($a, $b, $c, $d) = split('\.', $ip);
+	    my $ipstr = sprintf("0x%02x%02x%02x%02x", $a, $b, $c, $d);
+	    my $hexip = hex("$ipstr");
+	    if ( ($hexsubnet & $hexmask) == ($hexmask & $hexip)) {
+		my $line = sprintf ("host node-$ip {\n  hardware ethernet D0:0D:%02x:%02x:%02x:%02x;\n  fixed-address $ip;\n}\n", $a, $b, $c, $d);
+		print DOFH "$line";		
+	    }
+	}
+    }
+    print DOFH "}\n";
+    close(DOFH);
+
+    return($retfile);
+}
+
+sub deploy_dhcpd() {
+    my $dfile = shift @_;
+    my $origfile = "$eucalyptus/var/run/eucalyptus/net/euca-dhcp.conf";
+
+    # compare new with old
+    if ( compare($dfile, $origfile) == 0) {
+	return(0);
+    }
+    
+    # kill if running
+    my $pidfile = "$eucalyptus/var/run/eucalyptus/net/euca-dhcp.pid";
+    if ( -f "$pidfile" ) {
+	chomp(my $pid = `cat $pidfile`);
+	kill(15, $pid);
+	unlink($pidfile);
+    }
+    # remove trace
+    unlink("$eucalyptus/var/run/eucalyptus/net/euca-dhcp.trace") || return(1);
+
+    # touch leases
+    open(LOFH, ">$eucalyptus/var/run/eucalyptus/net/euca-dhcp.leases");
+    close(LOFH);
+    
+    # swap confs
+    rename($dfile, $origfile) || return(1);
+    
+    # kick dhcpd
+    return(system("$eucaconf{VNET_DHCPDAEMON} -cf $eucalyptus/var/run/eucalyptus/net/euca-dhcp.conf -lf $eucalyptus/var/run/eucalyptus/net/euca-dhcp.leases -pf $eucalyptus/var/run/eucalyptus/net/euca-dhcp.pid -tf $eucalyptus/var/run/eucalyptus/net/euca-dhcp.trace >/dev/null 2>&1 </dev/null"));
+}
+
+sub write_global_net() {
+    $cmd = "wget -T 5 -t 1 -O $eucalyptus/var/log/eucalyptus/global-net -q http://$cloudip:8773/latest/network-topology";
+    return(system($cmd));
+}
+
+sub check_environment() {
+    if ($vnetmode ne "STATIC-DYNMAC") {
+	exit(0);
+    }
+
+    $cmd = "ebtables -h >/dev/null 2>&1";
+    if (system($cmd)) {
+	print "ERROR: eucanetd: cannot run ebtables\n";
+	return(1);
+    }
+
+    $cmd = "$iptpath/sbin/iptables -h >/dev/null 2>&1";
+    if (system($cmd)) {
+	print "ERROR: eucanetd: cannot run iptables\n";
+	return(1);
+    }
+
+    if (!open(OFH, ">$logfile")) {
+	print "ERROR: eucanetd: cannot write to logfile '$logfile'\n";
+	return(1);
+    }
+    close(OFH);
+
+    if (!open(OFH, ">$pidfile")) {
+	print "ERROR: eucanetd: cannot write to pidfile '$pidfile'\n";
+	return(1);
+    }
+    close(OFH);
+
+    if ($dodhcpd) {
+	unlink("$eucalyptus/var/run/eucalyptus/net/euca-dhcp.conf");
+    }
+    return(0);
+}
+
+sub parse_eucalyptus_conf() {
+
+    if ( ! -f "$eucalyptus/etc/eucalyptus/eucalyptus.conf" ) {
+	print "ERROR: eucanetd: cannot find config file '$eucalyptus/etc/eucalyptus/eucalyptus.conf'\n";
+	return(1);
+    }
+    
+    
+    if (!open(FH, "$eucalyptus/etc/eucalyptus/eucalyptus.conf")) {
+	print "ERROR: eucanetd: cannot open config file for read\n";
+	return(1);
+    }
+    
+    while(<FH>) {
+	chomp;
+	my $line = $_;
+	if ($line =~ /\s*#.*/) {
+	    # skip comments
+	} elsif ($line =~ /(.*)=(.*)/) {
+	    my $var = $1;
+	    my $val = $2;
+	    $val =~ s/"//g;
+            $eucaconf{$var} = $val;
+	    if ($var eq "VNET_CLOUDIP") {
+		$cloudip = "$val";
+	    }
+            if ($var eq "EUCANETD_IPTPATH") {
+                $iptpath = "$val";
+            }
+            if ($var eq "EUCANETD_IPTMODE") {
+                $iptmode = "$val";
+            }
+            if ($var eq "EUCANETD_CLCPOLL") {
+                $polltime = "$val";
+            }
+            if ($var eq "EUCANETD_DHCPDMODE") {
+                $dodhcpd = "$val";
+            }
+            if ($var eq "VNET_MODE") {
+                $vnetmode = "$val";
+            }
+	}
+    }
+    close(FH);
+    return(0);
+}
+
+sub deploy_ebtrules() {
+    my $file = shift @_;
+    my $rc=1;
+    if ( -f "$file" ) {
+	$cmd = "ebtables --atomic-file $file --atomic-commit";
+	$rc = system($cmd);
+    } else {
+	$rc = 0;
+    }
+    return($rc);
+}
+
+sub write_ebtrules() {
+    my $afile = "/tmp/ebt.$$";
+    my $fail;
+    my @cmds;
+    
+    if (!$localpubdev || $localpubdev eq "") {
+	return(0);
+    }
+
+    $cmd = "ebtables --atomic-file $afile --atomic-init";
+    $rc = system($cmd);
+    if ($rc) {
+	return(1);
+    }
+    $cmd = "ebtables --atomic-file $afile -F FORWARD";
+    $rc = system($cmd);
+    if ($rc) {
+	return(1);
+    }
+    $cmd = "ebtables --atomic-file $afile -P FORWARD ACCEPT";
+    $rc = system($cmd);
+    if ($rc) {
+	return(1);
+    }
+    
+#    @cmds = (@cmds, "FORWARD -i $localpubdev -j ACCEPT");
+# TODO: this next part needs to be more dynamic (xen vifs and ifaces)
+#    @cmds = (@cmds, "FORWARD -i vif0.0 -j ACCEPT");
+#    @cmds = (@cmds, "FORWARD -i peth0 -j ACCEPT");
+
+#    @cmds = (@cmds, "FORWARD -p IPv4 --ip-dst $cloudip --ip-proto tcp --ip-dport 8773 -j ACCEPT");
+    @cmds = (@cmds, "FORWARD -p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
+    @cmds = (@cmds, "FORWARD -p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
+    foreach $mac (keys (%localnets) ) {
+	my %localnet = %{ $localnets{"$mac"} };
+	my $ip = $localnet{privip};
+	if ($ip ne "0.0.0.0") {
+	    my $erule = "FORWARD -i ! $localpubdev -p IPv4 -s $localnet{mac} --ip-src ! $ip -j DROP";
+	    @cmds = (@cmds, $erule);
+	    my $erule = "FORWARD -i ! $localpubdev -p IPv4 -s ! $localnet{mac} --ip-src $ip -j DROP";
+	    @cmds = (@cmds, $erule);
+	}
+#	my $erule = "FORWARD -i ! $localpubdev -s $localnet{mac} -j ACCEPT";
+#	@cmds = (@cmds, $erule);
+    }
+    
+    $fail=0;
+    for $erule (@cmds) {
+	$cmd = "ebtables --atomic-file $afile -A $erule";
+	$rc = system($cmd);
+	if ($rc) {
+	    $fail=1;
+	}
+    }
+    
+    if ($fail) {
+	return("");
+    }
+    return($afile);
+}
+
+sub deploy_iptrules() {
+    my $file = shift @_;
+    
+    my $rc = 1;
+    if ( -f "$file" ) {
+	my $cmd = "cat $file | $iptpath/sbin/iptables-restore > /dev/null 2>&1";
+	$rc = system($cmd);
+    }
+    return($rc);
+}
+
+sub read_iptrules() {
+    my $file = "/tmp/iptsave.$$";
+    
+    $cmd = "$iptpath/sbin/iptables-save > $file 2>/dev/null";
+    $rc = system($cmd); 
+    if ($rc) {
+	return("");
+    }
+    return($file);
+}
+
+sub write_iptrules() {
+    my $file = "/tmp/iptrules.$$";
+    if (!open(OFH, ">$file")) {
+	return("");
+    }
+    print OFH "*nat\n";
+    print OFH ":PREROUTING ACCEPT\n";
+    print OFH ":POSTROUTING ACCEPT\n";
+    print OFH ":OUTPUT ACCEPT\n";
+    print OFH "-A PREROUTING -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination $cloudip:8773\n";
+#    print OFH "-A OUTPUT -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination $cloudip:8773\n";
+    print OFH "COMMIT\n";
+    print OFH "*filter\n";
+    print OFH ":INPUT ACCEPT\n";
+    print OFH ":FORWARD ACCEPT\n";
+    print OFH ":OUTPUT ACCEPT\n";
+    print OFH ":ipsdrop - [0:0]\n";
+    print OFH ":eucarules - [0:0]\n";
+#    print OFH "-A PREROUTING -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination $cloudip:8773\n";
+    print OFH "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT\n";
+    print OFH "-A FORWARD -p udp -m udp --sport 67:68 --dport 67:68 -j LOG --log-level 6\n";
+    print OFH "-A FORWARD -j eucarules\n";
+
+    my %wgroups = ();
+    my @localips = get_local_ips();
+    for $localip (@localips) {
+#	print OFH "-A FORWARD -s 192.168.7.30/32 -d $localip -j ACCEPT\n";
+	my $group = get_my_group($localip);
+	my @mygroupips = get_ips_by_group($group);
+	if ($group ne "NOTFOUND") {
+	    if ($wgroups{$group} != 1) {
+		print OFH ":$group - [0:0]\n";
+		$wgroups{$group} = 1;
+	    }
+	    print OFH "-A ipsdrop -d $localip -j DROP\n";
+	    print OFH "-A eucarules -p udp -m udp --dport 67:68 -d $localip -j ACCEPT\n";
+	    # iptables way, or ipset way
+	    if ($iptmode eq "iptables") {
+		for $ip (@mygroupips) {
+		    if ($ip ne $localip) {
+			print OFH "-A $group -s $ip/32 -d $localip/32 -j ACCEPT\n";
+		    }
+		}
+	    } elsif ($iptmode eq "ipset") {
+#		$rc = make_ipset($group, @mygroupips);
+#		if (open(ISOFH, ">/tmp/ipsets.$$")) {
+#		    system("ipset -X $group.stage >/dev/null 2>&1 </dev/null");
+#		    system("ipset -N $group iphash >/dev/null 2>&1 </dev/null");
+#		    print ISOFH "-N $group.stage iphash --hashsize 1024 --probes 8 --resize 50\n";
+#		    for $ip (@mygroupips) {
+#			if ($ip ne $localip) {
+#			    print ISOFH "-A $group $ip\n";
+#			}
+#		    }
+#		    print ISOFH "COMMIT\n";
+#		    close(ISOFH);
+#		    system("cat /tmp/ipsets.$$ | ipset --restore");
+#		    system("ipset --swap $group.stage $group");
+#		    system("ipset -X $group.stage");
+#		    unlink("/tmp/ipsets.$$");
+#		}
+		print OFH "-A $group -m set --set $group src,dst -d $localip -j ACCEPT\n";
+	    }
+	    print OFH "-A FORWARD -j $group\n";
+
+	    foreach $rule (keys( %{ $secrules{$group} } ) ) {
+		my @iptrules = rule_convert($rule);
+		foreach $iptrule (@iptrules) {
+		    print OFH "-A eucarules -d $localip $iptrule\n";
+		}
+	    }
+	}
+    }
+    print OFH "-A FORWARD -j ipsdrop\n";
+    print OFH "COMMIT\n";
+    close(OFH);
+    return($file);
+}
+
+sub rule_convert() {
+    my $rule = shift @_;
+    my ($prot, $port, $source, $sourceuser, $sourcegroup);
+    my $ret = "";
+    my @retrules;
+
+    if ($rule =~ /-P (\S+)/) {
+	$prot = $1;
+    }
+    if ($rule =~ /-p (\S+)/) {
+	$port = $1;
+	$port =~ s/-/:/g;
+    }
+    if ($rule =~ /-s (\S+)/) {
+	$source = $1;
+    }
+    if ($rule =~ /-u (\S+)/) {
+	$sourceuser = "$1";
+    }
+    if ($rule =~ /-o (\S+)/) {
+        $sourcegroup = "$1";
+    }
+    if ($sourceuser && $sourcegroup) {
+	$source = "$sourceuser-$sourcegroup";
+    }
+
+    if ($source =~ /\d+\.\d+\.\d+\.\d+/) {
+	if ($prot) {
+	    $ret .= "-p $prot ";
+	}
+	if ($port) {
+	    $ret .= "--dport $port ";
+	}
+	if ($source) {
+	    $ret .= "-s $source ";
+	}
+	$ret .= "-j ACCEPT";
+	@retrules = (@retrules, $ret);
+    } else {
+	if ($iptmode eq "iptables") {
+	    my @ips = get_ips_by_group($source);
+	    for $ip (@ips) {
+		$ret = "";
+		if ($prot) {
+		    $ret .= "-p $prot ";
+		}
+		if ($port) {
+		    $ret .= "--dport $port ";
+		}
+		$ret .= "-s $ip ";
+		@retrules = (@retrules, "$ret -j ACCEPT");
+	    }
+	} elsif ($iptmode eq "ipset") {
+	    make_ipset($source);
+	    $ret = "-m set --set $source src,dst ";
+	    if ($prot) {
+		$ret .= "-p $prot ";
+	    }
+	    if ($port) {
+		$ret .= "--dport $port ";
+	    }
+	    @retrules = (@retrules, "$ret -j ACCEPT");
+	}
+    }
+    return(@retrules);
+}
+
+sub get_local_ips() {
+    my @ips = ();
+    foreach $mac (keys(%localnets)) {
+	@ips = (@ips, $localnets{"$mac"}{privip});
+    }
+#    return(keys(%localnets));
+    return(@ips);
+}
+
+sub get_my_group() {
+    my $ip = shift @_;
+    foreach $group ( keys(%secgroups) ) {
+	if ($secgroups{$group}{$ip} == 1) {
+	    return($group);
+	}
+    }
+    return("NOTFOUND");
+}
+
+sub get_ips_by_group() {
+    my $group = shift @_;
+    my @ret;
+
+    foreach $ip (keys( %{$secgroups{$group}})) {
+	@ret = (@ret, $ip);
+    }
+    return(@ret);
+}
+
+sub print_local_net() {
+    
+    foreach $ip (keys (%localnets) ) {
+	print LFH "$ip\n\t";
+	my %localnet = %{ $localnets{"$ip"} };
+	foreach $attr (keys (%localnet) ) {
+	    print LFH "$attr=$localnet{$attr} ";
+	}
+	print LFH "\n";
+    }
+    print LFH "\n";
+}
+
+sub print_global_net() {
+    foreach $group (keys (%secgroups) ) {
+	print LFH "$group\n";
+	my %ips = %{ $secgroups{$group} };
+	foreach $ip (keys(%ips)) {
+	    print LFH "\tIP=$ip\n";
+	} 
+	my %rules = %{ $secrules{$group} };
+	foreach $rule (keys(%rules)) {
+	    print LFH "\tRULE=$rule\n";
+	}
+    }
+    print LFH "\n";
+}
+
+sub read_global_net() {
+    open(FH, "$eucalyptus/var/log/eucalyptus/global-net");
+    while(<FH>) {
+	chomp;
+	my $line = $_;
+	if ($line) {
+	    my ($type, @tmp) = split(/\s+/, $line);
+	    if ($type eq "GROUP") {
+		my ($type, @rest) = split(/\s+/, $line);
+		my @ips = ();
+		my $ipcount = 0;
+		my $name = "";
+		foreach $tok (@rest) {
+		    if ($tok =~ /\d+\.\d+\.\d+\.\d+/) {
+			$ips[$ipcount] = $tok;
+			$ipcount++;
+		    } else {
+			$name .= $tok;
+		    }
+		}
+		for $ip (@ips) {
+		    $secgroups{$name}{$ip} = 1;
+		}
+		if ($iptmode eq "ipset") {
+		    $rc = make_ipset($name, @ips);
+		}
+	    } elsif ($type eq "RULE") {
+		my ($type, @rest) = split(/\s+/, $line);		
+		my @restarray = ();
+		my $restcount = 0;
+		my $name = "";
+		my $tok = "";
+		my $namemode = 1;
+		foreach $tok (@rest) {
+		    if ($tok =~ /^-/) {
+			$namemode = 0;
+		    }
+		    if ($namemode == 0) {
+			$restarray[$restcount] = $tok;
+			$restcount++;
+		    } else {
+			$name .= $tok;
+		    }
+		}
+		my $rule = join(" ", @restarray);
+		my %rules = $secrules{"$name"}{$rule} = 1;
+	    }
+	}
+    }
+    close(FH);
+    return(0);
+}
+
+sub read_local_net() {
+    open(FH, "$eucalyptus/var/log/eucalyptus/local-net");
+    while(<FH>) {
+	chomp;
+	my $line = $_;
+	if ($line && $line !=~ /^\s*#/ ) {
+	    my ($id, $pubdev, $sec, $vlan, $mac, $pubip, $privip) = split(/\s+/, $line);
+	    if ($pubdev) {
+		$localpubdev = $pubdev;
+	    }
+	    if ($privip && $mac) {
+		my %tmp = ( 'pubdev' => $pubdev, 
+			    'sec' => $sec, 
+			    'vlan' => $vlan, 
+			    'mac' => $mac, 
+			    'pubip' => $pubip, 
+			    'privip' => $privip );
+		$localnets{"$mac"} = { %tmp };
+	    }
+	}
+    }
+    close(FH);
+    return(0);
+}
+
+sub make_ipset() {
+    my $group = shift @_;
+    my @ips = @_;
+    if (open(ISOFH, ">/tmp/ipsets.$$")) {
+	system("ipset -X $group.stage >/dev/null 2>&1 </dev/null");
+	system("ipset -N $group iphash >/dev/null 2>&1 </dev/null");
+	print ISOFH "-N $group.stage iphash --hashsize 1024 --probes 8 --resize 50\n";
+	for $ip (@ips) {
+	    if ($ip ne $localip) {
+		print ISOFH "-A $group.stage $ip\n";
+	    }
+	}
+	print ISOFH "COMMIT\n";
+	close(ISOFH);
+	if (@ips) {
+	    system("cat /tmp/ipsets.$$ | ipset --restore");
+	    system("ipset --swap $group.stage $group");
+	    system("ipset -X $group.stage");
+	}
+	unlink("/tmp/ipsets.$$");
+    } else {
+	return(1);
+    }
+    return(0);
+}

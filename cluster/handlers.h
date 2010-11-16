@@ -76,7 +76,8 @@ permission notice:
 #define OP_TIMEOUT_MIN 5
 
 enum {SHARED_MEM, SHARED_FILE};
-enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, BUNDLECACHE, ENDLOCK};
+enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, RESCACHESTAGE, REFRESHLOCK, BUNDLECACHE, NCCALL0, NCCALL1, NCCALL2, NCCALL3, NCCALL4, NCCALL5, NCCALL6, NCCALL7, NCCALL8, NCCALL9, NCCALL10, NCCALL11, NCCALL12, NCCALL13, NCCALL14, NCCALL15, NCCALL16, NCCALL17, NCCALL18, NCCALL19, NCCALL20, NCCALL21, NCCALL22, NCCALL23, NCCALL24, NCCALL25, NCCALL26, NCCALL27, NCCALL28, NCCALL29, NCCALL30, NCCALL31, ENDLOCK};
+enum {PRIMORDIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED};
 
 typedef struct instance_t {
   char instanceId[16];
@@ -125,12 +126,13 @@ typedef struct resource_t {
   char ncURL[128];
   char ncService[128];
   int ncPort;
-  char hostname[128], mac[24], ip[24];
+  char hostname[128], mac[24], ip[24], iqn[128];
   int maxMemory, availMemory, maxDisk, availDisk, maxCores, availCores;
   // state information
   int state, lastState;
   time_t stateChange, idleStart;
   int running;
+  int lockidx;
 } ccResource;
 int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory, int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart);
 
@@ -152,6 +154,10 @@ typedef struct ccInstanceCache_t {
 
 typedef struct ccConfig_t {
   char eucahome[MAX_PATH];
+  char proxyPath[MAX_PATH];
+  char proxyIp[32];
+  int use_proxy;
+  int proxy_max_cache_size;
   char configFiles[2][MAX_PATH];
   int use_wssec, use_tunnels;
   char policyFile[MAX_PATH];
@@ -160,6 +166,9 @@ typedef struct ccConfig_t {
   int idleThresh, wakeThresh;
   time_t configMtime, instanceTimeout, ncPollingFrequency;
   int threads[3];
+  int ncFanout;
+  int ccState, ccLastState, kick_network;
+  serviceStatusType ccStatus;
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
@@ -188,7 +197,7 @@ int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata *meta, char **instIds, int instIdsLen, int **outStatus);
 
 int doRegisterImage(ncMetadata *meta, char *amiId, char *location);
-int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, char ***outServiceTags, int *outServiceTagsLen);
+int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, ccResource **outNodes, int *outNodesLen);
 int doFlushNetwork(ncMetadata *ccMeta, char *destName);
 
 int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid);
@@ -246,6 +255,16 @@ int powerDown(ncMetadata *ccMeta, ccResource *node);
 int powerUp(ccResource *node);
 int changeState(ccResource *in, int newstate);
 
+int ccIsEnabled(void);
+int ccIsDisabled(void);
+int ccChangeState(int newstate);
+int ccGetStateString(char *outstr, int n);
+
 void *monitor_thread(void *);
+
+int image_cache(char *id, char *url);
+int image_cache_proxykick(ccResource *res, int *numHosts);
+int image_cache_invalidate(void);
+
 #endif
 

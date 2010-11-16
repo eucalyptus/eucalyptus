@@ -88,16 +88,9 @@ public class DNSBootstrapper extends Bootstrapper {
 	}
 
 	@Override
-	public boolean check( ) throws Exception {
-		return true;
-	}
-
-	@Override
-	public void destroy( ) throws Exception {}
-
-	@Override
 	public boolean load( ) throws Exception {
 		LOG.info("Initializing DNS");
+		//The following call binds DNS ports. Must be in a privileged context.
 		DNSControl.initialize();
 		return true;
 	}
@@ -105,12 +98,47 @@ public class DNSBootstrapper extends Bootstrapper {
 	@Override
 	public boolean start( ) throws Exception {
 		LOG.info("Loading DNS records");
+		//populateRecords must be idempotent.
 		DNSControl.populateRecords();
 		return true;
 	}
 
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+	 */
+	@Override
+	public boolean enable( ) throws Exception {
+		return true;
+	}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+	 */
 	@Override
 	public boolean stop( ) throws Exception {
+		return true;
+	}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+	 */
+	@Override
+	public void destroy( ) throws Exception {}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+	 */
+	@Override
+	public boolean disable( ) throws Exception {
+		//Don't bring down service but don't process requests.
+		return true;
+	}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+	 */
+	@Override
+	public boolean check( ) throws Exception {
 		return true;
 	}
 

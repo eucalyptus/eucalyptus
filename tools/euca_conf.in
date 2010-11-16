@@ -920,6 +920,12 @@ if [ -n "$SETUP" ]; then
 	let $((ret += $?))
 
 	# let's create more needed directory with the right permissions
+	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/dynserv/data
+	let $((ret += $?))
+	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/dynserv
+	let $((ret += $?))
+	chmod -R 700 $EUCALYPTUS/var/lib/eucalyptus/dynserv
+	let $((ret += $?))
 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
 	let $((ret += $?))
 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/db
@@ -1059,6 +1065,7 @@ createCloudURL () {
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
+  DB_PASS=`echo $DB_PASS | sed "s/(stdin)= //g"`
   AKEY=$(print_query_id)
   SKEY=$(print_secret_key)
   
@@ -1149,6 +1156,7 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
   openssl dgst -sha256 \
   -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
   -hex)
+  DB_PASS=`echo $DB_PASS | sed "s/(stdin)= //g"`
   KEY=$(print_token)
   if [ -z "$KEY" ]; then
   	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."

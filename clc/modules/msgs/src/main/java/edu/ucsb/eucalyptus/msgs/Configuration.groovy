@@ -63,12 +63,19 @@
  */
 package edu.ucsb.eucalyptus.msgs;
 
+import java.util.ArrayList;
+
 public class ComponentInfoType extends EucalyptusData {
+  String partition;
   String name;
-  String detail;
+  String state;//really an enum
+  String uri;
+  ArrayList<String> details = new ArrayList<String>( );
+  String detail;//TODO: remove me.
   public ComponentInfoType(){}
-  public ComponentInfoType(String name, String detail){this.name = name; this.detail = detail;}
+  public ComponentInfoType(String partition, String name, String state, String detail){this.partition = partition; this.name = name; this.state = state; this.detail = detail;}
 }
+
 public class NodeComponentInfoType extends EucalyptusData {
   String name;
   String clusterName;  
@@ -85,12 +92,27 @@ public class ConfigurationMessage extends EucalyptusMessage {
     return className.replaceAll("Describe","").replaceAll("Deregister","").replaceAll("Register","").substring(0,6);
   }
 }
+public class ServiceTransitionType extends EmpyreanMessage  {
+  String type;//component type
+  String name;
+}
+public class StartServiceType extends ServiceTransitionType {}
+public class StartServiceResponseType extends ServiceTransitionType {}
+public class StopServiceType extends ServiceTransitionType {}
+public class StopServiceResponseType extends ServiceTransitionType {}
+public class EnableServiceType extends ServiceTransitionType {}
+public class EnableServiceResponseType extends ServiceTransitionType {}
+public class DisableServiceType extends ServiceTransitionType {}
+public class DisableServiceResponseType extends ServiceTransitionType {}
+
 public class RegisterComponentType extends ConfigurationMessage {
+  String partition;
   String name;
   String host;
   Integer port;
   def RegisterComponentType() {}
-  def RegisterComponentType(final String name, final String host, final Integer port) {
+  def RegisterComponentType(final String partition, final String name, final String host, final Integer port) {
+    this.partition = partition;
     this.name = name;
     this.host = host;
     this.port = port;
@@ -106,17 +128,25 @@ public class DescribeComponentsType extends ConfigurationMessage {}
 public class DescribeComponentsResponseType extends ConfigurationMessage {
   ArrayList<ComponentInfoType> registered = new ArrayList<ComponentInfoType>();
 }
+public class ModifyComponentAttributeType extends ComponentMessageType {
+  String name;
+  String attribute; //{partition,state}
+  String value;
+}
+public class ModifyComponentAttributeResponseType extends ComponentMessageType {}
 
 public class RegisterClusterType extends RegisterComponentType {
   public RegisterClusterType( ) {}
-  public RegisterClusterType( String name, String host, Integer port ) {
-    super( name, host, port );
+  public RegisterClusterType( String partition, String name, String host, Integer port ) {
+    super( partition, name, host, port );
   }  
 }
 
 public class RegisterClusterResponseType extends RegisterComponentResponseType {}
 public class DeregisterClusterType extends DeregisterComponentType {}
 public class DeregisterClusterResponseType extends DeregisterComponentResponseType {}
+public class ModifyClusterAttributeType extends ModifyComponentAttributeType{}
+public class ModifyClusterAttributeResponseType extends ModifyComponentAttributeResponseType {}
 public class DescribeClustersType extends DescribeComponentsType {}
 public class DescribeClustersResponseType extends DescribeComponentsResponseType {}
 public class DescribeNodesType extends ConfigurationMessage  {}
@@ -128,6 +158,8 @@ public class RegisterStorageControllerType extends RegisterComponentType {}
 public class RegisterStorageControllerResponseType extends RegisterComponentResponseType {}
 public class DeregisterStorageControllerType extends DeregisterComponentType {}
 public class DeregisterStorageControllerResponseType extends DeregisterComponentResponseType {}
+public class ModifyStorageControllerAttributeType extends ModifyComponentAttributeType{}
+public class ModifyStorageControllerAttributeResponseType extends ModifyComponentAttributeResponseType {}
 public class DescribeStorageControllersType extends DescribeComponentsType {}
 public class DescribeStorageControllersResponseType extends DescribeComponentsResponseType {}
 
@@ -135,6 +167,8 @@ public class RegisterWalrusType extends RegisterComponentType {}
 public class RegisterWalrusResponseType extends RegisterComponentResponseType {}
 public class DeregisterWalrusType extends DeregisterComponentType {}
 public class DeregisterWalrusResponseType extends DeregisterComponentResponseType {}
+public class ModifyWalrusAttributeType extends ModifyComponentAttributeType{}
+public class ModifyWalrusAttributeResponseType extends ModifyComponentAttributeResponseType {}
 public class DescribeWalrusesType extends DescribeComponentsType {}
 public class DescribeWalrusesResponseType extends DescribeComponentsResponseType {}
 
@@ -144,6 +178,15 @@ public class DeregisterVMwareBrokerType extends DeregisterComponentType {}
 public class DeregisterVMwareBrokerResponseType extends DeregisterComponentResponseType {}
 public class DescribeVMwareBrokersType extends DescribeComponentsType {}
 public class DescribeVMwareBrokersResponseType extends DescribeComponentsResponseType {}
+
+public class RegisterArbitratorType extends RegisterComponentType {}
+public class RegisterArbitratorResponseType extends RegisterComponentResponseType {}
+public class DeregisterArbitratorType extends DeregisterComponentType {}
+public class DeregisterArbitratorResponseType extends DeregisterComponentResponseType {}
+public class ModifyArbitratorAttributeType extends ModifyComponentAttributeType{}
+public class ModifyArbitratorAttributeResponseType extends ModifyComponentAttributeResponseType {}
+public class DescribeArbitratorsType extends DescribeComponentsType {}
+public class DescribeArbitratorsResponseType extends DescribeComponentsResponseType {}
 
 public class GetComponentLogsType extends DescribeComponentsType {}
 public class GetComponentLogsResponseType extends DescribeComponentsResponseType {}

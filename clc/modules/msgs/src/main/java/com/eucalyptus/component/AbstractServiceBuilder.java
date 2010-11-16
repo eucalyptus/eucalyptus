@@ -86,5 +86,31 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       LOG.error( ex , ex );
     }
   }
+
+  /**
+   * @see com.eucalyptus.component.ServiceBuilder#fireEnable(com.eucalyptus.component.ServiceConfiguration)
+   * @param config
+   * @throws ServiceRegistrationException
+   */
+  @Override
+  public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
+  /**
+   * @see com.eucalyptus.component.ServiceBuilder#fireDisable(com.eucalyptus.component.ServiceConfiguration)
+   * @param config
+   * @throws ServiceRegistrationException
+   */
+  @Override
+  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
+  /**
+   * TODO: DOCUMENT
+   * @see com.eucalyptus.component.ServiceBuilder#fireCheck(com.eucalyptus.component.ServiceConfiguration)
+   * @param config
+   * @throws ServiceRegistrationException
+   */
+  @Override
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
   
 }

@@ -14,7 +14,7 @@ import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Iterables;
 
 @Provides( com.eucalyptus.bootstrap.Component.any )
-@RunDuring( Bootstrap.Stage.Verification )
+@RunDuring( Bootstrap.Stage.Final )
 public class ServiceVerifyBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceVerifyBootstrapper.class );
   
@@ -56,6 +56,44 @@ public class ServiceVerifyBootstrapper extends Bootstrapper {
     } catch ( Throwable ex ) {
       LOG.error( ex , ex );
     }
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy( ) throws Exception {}
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check( ) throws Exception {
     return true;
   }
 
