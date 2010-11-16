@@ -120,7 +120,7 @@
     <service name="Accounts">
       <inbound>
         <inbound-endpoint ref="ManagementVMEndpoint" />
-        <inbound-endpoint ref="ManagementWS" />
+        <inbound-endpoint ref="AccountsWS" />
       </inbound>
       <component class="com.eucalyptus.accounts.Accounts" />
       <outbound>
