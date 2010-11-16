@@ -112,10 +112,6 @@
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.StorageRequestType" />
         </filtering-router>
         <filtering-router>
-          <outbound-endpoint ref="EucalyptusRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-        </filtering-router>
-        <filtering-router>
           <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EmpyreanMessage" />
         </filtering-router>
@@ -134,6 +130,11 @@
         <filtering-router>
           <outbound-endpoint ref="ComponentRequestQueueEndpoint" synchronous="false" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ComponentMessageType" />
+        </filtering-router>
+        <!-- this must ALWAYS be the last outbound endpoint. -->
+        <filtering-router>
+          <outbound-endpoint ref="EucalyptusRequestQueueEndpoint" synchronous="false" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
         </filtering-router>
       </outbound>
     </service>

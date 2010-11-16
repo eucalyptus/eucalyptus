@@ -91,7 +91,7 @@ public class NodeComponentInfoType extends EucalyptusData {
     this.clusterName = clusterName;
   }
 }
-public class ConfigurationMessage extends EucalyptusMessage {
+public class ConfigurationMessage extends BaseMessage {
   String getComponentName(){
     String className = this.getClass().getSimpleName();
     return className.replaceAll("Describe","").replaceAll("Deregister","").replaceAll("Register","").substring(0,6);
