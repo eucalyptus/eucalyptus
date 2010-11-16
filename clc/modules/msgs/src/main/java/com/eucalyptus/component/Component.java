@@ -343,7 +343,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @return true if the component has not been explicitly marked as remote.
    */
   public Boolean isLocal( ) {
-    return this.localService.get( ) != null;
+    return this.local.get(); //this.localService.get( ) != null;
   }
   
   /**
