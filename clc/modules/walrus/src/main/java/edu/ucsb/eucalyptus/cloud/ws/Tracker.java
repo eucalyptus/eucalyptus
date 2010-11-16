@@ -143,4 +143,9 @@ public class Tracker extends Thread {
 			proc.destroy();
 	}
 
+	public static void die() {
+		if(tracker != null) {
+			tracker.bye();
+		}
+	}
 }
