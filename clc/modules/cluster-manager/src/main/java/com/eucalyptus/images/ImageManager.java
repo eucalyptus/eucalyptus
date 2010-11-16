@@ -280,11 +280,11 @@ public class ImageManager {
       throw e;
     }
     ImageInfo imageInfo = new ImageInfo( imageLocation, request.getUserId( ), "available", true );
-//    try {
-//      WalrusUtil.verifyManifestIntegrity( imageInfo );
-//    } catch ( EucalyptusCloudException e ) {
-//      throw new EucalyptusCloudException( "Image registration failed because the manifest referenced is invalid or unavailable." );
-//    }
+    try {
+      WalrusUtil.verifyManifestIntegrity( imageInfo );
+    } catch ( EucalyptusCloudException e ) {
+      throw new EucalyptusCloudException( "Image registration failed because the manifest referenced is invalid or unavailable." );
+    }
     String userName = request.getUserId( );
     // FIXME: wrap this manifest junk in a helper class.
     Document inputSource = ImageUtil.getManifestDocument( imagePathParts, userName );

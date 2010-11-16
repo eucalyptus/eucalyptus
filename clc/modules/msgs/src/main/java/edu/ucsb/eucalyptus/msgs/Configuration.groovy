@@ -151,13 +151,13 @@ public class DescribeComponentsType extends ConfigurationMessage {}
 public class DescribeComponentsResponseType extends ConfigurationMessage {
   ArrayList<ComponentInfoType> registered = new ArrayList<ComponentInfoType>();
 }
-public class ModifyComponentAttributeType extends ComponentMessageType {
+public class ModifyComponentAttributeType extends ConfigurationMessage {
   String partition;
   String name;
   String attribute; //{partition,state}
   String value;
 }
-public class ModifyComponentAttributeResponseType extends ComponentMessageType {}
+public class ModifyComponentAttributeResponseType extends ConfigurationMessage {}
 
 public class RegisterClusterType extends RegisterComponentType {
   public RegisterClusterType( ) {}
