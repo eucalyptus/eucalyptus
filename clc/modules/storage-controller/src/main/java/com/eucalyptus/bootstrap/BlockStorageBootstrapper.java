@@ -69,10 +69,11 @@ import com.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 
 @Provides(Component.storage)
-@RunDuring(Bootstrap.Stage.DatabaseInit)
+@RunDuring(Bootstrap.Stage.RemoteServicesInit)
 @DependsLocal(Component.storage)
 public class BlockStorageBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
+	
 	private static BlockStorageBootstrapper singleton;
 
 	public static Bootstrapper getInstance( ) {

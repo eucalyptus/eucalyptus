@@ -16,6 +16,9 @@ import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Resource;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -23,6 +26,7 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
@@ -130,13 +134,74 @@ public class ServiceContext {
     return ServiceContext.getContext( ).getRegistry( );
   }
   
-  public static void stopContext( ) {
+  public static synchronized void shutdown( ) {
     try {
       ServiceContext.getContext( ).stop( );
       ServiceContext.getContext( ).dispose( );
+      context.set( null );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
+  }
+
+  static boolean loadContext( ) {
+    List<ConfigResource> configs = Lists.newArrayList( );
+    configs.addAll( Components.lookup( Component.bootstrap ).getConfiguration( ).getResource( ).getConfigurations( ) );
+    if( Components.lookup( Component.eucalyptus ).isAvailableLocally( ) ) {
+//      configs.addAll( Components.lookup( Component.eucalyptus ).getConfiguration( ).getResource( ).getConfigurations( ) );
+      for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
+        if ( comp.getPeer( ).isCloudLocal( ) ) {
+          Resource rsc = comp.getConfiguration( ).getResource( );
+          if ( rsc != null ) {
+            LOG.info( "-> Preparing cloud-local cfg: " + rsc );
+            configs.addAll( rsc.getConfigurations( ) );
+          }
+        }
+      }
+    }
+    for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
+      if ( comp.isRunningLocally( ) ) {
+        Resource rsc = comp.getConfiguration( ).getResource( );
+        if ( rsc != null ) {
+          LOG.info( "-> Preparing component cfg: " + rsc );
+          configs.addAll( rsc.getConfigurations( ) );
+        }
+      }
+    }
+    for ( ConfigResource cfg : configs ) {
+      LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );
+    }
+    try {
+      buildContext( configs );
+    } catch ( Exception e ) {
+      LOG.fatal( "Failed to bootstrap services.", e );
+      return false;
+    }
+    return true;
+  }
+
+  public static synchronized boolean startup( ) {
+    try {
+      LOG.info( "Loading system bus." );
+      loadContext( );
+    } catch ( Exception e ) {
+      LOG.fatal( "Failed to configure services.", e );
+      return false;
+    }
+    try {
+      LOG.info( "Starting up system bus." );
+      createContext( );
+    } catch ( Exception e ) {
+      LOG.fatal( "Failed to configure services.", e );
+      return false;
+    }
+    try {
+      startContext( );
+    } catch ( Exception e ) {
+      LOG.fatal( "Failed to start services.", e );
+      return false;
+    }
+    return true;
   }
   
 }

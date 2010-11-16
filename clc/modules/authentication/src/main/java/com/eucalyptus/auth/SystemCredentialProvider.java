@@ -81,7 +81,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.system.SubDirectory;
 
-@Provides( Component.any )
+@Provides( Component.bootstrap )
 @RunDuring( Bootstrap.Stage.SystemCredentialsInit )
 @DependsLocal( Component.eucalyptus )
 public class SystemCredentialProvider extends Bootstrapper {

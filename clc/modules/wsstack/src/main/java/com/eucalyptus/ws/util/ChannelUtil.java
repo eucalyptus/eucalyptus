@@ -68,8 +68,8 @@ public class ChannelUtil {
   @ConfigurableField( initial = "" + 20, description = "Server socket write time-out." )
   public static Long           PIPELINE_WRITE_TIMEOUT_SECONDS    = 20l;
   public static Integer        CLIENT_POOL_MAX_THREADS           = 40;
-  public static Long           CLIENT_POOL_MAX_MEM_PER_CONN      = 1048576l;
-  public static Long           CLIENT_POOL_TOTAL_MEM             = 20 * 1024 * 1024l;
+  public static Long           CLIENT_POOL_MAX_MEM_PER_CONN      = 10485760l;
+  public static Long           CLIENT_POOL_TOTAL_MEM             = 200 * 1024 * 1024l;
   public static Long           CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
   
   static class NioServerPipelineFactory implements ChannelPipelineFactory {

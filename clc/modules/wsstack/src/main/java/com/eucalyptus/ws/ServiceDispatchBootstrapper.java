@@ -80,7 +80,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
-@Provides( com.eucalyptus.bootstrap.Component.any )
+@Provides( com.eucalyptus.bootstrap.Component.bootstrap )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
@@ -110,11 +110,11 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     boolean failed = false;
     Component euca = Components.lookup( Components.delegate.eucalyptus );
     for ( Component comp : Components.list( ) ) {
-      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
+      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
         if ( euca.isLocal( ) && euca.getPeer( ).hasDispatcher( ) ) {
           try {
-            comp.buildService( s );
+            comp.loadService( s );
           } catch ( ServiceRegistrationException ex ) {
             LOG.error( ex, ex );
             failed = true;
@@ -136,11 +136,19 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     boolean failed = false;
     Component euca = Components.lookup( Components.delegate.eucalyptus );
     for ( Component comp : Components.list( ) ) {
-      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isEnabled( ).toString( ) ).info( );
+      EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
         if ( euca.isLocal( ) && euca.getPeer( ).hasDispatcher( ) ) {
           try {
             comp.startService( s );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.error( ex, ex );
+            failed = true;
+          } catch ( Throwable ex ) {
+            BootstrapException.throwFatal( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+          }
+          try {
+            comp.enableService( s );
           } catch ( ServiceRegistrationException ex ) {
             LOG.error( ex, ex );
             failed = true;

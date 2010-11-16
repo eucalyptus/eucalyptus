@@ -71,10 +71,9 @@ import com.eucalyptus.ws.util.PipelineRegistry;
 
 public class NioServer {
   private static Logger                 LOG = Logger.getLogger( NioServer.class );
-  private Channel                       serverChannel;
+  private static Channel                       serverChannel;
 
-  public NioServer( ) {
-    //TODO: make this bootstrappable.
+  static {
     PipelineRegistry.getInstance( ).register( new HeartbeatPipeline( ) );
     PipelineRegistry.getInstance( ).register( new MetadataPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
@@ -84,9 +83,21 @@ public class NioServer {
     PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
     PipelineRegistry.getInstance( ).register( new WalrusSoapPipeline( ) );
   }
+  
+  public NioServer( ) {}
 
-  public void start( ) {
-    this.serverChannel = ChannelUtil.getServerChannel();
+  public static void start( ) {
+    if( serverChannel != null ) {
+      return;
+    } else {
+      synchronized(NioServer.class) {
+        if( serverChannel != null ) {
+          return;
+        } else {
+          serverChannel = ChannelUtil.getServerChannel();
+        }
+      }
+    }
   }
 
 }

@@ -61,34 +61,39 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.ws.handlers;
+package com.eucalyptus.component;
 
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.http.MappingHttpMessage;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Component;
+import com.google.common.collect.Maps;
+public class ServiceBuilderRegistry {
+  private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );
+  private static Map<Class,ServiceBuilder<ServiceConfiguration>> builders = Maps.newConcurrentHashMap( );
+  private static Map<Component,ServiceBuilder<ServiceConfiguration>> componentBuilders = Maps.newConcurrentHashMap( );
 
-public class ServiceInfoInjectionHandler extends MessageStackHandler implements ChannelHandler {
-  
-  /**
-   * @see com.eucalyptus.ws.handlers.MessageStackHandler#outgoingMessage(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.MessageEvent)
-   */
-  @Override
-  public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
-      MappingHttpMessage httpRequest = ( MappingHttpMessage ) event.getMessage( );
-      if( httpRequest.getMessage( ) instanceof EucalyptusErrorMessageType || httpRequest.getMessage( ) == null ) {
-        return;
-      } else if ( httpRequest.getMessage( ) instanceof BaseMessage ) {
-        BaseMessage msg = ( BaseMessage ) httpRequest.getMessage( );
-        
-      }
-    }
+  public static void addBuilder( Class c, ServiceBuilder b ) {
+    LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
+    builders.put( c, b );
   }
-  
-  @Override
-  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {}
+
+  public static void addBuilder( Component c, ServiceBuilder b ) {
+    LOG.info( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
+    componentBuilders.put( c, b );
+  }
+
+  public static Set<Entry<Class, ServiceBuilder<ServiceConfiguration>>> entrySet( ) {
+    return builders.entrySet( );
+  }
+
+  public static ServiceBuilder<ServiceConfiguration> get( Class arg0 ) {
+    return builders.get( arg0 );
+  }
+
+  public static ServiceBuilder<ServiceConfiguration> get( Component arg0 ) {
+    return componentBuilders.get( arg0 );
+  }
   
 }

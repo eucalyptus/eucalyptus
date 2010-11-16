@@ -62,15 +62,22 @@
  */
 package com.eucalyptus.component;
 
+import java.net.InetAddress;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Record;
@@ -78,7 +85,9 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
+import com.eucalyptus.util.fsm.SimpleTransitionListener;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -95,11 +104,11 @@ public class Component implements ComponentInformation, HasName<Component> {
   private static Logger LOG = Logger.getLogger( Component.class );
   
   public enum State {
-    DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED;
+    BROKEN, PRIMORDIAL, INITIALIZED, LOADED, NOTREADY, DISABLED, ENABLED, STOPPED;
   }
   
   public enum Transition {
-    EARLYRUNTIME, INITIALIZE, LOAD, START, STOP, PAUSE;
+    INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING;
     /**
      * @see Component#stateMachine
      * @see com.eucalyptus.util.fsm.AtomicMarkedState#transition(java.lang.Enum)
@@ -109,35 +118,25 @@ public class Component implements ComponentInformation, HasName<Component> {
       return new Callback.Success<Component>( ) {
         @Override
         public void fire( Component t ) {
-          t.stateMachine.transition( Transition.this );
+          if( t.isAvailableLocally( ) ) {
+            t.stateMachine.transition( Transition.this );
+          }
         }
       };
     }
   }
   
-  private final String                                          name;
-  private final com.eucalyptus.bootstrap.Component              component;
-  private final Configuration                                   configuration;
-  private final AtomicMarkedState<Component, State, Transition> stateMachine;
-  private final AtomicBoolean                                   enabled  = new AtomicBoolean( false );
-  private final AtomicBoolean                                   local    = new AtomicBoolean( false );
-  private final Map<String, Service>                            services = Maps.newConcurrentHashMap( );
-  private ServiceBuilder<ServiceConfiguration>                  builder;                                //TODO: lonely mutable is lonely.
-                                                                                                         
-  public final Iterator<ServiceInfoType> getUnorderedIterator( ) {
-    return Iterables.transform( this.services.values( ), new Function<Service,ServiceInfoType>(){
-
-      @Override
-      public ServiceInfoType apply( final Service arg0 ) {
-        return new ServiceInfoType() {{
-          setPartition( arg0.getServiceConfiguration( ).getPartition( ) ); 
-          setName( arg0.getServiceConfiguration( ).getName( ) );
-          setType( Component.this.getName( ) );
-          getUris( ).add( arg0.getServiceConfiguration( ).getUri( ) );
-        }};
-      }} ).iterator( );
-  }
-
+  private final String                               name;
+  private final com.eucalyptus.bootstrap.Component   component;
+  private final Configuration                        configuration;
+  private final AtomicBoolean                        enabled      = new AtomicBoolean( false );
+  private final AtomicBoolean                        local        = new AtomicBoolean( false );
+  private final Map<String, Service>                 services     = Maps.newConcurrentHashMap( );
+  private final ServiceBuilder<ServiceConfiguration> builder;
+  private final ComponentBootstrapper                bootstrapper;
+  private final ComponentState                       stateMachine;
+  private final AtomicReference<Service>             localService = new AtomicReference( null );
+  
   Component( String name, URI configFile ) throws ServiceRegistrationException {
     this.name = name;
     this.component = initComponent( );
@@ -152,63 +151,19 @@ public class Component implements ComponentInformation, HasName<Component> {
     } else {
       this.configuration = new Configuration( this );
     }
-    this.stateMachine = new StateMachineBuilder<Component, State, Transition>( this, State.DISABLED ) {
-      {
-        on( Transition.EARLYRUNTIME ).from( State.DISABLED ).to( State.PRIMORDIAL ).error( State.DISABLED ).noop( );
-        on( Transition.INITIALIZE ).from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.DISABLED ).noop( );
-        on( Transition.LOAD ).from( State.INITIALIZED ).to( State.LOADED ).error( State.DISABLED ).noop( );
-        on( Transition.START ).from( State.LOADED ).to( State.RUNNING ).error( State.DISABLED ).noop( );
-        on( Transition.STOP ).from( State.RUNNING ).to( State.STOPPED ).error( State.STOPPED ).noop( );
-        on( Transition.PAUSE ).from( State.RUNNING ).to( State.PAUSED ).noop( );
-      }
-    }.newAtomicState( );
-    this.builder = new DummyServiceBuilder( this );
-  }
-  
-  /**
-   * TODO: DOCUMENT Component.java
-   * 
-   * @param config
-   * @throws ServiceRegistrationException
-   */
-  public void removeService( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    final boolean configLocal = NetworkUtil.testLocal( config.getHostName( ) );
-    Service remove = this.lookupServiceByHost( config.getHostName( ) );
-    if ( remove == null ) {
-      throw new ServiceRegistrationException( "Failed to find service corresponding to: " + config );
+    if ( ServiceBuilderRegistry.get( this.component ) != null ) {
+      this.builder = ServiceBuilderRegistry.get( this.component );
     } else {
-      Service service = this.services.remove( remove.getName( ) );
-      this.builder.fireStop( config );
-      DispatcherFactory.remove( service );
-//      Components.deregister( service );
-      EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_STOP, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+      this.builder = new DummyServiceBuilder( this );
     }
+    this.bootstrapper = new ComponentBootstrapper( this );
+    this.stateMachine = new ComponentState( this );
   }
   
-  /**
-   * Builds a Service instance for this component using a service configuration
-   * created with the specified URI.
-   * 
-   * @return
-   * @throws ServiceRegistrationException
-   */
-  public Service buildService( URI uri ) throws ServiceRegistrationException {
-    ServiceConfiguration config = this.builder.toConfiguration( uri );
-    Service service = new Service( this, config );
-    return this.setupService( config, service );
+  protected Service getLocalService( ) {
+    return this.localService.get( );
   }
   
-  /**
-   * Builds a Service instance for this component using the provided service
-   * configuration.
-   * 
-   * @return Service instance of the service
-   * @throws ServiceRegistrationException
-   */
-  public Service buildService( ServiceConfiguration config ) throws ServiceRegistrationException {
-    Service service = new Service( this, config );
-    return this.setupService( config, service );
-  }
   
   /**
    * Builds a Service instance for this component using the local default
@@ -217,12 +172,32 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @return Service instance of the service
    * @throws ServiceRegistrationException
    */
-  public Service buildService( ) throws ServiceRegistrationException {
-    ServiceConfiguration conf = this.builder.toConfiguration( this.getConfiguration( ).getLocalUri( ) );
-    Service service = new Service( this, conf );
-    return this.setupService( conf, service );
+  public void initService( ) throws ServiceRegistrationException {
+    if( this.enabled.get( ) ) {
+      ServiceConfiguration config = this.builder.toConfiguration( this.getConfiguration( ).getLocalUri( ) );
+      Service service = new Service( this, config );
+      this.setupService( service );
+      
+    } else {
+      throw new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." );
+    }
   }
-  
+
+  /**
+   * Builds a Service instance for this component using the provided service
+   * configuration.
+   * 
+   * @return Service instance of the service
+   * @throws ServiceRegistrationException
+   */
+  public void loadService( ServiceConfiguration config ) throws ServiceRegistrationException {
+    Service service = new Service( this, config );
+    this.setupService( service );
+    if( service.isLocal( ) && State.INITIALIZED.equals( this.getState( ) ) ) {
+      this.stateMachine.transition( Transition.LOADING );
+    }
+  }
+
   /**
    * 
    * @param config
@@ -230,32 +205,104 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @return
    * @throws ServiceRegistrationException
    */
-  private Service setupService( ServiceConfiguration config, Service service ) throws ServiceRegistrationException {
+  private Service setupService( Service service ) throws ServiceRegistrationException {
+    if ( service.getServiceConfiguration( ).isLocal( ) ) {
+      this.localService.set( service );
+    }
     this.services.put( service.getName( ), service );
     Components.register( service );
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
                         this.getName( ),
-                        config.isLocal( )
+                        service.getServiceConfiguration( ).isLocal( )
                           ? "local"
                           : "remote",
                         service.getName( ), service.getUri( ), service.getDispatcher( ) ).info( );
     return service;
   }
   
-  /**
-   * TODO: DOCUMENT Component.java
-   * 
-   * @param service
-   * @throws ServiceRegistrationException 
-   */
   public void startService( ServiceConfiguration service ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
-    this.builder.fireStart( service );
+    if( service.isLocal( ) ) {
+      this.stateMachine.transition( Transition.STARTING );
+      try {
+        this.stateMachine.transition( Transition.READY_CHECK );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+      }
+    } else {
+      this.builder.fireStart( service );
+    }
   }
   
-  /**
-   * @see com.eucalyptus.util.fsm.AtomicMarkedState#getState()
-   */
+  public void enableService( ServiceConfiguration service ) throws ServiceRegistrationException {
+    EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+    if( service.isLocal( ) ) {
+      if( State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
+        this.stateMachine.transition( Transition.READY_CHECK );
+      }
+      this.stateMachine.transition( Transition.ENABLING );
+    } else {
+      this.builder.fireStart( service );
+    }
+  }
+
+  public void disableService( ServiceConfiguration service ) throws ServiceRegistrationException {
+    EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+    if( service.isLocal( ) ) {
+      if( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+        this.stateMachine.transition( Transition.DISABLING );
+      }
+    } else {
+      this.builder.fireStart( service );
+    }
+  }
+
+  public void stopService( ServiceConfiguration service ) throws ServiceRegistrationException {
+    EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+    if( service.isLocal( ) ) {
+      if( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+        this.stateMachine.transition( Transition.DISABLING );
+      }
+      this.stateMachine.transition( Transition.STOPPING );
+    } else {
+      this.builder.fireStart( service );
+    }
+  }
+
+  public void destroyService( final ServiceConfiguration config ) throws ServiceRegistrationException {
+    final boolean configLocal = NetworkUtil.testLocal( config.getHostName( ) );
+    Service remove = this.lookupServiceByHost( config.getHostName( ) );
+    if ( remove == null ) {
+      throw new ServiceRegistrationException( "Failed to find service corresponding to: " + config );
+    } else {
+      Service service = this.services.remove( remove.getName( ) );
+      DispatcherFactory.remove( service );
+//      Components.deregister( service );
+      EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_STOP, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+      if( config.isLocal( ) ) {
+        this.stateMachine.transition( Transition.DESTROYING );
+        this.localService.set( null );
+      }
+    }
+  }
+  
+  public final Iterator<ServiceInfoType> getUnorderedIterator( ) {
+    return Iterables.transform( this.services.values( ), new Function<Service, ServiceInfoType>( ) {
+      
+      @Override
+      public ServiceInfoType apply( final Service arg0 ) {
+        return new ServiceInfoType( ) {
+          {
+            setPartition( arg0.getServiceConfiguration( ).getPartition( ) );
+            setName( arg0.getServiceConfiguration( ).getName( ) );
+            setType( Component.this.getName( ) );
+            getUris( ).add( arg0.getServiceConfiguration( ).getUri( ) );
+          }
+        };
+      }
+    } ).iterator( );
+  }
+  
   public State getState( ) {
     return this.stateMachine.getState( );
   }
@@ -275,21 +322,8 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.configuration;
   }
   
-  /**
-   * TODO: DOCUMENT Component.java
-   * @return
-   */
   public ServiceBuilder<ServiceConfiguration> getBuilder( ) {
     return this.builder;
-  }
-  
-  /**
-   * @note the only real use of this method is for the remote stack to mark components disabled
-   *       later during bootstrap.
-   */
-  public void markDisabled( ) {
-    this.local.set( false );
-    this.enabled.set( false );
   }
   
   /**
@@ -297,7 +331,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    * 
    * @return true if the component could be run locally.
    */
-  public Boolean isEnabled( ) {
+  public Boolean isAvailableLocally( ) {
     return this.enabled.get( );
   }
   
@@ -309,11 +343,12 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @return true if the component has not been explicitly marked as remote.
    */
   public Boolean isLocal( ) {
-    return this.local.get( );
+    return this.local.get(); //this.localService.get( ) != null;
   }
   
   /**
    * TODO: DOCUMENT Component.java
+   * 
    * @return
    * @throws ServiceRegistrationException
    */
@@ -323,6 +358,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   /**
    * TODO: DOCUMENT Component.java
+   * 
    * @param hostName
    * @param port
    * @return
@@ -332,27 +368,12 @@ public class Component implements ComponentInformation, HasName<Component> {
   }
   
   /**
-   * TODO: DOCUMENT Component.java
-   * @param builder
-   */
-  void setBuilder( ServiceBuilder<ServiceConfiguration> builder ) {
-    this.builder = builder;
-  }
-  
-  /**
-   * @return true if the component is in a running state.
-   */
-  public Boolean isRunning( ) {
-    return State.RUNNING.equals( this.getState( ) );
-  }
-  
-  /**
    * @return {@link NavigableSet<Service>} of the registered service of this {@link Component} type.
    */
   public NavigableSet<Service> getServices( ) {
     return Sets.newTreeSet( this.services.values( ) );
   }
-
+  
   /**
    * Lookup the {@link Service} instance of this {@link Component} registered as {@code name}
    * 
@@ -382,6 +403,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    */
   public Service lookupServiceByHost( String hostName ) {
     Exceptions.ifNullArgument( hostName );
+//ASAP:FIXME:GRZE:    hostName = InetAddress.getByName( hostName ).getCanonicalHostName( );
     for ( Service s : this.services.values( ) ) {
       if ( hostName.equals( s.getServiceConfiguration( ).getHostName( ) ) ) {
         return s;
@@ -410,20 +432,10 @@ public class Component implements ComponentInformation, HasName<Component> {
     throw new NoSuchElementException( "No service found matching hostname: " + hostName + " for component: " + this.getName( ) );
   }
   
-  /**
-   * TODO: DOCUMENT Component.java
-   * @return
-   */
   public Boolean isRunningLocally( ) {
-    try {
-      this.lookupServiceByHost( "localhost" );
-      return true;
-    } catch ( NoSuchElementException ex ) {
-      LOG.trace( ex, ex );
-      return false;
-    }
+    return State.ENABLED.equals( this.getState( ) ) && this.localService.get( ) != null;
   }
-
+  
   /**
    * @see java.lang.Object#toString()
    */
@@ -471,4 +483,34 @@ public class Component implements ComponentInformation, HasName<Component> {
     }
   }
   
+  /**
+   * @return the bootstrapper
+   */
+  public ComponentBootstrapper getBootstrapper( ) {
+    return this.bootstrapper;
+  }
+  
+  public static class CheckEvent implements EventListener {
+    public static void register( ) {
+      ListenerRegistry.getInstance( ).register( ClockTick.class, new CheckEvent( ) );
+    }
+
+    @Override 
+    public void fireEvent( Event event ) {
+      for( Component c : Components.list( ) ) {
+        try {
+          if( c.isAvailableLocally( ) && (c.getState( ).equals( State.NOTREADY ) ) ) {
+            c.stateMachine.transition( Transition.READY_CHECK );          
+          } else if( c.isAvailableLocally( ) && (c.getState( ).equals( State.ENABLED ) ) ) {
+            c.stateMachine.transition( Transition.ENABLED_CHECK );          
+          } else if( c.isAvailableLocally( ) && (c.getState( ).equals( State.DISABLED ) ) ) {
+            c.stateMachine.transition( Transition.DISABLED_CHECK );          
+          }
+        } catch ( Throwable ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    }
+    public void advertiseEvent( Event event ) {}
+  }
 }

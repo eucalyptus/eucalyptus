@@ -77,7 +77,7 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.Threads;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
-@Provides(Component.db)
+@Provides(Component.bootstrap)
 @RunDuring(Bootstrap.Stage.DatabaseInit)
 @DependsLocal(Component.eucalyptus)
 public class LocalDatabaseBootstrapper extends Bootstrapper implements EventListener, Runnable, DatabaseBootstrapper {

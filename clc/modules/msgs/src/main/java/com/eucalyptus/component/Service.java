@@ -63,6 +63,7 @@
 package com.eucalyptus.component;
 
 import java.net.URI;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.NetworkUtil;
 import edu.ucsb.eucalyptus.msgs.ServiceId;
@@ -75,6 +76,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   private final ServiceEndpoint      endpoint;
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
+  private final Component.State      state = State.ENABLED/**ASAP:FIXME:GRZE**/;
 
   public final ServiceId getServiceId( ) {
     return new ServiceId() {{
@@ -186,6 +188,17 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   public String toString( ) {
     return String.format( "Service %s name=%s endpoint=%s dispatcher=%s serviceConfiguration=%s keys=%s", this.parent.getPeer( ), this.name, 
                           this.endpoint, this.dispatcher, this.serviceConfiguration, this.keys );
+  }
+
+  /**
+   * @return the state
+   */
+  public Component.State getState( ) {
+    if( this.serviceConfiguration.isLocal( ) ) {
+      return this.parent.getState( );
+    } else {
+      return this.state;
+    }
   }
 
 }

@@ -66,7 +66,7 @@ import org.apache.log4j.Logger;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 
 @Provides(Component.walrus)
-@RunDuring(Bootstrap.Stage.DatabaseInit)
+@RunDuring(Bootstrap.Stage.RemoteServicesInit)
 @DependsLocal(Component.walrus)
 public class WalrusBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( WalrusBootstrapper.class );
