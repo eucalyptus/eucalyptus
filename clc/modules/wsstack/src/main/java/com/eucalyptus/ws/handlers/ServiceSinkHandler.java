@@ -87,7 +87,9 @@ import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
 import org.mule.api.MuleSession;
+import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.endpoint.OutboundEndpoint;
+import org.mule.api.service.Service;
 import org.mule.api.transport.DispatchException;
 import org.mule.transport.AbstractConnector;
 import org.mule.transport.NullPayload;
@@ -234,9 +236,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( this.msgReceiver == null ) {
           ServiceSinkHandler.dispatchRequest( msg );
         } else if ( ( user == null ) || ( ( user != null ) && user.isAdministrator( ) ) ) {
+//          this.dispatchRequest( ctx, request, msg );
           ServiceSinkHandler.dispatchRequest( msg );
-
-          //          this.dispatchRequest( ctx, request, msg );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
@@ -255,6 +256,13 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
    */
   private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final BaseMessage msg ) throws NoSuchContextException {
     try {
+      /** ASAP:FIXME:GRZE this is a temporary hack around mule reloading issue **/
+      if( !this.msgReceiver.getConnector( ).isStarted( ) ) {
+        InboundEndpoint inbound = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory().getInboundEndpoint( this.msgReceiver.getEndpointURI( ) );
+        Service service = ServiceContext.getContext( ).getRegistry( ).lookupService( this.msgReceiver.getService( ).getName( ) );
+        this.msgReceiver = new NioMessageReceiver( inbound.getConnector( ), service, inbound );
+//        this.msgReceiver.doConnect( );
+      }
       final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
       if ( reply != null ) {
         ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
