@@ -1,6 +1,7 @@
 package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -24,6 +25,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   	Groups.setGroupProvider( dbAuth );
   	Accounts.setAccountProvider( dbAuth );
   	Policies.setPolicyProvider( dbAuth );
+  	Authorizations.setPolicyEngine( new PolicyEngineImpl( ) );
     return true;
   }
   

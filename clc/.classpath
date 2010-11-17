@@ -150,8 +150,8 @@
 	<classpathentry kind="lib" path="lib/hibernate-jpa-2.0-api-1.0.0.Final.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate3.jar"/>
 	<classpathentry kind="lib" path="lib/javassist-3.9.0.GA.jar"/>
-	<classpathentry kind="lib" path="lib/jta-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.5.8.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.8.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-jta_1.1_spec-1.1.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

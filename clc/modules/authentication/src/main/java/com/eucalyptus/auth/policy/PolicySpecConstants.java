@@ -4,8 +4,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
+import com.eucalyptus.images.Image;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class PolicySpecConstants {
   
@@ -391,4 +394,17 @@ public class PolicySpecConstants {
   public static final String S3_RESOURCE_BUCKET = "bucket";
   public static final String S3_RESOURCE_OBJECT = "object";
   
+  // Map resource class type to resource string
+  public static final Map<Class<? extends Object>, String> RESOURCE_CLASS_TO_STRING = Maps.newHashMap( );
+  
+  static {
+    RESOURCE_CLASS_TO_STRING.put( Image.class, VENDOR_EC2 + ":" + EC2_RESOURCE_IMAGE );
+  }
+  
+  // Map message class type to action string
+  public static final Map<Class<? extends BaseMessage>, String> MESSAGE_CLASS_TO_ACTION = Maps.newHashMap( );
+  
+  static {
+    MESSAGE_CLASS_TO_ACTION.put( RunInstancesType.class, VENDOR_EC2 + ":" + EC2_RUNINSTANCES );
+  }
 }

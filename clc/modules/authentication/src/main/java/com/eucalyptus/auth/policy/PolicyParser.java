@@ -106,13 +106,13 @@ public class PolicyParser {
       action = action.toLowerCase( );
       checkAction( action );
       for ( String resource : resources ) {
-        String resType = checkResourceType( resource );
-        if ( actionMatchesResourceType( action, resType ) ) {
+        String[] parsed = parseResourceArn( resource );
+        if ( actionMatchesResourceType( action, parsed[0] ) ) {
           results.add( new AuthorizationEntity( EffectType.valueOf( effect ),
                                                 action,
                                                 Boolean.valueOf( PolicySpecConstants.NOTACTION.equals( actionElement ) ),
-                                                resType,
-                                                resource,
+                                                parsed[0], // resource type
+                                                parsed[1], // resource relative name/id
                                                 Boolean.valueOf( PolicySpecConstants.NOTRESOURCE.equals( resourceElement ) ) ) );
         }
       }
@@ -177,7 +177,8 @@ public class PolicyParser {
     return name.substring( 0, colon );
   }
   
-  private String checkResourceType( String resource ) throws JSONException {
+  private String[] parseResourceArn( String resource ) throws JSONException {
+    String[] parsed = new String[2];
     Matcher matcher = PolicySpecConstants.ARN_PATTERN.matcher( resource );
     if ( !matcher.matches( ) ) {
       throw new JSONException( "'" + resource + "' is not a valid ARN" );
@@ -185,25 +186,30 @@ public class PolicyParser {
     String vendor = null;
     String type = null;
     if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM ) != null ) {
-      vendor = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM );
-      type = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM_USERGROUP );
+      parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM ) + ":" +
+          matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM_USERGROUP ).toLowerCase( );
+      parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM_ID );
     } else if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 ) != null ) {
-      vendor = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 );
-      type = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
+      parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 ) + ":" +
+          matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
       if ( !PolicySpecConstants.EC2_RESOURCES.contains( type ) ) {
         throw new JSONException( "EC2 type '" + type + "' is not supported" );
       }
+      parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2_ID ).toLowerCase( );
     } else if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3 ) != null ) {
-      vendor = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3 );
+      parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3 ) + ":";
       if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_OBJECT ) != null ) {
-        type = PolicySpecConstants.S3_RESOURCE_OBJECT;
+        parsed[0] += PolicySpecConstants.S3_RESOURCE_OBJECT;
       } else {
-        type = PolicySpecConstants.S3_RESOURCE_BUCKET;
+        parsed[0] += PolicySpecConstants.S3_RESOURCE_BUCKET;
       }
+      parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_BUCKET ) +
+          matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_OBJECT );
     } else {
-      return PolicySpecConstants.ALL_RESOURCE;
-    }
-    return vendor + ":" + type;
+      parsed[0] = PolicySpecConstants.ALL_RESOURCE;
+      parsed[1] = PolicySpecConstants.ALL_RESOURCE;
+    }    
+    return parsed;
   }
   
   private void checkConditionType( String type ) throws JSONException {

@@ -18,6 +18,7 @@ public class AuthException extends BaseException {
   public static final String EMPTY_GROUP_NAME = "Empty group name";
   public static final String EMPTY_GROUP_ID = "Empty group ID";
   public static final String EMPTY_ACCOUNT_NAME = "Empty account name";
+  public static final String EMPTY_ACCOUNT_ID = "Empty account ID";
   public static final String USER_DELETE_CONFLICT = "User has resources attached and can not be deleted";
   public static final String GROUP_DELETE_CONFLICT = "Group has resources attached and can not be deleted";
   public static final String ACCOUNT_DELETE_CONFLICT = "Account still has groups and can not be deleted";
@@ -37,6 +38,8 @@ public class AuthException extends BaseException {
   public static final String NO_SUCH_ACCOUNT = "No such account";
   public static final String USER_GROUP_DELETE = "Can not delete user group";
   public static final String NO_SUCH_CERTIFICATE = "No such certificate";
+  
+  public static final String ACCESS_DENIED = "Access to the resource is denied";
   
   public AuthException( ) {
     super( );

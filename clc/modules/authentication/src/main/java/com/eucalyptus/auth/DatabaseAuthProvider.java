@@ -631,6 +631,12 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   
   @Override
   public List<? extends Authorization> lookupAuthorizations( String resourceType, String userId ) throws AuthException {
+    if ( resourceType == null ) {
+      throw new AuthException( "Empty resource type" );
+    }
+    if ( userId == null ) {
+      throw new AuthException( AuthException.EMPTY_USER_ID );
+    }
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
     Session session = db.getSession( );
     try {
@@ -643,7 +649,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true )
-          .createCriteria( "users" ).add(Restrictions.idEq( userId ) )
+          .createCriteria( "users" ).setCacheable( true ).add(Restrictions.idEq( userId ) )
           .list( );
       db.commit( );
       List<DatabaseAuthorizationProxy> results = Lists.newArrayList( );
@@ -653,23 +659,61 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       return results;
     } catch ( Throwable e ) {
       db.rollback( );
-      Debugging.logError( LOG, e, "Failed to lookup authorization for user with ID "
-          + userId + ", type=" + resourceType);
+      Debugging.logError( LOG, e, "Failed to lookup authorization for user with ID " + userId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup auth", e );
     }
   }
   
   @Override
-  public List<? extends Authorization> lookupQuotas( String resourceType, String userId ) throws AuthException {
+  public List<? extends Authorization> lookupAccountGlobalAuthorizations( String resourceType, String accountId ) throws AuthException {
+    if ( resourceType == null ) {
+      throw new AuthException( "Empty resource type" );
+    }
+    if ( accountId == null ) {
+      throw new AuthException( AuthException.EMPTY_ACCOUNT_ID );
+    }
+    GroupEntity searchGroup = new GroupEntity( getUserGroupName( User.ACCOUNT_ADMIN_USER_NAME ) );
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
     Session session = db.getSession( );
     try {
+      Example groupExample = Example.create( searchGroup ).enableLike( MatchMode.EXACT );
+      @SuppressWarnings( "unchecked" )
+      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
+          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( 
+              Restrictions.or( 
+                  Restrictions.eq( "effect", EffectType.Allow ),
+                  Restrictions.eq( "effect", EffectType.Deny ) ) )
+          .createCriteria( "statement" ).setCacheable( true )
+          .createCriteria( "policy" ).setCacheable( true )
+          .createCriteria( "group" ).setCacheable( true ).add( groupExample )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.idEq( accountId ) )
+          .list( );
+      db.commit( );
+      List<DatabaseAuthorizationProxy> results = Lists.newArrayList( );
+      for ( AuthorizationEntity auth : authorizations ) {
+        results.add( new DatabaseAuthorizationProxy( auth ) );
+      }
+      return results;
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to lookup global authorization for account " + accountId + ", type=" + resourceType);
+      throw new AuthException( "Failed to lookup account global auth", e );
+    }
+  }
+  
+  @Override
+  public List<? extends Authorization> lookupQuotas( String resourceType, String userId, boolean forUser ) throws AuthException {
+    GroupEntity searchGroup = new GroupEntity( forUser );
+    EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
+    Session session = db.getSession( );
+    try {
+      Example groupExample = Example.create( searchGroup ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( Restrictions.eq( "effect", EffectType.Limit ) )
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
-          .createCriteria( "group" ).setCacheable( true )
+          .createCriteria( "group" ).setCacheable( true ).add( groupExample )
           .createCriteria( "users" ).add(Restrictions.idEq( userId ) )
           .list( );
       db.commit( );
@@ -680,9 +724,42 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       return results;
     } catch ( Throwable e ) {
       db.rollback( );
-      Debugging.logError( LOG, e, "Failed to lookup quotas for user with ID "
-          + userId + ", type=" + resourceType);
+      Debugging.logError( LOG, e, "Failed to lookup quotas for user with ID " + userId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup quota", e );
+    }
+  }
+  
+  @Override
+  public List<? extends Authorization> lookupAccountGlobalQuotas( String resourceType, String accountId ) throws AuthException {
+    if ( resourceType == null ) {
+      throw new AuthException( "Empty resource type" );
+    }
+    if ( accountId == null ) {
+      throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
+    }
+    GroupEntity searchGroup = new GroupEntity( getUserGroupName( User.ACCOUNT_ADMIN_USER_NAME ) );
+    EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
+    Session session = db.getSession( );
+    try {
+      Example groupExample = Example.create( searchGroup ).enableLike( MatchMode.EXACT );
+      @SuppressWarnings( "unchecked" )
+      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
+          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( Restrictions.eq( "effect", EffectType.Limit ) )
+          .createCriteria( "statement" ).setCacheable( true )
+          .createCriteria( "policy" ).setCacheable( true )
+          .createCriteria( "group" ).setCacheable( true ).add( groupExample )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.idEq( accountId ) )
+          .list( );
+      db.commit( );
+      List<DatabaseAuthorizationProxy> results = Lists.newArrayList( );
+      for ( AuthorizationEntity auth : authorizations ) {
+        results.add( new DatabaseAuthorizationProxy( auth ) );
+      }
+      return results;
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to lookup global quota for account " + accountId + ", type=" + resourceType);
+      throw new AuthException( "Failed to lookup account global quota", e );
     }
   }
   

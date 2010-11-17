@@ -143,7 +143,7 @@ public class UserEntity extends AbstractPersistent implements User, Serializable
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
-    sb.append( "User[" );
+    sb.append( "User(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
@@ -153,7 +153,7 @@ public class UserEntity extends AbstractPersistent implements User, Serializable
     sb.append( "passwordExpires=").append( this.getPasswordExpires( ) ).append( ", " );
     sb.append( "token=").append( this.getToken( ) ).append( ", " );
     sb.append( "confirmationCode=").append( this.getConfirmationCode( ) );
-    sb.append( "]" );
+    sb.append( ")" );
     return sb.toString( );
   }
   

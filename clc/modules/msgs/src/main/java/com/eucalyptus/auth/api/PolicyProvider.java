@@ -60,14 +60,35 @@ public interface PolicyProvider {
   public List<? extends Authorization> lookupAuthorizations( String resourceType, String userId ) throws AuthException;
   
   /**
+   * Lookup account global authorizations.
+   * 
+   * @param resourceType The type of resource
+   * @param accountId The account ID
+   * @return The list of authorizations that are account global (i.e. attached to admin's user group)
+   * @throws AuthException for any error
+   */
+  public List<? extends Authorization> lookupAccountGlobalAuthorizations( String resourceType, String accountId ) throws AuthException;
+  
+  /**
    * Lookup a user's quota.
    * 
    * @param resourceType Search by resource type
    * @param userId Search by user ID
-   * @return The list of quotas that can be potentially applied to the user
+   * @param forUser If true, returns quotas for the user; otherwise returns quota for groups that the user belongs to.
+   * @return The list of quotas that can be potentially applied to the user or the groups of the user.
    * @throws AuthException for any error
    */
-  public List<? extends Authorization> lookupQuotas( String resourceType, String userId ) throws AuthException;
+  public List<? extends Authorization> lookupQuotas( String resourceType, String userId, boolean forUser ) throws AuthException;
+  
+  /**
+   * Lookup account global quotas.
+   * 
+   * @param resourceType The type of the resource.
+   * @param accountId The account ID
+   * @return The list of quotas that are account global (i.e. attached to admin's user group)
+   * @throws AuthException for any error
+   */
+  public List<? extends Authorization> lookupAccountGlobalQuotas( String resourceType, String accountId ) throws AuthException;
   
   /**
    * Check if a certificate is active (not revoked and active).
