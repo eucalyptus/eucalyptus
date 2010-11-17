@@ -83,14 +83,14 @@ public class WalrusRequestType extends BaseMessage {
 	protected String bucket;
 	protected String key;
 
-	def WalrusRequestType() {}
+	public WalrusRequestType() {}
 
-  def WalrusRequestType( String bucket, String key ) {
+  public WalrusRequestType( String bucket, String key ) {
     this.bucket = bucket;
     this.key = key;
   }
 
-  def WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
+  public WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
 		this.accessKeyID = accessKeyID;
 		this.timeStamp = timeStamp;
 		this.signature = signature;
