@@ -124,7 +124,6 @@
 	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/mysql-connector-java-5.1.10-bin.jar"/>
 	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry kind="lib" path="lib/proxool-0.9.1.jar"/>
@@ -138,7 +137,6 @@
 	<classpathentry kind="lib" path="lib/spring-core-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/spring-web-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/stax2-api-3.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/vijava220090625-euca.jar"/>
 	<classpathentry kind="lib" path="lib/woodstox-core-asl-4.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
 	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>
@@ -147,11 +145,16 @@
 	<classpathentry kind="lib" path="lib/xml-security-1.4.2.jar"/>
 	<classpathentry kind="lib" path="lib/xom-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3-1.1.3.4.O.jar"/>
-	<classpathentry kind="lib" path="lib/hibernate-jpa-2.0-api-1.0.0.Final.jar"/>
-	<classpathentry kind="lib" path="lib/hibernate3.jar"/>
+	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-j2ee-management_1.1_spec-1.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-jpa_2.0_spec-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-jta_1.1_spec-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
 	<classpathentry kind="lib" path="lib/javassist-3.9.0.GA.jar"/>
+	<classpathentry kind="lib" path="lib/kahadb-5.4.1.jar"/>
+	<classpathentry kind="lib" path="lib/mysql-connector-java-commercial-5.1.11-bin.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.5.8.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.8.jar"/>
-	<classpathentry kind="lib" path="lib/geronimo-jta_1.1_spec-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/vijava220090625.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
