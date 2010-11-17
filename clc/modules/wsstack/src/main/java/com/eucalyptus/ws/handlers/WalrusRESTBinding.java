@@ -124,6 +124,7 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -185,7 +186,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
 			namespace = "http://s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION;
 			// TODO: get real user data here too
-			EucalyptusMessage msg = (EucalyptusMessage) this.bind( "admin", true, httpRequest );
+			BaseMessage msg = (BaseMessage) this.bind( "admin", true, httpRequest );
 			httpRequest.setMessage( msg );
 			if(msg instanceof WalrusDataGetRequestType) {
 				WalrusDataGetRequestType getObject = (WalrusDataGetRequestType) msg;
@@ -354,7 +355,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	}
 
-	private void addLogData(EucalyptusMessage eucaMsg,
+	private void addLogData(BaseMessage eucaMsg,
 			Map bindingArguments) {
 		if(eucaMsg instanceof WalrusRequestType) {
 			String operation = (String) bindingArguments.remove("Operation");
