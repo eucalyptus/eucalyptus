@@ -145,7 +145,8 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    Iterables.all( Components.list( ), Component.Transition.LOAD.getCallback( ) );
+    /** ASAP:FIXME:GRZE **/
+    Iterables.all( Components.list( ), Component.Transition.LOADING.getCallback( ) );
     return true;
   }
     
@@ -164,7 +165,8 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    Iterables.all( Components.list( ), Component.Transition.START.getCallback( ) );
+    /** ASAP:FIXME:GRZE **/
+    Iterables.all( Components.list( ), Component.Transition.STARTING.getCallback( ) );
     return true;
   }
   
@@ -184,7 +186,7 @@ public class SystemBootstrapper {
     LOG.warn( "Shutting down Eucalyptus." );
     EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
     EventRecord.flush( );
-    ServiceContext.stopContext( );
+    ServiceContext.shutdown( );
     return true;
   }
   

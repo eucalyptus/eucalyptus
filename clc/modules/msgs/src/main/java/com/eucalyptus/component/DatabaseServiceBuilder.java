@@ -82,6 +82,15 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   }
   
   @Override
+  public T lookup( String partition, String name ) throws ServiceRegistrationException {
+    T conf = this.newInstance( );
+    conf.setName( name );
+    conf.setPartition( partition );
+    return ( T ) ServiceConfigurations.getInstance( ).lookup( conf );
+  }
+
+  
+  @Override
   public T lookupByName( String name ) throws ServiceRegistrationException {
     T conf = this.newInstance( );
     conf.setName( name );
@@ -96,11 +105,11 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   }
   
   @Override
-  public Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     try {
       if ( !NetworkUtil.testGoodAddress( host ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );
-      } else if ( NetworkUtil.testLocal( host ) && !this.getComponent( ).isLocal( ) ) {
+      } else if ( NetworkUtil.testLocal( host ) && !this.getComponent( ).isAvailableLocally( ) ) {
         throw new EucalyptusCloudException( "You do not have a local " + this.newInstance( ).getClass( ).getSimpleName( ).replaceAll( "Configuration", "" )
                                             + " enabled (or it is not installed)." );
       }
@@ -136,7 +145,7 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
 
   @Override
   public T add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    T config = this.newInstance( null, name, host, port );
+    T config = this.newInstance( partition, name, host, port );
     ServiceConfigurations.getInstance( ).store( config );
     return config;
   }

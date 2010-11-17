@@ -146,7 +146,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   
   private void prepareComponent( String componentName, String hostName ) throws ServiceRegistrationException {
     final Component c = safeLookupComponent( componentName );
-    c.buildService( c.getUri( hostName, c.getConfiguration( ).getDefaultPort( ) ) );
+    c.loadService( c.getBuilder( ).toConfiguration( c.getUri( hostName, c.getConfiguration( ).getDefaultPort( ) ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -170,7 +170,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
         URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
         ServiceConfiguration config = new BogoConfig( comp.getPeer( ), comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
-        comp.buildService( config );
+        comp.loadService( config );
         initializedComponents.add( component.getComponent( ) );
       } catch ( Exception ex ) {
         LOG.warn( LogUtil.header( "Failed registering local component "+LogUtil.dumpObject( component )+":  Are the required packages installed?\n The cause of the error: " + ex.getMessage( ) ) );
@@ -255,8 +255,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
           HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
           String resp = "";
           for ( Component c : Components.list( ) ) {
-            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
-                                   c.isRunning( ) );
+            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isLocal( ),
+                                   c.isRunningLocally( ) );
           }
           ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
           response.setContent( buf );
@@ -321,8 +321,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
     String resp = "";
     for ( Component c : Components.list( ) ) {
-      resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
-                             c.isRunning( ) );
+      resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isLocal( ),
+                             c.isRunningLocally( ) );
     }
     ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
     response.setContent( buf );
@@ -338,7 +338,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     List<String> registeredComponents = Lists.newArrayList( );
     for( ComponentType started : hb.getStarted( ) ) {
       try {
-        safeLookupComponent( started.getComponent( ) ).buildService( started.toConfiguration( ) );
+        Component c = safeLookupComponent( started.getComponent( ) );
+        c.loadService( started.toConfiguration( ) );
       } catch ( ServiceRegistrationException ex ) {
         LOG.error( ex , ex );
       } catch ( NoSuchElementException ex ) {
@@ -348,7 +349,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     for( ComponentType stopped : hb.getStarted( ) ) {
       if( Components.contains( stopped.getComponent( ) ) ) {
         try {
-          Components.lookup( stopped.getComponent( ) ).removeService( stopped.toConfiguration( ) );
+          Components.lookup( stopped.getComponent( ) ).destroyService( stopped.toConfiguration( ) );
         } catch ( ServiceRegistrationException ex ) {
           LOG.error( ex , ex );
         } catch ( NoSuchElementException ex ) {

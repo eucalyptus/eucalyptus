@@ -69,10 +69,11 @@ import com.eucalyptus.storage.LogicalStorageManager;
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 
 @Provides(Component.storage)
-@RunDuring(Bootstrap.Stage.DatabaseInit)
+@RunDuring(Bootstrap.Stage.RemoteServicesInit)
 @DependsLocal(Component.storage)
 public class BlockStorageBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
+	
 	private static BlockStorageBootstrapper singleton;
 
 	public static Bootstrapper getInstance( ) {
@@ -89,14 +90,16 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean load() throws Exception {
+		//privileged context (loads modules if necessary, etc).
+		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
+		if(blockStorageManager != null)
+			blockStorageManager.checkPreconditions();
 		return true;
 	}
 
 	@Override
 	public boolean start( ) throws Exception {
-		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
-		if(blockStorageManager != null)
-			blockStorageManager.checkPreconditions();
+		//BlockStorage.configure();
 		return true;
 	}
 
@@ -105,6 +108,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean enable( ) throws Exception {
+		BlockStorage.enable();
 		return true;
 	}
 
@@ -113,6 +117,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean stop( ) throws Exception {
+		BlockStorage.stop();
 		return true;
 	}
 
@@ -127,6 +132,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean disable( ) throws Exception {
+		BlockStorage.disable();
 		return true;
 	}
 
@@ -135,6 +141,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean check( ) throws Exception {
+		BlockStorage.check();
 		return true;
 	}
 }

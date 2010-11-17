@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,35 +53,18 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-package edu.ucsb.eucalyptus.cloud.ws;
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+package com.eucalyptus.util;
 
-import org.apache.log4j.Logger;
+public interface CheckedFunction<F,T> {
 
-import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.SnapshotTask;
-
-public class SnapshotService {
-	private Logger LOG = Logger.getLogger( SnapshotService.class );
-
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 3;
-
-	public SnapshotService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
-	}
-
-	public void add(SnapshotTask creator) {
-		pool.execute(creator);
-	}
-
-	public void shutdown() {
-		pool.shutdownNow();
-	}
+  public T apply( F arg0 ) throws Exception;
+  
 }
