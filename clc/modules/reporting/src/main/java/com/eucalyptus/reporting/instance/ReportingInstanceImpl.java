@@ -13,9 +13,6 @@ public class ReportingInstanceImpl
 	private final String availabilityZone;
 	private final List<UsageSnapshot> snapshotList;
 	
-	/**
-	 * @param snapshotList Must be a non-null list with at least one element 	
-	 */
 	ReportingInstanceImpl(String uuid, String instanceId, String instanceType,
 			String userId, String clusterName, String availabilityZone)
 	{
@@ -74,6 +71,7 @@ public class ReportingInstanceImpl
 	@Override
 	public UsageData getUsageData(Period period)
 	{
+		assert snapshotList.size() > 0;  //always filled by db join with >=1 periods
 		UsageSnapshot latestSnapshot = snapshotList.get(0);
 		UsageSnapshot earliestSnapshot = snapshotList.get(0);
 		
