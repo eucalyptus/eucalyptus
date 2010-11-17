@@ -56,10 +56,10 @@ public class InstanceUsageLog
 	 * An Iterator is returned because the result set can be large and
 	 * may not fit in memory.
 	 */
-	public Iterator<ReportingInstanceImpl> getPeriodInstanceUsages(final Period period)
+	public Iterator<ReportingInstance> getReportingInstances(final Period period)
 	{
 		if (period == null) throw new IllegalArgumentException("period must not be null");
-		final List<ReportingInstanceImpl> results = new ArrayList<ReportingInstanceImpl>();
+		final List<ReportingInstance> results = new ArrayList<ReportingInstance>();
 
 		log.debug(String.format("getPeriodInstanceUsages periodBeginMs:%d periodsEndMs:%d ",
 				period.getBeginningMs(), period.getEndingMs()));
