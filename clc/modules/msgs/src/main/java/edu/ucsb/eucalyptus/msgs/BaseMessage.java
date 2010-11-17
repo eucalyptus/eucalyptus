@@ -32,6 +32,13 @@ public class BaseMessage {
     this.statusMessage = null;
   }
   
+  public BaseMessage( BaseMessage copy ) {
+    this( );
+    this.userId = copy.getUserId( );
+    this.effectiveUserId = copy.getEffectiveUserId( );
+    this.correlationId = copy.getCorrelationId( );
+  }
+  
   public String getCorrelationId( ) {
     return this.correlationId;
   }
