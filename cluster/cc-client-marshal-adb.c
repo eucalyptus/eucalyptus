@@ -526,6 +526,7 @@ int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub
   */
   adb_assignAddressType_set_source(sn, env, src);
   adb_assignAddressType_set_dest(sn, env, dst);
+  adb_assignAddressType_set_uuid(sn, env, "the-uuid");
 
   adb_AssignAddress_set_AssignAddress(input, env, sn);
 
@@ -630,10 +631,12 @@ int cc_describePublicAddresses(axutil_env_t *env, axis2_stub_t *stub) {
   for (i=0; i<len; i++) {
     char *ip;
     char *dstip;
+    char *uuid;
     ip = adb_describePublicAddressesResponseType_get_sourceAddresses_at(snrt, env, i);
     dstip = adb_describePublicAddressesResponseType_get_destAddresses_at(snrt, env, i);
+    uuid = adb_describePublicAddressesResponseType_get_uuids_at(snrt, env, i);
 
-    printf("IP: %s ALLOC: %s\n", ip, dstip);
+    printf("UUID: %s IP: %s ALLOC: %s\n", uuid, ip, dstip);
   }
   // len = ...for (i=0....
   //  printf("descibePublicAddresses returned status %d\n", adb_describePublicAddressesResponseType_get_networkStatus(snrt, env));
@@ -920,6 +923,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	char *state;
 	char *reservationId;
 	char *ownerId, *keyName;
+	char *uuid;
 	int networkIndex;
 	
 	it = adb_describeInstancesResponseType_get_instances_at(dirt, env, i);
@@ -931,6 +935,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	state = adb_ccInstanceType_get_stateName(it, env);
 	nct = adb_ccInstanceType_get_netParams(it, env);
 	vm = adb_ccInstanceType_get_instanceType(it, env);
+	uuid = adb_ccInstanceType_get_uuid(it, env);
 	//	networkIndex = adb_ccInstanceType_get_networkIndex(it, env);
 
 	if (0)
@@ -966,7 +971,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	volId = adb_volumeType_get_volumeId(vol, env);
 
 	networkIndex = adb_netConfigType_get_networkIndex(nct, env);
-	printf("Desc: %s %s %s %s %s %s %s %d %s %s %d %d %d %s %s %s %s %s %d\n", instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
+	printf("Desc: uuid=%s instanceId=%s reservationId=%s ownerId=%s state=%s privMac=%s privIp=%s pubIp=%s vlan=%d keyName=%s vmTypeName=%s cores=%d mem=%d disk=%d serviceTag=%s userData=%s launchIndex=%s groupName=%s volId=%s networkIndex=%d\n", uuid, instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
 	
       }
     }
