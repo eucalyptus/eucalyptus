@@ -69,12 +69,12 @@ import edu.ucsb.eucalyptus.cloud.BucketLogData;
  *
  * Author: Neil Soman <neil@eucalyptus.com>
  */
-public class WalrusResponseType extends EucalyptusMessage {
+public class WalrusResponseType extends BaseMessage {
 	BucketLogData logData;
 	def WalrusResponseType() {}
 }
 
-public class WalrusRequestType extends EucalyptusMessage {
+public class WalrusRequestType extends BaseMessage {
 	protected String accessKeyID;
 	protected Date timeStamp;
 	protected String signature;
