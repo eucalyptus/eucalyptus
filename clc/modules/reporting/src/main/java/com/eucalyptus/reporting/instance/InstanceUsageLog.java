@@ -35,8 +35,8 @@ public class InstanceUsageLog
 	/**
 	 * Reads instance usage data from the log.
 	 *
-	 * You can't search through the log for specific instances or
-	 * specific data; you can only get a full dump between dates. However, there
+	 * You can't search through the log for specific instances or specific
+	 * data; you can only get a full dump between dates. However, there
 	 * exist groovy scripts to filter the data, or to insert the data into
 	 * a data warehouse for subsequent searching.
 	 *
@@ -70,15 +70,16 @@ public class InstanceUsageLog
 			sess = entityWrapper.getSession();
 			
 			Iterator iter = sess.createQuery(
-				"from ReportingInstance, InstanceUsageSnapshot"
-				+ " where ReportingInstance.uuid = InstanceUsageSnapshot.uuid"
+				"from InstanceAttributes, InstanceUsageSnapshot"
+				+ " where InstanceAttributes.uuid = InstanceUsageSnapshot.uuid"
 				+ " and InstanceUsageSnapshot.timestampMs > ?"
 				+ " and InstanceUsageSnapshot.timestampMs < ?")
 				.setLong(0, period.getBeginningMs())
 				.setLong(1, period.getEndingMs())
 				.iterate();
 
-			Map<String, ReportingInstanceImpl> reportingInstances = new HashMap<String, ReportingInstanceImpl>();
+			Map<String, ReportingInstanceImpl> reportingInstances =
+				new HashMap<String, ReportingInstanceImpl>();
 			
 			while (iter.hasNext()) {
 				Object[] row = (Object[]) iter.next();
@@ -101,15 +102,46 @@ public class InstanceUsageLog
 			}
 
 			results.addAll(reportingInstances.values());
-
 			entityWrapper.commit();
-
 		} catch (Exception ex) {
 			log.error(ex);
 			entityWrapper.rollback();
 		}
 		
 		return results.iterator();
+	}
+
+	/**
+	 * Permanently purges data older than a certain timestamp from the log. 
+	 */
+	public void purgeLog(long earlierThanMs)
+	{
+		log.info(String.format("purge earlierThan:%d ", earlierThanMs));
+
+		EntityWrapper entityWrapper = EntityWrapper.get(InstanceAttributes.class);
+		Session sess = null;
+		try {
+			sess = entityWrapper.getSession();
+			sess.createSQLQuery("DELETE FROM instance_usage_snapshot WHERE timestamp_ms < ?")
+				.setLong(0, new Long(earlierThanMs))
+				.executeUpdate();
+			
+			/* Delete all reporting instances which no longer have even a
+			 * a single corresponding instance usage snapshot, using
+			 * MySQL's fancy multi-table delete with left outer join syntax.
+			 */
+			sess.createSQLQuery(
+					"DELETE instance_attributes" 
+					+ " FROM instance_attributes"
+					+ " LEFT OUTER JOIN instance_usage_snapshot"
+					+ " ON instance_attributes.uuid = instance_usage_snapshot.uuid"
+					+ " WHERE instance_usage_snapshot.uuid IS NULL")
+				.executeUpdate();
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			log.error(ex);
+			entityWrapper.rollback();
+		}
 	}
 
 }
