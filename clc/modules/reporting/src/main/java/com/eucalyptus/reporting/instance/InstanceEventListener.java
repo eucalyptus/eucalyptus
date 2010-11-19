@@ -18,7 +18,7 @@ public class InstanceEventListener
 	private final Set<String> recentlySeenUuids;
 	private final Set<InstanceUsageSnapshot> recentUsageSnapshots;
 	private long lastWriteMs;
-	
+
 	public InstanceEventListener()
 	{
 		this.recentlySeenUuids = new HashSet<String>();
@@ -28,12 +28,12 @@ public class InstanceEventListener
 
 	public void receiveEvent(Event e)
 	{
-		final long receivedEventMs = System.currentTimeMillis();
+		final long receivedEventMs = this.getCurrentTimeMillis();
 		if (e instanceof InstanceEvent) {
 			InstanceEvent event = (InstanceEvent) e;
 
 			final String uuid = event.getUuid();
-					
+		
 			EntityWrapper entityWrapper = EntityWrapper.get(InstanceAttributes.class);
 			Session sess = null;
 			try {
@@ -51,7 +51,7 @@ public class InstanceEventListener
 				UsageSnapshot usageSnapshot = new UsageSnapshot(receivedEventMs, usageData);
 				InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(uuid,
 						usageSnapshot);
-				
+
 				/* Only write the instance attributes if we don't have them
 				 * already.
 				 */
@@ -67,7 +67,7 @@ public class InstanceEventListener
 				 * at once every n secs.
 				 */
 				recentUsageSnapshots.add(insUsageSnapshot);
-				
+
 				if (receivedEventMs > (lastWriteMs + WRITE_INTERVAL_SECS*1000)) {
 					for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
 						sess.save(ius);
@@ -75,7 +75,7 @@ public class InstanceEventListener
 					}
 					recentUsageSnapshots.clear();
 				}
-				
+
 				entityWrapper.commit();
 			} catch (Exception ex) {
 				entityWrapper.rollback();
@@ -85,4 +85,13 @@ public class InstanceEventListener
 	}
 
 
+	/**
+	 * This is overridden by a test class which makes up fake times for fake
+	 * data.
+	 */
+	protected long getCurrentTimeMillis()
+	{
+		return System.currentTimeMillis();
+	}
+	
 }
