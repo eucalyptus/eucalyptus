@@ -7,7 +7,7 @@
     "Resource":["arn:aws:iam::123456:group/*","arn:aws:iam::123456:user/*"],
     "Condition":{
       "DateGreaterThan":{
-        "aws:currenttime":"2010-11-14"
+        "aws:currenttime":"2010-11-14T00:07:00.4555Z"
       }
     }
   },
@@ -40,7 +40,7 @@
     "Action":"*",
     "Resource":"arn:aws:ec2:::instance/*",
     "Condition":{
-      "Quota":{
+      "NumericLessThanEquals":{
         "ec2:vmnumber":"10"
       }
     }

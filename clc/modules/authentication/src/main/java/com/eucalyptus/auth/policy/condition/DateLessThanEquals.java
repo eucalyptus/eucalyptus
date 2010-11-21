@@ -1,11 +1,21 @@
 package com.eucalyptus.auth.policy.condition;
 
-public class DateLessThanEquals implements ConditionOp {
+import java.text.ParseException;
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.policy.key.Iso8601DateParser;
+
+public class DateLessThanEquals implements DateConditionOp {
+  
+  private static final Logger LOG = Logger.getLogger( DateEquals.class );
   
   @Override
   public boolean check( String key, String value ) {
-    // TODO Auto-generated method stub
-    return false;
+    try {
+      return Iso8601DateParser.parse( key ).compareTo( Iso8601DateParser.parse( value ) ) <= 0;
+    } catch ( ParseException e ) {
+      LOG.error( "Invalid input date input", e );
+      return false;
+    }
   }
   
 }

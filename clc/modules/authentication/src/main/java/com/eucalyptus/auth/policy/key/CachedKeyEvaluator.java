@@ -12,10 +12,10 @@ public class CachedKeyEvaluator {
   public CachedKeyEvaluator( ) {
   }
   
-  public String getValue( Key key, Authorization auth ) throws AuthException {
+  public String getValue( Key key ) throws AuthException {
     String value = cache.get( key );
     if ( value == null ) {
-      value = key.value( auth );
+      value = key.value( );
       cache.put( key.getClass( ), value );
     }
     return value;

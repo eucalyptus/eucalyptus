@@ -1,6 +1,6 @@
 package com.eucalyptus.auth.policy.condition;
 
-public class StringEquals implements ConditionOp {
+public class StringEquals implements StringConditionOp {
   
   @Override
   public boolean check( String key, String value ) {

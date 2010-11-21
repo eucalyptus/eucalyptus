@@ -14,8 +14,12 @@ import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.StatementEntity;
 import com.eucalyptus.auth.json.JsonUtils;
+import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.Conditions;
+import com.eucalyptus.auth.policy.condition.NumericLessThanEquals;
+import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
+import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -127,17 +131,13 @@ public class PolicyParser {
     if ( condsObj != null ) {    
       for ( Object t : condsObj.keySet( ) ) {
         String type = ( String ) t;
-        // Ignore non quota condition if it is a quota statement (i.e. Effect is Limit)
-        if ( isQuota && !Conditions.QUOTA.equals( type ) ) {
-          continue;
-        }
-        checkConditionType( type );
+        Class<? extends ConditionOp> typeClass = checkConditionType( type );
         JSONObject paramsObj = JsonUtils.getByType( JSONObject.class, condsObj, type );
         for ( Object k : paramsObj.keySet( ) ) {
-          String key = ( String ) k;
-          checkConditionKey( key );
+          String key = ( ( String ) k ).toLowerCase( );
           Set<String> values = Sets.newHashSet( );
           values.addAll( JsonUtils.parseStringOrStringList( paramsObj, key ) );
+          checkConditionKeyAndValues( key, values, typeClass, isQuota );
           results.add( new ConditionEntity( type, key, values ) );
         }
       }
@@ -183,15 +183,13 @@ public class PolicyParser {
     if ( !matcher.matches( ) ) {
       throw new JSONException( "'" + resource + "' is not a valid ARN" );
     }
-    String vendor = null;
-    String type = null;
     if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM ) != null ) {
       parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM ) + ":" +
           matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM_USERGROUP ).toLowerCase( );
       parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM_ID );
     } else if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 ) != null ) {
-      parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 ) + ":" +
-          matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
+      String type = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
+      parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 ) + ":" + type;
       if ( !PolicySpecConstants.EC2_RESOURCES.contains( type ) ) {
         throw new JSONException( "EC2 type '" + type + "' is not supported" );
       }
@@ -212,21 +210,35 @@ public class PolicyParser {
     return parsed;
   }
   
-  private void checkConditionType( String type ) throws JSONException {
+  private Class<? extends ConditionOp> checkConditionType( String type ) throws JSONException {
     if ( type == null ) {
       throw new JSONException( "Empty condition type" );
     }
-    if ( !Conditions.CONDITION_MAP.containsKey( type ) ) {
+    Class<? extends ConditionOp> typeClass = Conditions.CONDITION_MAP.get( type );
+    if ( typeClass == null ) {
       throw new JSONException( "Condition type '" + type + "' is not supported" );
     }
+    return typeClass;
   }
   
-  private void checkConditionKey( String key ) throws JSONException {
+  private void checkConditionKeyAndValues( String key, Set<String> values, Class<? extends ConditionOp> typeClass, boolean isQuota ) throws JSONException {
     if ( key == null ) {
       throw new JSONException( "Empty key name" );
     }
-    if ( !Keys.KEY_MAP.containsKey( key.toLowerCase( ) ) ) {
+    Class<? extends Key> keyClass = Keys.KEY_MAP.get( key );
+    if ( keyClass == null ) {
       throw new JSONException( "Condition key '" + key + "' is not supported" );
+    }
+    if ( isQuota && !QuotaKey.class.isAssignableFrom( keyClass ) ) {
+      throw new JSONException( "Quota statement can only use quota keys.'" + key + "' is invalid." );
+    }
+    Key keyObj = Keys.getKeyInstance( keyClass );
+    keyObj.validateConditionType( typeClass );
+    if ( values.size( ) < 1 ) {
+      throw new JSONException( "No value for key '" + key + "'" );
+    }
+    for ( String v : values ) {
+      keyObj.validateValueType( v );
     }
   }
   

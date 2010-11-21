@@ -4,7 +4,7 @@ public class Bool implements ConditionOp {
   
   @Override
   public boolean check( String key, String value ) {
-    return key.equalsIgnoreCase( value );
+    return Boolean.valueOf( key ) == Boolean.valueOf( value );
   }
   
 }

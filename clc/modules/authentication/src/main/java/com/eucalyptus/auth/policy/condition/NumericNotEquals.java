@@ -1,10 +1,19 @@
 package com.eucalyptus.auth.policy.condition;
 
-public class NumericNotEquals implements ConditionOp {
+import org.apache.log4j.Logger;
+
+public class NumericNotEquals implements NumericConditionOp {
   
+  private static final Logger LOG = Logger.getLogger( NumericEquals.class );
+
   @Override
   public boolean check( String key, String value ) {
-    // TODO Auto-generated method stub
+    try {
+      return Integer.valueOf( key ).compareTo( Integer.valueOf( value ) ) != 0;
+    } catch ( NumberFormatException e ) {
+      // It does not make sense to check the equality of two floats.
+      LOG.error( "Invalid number format", e );
+    }
     return false;
   }
   

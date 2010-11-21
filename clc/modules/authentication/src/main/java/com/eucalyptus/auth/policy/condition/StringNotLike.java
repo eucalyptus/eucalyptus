@@ -3,7 +3,7 @@ package com.eucalyptus.auth.policy.condition;
 import java.util.regex.Pattern;
 import com.eucalyptus.auth.policy.PatternUtils;
 
-public class StringNotLike implements ConditionOp {
+public class StringNotLike implements StringConditionOp {
   
   @Override
   public boolean check( String key, String value ) {

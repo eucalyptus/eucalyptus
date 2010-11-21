@@ -71,74 +71,63 @@ public class Conditions {
   
   public static final String NOTIPADDRESS = "NotIpAddress";
   
-  // Eucalyptus extensions
-  public static final String QUOTA = "Quota";
-  
-  public static final Map<String, ConditionOp> CONDITION_MAP = Maps.newHashMap( );
+  public static final Map<String, Class<? extends ConditionOp>> CONDITION_MAP = Maps.newHashMap( );
   
   static {
-    ConditionOp op = new StringEquals( );
-    CONDITION_MAP.put( STRINGEQUALS, op );
-    CONDITION_MAP.put( STRINGEQUALS_S, op );
-    op = new StringNotEquals( );
-    CONDITION_MAP.put( STRINGNOTEQUALS, op );
-    CONDITION_MAP.put( STRINGNOTEQUALS_S, op );
-    op = new StringEqualsIgnoreCase( );
-    CONDITION_MAP.put( STRINGEQUALSIGNORECASE, op );
-    CONDITION_MAP.put( STRINGEQUALSIGNORECASE_S, op );
-    op = new StringNotEqualsIgnoreCase( );
-    CONDITION_MAP.put( STRINGNOTEQUALSIGNORECASE, op );
-    CONDITION_MAP.put( STRINGNOTEQUALSIGNORECASE_S, op );
-    op = new StringLike( );
-    CONDITION_MAP.put( STRINGLIKE, op );
-    CONDITION_MAP.put( STRINGLIKE_S, op );
-    op = new StringNotLike( );
-    CONDITION_MAP.put( STRINGNOTLIKE, op );
-    CONDITION_MAP.put( STRINGNOTLIKE_S, op );
-    op = new NumericEquals( );
-    CONDITION_MAP.put( NUMERICEQUALS, op );
-    CONDITION_MAP.put( NUMERICEQUALS_S, op );
-    op = new NumericNotEquals( );
-    CONDITION_MAP.put( NUMERICNOTEQUALS, op );
-    CONDITION_MAP.put( NUMERICNOTEQUALS_S, op );
-    op = new NumericLessThan( );
-    CONDITION_MAP.put( NUMERICLESSTHAN, op );
-    CONDITION_MAP.put( NUMERICLESSTHAN_S, op );
-    op = new NumericLessThanEquals( );
-    CONDITION_MAP.put( NUMERICLESSTHANEQUALS, op );
-    CONDITION_MAP.put( NUMERICLESSTHANEQUALS_S, op );
-    op = new NumericGreaterThan( );
-    CONDITION_MAP.put( NUMERICGREATERTHAN, op );
-    CONDITION_MAP.put( NUMERICGREATERTHAN_S, op );
-    op = new NumericGreaterThanEquals( );
-    CONDITION_MAP.put( NUMERICGREATERTHANEQUALS, op );
-    CONDITION_MAP.put( NUMERICGREATERTHANEQUALS_S, op );
-    op = new DateEquals( );
-    CONDITION_MAP.put( DATEEQUALS, op );
-    CONDITION_MAP.put( DATEEQUALS_S, op );
-    op = new DateNotEquals( );
-    CONDITION_MAP.put( DATENOTEQUALS, op );
-    CONDITION_MAP.put( DATENOTEQUALS_S, op );
-    op = new DateLessThan( );
-    CONDITION_MAP.put( DATELESSTHAN, op );
-    CONDITION_MAP.put( DATELESSTHAN_S, op );
-    op = new DateLessThanEquals( );
-    CONDITION_MAP.put( DATELESSTHANEQUALS, op );
-    CONDITION_MAP.put( DATELESSTHANEQUALS_S, op );
-    op = new DateGreaterThan( );
-    CONDITION_MAP.put( DATEGREATERTHAN, op );
-    CONDITION_MAP.put( DATEGREATERTHAN_S, op );
-    op = new DateGreaterThanEquals( );
-    CONDITION_MAP.put( DATEGREATERTHANEQUALS, op );
-    CONDITION_MAP.put( DATEGREATERTHANEQUALS_S, op );
-      
-    CONDITION_MAP.put( BOOL, new Bool( ) );
-      
-    CONDITION_MAP.put( IPADDRESS, new IpAddress( ) );
-      
-    CONDITION_MAP.put( NOTIPADDRESS, new NotIpAddress( ) );
-    
-    CONDITION_MAP.put( QUOTA, new Quota( ) );
+    CONDITION_MAP.put( STRINGEQUALS, StringEquals.class );
+    CONDITION_MAP.put( STRINGEQUALS_S, StringEquals.class );
+    CONDITION_MAP.put( STRINGNOTEQUALS, StringNotEquals.class );
+    CONDITION_MAP.put( STRINGNOTEQUALS_S, StringNotEquals.class );
+    CONDITION_MAP.put( STRINGEQUALSIGNORECASE, StringEqualsIgnoreCase.class );
+    CONDITION_MAP.put( STRINGEQUALSIGNORECASE_S, StringEqualsIgnoreCase.class );
+    CONDITION_MAP.put( STRINGNOTEQUALSIGNORECASE, StringNotEqualsIgnoreCase.class );
+    CONDITION_MAP.put( STRINGNOTEQUALSIGNORECASE_S, StringNotEqualsIgnoreCase.class );
+    CONDITION_MAP.put( STRINGLIKE, StringLike.class );
+    CONDITION_MAP.put( STRINGLIKE_S, StringLike.class );
+    CONDITION_MAP.put( STRINGNOTLIKE, StringNotLike.class );
+    CONDITION_MAP.put( STRINGNOTLIKE_S, StringNotLike.class );
+    CONDITION_MAP.put( NUMERICEQUALS, NumericEquals.class );
+    CONDITION_MAP.put( NUMERICEQUALS_S, NumericEquals.class );
+    CONDITION_MAP.put( NUMERICNOTEQUALS, NumericNotEquals.class );
+    CONDITION_MAP.put( NUMERICNOTEQUALS_S, NumericNotEquals.class );
+    CONDITION_MAP.put( NUMERICLESSTHAN, NumericLessThan.class );
+    CONDITION_MAP.put( NUMERICLESSTHAN_S, NumericLessThan.class );
+    CONDITION_MAP.put( NUMERICLESSTHANEQUALS, NumericLessThanEquals.class );
+    CONDITION_MAP.put( NUMERICLESSTHANEQUALS_S, NumericLessThanEquals.class );
+    CONDITION_MAP.put( NUMERICGREATERTHAN, NumericGreaterThan.class );
+    CONDITION_MAP.put( NUMERICGREATERTHAN_S, NumericGreaterThan.class );
+    CONDITION_MAP.put( NUMERICGREATERTHANEQUALS, NumericGreaterThanEquals.class );
+    CONDITION_MAP.put( NUMERICGREATERTHANEQUALS_S, NumericGreaterThanEquals.class );
+    CONDITION_MAP.put( DATEEQUALS, DateEquals.class );
+    CONDITION_MAP.put( DATEEQUALS_S, DateEquals.class );
+    CONDITION_MAP.put( DATENOTEQUALS, DateNotEquals.class );
+    CONDITION_MAP.put( DATENOTEQUALS_S, DateNotEquals.class );
+    CONDITION_MAP.put( DATELESSTHAN, DateLessThan.class );
+    CONDITION_MAP.put( DATELESSTHAN_S, DateLessThan.class );
+    CONDITION_MAP.put( DATELESSTHANEQUALS, DateLessThanEquals.class );
+    CONDITION_MAP.put( DATELESSTHANEQUALS_S, DateLessThanEquals.class );
+    CONDITION_MAP.put( DATEGREATERTHAN, DateGreaterThan.class );
+    CONDITION_MAP.put( DATEGREATERTHAN_S, DateGreaterThan.class );
+    CONDITION_MAP.put( DATEGREATERTHANEQUALS, DateGreaterThanEquals.class );
+    CONDITION_MAP.put( DATEGREATERTHANEQUALS_S, DateGreaterThanEquals.class );
+    CONDITION_MAP.put( BOOL, Bool.class );
+    CONDITION_MAP.put( IPADDRESS, IpAddress.class );
+    CONDITION_MAP.put( NOTIPADDRESS, NotIpAddress.class );
+  }
+  
+  public static ConditionOp getOpInstance( Class<? extends ConditionOp> opClass ) {
+    try {
+      ConditionOp op = opClass.newInstance( );
+      return op;
+    } catch ( IllegalAccessException e ) {
+      throw new RuntimeException( "Can not find condition type " + opClass.getName( ), e );
+    } catch ( InstantiationException e ) {
+      throw new RuntimeException( "Can not find condition type " + opClass.getName( ), e );
+    } catch ( ExceptionInInitializerError e ) {
+      throw new RuntimeException( "Can not find condition type " + opClass.getName( ), e );
+    } catch ( SecurityException e ) {
+      throw new RuntimeException( "Can not find condition type " + opClass.getName( ), e );
+    }
   }
   
 }

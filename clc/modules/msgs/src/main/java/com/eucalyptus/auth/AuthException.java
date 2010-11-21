@@ -41,6 +41,8 @@ public class AuthException extends BaseException {
   
   public static final String ACCESS_DENIED = "Access to the resource is denied";
   
+  public static final String QUOTA_EXCEEDED = "Resource quota is exceeded";
+  
   public AuthException( ) {
     super( );
   }
