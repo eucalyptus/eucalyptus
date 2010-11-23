@@ -25,7 +25,7 @@ public class AuthTest {
 
   private static Logger LOG = Logger.getLogger( AuthTest.class );
                                                
-  private static final String MARK = "[YE] ";
+  public static final String MARK = "[YE] ";
   
   public static void test( ) {
     try {
@@ -154,8 +154,8 @@ public class AuthTest {
           "'Action':'ec2:RunInstances'," +
           "'Resource':'*'," +
           "'Condition':{" +
-            "'DateEquals':{" +
-              "'aws:currenttime':'2010-11-22'" +
+            "'DateLessThanEquals':{" +
+              "'aws:currenttime':'2010-12-31'" +
             "}" +
           "}" +
         "}]" +
