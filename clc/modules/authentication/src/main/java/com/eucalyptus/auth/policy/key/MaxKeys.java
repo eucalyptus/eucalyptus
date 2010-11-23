@@ -4,6 +4,7 @@ import net.sf.json.JSONException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.policy.PolicySpecConstants;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
+import com.eucalyptus.auth.policy.condition.NumericGreaterThan;
 import com.eucalyptus.auth.policy.condition.NumericLessThanEquals;
 
 public class MaxKeys extends ContractKey {
@@ -33,6 +34,11 @@ public class MaxKeys extends ContractKey {
   @Override
   public boolean canApply( String action, String resourceType ) {
     return ( ACTION_LISTBUCKET.equals( action ) || ACTION_LISTBUCKETVERSIONS.equals( action ) );
+  }
+
+  @Override
+  public boolean isBetter( Contract current, Contract update ) {
+    return ( new NumericGreaterThan( ) ).check( update.getValue( ), current.getValue( ) );
   }
 
 }

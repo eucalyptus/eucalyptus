@@ -13,7 +13,7 @@ public class DateGreaterThan implements DateConditionOp {
     try {
       return Iso8601DateParser.parse( key ).compareTo( Iso8601DateParser.parse( value ) ) > 0;
     } catch ( ParseException e ) {
-      LOG.error( "Invalid input date input", e );
+      LOG.error( "Invalid input date", e );
       return false;
     }
   }

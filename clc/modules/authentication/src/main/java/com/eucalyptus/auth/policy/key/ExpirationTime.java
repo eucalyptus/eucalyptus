@@ -6,6 +6,7 @@ import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.policy.PolicySpecConstants;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.DateEquals;
+import com.eucalyptus.auth.policy.condition.DateGreaterThan;
 
 public class ExpirationTime extends ContractKey {
 
@@ -33,6 +34,11 @@ public class ExpirationTime extends ContractKey {
   @Override
   public boolean canApply( String action, String resourceType ) {
     return ACTION_RUNINSTANCES.equals( action );
+  }
+
+  @Override
+  public boolean isBetter( Contract current, Contract update ) {
+    return ( new DateGreaterThan( ) ).check( update.getValue( ), current.getValue( ) );
   }
   
 }

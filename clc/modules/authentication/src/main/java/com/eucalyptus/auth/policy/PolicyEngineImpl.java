@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.AuthTest;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.Policies;
 import com.eucalyptus.auth.api.PolicyEngine;
@@ -59,7 +60,10 @@ public class PolicyEngineImpl implements PolicyEngine {
   private Map<String, Contract> processAuthorizations( List<Authorization> authorizations, String action, String resource ) throws AuthException {
     CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
     ContractKeyEvaluator contractEval = new ContractKeyEvaluator( );
+    // Default deny
+    boolean allowed = false;
     for ( Authorization auth : authorizations ) {
+      LOG.debug( AuthTest.MARK + "Processing authorization: " + auth );
       if ( !Pattern.matches( PatternUtils.toJavaPattern( auth.getActionPattern( ) ), action ) ) {
         continue;
       }
@@ -71,11 +75,18 @@ public class PolicyEngineImpl implements PolicyEngine {
         continue;
       }
       if ( auth.getEffect( ) == EffectType.Deny ) {
+        LOG.debug( AuthTest.MARK + "--Explicit deny." );
+        // Explicit deny
         throw new AuthException( AuthException.ACCESS_DENIED );
       } else {
-        return contractEval.getContracts( );
+        allowed = true;
       }      
     }
+    if ( allowed ) {
+      LOG.debug( AuthTest.MARK + "Approved" );
+      return contractEval.getContracts( );
+    }
+    LOG.debug( AuthTest.MARK + "Default deny." );
     throw new AuthException( AuthException.ACCESS_DENIED );
   }
   

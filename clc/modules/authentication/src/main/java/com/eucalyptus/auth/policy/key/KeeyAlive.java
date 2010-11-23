@@ -6,6 +6,7 @@ import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.policy.PolicySpecConstants;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.NumericEquals;
+import com.eucalyptus.auth.policy.condition.NumericGreaterThan;
 
 public class KeeyAlive extends ContractKey {
   
@@ -33,6 +34,11 @@ public class KeeyAlive extends ContractKey {
   @Override
   public boolean canApply( String action, String resourceType ) {
     return ACTION_RUNINSTANCES.equals( action );
+  }
+
+  @Override
+  public boolean isBetter( Contract current, Contract update ) {
+    return ( new NumericGreaterThan( ) ).check( update.getValue( ), current.getValue( ) );
   }
   
 }

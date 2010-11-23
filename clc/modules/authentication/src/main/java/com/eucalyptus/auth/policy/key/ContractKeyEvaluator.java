@@ -16,11 +16,11 @@ public class ContractKeyEvaluator {
   }
   
   public void addContract( ContractKey contractKey, Set<String> values ) {
-    Contract contract = contractKey.getContract( values.toArray( new String[0] ) );
-    if ( contracts.containsKey( contract.getName( ) ) ) {
-      LOG.warn( "Contract key conflicts: " + contract.getName( ) );
+    Contract update = contractKey.getContract( values.toArray( new String[0] ) );
+    Contract current = contracts.get( update.getName( ) );
+    if ( current == null || contractKey.isBetter( current, update ) ) {
+      contracts.put( update.getName( ), update );
     }
-    contracts.put( contract.getName( ), contract );
   }
   
   public Map<String, Contract> getContracts( ) {
