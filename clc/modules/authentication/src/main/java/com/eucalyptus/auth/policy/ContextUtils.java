@@ -8,19 +8,56 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class ContextUtils {
 
+  public interface ContextAdaptor {
+    
+    public User getRequestUser( );
+    public Class<? extends BaseMessage> getRequestMessageClass( );
+    public SocketAddress getRemoteAddress( );
+    
+  }
+  
+  private static class DefaultContextAdaptor implements ContextAdaptor {
+    
+    @Override
+    public User getRequestUser( ) {
+      Context requestContext = Contexts.lookup( );
+      return requestContext.getUser( );
+    }
+    
+    @Override
+    public Class<? extends BaseMessage> getRequestMessageClass( ) {
+      Context requestContext = Contexts.lookup( );
+      return requestContext.getRequest( ).getClass( );
+    }
+    
+    @Override
+    public SocketAddress getRemoteAddress( ) {
+      Context requestContext = Contexts.lookup( );
+      return requestContext.getChannel( ).getRemoteAddress( );
+    }
+    
+  }
+  
+  private static ContextAdaptor adaptor = new DefaultContextAdaptor( );
+  
+  /**
+   * For testing.
+   * @param adaptor
+   */
+  public static void setAdaptor( ContextAdaptor adaptor ) {
+    ContextUtils.adaptor = adaptor;
+  }
+
   public static User getRequestUser( ) {
-    Context requestContext = Contexts.lookup( );
-    return requestContext.getUser( );
+    return adaptor.getRequestUser( );
   }
   
   public static Class<? extends BaseMessage> getRequestMessageClass( ) {
-    Context requestContext = Contexts.lookup( );
-    return requestContext.getRequest( ).getClass( );
+    return adaptor.getRequestMessageClass( );
   }
   
   public static SocketAddress getRemoteAddress( ) {
-    Context requestContext = Contexts.lookup( );
-    return requestContext.getChannel( ).getRemoteAddress( );
+    return adaptor.getRemoteAddress( );
   }
-  
+
 }
