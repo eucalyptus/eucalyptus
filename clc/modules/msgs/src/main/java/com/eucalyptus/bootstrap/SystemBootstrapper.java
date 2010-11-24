@@ -68,7 +68,7 @@ import java.net.SocketException;
 import java.security.Security;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import com.eucalyptus.auth.util.Hashes;
+//import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
@@ -285,7 +285,7 @@ public class SystemBootstrapper {
     		try {
           banner += "\n[8m-----------------[0;10m[1m Detected Interfaces: \n";
           for( NetworkInterface iface : NetworkUtil.getNetworkInterfaces( ) ) {
-            banner += prefix + iface.getDisplayName( ) + SEP + Hashes.bytesToHex( iface.getHardwareAddress( ) ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING  );
+            banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING  );
             for( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
               banner += prefix + iface.getDisplayName( ) + SEP + addr;
             }
