@@ -44,6 +44,13 @@ public class Debugging {
   }
   
   public static void logError( Logger logger, Throwable t, String message ) {
-    logger.warn( message + " with " + t + " @ " +  getEucaStackTraceString( 0, t ), t );
+    StringBuilder sb = new StringBuilder( );
+    sb.append( message );
+    Throwable current = t;
+    while ( current != null ) {
+      sb.append( "=>" ).append( t ).append( '@' ).append( getEucaStackTraceString( 0, t ) );
+      current = t.getCause( );
+    }
   }
+  
 }

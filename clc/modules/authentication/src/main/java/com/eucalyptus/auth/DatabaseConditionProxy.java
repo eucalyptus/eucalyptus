@@ -4,12 +4,14 @@ import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.ConditionEntity;
+import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public class DatabaseConditionProxy implements Condition {
 
@@ -35,7 +37,17 @@ public class DatabaseConditionProxy implements Condition {
 
   @Override
   public Set<String> getValues( ) {
-    return this.delegate.getValues( );
+    final Set<String> results = Sets.newHashSet( );
+    try {
+      Transactions.one( ConditionEntity.class, this.delegate.getId( ), new Tx<ConditionEntity>( ) {
+        public void fire( ConditionEntity t ) throws Throwable {
+          results.addAll( t.getValues( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getValues for " + this.delegate );
+    }
+    return results;
   }
 
   @Override
