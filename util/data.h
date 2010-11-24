@@ -194,6 +194,7 @@ typedef struct ncVolume_t {
 } ncVolume;
 
 typedef struct ncInstance_t {
+    char uuid[CHAR_BUFFER_SIZE];
     char instanceId[CHAR_BUFFER_SIZE];
     char reservationId[CHAR_BUFFER_SIZE];
     char userId[CHAR_BUFFER_SIZE];
@@ -229,6 +230,8 @@ typedef struct ncInstance_t {
     // updated by NC upon Attach/DetachVolume
     ncVolume volumes[EUCA_MAX_VOLUMES];
     int volumesSize;
+  
+    long long blkbytes, netbytes;
 } ncInstance;
 
 typedef struct ncResource_t {
@@ -265,7 +268,8 @@ int total_instances (bunchOfInstances **head);
 ncMetadata * allocate_metadata(char *correlationId, char *userId);
 void free_metadata(ncMetadata ** meta);
 
-ncInstance * allocate_instance(char *instanceId, char *reservationId, 
+ncInstance * allocate_instance(char *uuid,
+			       char *instanceId, char *reservationId, 
                                virtualMachine *params, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,

@@ -120,6 +120,7 @@ int main (int argc, char **argv)
     char * ramdisk_id = NULL;
     char * ramdisk_manifest = NULL;
     char * reservation_id = NULL;
+    char * uu_id = NULL;
     char * mac_addr = strdup (DEFAULT_MAC_ADDR);
     char * volume_id = NULL;
     char * remote_dev = NULL;
@@ -133,7 +134,7 @@ int main (int argc, char **argv)
     int count = 1;
 	int ch;
     
-	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:V:R:L:FU:I:G:")) != -1) {
+	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:u:V:R:L:FU:I:G:")) != -1) {
 		switch (ch) {
         case 'c':
             count = atoi (optarg);
@@ -176,6 +177,9 @@ int main (int argc, char **argv)
             break;
         case 'e':
             reservation_id = optarg;
+            break;
+        case 'u':
+            uu_id = optarg;
             break;
         case 'a':
             mac_addr = optarg;
@@ -319,7 +323,7 @@ int main (int argc, char **argv)
 #define C rand()%26 + 97
 
         while (count--) {
-            char * iid, * rid;
+	    char * iid, * rid, *uuid;
 
             char ibuf [8];
             if (instance_id==NULL || count>1) {
@@ -336,6 +340,14 @@ int main (int argc, char **argv)
             } else {
                 rid = reservation_id;
             }
+
+            char ubuf [48];
+            if (uu_id==NULL || count>1) {
+	        snprintf (ubuf, 48, "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c", C, C, C, C, C, C, C, C,C, C, C, C,C, C, C, C,C, C, C, C,C, C, C, C,C, C, C, C,C, C, C, C);
+                uuid = ubuf;
+            } else {
+                uuid = uu_id;
+            }
             
 	    netConfig netparams;
             ncInstance * outInst;
@@ -344,7 +356,7 @@ int main (int argc, char **argv)
 	    snprintf(netparams.privateMac, 24, "%s", privMac);
 
             int rc = ncRunInstanceStub(stub, &meta, 
-                                       iid, rid,
+                                       uuid, iid, rid,
                                        &params, 
                                        image_id, image_url, 
                                        kernel_id, kernel_url, 
