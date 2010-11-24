@@ -117,6 +117,7 @@ prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName
 static int
 doRunInstance(	struct nc_state_t *nc,
                 ncMetadata *meta,
+		char *uuid,
                 char *instanceId,
                 char *reservationId,
                 virtualMachine *params, 
@@ -145,7 +146,8 @@ doRunInstance(	struct nc_state_t *nc,
         logprintfl (EUCAFATAL, "Error: instance %s already running\n", instanceId);
         return 1; /* TODO: return meaningful error codes? */
     }
-    if (!(instance = allocate_instance (instanceId, 
+    if (!(instance = allocate_instance (uuid,
+					instanceId, 
                                         reservationId,
                                         params, 
                                         instance_state_names[PENDING], 
@@ -624,6 +626,7 @@ doPowerDown(	struct nc_state_t *nc,
 static int
 doStartNetwork(	struct nc_state_t *nc,
 		ncMetadata *ccMeta, 
+		char *uuid,
 		char **remoteHosts, 
 		int remoteHostsLen, 
 		int port, 

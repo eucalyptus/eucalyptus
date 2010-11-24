@@ -61,28 +61,39 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.config;
+package com.eucalyptus.component;
 
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import com.eucalyptus.component.ServiceBuilder;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Component;
 import com.google.common.collect.Maps;
-//ASAP: TODO: GRZE: move up in deps tree
 public class ServiceBuilderRegistry {
-
-  private static Map<Class,ServiceBuilder<ComponentConfiguration>> builders = Maps.newConcurrentHashMap( );
+  private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );
+  private static Map<Class,ServiceBuilder<ServiceConfiguration>> builders = Maps.newConcurrentHashMap( );
+  private static Map<Component,ServiceBuilder<ServiceConfiguration>> componentBuilders = Maps.newConcurrentHashMap( );
 
   public static void addBuilder( Class c, ServiceBuilder b ) {
+    LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     builders.put( c, b );
   }
 
-  public static Set<Entry<Class, ServiceBuilder<ComponentConfiguration>>> entrySet( ) {
+  public static void addBuilder( Component c, ServiceBuilder b ) {
+    LOG.info( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
+    componentBuilders.put( c, b );
+  }
+
+  public static Set<Entry<Class, ServiceBuilder<ServiceConfiguration>>> entrySet( ) {
     return builders.entrySet( );
   }
 
-  public static ServiceBuilder<ComponentConfiguration> get( Class arg0 ) {
+  public static ServiceBuilder<ServiceConfiguration> get( Class arg0 ) {
     return builders.get( arg0 );
+  }
+
+  public static ServiceBuilder<ServiceConfiguration> get( Component arg0 ) {
+    return componentBuilders.get( arg0 );
   }
   
 }

@@ -19,14 +19,15 @@ public interface ServiceBuilder<T extends ServiceConfiguration> {
   public abstract Component getComponent();
   /**
    * Do input validation on the parameters.
+   * @param partition TODO
    * @param name
    * @param host
    * @param port
    * @return true if request accepted.
    * @throws ServiceRegistrationException
    */
-  public abstract Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException;
-  public abstract Boolean checkRemove( String name ) throws ServiceRegistrationException;
+  public abstract Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException;
+  public abstract Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException;
   public abstract ServiceConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException;
   public abstract ServiceConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException;
   /**
@@ -44,5 +45,6 @@ public interface ServiceBuilder<T extends ServiceConfiguration> {
   public abstract List<T> list() throws ServiceRegistrationException;
   public abstract T lookupByName( String name ) throws ServiceRegistrationException;
   public abstract T lookupByHost( String name ) throws ServiceRegistrationException;
+  public abstract T lookup( String partition, String name ) throws ServiceRegistrationException;
   
 }

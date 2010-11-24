@@ -164,7 +164,7 @@ public class RemoteInfoHandler {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
     for ( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
       try {
-        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( Component.storage ).isRunning( ) ) {
+        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( Component.storage ).isRunningLocally( ) ) {
           storageList.add( StorageInfoWeb.DEFAULT_SC );
           continue;
         }

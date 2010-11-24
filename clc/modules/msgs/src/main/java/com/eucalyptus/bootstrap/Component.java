@@ -77,7 +77,7 @@ import com.eucalyptus.util.NetworkUtil;
 public enum Component {
   bootstrap( false, true, false ),
   component( false, true, false ),
-  eucalyptus( true, false, true ),
+  eucalyptus( true, true, true ),
   walrus( true, false, false ),
   dns( true, false, true ),
   storage( true, false, false ),
@@ -111,7 +111,7 @@ public enum Component {
   
   public Boolean isEnabled( ) {
     try {
-      return Components.lookup( this ).isEnabled( );
+      return Components.lookup( this ).isAvailableLocally( );
     } catch ( NoSuchElementException ex ) {
       return false;
     }

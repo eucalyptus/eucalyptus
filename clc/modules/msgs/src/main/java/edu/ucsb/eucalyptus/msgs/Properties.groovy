@@ -74,18 +74,19 @@ public class Property extends EucalyptusData {
     this.description = description;
   }
 }
-public class DescribePropertiesType extends EucalyptusMessage {
+public class PropertiesMessage extends BaseMessage {}
+public class DescribePropertiesType extends PropertiesMessage {
   ArrayList<String> properties = new ArrayList<String>();
 }
-public class DescribePropertiesResponseType extends EucalyptusMessage {
+public class DescribePropertiesResponseType extends PropertiesMessage {
   ArrayList<Property> properties = new ArrayList<Property>();
 }
-public class ModifyPropertyValueType extends EucalyptusMessage {
+public class ModifyPropertyValueType extends PropertiesMessage {
   String name;
   String value;
   Boolean reset;
 }
-public class ModifyPropertyValueResponseType extends EucalyptusMessage {
+public class ModifyPropertyValueResponseType extends PropertiesMessage {
   String name;
   String value;
   String oldValue;

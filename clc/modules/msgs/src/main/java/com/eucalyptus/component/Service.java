@@ -63,8 +63,12 @@
 package com.eucalyptus.component;
 
 import java.net.URI;
+import java.util.List;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.NetworkUtil;
+import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.ucsb.eucalyptus.msgs.ServiceId;
 
 public class Service implements ComponentInformation, Comparable<Service>, HasParent<Component> {
@@ -75,6 +79,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   private final ServiceEndpoint      endpoint;
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
+  private final Component.State      state = State.ENABLED/**ASAP:FIXME:GRZE**/;
 
   public final ServiceId getServiceId( ) {
     return new ServiceId() {{
@@ -126,7 +131,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
     return this.endpoint.isLocal( );
   }
   
-  public Credentials getKeys( ) {
+  public Credentials getCredentials( ) {
     return this.keys;
   }
   
@@ -184,8 +189,26 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
    */
   @Override
   public String toString( ) {
-    return String.format( "Service %s name=%s endpoint=%s dispatcher=%s serviceConfiguration=%s keys=%s", this.parent.getPeer( ), this.name, 
-                          this.endpoint, this.dispatcher, this.serviceConfiguration, this.keys );
+    return String.format( "Service %s name=%s endpoint=%s\nService %s name=%s serviceConfiguration=%s\nService %s name=%s keys=%s", 
+                          this.parent.getPeer( ), this.name, this.endpoint, 
+                          this.parent.getPeer( ), this.name, this.serviceConfiguration, 
+                          this.parent.getPeer( ), this.name, this.keys );
+  }
+
+  /**
+   * @return the state
+   */
+  public Component.State getState( ) {
+    if( this.serviceConfiguration.isLocal( ) ) {
+      return this.parent.getState( );
+    } else {
+      return this.state;
+    }
+  }
+
+  /**ASAP:FIXME:GRZE**/
+  public List<String> getDetails( ) {
+    return Arrays.asList( this.toString( ).split( "\n" ) );
   }
 
 }

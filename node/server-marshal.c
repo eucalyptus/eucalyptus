@@ -136,6 +136,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
     //    axis2_char_t * userId = adb_ncStartNetworkType_get_userId(input, env);
 
     // get operation-specific fields from input
+    char * uuid = adb_ncStartNetworkType_get_uuid(input, env);
     int port = adb_ncStartNetworkType_get_remoteHostPort(input, env);
     int vlan = adb_ncStartNetworkType_get_vlan(input, env);
     int peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env);
@@ -150,7 +151,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
       //ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
 	EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
-        int error = doStartNetwork (&meta, peers, peersLen, port, vlan);
+        int error = doStartNetwork (&meta, uuid, peers, peersLen, port, vlan);
 
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doStartNetwork() failed error=%d\n", error);
@@ -244,6 +245,7 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     // NOTE: the order of set operations reflects the order in the WSDL
 
     // passed into runInstances
+    adb_instanceType_set_uuid(instance, env, outInst->uuid);
     adb_instanceType_set_reservationId(instance, env, outInst->reservationId);
     adb_instanceType_set_instanceId(instance, env, outInst->instanceId);
     adb_instanceType_set_imageId(instance, env, outInst->imageId);
@@ -301,6 +303,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     //    axis2_char_t * userId = adb_ncRunInstanceType_get_userId(input, env);
 
     // get operation-specific fields from input
+    axis2_char_t * uuid = adb_ncRunInstanceType_get_uuid(input, env);
     axis2_char_t * instanceId = adb_ncRunInstanceType_get_instanceId(input, env);
     axis2_char_t * reservationId = adb_ncRunInstanceType_get_reservationId(input, env);
     virtualMachine params;
@@ -340,7 +343,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
 	    EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
             ncInstance * outInst;
             
-            int error = doRunInstance (&meta, instanceId, reservationId, &params, 
+            int error = doRunInstance (&meta, uuid, instanceId, reservationId, &params, 
                                        imageId, imageURL, 
                                        kernelId, kernelURL, 
                                        ramdiskId, ramdiskURL, 

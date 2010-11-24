@@ -242,6 +242,14 @@
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="exhaustive" />
   </category>
+  <category name="org.mule.DefaultMuleContext" additivity="false">
+    <priority value="${euca.log.exhaustive.external}" />
+    <appender-ref ref="exhaustive" />
+  </category>
+  <category name="org.hibernate" additivity="false">
+    <priority value="${euca.log.exhaustive.external}" />
+    <appender-ref ref="exhaustive" />
+  </category>
   <category name="org.springframework" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="exhaustive" />

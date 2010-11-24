@@ -92,7 +92,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         return transition;
       }
     }
-    throw new NoSuchElementException( "No such transition: " + transitionName + " for the current state " + fromState + " and mark " + mark[0] );
+    throw new NoSuchElementException( "No such transition: " + transitionName + " for the current state " + fromState + " and mark " + mark[0] + " for parent " + this.parent.toString( ) );
   }
   
   /**

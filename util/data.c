@@ -118,7 +118,8 @@ void free_metadata (ncMetadata ** metap)
 }
 
 /* instances are present in instance-related requests */
-ncInstance * allocate_instance (char *instanceId, char *reservationId, 
+ncInstance * allocate_instance (char *uuid,
+				char *instanceId, char *reservationId, 
                                 virtualMachine *params, 
                                 char *stateName, int stateCode, char *userId, 
                                 netConfig *ncnet, char *keyName,
@@ -154,6 +155,10 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
     
     if (ncnet != NULL) {
       memcpy(&(inst->ncnet), ncnet, sizeof(netConfig));
+    }
+    
+    if (uuid) {
+      strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
     }
 
     if (instanceId) {

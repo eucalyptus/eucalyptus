@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,38 +57,37 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************
- * @author chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************/
+/*
+ *
+ * Author: Neil Soman neil@eucalyptus.com
  */
 
-package com.eucalyptus.ws.handlers;
+package edu.ucsb.eucalyptus.cloud.ws;
 
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.http.MappingHttpMessage;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import org.apache.log4j.Logger;
 
-public class ServiceInfoInjectionHandler extends MessageStackHandler implements ChannelHandler {
-  
-  /**
-   * @see com.eucalyptus.ws.handlers.MessageStackHandler#outgoingMessage(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.MessageEvent)
-   */
-  @Override
-  public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
-      MappingHttpMessage httpRequest = ( MappingHttpMessage ) event.getMessage( );
-      if( httpRequest.getMessage( ) instanceof EucalyptusErrorMessageType || httpRequest.getMessage( ) == null ) {
-        return;
-      } else if ( httpRequest.getMessage( ) instanceof BaseMessage ) {
-        BaseMessage msg = ( BaseMessage ) httpRequest.getMessage( );
-        
-      }
-    }
-  }
-  
-  @Override
-  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {}
-  
+import edu.ucsb.eucalyptus.storage.StorageManager;
+
+public class BackendStorageManagerFactory {
+
+	private static Logger LOG = Logger.getLogger( BackendStorageManagerFactory.class );
+
+	public static StorageManager getStorageManager() {
+		String storageManager = "FileSystemStorageManager";
+		if(System.getProperty("walrus.storage.manager") != null) {
+			storageManager = System.getProperty("walrus.storage.manager");
+		}
+		try {
+			storageManager = "edu.ucsb.eucalyptus.storage.fs." + storageManager;
+			return (StorageManager) ClassLoader.getSystemClassLoader().loadClass(storageManager).newInstance();
+		} catch (InstantiationException e) {
+			LOG.error(e, e); 
+		} catch (IllegalAccessException e) {
+			LOG.error(e, e); 
+		} catch (ClassNotFoundException e) {
+			LOG.error(e, e); 
+		}
+		return null;
+	}
 }

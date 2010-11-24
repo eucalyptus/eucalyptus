@@ -151,10 +151,8 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     }
   }
 
-  public String toString() {
-    return this.dump( );
-  }
-
+  
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -184,6 +182,12 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   public int compareTo(ComponentConfiguration that) {
     //ASAP: FIXME: GRZE useful ordering here plox.
     return (partition + name).compareTo( that.partition + that.name );
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s uuid=%s hostName=%s port=%s servicePath=%s",
+                          this.getComponent( ), this.isLocal( ), this.partition, this.name, this.getId(), this.hostName, this.port, this.servicePath );
   }
 }
 /**

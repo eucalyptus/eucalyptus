@@ -38,7 +38,7 @@ public class ServiceVerifyBootstrapper extends Bootstrapper {
   private static void requireComponent( com.eucalyptus.bootstrap.Component comp, String prettyName ) {
     try {
       Component component = Components.lookup( comp );
-      if ( !component.isRunning( ) ) {
+      if ( !component.isRunningLocally( ) ) {
         LOG.warn( LogUtil.header( "Failed to find a " + prettyName + " configuration.  You must register one in order to use Eucalyptus." ) );
       }
     } catch ( NoSuchElementException ex ) {
