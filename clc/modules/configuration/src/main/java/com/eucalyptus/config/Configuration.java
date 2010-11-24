@@ -72,6 +72,7 @@ import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
@@ -232,12 +233,26 @@ public class Configuration {
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
-    for( ServiceConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
-      try {
-        Service s = Components.lookup( conf );
-        listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), Lists.newArrayList( "everything is fine" ).toString()/**ASAP:FIXME:GRZE**/ ) );
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
+    if( DescribeComponentsType.class.equals( request.getClass( ) ) ) {
+      for( Component c : Components.list( ) ) {
+        for ( Service s : c.getServices( ) ) {
+          ServiceConfiguration conf = s.getServiceConfiguration( );
+          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+                                                  conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), "" ) );
+          for( String d : s.getDetails( ) ) {
+            listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+                                                    conf.getName( ), "detail", d, "" ) );
+          }
+        }        
+      }
+    } else {
+      for( ServiceConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
+        try {
+          Service s = Components.lookup( conf );
+          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), s.getDetails( ) ) );
+        } catch ( NoSuchElementException ex ) {
+          LOG.error( ex , ex );
+        }
       }
     }
     return reply;

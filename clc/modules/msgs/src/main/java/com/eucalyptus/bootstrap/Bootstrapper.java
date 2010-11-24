@@ -300,7 +300,7 @@ public abstract class Bootstrapper {
    */
   @Override
   public String toString( ) {
-    return String.format( "Bootstrapper %s dependsLocal=%s dependsRemote=%s", this.getClass( ).getSimpleName( ), this.dependsLocal, this.dependsRemote );
+    return String.format( "Bootstrapper %s runDuring=%s dependsLocal=%s dependsRemote=%s", this.getClass( ).getSimpleName( ), this.getBootstrapStage( ), this.dependsLocal, this.dependsRemote );
   }
   
 }
