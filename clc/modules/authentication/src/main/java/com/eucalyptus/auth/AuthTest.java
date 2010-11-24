@@ -141,11 +141,13 @@ public class AuthTest {
   public static void test2( ) throws Exception {
     Accounts.addAccount( "test" );
     Users.addAccountAdmin( "test", "foobar" );
-    Users.addUser( "tom", "/", true, true, null, true, true, true, "test" );
-    Users.addUser( "jack", "/", true, true, null, true, true, true, "test" );
-    Users.addUser( "chris", "/", true, true, null, true, true, true, "test" );
-    Groups.addGroup( "sales", "/", "test" );
-    Groups.addGroup( "marketing", "/", "test" );
+    User tom = Users.addUser( "tom", "/", true, true, null, true, true, true, "test" );
+    User jack = Users.addUser( "jack", "/", true, true, null, true, true, true, "test" );
+    User chris = Users.addUser( "chris", "/", true, true, null, true, true, true, "test" );
+    Group sales = Groups.addGroup( "sales", "/", "test" );
+    sales.addMember( tom );
+    Group marketing = Groups.addGroup( "marketing", "/", "test" );
+    marketing.addMember( jack );
     
     String policy =
       "{" +

@@ -642,10 +642,12 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
     try {
       @SuppressWarnings( "unchecked" )
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
-          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( 
-              Restrictions.or( 
-                  Restrictions.eq( "effect", EffectType.Allow ),
-                  Restrictions.eq( "effect", EffectType.Deny ) ) )
+          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
+              Restrictions.and(
+                  Restrictions.eq( "resourceType", resourceType ),
+                  Restrictions.or( 
+                      Restrictions.eq( "effect", EffectType.Allow ),
+                      Restrictions.eq( "effect", EffectType.Deny ) ) ) )
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true )
@@ -679,10 +681,12 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       Example groupExample = Example.create( searchGroup ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
-          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( 
-              Restrictions.or( 
-                  Restrictions.eq( "effect", EffectType.Allow ),
-                  Restrictions.eq( "effect", EffectType.Deny ) ) )
+          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
+              Restrictions.and(
+                  Restrictions.eq( "resourceType", resourceType ),
+                  Restrictions.or( 
+                      Restrictions.eq( "effect", EffectType.Allow ),
+                      Restrictions.eq( "effect", EffectType.Deny ) ) ) )
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true ).add( groupExample )
@@ -710,7 +714,10 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       Example groupExample = Example.create( searchGroup ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
-          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( Restrictions.eq( "effect", EffectType.Limit ) )
+          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
+              Restrictions.and(
+                  Restrictions.eq( "resourceType", resourceType ),
+                  Restrictions.eq( "effect", EffectType.Limit ) ) )
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true ).add( groupExample )
@@ -744,7 +751,10 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       Example groupExample = Example.create( searchGroup ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
-          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add( Restrictions.eq( "effect", EffectType.Limit ) )
+          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
+              Restrictions.and(
+                  Restrictions.eq( "resourceType", resourceType ),
+                  Restrictions.eq( "effect", EffectType.Limit ) ) )
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true ).add( groupExample )
