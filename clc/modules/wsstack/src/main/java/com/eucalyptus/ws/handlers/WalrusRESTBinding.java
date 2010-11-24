@@ -127,7 +127,7 @@ import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
@@ -214,7 +214,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-			EucalyptusMessage msg = (EucalyptusMessage) httpResponse.getMessage( );
+			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
 			Binding binding;
 
 			if(!(msg instanceof EucalyptusErrorMessageType)) {
@@ -304,31 +304,34 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		OMElement msg;
 
-		EucalyptusMessage eucaMsg;
+		GroovyObject groovyMsg;
 		Map<String, String> fieldMap;
 		Class targetType;
 		try
 		{
 			//:: try to create the target class :://
 			targetType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs.".concat( operationName ).concat( "Type" ) );
+			if( !GroovyObject.class.isAssignableFrom( targetType ) ) {
+			  throw new Exception( );
+			}
 			//:: get the map of parameters to fields :://
 			fieldMap = this.buildFieldMap( targetType );
 			//:: get an instance of the message :://
-			eucaMsg =  (EucalyptusMessage) targetType.newInstance();
+			groovyMsg =  (GroovyObject) targetType.newInstance();
 		}
 		catch ( Exception e )
 		{
 			throw new BindingException( "Failed to construct message of type " + operationName );
 		}
 
-		addLogData(eucaMsg, bindingArguments);
+		addLogData((BaseMessage)groovyMsg, bindingArguments);
 
 		//TODO: Refactor this to be more general
-		List<String> failedMappings = populateObject( eucaMsg, fieldMap, params);
-		populateObjectFromBindingMap(eucaMsg, fieldMap, httpRequest, bindingArguments);
+		List<String> failedMappings = populateObject( groovyMsg, fieldMap, params);
+		populateObjectFromBindingMap(groovyMsg, fieldMap, httpRequest, bindingArguments);
 
 		User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser();
-		setRequiredParams (eucaMsg, user);
+		setRequiredParams (groovyMsg, user);
 
 		if ( !failedMappings.isEmpty() || !params.isEmpty() )
 		{
@@ -340,18 +343,18 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			throw new BindingException( errMsg.toString() );
 		}
 
-		LOG.info(eucaMsg.toString());
+		LOG.info(groovyMsg.toString());
 		try
 		{
 			Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.com" ) );
-			msg = binding.toOM( eucaMsg );
+			msg = binding.toOM( groovyMsg );
 		}
 		catch ( RuntimeException e )
 		{
 			throw new BindingException( "Failed to build a valid message: " + e.getMessage() );
 		}
 
-		return eucaMsg;
+		return groovyMsg;
 
 	}
 

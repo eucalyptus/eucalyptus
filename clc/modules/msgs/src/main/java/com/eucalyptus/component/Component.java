@@ -490,6 +490,20 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.bootstrapper;
   }
   
+  public void runChecks( ) {
+    try {
+      if( this.isAvailableLocally( ) && (this.getState( ).equals( State.NOTREADY ) ) ) {
+        this.stateMachine.transition( Transition.READY_CHECK );          
+      } else if( this.isAvailableLocally( ) && (this.getState( ).equals( State.ENABLED ) ) ) {
+        this.stateMachine.transition( Transition.ENABLED_CHECK );          
+      } else if( this.isAvailableLocally( ) && (this.getState( ).equals( State.DISABLED ) ) ) {
+        this.stateMachine.transition( Transition.DISABLED_CHECK );          
+      }
+    } catch ( IllegalStateException ex ) {
+      LOG.trace( ex );
+    }
+  }
+  
   public static class CheckEvent implements EventListener {
     public static void register( ) {
       ListenerRegistry.getInstance( ).register( ClockTick.class, new CheckEvent( ) );
@@ -499,13 +513,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     public void fireEvent( Event event ) {
       for( Component c : Components.list( ) ) {
         try {
-          if( c.isAvailableLocally( ) && (c.getState( ).equals( State.NOTREADY ) ) ) {
-            c.stateMachine.transition( Transition.READY_CHECK );          
-          } else if( c.isAvailableLocally( ) && (c.getState( ).equals( State.ENABLED ) ) ) {
-            c.stateMachine.transition( Transition.ENABLED_CHECK );          
-          } else if( c.isAvailableLocally( ) && (c.getState( ).equals( State.DISABLED ) ) ) {
-            c.stateMachine.transition( Transition.DISABLED_CHECK );          
-          }
+          c.runChecks( );
         } catch ( Throwable ex ) {
           LOG.error( ex , ex );
         }
