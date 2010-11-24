@@ -96,7 +96,7 @@ public class BlockStorageUtil {
 			cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
 			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
 		} catch ( Exception e ) {
-			LOG.error( "Unable to encrypt storage target password" );
+			LOG.error( "Unable to encrypt storage target password", e );
 			credDb.rollback( );
 			throw new EucalyptusCloudException(e.getMessage(), e);
 		}
