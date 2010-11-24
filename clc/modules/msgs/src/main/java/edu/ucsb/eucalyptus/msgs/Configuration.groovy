@@ -207,6 +207,8 @@ public class RegisterVMwareBrokerType extends RegisterComponentType {}
 public class RegisterVMwareBrokerResponseType extends RegisterComponentResponseType {}
 public class DeregisterVMwareBrokerType extends DeregisterComponentType {}
 public class DeregisterVMwareBrokerResponseType extends DeregisterComponentResponseType {}
+public class ModifyVMwareBrokerAttributeType extends ModifyComponentAttributeType{}
+public class ModifyVMwareBrokerAttributeResponseType extends ModifyComponentAttributeResponseType {}
 public class DescribeVMwareBrokersType extends DescribeComponentsType {}
 public class DescribeVMwareBrokersResponseType extends DescribeComponentsResponseType {}
 
