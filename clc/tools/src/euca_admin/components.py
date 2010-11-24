@@ -56,9 +56,10 @@ class Component():
       list = self.euca.connection.get_list('DescribeComponents', params,
                                            [('euca:item', Component)])
       for i in list:
-        if not verbose:
-          i.detail = ""
-        print i
+        if verbose:
+          print i
+        elif not verbose and not i.host_name == 'detail':
+          print i
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
         

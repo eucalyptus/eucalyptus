@@ -145,16 +145,16 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
             LOG.error( ex, ex );
             failed = true;
           } catch ( Throwable ex ) {
-            BootstrapException.throwFatal( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+            Exceptions.eat( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
           }
-//          try {
-//            comp.enableService( s );
-//          } catch ( ServiceRegistrationException ex ) {
-//            LOG.error( ex, ex );
-//            failed = true;
-//          } catch ( Throwable ex ) {
-//            BootstrapException.throwFatal( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
-//          }
+          try {
+            comp.enableService( s );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.error( ex, ex );
+            failed = true;
+          } catch ( Throwable ex ) {
+            Exceptions.eat( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+          }
         }
       }
     }

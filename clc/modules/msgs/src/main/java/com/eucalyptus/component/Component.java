@@ -118,8 +118,12 @@ public class Component implements ComponentInformation, HasName<Component> {
       return new Callback.Success<Component>( ) {
         @Override
         public void fire( Component t ) {
-          if ( t.isAvailableLocally( ) && Component.State.LOADED.equals( t.getState( ) ) ) {
-            t.stateMachine.transition( Transition.this );
+          if ( t.isAvailableLocally( ) ) {
+            try {
+              t.stateMachine.transition( Transition.this );
+            } catch ( Throwable ex ) {
+              LOG.error( ex , ex );
+            }
           }
         }
       };
