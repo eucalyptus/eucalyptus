@@ -90,24 +90,18 @@ public class DNSBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean load( ) throws Exception {
-    /** ASAP:FIXME:GRZE restore normalcy **/
-	  if( Components.lookup( Components.delegate.dns ).isLocal( ) ) {
-  		LOG.info("Initializing DNS");
-  		//The following call binds DNS ports. Must be in a privileged context.
-  		DNSControl.initialize();
-	  }
+		LOG.info("Initializing DNS");
+		//The following call binds DNS ports. Must be in a privileged context.
+		DNSControl.initialize();
 		return true;
 	}
 
 	@Override
 	public boolean start( ) throws Exception {
-	  /** ASAP:FIXME:GRZE restore normalcy **/
-    if( Components.lookup( Components.delegate.dns ).isLocal( ) ) {
-  		LOG.info("Loading DNS records");
-  		//populateRecords must be idempotent.
-  		DNSControl.populateRecords();
-  		DNSControl.populateRecords();
-    }
+		LOG.info("Loading DNS records");
+		//populateRecords must be idempotent.
+		DNSControl.populateRecords();
+		DNSControl.populateRecords();
 		return true;
 	}
 
