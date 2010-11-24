@@ -141,7 +141,8 @@ public class BaseMessage {
       mctx.marshalDocument( this, "UTF-8", null, temp );
     } catch ( JiBXException e ) {
       Logger.getLogger( BaseMessage.class ).debug( e, e );
-      return null;
+    } catch ( Throwable e ) {
+      Logger.getLogger( BaseMessage.class ).error( e, e );
     }
     return temp.toString( );
   }

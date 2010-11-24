@@ -100,7 +100,7 @@ public class WalrusUtil {
 
 	public static void checkValid( Image imgInfo ) {
 		String[] parts = imgInfo.getImageLocation().split( "/" );
-		CheckImageType check = new CheckImageType();
+		CheckImageType check = new CheckImageType( );
 		check.setUserId( imgInfo.getImageOwnerId( ) );
 		check.setBucket( parts[ 0 ] );
 		check.setKey( parts[ 1 ] );
