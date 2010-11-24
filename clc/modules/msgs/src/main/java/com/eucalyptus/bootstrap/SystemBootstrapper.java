@@ -282,16 +282,12 @@ public class SystemBootstrapper {
             }
           }
         }
-    		try {
-          banner += "\n[8m-----------------[0;10m[1m Detected Interfaces: \n";
-          for( NetworkInterface iface : NetworkUtil.getNetworkInterfaces( ) ) {
-            banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING  );
-            for( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
-              banner += prefix + iface.getDisplayName( ) + SEP + addr;
-            }
+        banner += "\n[8m-----------------[0;10m[1m Detected Interfaces: \n";
+        for( NetworkInterface iface : NetworkUtil.getNetworkInterfaces( ) ) {
+          banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING  );
+          for( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
+            banner += prefix + iface.getDisplayName( ) + SEP + addr;
           }
-        } catch ( SocketException ex ) {
-          LOG.error( ex , ex );
         }
     LOG.info( banner );
     return banner;
