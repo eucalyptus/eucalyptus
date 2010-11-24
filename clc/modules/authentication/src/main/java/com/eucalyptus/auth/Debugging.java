@@ -44,6 +44,6 @@ public class Debugging {
   }
   
   public static void logError( Logger logger, Throwable t, String message ) {
-    logger.warn( message + " with " + t + " @ " +  getEucaStackTraceString( 0, t ) );
+    logger.warn( message + " with " + t + " @ " +  getEucaStackTraceString( 0, t ), t );
   }
 }
