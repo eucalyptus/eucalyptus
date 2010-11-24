@@ -214,11 +214,13 @@ public class Bootstrap {
     }
     
     private void printAgenda( ) {
-      LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( ) + ( Bootstrap.loading
-        ? "load()"
-        : "start()" ) ) );
-      LOG.info( Join.join( this.name() + " bootstrappers:  ", this.bootstrappers ) );
-      LOG.info( Join.join( this.name() + " skiptstrappers: ", this.bootstrappers ) );
+      if( !this.bootstrappers.isEmpty( ) ) {
+        LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( ) + "." + ( Bootstrap.loading
+          ? "load()"
+          : "start()" ) ) );
+        LOG.debug( Join.join( this.name() + " bootstrappers:  ", this.bootstrappers ) );
+        LOG.debug( Join.join( this.name() + " skiptstrappers: ", this.bootstrappers ) );
+      }
     }
     
     public void updateBootstrapDependencies( ) {
@@ -419,7 +421,7 @@ public class Bootstrap {
     for ( int i = currOrdinal + 1; i <= Stage.Final.ordinal( ); i++ ) {
       currentStage = Stage.values( )[i];
       if ( currentStage.bootstrappers.isEmpty( ) ) {
-        LOG.info( LogUtil.subheader( "Bootstrap stage skipped: " + currentStage.toString( ) ) );
+        LOG.trace( LogUtil.subheader( "Bootstrap stage skipped: " + currentStage.toString( ) ) );
         continue;
       } else {
         return currentStage;
@@ -480,7 +482,7 @@ public class Bootstrap {
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
     Iterables.all( Stage.list( ), loadConfigs );
     Iterables.all( Components.list( ), Component.Transition.INITIALIZING.getCallback( ) );
-    
+
     LOG.info( LogUtil.header( "Initial component configuration:" ) );
     Iterables.all( Components.list( ), Components.configurationPrinter( ) );
 
@@ -504,8 +506,7 @@ public class Bootstrap {
     
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
-    /** ASAP:FIXME:GRZE **/
-    Iterables.all( Components.list( ), Component.Transition.INITIALIZING.getCallback( ) );
+
     LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
   }
   

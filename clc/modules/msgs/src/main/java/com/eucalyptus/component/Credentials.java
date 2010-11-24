@@ -3,6 +3,9 @@ package com.eucalyptus.component;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 
+/**
+ *
+ */
 public class Credentials implements ComponentInformation {
   private final Service parent;
   private KeyPair         keys;
@@ -36,5 +39,16 @@ public class Credentials implements ComponentInformation {
   protected final Service getParent( ) {
     return this.parent;
   }
+
+  @Override
+  public String toString( ) {
+    if( this.certificate != null ) {
+      return String.format( "Credentials name=%s cert-sn=%s cert-dn=%s", this.getName( ), this.getCertificate( ).getSerialNumber( ), this.getCertificate( ).getSubjectDN( ) );
+    } else {
+      return String.format( "Credentials name=%s cert-sn=%s cert-dn=%s", this.getName( ), "none", "none" );
+    }
+  }
+  
+  
   
 }

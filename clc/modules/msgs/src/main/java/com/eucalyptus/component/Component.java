@@ -118,7 +118,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       return new Callback.Success<Component>( ) {
         @Override
         public void fire( Component t ) {
-          if( t.isAvailableLocally( ) ) {
+          if ( t.isAvailableLocally( ) && Component.State.LOADED.equals( t.getState( ) ) ) {
             t.stateMachine.transition( Transition.this );
           }
         }
@@ -164,7 +164,6 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.localService.get( );
   }
   
-  
   /**
    * Builds a Service instance for this component using the local default
    * values.
@@ -173,7 +172,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public void initService( ) throws ServiceRegistrationException {
-    if( this.enabled.get( ) ) {
+    if ( this.enabled.get( ) ) {
       ServiceConfiguration config = this.builder.toConfiguration( this.getConfiguration( ).getLocalUri( ) );
       Service service = new Service( this, config );
       this.setupService( service );
@@ -182,7 +181,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       throw new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." );
     }
   }
-
+  
   /**
    * Builds a Service instance for this component using the provided service
    * configuration.
@@ -193,11 +192,11 @@ public class Component implements ComponentInformation, HasName<Component> {
   public void loadService( ServiceConfiguration config ) throws ServiceRegistrationException {
     Service service = new Service( this, config );
     this.setupService( service );
-    if( service.isLocal( ) && State.INITIALIZED.equals( this.getState( ) ) ) {
+    if ( service.isLocal( ) && State.INITIALIZED.equals( this.getState( ) ) ) {
       this.stateMachine.transition( Transition.LOADING );
     }
   }
-
+  
   /**
    * 
    * @param config
@@ -220,14 +219,20 @@ public class Component implements ComponentInformation, HasName<Component> {
     return service;
   }
   
+  public boolean inState( State queryState ) {
+    return queryState.equals( this.getState( ) );
+  }
+  
   public void startService( ServiceConfiguration service ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
-    if( service.isLocal( ) ) {
+    if ( service.isLocal( ) && this.inState( State.LOADED ) ) {
       this.stateMachine.transition( Transition.STARTING );
-      try {
-        this.stateMachine.transition( Transition.READY_CHECK );
-      } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
+      if( this.inState( State.NOTREADY ) ) {
+        try {
+          this.stateMachine.transition( Transition.READY_CHECK );
+        } catch ( Throwable ex ) {
+          LOG.trace( ex, ex );
+        }
       }
     } else {
       this.builder.fireStart( service );
@@ -236,39 +241,39 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   public void enableService( ServiceConfiguration service ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
-    if( service.isLocal( ) ) {
-      if( State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
+    if ( service.isLocal( ) ) {
+      if ( State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
         this.stateMachine.transition( Transition.READY_CHECK );
       }
       this.stateMachine.transition( Transition.ENABLING );
     } else {
-      this.builder.fireStart( service );
+      this.builder.fireEnable( service );
     }
   }
-
+  
   public void disableService( ServiceConfiguration service ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
-    if( service.isLocal( ) ) {
-      if( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+    if ( service.isLocal( ) ) {
+      if ( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
         this.stateMachine.transition( Transition.DISABLING );
       }
     } else {
-      this.builder.fireStart( service );
+      this.builder.fireDisable( service );
     }
   }
-
+  
   public void stopService( ServiceConfiguration service ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
-    if( service.isLocal( ) ) {
-      if( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+    if ( service.isLocal( ) ) {
+      if ( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
         this.stateMachine.transition( Transition.DISABLING );
       }
       this.stateMachine.transition( Transition.STOPPING );
     } else {
-      this.builder.fireStart( service );
+      this.builder.fireStop( service );
     }
   }
-
+  
   public void destroyService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     final boolean configLocal = NetworkUtil.testLocal( config.getHostName( ) );
     Service remove = this.lookupServiceByHost( config.getHostName( ) );
@@ -279,7 +284,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       DispatcherFactory.remove( service );
 //      Components.deregister( service );
       EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_STOP, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
-      if( config.isLocal( ) ) {
+      if ( config.isLocal( ) ) {
         this.stateMachine.transition( Transition.DESTROYING );
         this.localService.set( null );
       }
@@ -343,7 +348,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @return true if the component has not been explicitly marked as remote.
    */
   public Boolean isLocal( ) {
-    return this.local.get(); //this.localService.get( ) != null;
+    return this.local.get( ); //this.localService.get( ) != null;
   }
   
   /**
@@ -492,12 +497,12 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   public void runChecks( ) {
     try {
-      if( this.isAvailableLocally( ) && (this.getState( ).equals( State.NOTREADY ) ) ) {
-        this.stateMachine.transition( Transition.READY_CHECK );          
-      } else if( this.isAvailableLocally( ) && (this.getState( ).equals( State.ENABLED ) ) ) {
-        this.stateMachine.transition( Transition.ENABLED_CHECK );          
-      } else if( this.isAvailableLocally( ) && (this.getState( ).equals( State.DISABLED ) ) ) {
-        this.stateMachine.transition( Transition.DISABLED_CHECK );          
+      if ( this.isAvailableLocally( ) && ( this.getState( ).equals( State.NOTREADY ) ) ) {
+        this.stateMachine.transition( Transition.READY_CHECK );
+      } else if ( this.isAvailableLocally( ) && ( this.getState( ).equals( State.ENABLED ) ) ) {
+        this.stateMachine.transition( Transition.ENABLED_CHECK );
+      } else if ( this.isAvailableLocally( ) && ( this.getState( ).equals( State.DISABLED ) ) ) {
+        this.stateMachine.transition( Transition.DISABLED_CHECK );
       }
     } catch ( IllegalStateException ex ) {
       LOG.trace( ex );
@@ -508,17 +513,18 @@ public class Component implements ComponentInformation, HasName<Component> {
     public static void register( ) {
       ListenerRegistry.getInstance( ).register( ClockTick.class, new CheckEvent( ) );
     }
-
-    @Override 
+    
+    @Override
     public void fireEvent( Event event ) {
-      for( Component c : Components.list( ) ) {
+      for ( Component c : Components.list( ) ) {
         try {
           c.runChecks( );
         } catch ( Throwable ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
     }
+    
     public void advertiseEvent( Event event ) {}
   }
 }

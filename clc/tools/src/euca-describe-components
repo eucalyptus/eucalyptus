@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+import sys
+from euca_admin.components import Component
+
+def main():
+  c = Component().cli_describe()
+  sys.exit()
+
+if __name__ == "__main__":
+  main()
+ 

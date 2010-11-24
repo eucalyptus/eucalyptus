@@ -65,11 +65,12 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.LogicalStorageManager;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 
 @Provides(Component.storage)
-@RunDuring(Bootstrap.Stage.RemoteServicesInit)
+@RunDuring(Bootstrap.Stage.DatabaseInit)
 @DependsLocal(Component.storage)
 public class BlockStorageBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
@@ -99,7 +100,12 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean start( ) throws Exception {
-		//BlockStorage.configure();
+    try {
+      BlockStorage.configure();
+    } catch (EucalyptusCloudException e) {
+      LOG.error(e);
+    }
+	  //BlockStorage.configure();
 		return true;
 	}
 

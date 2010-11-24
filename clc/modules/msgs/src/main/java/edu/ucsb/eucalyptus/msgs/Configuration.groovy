@@ -72,6 +72,13 @@ public class ComponentInfoType extends EucalyptusData {
   String state;//really an enum
   String detail;//TODO: remove me.
   public ComponentInfoType(){}
+  public ComponentInfoType(String partition, String name, String host, String state, List<String> details){
+    this.partition = partition; 
+    this.name = name; 
+    this.state = state; 
+    this.hostName = host;
+    this.detail = details.toString( );
+  }
   public ComponentInfoType(String partition, String name, String host, String state, String detail){
     this.partition = partition; 
     this.name = name; 
