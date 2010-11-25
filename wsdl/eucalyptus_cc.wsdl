@@ -381,14 +381,19 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="publicAddressType">
+	<xs:sequence>
+	  <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string" />
+	  <xs:element minOccurs="1" maxOccurs="1" name="sourceAddress" type="xs:string" />
+	  <xs:element minOccurs="1" maxOccurs="1" name="destAddress" type="xs:string" />
+	</xs:sequence>
+      </xs:complexType>
+      
       <xs:complexType name="describePublicAddressesResponseType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <!-- next three lists must be same length -->
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="uuids" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="sourceAddresses" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="destAddresses" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="addresses" type="tns:publicAddressType"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

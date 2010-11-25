@@ -366,19 +366,24 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   dpart = adb_describePublicAddressesResponseType_create(env);
   for (i=0; i<outAddressesLen; i++) {
     if (outAddresses[i].ip) {
-      adb_describePublicAddressesResponseType_add_uuids(dpart, env, outAddresses[i].uuid);
+      adb_publicAddressType_t *addr;
+      addr = adb_publicAddressType_create(env);
+
+      adb_publicAddressType_set_uuid(addr, env, outAddresses[i].uuid);
+
       ipstr = hex2dot(outAddresses[i].ip);
-      adb_describePublicAddressesResponseType_add_sourceAddresses(dpart, env, ipstr);
+      adb_publicAddressType_set_sourceAddress(addr, env, ipstr);
       if (ipstr) free(ipstr);
 
       if (outAddresses[i].dstip) {
 	ipstr = hex2dot(outAddresses[i].dstip);
-	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, ipstr);
+	adb_publicAddressType_set_destAddress(addr, env, ipstr);
 	if (ipstr) free(ipstr);
-
       } else {
-	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, "");
+	adb_publicAddressType_set_destAddress(addr, env, "");
       }
+
+      adb_describePublicAddressesResponseType_add_addresses(dpart, env, addr);
     }
   }
   
