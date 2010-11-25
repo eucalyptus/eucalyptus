@@ -11,6 +11,8 @@ import java.util.*;
 /**
  * <p>InstanceUsageLog is a log of historical instance usage information.
  * You can query InstanceUsageLog to gather data for reporting generation.
+ * 
+ * @author tom.werges
  */
 @ConfigurableClass(root="instanceLog", alias="basic", description="Configuration for instance usage sampling and logging", singleton=true)
 public class InstanceUsageLog
@@ -31,84 +33,60 @@ public class InstanceUsageLog
 		return singletonInstance;
 	}
 
-
 	/**
-	 * Reads instance usage data from the log.
-	 *
-	 * You can't search through the log for specific instances or specific
-	 * data; you can only get a full dump between dates. However, there
-	 * exist groovy scripts to filter the data, or to insert the data into
-	 * a data warehouse for subsequent searching.
-	 *
-	 * The usage data in logs is <i>sampled</i>, meaning data is collected
-	 * every <i>n</i> seconds and stored. As a result, some small error
-	 * will be introduced if the boundaries of desired periods (ie months)
-	 * do not exactly correspond to the boundaries of the samples. In that
-	 * case, the reporting mechanism will be unable to determine how much
-	 * of the usage in a sample belongs to which of the two periods whose
-	 * boundaries it crosses, so it will assign usage to one period based on
-	 * a rule.
-	 *
-	 * Very recent information (within the prior five minutes, for example)
+	 * <p>Reads instance usage data from the log. The results include both
+	 * instance attributes (instance id, type, etc) and resource usage
+	 * by instance for some period.
+	 * 
+	 * <p>The data in the log is not indexed, in order to minimize write time.
+	 * As a result, you can't search through the log for specific instances or
+	 * specific data; you can only get a full dump between dates. However, there
+	 * exist groovy scripts to filter the data, or to insert the data into a
+	 * data warehouse for subsequent searching.
+	 * 
+	 * <p>The usage data in logs is <i>sampled</i>, meaning data is collected
+	 * every <i>n</i> seconds and written. As a result, some small error will
+	 * be introduced if the boundaries of desired periods (ie months) do not
+	 * exactly correspond to the boundaries of the samples. In that case, the
+	 * reporting mechanism will be unable to determine how much of the usage in
+	 * a sample belongs to which of the two periods whose boundaries it crosses,
+	 * so it will assign usage to one period based on a rule.
+	 * 
+	 * <p>Very recent information (within the prior five minutes, for example)
 	 * may not have been acquired yet, in which case, an empty period or a
 	 * period with incomplete information may be returned.
-	 * 
-	 * An Iterator is returned because the result set can be large and
-	 * may not fit in memory.
 	 */
-	public Iterator<ReportingInstance> getReportingInstances(final Period period)
+	public LogResultSet queryLog(final Period period)
 	{
 		if (period == null) throw new IllegalArgumentException("period must not be null");
-		final List<ReportingInstance> results = new ArrayList<ReportingInstance>();
 
 		log.debug(String.format("getPeriodInstanceUsages periodBeginMs:%d periodsEndMs:%d ",
 				period.getBeginningMs(), period.getEndingMs()));
 
+		Iterator resultIter = null;
 		EntityWrapper entityWrapper = EntityWrapper.get(InstanceAttributes.class);
 		Session sess = null;
 		try {
 			sess = entityWrapper.getSession();
-			
-			Iterator iter = sess.createQuery(
+
+			resultIter = sess.createQuery(
 				"from InstanceAttributes, InstanceUsageSnapshot"
 				+ " where InstanceAttributes.uuid = InstanceUsageSnapshot.uuid"
 				+ " and InstanceUsageSnapshot.timestampMs > ?"
-				+ " and InstanceUsageSnapshot.timestampMs < ?")
+				+ " and InstanceUsageSnapshot.timestampMs < ?"
+				+ " order by InstanceAttributes.uuid")
 				.setLong(0, period.getBeginningMs())
 				.setLong(1, period.getEndingMs())
 				.iterate();
 
-			Map<String, ReportingInstanceImpl> reportingInstances =
-				new HashMap<String, ReportingInstanceImpl>();
-			
-			while (iter.hasNext()) {
-				Object[] row = (Object[]) iter.next();
-
-				InstanceAttributes insAtts = (InstanceAttributes) row[0];
-				InstanceUsageSnapshot iu = (InstanceUsageSnapshot) row[1];
-				UsageSnapshot uSnapshot = iu.getUsageSnapshot();
-				String uuid = insAtts.getUuid();
-				
-				if (reportingInstances.containsKey(uuid)) {
-					reportingInstances.get(uuid).addSnapshot(uSnapshot);
-				} else {
-					ReportingInstanceImpl repIns = new ReportingInstanceImpl(uuid,
-							insAtts.getInstanceId(), insAtts.getInstanceType(),
-							insAtts.getUserId(), insAtts.getClusterName(),
-							insAtts.getAvailabilityZone());
-					repIns.addSnapshot(uSnapshot);
-					reportingInstances.put(uuid, repIns);
-				}
-			}
-
-			results.addAll(reportingInstances.values());
 			entityWrapper.commit();
 		} catch (Exception ex) {
 			log.error(ex);
 			entityWrapper.rollback();
+			//We can't recover from this.
 		}
-		
-		return results.iterator();
+
+		return new LogResultSet(resultIter, period);
 	}
 
 	/**
@@ -125,7 +103,7 @@ public class InstanceUsageLog
 			sess.createSQLQuery("DELETE FROM instance_usage_snapshot WHERE timestamp_ms < ?")
 				.setLong(0, new Long(earlierThanMs))
 				.executeUpdate();
-			
+
 			/* Delete all reporting instances which no longer have even a
 			 * a single corresponding instance usage snapshot, using
 			 * MySQL's fancy multi-table delete with left outer join syntax.
