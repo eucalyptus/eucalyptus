@@ -145,7 +145,7 @@ public class VmRunResponseType extends EucalyptusMessage {
 }
 
 public class VmInfo extends EucalyptusData {
-  
+  String uuid;
   String imageId;
   String kernelId;
   String ramdiskId;
@@ -185,6 +185,7 @@ public class VmRunType extends EucalyptusMessage {
   VmKeyInfo keyInfo;
   
   List<String> instanceIds = new ArrayList<String>();
+  List<String> uuids = new ArrayList<String>();
   List<String> macAddresses = new ArrayList<String>();
   List<String> networkNames = new ArrayList<String>();
   ArrayList<String> networkIndexList = new ArrayList<String>();

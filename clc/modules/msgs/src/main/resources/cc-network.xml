@@ -88,6 +88,7 @@ TODO: change name space to reflect change of API
     
      <mapping name="StartNetwork" class="edu.ucsb.eucalyptus.msgs.StartNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
          <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+         <value name="uuid" field="uuid" usage="required" />
          <value name="vlan" field="vlan" usage="required"/>
          <value name="netName" field="netName" usage="required"/>
          <value name="nameserver" field="nameserver" usage="optional"/>
@@ -108,6 +109,7 @@ TODO: change name space to reflect change of API
     </mapping>
     <mapping name="AssignAddress" class="edu.ucsb.eucalyptus.msgs.AssignAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="uuid" field="uuid" usage="required" />
         <value name="source" field="source" usage="required"/>
         <value name="dest" field="destination" usage="required"/>
     </mapping>

@@ -64,7 +64,7 @@
 package edu.ucsb.eucalyptus.msgs
 
 public class StartNetworkType extends EucalyptusMessage {
-
+  String uuid;
   int vlan;
   String netName;
   String nameserver;
@@ -123,8 +123,14 @@ public class DescribeNetworksResponseType extends EucalyptusMessage {
       + "\n${this.getClass().getSimpleName()} " + this.activeNetworks*.toString().join( "\n${this.getClass().getSimpleName()} " ); 
   }
 }
+public class AddressMappingInfoType extends EucalyptusData {
+  String uuid;
+  String source;
+  String destination;
+}
 
 public class NetworkInfoType extends EucalyptusData {
+  String uuid;
   Integer vlan;
   String networkName;
   String userName;
@@ -136,6 +142,7 @@ public class NetworkInfoType extends EucalyptusData {
 
 
 public class AssignAddressType extends EucalyptusMessage {
+  String uuid;
   String instanceId;
   String source;
   String destination;
