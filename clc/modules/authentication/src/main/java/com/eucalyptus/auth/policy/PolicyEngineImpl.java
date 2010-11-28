@@ -72,13 +72,16 @@ public class PolicyEngineImpl implements PolicyEngine {
     for ( Authorization auth : authorizations ) {
       LOG.debug( AuthTest.MARK + "Processing authorization: " + auth );
       if ( evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
+        LOG.debug( AuthTest.MARK + "Action not matched: " + action );
         continue;
       }
       //YE TODO: special case for ec2:address with IP range.
       if ( !evaluatePatterns( auth.getResources( ), auth.isNotResource( ), resource ) ) {
+        LOG.debug( AuthTest.MARK + "Resource not matched: " + resource );
         continue;
       }
       if ( !evaluateConditions( auth.getConditions( ), action, auth.getType( ), keyEval, contractEval ) ) {
+        LOG.debug( AuthTest.MARK + "condition not matched" );
         continue;
       }
       if ( auth.getEffect( ) == EffectType.Deny ) {
