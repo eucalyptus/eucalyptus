@@ -71,7 +71,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     boolean allowed = false;
     for ( Authorization auth : authorizations ) {
       LOG.debug( AuthTest.MARK + "Processing authorization: " + auth );
-      if ( evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
+      if ( !evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
         LOG.debug( AuthTest.MARK + "Action not matched: " + action );
         continue;
       }
@@ -85,7 +85,7 @@ public class PolicyEngineImpl implements PolicyEngine {
         continue;
       }
       if ( auth.getEffect( ) == EffectType.Deny ) {
-        LOG.debug( AuthTest.MARK + "--Explicit deny." );
+        LOG.debug( AuthTest.MARK + "Explicit deny." );
         // Explicit deny
         throw new AuthException( AuthException.ACCESS_DENIED );
       } else {
