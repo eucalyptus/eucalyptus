@@ -66,7 +66,7 @@ package com.eucalyptus.component;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.concurrent.AbstractListenableFuture;
 
-public abstract class ResourceStateLookup extends AbstractListenableFuture<Integer> {
+public abstract class ResourceStateLookup<T extends Number> extends AbstractListenableFuture<T> {
   @Override
-  public abstract Integer get( ) throws InterruptedException, ExecutionException;
+  public abstract T get( ) throws InterruptedException, ExecutionException;
 }
