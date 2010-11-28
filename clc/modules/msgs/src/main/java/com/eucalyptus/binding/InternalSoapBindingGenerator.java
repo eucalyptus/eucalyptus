@@ -93,13 +93,13 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     this.out.write( "</binding>" );
     this.out.flush( );
     this.out.close( );
-    try {
-      XMLSerializer xmlSerializer = new XMLSerializer();  
-      JSON json = xmlSerializer.readFromFile( this.outFile );  
-      System.out.println( json.toString(2) );
-    } catch ( Throwable ex ) {
-      LOG.error( ex , ex );
-    }    
+//    try {
+//      XMLSerializer xmlSerializer = new XMLSerializer();  
+//      JSON json = xmlSerializer.readFromFile( this.outFile );  
+//      System.out.println( json.toString(2) );
+//    } catch ( Throwable ex ) {
+//      LOG.error( ex , ex );
+//    }    
   }
   
   public TypeBinding getTypeBinding( Field field ) {
@@ -156,7 +156,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     
     public String process( ) {
       if( this.type.getCanonicalName( ) == null ) {
-        new RuntimeException( "" + this.type ).printStackTrace( );
+        new RuntimeException( "Ignoring anonymous class: " + this.type ).printStackTrace( );
       } else {
         this.elem( Elem.mapping );
         if ( this.abs ) {
