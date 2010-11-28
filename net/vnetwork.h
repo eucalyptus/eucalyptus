@@ -84,6 +84,7 @@ typedef struct netEntry_t {
 typedef struct userEntry_t {
   char netName[32];
   char userName[32];
+  char uuid[48];
 } userEntry;
 
 typedef struct networkEntry_t {
@@ -136,7 +137,7 @@ typedef struct vnetConfig_t {
 enum {NC, CC, CLC};
 void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp);
 
-int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
+int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
 int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx);
 int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
@@ -155,7 +156,7 @@ int vnetCountLocalIP(vnetConfig *vnetconfig);
 int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts);
 int vnetKickDHCP(vnetConfig *vnetconfig);
 
-int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network);
+int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *network);
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
 
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen);
@@ -190,7 +191,7 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
 int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
 
 // linux managed mode driver
-int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
+int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
 
 // helper functions

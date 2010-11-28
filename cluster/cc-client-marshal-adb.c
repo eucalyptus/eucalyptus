@@ -627,14 +627,16 @@ int cc_describePublicAddresses(axutil_env_t *env, axis2_stub_t *stub) {
     return(1);
   }
   snrt = adb_DescribePublicAddressesResponse_get_DescribePublicAddressesResponse(output, env);
-  len = adb_describePublicAddressesResponseType_sizeof_sourceAddresses(snrt, env);
+  len = adb_describePublicAddressesResponseType_sizeof_addresses(snrt, env);
   for (i=0; i<len; i++) {
     char *ip;
     char *dstip;
     char *uuid;
-    ip = adb_describePublicAddressesResponseType_get_sourceAddresses_at(snrt, env, i);
-    dstip = adb_describePublicAddressesResponseType_get_destAddresses_at(snrt, env, i);
-    uuid = adb_describePublicAddressesResponseType_get_uuids_at(snrt, env, i);
+    adb_publicAddressType_t *addr;
+    addr = adb_describePublicAddressesResponseType_get_addresses_at(snrt, env, i);
+    ip = adb_publicAddressType_get_sourceAddress(addr, env);
+    dstip = adb_publicAddressType_get_destAddress(addr, env);
+    uuid = adb_publicAddressType_get_uuid(addr, env);
 
     printf("UUID: %s IP: %s ALLOC: %s\n", uuid, ip, dstip);
   }
@@ -678,6 +680,7 @@ int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_
 
   adb_startNetworkType_set_vlan(sn, env, vlan);
   adb_startNetworkType_set_netName(sn, env, netName);
+  adb_startNetworkType_set_uuid(sn, env, "the-uuid");
   
   for (i=0; i<ccsLen; i++) {
     printf("adding %s\n", ccs[i]);
@@ -757,7 +760,7 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
     for (i=0; i<numnets; i++) {
       adb_networkType_t *nt;
       nt = adb_describeNetworksResponseType_get_activeNetworks_at(snrt, env, i);
-      printf("\tvlan: %d netName: %s userName: %s\n", adb_networkType_get_vlan(nt, env), adb_networkType_get_netName(nt, env), adb_networkType_get_userName(nt, env));
+      printf("\tvlan: %d uuid: %s nnetName: %s userName: %s\n", adb_networkType_get_vlan(nt, env), adb_networkType_get_uuid(nt, env), adb_networkType_get_netName(nt, env), adb_networkType_get_userName(nt, env));
       numaddrs = adb_networkType_sizeof_activeAddrs(nt, env);
       printf("\tnumber of active addrs: %d - ", numaddrs);
       for (j=0; j<numaddrs; j++) {
