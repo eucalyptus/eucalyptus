@@ -148,11 +148,19 @@ public class UserEntity extends AbstractPersistent implements User, Serializable
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
     sb.append( "enabled=" ).append( this.isEnabled( ) ).append( ", " );
-    sb.append( "regStat=").append( this.getRegistrationStatus( ) ).append( ", " );
-    sb.append( "password=").append( this.getPassword( ) ).append( ", " );
-    sb.append( "passwordExpires=").append( this.getPasswordExpires( ) ).append( ", " );
-    sb.append( "token=").append( this.getToken( ) ).append( ", " );
-    sb.append( "confirmationCode=").append( this.getConfirmationCode( ) );
+    sb.append( "regStat=" ).append( this.getRegistrationStatus( ) ).append( ", " );
+    sb.append( "password=" ).append( this.getPassword( ) ).append( ", " );
+    sb.append( "passwordExpires=" ).append( this.getPasswordExpires( ) ).append( ", " );
+    sb.append( "token=" ).append( this.getToken( ) ).append( ", " );
+    sb.append( "confirmationCode=" ).append( this.getConfirmationCode( ) ).append( ", " );
+    sb.append( "info=" ).append( this.getInfoMap( ) ).append( ", " );
+    sb.append( "keys=" ).append( this.keys ).append( ", " ).append( ", " );
+    sb.append( "certificates=" ).append( this.certificates ).append( ", " );
+    sb.append( "groups=[" );
+    for ( GroupEntity g : this.groups ) {
+      sb.append( g.getName( ) ).append( ' ' );
+    }
+    sb.append( ']' );
     sb.append( ")" );
     return sb.toString( );
   }

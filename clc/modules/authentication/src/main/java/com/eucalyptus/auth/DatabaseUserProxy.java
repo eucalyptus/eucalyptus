@@ -7,6 +7,7 @@ import java.util.Map;
 import javax.persistence.EntityManager;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.AccountEntity;
+import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
@@ -451,7 +452,17 @@ public class DatabaseUserProxy implements User {
   
   @Override
   public String toString( ) {
-    return this.delegate.toString( );
+    final StringBuilder sb = new StringBuilder( );
+    try {
+      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) throws Throwable {
+          sb.append( t.toString( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
+    }
+    return sb.toString( );
   }
 
   @Override

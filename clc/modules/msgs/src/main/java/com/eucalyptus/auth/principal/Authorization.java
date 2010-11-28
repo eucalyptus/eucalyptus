@@ -2,6 +2,7 @@ package com.eucalyptus.auth.principal;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author decker
@@ -16,16 +17,16 @@ public interface Authorization extends Serializable {
   }
   
   public EffectType getEffect( );
-  
-  public String getActionPattern( );
-  
-  public String getResourceType( );
-  
-  public String getResourcePattern( );
+ 
+  public String getType( );
   
   public Boolean isNotAction( );
   
+  public Set<String> getActions( );
+  
   public Boolean isNotResource( );
+  
+  public Set<String> getResources( );
   
   public List<? extends Condition> getConditions( );
   

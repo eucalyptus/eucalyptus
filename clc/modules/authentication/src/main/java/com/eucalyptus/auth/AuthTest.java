@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
-import com.eucalyptus.auth.policy.ContextUtils;
-import com.eucalyptus.auth.policy.ContextUtils.ContextAdaptor;
+import com.eucalyptus.auth.policy.RequestContext;
+import com.eucalyptus.auth.policy.RequestContext.ContextAdaptor;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
@@ -166,7 +166,7 @@ public class AuthTest {
     Policies.attachGroupPolicy( policy, "sales", "test" );
 
     final User user = Users.lookupUserByName( "tom", "test" );
-    ContextUtils.setAdaptor( new ContextAdaptor( ) {
+    RequestContext.setAdaptor( new ContextAdaptor( ) {
 
       @Override
       public User getRequestUser( ) {

@@ -1,6 +1,7 @@
 package com.eucalyptus.auth.policy;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,6 +23,7 @@ import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 /**
@@ -48,6 +50,14 @@ public class PolicyParser {
   public PolicyParser( ) {
   }
   
+  /**
+   * Parse the input policy text and returns an PolicyEntity object that
+   * represents the policy internally.
+   * 
+   * @param policy The input policy text.
+   * @return The parsed the policy entity.
+   * @throws PolicyException for policy syntax error.
+   */
   public PolicyEntity parse( String policy ) throws PolicyException {
     if ( policy == null ) {
       throw new PolicyException( PolicyException.EMPTY_POLICY );
@@ -58,6 +68,7 @@ public class PolicyParser {
     try {
       JSONObject policyJsonObj = JSONObject.fromObject( policy );
       String version = JsonUtils.getByType( String.class, policyJsonObj, PolicySpecConstants.VERSION );
+      // Policy statements
       List<StatementEntity> statements = parseStatements( policyJsonObj );
       PolicyEntity policyEntity = new PolicyEntity( version, policy, statements );
       return policyEntity;
@@ -67,6 +78,13 @@ public class PolicyParser {
     }
   }
   
+  /**
+   * Parse all statements.
+   * 
+   * @param policy Input policy text.
+   * @return A list of statement entities from the input policy.
+   * @throws JSONException for syntax error.
+   */
   private List<StatementEntity> parseStatements( JSONObject policy ) throws JSONException {
     List<JSONObject> objs = JsonUtils.getArrayByType( JSONObject.class, policy, PolicySpecConstants.STATEMENT );
     List<StatementEntity> statements = Lists.newArrayList( );
@@ -76,54 +94,134 @@ public class PolicyParser {
     return statements;
   }
   
+  /**
+   * Parse one statement. A statement is internally represented by a list of authorizations
+   * and a list of conditions. The action list and the resource list of the statement are
+   * parsed into authorizations (which action is allowed on which resource). The condition
+   * block is translated into conditions (keys, values and their relationships).
+   * 
+   * @param statement The JSON object of the statement
+   * @return The parsed statement entity
+   * @throws JSONException for syntax error
+   */
   private StatementEntity parseStatement( JSONObject statement ) throws JSONException {
+    // statement ID
     String sid = JsonUtils.getByType( String.class, statement, PolicySpecConstants.SID );
-
+    // effect
     JsonUtils.checkRequired( statement, PolicySpecConstants.EFFECT );
     String effect = JsonUtils.getByType( String.class, statement, PolicySpecConstants.EFFECT );
     checkEffect( effect );
-
+    // authorizations: action + resource
     List<AuthorizationEntity> authorizations = parseAuthorizations( statement, effect );
+    // conditions
     List<ConditionEntity> conditions = parseConditions( statement, effect );
-    
+    // Construct the statement: a list of authorizations and a list of conditions
     StatementEntity statementEntity = new StatementEntity( sid );
     statementEntity.setAuthorizations( authorizations );
     statementEntity.setConditions( conditions );
     return statementEntity;
   }
-  
+
+  /**
+   * Parse the authorization part of a statement.
+   * 
+   * @param statement The input statement in JSON object.
+   * @param effect The effect of the statement
+   * @return A list of authorization entities.
+   * @throws JSONException for syntax error.
+   */
   private List<AuthorizationEntity> parseAuthorizations( JSONObject statement, String effect ) throws JSONException {
+    // actions
     String actionElement = JsonUtils.checkBinaryOption( statement, PolicySpecConstants.ACTION, PolicySpecConstants.NOTACTION );
     List<String> actions = JsonUtils.parseStringOrStringList( statement, actionElement );
-    if ( EffectType.Limit.name( ).equals( effect ) && PolicySpecConstants.NOTACTION.equals( actionElement ) ) {
-      throw new JSONException( "Quota statement does not allow NotAction" );
+    if ( actions.size( ) < 1 ) {
+      throw new JSONException( "Empty action values" );
     }
-
+    // resources
     String resourceElement = JsonUtils.checkBinaryOption( statement, PolicySpecConstants.RESOURCE, PolicySpecConstants.NOTRESOURCE );
     List<String> resources = JsonUtils.parseStringOrStringList( statement, resourceElement );
-    if ( EffectType.Limit.name( ).equals( effect ) && PolicySpecConstants.NOTRESOURCE.equals( resourceElement ) ) {
-      throw new JSONException( "Quota statement does not allow NotResource" );
+    if ( resources.size( ) < 1 ) {
+      throw new JSONException( "Empty resource values" );
     }
-    
-    List<AuthorizationEntity> results = Lists.newArrayList( );
+    // decompose actions and resources and re-combine them into a list of authorizations
+    return decomposeStatement( effect, actionElement, actions, resourceElement, resources );
+  }
+  
+  /**
+   * The algorithm of decomposing the actions and resources of a statement into authorizations:
+   * 1. Group actions into different vendors.
+   * 2. Group resources into different resource types.
+   * 3. Permute all combinations of action groups and resource groups, matching them by the same
+   *    vendors.
+   *    
+   * @param effect
+   * @param actionElement
+   * @param actions
+   * @param resourceElement
+   * @param resources
+   * @return
+   */
+  private List<AuthorizationEntity> decomposeStatement( String effect, String actionElement, List<String> actions, String resourceElement, List<String> resources ) {
+    // Group actions by vendor
+    Map<String, Set<String>> actionMap = Maps.newHashMap( );
     for ( String action : actions ) {
       action = action.toLowerCase( );
-      checkAction( action );
-      for ( String resource : resources ) {
-        String[] parsed = parseResourceArn( resource );
-        if ( actionMatchesResourceType( action, parsed[0] ) ) {
+      String vendor = checkAction( action );
+      addToSetMap( actionMap, vendor, action );
+    }
+    // Group resources by type
+    Map<String, Set<String>> resourceMap = Maps.newHashMap( );
+    for ( String resource : resources ) {
+      String[] parsed = parseResourceArn( resource );
+      addToSetMap( resourceMap, parsed[0], parsed[1] );
+    }
+    // Permute action and resource groups and construct authorizations.
+    List<AuthorizationEntity> results = Lists.newArrayList( );
+    for ( Map.Entry<String, Set<String>> actionSetEntry : actionMap.entrySet( ) ) {
+      String vendor = actionSetEntry.getKey( );
+      Set<String> actionSet = actionSetEntry.getValue( );
+      for ( Map.Entry<String, Set<String>> resourceSetEntry : resourceMap.entrySet( ) ) {
+        String type = resourceSetEntry.getKey( );
+        Set<String> resourceSet = resourceSetEntry.getValue( );
+        if ( PolicySpecConstants.ALL_ACTION.equals( vendor )
+            || PolicySpecConstants.ALL_RESOURCE.equals( type )
+            || type.startsWith( vendor ) ) {
           results.add( new AuthorizationEntity( EffectType.valueOf( effect ),
-                                                action,
-                                                Boolean.valueOf( PolicySpecConstants.NOTACTION.equals( actionElement ) ),
-                                                parsed[0], // resource type
-                                                parsed[1], // resource relative name/id
-                                                Boolean.valueOf( PolicySpecConstants.NOTRESOURCE.equals( resourceElement ) ) ) );
+              type,
+              actionSet,
+              Boolean.valueOf( PolicySpecConstants.NOTACTION.equals( actionElement ) ),
+              resourceSet,
+              Boolean.valueOf( PolicySpecConstants.NOTRESOURCE.equals( resourceElement ) ) ) );
         }
       }
     }
     return results;
   }
   
+  /**
+   * Add a value to a map of sets.
+   * 
+   * @param map
+   * @param key
+   * @param value
+   */
+  private void addToSetMap( Map<String, Set<String>> map, String key, String value ) {
+    Set<String> set = map.get( key );
+    if ( set == null ) {
+      set = Sets.newHashSet( );
+      map.put( key, set );
+    }
+    set.add( value );
+  }
+  
+  /**
+   * Parse the conditions of a statement
+   * 
+   * @param statement The JSON object of the statement
+   * @param effect The effect of the statement
+   * @return A list of parsed condition entity.
+   * @throws JSONException for syntax error.
+   */
   private List<ConditionEntity> parseConditions( JSONObject statement, String effect ) throws JSONException {
     JSONObject condsObj = JsonUtils.getByType( JSONObject.class, statement, PolicySpecConstants.CONDITION );
     boolean isQuota = EffectType.Limit.name( ).equals( effect );
@@ -145,38 +243,38 @@ public class PolicyParser {
     return results;
   }
 
-  private void checkAction( String action ) throws JSONException {
+  /**
+   * Check validity of the action value.
+   * 
+   * @param action The input action pattern.
+   * @return The vendor of the action.
+   * @throws JSONException for any error
+   */
+  private String checkAction( String action ) throws JSONException {
     Matcher matcher = PolicySpecConstants.ACTION_PATTERN.matcher( action );
     if ( !matcher.matches( ) ) {
       throw new JSONException( "'" + action + "' is not a valid action" );
     }
     if ( PolicySpecConstants.ALL_ACTION.equals( action ) ) {
-      return;
+      return PolicySpecConstants.ALL_ACTION;
     }
-    String prefix = matcher.group( 1 );
-    String pattern = matcher.group( 2 );
+    String prefix = matcher.group( 1 ); // vendor
+    String pattern = matcher.group( 2 ); // action pattern
     for ( String defined : PolicySpecConstants.VENDOR_ACTIONS.get( prefix ) ) {
       if ( Pattern.matches( PatternUtils.toJavaPattern( pattern ), defined ) ) {
-        return;
+        return prefix;
       }
     }
     throw new JSONException( "'" + pattern + "' does not match any defined action" );
   }
   
-  private boolean actionMatchesResourceType( String action, String resourceType ) {
-    if ( PolicySpecConstants.ALL_ACTION.equals( action ) || PolicySpecConstants.ALL_RESOURCE.equals( resourceType ) ) {
-      return true;
-    }
-    String actionVendor = getVendor( action );
-    String resourceVendor = getVendor( resourceType );
-    return actionVendor.equals( resourceVendor );
-  }
-  
-  private String getVendor( String name ) {
-    int colon = name.indexOf( ':' );
-    return name.substring( 0, colon );
-  }
-  
+  /**
+   * Parse an ARN.
+   * 
+   * @param resource The resource pattern string.
+   * @return The resource type and the relative ID of the resource.
+   * @throws JSONException for syntax error
+   */
   private String[] parseResourceArn( String resource ) throws JSONException {
     String[] parsed = new String[2];
     Matcher matcher = PolicySpecConstants.ARN_PATTERN.matcher( resource );
@@ -198,11 +296,13 @@ public class PolicyParser {
       parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3 ) + ":";
       if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_OBJECT ) != null ) {
         parsed[0] += PolicySpecConstants.S3_RESOURCE_OBJECT;
+        parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_BUCKET ) +
+            matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_OBJECT );
       } else {
         parsed[0] += PolicySpecConstants.S3_RESOURCE_BUCKET;
+        parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_BUCKET );
       }
-      parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_BUCKET ) +
-          matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_OBJECT );
+
     } else {
       parsed[0] = PolicySpecConstants.ALL_RESOURCE;
       parsed[1] = PolicySpecConstants.ALL_RESOURCE;
@@ -210,6 +310,13 @@ public class PolicyParser {
     return parsed;
   }
   
+  /**
+   * Check the validity of a condition type.
+   * 
+   * @param type The condition type string.
+   * @return The class represents the condition type.
+   * @throws JSONException for syntax error.
+   */
   private Class<? extends ConditionOp> checkConditionType( String type ) throws JSONException {
     if ( type == null ) {
       throw new JSONException( "Empty condition type" );
@@ -221,6 +328,15 @@ public class PolicyParser {
     return typeClass;
   }
   
+  /**
+   * Check the condition key and value validity.
+   * 
+   * @param key Condition key.
+   * @param values Condition values.
+   * @param typeClass The condition type
+   * @param isQuota If it is for a quota statement
+   * @throws JSONException for syntax error.
+   */
   private void checkConditionKeyAndValues( String key, Set<String> values, Class<? extends ConditionOp> typeClass, boolean isQuota ) throws JSONException {
     if ( key == null ) {
       throw new JSONException( "Empty key name" );
@@ -242,6 +358,12 @@ public class PolicyParser {
     }
   }
   
+  /**
+   * Check the validity of effect.
+   * 
+   * @param effect
+   * @throws JSONException
+   */
   private void checkEffect( String effect ) throws JSONException {
     if ( effect == null ) {
       throw new JSONException( "Effect can not be empty" );

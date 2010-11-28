@@ -6,7 +6,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public class ContextUtils {
+public class RequestContext {
 
   public interface ContextAdaptor {
     
@@ -45,7 +45,7 @@ public class ContextUtils {
    * @param adaptor
    */
   public static void setAdaptor( ContextAdaptor adaptor ) {
-    ContextUtils.adaptor = adaptor;
+    RequestContext.adaptor = adaptor;
   }
 
   public static User getRequestUser( ) {

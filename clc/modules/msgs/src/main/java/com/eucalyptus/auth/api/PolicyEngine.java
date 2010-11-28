@@ -24,6 +24,6 @@ public interface PolicyEngine {
    * @param resourceClass The type class of the resource
    * @throws AuthException if allocation is denied.
    */
-  public <T> void evaluateQuota( Class<T> resourceClass ) throws AuthException;
+  public <T> void evaluateQuota( Class<T> resourceClass, String resourceName ) throws AuthException;
   
 }

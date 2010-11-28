@@ -19,7 +19,7 @@ public class PolicyTest {
     InputStream input = new FileInputStream( args[0] );
     
     String policy = readInputAsString( input );
-    
+        
     PolicyEntity parsed = PolicyParser.getInstance( ).parse( policy );
     
     printPolicy( parsed );
@@ -29,8 +29,9 @@ public class PolicyTest {
     ByteArrayOutputStream baos = new ByteArrayOutputStream( );
     
     byte[] buf = new byte[512];
-    while ( in.read( buf ) >= 0 ) {
-      baos.write( buf );
+    int nRead = 0;
+    while ( ( nRead = in.read( buf ) ) >= 0 ) {
+      baos.write( buf, 0, nRead );
     }
     
     return new String( baos.toByteArray( ), "UTF-8" );
@@ -41,11 +42,10 @@ public class PolicyTest {
     for ( StatementEntity statement : parsed.getStatements( ) ) {
       System.out.println( "Statement: " + statement.getSid( ) );
       for ( AuthorizationEntity auth : statement.getAuthorizations( ) ) {
-        System.out.println( "Authorization: " + auth.getEffect( ) + " " + auth.getActionPattern( ) + " " + auth.isNotAction( ) + " "
-                            + auth.getResourcePattern( ) + " " + auth.getResourceType( ) + " " + auth.isNotResource( ) );
+        System.out.println( "Authorization: " + auth );
       }
       for ( ConditionEntity cond : statement.getConditions( ) ) {
-        System.out.println( "Condition: " + cond.getType( ) + " " + cond.getKey( ) + " " + cond.getValues( ) );
+        System.out.println( "Condition: " + cond );
       }
     }
   }

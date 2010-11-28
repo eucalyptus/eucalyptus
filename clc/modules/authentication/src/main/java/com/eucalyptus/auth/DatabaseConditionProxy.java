@@ -56,12 +56,7 @@ public class DatabaseConditionProxy implements Condition {
     try {
       Transactions.one( ConditionEntity.class, this.delegate.getId( ), new Tx<ConditionEntity>( ) {
         public void fire( ConditionEntity t ) throws Throwable {
-          sb.append( "Condition(" );
-          sb.append( "ID=" ).append( t.getId( ) ).append( ", " );
-          sb.append( "type=" ).append( t.getType( ) ).append( ", " );
-          sb.append( "key=" ).append( t.getKey( ) ).append( ", " );
-          sb.append( "values=" ).append( t.getValues( ) );
-          sb.append( ")" );
+          sb.append( t.toString( ) );
         }
       } );
     } catch ( TransactionException e ) {

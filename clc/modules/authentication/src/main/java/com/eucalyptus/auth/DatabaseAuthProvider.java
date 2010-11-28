@@ -644,7 +644,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
               Restrictions.and(
-                  Restrictions.eq( "resourceType", resourceType ),
+                  Restrictions.eq( "type", resourceType ),
                   Restrictions.or( 
                       Restrictions.eq( "effect", EffectType.Allow ),
                       Restrictions.eq( "effect", EffectType.Deny ) ) ) )
@@ -683,7 +683,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
               Restrictions.and(
-                  Restrictions.eq( "resourceType", resourceType ),
+                  Restrictions.eq( "type", resourceType ),
                   Restrictions.or( 
                       Restrictions.eq( "effect", EffectType.Allow ),
                       Restrictions.eq( "effect", EffectType.Deny ) ) ) )
@@ -716,7 +716,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
               Restrictions.and(
-                  Restrictions.eq( "resourceType", resourceType ),
+                  Restrictions.eq( "type", resourceType ),
                   Restrictions.eq( "effect", EffectType.Limit ) ) )
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
@@ -753,7 +753,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
               Restrictions.and(
-                  Restrictions.eq( "resourceType", resourceType ),
+                  Restrictions.eq( "type", resourceType ),
                   Restrictions.eq( "effect", EffectType.Limit ) ) )
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )

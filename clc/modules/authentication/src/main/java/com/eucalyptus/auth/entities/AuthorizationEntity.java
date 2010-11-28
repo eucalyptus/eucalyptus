@@ -2,7 +2,10 @@ package com.eucalyptus.auth.entities;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -45,25 +48,27 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   @Column( name = "auth_auth_effect" )
   EffectType effect;
 
+  // The type of resource this authorization applies to, used to restrict search.
+  @Column( name = "auth_auth_type" )
+  String type;
+  
   // If action list is negated, i.e. NotAction
   @Column( name = "auth_auth_not_action" )
   Boolean notAction;
   
-  // The action pattern of the authorization
-  @Column( name = "auth_auth_action_pattern" )
-  String actionPattern;
-
-  // The resource type of the authorization
-  @Column( name = "auth_auth_resource_type" )
-  String resourceType;
+  @ElementCollection
+  @CollectionTable( name = "auth_auth_action_list" )
+  @Column( name = "auth_auth_actions" )
+  Set<String> actions;
   
   // If resource list is negated, i.e. NotResource
   @Column( name = "auth_auth_not_resource" )
   Boolean notResource;
   
-  // The resource pattern
-  @Column( name = "auth_auth_resource_pattern" )
-  String resourcePattern;
+  @ElementCollection
+  @CollectionTable( name = "auth_auth_resource_list" )
+  @Column( name = "auth_auth_resources" )
+  Set<String> resources;
 
   // The owning statement
   @ManyToOne
@@ -73,17 +78,17 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   public AuthorizationEntity( ) {
   }
 
-  public AuthorizationEntity( EffectType effect, String actionPattern, Boolean notAction, String resourceType, String resourcePattern, Boolean notResource ) {
+  public AuthorizationEntity( EffectType effect, String type, Set<String> actions, Boolean notAction, Set<String> resources, Boolean notResource ) {
     this.effect = effect;
-    this.actionPattern = actionPattern;
+    this.type = type;
     this.notAction = notAction;
-    this.resourceType = resourceType;
-    this.resourcePattern = resourcePattern;
+    this.actions = actions;
     this.notResource = notResource;
+    this.resources = resources;
   }
   
-  public AuthorizationEntity( String resourceType ) {
-    this.resourceType = resourceType;
+  public AuthorizationEntity( String type ) {
+    this.type = type;
   }
   
   @Override
@@ -91,12 +96,12 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
     StringBuilder sb = new StringBuilder( );
     sb.append( "Authorization(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
-    sb.append( "actionPattern=" ).append( this.actionPattern ).append( ", " );
-    sb.append( "notAction=" ).append( this.isNotAction( ) ).append( ", " );
     sb.append( "effect=" ).append( this.effect ).append( ", " );
-    sb.append( "resourceType=" ).append( this.resourceType ).append( ", " );
-    sb.append( "resourcePattern=" ).append( this.resourcePattern ).append( ", " );
-    sb.append( "notResource=" ).append( this.isNotResource( ) );
+    sb.append( "type=" ).append( this.type ).append( ", " );
+    sb.append( "notAction=" ).append( this.isNotAction( ) ).append( ", " );
+    sb.append( "actions=" ).append( this.getActions( ) ).append( ", " );
+    sb.append( "notResource=" ).append( this.isNotResource( ) ).append( ", " );
+    sb.append( "resources=" ).append( this.getResources( ) );
     sb.append( ")" );
     return sb.toString( );
   }
@@ -104,21 +109,6 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   @Override
   public EffectType getEffect( ) {
     return this.effect;
-  }
-
-  @Override
-  public String getActionPattern( ) {
-    return this.actionPattern;
-  }
-
-  @Override
-  public String getResourceType( ) {
-    return this.resourceType;
-  }
-
-  @Override
-  public String getResourcePattern( ) {
-    return this.resourcePattern;
   }
 
   @Override
@@ -138,6 +128,21 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   @Override
   public Boolean isNotResource( ) {
     return this.notResource;
+  }
+
+  @Override
+  public String getType( ) {
+    return this.type;
+  }
+
+  @Override
+  public Set<String> getActions( ) {
+    return this.actions;
+  }
+
+  @Override
+  public Set<String> getResources( ) {
+    return this.resources;
   }
   
 }

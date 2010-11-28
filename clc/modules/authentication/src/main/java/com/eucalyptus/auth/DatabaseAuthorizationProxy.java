@@ -1,6 +1,7 @@
 package com.eucalyptus.auth;
 
 import java.util.List;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
@@ -11,6 +12,7 @@ import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public class DatabaseAuthorizationProxy implements Authorization {
   
@@ -27,21 +29,6 @@ public class DatabaseAuthorizationProxy implements Authorization {
   @Override
   public EffectType getEffect( ) {
     return this.delegate.getEffect( );
-  }
-
-  @Override
-  public String getActionPattern( ) {
-    return this.delegate.getActionPattern( );
-  }
-
-  @Override
-  public String getResourceType( ) {
-    return this.delegate.getResourceType( );
-  }
-
-  @Override
-  public String getResourcePattern( ) {
-    return this.delegate.getResourcePattern( );
   }
 
   @Override
@@ -63,7 +50,17 @@ public class DatabaseAuthorizationProxy implements Authorization {
 
   @Override
   public String toString( ) {
-    return this.delegate.toString( );
+    final StringBuilder sb = new StringBuilder( );
+    try {
+      Transactions.one( AuthorizationEntity.class, this.delegate.getId( ), new Tx<AuthorizationEntity>( ) {
+        public void fire( AuthorizationEntity t ) throws Throwable {
+          sb.append( t.toString( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
+    }
+    return sb.toString( );
   }
 
   @Override
@@ -74,6 +71,41 @@ public class DatabaseAuthorizationProxy implements Authorization {
   @Override
   public Boolean isNotResource( ) {
     return this.delegate.isNotResource( );
+  }
+
+  @Override
+  public String getType( ) {
+    return this.delegate.getType( );
+  }
+
+  @Override
+  public Set<String> getActions( ) {
+    final Set<String> results = Sets.newHashSet( );
+    try {
+      Transactions.one( AuthorizationEntity.class, this.delegate.getId( ), new Tx<AuthorizationEntity>( ) {
+        public void fire( AuthorizationEntity t ) throws Throwable {
+          results.addAll( t.getActions( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getActions for " + this.delegate );
+    }
+    return results;
+  }
+
+  @Override
+  public Set<String> getResources( ) {
+    final Set<String> results = Sets.newHashSet( );
+    try {
+      Transactions.one( AuthorizationEntity.class, this.delegate.getId( ), new Tx<AuthorizationEntity>( ) {
+        public void fire( AuthorizationEntity t ) throws Throwable {
+          results.addAll( t.getResources( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getResources for " + this.delegate );
+    }
+    return results;
   }
   
 }

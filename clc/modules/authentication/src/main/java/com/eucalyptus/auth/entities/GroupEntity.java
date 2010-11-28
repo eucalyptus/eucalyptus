@@ -17,6 +17,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
+import org.codehaus.janino.Java.ThisReference;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.Account;
@@ -103,7 +104,19 @@ public class GroupEntity extends AbstractPersistent implements Group, Serializab
     sb.append( "Group(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
-    sb.append( "path=" ).append( this.getPath( ) );
+    sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
+    sb.append( "userGroup=" ).append( this.isUserGroup( ) ).append( ", " );
+    sb.append( "account=" ).append( this.getAccount( ).getName( ) ).append( ", " );
+    sb.append( "users=[");
+    for ( UserEntity u : this.getUsers( ) ) {
+      sb.append( u.getName( ) ).append( ' ' );
+    }
+    sb.append( ']' );
+    sb.append( "policies=[\n");
+    for ( PolicyEntity p : this.getPolicies( ) ) {
+      sb.append( p.getPolicyText( ) ).append( '\n' );
+    }
+    sb.append( ']' );
     sb.append( ")" );
     return sb.toString( );
   }

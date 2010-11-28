@@ -2,6 +2,7 @@ package com.eucalyptus.auth.policy;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
@@ -28,6 +29,12 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
+/**
+ * The implementation of policy engine, which evaluates a request against specified policies.
+ * 
+ * @author wenye
+ *
+ */
 public class PolicyEngineImpl implements PolicyEngine {
   
   private static final Logger LOG = Logger.getLogger( PolicyEngineImpl.class );
@@ -38,8 +45,8 @@ public class PolicyEngineImpl implements PolicyEngine {
   @Override
   public <T> Map<String, Contract> evaluateAuthorization( Class<T> resourceClass, String resourceName ) throws AuthException {
     try {
-      User requestUser = ContextUtils.getRequestUser( );
-      Class<? extends BaseMessage> requestMessageClass = ContextUtils.getRequestMessageClass( );
+      User requestUser = RequestContext.getRequestUser( );
+      Class<? extends BaseMessage> requestMessageClass = RequestContext.getRequestMessageClass( );
       String userId = requestUser.getUserId( );
       String accountId = requestUser.getAccount( ).getAccountId( );
       String resourceType = getResourceType( resourceClass );
@@ -64,14 +71,14 @@ public class PolicyEngineImpl implements PolicyEngine {
     boolean allowed = false;
     for ( Authorization auth : authorizations ) {
       LOG.debug( AuthTest.MARK + "Processing authorization: " + auth );
-      if ( !Pattern.matches( PatternUtils.toJavaPattern( auth.getActionPattern( ) ), action ) ) {
+      if ( evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
         continue;
       }
       //YE TODO: special case for ec2:address with IP range.
-      if ( !Pattern.matches( PatternUtils.toJavaPattern( auth.getResourcePattern( ) ), resource ) ) {
+      if ( !evaluatePatterns( auth.getResources( ), auth.isNotResource( ), resource ) ) {
         continue;
       }
-      if ( !evaluateConditions( auth.getConditions( ), action, auth.getResourceType( ), keyEval, contractEval ) ) {
+      if ( !evaluateConditions( auth.getConditions( ), action, auth.getType( ), keyEval, contractEval ) ) {
         continue;
       }
       if ( auth.getEffect( ) == EffectType.Deny ) {
@@ -88,6 +95,20 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
     LOG.debug( AuthTest.MARK + "Default deny." );
     throw new AuthException( AuthException.ACCESS_DENIED );
+  }
+  
+  private boolean evaluatePatterns( Set<String> patterns, boolean isNot, String instance ) {
+    boolean matched = false;
+    for ( String pattern : patterns ) {
+      if ( Pattern.matches( PatternUtils.toJavaPattern( pattern ), instance ) ) {
+        matched = true;
+        break;
+      }
+    }
+    if ( ( matched && !isNot ) || ( !matched && isNot ) ) {
+      return true;
+    }
+    return false;
   }
   
   private boolean evaluateConditions( List<? extends Condition> conditions, String action, String resourceType, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
@@ -141,13 +162,15 @@ public class PolicyEngineImpl implements PolicyEngine {
   }
 
   @Override
-  public <T> void evaluateQuota( Class<T> resourceClass ) throws AuthException {
+  public <T> void evaluateQuota( Class<T> resourceClass, String resourceName ) throws AuthException {
     try {
-      User requestUser = ContextUtils.getRequestUser( );
+      User requestUser = RequestContext.getRequestUser( );
+      Class<? extends BaseMessage> requestMessageClass = RequestContext.getRequestMessageClass( );
       String userId = requestUser.getUserId( );
       String accountId = requestUser.getAccount( ).getAccountId( );
       String resourceType = getResourceType( resourceClass );
-      Map<Class<? extends QuotaKey>, String> matchedQuotas = lookupMatchedQuotas( resourceType, userId, accountId );
+      String action = getAction( requestMessageClass );
+      Map<Class<? extends QuotaKey>, String> matchedQuotas = lookupMatchedQuotas( action, resourceType, resourceName, userId, accountId );
       processQuotas( matchedQuotas );
     } catch ( AuthException e ) {
       //throw by the policy engine implementation 
@@ -171,22 +194,28 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
   }
 
-  private Map<Class<? extends QuotaKey>, String> lookupMatchedQuotas( String resourceType, String userId, String accountId ) throws AuthException {
+  private Map<Class<? extends QuotaKey>, String> lookupMatchedQuotas( String action, String resourceType, String resourceName, String userId, String accountId ) throws AuthException {
     QuotaKeyEvaluator quotaEval = new QuotaKeyEvaluator( );
-    processQuotaAuthorizations( QuotaKeyEvaluator.Level.ACCOUNT, Policies.lookupAccountGlobalAuthorizations( resourceType, accountId ), quotaEval );
-    processQuotaAuthorizations( QuotaKeyEvaluator.Level.GROUP, Policies.lookupGroupQuotas( resourceType, userId ), quotaEval );
-    processQuotaAuthorizations( QuotaKeyEvaluator.Level.USER, Policies.lookupUserQuotas( resourceType, userId ), quotaEval );
+    processQuotaAuthorizations( QuotaKeyEvaluator.Level.ACCOUNT, Policies.lookupAccountGlobalAuthorizations( resourceType, accountId ), action, resourceName, quotaEval );
+    processQuotaAuthorizations( QuotaKeyEvaluator.Level.GROUP, Policies.lookupGroupQuotas( resourceType, userId ), action, resourceName, quotaEval );
+    processQuotaAuthorizations( QuotaKeyEvaluator.Level.USER, Policies.lookupUserQuotas( resourceType, userId ), action, resourceName, quotaEval );
     return quotaEval.getQuotas( );
   }
 
-  private void processQuotaAuthorizations( QuotaKeyEvaluator.Level level, List<? extends Authorization> auths, QuotaKeyEvaluator quotaEval ) throws AuthException {
+  private void processQuotaAuthorizations( QuotaKeyEvaluator.Level level, List<? extends Authorization> auths, String action, String resourceName, QuotaKeyEvaluator quotaEval ) throws AuthException {
     for ( Authorization auth : auths ) {
+      if ( !evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
+        continue;
+      }
+      if ( !evaluatePatterns( auth.getResources( ), auth.isNotResource( ), resourceName ) ) {
+        continue;
+      }
       for ( Condition cond : auth.getConditions( ) ) {
         Key key = Keys.getKeyInstance( Keys.KEY_MAP.get( cond.getKey( ) ) );
         if ( !( key instanceof QuotaKey ) ) {
           continue;
         }
-        if ( !key.canApply( null, auth.getResourceType( ) ) ) {
+        if ( !key.canApply( null, auth.getType( ) ) ) {
           continue;
         }
         quotaEval.addLevelQuota( level, ( ( QuotaKey ) key ).getClass( ), cond.getValues( ).toArray( new String[0] )[0] );

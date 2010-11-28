@@ -44,5 +44,12 @@
         "ec2:vmnumber":"10"
       }
     }
-  }]
+  },
+  {
+    "Sid":"55555",
+    "Effect":"Allow",
+    "Action":["s3:*", "ec2:*"],
+    "Resource":["arn:aws:ec2:::image/*", "arn:aws:s3:::*", "arn:aws:iam::1234567890:group/*"],
+  }
+  ]
 }

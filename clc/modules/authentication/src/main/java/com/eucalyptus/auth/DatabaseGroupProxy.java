@@ -148,17 +148,7 @@ public class DatabaseGroupProxy implements Group {
     try {
       Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) throws Throwable {
-          sb.append( "Group(" );
-          sb.append( "ID=" ).append( t.getId( ) ).append( ", " );
-          sb.append( "name=" ).append( t.getName( ) ).append( ", " );
-          sb.append( "path=" ).append( t.getPath( ) ).append( ", " );
-          sb.append( "users=" );
-          for ( UserEntity u : t.getUsers( ) ) {
-            sb.append( u.getName( ) );
-            sb.append( " " );
-          }
-          sb.append( ")" );
-
+          sb.append( t.toString( ) );
         }
       } );
     } catch ( TransactionException e ) {
