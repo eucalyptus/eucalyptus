@@ -68,6 +68,7 @@ import edu.ucsb.eucalyptus.msgs.*
 import com.eucalyptus.records.EventType;
 import org.apache.log4j.Logger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap
@@ -421,11 +422,29 @@ public class Network implements HasName<Network> {
     return this.getName().compareTo(that.getName());
   }
   
+  private List<String> trimmedIndexes( Collection<Integer> intList ) {
+    List<String> outList = [];
+    if( intList.size() < 5 ) {
+      outList.addAll( intList );
+    } else {
+      Integer last = intList.first();
+      intList.eachWithIndex{ it, i ->
+        if(intList.size()>i+1 && intList[i+1]>it+1) {
+          outList += (last!=it)?"${last}..${it}":"${last}";
+          last = intList[i+1];
+        } else if(i==intList.size()-1) {
+          outList += (last!=it)?"${last}..${it}":"${last}";
+        }
+      }
+    }
+    return outList;
+  }
+
   @Override
   public String toString( ) {
-    String out = "Network ${name} ${userName} ${networkName} ${uuid}";
-    out += "Network ${name} assigned=${LogUtil.rangedIntegerList( this.assignedNetworkIndexes )}\n";
-    out += "Network ${name} available=${LogUtil.rangedIntegerList( this.availableNetworkIndexes )}\n";
+    String out = "Network ${name} ${userName} ${networkName} ${uuid}\n";
+    out += "Network ${name} assigned=${trimmedIndexes( this.assignedNetworkIndexes ).toString( ).replaceAll("\\s","")}\n";
+    out += "Network ${name} available=${trimmedIndexes( this.availableNetworkIndexes ).toString( ).replaceAll("\\s","")}\n";
     this.clusterTokens.each{ out += "Network ${name} ${it}\n" };
     this.rules.each{ out += "Network ${name} ${it}\n" };
     return out;
