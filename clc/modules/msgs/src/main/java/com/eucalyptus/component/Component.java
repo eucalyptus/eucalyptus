@@ -524,7 +524,7 @@ public class Component implements ComponentInformation, HasName<Component> {
         try {
           c.runChecks( );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
+          LOG.debug( ex, ex );
         }
       }
     }
