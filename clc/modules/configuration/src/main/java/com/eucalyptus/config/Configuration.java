@@ -136,7 +136,11 @@ public class Configuration {
       } catch ( Exception ex ) {
         LOG.error( ex , ex );
       }
-      builder.getComponent( ).enableService( newComponent );
+      try {
+        builder.getComponent( ).enableService( newComponent );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       return true;
     } catch ( Throwable e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
