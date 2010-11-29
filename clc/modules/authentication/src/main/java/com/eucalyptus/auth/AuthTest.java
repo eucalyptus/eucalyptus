@@ -154,7 +154,7 @@ public class AuthTest {
         "'Statement':[{" +
           "'Effect':'Allow'," +
           "'Action':'ec2:RunInstances'," +
-          "'NotResource':'emi-1234*'," +
+          "'NotResource':'arn:aws:ec2:::image/emi-1234*'," +
           "'Condition':{" +
             "'DateLessThanEquals':{" +
               "'aws:currenttime':'2010-12-31'" +
