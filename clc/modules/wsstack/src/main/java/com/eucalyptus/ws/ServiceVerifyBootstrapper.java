@@ -13,7 +13,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Iterables;
 
-@Provides( com.eucalyptus.bootstrap.Component.any )
+@Provides( com.eucalyptus.bootstrap.Component.bootstrap )
 @RunDuring( Bootstrap.Stage.Final )
 public class ServiceVerifyBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceVerifyBootstrapper.class );
@@ -21,17 +21,15 @@ public class ServiceVerifyBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     LOG.info( LogUtil.header( "Components" ) );
-    requireComponent( Components.delegate.cluster, "Cluster Controller" );
-    requireComponent( Components.delegate.walrus, "Walrus" );
-    requireComponent( Components.delegate.storage, "Storage Controller" );
+//    requireComponent( Components.delegate.cluster, "Cluster Controller" );
+//    requireComponent( Components.delegate.walrus, "Walrus" );
+//    requireComponent( Components.delegate.storage, "Storage Controller" );
 
     LOG.info( LogUtil.header( "Component Configurations" ) );
     Iterables.all( Components.list( ), Components.componentPrinter( ) );
     
     LOG.info( LogUtil.subheader( "Service Dispatchers" ) );
     Iterables.all( ServiceDispatcher.values( ), Components.dispatcherPrinter( ) );
-
-    SystemClock.setupTimer( );
     return true;
   }
   

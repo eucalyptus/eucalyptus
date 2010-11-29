@@ -957,7 +957,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *uuid, char *netName, int vlan, char
     rc = vnetSetupTunnels(vnetconfig);
 
     brname = NULL;
-    rc = vnetStartNetwork(vnetconfig, vlan, ccMeta->userId, netName, &brname);
+    rc = vnetStartNetwork(vnetconfig, vlan, uuid, ccMeta->userId, netName, &brname);
     if (brname) free(brname);
 
     sem_mypost(VNET);
@@ -2937,7 +2937,7 @@ int restoreNetworkState() {
     if (vnetconfig->networks[i].active) {
       char *brname=NULL;
       logprintfl(EUCADEBUG, "restoreNetworkState(): found active network: %d\n", i);
-      rc = vnetStartNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName, &brname);
+      rc = vnetStartNetwork(vnetconfig, i, NULL, vnetconfig->users[i].userName, vnetconfig->users[i].netName, &brname);
       if (rc) {
         logprintfl(EUCADEBUG, "restoreNetworkState(): failed to reactivate network: %d", i);
       }

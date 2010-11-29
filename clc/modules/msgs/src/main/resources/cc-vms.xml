@@ -89,6 +89,9 @@
     <collection field="networkIndexList" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="networkIndexList" type="java.lang.String"/>
     </collection>
+    <collection field="uuids" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <value name="uuids" type="java.lang.String"/>
+    </collection>
     <value name="vlan" field="vlan" usage="required"/>
     <value name="userData" field="userData" usage="required"/>
     <value name="launchIndex" field="launchIndex" usage="required"/>

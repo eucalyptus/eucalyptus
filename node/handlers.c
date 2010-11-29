@@ -538,7 +538,7 @@ void *startup_thread (void * arg)
         return NULL;
     }
     
-    error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, &brname);
+    error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname);
     if ( error ) {
         logprintfl (EUCAFATAL, "start network failed for instance %s, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
