@@ -163,7 +163,7 @@ public class SystemBootstrapper {
     /** ASAP:FIXME:GRZE **/
     for( Component c : Components.list( ) ) {
       try {
-        Component.Transition.LOADING.apply( c );
+        Component.Transition.LOADING.transit( c );
       } catch ( Throwable ex ) {
         LOG.error( ex );
       }
@@ -189,9 +189,9 @@ public class SystemBootstrapper {
     /** ASAP:FIXME:GRZE **/
     for( Component c : Components.list( ) ) {
       if( Components.lookup( "eucalyptus" ).isLocal( ) && c.getPeer( ).isCloudLocal( ) ) {
-        Component.Transition.STARTING.apply( c );
+        Component.Transition.STARTING.transit( c );
       } else if( c.getPeer( ).isAlwaysLocal( ) ) {
-        Component.Transition.STARTING.apply( c );
+        Component.Transition.STARTING.transit( c );
       } 
     }
 //    SystemBootstrapper.printBanner( );

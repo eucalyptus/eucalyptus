@@ -119,14 +119,14 @@ public class Component implements ComponentInformation, HasName<Component> {
         @Override
         public void fire( Component t ) {
           try {
-            this.apply( t );
+            Transition.this.transit( t );
           } catch ( IllegalStateException ex ) {
             LOG.debug( ex );
           }
         }
       };
     }
-    public void apply( Component c ) {
+    public void transit( Component c ) {
       if ( c.isAvailableLocally( ) ) {
         try {
           c.stateMachine.transition( Transition.this );
