@@ -44,13 +44,8 @@ public class Debugging {
   }
   
   public static void logError( Logger logger, Throwable t, String message ) {
-    StringBuilder sb = new StringBuilder( );
-    sb.append( message );
-    Throwable current = t;
-    while ( current != null ) {
-      sb.append( "=>" ).append( t ).append( '@' ).append( getEucaStackTraceString( 0, t ) );
-      current = t.getCause( );
-    }
+    logger.error( t, t );
+    logger.debug( message + " with exception " + t + getEucaStackTraceString( 0, t ) );
   }
   
 }
