@@ -185,7 +185,7 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
     this.networkRules = networkRules;
   }
   public Network getVmNetwork( ) {
-    Network vmNetwork = new Network( this.getUserName( ), this.getDisplayName( ) );
+    Network vmNetwork = new Network( this.getUserName( ), this.getDisplayName( ), this.getId( ) );
     for ( NetworkRule networkRule : this.getNetworkRules( ) ) {
       PacketFilterRule pfrule = new PacketFilterRule( this.getUserName( ), this.getDisplayName( ), networkRule.getProtocol( ), networkRule.getLowPort( ), networkRule.getHighPort( ) );
       for ( IpRange cidr : networkRule.getIpRanges( ) )
