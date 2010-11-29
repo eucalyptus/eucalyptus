@@ -164,7 +164,7 @@ public class AuthTest {
         "{" +
           "'Effect':'Deny'," +
           "'Action':'ec2:RunInstances'," +
-          "'NotResource':'arn:aws:ec2:::image/emi-12345678'," +
+          "'Resource':'arn:aws:ec2:::image/emi-12345678'," +
         "}]" +
       "}";
     
