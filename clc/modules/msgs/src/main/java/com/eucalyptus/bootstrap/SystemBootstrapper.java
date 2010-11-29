@@ -94,10 +94,8 @@ import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
  * Java entry point from eucalyptus-bootstrap
  */
 public class SystemBootstrapper {
-  /**
-   * 
-   */
   private static final String SEP = " -- ";
+  static { System.setProperty( "euca.log.level", "TRACE" ); }
 
   private static Logger               LOG          = Logger.getLogger( SystemBootstrapper.class );
   
@@ -124,11 +122,6 @@ public class SystemBootstrapper {
       boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
       boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
-      Enumeration<Appender> appenderEnum =( ( AppenderAttachable ) Logger.getRootLogger( ) ).getAllAppenders( );
-      List<Appender> appenders = Collections.list( appenderEnum );
-      for( Appender a : appenders ) {
-        System.out.println( "APPENDER: " + a.getName( ) + " layout=" + a.getLayout( ).getClass( ) );
-      }
       Security.addProvider( new BouncyCastleProvider( ) );
       LogLevels.DEBUG = doDebug;
       LogLevels.TRACE = doDebug;
