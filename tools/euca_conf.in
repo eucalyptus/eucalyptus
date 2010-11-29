@@ -231,9 +231,9 @@ check_ws() {
 			awk -F">" '/>/{print "   "$2}')
 		eval "$2=\"${E}\""
 	else
-		if [ "$VERBOSE" = "Y" ]; then
+#		if [ "$VERBOSE" = "Y" ]; then
 			echo "$WGET -q -T 10 -t 10 -w 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
-		fi
+#		fi
 		soap_error="`$WGET -q -T 10 -t 10 -w 1 -O - \"$URL\"`"
 		ret="$?"
 		soap_error="`echo $soap_error |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'`"
