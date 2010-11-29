@@ -164,7 +164,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     this.stateMachine = new ComponentState( this );
   }
   
-  protected Service getLocalService( ) {
+  public Service getLocalService( ) {
     return this.localService.get( );
   }
   

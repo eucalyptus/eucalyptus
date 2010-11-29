@@ -100,11 +100,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean start( ) throws Exception {
-    try {
-      BlockStorage.configure();
-    } catch (EucalyptusCloudException e) {
-      LOG.error(e);
-    }
+    BlockStorage.configure();
 		return true;
 	}
 
