@@ -66,6 +66,11 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger LOG = Logger.getLogger( SystemClock.class );
@@ -120,4 +125,45 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     System.exit( -2 );
   }
   
+  @Provides( Component.bootstrap )
+  @RunDuring( Bootstrap.Stage.Final )
+  public static class SystemClockBootstrapper extends Bootstrapper {
+
+    @Override
+    public boolean load( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean start( ) throws Exception {
+      setupTimer( );
+      return true;
+    }
+
+    @Override
+    public boolean enable( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean stop( ) throws Exception {
+      //ASAP:FIXME:GRZE restarting the timer
+      return true;
+    }
+
+    @Override
+    public void destroy( ) throws Exception {}
+
+    @Override
+    public boolean disable( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean check( ) throws Exception {
+      return true;
+    }
+    
+  }
+
 }
