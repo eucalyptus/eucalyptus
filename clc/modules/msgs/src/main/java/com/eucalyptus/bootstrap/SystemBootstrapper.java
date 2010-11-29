@@ -124,14 +124,14 @@ public class SystemBootstrapper {
       boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
       boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
-      Security.addProvider( new BouncyCastleProvider( ) );
-      LogLevels.DEBUG = doDebug;
-      LogLevels.TRACE = doDebug;
       Enumeration<Appender> appenderEnum =( ( AppenderAttachable ) Logger.getRootLogger( ) ).getAllAppenders( );
       List<Appender> appenders = Collections.list( appenderEnum );
       for( Appender a : appenders ) {
         System.out.println( "APPENDER: " + a.getName( ) + " layout=" + a.getLayout( ).getClass( ) );
       }
+      Security.addProvider( new BouncyCastleProvider( ) );
+      LogLevels.DEBUG = doDebug;
+      LogLevels.TRACE = doDebug;
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
       t.printStackTrace( );
