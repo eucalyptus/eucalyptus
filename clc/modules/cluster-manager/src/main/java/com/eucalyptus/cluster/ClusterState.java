@@ -179,8 +179,8 @@ public class ClusterState {
     this.clusterName = clusterName;
   }
   
-  public NetworkToken extantAllocation( String userName, String networkName, int vlan ) throws NetworkAlreadyExistsException {
-    NetworkToken netToken = new NetworkToken( this.clusterName, userName, networkName, vlan );
+  public NetworkToken extantAllocation( String userName, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
+    NetworkToken netToken = new NetworkToken( this.clusterName, userName, networkName, networkUuid, vlan );
     if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException( );
     }

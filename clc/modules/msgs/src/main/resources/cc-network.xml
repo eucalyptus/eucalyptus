@@ -50,7 +50,7 @@
 
   <mapping name="StartNetwork" class="edu.ucsb.eucalyptus.msgs.StartNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="uuid" field="uuid" usage="required" />
+    <value name="uuid" field="networkUuid" usage="required" />
     <value name="vlan" field="vlan" usage="required" />
     <value name="netName" field="netName" usage="required" />
     <value name="nameserver" field="nameserver" usage="optional" />

@@ -66,7 +66,7 @@ package edu.ucsb.eucalyptus.msgs
 import java.util.List;
 
 public class StartNetworkType extends EucalyptusMessage {
-  String uuid;
+  String networkUuid;
   int vlan;
   String netName;
   String nameserver;
@@ -75,9 +75,10 @@ public class StartNetworkType extends EucalyptusMessage {
 
   def StartNetworkType(){}
 
-  def StartNetworkType(final String userId, final Integer vlan, final String netName)
+  def StartNetworkType(final String userId, final Integer vlan, final String netName, final String networkUuid)
   {
     super( userId );
+    this.networkUuid = networkUuid;
     this.vlan = vlan;
     this.netName = netName;
   }

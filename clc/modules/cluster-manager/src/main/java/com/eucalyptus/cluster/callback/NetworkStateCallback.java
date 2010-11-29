@@ -50,11 +50,11 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       try {
         net = Networks.getInstance( ).lookup( netInfo.getUserName( ) + "-" + netInfo.getNetworkName( ) );
       } catch ( NoSuchElementException e1 ) {
-        net = new Network( netInfo.getUserName( ), netInfo.getNetworkName( ) );
+        net = new Network( netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getUuid( ) );
       }
       active.add( net.getName( ) );
       if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-        NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getVlan( ) );
+        NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
         netToken = net.addTokenIfAbsent( netToken );
       }
     }

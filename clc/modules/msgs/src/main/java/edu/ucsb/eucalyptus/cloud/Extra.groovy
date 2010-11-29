@@ -282,6 +282,7 @@ public class VmKeyInfo {
 
 public class Network implements HasName<Network> {
   private static Logger LOG = Logger.getLogger( Network.class );
+  String uuid;
   String name;
   String networkName;
   String userName;
@@ -295,7 +296,7 @@ public class Network implements HasName<Network> {
   def Network() {
   }
   
-  def Network(final String userName, final String networkName) {
+  def Network(final String userName, final String networkName, final String uuid) {
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
@@ -334,14 +335,14 @@ public class Network implements HasName<Network> {
   }
   
   public NetworkToken getClusterToken( String cluster ) {
-    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan.get() ) );
+    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.uuid, this.vlan.get() ) );
     if( token == null ) token = this.clusterTokens.get( cluster );
     return token;
   }
   
   public NetworkToken createNetworkToken( String cluster ) {
     getClusterToken( cluster );
-    return new NetworkToken( cluster, this.userName, this.networkName, this.vlan.get() );
+    return new NetworkToken( cluster, this.userName, this.networkName, this.uuid, this.vlan.get() );
   }
   
   public void trim( Integer max ) {
@@ -432,7 +433,7 @@ public class Network implements HasName<Network> {
 }
 
 public class NetworkToken implements Comparable {
-  
+  String networkUuid;
   String networkName;
   String cluster;
   Integer vlan;
@@ -440,8 +441,9 @@ public class NetworkToken implements Comparable {
   String userName;
   String name;
   
-  def NetworkToken(final String cluster, final String userName, final String networkName, final int vlan ) {
+  def NetworkToken(final String cluster, final String userName, final String networkName, final String networkUuid, final int vlan ) {
     this.networkName = networkName;
+    this.networkUuid = networkUuid; 
     this.cluster = cluster;
     this.vlan = vlan;
     this.userName = userName;
@@ -481,7 +483,7 @@ public class NetworkToken implements Comparable {
   
   @Override
   public String toString( ) {
-    return "NetworkToken ${cluster} ${name} ${vlan} ${indexes}";
+    return "NetworkToken ${cluster} ${name} ${vlan} ${networkUuid} ${indexes}";
   }
 }
 
