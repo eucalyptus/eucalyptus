@@ -93,38 +93,42 @@ public class EucaLayout extends PatternLayout {
   
   @Override
   public String format( LoggingEvent event ) {
-    if( event.getThrowableInformation( ) != null ) {
-      Throwable t = event.getThrowableInformation( ).getThrowable( );
-      if( t != null && t instanceof GenericJDBCException ) {
+    try {
+      if( event.getThrowableInformation( ) != null ) {
+        Throwable t = event.getThrowableInformation( ).getThrowable( );
+        if( t != null && t instanceof GenericJDBCException ) {
+          return "";
+        }
+      } else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
         return "";
       }
-    } else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
-      return "";
-    }
-    String renderedMessage = event.getRenderedMessage( );
-    if(renderedMessage != null) {
-	String[] messages = renderedMessage.split( "\n" );
-    StringBuffer sb = new StringBuffer( );
-    boolean con = false;
-    for( int i = 0; i < messages.length; i++ ) {
+      String renderedMessage = event.getRenderedMessage( );
+      if(renderedMessage != null) {
+String[] messages = renderedMessage.split( "\n" );
+      StringBuffer sb = new StringBuffer( );
+      boolean con = false;
+      for( int i = 0; i < messages.length; i++ ) {
 //      String message= messages[i];
-      String substring= messages[i];
+        String substring= messages[i];
 //      while ( message.length( ) > 0 ) {
 //        int rb = LINE_BYTES>message.length( )?message.length( ):LINE_BYTES;
 //        String substring = message.substring( 0, rb );
 //        message = message.substring( rb );
-        LoggingEvent n = new LoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ), 
-                                           event.getTimeStamp( ), event.getLevel( ), 
-                                           substring, event.getThreadName( ), 
-                                           event.getThrowableInformation( ), null, null, null );
-        sb.append( (!con)?super.format( n ):continuation.format( n ) );
-        if(continuation==null) {
-          continuation = new PatternLayout(sb.toString( ).split( "\\|" )[0].replaceAll( ".", " " )+"| "+CONTINUATION);
-        }
-        con = true;        
+          LoggingEvent n = new LoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ), 
+                                             event.getTimeStamp( ), event.getLevel( ), 
+                                             substring, event.getThreadName( ), 
+                                             event.getThrowableInformation( ), null, null, null );
+          sb.append( (!con)?super.format( n ):continuation.format( n ) );
+          if(continuation==null) {
+            continuation = new PatternLayout(sb.toString( ).split( "\\|" )[0].replaceAll( ".", " " )+"| "+CONTINUATION);
+          }
+          con = true;        
 //      }      
-    }    
-    return sb.toString( );
+      }    
+      return sb.toString( );
+      }
+    } catch ( Exception ex ) {
+      ex.printStackTrace( );
     }
     return null;
   }
