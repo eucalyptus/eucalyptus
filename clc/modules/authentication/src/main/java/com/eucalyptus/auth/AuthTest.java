@@ -154,12 +154,17 @@ public class AuthTest {
         "'Statement':[{" +
           "'Effect':'Allow'," +
           "'Action':'ec2:RunInstances'," +
-          "'NotResource':'arn:aws:ec2:::image/emi-1234*'," +
+          "'Resource':'arn:aws:ec2:::image/emi-1234*'," +
           "'Condition':{" +
             "'DateLessThanEquals':{" +
               "'aws:currenttime':'2010-12-31'" +
             "}" +
           "}" +
+        "}," +
+        "{" +
+          "'Effect':'Deny'," +
+          "'Action':'ec2:RunInstances'," +
+          "'NotResource':'arn:aws:ec2:::image/emi-12345678'," +
         "}]" +
       "}";
     
