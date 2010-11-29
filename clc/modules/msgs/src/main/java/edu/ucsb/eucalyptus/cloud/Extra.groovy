@@ -297,6 +297,7 @@ public class Network implements HasName<Network> {
   }
   
   def Network(final String userName, final String networkName, final String uuid) {
+    this.uuid = uuid;
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
@@ -422,10 +423,11 @@ public class Network implements HasName<Network> {
   
   @Override
   public String toString( ) {
-    String out = "Network ${name} ${userName} ${networkName} assigned=${LogUtil.rangedIntegerList( this.assignedNetworkIndexes )}\n";
-    out += "Network ${name} ${userName} ${networkName} available=${LogUtil.rangedIntegerList( this.availableNetworkIndexes )}\n";
-    this.clusterTokens.each{ out += "Network ${name} ${userName} ${networkName} ${it}\n" };
-    this.rules.each{ out += "Network ${name} ${userName} ${networkName} ${it}\n" };
+    String out = "Network ${name} ${userName} ${networkName} ${uuid}";
+    out += "Network ${name} assigned=${LogUtil.rangedIntegerList( this.assignedNetworkIndexes )}\n";
+    out += "Network ${name} available=${LogUtil.rangedIntegerList( this.availableNetworkIndexes )}\n";
+    this.clusterTokens.each{ out += "Network ${name} ${it}\n" };
+    this.rules.each{ out += "Network ${name} ${it}\n" };
     return out;
   }
   
