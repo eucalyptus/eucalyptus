@@ -66,7 +66,11 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.security.Security;
+import java.util.Enumeration;
+import java.util.List;
+import org.apache.log4j.Appender;
 import org.apache.log4j.Logger;
+import org.apache.log4j.spi.AppenderAttachable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 //import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Component;
@@ -83,6 +87,7 @@ import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Collections;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 
 /**
@@ -122,6 +127,11 @@ public class SystemBootstrapper {
       Security.addProvider( new BouncyCastleProvider( ) );
       LogLevels.DEBUG = doDebug;
       LogLevels.TRACE = doDebug;
+      Enumeration<Appender> appenderEnum =( ( AppenderAttachable ) Logger.getRootLogger( ) ).getAllAppenders( );
+      List<Appender> appenders = Collections.list( appenderEnum );
+      for( Appender a : appenders ) {
+        System.out.println( "APPENDER: " + a.getName( ) + " layout=" + a.getLayout( ).getClass( ) );
+      }
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
       t.printStackTrace( );
