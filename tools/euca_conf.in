@@ -226,11 +226,11 @@ check_ws() {
 		eval "$2=\"${E}\""
 	else
 		if [ "$VERBOSE" = "Y" ]; then
-			echo "$WGET -q -T 10 -t 10 -w 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
+			echo "$WGET -q -T 10 -t 10 -w 1 -O - \"$URL\" |grep Error | sed 's:.*<Error>\(.*\)</Error>.*:\1:g;s:</\w*>: :g;s:<:\n:g;s:>:\:  :g;s:^\n::'"
 		fi
 		soap_error="`$WGET -q -T 10 -t 10 -w 1 -O - \"$URL\"`"
 		ret="$?"
-		soap_error="`echo $soap_error |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'`"
+		soap_error="`echo $soap_error |grep Error | sed 's:.*<Error>\(.*\)</Error>.*:\1:g;s:</\w*>: :g;s:<:\n:g;s:>:\:  :g;s:^\n::'"
 		if test -n "$soap_error" ; then
 			echo $soap_error
 			ret="1"
