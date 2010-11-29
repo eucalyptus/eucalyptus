@@ -189,6 +189,11 @@
       </collection>
     </structure>
   </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.ClusterAddressInfo" abstract="true">
+    <value name="uuid" field="uuid" />
+    <value name="sourceAddress" field="address" usage="required" />
+    <value name="destAddress" field="instanceIp" />
+  </mapping>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.PacketFilterRule" abstract="true">
     <value name="type" field="policy" usage="required" />

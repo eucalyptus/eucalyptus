@@ -16,6 +16,7 @@ import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmState;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
+import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 
 public abstract class AbstractSystemAddressManager {
   static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );
@@ -43,7 +44,7 @@ public abstract class AbstractSystemAddressManager {
     for ( ClusterAddressInfo addrInfo : ccList ) {
       try {
         Address address = Helper.lookupOrCreate( cluster, addrInfo );
-        if ( address.isAssigned( ) ) {
+        if ( address.isAssigned( ) && !address.isPending( ) ) {
           if ( Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ) {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }

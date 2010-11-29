@@ -3,7 +3,7 @@ package com.eucalyptus.cluster.callback;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.address.ClusterAddressInfo;
+import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.SubjectMessageCallback;
@@ -20,11 +20,7 @@ public class PublicAddressStateCallback extends SubjectMessageCallback<Cluster, 
   @Override
   public void fire( DescribePublicAddressesResponseType reply ) {
     this.getSubject( ).getState( ).setPublicAddressing( true );
-    
-    List<ClusterAddressInfo> addrInfo = ClusterAddressInfo.fromLists( reply.getAddresses( ), reply.getMapping( ) );
-    if ( addrInfo != null ) {
-      Addresses.getAddressManager( ).update( this.getSubject( ), addrInfo );
-    }
+    Addresses.getAddressManager( ).update( this.getSubject( ), reply.getAddresses( ) );
   }
   
   @Override
