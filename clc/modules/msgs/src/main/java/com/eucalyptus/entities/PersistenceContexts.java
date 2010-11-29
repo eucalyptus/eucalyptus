@@ -48,16 +48,16 @@ public class PersistenceContexts {
     PersistenceContext ctx = Ats.from( entity ).get( PersistenceContext.class );
     if( Ats.from( entity ).has( MappedSuperclass.class ) ) {
       return false;
-    } else if ( ctx == null || ctx.name( ) == null ) {
-      RuntimeException ex = new RuntimeException( "Failed to register broken entity class: " + entity.getCanonicalName( ) + ".  Ensure that the class has a well-formed @PersistenceContext annotation.");
-      LOG.error( ex, ex );
-      return false;
     } else if ( sharedEntities.contains( entity ) ) {
       Class old = sharedEntities.get( sharedEntities.indexOf( entity ) );
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       throw BootstrapException.throwFatal( "Duplicate entity definition in shared entities: " + entity.getCanonicalName( ) + ". See error logs for details." );
+    } else if ( ctx == null || ctx.name( ) == null ) {
+      RuntimeException ex = new RuntimeException( "Failed to register broken entity class: " + entity.getCanonicalName( ) + ".  Ensure that the class has a well-formed @PersistenceContext annotation.");
+      LOG.error( ex, ex );
+      return false;
     } else if ( entities.get( ctx.name( ) ) != null && entities.get( ctx.name( ) ).contains( entity ) ) {
       List<Class> context = entities.get( ctx.name( ) );
       Class old = context.get( context.indexOf( entity ) );
