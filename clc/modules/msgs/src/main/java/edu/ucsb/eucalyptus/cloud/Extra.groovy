@@ -422,8 +422,10 @@ public class Network implements HasName<Network> {
     return this.getName().compareTo(that.getName());
   }
   
-  private List<String> trimmedIndexes( Collection<Integer> intList ) {
+  private List<String> trimmedIndexes( Collection<Integer> indexes ) {
     List<String> outList = [];
+    List<Integer> intList = [];
+    intList.addAll( indexes );
     if( intList.size() < 5 ) {
       outList.addAll( intList );
     } else {
