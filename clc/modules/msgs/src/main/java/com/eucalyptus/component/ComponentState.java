@@ -191,9 +191,11 @@ public class ComponentState {
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
         try {
-          parent.getBootstrapper( ).check( );
-          if( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
-            parent.getBuilder( ).fireCheck( parent.getLocalService( ).getServiceConfiguration( ) );
+          if( State.LOADED.ordinal( ) < ComponentState.this.stateMachine.getState( ).ordinal( ) ) {
+            parent.getBootstrapper( ).check( );
+            if( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
+              parent.getBuilder( ).fireCheck( parent.getLocalService( ).getServiceConfiguration( ) );
+            }
           }
           transitionCallback.fire( );
         } catch ( Throwable ex ) {

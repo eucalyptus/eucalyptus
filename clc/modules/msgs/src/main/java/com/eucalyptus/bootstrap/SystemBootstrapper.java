@@ -161,7 +161,13 @@ public class SystemBootstrapper {
       throw t;
     }
     /** ASAP:FIXME:GRZE **/
-    Iterables.all( Components.list( ), Component.Transition.LOADING.getCallback( ) );
+    for( Component c : Components.list( ) ) {
+      try {
+        Component.Transition.LOADING.apply( c );
+      } catch ( Throwable ex ) {
+        LOG.error( ex );
+      }
+    }
     return true;
   }
     
@@ -181,7 +187,13 @@ public class SystemBootstrapper {
       throw t;
     }
     /** ASAP:FIXME:GRZE **/
-    Iterables.all( Components.list( ), Component.Transition.STARTING.getCallback( ) );
+    for( Component c : Components.list( ) ) {
+      if( Components.lookup( "eucalyptus" ).isLocal( ) && c.getPeer( ).isCloudLocal( ) ) {
+        Component.Transition.STARTING.apply( c );
+      } else if( c.getPeer( ).isAlwaysLocal( ) ) {
+        Component.Transition.STARTING.apply( c );
+      } 
+    }
 //    SystemBootstrapper.printBanner( );
     return true;
   }
