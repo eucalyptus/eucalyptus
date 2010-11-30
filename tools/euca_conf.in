@@ -195,7 +195,7 @@ check_heartbeat() {
 	fi
 
 	# let's talk to the host and check if something is running
-	ret="`$WGET -q -T 10 -t 10 -w 1 -O - http://${__host}:8773/services/Heartbeat`"
+	ret="`$WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  http://${__host}:8773/services/Heartbeat`"
 	if [ "$?" != "0" -o -z "$ret" ]; then
 		return 1
 	fi
@@ -224,17 +224,17 @@ check_ws() {
 		ret=""
 	elif [ "$2" != "" ]; then
 		if [ "$VERBOSE" = "Y" ]; then
-			echo   "$WGET -q -T 10 -t 10 -w 1 -O - \"$URL\"" "|sed 's/<euca:registered>\\(.*\\)<\\/euca:registered>/\\n\\1\\n/g;s/<euca:name>/\\n>/g;s/<\\/*euca:item>//g;s/<\\/*euca:[^>]*>/ /g'|awk -F\">\" '/>/{print \"   \"$2}')"
+			echo   "$WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  \"$URL\"" "|sed 's/<euca:registered>\\(.*\\)<\\/euca:registered>/\\n\\1\\n/g;s/<euca:name>/\\n>/g;s/<\\/*euca:item>//g;s/<\\/*euca:[^>]*>/ /g'|awk -F\">\" '/>/{print \"   \"$2}')"
 		fi
-		E=$($WGET -q -T 10 -t 10 -w 1 -O - "$URL"|\
+		E=$($WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  "$URL"|\
 			sed 's/<euca:registered>\(.*\)<\/euca:registered>/\n\1\n/g;s/<euca:name>/\n>/g;s/<\/*euca:item>//g;s/<\/*euca:[^>]*>/ /g'|\
 			awk -F">" '/>/{print "   "$2}')
 		eval "$2=\"${E}\""
 	else
 		if [ "$VERBOSE" = "Y" ]; then
-			echo "$WGET -q -T 10 -t 10 -w 1 -O - \"$URL\" |grep Error | sed 's:.*<Error>\(.*\)</Error>.*:\1:g;s:</\w*>: :g;s:<:\n:g;s:>:\:  :g;s:^\n::'"
+			echo "$WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  \"$URL\" |grep Error | sed 's:.*<Error>\(.*\)</Error>.*:\1:g;s:</\w*>: :g;s:<:\n:g;s:>:\:  :g;s:^\n::'"
 		fi
-		soap_error="`$WGET -q -T 10 -t 10 -w 1 -O - \"$URL\"`"
+		soap_error="`$WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  \"$URL\"`"
 		ret="$?"
 		soap_error="`echo $soap_error |grep Error | sed 's:.*<Error>\(.*\)</Error>.*:\1:g;s:</\w*>: :g;s:<:\n:g;s:>:\:  :g;s:^\n::'`"
 		if test -n "$soap_error" ; then
