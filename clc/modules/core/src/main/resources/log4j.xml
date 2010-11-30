@@ -147,10 +147,6 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="extlogfile" />
   </category>
-  <category name="org.mule" additivity="true">
-    <priority value="FATAL" />
-    <appender-ref ref="${euca.log.appender}" />
-  </category>
   <category name="org.hibernate" additivity="true">
     <priority value="FATAL" />
     <appender-ref ref="${euca.log.appender}" />
