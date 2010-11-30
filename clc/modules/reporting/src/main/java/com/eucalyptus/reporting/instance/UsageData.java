@@ -9,6 +9,9 @@ import javax.persistence.*;
  * by some instance over some period. UsageData is immutable because there
  * can be multiple references to one UsageData.
  * 
+ * <p>UsageData allows null values for its fields. Null values indicate unknown
+ * usage and not zero usage.
+ * 
  * @author tom.werges
  */
 @Embeddable
@@ -16,9 +19,9 @@ public class UsageData
 	implements Serializable
 {
 	//NOTE: hibernate can modify final fields using reflection
-	@Column(name="total_network_io_megs", nullable=false)
+	@Column(name="total_network_io_megs", nullable=true)
 	private final Long networkIoMegs;
-	@Column(name="total_disk_io_megs", nullable=false)
+	@Column(name="total_disk_io_megs", nullable=true)
 	private final Long diskIoMegs;
 
 	/**
@@ -31,45 +34,62 @@ public class UsageData
 		this.diskIoMegs = null;
 	}
 
-	public UsageData(long totalNetworkIoMegs, long totalDiskIoMegs)
+	public UsageData(Long totalNetworkIoMegs, Long totalDiskIoMegs)
 	{
-		this.networkIoMegs = new Long(totalNetworkIoMegs);
-		this.diskIoMegs = new Long(totalDiskIoMegs);
+		this.networkIoMegs = totalNetworkIoMegs;
+		this.diskIoMegs = totalDiskIoMegs;
 	}
 
-	public long getNetworkIoMegs()
+	public Long getNetworkIoMegs()
 	{
-		assert this.networkIoMegs != null; //hibernate notNullable
-		return this.networkIoMegs.longValue();
+		return this.networkIoMegs;
 	}
 
-	public long getDiskIoMegs()
+	public Long getDiskIoMegs()
 	{
-		assert this.diskIoMegs != null; //hibernate notNullable
-		return this.diskIoMegs.longValue();
+		return this.diskIoMegs;
 	}
 
+	/**
+	 * Sum usage data objects, meaning sum the numeric fields.
+	 * The numeric fields can be null, in which case the result fields will
+	 * be null. If <i>either</i> value for a field is null, the result is
+	 * null, not the value. Null plus anything is null.
+	 */
 	public UsageData sum(UsageData other)
 	{
-		long sumNetworkIoMegs = this.getNetworkIoMegs()
-					+ other.getNetworkIoMegs();
+		final Long sumNetworkIoMegs =
+			(this.networkIoMegs==null || other.networkIoMegs==null)
+			? null
+			: new Long(other.networkIoMegs.longValue() + this.networkIoMegs.longValue());
 
-		long sumDiskIoMegs = this.getDiskIoMegs()
-					+ other.getDiskIoMegs();
+		final Long sumDiskIoMegs =
+			(this.diskIoMegs==null || other.diskIoMegs==null)
+			? null
+			: new Long(other.diskIoMegs.longValue() + this.diskIoMegs.longValue());
 
 		return new UsageData(sumNetworkIoMegs, sumDiskIoMegs);
 	}
 
+	/**
+	 * Subtract one usage data from another, meaning subtract the numeric
+	 * fields. Fields can be null, in which case the resultant field
+	 * is null. If <i>either</i> value of a field is null, the result
+	 * is null. Null minus anything is null.
+	 */
 	public UsageData subtractFrom(UsageData other)
 	{
-		long subtractedNetworkIoMegs = other.getNetworkIoMegs()
-					- this.getNetworkIoMegs();
+		final Long subtractedNetworkIoMegs =
+			(this.networkIoMegs==null || other.networkIoMegs==null)
+			? null
+			: new Long(other.networkIoMegs.longValue() - this.networkIoMegs.longValue());
 
-		long subtractedDiskIoMegs = other.getDiskIoMegs()
-					- this.getDiskIoMegs();
+		final Long subtractedDiskIoMegs =
+			(this.diskIoMegs==null || other.diskIoMegs==null)
+			? null
+			: new Long(other.diskIoMegs.longValue() - this.diskIoMegs.longValue());
 
 		return new UsageData(subtractedNetworkIoMegs, subtractedDiskIoMegs);
 	}
 
 }
-

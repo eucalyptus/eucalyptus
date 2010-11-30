@@ -11,7 +11,7 @@ import javax.persistence.*;
  * @author tom.werges
  */
 @Embeddable
-public class UsageSnapshot
+class UsageSnapshot
 {
 	@Column(name="timestamp_ms", nullable=false)
 	private final Long timestampMs;
@@ -26,19 +26,19 @@ public class UsageSnapshot
 		this.timestampMs = null;  //hibernate will override these despite finality
 		this.cumulativeUsageData = null;
 	}
-	
+
 	public UsageSnapshot(long timestampMs, UsageData cumulativeUsageData)
 	{
 		this.timestampMs = new Long(timestampMs);
 		this.cumulativeUsageData = cumulativeUsageData;
 	}
-	
+
 	public long getTimestampMs()
 	{
 		assert this.timestampMs != null;  //hibernate notNullable
 		return this.timestampMs.longValue();
 	}
-	
+
 	public UsageData getCumulativeUsageData()
 	{
 		return this.cumulativeUsageData;

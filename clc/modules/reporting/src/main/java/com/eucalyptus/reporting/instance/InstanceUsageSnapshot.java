@@ -6,7 +6,7 @@ import javax.persistence.*;
  * <p>InstanceUsageSnapshot is a record of cumulative instance resource usage
  * at a certain point in time, keyed by instance uuid.
  * 
- * @author twerges
+ * @author tom.werges
  */
 @Entity
 @PersistenceContext(name="reporting")

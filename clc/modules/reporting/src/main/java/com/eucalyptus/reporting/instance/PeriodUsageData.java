@@ -45,11 +45,12 @@ public class PeriodUsageData
         UsageSnapshot latestSnapshot = snapshotList.get(0);
         UsageSnapshot earliestSnapshot = snapshotList.get(0);
 
+        /* SnapshotList isn't ordered.
+         */
         for (UsageSnapshot snapshot: snapshotList) {
             if (snapshot.getTimestampMs() < earliestSnapshot.getTimestampMs()) {
                 earliestSnapshot = snapshot;
-            }
-            if (snapshot.getTimestampMs() > latestSnapshot.getTimestampMs()) {
+            } else if (snapshot.getTimestampMs() > latestSnapshot.getTimestampMs()) {
                 latestSnapshot = snapshot;
             }
         }

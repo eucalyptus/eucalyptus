@@ -7,7 +7,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="reporting")
 @Table(name="reporting_instance")
-public class InstanceAttributes
+class InstanceAttributes
 	implements Serializable
 {
 	@Id

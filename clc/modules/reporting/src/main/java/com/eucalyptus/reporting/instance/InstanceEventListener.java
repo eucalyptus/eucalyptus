@@ -86,8 +86,9 @@ public class InstanceEventListener
 
 
 	/**
-	 * This is overridden by a test class which makes up fake times for fake
-	 * data.
+	 * Get the current time which will be used for recording when an event
+	 * occurred. This can be overridden if you have some alternative method
+	 * of timekeeping (synchronized, test times, etc).
 	 */
 	protected long getCurrentTimeMillis()
 	{
