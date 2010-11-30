@@ -1,6 +1,9 @@
 package com.eucalyptus.context;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.mule.DefaultMuleMessage;
@@ -10,7 +13,9 @@ import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
 import org.mule.api.context.MuleContextFactory;
+import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.registry.Registry;
+import org.mule.api.service.Service;
 import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
@@ -31,7 +36,7 @@ import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
-  static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
+  static Logger                                LOG                      = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
   @ConfigurableField( initial = "16", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
   public static Integer                        MAX_OUTSTANDING_MESSAGES = 16;
@@ -47,38 +52,48 @@ public class ServiceContext {
     }
   }
   
-  private static AtomicReference<MuleContext> context = new AtomicReference<MuleContext>( null );
-  private static AtomicReference<MuleClient> client = new AtomicReference<MuleClient>( null );
-  private static final BootstrapException failEx = new BootstrapException( "Attempt to use esb client before the service bus has been started." );
+  private static AtomicReference<MuleContext>           context           = new AtomicReference<MuleContext>( null );
+  private static ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<String, String>( );
+  private static AtomicReference<MuleClient>            client            = new AtomicReference<MuleClient>( null );
+  private static final BootstrapException               failEx            = new BootstrapException(
+                                                                                                    "Attempt to use esb client before the service bus has been started." );
+  
   private static MuleClient getClient( ) throws MuleException {
-    if( context.get( ) == null ) {
+    if ( context.get( ) == null ) {
       LOG.fatal( failEx, failEx );
       System.exit( 123 );
       throw failEx;
-    } else if( client.get( ) == null && client.compareAndSet( null, new MuleClient( context.get( ) ) ) ) {
+    } else if ( client.get( ) == null && client.compareAndSet( null, new MuleClient( context.get( ) ) ) ) {
       return client.get( );
     } else {
       return client.get( );
     }
   }
-
+  
   public static void dispatch( String dest, Object msg ) {
     try {
       send( dest, msg );
     } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
   }
-
+  
   public static <T> T send( String dest, Object msg ) throws EucalyptusCloudException {
+    if( ( dest.startsWith( "vm://" ) && !endpointToService.containsKey( dest ) ) || dest == null ) {
+      throw new EucalyptusCloudException( "Failed to find destination: " + dest, new IllegalArgumentException( "No such endpoint: " + dest + " in endpoints=" + endpointToService.entrySet( ) ) );
+    }
     if( dest.startsWith( "vm://" ) ) {
-      dest = "vm://" + dest;
+      dest = endpointToService.get( dest );
     }
     MuleEvent context = RequestContext.getEvent( );
     try {
       MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
 
-      if ( reply.getExceptionPayload( ) != null ) throw new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
+      if ( reply.getExceptionPayload( ) != null ) {
+        EucalyptusCloudException ex = new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
+        LOG.trace( ex, ex );
+        throw ex;
+      }
       else return (T) reply.getPayload( );
     } catch ( Throwable e ) {
       EucalyptusCloudException ex = new EucalyptusCloudException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest + " because of " + e.getMessage( ), e );
@@ -88,7 +103,6 @@ public class ServiceContext {
       RequestContext.setEvent( context );
     }
   }
-
   
   public static void buildContext( List<ConfigResource> configs ) {
     ServiceContext.builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
@@ -118,6 +132,14 @@ public class ServiceContext {
     }
     try {
       ServiceContext.getContext( ).start( );
+      endpointToService.clear( );
+      for( Object o : ServiceContext.getContext( ).getRegistry( ).lookupServices( ) ) {
+        Service s = (Service) o;
+        for( Object p : s.getInboundRouter( ).getEndpoints( ) ) {
+          InboundEndpoint in = (InboundEndpoint) p;
+          endpointToService.put( in.getEndpointURI( ).toString( ), s.getName( ) );
+        }
+      }
     } catch ( Throwable e ) {
       LOG.error( e, e );
       throw new ServiceInitializationException( "Failed to start service context.", e );
@@ -145,11 +167,11 @@ public class ServiceContext {
       LOG.debug( e, e );
     }
   }
-
+  
   static boolean loadContext( ) {
     List<ConfigResource> configs = Lists.newArrayList( );
     configs.addAll( Components.lookup( Component.bootstrap ).getConfiguration( ).getResource( ).getConfigurations( ) );
-    if( Components.lookup( Component.eucalyptus ).isAvailableLocally( ) ) {
+    if ( Components.lookup( Component.eucalyptus ).isAvailableLocally( ) ) {
 //      configs.addAll( Components.lookup( Component.eucalyptus ).getConfiguration( ).getResource( ).getConfigurations( ) );
       for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
         if ( comp.getPeer( ).isCloudLocal( ) ) {
@@ -181,7 +203,7 @@ public class ServiceContext {
     }
     return true;
   }
-
+  
   public static synchronized boolean startup( ) {
     try {
       LOG.info( "Loading system bus." );

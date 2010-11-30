@@ -88,9 +88,8 @@ public abstract class ServiceDispatcher implements Dispatcher {
    * @throws EucalyptusCloudException
    */
   @SuppressWarnings( "unchecked" )
-  public <REPLY extends BaseMessage> REPLY send( BaseMessage message ) throws EucalyptusCloudException {
-    return (REPLY) this.send( message );
-  }
+  public abstract <REPLY extends BaseMessage> REPLY send( BaseMessage message ) throws EucalyptusCloudException;
+  
   /**
    * @see com.eucalyptus.component.Dispatcher#getComponent()
    * @return
@@ -118,9 +117,6 @@ public abstract class ServiceDispatcher implements Dispatcher {
    */
   public boolean isLocal( ) {
     return isLocal;
-  }
-  protected MuleClient getMuleClient( ) throws Exception {
-    return ServiceContext.getContext( );
   }
 
   protected NioClient getNioClient( ) throws Exception {

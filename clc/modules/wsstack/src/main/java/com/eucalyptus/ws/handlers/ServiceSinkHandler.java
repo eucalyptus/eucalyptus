@@ -281,16 +281,16 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   }
   
   private static void dispatchRequest( final BaseMessage msg ) throws MuleException, DispatchException {
-//    ServiceContext.dispatch( "RequestQueue", msg );//ASAP: omg urgent.
-    OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
-    if ( !endpoint.getConnector( ).isStarted( ) ) {
-      endpoint.getConnector( ).start( );
-    }
-    MuleMessage muleMsg = new DefaultMuleMessage( msg );
-    MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
-                                                      ServiceContext.getContext( ) );
-    MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
-    dispatcherFactory.create( endpoint ).dispatch( muleEvent );
+    ServiceContext.dispatch( "RequestQueue", msg );//ASAP: omg urgent.
+//    OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
+//    if ( !endpoint.getConnector( ).isStarted( ) ) {
+//      endpoint.getConnector( ).start( );
+//    }
+//    MuleMessage muleMsg = new DefaultMuleMessage( msg );
+//    MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
+//                                                      ServiceContext.getContext( ) );
+//    MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
+//    dispatcherFactory.create( endpoint ).dispatch( muleEvent );
   }
   
   @Override
