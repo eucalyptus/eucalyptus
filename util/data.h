@@ -67,6 +67,12 @@ permission notice:
 #define CHAR_BUFFER_SIZE 512
 #define BIG_CHAR_BUFFER_SIZE 1024
 
+typedef struct publicAddressType_t {
+  char uuid[48];
+  char sourceAddress[32];
+  char destAddress[32];
+} publicAddressType;
+
 typedef struct serviceInfoType_t {
   char type[32];
   char name[32];

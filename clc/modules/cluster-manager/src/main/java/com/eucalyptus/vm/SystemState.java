@@ -310,7 +310,7 @@ public class SystemState {
           notwork = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + netName );
           networks.add( notwork );
           try {
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
+            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
           } catch ( NetworkAlreadyExistsException e ) {
@@ -326,7 +326,7 @@ public class SystemState {
               notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
             }
             networks.add( notwork );
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
+            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
             Networks.getInstance( ).registerIfAbsent( notwork, Networks.State.ACTIVE );

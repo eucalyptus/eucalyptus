@@ -448,7 +448,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 	if (outvnetConfig->networks[i].active) {
 	  adb_networkType_t *nt=NULL;
 	  nt = adb_networkType_create(env);
-	  //	  adb_networkType_set_uuid(nt, env, "UNSET");
+	  adb_networkType_set_uuid(nt, env, outvnetConfig->users[i].uuid);
 	  adb_networkType_set_vlan(nt, env, i);
 	  adb_networkType_set_netName(nt, env, outvnetConfig->users[i].netName);
 	  adb_networkType_set_userName(nt, env, outvnetConfig->users[i].userName);
@@ -523,19 +523,24 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   dpart = adb_describePublicAddressesResponseType_create(env);
   for (i=0; i<outAddressesLen; i++) {
     if (outAddresses[i].ip) {
-      //adb_describePublicAddressesResponseType_add_uuids(dpart, env, outAddresses[i].uuid);
+      adb_publicAddressType_t *addr;
+      addr = adb_publicAddressType_create(env);
+
+      adb_publicAddressType_set_uuid(addr, env, outAddresses[i].uuid);
+
       ipstr = hex2dot(outAddresses[i].ip);
-      adb_describePublicAddressesResponseType_add_sourceAddresses(dpart, env, ipstr);
+      adb_publicAddressType_set_sourceAddress(addr, env, ipstr);
       if (ipstr) free(ipstr);
 
       if (outAddresses[i].dstip) {
 	ipstr = hex2dot(outAddresses[i].dstip);
-	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, ipstr);
+	adb_publicAddressType_set_destAddress(addr, env, ipstr);
 	if (ipstr) free(ipstr);
-
       } else {
-	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, "");
+	adb_publicAddressType_set_destAddress(addr, env, "");
       }
+
+      adb_describePublicAddressesResponseType_add_addresses(dpart, env, addr);
     }
   }
   
@@ -1058,7 +1063,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   dt = axutil_date_time_create_with_offset(env, src->ts - time(NULL));
   
   adb_ccInstanceType_set_instanceId(dst, env, src->instanceId);
-  //  adb_ccInstanceType_set_uuid(dst, env, src->uuid);
+  adb_ccInstanceType_set_uuid(dst, env, src->uuid);
   adb_ccInstanceType_set_reservationId(dst, env, src->reservationId);
   adb_ccInstanceType_set_ownerId(dst, env, src->ownerId);
   adb_ccInstanceType_set_imageId(dst, env, src->amiId);

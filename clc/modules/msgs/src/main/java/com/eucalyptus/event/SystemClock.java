@@ -69,6 +69,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 
@@ -82,7 +83,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     super( );
   }
 
-  public static void setupTimer( ) {
+  private static void setupTimer( ) {
     synchronized(SystemClock.class) {
       if( timer == null ) {
         timer = new Timer("SystemClockTimer");
@@ -124,7 +125,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     LOG.fatal( e, e );
     System.exit( -2 );
   }
-  
+
   @Provides( Component.bootstrap )
   @RunDuring( Bootstrap.Stage.Final )
   public static class SystemClockBootstrapper extends Bootstrapper {
@@ -165,5 +166,5 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     }
     
   }
-
+  
 }

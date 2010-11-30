@@ -101,7 +101,7 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
   
   @Override
   public void doStop( ) throws MuleException {
-//    server.get( ).stop( );
+//  server.get( ).stop( );
   }
   
   @Override

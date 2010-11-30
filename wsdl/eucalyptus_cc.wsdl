@@ -388,7 +388,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element minOccurs="0" name="uuid" type="xs:string"/>
+	      <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string"/>
 	      <xs:element name="source" type="xs:string"/>
 	      <xs:element name="dest" type="xs:string"/>
 	    </xs:sequence>
@@ -454,7 +454,7 @@
 
       <xs:complexType name="networkType">
 	<xs:sequence>
-	  <xs:element minOccurs="0" name="uuid" type="xs:string"/>
+	  <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string"/>
 	  <xs:element minOccurs="1" maxOccurs="1" name="vlan" type="xs:int"/>
 	  <xs:element minOccurs="1" maxOccurs="1" name="netName" type="xs:string"/>
 	  <xs:element minOccurs="1" maxOccurs="1" name="userName" type="xs:string"/>
@@ -471,14 +471,19 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="publicAddressType">
+	<xs:sequence>
+	  <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string" />
+	  <xs:element minOccurs="1" maxOccurs="1" name="sourceAddress" type="xs:string" />
+	  <xs:element minOccurs="1" maxOccurs="1" name="destAddress" type="xs:string" />
+	</xs:sequence>
+      </xs:complexType>
+      
       <xs:complexType name="describePublicAddressesResponseType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <!-- next three lists must be same length -->
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="uuids" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="sourceAddresses" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="destAddresses" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="addresses" type="tns:publicAddressType"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -537,7 +542,7 @@
 	      <xs:element minOccurs="1" maxOccurs="unbounded" name="netNames" type="xs:string"/>
 	      <xs:element minOccurs="1" maxOccurs="unbounded" name="macAddresses" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="unbounded" name="networkIndexList" type="xs:int"/>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="uuids" type="xs:string"/>
+	      <xs:element minOccurs="1" maxOccurs="unbounded" name="uuids" type="xs:string"/>
 	      <xs:element name="vlan" type="xs:int"/>
 	      <xs:element name="userData" type="xs:string"/>
 	      <xs:element name="launchIndex" type="xs:string"/>

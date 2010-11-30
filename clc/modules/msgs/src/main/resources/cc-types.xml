@@ -102,6 +102,7 @@
   </mapping>
 
   <mapping class="edu.ucsb.eucalyptus.cloud.VmInfo" abstract="true">
+    <value name="uuid" field="uuid" usage="required" />
     <value name="imageId" field="imageId" usage="optional" />
     <value name="kernelId" field="kernelId" usage="optional" />
     <value name="ramdiskId" field="ramdiskId" usage="optional" />
@@ -180,6 +181,7 @@
     <value name="networkIndex" field="networkIndex" />
   </mapping>
   <mapping class="edu.ucsb.eucalyptus.msgs.NetworkInfoType" abstract="true">
+    <value name="uuid" field="uuid" usage="required" />
     <value name="vlan" field="vlan" />
     <value name="netName" field="networkName" />
     <value name="userName" field="userName" />
@@ -188,6 +190,11 @@
         <value name="activeAddrs" type="java.lang.String" />
       </collection>
     </structure>
+  </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.ClusterAddressInfo" abstract="true">
+    <value name="uuid" field="uuid" />
+    <value name="sourceAddress" field="address" usage="required" />
+    <value name="destAddress" field="instanceIp" />
   </mapping>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.PacketFilterRule" abstract="true">

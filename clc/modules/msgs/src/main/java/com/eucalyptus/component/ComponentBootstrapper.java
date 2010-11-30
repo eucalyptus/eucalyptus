@@ -72,6 +72,7 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Record;
 import com.eucalyptus.util.CheckedFunction;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
