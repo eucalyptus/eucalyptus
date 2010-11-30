@@ -18,9 +18,12 @@ package com.eucalyptus.reporting.event;
  * time periods, but no loss of usage information.
  * 
  * <p>InstanceEvent allows null values for usage statistics like
- * cumulativeDiskIo. Null values in that case signify missing information
- * and not zero usage. Null values will be ignored while calculating aggregate
- * usage information for reports.
+ * cumulativeDiskIo. Null values signify missing information and not zero
+ * usage. Null values will be ignored while calculating aggregate usage
+ * information for reports. Null values should be used only when we don't
+ * support gathering information from an instance <i>at all</i>. Null values
+ * for resource usage will be represented as "N/A" or something similar in
+ * UIs.
  * 
  * @author tom.werges
  */
