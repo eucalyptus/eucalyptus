@@ -10,9 +10,10 @@ public class ContractKeyEvaluator {
   
   private static final Logger LOG = Logger.getLogger( ContractKeyEvaluator.class );
 
-  private Map<String, Contract> contracts = Maps.newHashMap( );
+  private Map<String, Contract> contracts;
   
-  public ContractKeyEvaluator( ) {
+  public ContractKeyEvaluator( Map<String, Contract> contracts ) {
+    this.contracts = contracts;
   }
   
   public void addContract( ContractKey contractKey, Set<String> values ) {

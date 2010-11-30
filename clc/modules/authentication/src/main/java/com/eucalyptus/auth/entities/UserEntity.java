@@ -486,5 +486,10 @@ public class UserEntity extends AbstractPersistent implements User, Serializable
     }
     return results;
   }
+
+  @Override
+  public boolean isAccountAdmin( ) {
+    return ACCOUNT_ADMIN_USER_NAME.equals( this.getName( ) );
+  }
   
 }

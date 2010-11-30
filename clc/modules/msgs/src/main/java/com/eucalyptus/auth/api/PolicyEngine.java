@@ -12,10 +12,10 @@ public interface PolicyEngine {
    * @param <T> the resource type.
    * @param resourceClass The type class of the resource
    * @param resourceName The relative name/id of the resource
-   * @return a list of contract conditions applies to the result: like s3:max-keys and ec2:expiration
+   * @param resourceAccountId The account ID of the resource
    * @throws AuthException if access is denied.
    */
-  public <T> Map<String, Contract> evaluateAuthorization( Class<T> resourceClass, String resourceName ) throws AuthException;
+  public <T> void evaluateAuthorization( Class<T> resourceClass, String resourceName, String resourceAccountId ) throws AuthException;
   
   /**
    * Evaluate quota for resource allocation. Throw exception if the resource allocation is denied.

@@ -39,20 +39,72 @@ public class PolicyEngineImpl implements PolicyEngine {
   
   private static final Logger LOG = Logger.getLogger( PolicyEngineImpl.class );
   
+  private static enum Decision {
+    DEFAULT, // no match
+    DENY,    // explicit deny
+    ALLOW,   // explicit allow
+  }
+  
   public PolicyEngineImpl( ) {
   }
   
+  /**
+   * The authorization evaluation algorithm is a combination of AWS IAM policy evaluation logic and
+   * AWS inter-account permission checking logic (including EC2 image and snapshot permission, and
+   * S3 bucket ACL and bucket policy). The algorithm is described in the following:
+   * 
+   * 1. If request user is system admin, access is GRANTED.
+   * 2. Otherwise, check global (inter-account) authorizations, which are attached to account admin.
+   *    If explicitly denied, access is DENIED.
+   *    If explicitly allowed, continue.
+   *    If no matching authorization, check request user's account ID and resource's account ID:
+   *       If not match, access is DENIED.
+   *       If match, continue.
+   * 3. If request user is account admin, access is GRANTED.
+   * 4. Otherwise, check local (intra-account) authorizations.
+   *    If explicitly or default denied, access is DENIED.
+   *    If explicitly allowed, access is GRANTED.
+   *    
+   * @see com.eucalyptus.auth.api.PolicyEngine#evaluateAuthorization(java.lang.Class, java.lang.String, java.lang.String)
+   */
   @Override
-  public <T> Map<String, Contract> evaluateAuthorization( Class<T> resourceClass, String resourceName ) throws AuthException {
+  public <T> void evaluateAuthorization( Class<T> resourceClass, String resourceName, String resourceAccountId ) throws AuthException {
     try {
       User requestUser = RequestContext.getRequestUser( );
-      Class<? extends BaseMessage> requestMessageClass = RequestContext.getRequestMessageClass( );
+      // System admin can do everything
+      if ( requestUser.isSystemAdmin( ) ) {
+        return;
+      }
+      
+      BaseMessage request = RequestContext.getRequest( );
+      Map<String, Contract> contracts = RequestContext.getContracts( );
       String userId = requestUser.getUserId( );
       String accountId = requestUser.getAccount( ).getAccountId( );
       String resourceType = getResourceType( resourceClass );
-      String action = getAction( requestMessageClass );
-      List<Authorization> matchedAuths = lookupMatchedAuthorizations( resourceType, userId, accountId );
-      return processAuthorizations( matchedAuths, action, resourceName );
+      String action = getAction( request.getClass( ) );
+      
+      CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
+      ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
+      
+      // Check global (inter-account) authorizations first
+      Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, accountId ), action, resourceName, keyEval, contractEval );
+      if ( ( decision == Decision.DENY )
+          || ( decision == Decision.DEFAULT && !resourceAccountId.equals( accountId ) ) ) {
+        LOG.debug( request + " is rejected by global authorization check, due to decision " + decision );
+        throw new AuthException( AuthException.ACCESS_DENIED ); 
+      }
+      // Account admin can do everything within the account
+      if ( requestUser.isAccountAdmin( ) ) {
+        return;
+      }
+      // If not denied by global authorizations, check local (intra-account) authorizations.
+      decision = processAuthorizations( lookupLocalAuthorizations( resourceType, userId ), action, resourceName, keyEval, contractEval );
+      // Denied by explicit or default deny
+      if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
+        LOG.debug( request + " is rejected by local authorization check, due to decision " + decision );
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      // Allowed
     } catch ( AuthException e ) {
       //throw by the policy engine implementation 
       throw e;
@@ -64,40 +116,27 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
   }
   
-  private Map<String, Contract> processAuthorizations( List<Authorization> authorizations, String action, String resource ) throws AuthException {
-    CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
-    ContractKeyEvaluator contractEval = new ContractKeyEvaluator( );
-    // Default deny
-    boolean allowed = false;
+  private Decision processAuthorizations( List<Authorization> authorizations, String action, String resource, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
+    Decision result = Decision.DEFAULT; 
     for ( Authorization auth : authorizations ) {
-      LOG.debug( AuthTest.MARK + "Processing authorization: " + auth );
       if ( !evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
-        LOG.debug( AuthTest.MARK + "Action not matched: " + action );
         continue;
       }
       //YE TODO: special case for ec2:address with IP range.
       if ( !evaluatePatterns( auth.getResources( ), auth.isNotResource( ), resource ) ) {
-        LOG.debug( AuthTest.MARK + "Resource not matched: " + resource );
         continue;
       }
       if ( !evaluateConditions( auth.getConditions( ), action, auth.getType( ), keyEval, contractEval ) ) {
-        LOG.debug( AuthTest.MARK + "condition not matched" );
         continue;
       }
       if ( auth.getEffect( ) == EffectType.Deny ) {
-        LOG.debug( AuthTest.MARK + "Explicit deny." );
         // Explicit deny
-        throw new AuthException( AuthException.ACCESS_DENIED );
+        return Decision.DENY;
       } else {
-        allowed = true;
+        result = Decision.ALLOW;
       }      
     }
-    if ( allowed ) {
-      LOG.debug( AuthTest.MARK + "Approved" );
-      return contractEval.getContracts( );
-    }
-    LOG.debug( AuthTest.MARK + "Default deny." );
-    throw new AuthException( AuthException.ACCESS_DENIED );
+    return result;
   }
   
   private boolean evaluatePatterns( Set<String> patterns, boolean isNot, String instance ) {
@@ -139,10 +178,31 @@ public class PolicyEngineImpl implements PolicyEngine {
     return true;
   }
   
-  private List<Authorization> lookupMatchedAuthorizations( String resourceType, String userId, String accountId ) throws AuthException {
+  /**
+   * Lookup global (inter-accounts) authorizations.
+   * 
+   * @param resourceType Type of the resource
+   * @param accountId The ID of the account of the request user
+   * @return The list of global authorizations apply to the request user
+   * @throws AuthException for any error
+   */
+  private List<Authorization> lookupGlobalAuthorizations( String resourceType, String accountId ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( Policies.lookupAccountGlobalAuthorizations( resourceType, accountId ) );
     results.addAll( Policies.lookupAccountGlobalAuthorizations( PolicySpecConstants.ALL_RESOURCE, accountId ) );
+    return results;
+  }
+  
+  /**
+   * Lookup local (intra-accounts) authorizations.
+   * 
+   * @param resourceType Type of the resource
+   * @param userId The ID of the request user
+   * @return The list of local authorization apply to the request user
+   * @throws AuthException for any error
+   */
+  private List<Authorization> lookupLocalAuthorizations( String resourceType, String userId ) throws AuthException {
+    List<Authorization> results = Lists.newArrayList( );
     results.addAll( Policies.lookupAuthorizations( resourceType, userId ) );
     results.addAll( Policies.lookupAuthorizations( PolicySpecConstants.ALL_RESOURCE, userId ) );
     return results;
@@ -168,11 +228,11 @@ public class PolicyEngineImpl implements PolicyEngine {
   public <T> void evaluateQuota( Class<T> resourceClass, String resourceName ) throws AuthException {
     try {
       User requestUser = RequestContext.getRequestUser( );
-      Class<? extends BaseMessage> requestMessageClass = RequestContext.getRequestMessageClass( );
+      BaseMessage request = RequestContext.getRequest( );
       String userId = requestUser.getUserId( );
       String accountId = requestUser.getAccount( ).getAccountId( );
       String resourceType = getResourceType( resourceClass );
-      String action = getAction( requestMessageClass );
+      String action = getAction( request.getClass( ) );
       Map<Class<? extends QuotaKey>, String> matchedQuotas = lookupMatchedQuotas( action, resourceType, resourceName, userId, accountId );
       processQuotas( matchedQuotas );
     } catch ( AuthException e ) {

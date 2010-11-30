@@ -524,5 +524,10 @@ public class DatabaseUserProxy implements User {
     }
     return results;
   }
+
+  @Override
+  public boolean isAccountAdmin( ) {
+    return this.delegate.isAccountAdmin( );
+  }
   
 }

@@ -179,19 +179,24 @@ public class AuthTest {
       }
 
       @Override
-      public Class<? extends BaseMessage> getRequestMessageClass( ) {
-        return RunInstancesType.class;
+      public BaseMessage getRequest( ) {
+        return new RunInstancesType( );
       }
 
       @Override
       public SocketAddress getRemoteAddress( ) {
         return new InetSocketAddress( "192.168.7.54", 80808 );
       }
+
+      @Override
+      public Map<String, Contract> getContracts( ) {
+        return Maps.newHashMap( );
+      }
       
     } );
     
     PolicyEngine engine = new PolicyEngineImpl( );
-    engine.evaluateAuthorization( Image.class, "emi-12345678" );
+    engine.evaluateAuthorization( Image.class, "emi-12345678", user.getAccount( ).getAccountId( ) );
   }
   
   private static void printAuths( List<? extends Authorization> auths ) throws AuthException {

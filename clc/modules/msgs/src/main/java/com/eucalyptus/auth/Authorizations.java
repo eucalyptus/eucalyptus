@@ -2,6 +2,7 @@ package com.eucalyptus.auth;
 
 import java.net.SocketAddress;
 import java.util.Date;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import org.apache.log4j.Logger;
@@ -53,9 +54,6 @@ public class Authorizations {
    * @throws ResourceLookupException
    */
   public static <T extends HasName<T>> T lookupPrivileged( String resourceName, ResourceLookup<T> resolver ) throws AuthException, ResourceLookupException {
-    /** Check the policy; see implementation example for context lookup, etc. **/
-    //policyEngine.evaluate( resourceName );
-    /** If policy allows, perform resource lookup **/
     T resource;
     try {
       resource = resolver.resolve( resourceName );
@@ -73,8 +71,9 @@ public class Authorizations {
                                          + resolver.getClass( ).getCanonicalName( ) );
     }
     /** Can also use the returned resourceType to do policy evaluation **/
+    @SuppressWarnings( "unchecked" )
     Class<T> resourceType = ( Class<T> ) resource.getClass( );
-    //policyEngine.evaluate( resourceName, resourceType );
+    //policyEngine.evaluateAuthorization( resourceType, resourceName );
     return resource;
   }
   
@@ -82,11 +81,10 @@ public class Authorizations {
    * @param <T> type of the resource
    * @param quantity number of resources to allocate
    * @param allocator service implementation which performs the allocation
-   * @return immutable list of the resources which were allocated
    * @throws AuthException 
    * @throws ResourceAllocationException 
    */
-  public static <T extends HasName<T>> Set<ResourceLease<T>> allocatePrivileged( Integer quantity, ResourceAllocator<T> allocator ) throws AuthException, ResourceAllocationException {
+  public static <T extends HasName<T>> void allocatePrivileged( Integer quantity, ResourceAllocator<T> allocator ) throws AuthException, ResourceAllocationException {
     /*
     try {
       NavigableSet<T> resources = allocator.allocate( quantity );
@@ -116,7 +114,6 @@ public class Authorizations {
       throw ex;
     }
     */
-    return null;
   }
   
 }

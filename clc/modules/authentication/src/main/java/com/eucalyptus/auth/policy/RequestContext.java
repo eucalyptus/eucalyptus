@@ -1,6 +1,8 @@
 package com.eucalyptus.auth.policy;
 
 import java.net.SocketAddress;
+import java.util.Map;
+import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -11,8 +13,12 @@ public class RequestContext {
   public interface ContextAdaptor {
     
     public User getRequestUser( );
-    public Class<? extends BaseMessage> getRequestMessageClass( );
+
+    public BaseMessage getRequest( );
+    
     public SocketAddress getRemoteAddress( );
+    
+    public Map<String, Contract> getContracts( ); 
     
   }
   
@@ -25,15 +31,21 @@ public class RequestContext {
     }
     
     @Override
-    public Class<? extends BaseMessage> getRequestMessageClass( ) {
+    public BaseMessage getRequest( ) {
       Context requestContext = Contexts.lookup( );
-      return requestContext.getRequest( ).getClass( );
+      return requestContext.getRequest( );
     }
     
     @Override
     public SocketAddress getRemoteAddress( ) {
       Context requestContext = Contexts.lookup( );
       return requestContext.getChannel( ).getRemoteAddress( );
+    }
+
+    @Override
+    public Map<String, Contract> getContracts( ) {
+      Context requestContext = Contexts.lookup( );
+      return requestContext.getContracts( );
     }
     
   }
@@ -52,12 +64,16 @@ public class RequestContext {
     return adaptor.getRequestUser( );
   }
   
-  public static Class<? extends BaseMessage> getRequestMessageClass( ) {
-    return adaptor.getRequestMessageClass( );
+  public static BaseMessage getRequest( ) {
+    return adaptor.getRequest( );
   }
   
   public static SocketAddress getRemoteAddress( ) {
     return adaptor.getRemoteAddress( );
+  }
+  
+  public static Map<String, Contract> getContracts( ) {
+    return adaptor.getContracts( );
   }
 
 }

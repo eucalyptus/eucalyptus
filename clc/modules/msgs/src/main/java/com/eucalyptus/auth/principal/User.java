@@ -127,5 +127,7 @@ public interface User extends BasePrincipal, X509Principal, HmacPrincipal {
   public Account getAccount( );
   
   public boolean isSystemAdmin( );
+  
+  public boolean isAccountAdmin( );
     
 }
