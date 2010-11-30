@@ -546,5 +546,27 @@ public class SANManager implements LogicalStorageManager {
 		}
 		connectionManager.removeInitiatorRule(volumeId, nodeIqn);
 	}
+
+	@Override
+	public void checkReady() throws EucalyptusCloudException {
+		connectionManager.checkConnection();		
+	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		connectionManager.stop();
+	}
+
+	@Override
+	public void disable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void enable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
 }
 

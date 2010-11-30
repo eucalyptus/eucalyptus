@@ -113,7 +113,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
-@Provides(Component.eucalyptus)
+@Provides(Component.bootstrap)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
 @DependsLocal(Component.eucalyptus)
 public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPipelineFactory, EventListener {

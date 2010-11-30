@@ -114,7 +114,6 @@ public class DASManager implements LogicalStorageManager {
 	public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
 	private static Logger LOG = Logger.getLogger(DASManager.class);
 	public static String eucaHome = System.getProperty("euca.home");
-	private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
 	public static StorageExportManager exportManager;
 	private static String volumeGroup;
 
@@ -1052,5 +1051,29 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public void detachVolume(String volumeId, String nodeIqn)
 	throws EucalyptusCloudException {
+	}
+
+	@Override
+	public void checkReady() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void disable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void enable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
 	}
 }

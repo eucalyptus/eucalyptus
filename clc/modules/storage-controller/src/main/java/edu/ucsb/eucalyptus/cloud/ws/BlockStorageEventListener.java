@@ -70,6 +70,7 @@ import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 public class BlockStorageEventListener implements EventListener {
 	private static Logger LOG  = Logger.getLogger( BlockStorageEventListener.class );
@@ -84,9 +85,14 @@ public class BlockStorageEventListener implements EventListener {
 
 	@Override
 	public void fireEvent(Event event) {
-		if(event instanceof StartComponentEvent) {
-			if(((StartComponentEvent) event).isLocal())
-				BlockStorage.configure();
+		if(event instanceof StartComponentEvent) {			
+			//TODO: This needs to be moved to a Bootstrapper
+//			if(((StartComponentEvent) event).isLocal())
+//				try {
+//					BlockStorage.configure();
+//				} catch (EucalyptusCloudException e) {
+//					LOG.error(e);
+//				}
 		} 
 	}
 }

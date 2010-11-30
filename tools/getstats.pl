@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+
+use Getopt::Std;
+
+my $blkbytes = 0;
+my $ifbytes = 0;
+
+getopts('i:b:n:', \%opts);
+my $id = $opts{'i'};
+my $blkdevstr = $opts{'b'};
+my $ifacestr = $opts{'n'};
+
+my @blkdevs = split(",", $blkdevstr);
+my @ifaces = split(",", $ifacestr);
+
+foreach $blkdev (@blkdevs) {
+    open(RFH, "virsh domblkstat $id $blkdev 2>/dev/null|");
+    while(<RFH>) {
+	chomp;
+	my $line = $_;
+	if ($line =~ /rd_bytes (.*)/ || $line =~ /wr_bytes (.*)/) {
+	    $blkbytes += $1;
+	}
+    }
+    close(RFH);
+}
+
+foreach $iface (@ifaces) {
+    open(RFH, "virsh domifstat $id $iface 2>/dev/null |");
+    while(<RFH>) {
+	chomp;
+	my $line = $_;
+	if ($line =~ /rx_bytes (.*)/ || $line =~ /tx_bytes (.*)/) {
+	    $ifbytes += $1;
+	}
+    }
+    close(RFH);
+}
+
+print "OUTPUT $blkbytes $ifbytes\n";

@@ -1,7 +1,9 @@
 package com.eucalyptus.images;
 
+import com.eucalyptus.util.HasName;
 
-public interface Image {
+
+public interface Image extends HasName<Image> {
   
   public abstract String getArchitecture( );
   

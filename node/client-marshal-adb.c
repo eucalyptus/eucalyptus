@@ -192,7 +192,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     adb_netConfigType_t * netconf = adb_instanceType_get_netParams(instance, env);
     if (netconf != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
-		ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
+        ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
         strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
         strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
         strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
@@ -205,15 +205,10 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     }
 
     ncInstance * outInst = allocate_instance(
+        (char *)adb_instanceType_get_uuid(instance, env),
         (char *)adb_instanceType_get_instanceId(instance, env),
         (char *)adb_instanceType_get_reservationId(instance, env),
         &params,
-        (char *)adb_instanceType_get_imageId(instance, env),
-        NULL, // URL is NULL
-        (char *)adb_instanceType_get_kernelId(instance, env),
-        NULL, // URL is NULL
-        (char *)adb_instanceType_get_ramdiskId(instance, env),
-        NULL, // URL is NULL
         (char *)adb_instanceType_get_stateName(instance, env),
         0,
         (char *)adb_instanceType_get_userId(instance, env), 
@@ -225,7 +220,9 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         groupNames, groupNamesSize
         );
 
-	strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+    strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+    outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
+    outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
 
     axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);
     if (dt!=NULL) {
@@ -240,14 +237,14 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
             strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
             strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
-			strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
+            strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
         }
     }
 
     return outInst;
 }
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
     int i;
     axutil_env_t * env = st->env;
@@ -258,11 +255,12 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     // set standard input fields
     adb_ncRunInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncRunInstanceType_set_correlationId(request, env, CORRELATION_ID);
-        adb_ncRunInstanceType_set_userId(request, env, meta->userId);
+        if (meta->correlationId) { meta->correlationId = NULL; }
+        EUCA_MESSAGE_MARSHAL(ncRunInstanceType, request, meta);
     }
 
     // set op-specific input fields
+    adb_ncRunInstanceType_set_uuid(request, env, uuid);
     adb_ncRunInstanceType_set_instanceId(request, env, instanceId);
     adb_ncRunInstanceType_set_reservationId(request, env, reservationId);
     adb_ncRunInstanceType_set_instanceType(request, env, copy_vm_type_to_adb(env, params));
@@ -327,8 +325,8 @@ int ncGetConsoleOutputStub (ncStub *st, ncMetadata *meta, char *instanceId, char
     /* set input fields */
     adb_ncGetConsoleOutputType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncGetConsoleOutputType_set_correlationId(request, env, CORRELATION_ID);
-        adb_ncGetConsoleOutputType_set_userId(request, env, meta->userId);
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncGetConsoleOutputType, request, meta);
     }
     
     adb_ncGetConsoleOutputType_set_instanceId(request, env, instanceId);
@@ -368,8 +366,8 @@ int ncRebootInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId)
     /* set input fields */
     adb_ncRebootInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncRebootInstanceType_set_correlationId(request, env, CORRELATION_ID);
-        adb_ncRebootInstanceType_set_userId(request, env, meta->userId);
+        if (meta->correlationId) { meta->correlationId = NULL; }
+        EUCA_MESSAGE_MARSHAL(ncRebootInstanceType, request, meta);
     }
     
     adb_ncRebootInstanceType_set_instanceId(request, env, instanceId);
@@ -407,8 +405,8 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int *sh
     /* set input fields */
     adb_ncTerminateInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncTerminateInstanceType_set_correlationId(request, env, CORRELATION_ID);
-        adb_ncTerminateInstanceType_set_userId(request, env, meta->userId);
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncTerminateInstanceType, request, meta);
     }
     adb_ncTerminateInstanceType_set_instanceId(request, env, instId);
     adb_ncTerminateInstance_set_ncTerminateInstance(input, env, request);
@@ -450,8 +448,8 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
     /* set input fields */
     adb_ncDescribeInstancesType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncDescribeInstancesType_set_correlationId(request, env, CORRELATION_ID);
-        adb_ncDescribeInstancesType_set_userId(request, env, meta->userId);
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncDescribeInstancesType, request, meta);
     }
     int i;
     for (i=0; i<instIdsLen; i++) {
@@ -500,18 +498,18 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
     axis2_stub_t * stub = st->stub;
     adb_ncDescribeResource_t     * input   = adb_ncDescribeResource_create(env); 
     adb_ncDescribeResourceType_t * request = adb_ncDescribeResourceType_create(env);
-    
+
     /* set input fields */
     adb_ncDescribeResourceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncDescribeResourceType_set_correlationId(request, env, CORRELATION_ID);
-        adb_ncDescribeResourceType_set_userId(request, env, meta->userId);
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncDescribeResourceType, request, meta);
     }
     if (resourceType) {
         adb_ncDescribeResourceType_set_resourceType(request, env, resourceType);
     }
     adb_ncDescribeResource_set_ncDescribeResource(input, env, request);
-    
+
     int status = 0;
     {
         adb_ncDescribeResourceResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeResource(stub, env, input);
@@ -529,6 +527,7 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
 
             ncResource * res = allocate_resource(
                 (char *)adb_ncDescribeResourceResponseType_get_nodeStatus(response, env),
+		(char *)adb_ncDescribeResourceResponseType_get_iqn(response, env),		
                 (int)adb_ncDescribeResourceResponseType_get_memorySizeMax(response, env),
                 (int)adb_ncDescribeResourceResponseType_get_memorySizeAvailable(response, env),
                 (int)adb_ncDescribeResourceResponseType_get_diskSizeMax(response, env),
@@ -544,7 +543,7 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
             * outRes = res;
         }
     }
-    
+
     return status;
 }
 
@@ -557,8 +556,8 @@ int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
   // set standard input fields
   adb_ncPowerDownType_set_nodeName(request, env, st->node_name);
   if (meta) {
-    adb_ncPowerDownType_set_correlationId (request, env, CORRELATION_ID);
-    adb_ncPowerDownType_set_userId (request, env, meta->userId);
+    if (meta->correlationId) { meta->correlationId = NULL; }
+    EUCA_MESSAGE_MARSHAL(ncPowerDownType, request, meta);
   }
   
   // set op-specific input fields
@@ -583,7 +582,7 @@ int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
   return status;
 }
 
-int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char **peers, int peersLen, int port, int vlan, char **outStatus) 
+int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus) 
 {
     axutil_env_t * env  = st->env;
     axis2_stub_t * stub = st->stub;
@@ -593,11 +592,12 @@ int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char **peers, int peersLe
     // set standard input fields
     adb_ncStartNetworkType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncStartNetworkType_set_correlationId (request, env, CORRELATION_ID);
-        adb_ncStartNetworkType_set_userId (request, env, meta->userId);
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncStartNetworkType, request, meta);
     }
     
     // set op-specific input fields
+    adb_ncStartNetworkType_set_uuid(request, env, uuid);
     adb_ncStartNetworkType_set_vlan(request, env, vlan);
     adb_ncStartNetworkType_set_remoteHostPort(request, env, port);
     int i;
@@ -641,8 +641,8 @@ int ncAttachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     // set standard input fields
     adb_ncAttachVolumeType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncAttachVolumeType_set_correlationId (request, env, CORRELATION_ID);
-        adb_ncAttachVolumeType_set_userId (request, env, meta->userId);
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncAttachVolumeType, request, meta);
     }
     
     // set op-specific input fields
@@ -682,8 +682,8 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     // set standard input fields
     adb_ncDetachVolumeType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncDetachVolumeType_set_correlationId (request, env, CORRELATION_ID);
-        adb_ncDetachVolumeType_set_userId (request, env, meta->userId);
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncDetachVolumeType, request, meta);
     }
     
     // set op-specific input fields

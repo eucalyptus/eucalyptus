@@ -71,7 +71,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.address.ClusterAddressInfo;
+import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
@@ -179,8 +179,8 @@ public class ClusterState {
     this.clusterName = clusterName;
   }
   
-  public NetworkToken extantAllocation( String userName, String networkName, int vlan ) throws NetworkAlreadyExistsException {
-    NetworkToken netToken = new NetworkToken( this.clusterName, userName, networkName, vlan );
+  public NetworkToken extantAllocation( String userName, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
+    NetworkToken netToken = new NetworkToken( this.clusterName, userName, networkName, networkUuid, vlan );
     if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException( );
     }

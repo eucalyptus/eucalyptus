@@ -490,5 +490,10 @@ public class EquallogicProvider implements SANProvider {
 	public void setStorageProps(ArrayList<ComponentProperty> storageProps) {
 		this.configure();
 	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		
+	}
 }
 

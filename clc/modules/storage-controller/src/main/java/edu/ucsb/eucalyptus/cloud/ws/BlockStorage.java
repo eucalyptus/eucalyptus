@@ -141,7 +141,7 @@ public class BlockStorage {
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 
-	public static void configure() {
+	public static void configure() throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
 		StorageProperties.updateStorageHost();
@@ -178,6 +178,29 @@ public class BlockStorage {
 				LOG.error("unable to transfer pending snapshots", ex);
 			}
 		}
+	}
+
+	public static void check() throws EucalyptusCloudException {
+		blockManager.checkReady();
+	}
+
+	public static void stop() throws EucalyptusCloudException {
+		blockManager.stop();
+		//clean all state.
+		blockManager = null;
+		checker = null;
+		blockStorageStatistics = null;
+		volumeService.shutdown();
+		snapshotService.shutdown();
+		StorageProperties.enableSnapshots = StorageProperties.enableStorage = false;
+	}
+
+	public static void enable() throws EucalyptusCloudException {
+		blockManager.enable();
+	}
+	
+	public static void disable() throws EucalyptusCloudException {
+		blockManager.disable();
 	}
 
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
@@ -991,4 +1014,5 @@ public class BlockStorage {
 			}
 		}
 	}
+
 }

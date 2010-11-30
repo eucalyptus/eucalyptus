@@ -79,12 +79,7 @@ public class VmTypeVerify {
       throw new EucalyptusCloudException( "instance type does not exist: " + vmAllocInfo.getRequest().getInstanceType() );
     }
 
-    VmImageInfo vmImgInfo = vmAllocInfo.getImageInfo();
-    if( vmImgInfo.getSize() > 1024l*1024l*1024l*v.getDisk() ) {
-      throw new EucalyptusCloudException( "image too large [size="+vmImgInfo.getSize()/(1024l*1024l)+"MB] for instance type " + v.getName() + " [disk="+v.getDisk()*1024l+"MB]" );
-    }
-
-    vmAllocInfo.setVmTypeInfo( new VmTypeInfo( v.getName(),v.getMemory(),v.getDisk(),v.getCpu() ) );
+    vmAllocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
     return vmAllocInfo;
   }
 

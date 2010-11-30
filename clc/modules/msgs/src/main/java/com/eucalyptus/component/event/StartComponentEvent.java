@@ -16,13 +16,7 @@ public class StartComponentEvent extends LifecycleEvent {
     } catch ( URISyntaxException e ) {
       LOG.fatal( "Failed to construct a valid URL from a component configuration", e );
     }
-    return new StartComponentEvent( new LocalConfiguration( config.getComponent( ), uri ), config.getComponent(), true );
-  }
-  public static StartComponentEvent getLocal( com.eucalyptus.bootstrap.Component c ) {
-    return new StartComponentEvent( new LocalConfiguration( c, c.getLocalUri( ) ), c, true );
-  }
-  public static StartComponentEvent getLocal( Component c ) {
-    return new StartComponentEvent( new LocalConfiguration( c.getPeer( ), c.getConfiguration( ).getLocalUri( ) ), c.getPeer( ), true );
+    return new StartComponentEvent( new LocalConfiguration( config.getPartition( ), config.getComponent( ), uri ), config.getComponent(), true );
   }
   public static StartComponentEvent getRemote( ServiceConfiguration config ) {
     return new StartComponentEvent( config, config.getComponent( ), false );

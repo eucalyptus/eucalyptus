@@ -68,6 +68,8 @@ permission notice:
 #include <unistd.h>
 #include "adb-helpers.h"
 
+extern ncMetadata mymeta;
+
 int cc_killallInstances(axutil_env_t *env, axis2_stub_t *stub) {
   int rc, instIdsLen;
   char *instIds[256];
@@ -140,16 +142,8 @@ int cc_getConsoleOutput(char *instId, axutil_env_t *env, axis2_stub_t *stub) {
 
   tit = adb_getConsoleOutputType_create(env);
   adb_getConsoleOutputType_set_instanceId(tit, env, instId);
-  adb_getConsoleOutputType_set_userId(tit, env, "admin");
-  {
-    char cidstr[9];
-    bzero(cidstr, 9);
-    srand(time(NULL)+getpid());
-    for (i=0; i<8; i++) {
-      cidstr[i] = rand()%26+'a';
-    }
-    adb_getConsoleOutputType_set_correlationId(tit, env, cidstr);
-  }
+  
+  EUCA_MESSAGE_MARSHAL(getConsoleOutputType, tit, (&mymeta));
   
   tiIn = adb_GetConsoleOutput_create(env);
   adb_GetConsoleOutput_set_GetConsoleOutput(tiIn, env, tit);
@@ -196,16 +190,8 @@ int cc_rebootInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis2_
   for (i=0; i<instIdsLen; i++) {
     adb_rebootInstancesType_add_instanceIds(tit, env, instIds[i]);
   }
-  adb_rebootInstancesType_set_userId(tit, env, "eucalyptus");
-  {
-    char cidstr[9];
-    bzero(cidstr, 9);
-    srand(time(NULL)+getpid());
-    for (i=0; i<8; i++) {
-      cidstr[i] = rand()%26+'a';
-    }
-    adb_rebootInstancesType_set_correlationId(tit, env, cidstr);
-  }
+
+  EUCA_MESSAGE_MARSHAL(rebootInstancesType, tit, (&mymeta));
   
   tiIn = adb_RebootInstances_create(env);
   adb_RebootInstances_set_RebootInstances(tiIn, env, tit);
@@ -238,6 +224,8 @@ int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t *env, axi
   for (i=0; i<instIdsLen; i++) {
     adb_terminateInstancesType_add_instanceIds(tit, env, instIds[i]);
   }
+  EUCA_MESSAGE_MARSHAL(terminateInstancesType, tit, (&mymeta));
+  /*
   adb_terminateInstancesType_set_userId(tit, env, "eucalyptus");
   {
     char cidstr[9];
@@ -248,6 +236,15 @@ int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t *env, axi
     }
     adb_terminateInstancesType_set_correlationId(tit, env, cidstr);
   }
+  adb_terminateInstancesType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_terminateInstancesType_add_services(drt, env, sit);
+  */
 
   tiIn = adb_TerminateInstances_create(env);
   adb_TerminateInstances_set_TerminateInstances(tiIn, env, tit);
@@ -285,8 +282,10 @@ int cc_configureNetwork(char *sourceNet, char *destName, char *protocol, int min
 
   cn = adb_configureNetworkType_create(env);
   input = adb_ConfigureNetwork_create(env);
-  
-  adb_configureNetworkType_set_userId(cn, env, "admin");
+
+  EUCA_MESSAGE_MARSHAL(configureNetworkType, cn, (&mymeta));  
+
+  /*  adb_configureNetworkType_set_userId(cn, env, "admin");
   {
     char cidstr[9];
     bzero(cidstr, 9);
@@ -296,6 +295,15 @@ int cc_configureNetwork(char *sourceNet, char *destName, char *protocol, int min
     }
     adb_configureNetworkType_set_correlationId(cn, env, cidstr);
   }
+  adb_configureNetworkType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_configureNetworkType_add_services(drt, env, sit);
+  */
   
   nr = adb_networkRule_create(env);
 
@@ -346,7 +354,9 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t *env, axis2_stub_t *stu
 
   sn = adb_stopNetworkType_create(env);
   input = adb_StopNetwork_create(env);
-  
+
+  EUCA_MESSAGE_MARSHAL(stopNetworkType, sn, (&mymeta));
+  /*
   adb_stopNetworkType_set_userId(sn, env, "admin");
   {
     char cidstr[9];
@@ -357,6 +367,15 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t *env, axis2_stub_t *stu
     }
     adb_stopNetworkType_set_correlationId(sn, env, cidstr);
   }
+  adb_stopNetworkType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_stopNetworkType_add_services(drt, env, sit);
+  */
   adb_stopNetworkType_set_vlan(sn, env, vlan);
   adb_stopNetworkType_set_netName(sn, env, netName);
 
@@ -383,6 +402,8 @@ int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
   sn = adb_attachVolumeType_create(env);
   input = adb_AttachVolume_create(env);
   
+  EUCA_MESSAGE_MARSHAL(attachVolumeType, sn, (&mymeta));
+  /*
   adb_attachVolumeType_set_userId(sn, env, "eucalyptus");
   {
     char cidstr[9];
@@ -393,6 +414,16 @@ int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
     }
     adb_attachVolumeType_set_correlationId(sn, env, cidstr);
   }
+  adb_attachVolumeType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_attachVolumeType_add_services(drt, env, sit);
+  */
+
   adb_attachVolumeType_set_instanceId(sn, env, instanceId);
   adb_attachVolumeType_set_volumeId(sn, env, volumeId);
   adb_attachVolumeType_set_remoteDev(sn, env, remoteDev);
@@ -421,6 +452,8 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
   sn = adb_detachVolumeType_create(env);
   input = adb_DetachVolume_create(env);
   
+  EUCA_MESSAGE_MARSHAL(detachVolumeType, sn, (&mymeta));
+  /*
   adb_detachVolumeType_set_userId(sn, env, "eucalyptus");
   {
     char cidstr[9];
@@ -431,6 +464,16 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
     }
     adb_detachVolumeType_set_correlationId(sn, env, cidstr);
   }
+  adb_detachVolumeType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_detachVolumeType_add_services(drt, env, sit);
+  */
+
   adb_detachVolumeType_set_instanceId(sn, env, instanceId);
   adb_detachVolumeType_set_volumeId(sn, env, volumeId);
   adb_detachVolumeType_set_remoteDev(sn, env, remoteDev);
@@ -554,6 +597,8 @@ int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub
   sn = adb_assignAddressType_create(env);
   input = adb_AssignAddress_create(env);
   
+  EUCA_MESSAGE_MARSHAL(assignAddressType, sn, (&mymeta));
+  /*
   adb_assignAddressType_set_userId(sn, env, "eucalyptus");
   {
     char cidstr[9];
@@ -564,8 +609,18 @@ int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub
     }
     adb_assignAddressType_set_correlationId(sn, env, cidstr);
   }
+  adb_assignAddressType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_assignAddressType_add_services(drt, env, sit);
+  */
   adb_assignAddressType_set_source(sn, env, src);
   adb_assignAddressType_set_dest(sn, env, dst);
+  adb_assignAddressType_set_uuid(sn, env, "the-uuid");
 
   adb_AssignAddress_set_AssignAddress(input, env, sn);
 
@@ -589,6 +644,8 @@ int cc_unassignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *st
   sn = adb_unassignAddressType_create(env);
   input = adb_UnassignAddress_create(env);
   
+  EUCA_MESSAGE_MARSHAL(unassignAddressType, sn, (&mymeta));
+  /*
   adb_unassignAddressType_set_userId(sn, env, "eucalyptus");
   {
     char cidstr[9];
@@ -599,6 +656,15 @@ int cc_unassignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *st
     }
     adb_unassignAddressType_set_correlationId(sn, env, cidstr);
   }
+  adb_unassignAddressType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_unassignAddressType_add_services(drt, env, sit);
+  */
   adb_unassignAddressType_set_source(sn, env, src);
   adb_unassignAddressType_set_dest(sn, env, dst);
 
@@ -625,6 +691,8 @@ int cc_describePublicAddresses(axutil_env_t *env, axis2_stub_t *stub) {
   sn = adb_describePublicAddressesType_create(env);
   input = adb_DescribePublicAddresses_create(env);
   
+  EUCA_MESSAGE_MARSHAL(describePublicAddressesType, sn, (&mymeta));
+  /*
   adb_describePublicAddressesType_set_userId(sn, env, "eucalyptus");
   {
     char cidstr[9];
@@ -635,6 +703,16 @@ int cc_describePublicAddresses(axutil_env_t *env, axis2_stub_t *stub) {
     }
     adb_describePublicAddressesType_set_correlationId(sn, env, cidstr);
   }
+  adb_describePublicAddressesType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_describePublicAddressesType_add_services(drt, env, sit);
+  */
+
   adb_DescribePublicAddresses_set_DescribePublicAddresses(input, env, sn);
 
   output = axis2_stub_op_EucalyptusCC_DescribePublicAddresses(stub, env, input);
@@ -643,14 +721,18 @@ int cc_describePublicAddresses(axutil_env_t *env, axis2_stub_t *stub) {
     return(1);
   }
   snrt = adb_DescribePublicAddressesResponse_get_DescribePublicAddressesResponse(output, env);
-  len = adb_describePublicAddressesResponseType_sizeof_sourceAddresses(snrt, env);
+  len = adb_describePublicAddressesResponseType_sizeof_addresses(snrt, env);
   for (i=0; i<len; i++) {
     char *ip;
     char *dstip;
-    ip = adb_describePublicAddressesResponseType_get_sourceAddresses_at(snrt, env, i);
-    dstip = adb_describePublicAddressesResponseType_get_destAddresses_at(snrt, env, i);
+    char *uuid;
+    adb_publicAddressType_t *addr;
+    addr = adb_describePublicAddressesResponseType_get_addresses_at(snrt, env, i);
+    ip = adb_publicAddressType_get_sourceAddress(addr, env);
+    dstip = adb_publicAddressType_get_destAddress(addr, env);
+    uuid = adb_publicAddressType_get_uuid(addr, env);
 
-    printf("IP: %s ALLOC: %s\n", ip, dstip);
+    printf("UUID: %s IP: %s ALLOC: %s\n", uuid, ip, dstip);
   }
   // len = ...for (i=0....
   //  printf("descibePublicAddresses returned status %d\n", adb_describePublicAddressesResponseType_get_networkStatus(snrt, env));
@@ -668,6 +750,8 @@ int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_
   sn = adb_startNetworkType_create(env);
   input = adb_StartNetwork_create(env);
   
+  EUCA_MESSAGE_MARSHAL(startNetworkType, sn, (&mymeta));
+  /*
   adb_startNetworkType_set_userId(sn, env, "admin");
   {
     char cidstr[9];
@@ -678,8 +762,19 @@ int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_
     }
     adb_startNetworkType_set_correlationId(sn, env, cidstr);
   }
+  adb_startNetworkType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_startNetworkType_add_services(drt, env, sit);
+  */
+
   adb_startNetworkType_set_vlan(sn, env, vlan);
   adb_startNetworkType_set_netName(sn, env, netName);
+  adb_startNetworkType_set_uuid(sn, env, "the-uuid");
   
   for (i=0; i<ccsLen; i++) {
     printf("adding %s\n", ccs[i]);
@@ -712,6 +807,9 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
   if (nameserver) {
     adb_describeNetworksType_set_nameserver(sn, env, nameserver);
   }
+
+  EUCA_MESSAGE_MARSHAL(describeNetworksType, sn, (&mymeta));
+  /*
   adb_describeNetworksType_set_userId(sn, env, "eucalyptus");
   {
     char cidstr[9];
@@ -722,6 +820,16 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
     }
     adb_describeNetworksType_set_correlationId(sn, env, cidstr);
   }
+  adb_describeNetworksType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_describeNetworksType_add_services(drt, env, sit);
+  */
+
   
   for (i=0; i<ccsLen; i++) {
     printf("adding %s\n", ccs[i]);
@@ -746,7 +854,7 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
     for (i=0; i<numnets; i++) {
       adb_networkType_t *nt;
       nt = adb_describeNetworksResponseType_get_activeNetworks_at(snrt, env, i);
-      printf("\tvlan: %d netName: %s userName: %s\n", adb_networkType_get_vlan(nt, env), adb_networkType_get_netName(nt, env), adb_networkType_get_userName(nt, env));
+      printf("\tvlan: %d uuid: %s nnetName: %s userName: %s\n", adb_networkType_get_vlan(nt, env), adb_networkType_get_uuid(nt, env), adb_networkType_get_netName(nt, env), adb_networkType_get_userName(nt, env));
       numaddrs = adb_networkType_sizeof_activeAddrs(nt, env);
       printf("\tnumber of active addrs: %d - ", numaddrs);
       for (j=0; j<numaddrs; j++) {
@@ -762,6 +870,7 @@ int cc_describeResources(axutil_env_t *env, axis2_stub_t *stub) {
   adb_DescribeResourcesResponse_t *drOut=NULL;
   adb_describeResourcesResponseType_t *drrt=NULL;
   adb_ccResourceType_t *rt=NULL;
+  adb_ccNodeType_t *nt=NULL;
 
   adb_DescribeResources_t *drIn=NULL;
   adb_describeResourcesType_t *drt=NULL;
@@ -769,11 +878,15 @@ int cc_describeResources(axutil_env_t *env, axis2_stub_t *stub) {
   adb_virtualMachineType_t *vm;
   int i;
   axis2_bool_t status;
+  adb_serviceInfoType_t *sit;
 
   drt = adb_describeResourcesType_create(env);
   //  adb_describeResourcesType_add_instanceTypes(drt, env, "1");
   //  adb_describeResourcesType_add_instanceTypes(drt, env, "2");
   
+  EUCA_MESSAGE_MARSHAL(describeResourcesType, drt, (&mymeta));
+
+  /*
   adb_describeResourcesType_set_userId(drt, env, "eucalyptus");
   {
     char cidstr[9];
@@ -784,6 +897,15 @@ int cc_describeResources(axutil_env_t *env, axis2_stub_t *stub) {
     }
     adb_describeResourcesType_set_correlationId(drt, env, cidstr);
   }
+  adb_describeResourcesType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_describeResourcesType_add_services(drt, env, sit);
+  */
 
   vm = adb_virtualMachineType_create(env);
   adb_virtualMachineType_set_name(vm, env, "large");
@@ -821,11 +943,17 @@ int cc_describeResources(axutil_env_t *env, axis2_stub_t *stub) {
   if (status == AXIS2_FALSE) {
     printf("operation fault '%s'\n", adb_describeResourcesResponseType_get_statusMessage(drrt, env));
   } else {
-    
-    for (i=0; i<adb_describeResourcesResponseType_sizeof_serviceTags(drrt, env); i++) {
-      printf("%s ", adb_describeResourcesResponseType_get_serviceTags_at(drrt, env, i));
+    for (i=0; i<adb_describeResourcesResponseType_sizeof_nodes(drrt, env); i++) {
+      nt = adb_describeResourcesResponseType_get_nodes_at(drrt, env, i);
+      printf(":%s,%s:", adb_ccNodeType_get_serviceTag(nt, env), adb_ccNodeType_get_iqn(nt, env));
     }
     printf("\n");
+
+    /*    for (i=0; i<adb_describeResourcesResponseType_sizeof_serviceTags(drrt, env); i++) {
+      printf(":%s:", adb_describeResourcesResponseType_get_serviceTags_at(drrt, env, i));
+    }
+    printf("\n");*/
+    
     for (i=0; i<adb_describeResourcesResponseType_sizeof_resources(drrt, env); i++) {
       rt = adb_describeResourcesResponseType_get_resources_at(drrt, env, i);
       printf("DescribeResources: %d %d\n", adb_ccResourceType_get_maxInstances(rt, env), adb_ccResourceType_get_availableInstances(rt, env));
@@ -852,6 +980,9 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
       adb_describeInstancesType_add_instanceIds(dit, env, instIds[i]);
     }
   }
+
+  EUCA_MESSAGE_MARSHAL(describeInstancesType, dit, (&mymeta));
+  /*
   adb_describeInstancesType_set_userId(dit, env, "eucalyptus");
   {
     char cidstr[9];
@@ -862,6 +993,15 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
     }
     adb_describeInstancesType_set_correlationId(dit, env, cidstr);
   }
+  adb_describeInstancesType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_describeInstancesType_add_services(drt, env, sit);
+  */
 
   diIn = adb_DescribeInstances_create(env);
   adb_DescribeInstances_set_DescribeInstances(diIn, env, dit);
@@ -887,6 +1027,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	char *state;
 	char *reservationId;
 	char *ownerId, *keyName;
+	char *uuid;
 	int networkIndex;
 	
 	it = adb_describeInstancesResponseType_get_instances_at(dirt, env, i);
@@ -898,6 +1039,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	state = adb_ccInstanceType_get_stateName(it, env);
 	nct = adb_ccInstanceType_get_netParams(it, env);
 	vm = adb_ccInstanceType_get_instanceType(it, env);
+	uuid = adb_ccInstanceType_get_uuid(it, env);
 	//	networkIndex = adb_ccInstanceType_get_networkIndex(it, env);
 
 	if (0)
@@ -933,7 +1075,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	volId = adb_volumeType_get_volumeId(vol, env);
 
 	networkIndex = adb_netConfigType_get_networkIndex(nct, env);
-	printf("Desc: %s %s %s %s %s %s %s %d %s %s %d %d %d %s %s %s %s %s %d\n", instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
+	printf("Desc: uuid=%s instanceId=%s reservationId=%s ownerId=%s state=%s privMac=%s privIp=%s pubIp=%s vlan=%d keyName=%s vmTypeName=%s cores=%d mem=%d disk=%d serviceTag=%s userData=%s launchIndex=%s groupName=%s volId=%s networkIndex=%d\n", uuid, instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
 	
       }
     }
@@ -971,6 +1113,8 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
   adb_runInstancesType_add_netNames(rit, env, "third");
   
   adb_runInstancesType_set_keyName(rit, env, "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAvUJ+N859MBn7YZt4nt7KWm/4uX4/a+vHHFbS1yTDDa1hO6vUxcyJRmJYjfPYtUXJSUx/EInhtfbSLFdVioZbd3a8CpLuoJXZGYrxGK9YCiGk/9tevJD1RyMnsBkWPIJk3AMaWRloUnAMkUeFd6N74cMsig44oI1Bvd0aEoHxw0l5qJnOFeoNYkkCBZsrJOU8/muAPS/WAI5ro23p5k3VUSqmh+29OJ/hm/Vb3UvtspUqgJwuAVoIBtf8DlzM/M+X+leO0Ek7hgtxrgX05yhfu3LJMrkcRGDxUASbQ1GiYp9fPu3YbtBCcFSjXI7bgPWHXLw5QlWa1DxdXqYhmYZU3w== nurmi@spinner");
+  EUCA_MESSAGE_MARSHAL(runInstancesType, rit, (&mymeta));
+  /*
   adb_runInstancesType_set_userId(rit, env, "eucalyptus");
 
   {
@@ -982,6 +1126,15 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
     }
     adb_runInstancesType_set_correlationId(rit, env, cidstr);
   }
+  adb_runInstancesType_set_epoch(drt, env, 1);
+
+  sit = adb_serviceInfoType_create(env);
+  adb_serviceInfoType_set_type(sit, env, "walrus");
+  adb_serviceInfoType_set_name(sit, env, "thewalrus");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:1234/meh");
+  
+  adb_runInstancesType_add_services(drt, env, sit);
+  */
 
   adb_runInstancesType_set_instanceType(rit, env, vm);
 
@@ -1101,3 +1254,181 @@ int cc_registerImage(char *imageloc, axutil_env_t *env, axis2_stub_t *stub) {
   return 0;
 }
 */
+
+int cc_describeServices(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_DescribeServices_t *adbrequest;
+  adb_describeServicesType_t *adbinput;
+
+  adb_DescribeServicesResponse_t *adbresponse;
+  adb_describeServicesResponseType_t *adboutput;
+
+  adb_serviceInfoType_t *sit=NULL;
+
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_describeServicesType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(describeServicesType, adbinput, (&mymeta));
+  
+  sit = adb_serviceInfoType_create(env);
+  
+  adb_serviceInfoType_set_type(sit, env, "cc");
+  adb_serviceInfoType_set_name(sit, env, "self");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:8774");
+  
+  adb_describeServicesType_add_serviceIds(adbinput, env, sit);
+
+  adbrequest = adb_DescribeServices_create(env);
+  adb_DescribeServices_set_DescribeServices(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_DescribeServices(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: DescribeServices failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_DescribeServicesResponse_get_DescribeServicesResponse(adbresponse, env);
+    status = adb_describeServicesResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_describeServicesResponseType_get_statusMessage(adboutput, env));
+    } else {
+      for (i=0; i<adb_describeServicesResponseType_sizeof_serviceStatuses(adboutput, env); i++) {
+	adb_serviceStatusType_t *sst=NULL;
+	adb_serviceInfoType_t *sit=NULL;
+	sst = adb_describeServicesResponseType_get_serviceStatuses_at(adboutput, env, i);
+	printf("localState=%s localEpoch=%d details=%s\n", adb_serviceStatusType_get_localState(sst, env), adb_serviceStatusType_get_localEpoch(sst, env), adb_serviceStatusType_get_details_at(sst, env, 0));
+	sit = adb_serviceStatusType_get_serviceId(sst, env);
+	printf("\ttype=%s name=%s uris[0]=%s\n", adb_serviceInfoType_get_type(sit, env), adb_serviceInfoType_get_name(sit, env), adb_serviceInfoType_get_uris_at(sit, env, 0));
+      }
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_startService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_StartService_t *adbrequest;
+  adb_startServiceType_t *adbinput;
+
+  adb_StartServiceResponse_t *adbresponse;
+  adb_startServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_startServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(startServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_StartService_create(env);
+  adb_StartService_set_StartService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_StartService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: StartService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_StartServiceResponse_get_StartServiceResponse(adbresponse, env);
+    status = adb_startServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_startServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_stopService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_StopService_t *adbrequest;
+  adb_stopServiceType_t *adbinput;
+
+  adb_StopServiceResponse_t *adbresponse;
+  adb_stopServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_stopServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(stopServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_StopService_create(env);
+  adb_StopService_set_StopService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_StopService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: StopService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_StopServiceResponse_get_StopServiceResponse(adbresponse, env);
+    status = adb_stopServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_stopServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_enableService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_EnableService_t *adbrequest;
+  adb_enableServiceType_t *adbinput;
+
+  adb_EnableServiceResponse_t *adbresponse;
+  adb_enableServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_enableServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(enableServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_EnableService_create(env);
+  adb_EnableService_set_EnableService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_EnableService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: EnableService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_EnableServiceResponse_get_EnableServiceResponse(adbresponse, env);
+    status = adb_enableServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_enableServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_disableService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_DisableService_t *adbrequest;
+  adb_disableServiceType_t *adbinput;
+
+  adb_DisableServiceResponse_t *adbresponse;
+  adb_disableServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_disableServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(disableServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_DisableService_create(env);
+  adb_DisableService_set_DisableService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_DisableService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: DisableService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_DisableServiceResponse_get_DisableServiceResponse(adbresponse, env);
+    status = adb_disableServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_disableServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}

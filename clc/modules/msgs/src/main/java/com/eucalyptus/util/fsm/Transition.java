@@ -102,14 +102,14 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
     return this.rule.getErrorStateMark( );
   }
   
-  private boolean fireListeners( final TransitionListener.Phases phase, final Predicate<TransitionListener<P>> pred ) {
+  private boolean fireListeners( final TransitionListener.Phases phase, final Predicate<TransitionListener<P>> pred, P parent ) {
     if ( this.listeners.isEmpty( ) ) {
       throw new IllegalStateException( "Attempt to apply delegated transition before it is defined." );
     } else {
       for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
         final TransitionListener<P> tl = entry.getValue( );
         if( LogLevels.TRACE ) {
-          EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, this.toString( ), phase.toString( ),//
+          EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, ""+parent.getName( ), this.toString( ), phase.toString( ),//
                             entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll("^(\\w.)*","") ).trace( );
         }
         try {
@@ -134,7 +134,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
       public boolean apply( TransitionListener<P> listener ) {
         return listener.before( parent );
       }
-    } );
+    }, parent );
   }
   
   /**
@@ -148,7 +148,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
         listener.leave( parent, transitionCallback );
         return true;
       }
-    } );
+    }, parent );
   }
   
   /**
@@ -161,7 +161,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
         listener.enter( parent );
         return true;
       }
-    } );
+    }, parent );
   }
   
   /**
@@ -174,7 +174,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
         listener.after( parent );
         return true;
       }
-    } );
+    }, parent );
   }
   
   @Override

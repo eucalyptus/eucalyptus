@@ -153,7 +153,7 @@ public abstract class Bootstrapper {
    * 
    * @note Intended for future use. May become {@code abstract}.
    * @return true when all is clear
-   * @throws Exception should contain information about any malady which may be present.
+   * @throws Exception should contain detail any malady which may be present.
    */
   public abstract boolean check( ) throws Exception;
   
@@ -300,7 +300,7 @@ public abstract class Bootstrapper {
    */
   @Override
   public String toString( ) {
-    return String.format( "Bootstrapper %s dependsLocal=%s dependsRemote=%s", this.getClass( ).getSimpleName( ), this.dependsLocal, this.dependsRemote );
+    return String.format( "Bootstrapper %s runDuring=%s dependsLocal=%s dependsRemote=%s", this.getClass( ).getSimpleName( ), this.getBootstrapStage( ), this.dependsLocal, this.dependsRemote );
   }
   
 }

@@ -887,5 +887,11 @@ public class NetappProvider implements SANProvider {
 	public void setStorageProps(ArrayList<ComponentProperty> storageProps) {
 		this.configure();
 	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
 }
 

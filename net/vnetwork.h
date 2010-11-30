@@ -84,6 +84,7 @@ typedef struct netEntry_t {
 typedef struct userEntry_t {
   char netName[32];
   char userName[32];
+  char uuid[48];
 } userEntry;
 
 typedef struct networkEntry_t {
@@ -97,6 +98,7 @@ typedef struct publicip_t {
   uint32_t ip;
   uint32_t dstip;
   int allocated;
+  char uuid[48];
 } publicip;
 
 typedef struct tunnelData_t {
@@ -119,6 +121,7 @@ typedef struct vnetConfig_t {
   //  char localIp[32];
   uint32_t localIps[32];
   uint32_t nw, nm, euca_ns, cloudIp;
+  char euca_domainname[256];
   int role;
   int enabled;
   int initialized;
@@ -133,11 +136,14 @@ typedef struct vnetConfig_t {
 } vnetConfig;
 
 enum {NC, CC, CLC};
-void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp);
+int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp);
 
-int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
+int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
+int vnetStartInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
+int vnetStopInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
 int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx);
+int vnetRefreshHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx);
 int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
 int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan);
@@ -154,7 +160,7 @@ int vnetCountLocalIP(vnetConfig *vnetconfig);
 int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts);
 int vnetKickDHCP(vnetConfig *vnetconfig);
 
-int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network);
+int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *network);
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
 
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen);
@@ -177,9 +183,9 @@ int vnetSaveTablesToMemory(vnetConfig *vnetconfig);
 
 int vnetAddPublicIP(vnetConfig *vnetconfig, char *ip);
 int vnetCheckPublicIP(vnetConfig *vnetconfig, char *ip);
-int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip);
-int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip);
-int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval);
+int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip);
+int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip);
+int vnetSetPublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip, int setval);
 int vnetGetPublicIP(vnetConfig *vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
 
 int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst);
@@ -189,13 +195,14 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
 int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
 
 // linux managed mode driver
-int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
+int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
 
 // helper functions
 int vnetSaveIPTables(vnetConfig *vnetconfig);
 int vnetLoadIPTables(vnetConfig *vnetconfig);
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
+int vnetApplySingleEBTableRule(vnetConfig *vnetconfig, char *table, char *rule);
 int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet);
 
 char *host2ip(char *host);
@@ -207,6 +214,7 @@ void mac2hex(char *in, unsigned char out[6]);
 void hex2mac(unsigned char in[6], char **out);
 int maczero(unsigned char in[6]);
 int machexcmp(char *ina, unsigned char inb[6]);
+char *ipdot2macdot(char *ip, char *macprefix);
 
 int instId2mac(char *instId, char *outmac);
 int zeromac(unsigned char in[6]);

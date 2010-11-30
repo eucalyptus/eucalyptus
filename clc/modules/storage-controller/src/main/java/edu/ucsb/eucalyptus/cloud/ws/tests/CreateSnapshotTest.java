@@ -70,6 +70,7 @@ import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 import junit.framework.TestCase;
 import org.apache.commons.httpclient.HttpClient;
@@ -134,7 +135,11 @@ public class CreateSnapshotTest extends TestCase {
 
     public void setUp() {
         blockStorage = new BlockStorage();
-        BlockStorage.configure();
+        try {
+			BlockStorage.configure();
+		} catch (EucalyptusCloudException e) {
+			e.printStackTrace();
+		}
     }
 
 }

@@ -715,14 +715,19 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		oldRecord.setAffiliation (newRecord.getAffiliation());
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
-		oldRecord.setAdministrator(newRecord.isAdministrator());
-    oldRecord.setEnabled(newRecord.isEnabled( ));
-
-		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
-		if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {
-			oldRecord.setConfirmed(true);
-			oldRecord.setEnabled(true);
-			oldRecord.setApproved(true);
+		
+		// only an admin should be able to change this settings
+		if (callerRecord.isAdministrator()) { 
+			if(oldRecord.isAdministrator() != newRecord.isAdministrator()) 	
+				oldRecord.setAdministrator(newRecord.isAdministrator());
+			if(oldRecord.isEnabled() != newRecord.isEnabled())
+				oldRecord.setEnabled(newRecord.isEnabled( ));
+			// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
+			if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {
+				oldRecord.setConfirmed(true);
+				oldRecord.setEnabled(true);
+				oldRecord.setApproved(true);
+			}
 		}
 
 		EucalyptusManagement.commitWebUser( oldRecord );

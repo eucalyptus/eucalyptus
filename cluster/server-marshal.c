@@ -85,9 +85,9 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume
   
   avt = adb_AttachVolume_get_AttachVolume(attachVolume, env);
   
-  ccMeta.correlationId = adb_attachVolumeType_get_correlationId(avt, env);
-  ccMeta.userId = adb_attachVolumeType_get_userId(avt, env);
-  
+  //  ccMeta.correlationId = adb_attachVolumeType_get_correlationId(avt, env);
+  //  ccMeta.userId = adb_attachVolumeType_get_userId(avt, env);
+  EUCA_MESSAGE_UNMARSHAL(attachVolumeType, avt, (&ccMeta));
   //cid = adb_attachVolumeType_get_correlationId(avt, env);
   
   volumeId = adb_attachVolumeType_get_volumeId(avt, env);
@@ -135,9 +135,9 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
   
   dvt = adb_DetachVolume_get_DetachVolume(detachVolume, env);
   
-  ccMeta.correlationId = adb_detachVolumeType_get_correlationId(dvt, env);
-  ccMeta.userId = adb_detachVolumeType_get_userId(dvt, env);
-  
+  //  ccMeta.correlationId = adb_detachVolumeType_get_correlationId(dvt, env);
+  //  ccMeta.userId = adb_detachVolumeType_get_userId(dvt, env);
+  EUCA_MESSAGE_UNMARSHAL(detachVolumeType, dvt, (&ccMeta));
   //cid = adb_detachVolumeType_get_correlationId(dvt, env);
   
   volumeId = adb_detachVolumeType_get_volumeId(dvt, env);
@@ -342,9 +342,9 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, co
   
   snt = adb_StopNetwork_get_StopNetwork(stopNetwork, env);
   
-  ccMeta.correlationId = adb_stopNetworkType_get_correlationId(snt, env);
-  ccMeta.userId = adb_stopNetworkType_get_userId(snt, env);
-  
+  //  ccMeta.correlationId = adb_stopNetworkType_get_correlationId(snt, env);
+  //  ccMeta.userId = adb_stopNetworkType_get_userId(snt, env);
+  EUCA_MESSAGE_UNMARSHAL(stopNetworkType, snt, (&ccMeta));
   //userName = adb_stopNetworkType_get_userId(snt, env);
   //cid = adb_stopNetworkType_get_correlationId(snt, env);
   
@@ -388,7 +388,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char **clusterControllers=NULL, *nameserver=NULL;
+  char **clusterControllers=NULL, *nameserver=NULL, *vnetSubnet=NULL, *vnetNetmask=NULL;
   int clusterControllersLen=0;
   ncMetadata ccMeta;
   vnetConfig *outvnetConfig=NULL;
@@ -396,8 +396,9 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   outvnetConfig = malloc(sizeof(vnetConfig));
 
   snt = adb_DescribeNetworks_get_DescribeNetworks(describeNetworks, env);
-  ccMeta.correlationId = adb_describeNetworksType_get_correlationId(snt, env);
-  ccMeta.userId = adb_describeNetworksType_get_userId(snt, env);
+  //  ccMeta.correlationId = adb_describeNetworksType_get_correlationId(snt, env);
+  //  ccMeta.userId = adb_describeNetworksType_get_userId(snt, env);
+  EUCA_MESSAGE_UNMARSHAL(describeNetworksType, snt, (&ccMeta));
   
   nameserver = adb_describeNetworksType_get_nameserver(snt, env);
   
@@ -425,11 +426,29 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 	adb_describeNetworksResponseType_set_mode(snrt, env, 0);
       }
       adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, outvnetConfig->numaddrs);
+
+      /*
+      vnetSubnet = hex2dot(outvnetConfig->nw);
+      if (vnetSubnet) {
+	adb_describeNetworksResponseType_set_vnetSubnet(snrt, env, vnetSubnet);
+	free(vnetSubnet);
+      }
+
+      vnetNetmask = hex2dot(outvnetConfig->nm);
+      if (vnetNetmask) {
+	adb_describeNetworksResponseType_set_vnetNetmask(snrt, env, vnetNetmask);
+	free(vnetNetmask);
+	}
+      adb_describeNetworksResponseType_set_vlanMin(snrt, env, 2);
+      adb_describeNetworksResponseType_set_vlanMax(snrt, env, outvnetConfig->max_vlan);
+      */
+
       
       for (i=2; i<NUMBER_OF_VLANS; i++) {
 	if (outvnetConfig->networks[i].active) {
 	  adb_networkType_t *nt=NULL;
 	  nt = adb_networkType_create(env);
+	  adb_networkType_set_uuid(nt, env, outvnetConfig->users[i].uuid);
 	  adb_networkType_set_vlan(nt, env, i);
 	  adb_networkType_set_netName(nt, env, outvnetConfig->users[i].netName);
 	  adb_networkType_set_userName(nt, env, outvnetConfig->users[i].userName);
@@ -481,8 +500,9 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
 
   dpa = adb_DescribePublicAddresses_get_DescribePublicAddresses(describePublicAddresses, env);
 
-  ccMeta.correlationId = adb_describePublicAddressesType_get_correlationId(dpa, env);
-  ccMeta.userId = adb_describePublicAddressesType_get_userId(dpa, env);
+  //  ccMeta.correlationId = adb_describePublicAddressesType_get_correlationId(dpa, env);
+  //  ccMeta.userId = adb_describePublicAddressesType_get_userId(dpa, env);
+  EUCA_MESSAGE_UNMARSHAL(describePublicAddressesType, dpa, (&ccMeta));
 
   if (!DONOTHING) {
     rc = doDescribePublicAddresses(&ccMeta, &outAddresses, &outAddressesLen);
@@ -503,18 +523,24 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   dpart = adb_describePublicAddressesResponseType_create(env);
   for (i=0; i<outAddressesLen; i++) {
     if (outAddresses[i].ip) {
+      adb_publicAddressType_t *addr;
+      addr = adb_publicAddressType_create(env);
+
+      adb_publicAddressType_set_uuid(addr, env, outAddresses[i].uuid);
+
       ipstr = hex2dot(outAddresses[i].ip);
-      adb_describePublicAddressesResponseType_add_sourceAddresses(dpart, env, ipstr);
+      adb_publicAddressType_set_sourceAddress(addr, env, ipstr);
       if (ipstr) free(ipstr);
 
       if (outAddresses[i].dstip) {
 	ipstr = hex2dot(outAddresses[i].dstip);
-	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, ipstr);
+	adb_publicAddressType_set_destAddress(addr, env, ipstr);
 	if (ipstr) free(ipstr);
-
       } else {
-	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, "");
+	adb_publicAddressType_set_destAddress(addr, env, "");
       }
+
+      adb_describePublicAddressesResponseType_add_addresses(dpart, env, addr);
     }
   }
   
@@ -539,22 +565,24 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t *assignAdd
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *src, *dst, *cid;
+  char *src, *dst, *cid, *uuid=NULL;
   ncMetadata ccMeta;
   
   aat = adb_AssignAddress_get_AssignAddress(assignAddress, env);
   
-  ccMeta.correlationId = adb_assignAddressType_get_correlationId(aat, env);
-  ccMeta.userId = adb_assignAddressType_get_userId(aat, env);
+  //  ccMeta.correlationId = adb_assignAddressType_get_correlationId(aat, env);
+  //  ccMeta.userId = adb_assignAddressType_get_userId(aat, env);
+  EUCA_MESSAGE_UNMARSHAL(assignAddressType, aat, (&ccMeta));
   
   //cid = adb_assignAddressType_get_correlationId(aat, env);
   
   src = adb_assignAddressType_get_source(aat, env);
   dst = adb_assignAddressType_get_dest(aat, env);
+  uuid = adb_assignAddressType_get_uuid(aat, env);
 
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doAssignAddress(&ccMeta, src, dst);
+    rc = doAssignAddress(&ccMeta, uuid, src, dst);
     if (rc) {
       logprintf("ERROR: doAssignAddress() returned FAIL\n");
       status = AXIS2_FALSE;
@@ -591,8 +619,9 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t *una
   
   uat = adb_UnassignAddress_get_UnassignAddress(unassignAddress, env);
   
-  ccMeta.correlationId = adb_unassignAddressType_get_correlationId(uat, env);
-  ccMeta.userId = adb_unassignAddressType_get_userId(uat, env);
+  //  ccMeta.correlationId = adb_unassignAddressType_get_correlationId(uat, env);
+  //  ccMeta.userId = adb_unassignAddressType_get_userId(uat, env);
+  EUCA_MESSAGE_UNMARSHAL(unassignAddressType, uat, (&ccMeta));
   
   src = adb_unassignAddressType_get_source(uat, env);
   dst = adb_unassignAddressType_get_dest(uat, env);
@@ -639,8 +668,9 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   ncMetadata ccMeta;
   
   cnt = adb_ConfigureNetwork_get_ConfigureNetwork(configureNetwork, env);
-  ccMeta.correlationId = adb_configureNetworkType_get_correlationId(cnt, env);
-  ccMeta.userId = adb_configureNetworkType_get_userId(cnt, env);
+  //  ccMeta.correlationId = adb_configureNetworkType_get_correlationId(cnt, env);
+  //  ccMeta.userId = adb_configureNetworkType_get_userId(cnt, env);
+  EUCA_MESSAGE_UNMARSHAL(configureNetworkType, cnt, (&ccMeta));
   
   user = adb_configureNetworkType_get_userId(cnt, env);
   cid = adb_configureNetworkType_get_correlationId(cnt, env);
@@ -764,8 +794,9 @@ adb_GetConsoleOutputResponse_t* GetConsoleOutputMarshal (adb_GetConsoleOutput_t*
   ncMetadata ccMeta;
   
   gcot = adb_GetConsoleOutput_get_GetConsoleOutput(getConsoleOutput, env);
-  ccMeta.correlationId = adb_getConsoleOutputType_get_correlationId(gcot, env);
-  ccMeta.userId = adb_getConsoleOutputType_get_userId(gcot, env);
+  //  ccMeta.correlationId = adb_getConsoleOutputType_get_correlationId(gcot, env);
+  //  ccMeta.userId = adb_getConsoleOutputType_get_userId(gcot, env);
+  EUCA_MESSAGE_UNMARSHAL(getConsoleOutputType, gcot, (&ccMeta));
   
   instId = adb_getConsoleOutputType_get_instanceId(gcot, env);
   
@@ -813,18 +844,20 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *netName=NULL, **clusterControllers=NULL, *nameserver=NULL;
+  char *netName=NULL, **clusterControllers=NULL, *nameserver=NULL, *uuid=NULL;
   
   int vlan, clusterControllersLen=0;
   ncMetadata ccMeta;
   
   snt = adb_StartNetwork_get_StartNetwork(startNetwork, env);
-  ccMeta.correlationId = adb_startNetworkType_get_correlationId(snt, env);
-  ccMeta.userId = adb_startNetworkType_get_userId(snt, env);
+  //  ccMeta.correlationId = adb_startNetworkType_get_correlationId(snt, env);
+  //  ccMeta.userId = adb_startNetworkType_get_userId(snt, env);
+  EUCA_MESSAGE_UNMARSHAL(startNetworkType, snt, (&ccMeta));
   
   vlan = adb_startNetworkType_get_vlan(snt, env);
   netName = adb_startNetworkType_get_netName(snt, env);
   nameserver = adb_startNetworkType_get_nameserver(snt, env);
+  uuid = adb_startNetworkType_get_uuid(snt, env);
 
   clusterControllersLen = adb_startNetworkType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
@@ -835,7 +868,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   snrt = adb_startNetworkResponseType_create(env);
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doStartNetwork(&ccMeta, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
+    rc = doStartNetwork(&ccMeta, uuid, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
     if (rc) {
       logprintf("ERROR: doStartNetwork() returned fail %d\n", rc);
       status = AXIS2_FALSE;
@@ -872,18 +905,21 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
 
   // working vars
   int i, rc, *outTypesMax=NULL, *outTypesAvail=NULL;
-  int vmLen=0, outTypesLen=0, outServiceTagsLen=0;
+  int vmLen=0, outTypesLen=0;
+  ccResource *outNodes=NULL;
+  int outNodesLen=0;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char **outServiceTags=NULL;
   virtualMachine *vms=NULL;
   adb_virtualMachineType_t *vm=NULL;
   ncMetadata ccMeta;
+  adb_serviceInfoType_t *sit=NULL;
+  int servicesLen=0, urisLen=0, j;
 
   drt = adb_DescribeResources_get_DescribeResources(describeResources, env);
-  ccMeta.correlationId = adb_describeResourcesType_get_correlationId(drt, env);
-  ccMeta.userId = adb_describeResourcesType_get_userId(drt, env);
 
+  EUCA_MESSAGE_UNMARSHAL(describeResourcesType, drt, (&ccMeta));
+  
   vmLen = adb_describeResourcesType_sizeof_instanceTypes(drt, env);
   vms = malloc(sizeof(virtualMachine) * vmLen);
 
@@ -898,7 +934,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   
   rc=1;
   if (!DONOTHING) {
-    rc = doDescribeResources(&ccMeta, &vms, vmLen, &outTypesMax, &outTypesAvail, &outTypesLen, &outServiceTags, &outServiceTagsLen);
+    rc = doDescribeResources(&ccMeta, &vms, vmLen, &outTypesMax, &outTypesAvail, &outTypesLen, &outNodes, &outNodesLen);
   }
   
   if (rc) {
@@ -906,13 +942,17 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     status = AXIS2_FALSE;
     snprintf(statusMessage, 255, "ERROR");
   } else {
-    for (i=0; i<outServiceTagsLen; i++) {
-      if (outServiceTags[i]) {
-	adb_describeResourcesResponseType_add_serviceTags(drrt, env, outServiceTags[i]);
-	free(outServiceTags[i]);
-      }
+    for (i=0; i<outNodesLen; i++) {
+      adb_describeResourcesResponseType_add_serviceTags(drrt, env, outNodes[i].ncURL);
+      adb_ccNodeType_t *nt=NULL;
+      
+      nt = adb_ccNodeType_create(env);
+      adb_ccNodeType_set_serviceTag(nt, env, outNodes[i].ncURL);
+      adb_ccNodeType_set_iqn(nt, env, outNodes[i].iqn);
+      //      adb_describeResourcesResponseType_add_nodes(drrt, env, nt);
+      
     }
-    if (outServiceTags) free(outServiceTags);
+    if (outNodes) free(outNodes);
 
     for (i=0; i<outTypesLen; i++) {
       adb_ccResourceType_t *rt=NULL;
@@ -963,8 +1003,9 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
   ncMetadata ccMeta;
   
   dit = adb_DescribeInstances_get_DescribeInstances(describeInstances, env);
-  ccMeta.correlationId = adb_describeInstancesType_get_correlationId(dit, env);
-  ccMeta.userId = adb_describeInstancesType_get_userId(dit, env);
+  //  ccMeta.correlationId = adb_describeInstancesType_get_correlationId(dit, env);
+  //  ccMeta.userId = adb_describeInstancesType_get_userId(dit, env);
+  EUCA_MESSAGE_UNMARSHAL(describeInstancesType, dit, (&ccMeta));
 
   instIdsLen = adb_describeInstancesType_sizeof_instanceIds(dit, env);
   instIds = malloc(sizeof(char *) * instIdsLen);
@@ -992,6 +1033,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
       
       it = adb_ccInstanceType_create(env);
   
+      //      myInstance->ccvm.virtualBootRecordLen = 0;
       rc = ccInstanceUnmarshal(it, myInstance, env);
       adb_describeInstancesResponseType_add_instances(dirt, env, it);
     }
@@ -1021,6 +1063,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   dt = axutil_date_time_create_with_offset(env, src->ts - time(NULL));
   
   adb_ccInstanceType_set_instanceId(dst, env, src->instanceId);
+  adb_ccInstanceType_set_uuid(dst, env, src->uuid);
   adb_ccInstanceType_set_reservationId(dst, env, src->reservationId);
   adb_ccInstanceType_set_ownerId(dst, env, src->ownerId);
   adb_ccInstanceType_set_imageId(dst, env, src->amiId);
@@ -1085,18 +1128,20 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   adb_virtualMachineType_t *vm=NULL;
 
   ccInstance *outInsts=NULL, *myInstance=NULL;
-  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList=NULL, networkIndexListLen;
+  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList=NULL, networkIndexListLen, uuidsLen;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *platform, *tmp;
+  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *platform, *tmp, **uuids=NULL;
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
   
   rit = adb_RunInstances_get_RunInstances(runInstances, env);
-  ccMeta.correlationId = adb_runInstancesType_get_correlationId(rit, env);
-  ccMeta.userId = adb_runInstancesType_get_userId(rit, env);
+  //  ccMeta.correlationId = adb_runInstancesType_get_correlationId(rit, env);
+  //  ccMeta.userId = adb_runInstancesType_get_userId(rit, env);
+  EUCA_MESSAGE_UNMARSHAL(runInstancesType, rit, (&ccMeta));
+
   reservationId = adb_runInstancesType_get_reservationId(rit, env);
 
   maxCount = adb_runInstancesType_get_maxCount(rit, env);
@@ -1136,6 +1181,9 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   netNamesLen = adb_runInstancesType_sizeof_netNames(rit, env);
   netNames = malloc(sizeof(char *) * netNamesLen);  
+  if (netNamesLen > 1) {
+     netNamesLen = 1;
+  }
   for (i=0; i<netNamesLen; i++) {
     netNames[i] = adb_runInstancesType_get_netNames_at(rit, env, i);
   }
@@ -1144,6 +1192,12 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   macAddrs = malloc(sizeof(char *) * macAddrsLen);  
   for (i=0; i<macAddrsLen; i++) {
     macAddrs[i] = adb_runInstancesType_get_macAddresses_at(rit, env, i);
+  }
+
+  uuidsLen = adb_runInstancesType_sizeof_uuids(rit, env);
+  uuids = malloc(sizeof(char *) * uuidsLen);  
+  for (i=0; i<uuidsLen; i++) {
+    uuids[i] = adb_runInstancesType_get_uuids_at(rit, env, i);
   }
 
   networkIndexList = NULL;
@@ -1159,7 +1213,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   rc=1;
   if (!DONOTHING) {
-    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, NULL, &outInsts, &outInstsLen);
+    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, NULL, &outInsts, &outInstsLen);
   }
   
   if (rc) {
@@ -1172,6 +1226,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
       
       it = adb_ccInstanceType_create(env);
       
+      myInstance->ccvm.virtualBootRecordLen = 0;
       rc = ccInstanceUnmarshal(it, myInstance, env);
       adb_runInstancesResponseType_add_instances(rirt, env, it);
     }
@@ -1211,8 +1266,9 @@ adb_RebootInstancesResponse_t* RebootInstancesMarshal (adb_RebootInstances_t* re
   ncMetadata ccMeta;
 
   rit = adb_RebootInstances_get_RebootInstances(rebootInstances, env);
-  ccMeta.correlationId = adb_rebootInstancesType_get_correlationId(rit, env);
-  ccMeta.userId = adb_rebootInstancesType_get_userId(rit, env);
+  //  ccMeta.correlationId = adb_rebootInstancesType_get_correlationId(rit, env);
+  //  ccMeta.userId = adb_rebootInstancesType_get_userId(rit, env);
+  EUCA_MESSAGE_UNMARSHAL(rebootInstancesType, rit, (&ccMeta));
   
   instIdsLen = adb_rebootInstancesType_sizeof_instanceIds(rit, env);
   instIds = malloc(sizeof(char *) * instIdsLen);  
@@ -1267,8 +1323,9 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
   ncMetadata ccMeta;
   
   tit = adb_TerminateInstances_get_TerminateInstances(terminateInstances, env);
-  ccMeta.correlationId = adb_terminateInstancesType_get_correlationId(tit, env);
-  ccMeta.userId = adb_terminateInstancesType_get_userId(tit, env);
+  //  ccMeta.correlationId = adb_terminateInstancesType_get_correlationId(tit, env);
+  //  ccMeta.userId = adb_terminateInstancesType_get_userId(tit, env);
+  EUCA_MESSAGE_UNMARSHAL(terminateInstancesType, tit, (&ccMeta));
   
   instIdsLen = adb_terminateInstancesType_sizeof_instanceIds(tit, env);
   instIds = malloc(sizeof(char *) * instIdsLen);  
@@ -1316,4 +1373,3 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
 void print_adb_ccInstanceType(adb_ccInstanceType_t *in) {
   
 }
-

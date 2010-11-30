@@ -103,26 +103,26 @@ public class ZoneManager {
 
 	public static Zone getZone(Name name) {
 		if(name.toString().endsWith("in-addr.arpa.")) {
-	      //create new transient zone to handle reverse lookups
-		  return TransientZone.getPtrZone(name);
+			//create new transient zone to handle reverse lookups
+			return TransientZone.getPtrZone(name);
 		} else {
-		  try {
-        if(!ZoneManager.zones.containsKey(TransientZone.getExternalName())){
-          ZoneManager.registerZone(TransientZone.getExternalName( ),TransientZone.getInstanceExternalZone());
-        } else if(!ZoneManager.zones.containsKey(TransientZone.getInternalName())){
-          ZoneManager.registerZone(TransientZone.getInternalName(),TransientZone.getInstanceInternalZone());
-        }
-      } catch(Exception e) {
-        LOG.debug( e, e );
-      }
-    }
+			try {
+				if(!ZoneManager.zones.containsKey(TransientZone.getExternalName())){
+					ZoneManager.registerZone(TransientZone.getExternalName( ),TransientZone.getInstanceExternalZone());
+				} else if(!ZoneManager.zones.containsKey(TransientZone.getInternalName())){
+					ZoneManager.registerZone(TransientZone.getInternalName(),TransientZone.getInstanceInternalZone());
+				}
+			} catch(Exception e) {
+				LOG.debug( e, e );
+			}
+		}
 		return zones.get(name);
 	}
 
 	public static void registerZone( Name name, Zone z ) {
-	  zones.putIfAbsent( name, z );
+		zones.putIfAbsent( name, z );
 	}
-	
+
 	public static void addZone(ZoneInfo zoneInfo, SOARecordInfo soaRecordInfo, NSRecordInfo nsRecordInfo) {
 		try {
 			String nameString = zoneInfo.getName();
@@ -215,7 +215,9 @@ public class ZoneManager {
 				LOG.error(ex);
 			}
 		} else {
-			zone.addRecord(record);
+			if(zone.findExactMatch(record.getName(), record.getType()) == null) {
+				zone.addRecord(record);
+			}
 		}
 	}
 

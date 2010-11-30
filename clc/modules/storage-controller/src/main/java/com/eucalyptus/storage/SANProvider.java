@@ -106,5 +106,7 @@ public interface SANProvider {
 	public void getStorageProps(ArrayList<ComponentProperty> componentProperties);
 
 	public void setStorageProps(ArrayList<ComponentProperty> storageProps);
+
+	public void stop() throws EucalyptusCloudException;
 }
 

@@ -86,28 +86,115 @@ permission notice:
 
 char *iptablesCache=NULL;
 
-void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp) {
+int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp) {
   uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0, *ips=NULL, *nms=NULL;
   int vlan=0, numaddrs=1, len, i;
   char cmd[256];
 
-  if (param_check("vnetInit", vnetconfig, mode, eucahome, path, role, pubInterface, numberofaddrs, network, netmask, broadcast, nameserver, router, daemon, bridgedev)) return;
+  //  if (param_check("vnetInit", vnetconfig, mode, eucahome, path, role, pubInterface, numberofaddrs, network, netmask, broadcast, nameserver, router, daemon, bridgedev)) return(1);
   
   if (!vnetconfig->initialized) {
     bzero(vnetconfig, sizeof(vnetConfig));
+    // always need 'mode' set
+    if (mode) {
+      strncpy(vnetconfig->mode, mode, 32);
+    } else {
+      logprintfl(EUCAERROR, "vnetInit(): VNET_MODE is not set\n");
+      return(1);
+    }
+    if (role != CLC && role != NC) {
+      logprintfl(EUCAERROR, "vnetInit(): bad role specified\n");
+      return(1);
+    }
+
+    //check mode specific parameters
+    if (!strcmp(mode, "SYSTEM")) {
+      if (role == CLC) {
+      } else if (role == NC) {
+      }
+    } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "STATIC-DYNMAC")) {
+      if (role == CLC) {
+	if (!daemon || check_file(daemon)) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
+	  return(1);
+	}
+	if (!privInterface || check_device(privInterface)) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_PRIVINTERFACE (%s), please check parameter and device name\n", SP(privInterface));
+	  return(1);
+	}
+	if (!network || !netmask || !broadcast || !nameserver || !router) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_BROADCAST(%s), VNET_NAMESERVER(%s), VNET_ROUTER(%s)), please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
+	  return(1);
+	}
+      } else if (role == NC) {
+	if (!strcmp(mode, "STATIC-DYNMAC")) {
+	  if (!pubInterface || check_device(pubInterface)) {
+	    logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_PUBINTERFACE(%s), please check parameters and device\n", SP(pubInterface));
+	    return(1);
+	  }
+	}
+      }
+    } else if (!strcmp(mode, "MANAGED-NOVLAN")) {
+      if (role == CLC) {
+	if (!daemon || check_file(daemon)) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
+	  return(1);
+	}
+	if (!pubInterface || check_device(pubInterface)) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_PUBINTERFACE (%s), please check parameter and device name\n", SP(pubInterface));
+	  return(1);
+	}
+	if (!privInterface || check_device(privInterface)) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_PRIVINTERFACE (%s), please check parameter and device name\n", SP(privInterface));
+	  return(1);
+	}
+	if (!network || !netmask || !nameserver) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_NAMESERVER(%s), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
+	  return(1);
+	}
+      } else if (role == NC) {
+	if (!bridgedev || check_bridge(bridgedev)) {
+	  logprintfl (EUCAERROR, "vnetInit(): cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n");
+	  return(1);
+	}
+      }
+    } else if (!strcmp(mode, "MANAGED")) {
+      if (role == CLC) {
+	if (!daemon || check_file(daemon)) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
+	  return(1);
+	}
+	if (!pubInterface || check_device(pubInterface)) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_PUBINTERFACE (%s), please check parameter and device name\n", SP(pubInterface));
+	  return(1);
+	}
+	if (!privInterface || check_device(privInterface)) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_PRIVINTERFACE (%s), please check parameter and device name\n", SP(privInterface));
+	  return(1);
+	}
+	if (!network || !netmask || !nameserver) {
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_NAMESERVER(%s)), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
+	  return(1);
+	}
+      } else if (role == NC) {
+      }
+    } else {
+      return(1);
+    }
+    
     if (path) strncpy(vnetconfig->path, path, MAX_PATH);
     if (eucahome) strncpy(vnetconfig->eucahome, eucahome, MAX_PATH);
     if (pubInterface) strncpy(vnetconfig->pubInterface, pubInterface, 32);
-    if (mode) {
-       strncpy(vnetconfig->mode, mode, 32);
-    } else {
-       logprintfl(EUCAERROR, "vnetInit(): ERROR mode is not set\n");
-       return;
-    }
     if (bridgedev) strncpy(vnetconfig->bridgedev, bridgedev, 32);
     if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, MAX_PATH);
     if (privInterface) strncpy(vnetconfig->privInterface, privInterface, 32);
     if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
+    if (domainname) {
+      strncpy(vnetconfig->euca_domainname, domainname, 256);
+    } else {
+      strncpy(vnetconfig->euca_domainname, "eucalyptus", strlen("eucalyptus"));
+    }
+
     if (localIp) {
       char *ipbuf=NULL;
       ipbuf = host2ip(localIp);
@@ -213,7 +300,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	  vnetconfig->networks[vlan].router = unw+1;
 	  unw += numaddrs + 1;
 	}	
-      } else if (!strcmp(mode, "STATIC")) {
+      } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "STATIC-DYNMAC")) {
 	for (vlan=0; vlan<vnetconfig->max_vlan; vlan++) {
 	  vnetconfig->networks[vlan].nw = nw;
 	  vnetconfig->networks[vlan].nm = nm;
@@ -235,9 +322,41 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 	  logprintfl(EUCAWARN, "vnetInit(): could not add logging rule for DHCP replies, may not see instance IPs as they are assigned by system DHCP server");
 	}
       }
+
+      if (strcmp(vnetconfig->mode, "MANAGED")) {
+	/*
+	// if we're not in MANAGED mode, set up ebtables	
+	snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ebtables -F FORWARD", vnetconfig->eucahome);
+	rc = system(cmd);
+	if (rc) {
+	  logprintfl(EUCAWARN, "vnetInit(): could not flush ebtables FORWARD rules\n");
+	}
+
+	snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ebtables -P FORWARD DROP", vnetconfig->eucahome);
+	rc = system(cmd);
+	if (rc) {
+	  logprintfl(EUCAWARN, "vnetInit(): could set default ebtables FORWARD policy to DROP\n");
+	} 
+
+	// forward non-VM traffic
+	snprintf(cmd, 256, "-A FORWARD -i %s -j ACCEPT", vnetconfig->pubInterface);
+	rc = vnetApplySingleEBTableRule(vnetconfig, "filter", cmd);
+	if (rc) {
+	  logprintfl(EUCAWARN, "vnetInit(): could set up default ebtables rule '%s'\n", cmd);
+	} 
+	
+	// allow VM DHCP traffic
+	snprintf(cmd, 256, "-A FORWARD -p IPv4 -d Broadcast -i ! %s --ip-proto udp --ip-dport 67:68 -j ACCEPT", vnetconfig->pubInterface);
+	rc = vnetApplySingleEBTableRule(vnetconfig, "filter", cmd);
+	if (rc) {
+	  logprintfl(EUCAWARN, "vnetInit(): could set up default ebtables rule '%s'\n", cmd);
+	}
+	*/
+      }
     }
     logprintfl(EUCAINFO, "vnetInit(): VNET Configuration: eucahome=%s, path=%s, dhcpdaemon=%s, dhcpuser=%s, pubInterface=%s, privInterface=%s, bridgedev=%s, networkMode=%s\n", SP(vnetconfig->eucahome), SP(vnetconfig->path), SP(vnetconfig->dhcpdaemon), SP(vnetconfig->dhcpuser), SP(vnetconfig->pubInterface), SP(vnetconfig->privInterface), SP(vnetconfig->bridgedev), SP(vnetconfig->mode));
   }
+  return(0);
 }
 
 int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet) {
@@ -353,13 +472,9 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
   }
 
   done=found=0;
-  //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  //  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
   for (i=start; i<=stop && !done; i++) {
-    //    if (vnetconfig->networks[vlan].addrs[i].mac[0] == '\0') {
     if (!maczero(vnetconfig->networks[vlan].addrs[i].mac)) {
       if (!found) found=i;
-      //    } else if (!strcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) {
     } else if (!machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) {
       done++;
     }
@@ -414,6 +529,58 @@ int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   if (!done) {
     return(1);
   }
+  return(0);
+}
+
+int vnetRefreshHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) {
+  int i, done, found, start, stop;
+  
+  //  if (param_check("vnetRefreshHost", vnetconfig, mac, ip, vlan)) return(1);
+
+  if (!vnetconfig->enabled) {
+    logprintfl(EUCADEBUG,"vnetRefreshHost(): network support is not enabled\n");
+    return(1);
+  }
+
+  if (idx < 0) {
+    start = 2;
+    stop = vnetconfig->numaddrs-2;
+  } else if (idx >= 2 && idx <= (vnetconfig->numaddrs-2)) {
+    start = idx;
+    stop = idx;
+  } else {
+    logprintfl(EUCAERROR, "vnetRefreshHost(): index out of bounds: idx=%d, min=2 max=%d\n", idx, vnetconfig->numaddrs-2);
+    return(1);
+  }
+  
+  done=found=0;
+  for (i=start; i<=stop && !done; i++) {
+
+    if (ip) {
+      if (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) {
+	found=i;
+	done++;
+      }
+    }
+    if (mac) {
+      if (!machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) {
+	found=i;
+	done++;
+      }
+    }
+  }
+
+  if (!done) {
+    return(vnetAddHost(vnetconfig, mac, ip, vlan, idx));
+  } else {
+    if (mac) {
+      mac2hex(mac, vnetconfig->networks[vlan].addrs[found].mac);
+    }
+    if (ip) {
+      vnetconfig->networks[vlan].addrs[found].ip = dot2hex(ip);      
+    }
+  }
+  
   return(0);
 }
 int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
@@ -652,6 +819,20 @@ int vnetFlushTable(vnetConfig *vnetconfig, char *userName, char *netName) {
   return(1);
 }
 
+int vnetApplySingleEBTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
+  char cmd[MAX_PATH];
+  int rc;
+
+  if (!rule || !table || !vnetconfig) {
+    logprintfl(EUCAERROR, "vnetApplySingleEBTableRule(): bad input params: table=%s, rule=%s\n", SP(table), SP(rule));
+    return(1);
+  }
+  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ebtables -t %s %s\n", vnetconfig->eucahome, table, rule);
+  logprintfl(EUCADEBUG, "vnetApplySingleEBTableRule(): running cmd '%s'\n", cmd);
+  rc = system(cmd);
+  rc = rc>>8;
+  return(rc);
+}
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
   int rc, fd, ret=0;
   char *file, cmd[256];
@@ -776,12 +957,13 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
 }
 
 
-int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network) {
+int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *network) {
   
   if (param_check("vnetSetVlan", vnetconfig, vlan, user, network)) return(1);
 
   strncpy(vnetconfig->users[vlan].userName, user, 32);
   strncpy(vnetconfig->users[vlan].netName, network, 32);
+  if (uuid) strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
   
   return(0);
 }
@@ -814,7 +996,7 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
   
   ret = 1;
   // define/get next mac and allocate IP
-  if (!strcmp(vnetconfig->mode, "STATIC")) {
+  if (!strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
     // get the next valid mac/ip pairing for this vlan
     outmac[0] = '\0';
     rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1);
@@ -1010,12 +1192,11 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
     return(1);
   }
   
-  fprintf(fp, "# automatically generated config file for DHCP server\ndefault-lease-time 1200;\nmax-lease-time 1200;\nddns-update-style none;\n\n");
+  fprintf(fp, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
   
   fprintf(fp, "shared-network euca {\n");
   for (i=0; i<vnetconfig->max_vlan; i++) {
     if (vnetconfig->networks[i].numhosts > 0) {
-
       network = hex2dot(vnetconfig->networks[i].nw);
       netmask = hex2dot(vnetconfig->networks[i].nm);
       broadcast = hex2dot(vnetconfig->networks[i].bc);
@@ -1029,7 +1210,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
 	snprintf(nameservers, 1024, "%s", nameserver);
       }	
       
-      fprintf(fp, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n  option domain-name-servers %s;\n  option routers %s;\n}\n", network, netmask, netmask, broadcast, nameservers, router);
+      fprintf(fp, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n  option domain-name \"%s\";\n  option domain-name-servers %s;\n  option routers %s;\n}\n", network, netmask, netmask, broadcast, vnetconfig->euca_domainname, nameservers, router);
       
       if (euca_nameserver) free(euca_nameserver);
       if (nameserver) free(nameserver);
@@ -1065,13 +1246,13 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   char buf [MAX_PATH];
   char file[MAX_PATH];
   int rc, i, numHosts;
-  
+
   if (param_check("vnetKickDHCP", vnetconfig)) return(1);
 
   if (!strcmp(vnetconfig->mode, "SYSTEM")) {
     return(0);
   }
-  
+
   rc = vnetGenerateDHCP(vnetconfig, &numHosts);
   if (rc) {
     logprintfl(EUCAERROR, "vnetKickDHCP(): failed to (re)create DHCP config (%s/euca-dhcp.conf)\n", vnetconfig->path);
@@ -1080,8 +1261,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
     // nothing to do
     return(0);
   }
-  
-  
+
   for (i=0; i<vnetconfig->max_vlan; i++) {
     if (vnetconfig->etherdevs[i][0] != '\0') {
       strncat (dstring, " ", 512);
@@ -1239,7 +1419,66 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   return(0);
 }
 
-int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {
+int vnetStartInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr) {
+  char rules[4][MAX_PATH];
+  char rule[MAX_PATH];
+  int rc, ret=0, done, i, numrules;
+  numrules = 3;
+  
+  return(0);
+  if (!strcmp(vnetconfig->mode, "MANAGED")) {
+    
+  } else {
+
+    // do ebtables to provide MAC/IP spoofing protection
+    snprintf(rules[0], MAX_PATH, "FORWARD -i ! %s -p IPv4 -s %s --ip-src %s -j ACCEPT", vnetconfig->pubInterface, macaddr, privateIp);
+    snprintf(rules[1], MAX_PATH, "FORWARD -i ! %s -p IPv4 -s %s --ip-src ! %s -j DROP", vnetconfig->pubInterface, macaddr, privateIp);
+    snprintf(rules[2], MAX_PATH, "FORWARD -i ! %s -s %s -j ACCEPT", vnetconfig->pubInterface, macaddr);
+
+    done=0;
+    for (i=0; i<numrules && !done; i++) {
+      snprintf(rule, MAX_PATH, "-A %s\n", rules[i]);
+      rc = vnetApplySingleEBTableRule(vnetconfig, "filter", rule);
+      if (rc) {
+	logprintfl(EUCAERROR, "vnetStartInstanceNetwork(): could not apply ebtables rule '%s'\n", rule);
+	done=1;
+	ret=1;
+      }
+    }
+    if (done) {
+      // one of the rules failed, tear them down
+      for (i=0; i<numrules; i++) {
+	snprintf(rule, MAX_PATH, "-D %s\n", rules[i]);
+	rc = vnetApplySingleEBTableRule(vnetconfig, "filter", rule);
+      }
+    }
+  }
+  return(ret);
+}
+
+int vnetStopInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr) {
+  char rules[3][MAX_PATH];
+  char rule[MAX_PATH];
+  int rc, ret=0, i, done, numrules;
+  numrules = 3;
+
+  return(0);
+  if (!strcmp(vnetconfig->mode, "MANAGED")) {
+
+  } else {
+    snprintf(rules[0], MAX_PATH, "FORWARD -i ! %s -p IPv4 -s %s --ip-src %s -j ACCEPT", vnetconfig->pubInterface, macaddr, privateIp);
+    snprintf(rules[1], MAX_PATH, "FORWARD -i ! %s -p IPv4 -s %s --ip-src ! %s -j DROP", vnetconfig->pubInterface, macaddr, privateIp);
+    snprintf(rules[2], MAX_PATH, "FORWARD -i ! %s -s %s -j ACCEPT", vnetconfig->pubInterface, macaddr);
+    done=0;
+    for (i=0; i<numrules && !done; i++) {
+      snprintf(rule, MAX_PATH, "-D %s\n", rules[i]);
+      rc = vnetApplySingleEBTableRule(vnetconfig, "filter", rule);
+    }
+  }  
+  return(ret);
+}
+
+int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname) {
   char cmd[MAX_PATH], newdevname[32], newbrname[32], *network=NULL;
   int rc, slashnet;
 
@@ -1306,6 +1545,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
       }
     } else {
       snprintf(newbrname, 32, "%s", vnetconfig->bridgedev);
+      if (!strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+	//ebtables rule(s) here, need mac/ip mapping and ethernet device
+      }
     }
     
     *outbrname = strdup(newbrname);
@@ -1316,7 +1558,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     vnetconfig->networks[vlan].addrs[1].active = 1;
     vnetconfig->networks[vlan].addrs[vnetconfig->numaddrs-1].active = 1;
     
-    rc = vnetSetVlan(vnetconfig, vlan, userName, netName);
+    rc = vnetSetVlan(vnetconfig, vlan, uuid, userName, netName);
     rc = vnetCreateChain(vnetconfig, userName, netName);
     
     // allow traffic on this net to flow freely
@@ -1772,10 +2014,10 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
   return(ret);
 }
 
-int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {
+int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname) {
   int rc;
 
-  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
+  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
     if (outbrname) {
       if (vnetconfig->role == NC) {
 	*outbrname = strdup(vnetconfig->bridgedev);
@@ -1790,7 +2032,7 @@ int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *net
     }
     rc = 0;
   } else {
-    rc = vnetStartNetworkManaged(vnetconfig, vlan, userName, netName, outbrname);
+    rc = vnetStartNetworkManaged(vnetconfig, vlan, uuid, userName, netName, outbrname);
   }
   
   if (vnetconfig->role != NC && outbrname && *outbrname) {
@@ -1901,7 +2143,18 @@ int vnetAddPublicIP(vnetConfig *vnetconfig, char *inip) {
       if (done) {
 	//already there
       } else if (found) {
+	if (!strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+	  char *theipstr=NULL, *themacstr=NULL;
+	  theipstr = hex2dot(theip);
+	  themacstr = ipdot2macdot(theipstr, "D0:0D");
+	  if (theipstr && themacstr) {
+	    vnetRefreshHost(vnetconfig, themacstr, theipstr, 0, -1);
+	    free(themacstr);
+	    free(theipstr);
+	  }
+	} else {
 	  vnetconfig->publicips[found].ip = theip;
+	}
       } else {
 	logprintfl(EUCAERROR, "vnetAddPublicIP(): cannot add any more public IPS (limit:%d)\n", NUMBER_OF_PUBLIC_IPS);
 	return(1);
@@ -1932,15 +2185,15 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
   return(rc);
 }
 
-int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip) {
-  return(vnetSetPublicIP(vnetconfig, ip, dstip, 1));
+int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip) {
+  return(vnetSetPublicIP(vnetconfig, uuid, ip, dstip, 1));
 }
 
-int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip) {
-  return(vnetSetPublicIP(vnetconfig, ip, NULL, 0));
+int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip) {
+  return(vnetSetPublicIP(vnetconfig, uuid, ip, NULL, 0));
 }
 
-int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval) {
+int vnetSetPublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip, int setval) {
   int i, done;
   uint32_t hip;
   
@@ -1957,6 +2210,15 @@ int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval) {
 	vnetconfig->publicips[i].dstip = 0;
       }
       vnetconfig->publicips[i].allocated = setval;
+      if (uuid) {
+	if (setval) {
+	  snprintf(vnetconfig->publicips[i].uuid, 48, "%s", uuid);
+	} else {
+	  bzero(vnetconfig->publicips[i].uuid, sizeof(char) * 48);
+	}
+      } else {
+	bzero(vnetconfig->publicips[i].uuid, sizeof(char) * 48);
+      }
       done++;
     }
   }
@@ -2001,7 +2263,7 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
 }
 
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName) {
-  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
+  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
     return(0);
   }
   return(vnetStopNetworkManaged(vnetconfig, vlan, userName, netName));
@@ -2240,6 +2502,27 @@ char *hex2dot(uint32_t in) {
   snprintf(out, 16, "%u.%u.%u.%u", (in & 0xFF000000)>>24, (in & 0x00FF0000)>>16, (in & 0x0000FF00)>>8, in & 0x000000FF);
   
   return(strdup(out));
+}
+
+char *ipdot2macdot(char *ip, char *macprefix) {
+  int a=0, b=0, c=0, d=0, rc;
+  char *ret=NULL;
+  
+  rc = sscanf(ip, "%d.%d.%d.%d", &a, &b, &c, &d);
+  if (rc != 4 || (a<0||a>255) || (b<0||b>255) || (c<0||c>255) || (d<0||d>255)) {
+    a=127;
+    b=0;
+    c=0;
+    d=1;
+  }
+  ret = malloc(sizeof(char) * 24);
+  bzero(ret, sizeof(char) * 24);
+  if (macprefix) {
+    snprintf(ret, 24, "%s:%02X:%02X:%02X:%02X", macprefix, a, b, c, d);
+  } else {
+    snprintf(ret, 24, "%s:%02X:%02X:%02X:%02X", "D0:0D", a, b, c, d);
+  }
+  return(ret);
 }
 
 int vnetLoadIPTables(vnetConfig *vnetconfig) {

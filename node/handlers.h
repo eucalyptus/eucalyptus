@@ -83,6 +83,7 @@ struct nc_state_t {
 	char admin_user_id[CHAR_BUFFER_SIZE];
 	int save_instance_files;
 	char uri[CHAR_BUFFER_SIZE];
+        char iqn[CHAR_BUFFER_SIZE];
 	virConnectPtr conn;
 	int convert_to_disk;
 	// defined max
@@ -129,6 +130,7 @@ struct handlers {
 				int *outInstsLen);
     int (*doRunInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
+				char *uuid,
 				char *instanceId,
 				char *reservationId,
 				virtualMachine *params,
@@ -164,6 +166,7 @@ struct handlers {
 			       	ncResource **outRes);
     int (*doStartNetwork)	(struct nc_state_t *nc,
 				ncMetadata *ccMeta,
+				char *uuid,
 				char **remoteHosts,
 				int remoteHostsLen,
 				int port,
@@ -182,6 +185,7 @@ struct handlers {
 				char *localDev,
 				int force,
                                 int grab_inst_sem);
+
     int (*doBundleInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
 				char *instanceId,
@@ -205,14 +209,14 @@ struct handlers {
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
 int doPowerDown			(ncMetadata *meta);
 int doDescribeInstances		(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-int doRunInstance		(ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst);
+int doRunInstance		(ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst);
 int doTerminateInstance		(ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
 int doRebootInstance		(ncMetadata *meta, char *instanceId);
 int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutput);
 int doDescribeResource		(ncMetadata *meta, char *resourceType, ncResource **outRes);
-int doStartNetwork		(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan);
+int doStartNetwork		(ncMetadata *ccMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
@@ -247,7 +251,6 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *disk_path,
 				virtualMachine *params,
 				char *privMac,
-				//				char *pubMac,
 				char *brname,
 				int use_virtio_net,
 				int use_virtio_root,
@@ -260,6 +263,8 @@ void parse_target(char *dev_string);
 char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string);
 char* get_iscsi_target(const char *storage_cmd_path, char *dev_string);
+
+int get_instance_stats(virDomainPtr dom, ncInstance *instance);
 
 // bundling structure
 struct bundling_params_t {

@@ -79,9 +79,11 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.system.SubDirectory;
 
-@Provides( Component.any )
+@Provides( Component.bootstrap )
 @RunDuring( Bootstrap.Stage.SystemCredentialsInit )
 @DependsLocal( Component.eucalyptus )
 public class SystemCredentialProvider extends Bootstrapper {
@@ -133,6 +135,14 @@ public class SystemCredentialProvider extends Bootstrapper {
     } else if ( Component.eucalyptus.isLocal( ) ) {
       this.createSystemCredentialProviderKey( this.name );
       return;
+    }
+    for( Service s : Components.lookup( this.name ).getServices( ) ) {
+      try {
+        s.getCredentials( ).setCertificate( this.getCertificate() );
+        s.getCredentials( ).setKeys( this.getKeyPair() );
+      } catch ( Throwable ex ) {
+        LOG.trace( ex , ex );
+      }
     }
     throw new RuntimeException( "Failed to load credentials because of an unknown error." );
   }

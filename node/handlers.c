@@ -160,7 +160,6 @@ int convert_dev_names(	char *localDev,
         bzero(localDevTag, 256);
         snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
     }
-
     return 0;
 }
 
@@ -295,12 +294,19 @@ refresh_instance_info(	struct nc_state_t *nc,
         /* else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED */
         return;
     }
+
+    int rc;
+    rc = get_instance_stats(dom, instance);
+    if (rc) {
+      logprintfl(EUCAWARN, "refresh_instances(): cannot get instance stats (block, network)\n");
+    }
+
     virDomainInfo info;
     sem_p(hyp_sem);
     int error = virDomainGetInfo(dom, &info);
     sem_v(hyp_sem);
     if (error < 0 || info.state == VIR_DOMAIN_NOSTATE) {
-        logprintfl (EUCAWARN, "warning: failed to get informations for domain %s\n", instance->instanceId);
+        logprintfl (EUCAWARN, "warning: failed to get information for domain %s\n", instance->instanceId);
         /* what to do? hopefully we'll find out more later */
 	sem_p(hyp_sem);
         virDomainFree (dom);
@@ -457,8 +463,18 @@ monitoring_thread (void *arg)
     for (;;) {
         bunchOfInstances *head;
         time_t now = time(NULL);
+	FILE *FP=NULL;
+	char nfile[MAX_PATH], nfilefinal[MAX_PATH];
+
         sem_p (inst_sem);
 
+	snprintf(nfile, MAX_PATH, "%s/var/log/eucalyptus/local-net.stage", nc_state.home);
+	snprintf(nfilefinal, MAX_PATH, "%s/var/log/eucalyptus/local-net", nc_state.home);
+	FP=fopen(nfile, "w");
+	if (!FP) {
+	  logprintfl(EUCAWARN, "monitoring_thread(): could not open file %s for writing\n", nfile);
+	}
+	
         for ( head = global_instances; head; head = head->next ) {
             ncInstance * instance = head->instance;
 
@@ -471,7 +487,14 @@ monitoring_thread (void *arg)
                 instance->state!=SHUTDOWN &&
 		instance->state!=BUNDLING_SHUTDOWN &&
 		instance->state!=BUNDLING_SHUTOFF &&
-                instance->state!=TEARDOWN) continue;
+                instance->state!=TEARDOWN) {
+	      
+	      if (FP && !strcmp(instance->stateName, "Extant")) {
+		// have a running instance, write its information to local state file
+		fprintf(FP, "%s %s %s %d %s %s %s\n", instance->instanceId, nc_state.vnetconfig->pubInterface, "NA", instance->ncnet.vlan, instance->ncnet.privateMac, instance->ncnet.publicIp, instance->ncnet.privateIp);
+	      }
+	      continue;
+	    }
 
             if (instance->state==TEARDOWN) {
                 /* it's been long enough, we can forget the instance */
@@ -498,11 +521,11 @@ monitoring_thread (void *arg)
 	      if (scCleanupInstanceImage(instance->userId, instance->instanceId)) {
                 logprintfl (EUCAWARN, "warning: failed to cleanup instance image %s\n", instance->instanceId);
 	      }
-			} else {
-				logprintfl (EUCAINFO, "cleaning up state for instance %s (but keeping the files)\n", instance->instanceId);
-			}
+	    } else {
+	      logprintfl (EUCAINFO, "cleaning up state for instance %s (but keeping the files)\n", instance->instanceId);
+	    }
             
-            /* check to see if this is the last instance running on vlan */
+            /* check to see if this is the last instance running on vlan, handle local networking information drop */
             int left = 0;
             bunchOfInstances * vnhead;
             for (vnhead = global_instances; vnhead; vnhead = vnhead->next ) {
@@ -519,6 +542,10 @@ monitoring_thread (void *arg)
             change_state (instance, TEARDOWN); /* TEARDOWN = no more resources */
             instance->terminationTime = time (NULL);
         }
+	if (FP) {
+	  fclose(FP);
+	  rename (nfile, nfilefinal);
+	}
         sem_v (inst_sem);
 
 	if (head) {
@@ -533,6 +560,15 @@ monitoring_thread (void *arg)
     return NULL;
 }
 
+static void build_id_and_url (const virtualBootRecord * vbr, char * id, char * url)
+{
+    id [0] = '\0';
+    url [0] = '\0';
+    if (vbr) {
+        strncpy (id, vbr->id, SMALL_CHAR_BUFFER_SIZE);
+        strncpy (url, vbr->preparedResourceLocation, CHAR_BUFFER_SIZE);
+    }
+}
 
 void *startup_thread (void * arg)
 {
@@ -548,19 +584,30 @@ void *startup_thread (void * arg)
         return NULL;
     }
     
-    error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, &brname);
+    error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname);
     if ( error ) {
         logprintfl (EUCAFATAL, "start network failed for instance %s, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         return NULL;
     }
+    error = vnetStartInstanceNetwork(nc_state.vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
+    if (error) {
+      logprintfl(EUCAFATAL, "start instance network failed for instance %s, terminating it\n", instance->instanceId);
+      change_state(instance, SHUTOFF);
+      return(NULL);
+    }
+
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
-    
+
+    char imageURL   [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.image, instance->imageId, imageURL);
+    char kernelURL  [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.kernel, instance->kernelId, kernelURL);
+    char ramdiskURL [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.ramdisk, instance->ramdiskId, ramdiskURL);
+
     error = scMakeInstanceImage (nc_state.home, 
 				 instance->userId, 
-                                 instance->imageId, instance->imageURL, 
-                                 instance->kernelId, instance->kernelURL, 
-                                 instance->ramdiskId, instance->ramdiskURL, 
+                                 instance->imageId, imageURL,
+                                 instance->kernelId, kernelURL,
+                                 instance->ramdiskId, ramdiskURL,
                                  instance->instanceId, instance->keyName, 
 				 instance->platform, &disk_path, 
 				 addkey_sem, nc_state.convert_to_disk,
@@ -890,7 +937,7 @@ static int init (void)
 	bridge = getConfString(configFiles, 2, "VNET_BRIDGE");
 	tmp = getConfString(configFiles, 2, "VNET_MODE");
 	
-	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL, NULL);
+	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL, NULL);
 	if (hypervisor) free(hypervisor);
 	if (bridge) free(bridge);
 	if (tmp) free(tmp);
@@ -944,6 +991,24 @@ static int init (void)
 	  free(tmp);
 	} else {
 	  snprintf (nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", EUCALYPTUS_NC_DELETE_BUNDLE); // default value
+	}
+
+	// find and set iqn
+	{
+	  snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "UNSET");
+	  char *ptr=NULL, *iqn=NULL, *tmp=NULL, cmd[MAX_PATH];
+	  snprintf(cmd, MAX_PATH, "%s cat /etc/iscsi/initiatorname.iscsi", nc_state.rootwrap_cmd_path);
+	  ptr = system_output(cmd);
+	  if (ptr) {
+	    iqn = strstr(ptr, "InitiatorName=");
+	    if (iqn) {
+	      iqn+=strlen("InitiatorName=");
+	      tmp=strstr(iqn, "\n");
+	      if (tmp) *tmp='\0';
+	      snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "%s", iqn);
+	    } 
+	    free(ptr);
+	  }
 	}
 
 	/* start the monitoring thread */
@@ -1071,35 +1136,123 @@ int doPowerDown(ncMetadata *meta) {
 	return ret;
 }
 
-int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
-	int ret;
+    int ret;
+    
+    if (init())
+        return 1;
+    
+    logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
+    logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
+    
+    int i;
+    int found_image = 0;
+    int found_kernel = 0;
+    int found_ramdisk = 0;
+    for (i=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
+        virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
+        if (strlen(vbr->resourceLocation)>0) {
+            logprintfl (EUCAINFO, "                         device mapping: type=%s id=%s dev=%s size=%d format=%s %s\n", vbr->id, vbr->typeName, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
+            if (!strcmp(vbr->typeName, "machine")) found_image = 1;
+            if (!strcmp(vbr->typeName, "kernel")) found_kernel = 1;
+            if (!strcmp(vbr->typeName, "ramdisk")) found_ramdisk = 1;
+        } else {
+            break;
+        }
+    }
 
-	if (init())
-		return 1;
+    // legacy support for image{Id|URL}
+    if (imageId && imageURL) {
+        if (found_image) {
+            logprintfl (EUCAINFO, "                         IGNORING image %s passed outside the virtual boot record\n", imageId);
+        } else {
+            logprintfl (EUCAINFO, "                         LEGACY pre-VBR image id=%s URL=%s\n", imageId, imageURL);
+            if (i>=EUCA_MAX_VBRS-2) {
+                logprintfl (EUCAERROR, "Out of room in the Virtual Boot Record for legacy image %s\n", imageId);
+                return ERROR;
+            }
+            {
+                virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+                strncpy (vbr->resourceLocation, imageURL, sizeof (vbr->resourceLocation));
+                strncpy (vbr->guestDeviceName, "sda1", sizeof (vbr->guestDeviceName));
+                strncpy (vbr->id, imageId, sizeof (vbr->id));
+                strncpy (vbr->typeName, "machine", sizeof (vbr->typeName));
+                vbr->size = -1;
+                strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+		params->virtualBootRecordLen++;
+            }
+            {
+                virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+                strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
+                strncpy (vbr->guestDeviceName, "sda2", sizeof (vbr->guestDeviceName));
+                strncpy (vbr->id, "none", sizeof (vbr->id));
+                strncpy (vbr->typeName, "ephemeral0", sizeof (vbr->typeName));
+                vbr->size = 524288; // we cannot compute it here, so pick something
+                strncpy (vbr->formatName, "ext2", sizeof (vbr->formatName));
+		params->virtualBootRecordLen++;
+            }
+            {
+                virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+                strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
+                strncpy (vbr->guestDeviceName, "sda3", sizeof (vbr->guestDeviceName));
+                strncpy (vbr->id, "none", sizeof (vbr->id));
+                strncpy (vbr->typeName, "swap", sizeof (vbr->typeName));
+                vbr->size = 524288;
+                strncpy (vbr->formatName, "swap", sizeof (vbr->formatName));
+		params->virtualBootRecordLen++;
+            }
+        }
+    }
 
-	logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
-	logprintfl (EUCAINFO, "                         image=%s at %s\n", imageId, imageURL);
-	if (kernelId && kernelURL)
-	  logprintfl (EUCAINFO, "                         krnel=%s at %s\n", kernelId, kernelURL);
-	if (ramdiskId && ramdiskURL)
-	  logprintfl (EUCAINFO, "                         rmdsk=%s at %s\n", ramdiskId, ramdiskURL);
-	logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
+    // legacy support for kernel{Id|URL}
+    if (kernelId && kernelURL) {
+        if (found_kernel) {
+            logprintfl (EUCAINFO, "                         IGNORING kernel %s passed outside the virtual boot record\n", kernelId);
+        } else {
+            logprintfl (EUCAINFO, "                         LEGACY pre-VBR kernel id=%s URL=%s\n", kernelId, kernelURL);
+            if (i==EUCA_MAX_VBRS) {
+                logprintfl (EUCAERROR, "Out of room in the Virtual Boot Record for legacy kernel %s\n", kernelId);
+                return ERROR;
+            }
+            virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+            strncpy (vbr->resourceLocation, kernelURL, sizeof (vbr->resourceLocation));
+            strncpy (vbr->guestDeviceName, "none", sizeof (vbr->guestDeviceName));
+            strncpy (vbr->id, kernelId, sizeof (vbr->id));
+            strncpy (vbr->typeName, "kernel", sizeof (vbr->typeName));
+            vbr->size = -1;
+            strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+	    params->virtualBootRecordLen++;
+        }
+    }
 
-	int i;
-	for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
-	  deviceMapping * dm = &(params->deviceMapping[i]);
-	  if (strlen(dm->deviceName)>0) {
-	    logprintfl (EUCAINFO, "                         device mapping: %s=%s size=%d format=%s\n", dm->deviceName, dm->virtualName, dm->size, dm->format);
-	  }
-	}
-
-	if (nc_state.H->doRunInstance)
- 	  ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
-	else
-	  ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
-
-	return ret;
+    // legacy support for ramdisk{Id|URL}
+    if (ramdiskId && ramdiskURL) {
+        if (found_ramdisk) {
+            logprintfl (EUCAINFO, "                         IGNORING ramdisk %s passed outside the virtual boot record\n", ramdiskId);
+        } else {
+            logprintfl (EUCAINFO, "                         LEGACY pre-VBR ramdisk id=%s URL=%s\n", ramdiskId, ramdiskURL);
+            if (i==EUCA_MAX_VBRS) {
+                logprintfl (EUCAERROR, "Out of room in the Virtual Boot Record for legacy ramdisk %s\n", ramdiskId);
+                return ERROR;
+            }
+            virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
+            strncpy (vbr->resourceLocation, ramdiskURL, sizeof (vbr->resourceLocation));
+            strncpy (vbr->guestDeviceName, "none", sizeof (vbr->guestDeviceName));
+            strncpy (vbr->id, ramdiskId, sizeof (vbr->id));
+            strncpy (vbr->typeName, "ramdisk", sizeof (vbr->typeName));
+            vbr->size = -1;
+            strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+	    params->virtualBootRecordLen++;
+        }
+    }
+   
+    if (nc_state.H->doRunInstance)
+      ret = nc_state.H->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
+    else
+      ret = nc_state.D->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
+    
+    return ret;
 }
 
 int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
@@ -1172,6 +1325,7 @@ int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource **outRe
 
 int
 doStartNetwork (	ncMetadata *ccMeta,
+			char *uuid,
 			char **remoteHosts,
 			int remoteHostsLen,
 			int port,
@@ -1185,9 +1339,9 @@ doStartNetwork (	ncMetadata *ccMeta,
 	logprintfl(EUCADEBUG, "doStartNetwork() invoked\n");
 
 	if (nc_state.H->doStartNetwork) 
-		ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+	        ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	else 
-		ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+	        ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	
 	return ret;
 }
@@ -1209,7 +1363,7 @@ int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	return ret;
 }
 
-int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem)
 {
 	int ret;
 
@@ -1219,9 +1373,9 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
 
 	if (nc_state.H->doDetachVolume)
-		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, 1);
+		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
 	else 
-		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, 1);
+		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
 
 	return ret;
 }
@@ -1330,3 +1484,97 @@ char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     return retval;
 }
 
+int get_instance_stats(virDomainPtr dom, ncInstance *instance)
+{
+  char *xml;
+  int ret=1;
+  long long b=0, i=0;
+	      
+  sem_p(hyp_sem);
+  xml = virDomainGetXMLDesc(dom, 0);
+  //      logprintfl(EUCADEBUG, "MEH: '%s'\n", xml);
+  if (xml) {
+    char *el;
+    //	blkdev = xpath_content(xml, "domain/devices/disk[1]/target/@dev");
+    el = xpath_content(xml, "domain/devices/disk");
+    if (el) {
+      char *start, *end;
+      //	  logprintfl(EUCADEBUG, "FOOMEH: %s\n", el);
+      start = strstr(el, "target dev='");
+      if (start) {
+	start += strlen("target dev='");
+	end = strstr(start, "'");
+	if (end) {
+	  *end = '\0';
+	  //	      logprintfl(EUCADEBUG, "WOOTMEH: %s\n", start);
+	  int rc;
+	  virDomainBlockStatsStruct bstats;
+	  b = 0;
+	  rc = virDomainBlockStats(dom, start, &bstats, sizeof(virDomainBlockStatsStruct));
+	  if (rc) {
+	    char cmd[MAX_PATH], *output;
+	    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b %s", nc_state.home, nc_state.home, instance->instanceId, start);
+	    output = system_output(cmd);
+	    if (output) {
+	      sscanf(output, "OUTPUT %lld %lld", &b, &i);
+	      if (b > 0) {
+		rc = 0;
+	      }
+	      free(output);
+	    }
+	  } else {
+	    b = bstats.rd_bytes + bstats.wr_bytes;
+	  }
+	  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, dev=%s, bytes=%lld\n", instance->instanceId, start, b);
+	  instance->blkbytes = b;
+	  if (!rc) {
+	    ret = 0;
+	  }
+	}
+      }
+      free(el);
+    }
+    
+    el = xpath_content(xml, "domain/devices/interface");
+    if (el) {
+      char *start, *end;
+      //	  logprintfl(EUCADEBUG, "FOOMEH: %s\n", el);
+      start = strstr(el, "target dev='");
+      if (start) {
+	start += strlen("target dev='");
+	end = strstr(start, "'");
+	if (end) {
+	  *end = '\0';
+	  //	      logprintfl(EUCADEBUG, "WOOTMEH: %s\n", start);
+	  int rc;
+	  virDomainInterfaceStatsStruct istats;
+	  rc = virDomainInterfaceStats(dom, start, &istats, sizeof(virDomainInterfaceStatsStruct));
+	  if (rc) {
+	    char cmd[MAX_PATH], *output;
+	    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -n %s", nc_state.home, nc_state.home, instance->instanceId, start);
+	    output = system_output(cmd);
+	    if (output) {
+	      sscanf(output, "OUTPUT %lld %lld", &b, &i);
+	      if (i > 0) {
+		rc = 0;
+	      }
+	      free(output);
+	    }
+	  } else {
+	    i = istats.rx_bytes + istats.tx_bytes;
+	  }
+	  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, dev=%s, bytes=%lld\n", instance->instanceId, start, i);
+	  instance->netbytes = i;
+	  if (!rc) {
+	    ret = 0;
+	  }
+	}
+      }
+      free(el);
+    }
+
+    free(xml);
+  }
+  sem_v(hyp_sem);
+  return(ret);
+}

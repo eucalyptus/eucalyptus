@@ -77,7 +77,7 @@ import com.eucalyptus.util.NetworkUtil;
 public enum Component {
   bootstrap( false, true, false ),
   component( false, true, false ),
-  eucalyptus( true, false, true ),
+  eucalyptus( true, true, true ),
   walrus( true, false, false ),
   dns( true, false, true ),
   storage( true, false, false ),
@@ -111,7 +111,7 @@ public enum Component {
   
   public Boolean isEnabled( ) {
     try {
-      return Components.lookup( this ).isEnabled( );
+      return Components.lookup( this ).isAvailableLocally( );
     } catch ( NoSuchElementException ex ) {
       return false;
     }
@@ -132,8 +132,10 @@ public enum Component {
   public URI getUri( ) {
     com.eucalyptus.component.Component c = Components.lookup( this );
     NavigableSet<Service> services = c.getServices( );
-    if( this.isCloudLocal( ) && services.size( ) != 1 ) {
+    if( this.isCloudLocal( ) && services.size( ) != 1 && !db.equals( this ) ) {
       throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
+    } else if( this.isCloudLocal( ) && services.size( ) != 1 && db.equals( this ) ) {
+      return this.getLocalUri( );
     } else if( this.isCloudLocal( ) && services.size( ) == 1 ) {
       return services.first( ).getUri( );
     } else {

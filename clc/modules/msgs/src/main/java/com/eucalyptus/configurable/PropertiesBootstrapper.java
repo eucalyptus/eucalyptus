@@ -11,52 +11,53 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 @RunDuring(Bootstrap.Stage.SystemCredentialsInit)
 public class PropertiesBootstrapper extends Bootstrapper {
 
-  @Override
-  public boolean load( ) throws Exception {
-    ConfigurationProperties.doConfiguration( );
-    return true;
-  }
+	@Override
+	public boolean load( ) throws Exception {
+		ConfigurationProperties.doConfiguration( );
+		return true;
+	}
 
-  @Override
-  public boolean start( ) throws Exception {
-    return true;
-  }
+	@Override
+	public boolean start( ) throws Exception {
+		return true;
+	}
 
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+	 */
+	@Override
+	public boolean enable( ) throws Exception {
+		return true;
+	}
 
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+	 */
+	@Override
+	public boolean stop( ) throws Exception {
+		//unload properties
+		return true;
+	}
 
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+	 */
+	@Override
+	public void destroy( ) throws Exception {}
 
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+	 */
+	@Override
+	public boolean disable( ) throws Exception {
+		return true;
+	}
 
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+	 */
+	@Override
+	public boolean check( ) throws Exception {
+		return true;
+	}
 }

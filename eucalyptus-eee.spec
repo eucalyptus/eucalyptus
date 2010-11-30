@@ -252,6 +252,8 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 /usr/sbin/euca-get-credentials
 /usr/sbin/euca-grant-zone-permission
 /usr/sbin/euca-modify-property
+/usr/sbin/euca-modify-storage-controller
+/usr/sbin/euca-modify-walrus
 /usr/sbin/euca-register-cluster
 /usr/sbin/euca-register-storage-controller
 /usr/sbin/euca-register-walrus
