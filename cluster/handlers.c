@@ -1453,6 +1453,7 @@ int powerDown(ncMetadata *ccMeta, ccResource *node) {
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   int i;
   
+  strncpy(dst->uuid, src->uuid, 48);
   strncpy(dst->instanceId, src->instanceId, 16);
   strncpy(dst->reservationId, src->reservationId, 16);
   strncpy(dst->ownerId, src->userId, 16);
