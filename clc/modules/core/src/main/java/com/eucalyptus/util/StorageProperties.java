@@ -66,11 +66,14 @@
 package com.eucalyptus.util;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentState;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
@@ -113,39 +116,52 @@ public class StorageProperties {
 	static { GroovyUtil.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
-		if(!Component.eucalyptus.isLocal()) {
-			String scName = System.getProperty("euca.storage.name");
-			if(scName != null) {
-				StorageProperties.NAME = scName;
-			} else {
-				SystemUtil.shutdownWithError("Storage controller name cannot be determined. Shutting down.");
-			}
-		} else {
-			try {
-				List<StorageControllerConfiguration> configs = Configuration.getStorageControllerConfigurations();
-				for(StorageControllerConfiguration config : configs) {
-					if(NetworkUtil.testLocal(config.getHostName())) {
-						StorageProperties.NAME = config.getName();
-						return;
-					}
-				}
-			} catch (EucalyptusCloudException e) {
-				LOG.error(e);
-			}
-		}
+	  try {
+      StorageProperties.NAME = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getName( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+      LOG.error( "Failed to configure Storage Controller NAME." );
+      throw ex;
+    }
+//		if(!Component.eucalyptus.isLocal()) {
+//			String scName = System.getProperty("euca.storage.name");
+//			if(scName != null) {
+//				StorageProperties.NAME = scName;
+//			} else {
+//				SystemUtil.shutdownWithError("Storage controller name cannot be determined. Shutting down.");
+//			}
+//		} else {
+//			try {
+//				List<StorageControllerConfiguration> configs = Configuration.getStorageControllerConfigurations();
+//				for(StorageControllerConfiguration config : configs) {
+//					if(NetworkUtil.testLocal(config.getHostName())) {
+//						StorageProperties.NAME = config.getName();
+//						return;
+//					}
+//				}
+//			} catch (EucalyptusCloudException e) {
+//				LOG.error(e);
+//			}
+//		}
 	}
 
 	public static void updateStorageHost() {
-		try {
-			if(!"unregistered".equals(StorageProperties.NAME)) {
-				StorageControllerConfiguration config = Configuration.getStorageControllerConfiguration(StorageProperties.NAME);
-				STORAGE_HOST = config.getHostName();
-			} else {
-				LOG.info("Storage Controller not registered yet.");
-			}
-		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
-		}
+    try {
+      STORAGE_HOST = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getHostName( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+      LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
+    }
+//		try {
+//			if(!"unregistered".equals(StorageProperties.NAME)) {
+//				StorageControllerConfiguration config = Configuration.getStorageControllerConfiguration(StorageProperties.NAME);
+//				STORAGE_HOST = config.getHostName();
+//			} else {
+//				LOG.info("Storage Controller not registered yet.");
+//			}
+//		} catch (EucalyptusCloudException e) {
+//			LOG.error(e);
+//		}
 	}
 
 	public static void updateStorageHost(String hostName) {

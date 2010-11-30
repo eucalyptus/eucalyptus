@@ -118,15 +118,25 @@ public class Component implements ComponentInformation, HasName<Component> {
       return new Callback.Success<Component>( ) {
         @Override
         public void fire( Component t ) {
-          if ( t.isAvailableLocally( ) ) {
-            try {
-              t.stateMachine.transition( Transition.this );
-            } catch ( Throwable ex ) {
-              LOG.error( ex , ex );
-            }
+          try {
+            Transition.this.transit( t );
+          } catch ( IllegalStateException ex ) {
+            LOG.debug( ex );
           }
         }
       };
+    }
+    public void transit( Component c ) {
+      if ( c.isAvailableLocally( ) ) {
+        try {
+          c.stateMachine.transition( Transition.this );
+        } catch ( Throwable ex ) {
+          LOG.error( ex , ex );
+          throw new IllegalStateException( "Error while applying transtition " + this.name( ) + " to " + c.getName( ) + " currently in state " + c.stateMachine.toString( ), ex );
+        }
+      } else {
+        throw new IllegalStateException( "Error while applying transtition " + this.name( ) + " to " + c.getName( ) + " since it is not available locally." );
+      }
     }
   }
   
@@ -164,7 +174,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     this.stateMachine = new ComponentState( this );
   }
   
-  protected Service getLocalService( ) {
+  public Service getLocalService( ) {
     return this.localService.get( );
   }
   
@@ -524,7 +534,7 @@ public class Component implements ComponentInformation, HasName<Component> {
         try {
           c.runChecks( );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
+          LOG.debug( ex, ex );
         }
       }
     }

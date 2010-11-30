@@ -68,6 +68,7 @@ import edu.ucsb.eucalyptus.msgs.*
 import com.eucalyptus.records.EventType;
 import org.apache.log4j.Logger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap
@@ -145,7 +146,7 @@ public class VmRunResponseType extends EucalyptusMessage {
 }
 
 public class VmInfo extends EucalyptusData {
-  
+  String uuid;
   String imageId;
   String kernelId;
   String ramdiskId;
@@ -185,6 +186,7 @@ public class VmRunType extends EucalyptusMessage {
   VmKeyInfo keyInfo;
   
   List<String> instanceIds = new ArrayList<String>();
+  List<String> uuids = new ArrayList<String>();
   List<String> macAddresses = new ArrayList<String>();
   List<String> networkNames = new ArrayList<String>();
   ArrayList<String> networkIndexList = new ArrayList<String>();
@@ -195,7 +197,7 @@ public class VmRunType extends EucalyptusMessage {
   def VmRunType(final String reservationId, final String userData, final int amount,
   final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
   final List<String> instanceIds, final List<String> macAddresses,
-  final int vlan, final List<String> networkNames, final List<String> networkIndexList ) {
+  final int vlan, final List<String> networkNames, final List<String> networkIndexList, final List<String> uuids ) {
     this.reservationId = reservationId;
     this.userData = userData;
     this.min = amount;
@@ -207,6 +209,7 @@ public class VmRunType extends EucalyptusMessage {
     this.macAddresses = macAddresses;
     this.networkNames = networkNames;
     this.networkIndexList = networkIndexList;
+    this.uuids = uuids;
   }
   
   def VmRunType(RunInstancesType request) {
@@ -280,6 +283,7 @@ public class VmKeyInfo {
 
 public class Network implements HasName<Network> {
   private static Logger LOG = Logger.getLogger( Network.class );
+  String uuid;
   String name;
   String networkName;
   String userName;
@@ -293,7 +297,8 @@ public class Network implements HasName<Network> {
   def Network() {
   }
   
-  def Network(final String userName, final String networkName) {
+  def Network(final String userName, final String networkName, final String uuid) {
+    this.uuid = uuid;
     this.userName = userName;
     this.networkName = networkName;
     this.name = this.userName + "-" + this.networkName;
@@ -332,14 +337,14 @@ public class Network implements HasName<Network> {
   }
   
   public NetworkToken getClusterToken( String cluster ) {
-    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.vlan.get() ) );
+    NetworkToken token = this.clusterTokens.putIfAbsent( cluster, new NetworkToken( cluster, this.userName, this.networkName, this.uuid, this.vlan.get() ) );
     if( token == null ) token = this.clusterTokens.get( cluster );
     return token;
   }
   
   public NetworkToken createNetworkToken( String cluster ) {
     getClusterToken( cluster );
-    return new NetworkToken( cluster, this.userName, this.networkName, this.vlan.get() );
+    return new NetworkToken( cluster, this.userName, this.networkName, this.uuid, this.vlan.get() );
   }
   
   public void trim( Integer max ) {
@@ -417,12 +422,33 @@ public class Network implements HasName<Network> {
     return this.getName().compareTo(that.getName());
   }
   
+  private List<String> trimmedIndexes( Collection<Integer> indexes ) {
+    List<String> outList = [];
+    List<Integer> intList = [];
+    intList.addAll( indexes );
+    if( intList.size() < 5 ) {
+      outList.addAll( intList );
+    } else {
+      Integer last = intList.first();
+      intList.eachWithIndex{ it, i ->
+        if(intList.size()>i+1 && intList[i+1]>it+1) {
+          outList += (last!=it)?"${last}..${it}":"${last}";
+          last = intList[i+1];
+        } else if(i==intList.size()-1) {
+          outList += (last!=it)?"${last}..${it}":"${last}";
+        }
+      }
+    }
+    return outList;
+  }
+
   @Override
   public String toString( ) {
-    String out = "Network ${name} ${userName} ${networkName} assigned=${LogUtil.rangedIntegerList( this.assignedNetworkIndexes )}\n";
-    out += "Network ${name} ${userName} ${networkName} available=${LogUtil.rangedIntegerList( this.availableNetworkIndexes )}\n";
-    this.clusterTokens.each{ out += "Network ${name} ${userName} ${networkName} ${it}\n" };
-    this.rules.each{ out += "Network ${name} ${userName} ${networkName} ${it}\n" };
+    String out = "Network ${name} ${userName} ${networkName} ${uuid}\n";
+    out += "Network ${name} assigned=${trimmedIndexes( this.assignedNetworkIndexes ).toString( ).replaceAll("\\s","")}\n";
+    out += "Network ${name} available=${trimmedIndexes( this.availableNetworkIndexes ).toString( ).replaceAll("\\s","")}\n";
+    this.clusterTokens.each{ out += "Network ${name} ${it}\n" };
+    this.rules.each{ out += "Network ${name} ${it}\n" };
     return out;
   }
   
@@ -430,7 +456,7 @@ public class Network implements HasName<Network> {
 }
 
 public class NetworkToken implements Comparable {
-  
+  String networkUuid;
   String networkName;
   String cluster;
   Integer vlan;
@@ -438,8 +464,9 @@ public class NetworkToken implements Comparable {
   String userName;
   String name;
   
-  def NetworkToken(final String cluster, final String userName, final String networkName, final int vlan ) {
+  def NetworkToken(final String cluster, final String userName, final String networkName, final String networkUuid, final int vlan ) {
     this.networkName = networkName;
+    this.networkUuid = networkUuid; 
     this.cluster = cluster;
     this.vlan = vlan;
     this.userName = userName;
@@ -479,7 +506,7 @@ public class NetworkToken implements Comparable {
   
   @Override
   public String toString( ) {
-    return "NetworkToken ${cluster} ${name} ${vlan} ${indexes}";
+    return "NetworkToken ${cluster} ${name} ${vlan} ${networkUuid} ${indexes}";
   }
 }
 

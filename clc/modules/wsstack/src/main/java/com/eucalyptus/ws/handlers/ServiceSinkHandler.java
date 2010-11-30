@@ -152,7 +152,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
         BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
-        if( RegisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || DeregisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || ServiceTransitionType.class.isAssignableFrom( reply.getClass( ) ) ) {
+        if( ( RegisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || DeregisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || ServiceTransitionType.class.isAssignableFrom( reply.getClass( ) ) ) && reply.get_return( ) ) {
           try {
             ServiceContext.shutdown( );
             ServiceContext.startup( );

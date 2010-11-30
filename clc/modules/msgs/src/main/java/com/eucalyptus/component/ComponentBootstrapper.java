@@ -72,6 +72,7 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Record;
 import com.eucalyptus.util.CheckedFunction;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -120,7 +121,7 @@ public class ComponentBootstrapper {
             throw BootstrapException.throwError( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ) );
           }
         } catch ( Throwable e ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.component.getName( ), b.getClass( ).getCanonicalName( ) ).info( );
+          LOG.error( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.component.getName( ), b.getClass( ).getCanonicalName( ), e.getMessage( ) ).info( ).toString( ), e );
 //          throw BootstrapException.throwError( b.getClass( ).getSimpleName( ) + " threw an error in " + name + "( ): " + e.getMessage( ), e );
           return false;
         }
