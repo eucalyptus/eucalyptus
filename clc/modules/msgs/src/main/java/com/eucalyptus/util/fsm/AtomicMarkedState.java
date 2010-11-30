@@ -174,7 +174,6 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         throw new IllegalStateException( String.format( "Failed to apply transition %s because before() returned false.", transitionName.toString( ) ) );
       }
     } catch ( Throwable t ) {
-      LOG.error( t, t );
       throw new IllegalStateException( String.format( "Failed to apply transition %s because before() threw an exception.", transitionName.toString( ) ), t );
     }
   }
