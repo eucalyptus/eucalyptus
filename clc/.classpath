@@ -115,7 +115,7 @@
 	<classpathentry kind="lib" path="lib/proxool-cglib.jar"/>
 	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar" sourcepath="/bzr/third-party/mule-2.0.1.orig/core/src/main/java"/>
 	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar" sourcepath="/bzr/third-party/mule-2.0.1.orig"/>
 	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>

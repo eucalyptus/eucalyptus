@@ -12,6 +12,7 @@ import org.apache.log4j.Logger;
 import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
@@ -80,13 +81,6 @@ public abstract class ServiceDispatcher implements Dispatcher {
 
   /**
    * @see com.eucalyptus.component.Dispatcher#send(edu.ucsb.eucalyptus.msgs.BaseMessage)
-   * @param msg
-   * @return
-   * @throws EucalyptusCloudException
-   */
-  public abstract BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException;
-  /**
-   * @see com.eucalyptus.component.Dispatcher#send(edu.ucsb.eucalyptus.msgs.BaseMessage, java.lang.Class)
    * @param <REPLY>
    * @param message
    * @param replyType
@@ -94,7 +88,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
    * @throws EucalyptusCloudException
    */
   @SuppressWarnings( "unchecked" )
-  public <REPLY> REPLY send( BaseMessage message, Class<REPLY> replyType ) throws EucalyptusCloudException {
+  public <REPLY extends BaseMessage> REPLY send( BaseMessage message ) throws EucalyptusCloudException {
     return (REPLY) this.send( message );
   }
   /**
@@ -126,7 +120,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
     return isLocal;
   }
   protected MuleClient getMuleClient( ) throws Exception {
-    return new MuleClient( );
+    return ServiceContext.getContext( );
   }
 
   protected NioClient getNioClient( ) throws Exception {

@@ -3,6 +3,7 @@ package com.eucalyptus.context;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.mule.DefaultMuleMessage;
 import org.mule.RequestContext;
 import org.mule.api.MuleContext;
 import org.mule.api.MuleEvent;
@@ -62,26 +63,27 @@ public class ServiceContext {
   }
 
   public static void dispatch( String dest, Object msg ) {
-    MuleEvent context = RequestContext.getEvent( );
     try {
-      ServiceContext.getClient( ).sendDirect( dest, null, msg, null );
-    } catch ( MuleException e ) {
-      LOG.error( e );
-    } finally {
-      RequestContext.setEvent( context );
+      send( dest, msg );
+    } catch ( EucalyptusCloudException ex ) {
+      LOG.error( ex , ex );
     }
   }
 
   public static <T> T send( String dest, Object msg ) throws EucalyptusCloudException {
+    if( dest.startsWith( "vm://" ) ) {
+      dest = "vm://" + dest;
+    }
     MuleEvent context = RequestContext.getEvent( );
     try {
-      MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, msg, null );
+      MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
 
       if ( reply.getExceptionPayload( ) != null ) throw new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
       else return (T) reply.getPayload( );
-    } catch ( MuleException e ) {
-      LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
+    } catch ( Throwable e ) {
+      EucalyptusCloudException ex = new EucalyptusCloudException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest + " because of " + e.getMessage( ), e );
+      LOG.trace( ex, ex );
+      throw ex;
     } finally {
       RequestContext.setEvent( context );
     }
