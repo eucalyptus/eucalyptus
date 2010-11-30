@@ -776,12 +776,13 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
 }
 
 
-int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network) {
+int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *network) {
   
   if (param_check("vnetSetVlan", vnetconfig, vlan, user, network)) return(1);
 
   strncpy(vnetconfig->users[vlan].userName, user, 32);
   strncpy(vnetconfig->users[vlan].netName, network, 32);
+  if (uuid) strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
   
   return(0);
 }
@@ -1239,7 +1240,7 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   return(0);
 }
 
-int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {
+int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname) {
   char cmd[MAX_PATH], newdevname[32], newbrname[32], *network=NULL;
   int rc, slashnet;
 
@@ -1316,7 +1317,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, ch
     vnetconfig->networks[vlan].addrs[1].active = 1;
     vnetconfig->networks[vlan].addrs[vnetconfig->numaddrs-1].active = 1;
     
-    rc = vnetSetVlan(vnetconfig, vlan, userName, netName);
+    rc = vnetSetVlan(vnetconfig, vlan, uuid, userName, netName);
     rc = vnetCreateChain(vnetconfig, userName, netName);
     
     // allow traffic on this net to flow freely
@@ -1772,7 +1773,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
   return(ret);
 }
 
-int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname) {
+int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname) {
   int rc;
 
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
@@ -1790,7 +1791,7 @@ int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *net
     }
     rc = 0;
   } else {
-    rc = vnetStartNetworkManaged(vnetconfig, vlan, userName, netName, outbrname);
+    rc = vnetStartNetworkManaged(vnetconfig, vlan, uuid, userName, netName, outbrname);
   }
   
   if (vnetconfig->role != NC && outbrname && *outbrname) {
@@ -1932,15 +1933,15 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
   return(rc);
 }
 
-int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip) {
-  return(vnetSetPublicIP(vnetconfig, ip, dstip, 1));
+int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip) {
+  return(vnetSetPublicIP(vnetconfig, uuid, ip, dstip, 1));
 }
 
-int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip) {
-  return(vnetSetPublicIP(vnetconfig, ip, NULL, 0));
+int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip) {
+  return(vnetSetPublicIP(vnetconfig, uuid, ip, NULL, 0));
 }
 
-int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval) {
+int vnetSetPublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip, int setval) {
   int i, done;
   uint32_t hip;
   
@@ -1957,6 +1958,15 @@ int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval) {
 	vnetconfig->publicips[i].dstip = 0;
       }
       vnetconfig->publicips[i].allocated = setval;
+      if (uuid) {
+	if (setval) {
+	  snprintf(vnetconfig->publicips[i].uuid, 48, "%s", uuid);
+	} else {
+	  bzero(vnetconfig->publicips[i].uuid, sizeof(char) * 48);
+	}
+      } else {
+	bzero(vnetconfig->publicips[i].uuid, sizeof(char) * 48);
+      }
       done++;
     }
   }

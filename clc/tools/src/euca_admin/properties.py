@@ -11,7 +11,8 @@ VERBOSE = False
 class Property():
   
   
-  def __init__(self, property_name=None, property_value=None, property_description=None, property_old_value=None):
+  def __init__(self, property_name=None, property_value=None,
+               property_description=None, property_old_value=None):
     self.property_name = property_name
     self.property_value = property_value
     self.property_description = property_description
@@ -44,8 +45,9 @@ class Property():
       setattr(self, name, value)
 
   def get_parser(self):
-    parser = OptionParser("usage: %prog [PROPERTY...]",version="Eucalyptus %prog VERSION")
-    parser.add_option("-v","--verbose",dest="verbose",action="store_true",help="Show property descriptions.")
+    parser = OptionParser("usage: %prog [PROPERTY...]", version="Eucalyptus %prog VERSION")
+    parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
+                      help="Show property descriptions.")
     return parser
         
   def parse_describe(self):
@@ -89,8 +91,8 @@ class Property():
       sys.exit(1)
     else:
       if options.props:
-        for i in opts:
-          if not re.match("^[\w.]+=[\.]+$",i):
+        for i in options.props:
+          if not re.match("^[\w.]+=[\w\.]+$",i):
             print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
             parser.print_help()
             sys.exit(1)
@@ -107,7 +109,7 @@ class Property():
     try:
       result = self.euca.connection.get_object('ModifyPropertyValue',
                                                {'Name' : name, 'Value' : value},
-                                               Property)
+                                               Property, verb='POST')
       print result
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
@@ -129,13 +131,16 @@ class Property():
           print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
           sys.exit(1)
         file_path = new_prop[1]
-        file_path = os.path.expanduser(file_path)
-        file_path = os.path.expandvars(file_path)
-        if not os.path.isfile(file_path):
-          print "ERROR File %s does not exist" % file_path
-          sys.exit(1)
-        fp = open(file_path)
-        value = fp.read()
-        fp.close()
+        if file_path == '-':
+          value = sys.stdin.read()
+        else:
+          file_path = os.path.expanduser(file_path)
+          file_path = os.path.expandvars(file_path)
+          if not os.path.isfile(file_path):
+            print "ERROR File %s does not exist" % file_path
+            sys.exit(1)
+          fp = open(file_path)
+          value = fp.read()
+          fp.close()
         self._modify(new_prop[0], value)
 

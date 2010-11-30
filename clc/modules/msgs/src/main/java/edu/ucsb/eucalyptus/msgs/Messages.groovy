@@ -1,3 +1,19 @@
+package edu.ucsb.eucalyptus.msgs
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.NoSuchElementException;
+import org.jibx.runtime.BindingDirectory;
+import org.jibx.runtime.IBindingFactory;
+import org.jibx.runtime.IMarshallingContext;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.config.EphemeralConfiguration;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
+
+
 /*******************************************************************************
  *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
@@ -57,58 +73,16 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.msgs
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-import org.jibx.runtime.BindingDirectory
-import org.jibx.runtime.IBindingFactory
-import org.jibx.runtime.IMarshallingContext
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.config.EphemeralConfiguration;
-
-//TODO: Remove me
-//public class INTERNAL extends EucalyptusMessage {
-//  
-//  def INTERNAL() {
-//    super();
-//    this.userId = "eucalyptus";
-//    this.effectiveUserId = "eucalyptus";
-//  }
-//}
 
 public class HeartbeatType extends EucalyptusMessage {
   ArrayList<HeartbeatComponentType> components = new ArrayList<HeartbeatComponentType>();
   ArrayList<ComponentType> started = new ArrayList<ComponentType>();
   ArrayList<ComponentType> stopped = new ArrayList<ComponentType>();
 }
-public class ServiceInfoType extends EucalyptusData {
-  String name;
-  String type;
-  ArrayList<String> uris = new ArrayList<String>();
-}
-public class ServiceStatusType extends EucalyptusData {
-  String name;
-  String type;
-  String uri;
-  String state;
-  Integer epoch;
-  ArrayList<String> details = new ArrayList<String>( );
-}
-public class DescribeServicesType extends EucalyptusMessage {}
-public class DescribeServicesResponseType extends EucalyptusMessage {
-  ArrayList<ServiceStatusType> registered = new ArrayList<ServiceStatusType>();
-}
-
 public class HeartbeatResponseType extends EucalyptusMessage {}
 public class HeartbeatComponentType extends EucalyptusData {
   String component;
@@ -119,6 +93,13 @@ public class HeartbeatComponentType extends EucalyptusData {
     this.name = name;
   }
 }
+public class ServiceInfoType extends EucalyptusData {
+  String partition;
+  String name;
+  String type;
+  ArrayList<String> uris = new ArrayList<String>( );
+}
+
 public class ComponentType extends EucalyptusData {
   String component;
   String name;
@@ -193,6 +174,8 @@ public class WalrusStateType extends EucalyptusMessage{
   }
 }
 
+public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
+}
 
 public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
     
@@ -290,15 +273,19 @@ public class VmTypeInfo extends EucalyptusData {
   Integer memory;
   Integer disk;
   Integer cores;
+  String rootDeviceName = "sda1";
+  
   ArrayList<BlockDeviceMappingItemType> deviceMappings = new ArrayList<BlockDeviceMappingItemType>();
+  ArrayList<VirtualBootRecord> virtualBootRecord = new ArrayList<VirtualBootRecord>();
   def VmTypeInfo(){
   }
   
-  def VmTypeInfo(final name, final memory, final disk, final cores) {
+  def VmTypeInfo(final name, final memory, final disk, final cores, final rootDevice ) {
     this.name = name;
     this.memory = memory;
     this.disk = disk;
     this.cores = cores;
+    this.rootDeviceName = rootDevice;
   }
   
   @Override
@@ -306,6 +293,50 @@ public class VmTypeInfo extends EucalyptusData {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
   
+  public void setRoot( String imageId, String location, Long sizeKb ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
+  }
+  
+  public void setKernel( String imageId, String location ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "kernel" ) );
+  }
+
+  public void setRamdisk( String imageId, String location ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "ramdisk" ) );
+  }
+
+  public void setSwap( String deviceName, Long sizeKb ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeKb, , type : "swap", format : "swap" ) );
+  }
+
+  public void setEphemeral( Integer index, String deviceName, Long sizeKb ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( type : "ephemeral" + index, guestDeviceName : deviceName, size : sizeKb ) );
+  }
+
+  public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
+    VirtualBootRecord ret;
+    if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
+      throw new NoSuchElementException( "Failed to find virtual boot record of type machine among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
+    } else {
+      return ret;
+    }
+  }
+  public VirtualBootRecord lookupKernel( ) throws NoSuchElementException {
+    VirtualBootRecord ret;
+    if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "kernel" })==null ) {
+      throw new NoSuchElementException( "Failed to find virtual boot record of type kernel among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
+    } else {
+      return ret;
+    }
+  }
+  public VirtualBootRecord lookupRamdisk( ) throws NoSuchElementException {
+    VirtualBootRecord ret;
+    if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ramdisk" })==null ) {
+      throw new NoSuchElementException( "Failed to find virtual boot record of type ramdisk among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
+    } else {
+      return ret;
+    }
+  }
 }
 public class ResourceType extends EucalyptusData {
   

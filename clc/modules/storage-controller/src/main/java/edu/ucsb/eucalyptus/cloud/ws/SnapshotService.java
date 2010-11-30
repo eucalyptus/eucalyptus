@@ -69,15 +69,19 @@ import edu.ucsb.eucalyptus.cloud.ws.BlockStorage.SnapshotTask;
 
 public class SnapshotService {
 	private Logger LOG = Logger.getLogger( SnapshotService.class );
-	
+
 	private final ExecutorService pool;
-	private final int NUM_THREADS = 1;
-	
+	private final int NUM_THREADS = 3;
+
 	public SnapshotService() {
 		pool = Executors.newFixedThreadPool(NUM_THREADS);
 	}
-	
+
 	public void add(SnapshotTask creator) {
 		pool.execute(creator);
+	}
+
+	public void shutdown() {
+		pool.shutdownNow();
 	}
 }

@@ -72,6 +72,7 @@ import junit.framework.TestCase;
 import java.util.ArrayList;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 public class VolumeTest extends TestCase {
 
@@ -105,6 +106,10 @@ public class VolumeTest extends TestCase {
 
     public void setUp() {
         blockStorage = new BlockStorage();
-        BlockStorage.configure();
+        try {
+			BlockStorage.configure();
+		} catch (EucalyptusCloudException e) {
+			e.printStackTrace();
+		}
     }
 }

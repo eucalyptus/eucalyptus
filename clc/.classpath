@@ -5,11 +5,7 @@
 	<classpathentry kind="src" output="modules/database/build" path="modules/database/src/main/java"/>
 	<classpathentry kind="src" output="modules/core/build" path="modules/core/src/main/java"/>
 	<classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/main/java"/>
-	<classpathentry kind="src" output="modules/interface/build" path="modules/interface/src/main/java"/>
 	<classpathentry kind="src" output="modules/cluster-manager/build" path="modules/cluster-manager/src/main/java"/>
-	<classpathentry kind="src" output="modules/group-manager/build" path="modules/group-manager/src/main/java"/>
-	<classpathentry kind="src" output="modules/image-manager/build" path="modules/image-manager/src/main/java"/>
-	<classpathentry kind="src" output="modules/key-manager/build" path="modules/key-manager/src/main/java"/>
 	<classpathentry kind="src" output="modules/storage-controller/build" path="modules/storage-controller/src/main/java"/>
 	<classpathentry kind="src" output="modules/dns/build" path="modules/dns/src/main/java"/>
 	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>

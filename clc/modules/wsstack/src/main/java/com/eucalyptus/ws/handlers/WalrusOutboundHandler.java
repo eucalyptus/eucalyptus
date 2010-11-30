@@ -76,6 +76,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
 
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -97,7 +98,7 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-			EucalyptusMessage msg = (EucalyptusMessage) httpResponse.getMessage( );
+			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
 
 			if(msg instanceof PutObjectResponseType) {
 				PutObjectResponseType putObjectResponse = (PutObjectResponseType) msg;

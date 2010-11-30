@@ -65,22 +65,29 @@ package com.eucalyptus.config;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
@@ -88,6 +95,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
 import edu.ucsb.eucalyptus.msgs.DescribeNodesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNodesType;
+import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeType;
 import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
@@ -98,82 +107,123 @@ public class Configuration {
   static String         CLUSTER_KEY_FSTRING = "cc-%s";
   static String         NODE_KEY_FSTRING    = "nc-%s";
 
-  private static Map<Class,ServiceBuilder<ComponentConfiguration>> builders = Maps.newConcurrentHashMap( );
-  public static void addBuilder( Class c, ServiceBuilder b ) {
-    builders.put( c, b );
-  }
-  
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
+    ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
-    reply.set_return( false );
     String name = request.getName( );
+    String partition = request.getPartition( );
     String hostName = request.getHost();
     Integer port = request.getPort( );
-    ServiceBuilder builder = builders.get( request.getClass( ) );
+    reply.set_return( register( builder, partition != null ? partition : name, name, hostName, port ) );
+    return reply;
+  }
+
+  private boolean register( ServiceBuilder builder, String partition, String name, String hostName, Integer port ) throws ServiceRegistrationException {
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + name + "@" + hostName + ":" + port );
-    if( !builder.checkAdd( name, hostName, port ) ) {
+    if( !builder.checkAdd( null, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
-      return reply;
+      return false;
     }
     try {
-      ServiceConfiguration newComponent = builder.add( name, hostName, port );
-      builder.getComponent( ).buildService( newComponent );
-      builder.getComponent( ).startService( newComponent );
-      reply.set_return( true );
-    } catch( EucalyptusCloudException e ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
-      LOG.info( e.getMessage( ) );
-      LOG.error( e, e );
-      throw e;
+      ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
+      try {
+        builder.getComponent( ).loadService( newComponent );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
+      try {
+        builder.getComponent( ).startService( newComponent );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
+      try {
+        builder.getComponent( ).enableService( newComponent );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
+      return true;
     } catch ( Throwable e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
       LOG.info( e.getMessage( ) );
       LOG.error( e, e );
-      throw new ServiceRegistrationException( e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": add failed with message: " + e.getMessage( ), e );
     }
-    return reply;
   }
     
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
+    ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
-    reply.set_return( false );
-    ServiceBuilder builder = builders.get( request.getClass( ) );
+    reply.set_return( deregister( request.getPartition( ) != null ? request.getPartition( ) : request.getName( ), request.getName( ), builder ) );
+    return reply;
+  }
+
+  private boolean deregister( String partition, String name, ServiceBuilder builder ) throws ServiceRegistrationException, EucalyptusCloudException {
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     try {
-      if( !builder.checkRemove( request.getName( ) ) ) {
+      if( !builder.checkRemove( partition, name ) ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
-        return reply;
+        throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove returned false.  It is unsafe to currently deregister, please check the logs for additional information." );
       }
     } catch ( Exception e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
-      throw new ServiceRegistrationException( e.getMessage( ), e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: " + e.getMessage( ), e );
     }
     ServiceConfiguration conf;
     try {
-      conf = builder.lookupByName( request.getName( ) );
+      conf = builder.lookupByName( name );
     } catch ( ServiceRegistrationException e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": lookupByName failed." );
       LOG.error( e, e );
-      return reply;
+      throw e;
     }
     try {
       try {
-        builder.getComponent( ).removeService( conf );
+        builder.getComponent( ).disableService( conf );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+      }
+      try {
+        builder.getComponent( ).stopService( conf );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+      }
+      try {
+        builder.getComponent( ).destroyService( conf );
       } catch ( Throwable ex ) {
         LOG.error( ex , ex );
       }
       builder.remove( conf );
-      reply.set_return( true );
-    } catch( EucalyptusCloudException e ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": remove failed." );
-      LOG.info( e.getMessage( ) );
-      LOG.error( e, e );
-      throw e;
+      return true;
     } catch ( Throwable e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": remove failed." );
       LOG.info( e.getMessage( ) );
       LOG.error( e, e );
-      throw new ServiceRegistrationException( e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": remove failed with message: " + e.getMessage( ), e );
+    }
+  }
+  
+  private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
+  public ModifyComponentAttributeResponseType modify( ModifyComponentAttributeType request ) throws EucalyptusCloudException {
+    ModifyComponentAttributeResponseType reply = request.getReply( );
+    if( !attributes.contains( request.getAttribute( ) ) ) {
+      throw new EucalyptusCloudException( "Request to modify unknown attribute: " + request.getAttribute() );
+    }
+    ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
+    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
+    if( "state".equals( request.getAttribute( ) ) ) {
+      ServiceConfiguration conf;
+      try {
+        conf = builder.lookupByName( request.getName( ) );
+      } catch ( ServiceRegistrationException e ) {
+        LOG.info( builder.getClass( ).getSimpleName( ) + ": lookupByName failed." );
+        LOG.error( e, e );
+        throw e;
+      }
+      if( "enabled".startsWith( request.getValue( ).toLowerCase( ) ) ) {
+        builder.getComponent( ).enableService( conf );
+      } else if( "disabled".startsWith( request.getValue( ).toLowerCase( ) ) ) {
+        builder.getComponent( ).disableService( conf );
+      }
     }
     return reply;
   }
@@ -187,8 +237,27 @@ public class Configuration {
   public DescribeComponentsResponseType listComponents( DescribeComponentsType request ) throws EucalyptusCloudException {
     DescribeComponentsResponseType reply = ( DescribeComponentsResponseType ) request.getReply( );
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
-    for( ComponentConfiguration conf : builders.get( request.getClass( ) ).list( ) ) {
-      listConfigs.add( new ComponentInfoType( conf.getName( ), conf.getHostName( ) ) );
+    if( DescribeComponentsType.class.equals( request.getClass( ) ) ) {
+      for( Component c : Components.list( ) ) {
+        for ( Service s : c.getServices( ) ) {
+          ServiceConfiguration conf = s.getServiceConfiguration( );
+          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+                                                  conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), "" ) );
+          for( String d : s.getDetails( ) ) {
+            listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+                                                    conf.getName( ), "detail", d, "" ) );
+          }
+        }        
+      }
+    } else {
+      for( ServiceConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
+        try {
+          Service s = Components.lookup( conf );
+          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), s.getDetails( ) ) );
+        } catch ( NoSuchElementException ex ) {
+          LOG.error( ex , ex );
+        }
+      }
     }
     return reply;
   }

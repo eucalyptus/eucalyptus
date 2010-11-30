@@ -181,7 +181,9 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       }
     }
     for ( String trKey : alltransitions.keySet( ) ) {
-      LOG.debug( String.format( "fsm %s %-60.60s %s", this.parent.getName( ), trKey, alltransitions.get( trKey ) ) );
+      if( alltransitions.get( trKey ) != null ) {
+        LOG.debug( String.format( "fsm %s %-60.60s %s", this.parent.getName( ), trKey, alltransitions.get( trKey ) ) );
+      }
     }
   }
   

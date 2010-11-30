@@ -99,7 +99,7 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
 
   private boolean checkAllKeys( ) {
     for ( com.eucalyptus.component.Component c : Components.list( ) ) {
-      if ( c.isEnabled( ) ) {
+      if ( c.isAvailableLocally( ) ) {
         try {
           if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.getName( ) ) ) {//ASAP: this is where the keys thing happens during bootstrap.
             return false;

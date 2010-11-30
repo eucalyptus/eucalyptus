@@ -12,7 +12,7 @@ public class HsqldbDestination implements DatabaseDestination {
 
 	public void initialize( ) throws Exception {
 		/** Bring up the new destination database **/
-		Components.lookup( Component.db ).buildService( );
+		Components.lookup( Component.db ).initService( );
 		LocalDatabaseBootstrapper db = ( LocalDatabaseBootstrapper ) LocalDatabaseBootstrapper.getInstance( );
 		db.load(Stage.DatabaseInit);
 		db.start();

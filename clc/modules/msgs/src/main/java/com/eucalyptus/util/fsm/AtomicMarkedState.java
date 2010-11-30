@@ -92,7 +92,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         return transition;
       }
     }
-    throw new NoSuchElementException( "No such transition: " + transitionName + " for the current state " + fromState + " and mark " + mark[0] );
+    throw new NoSuchElementException( "No such transition: " + transitionName + " for the current state " + fromState + " and mark " + mark[0] + " for parent " + this.parent.toString( ) );
   }
   
   /**
@@ -138,12 +138,12 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
 //      throw new IllegalStateException( "There is no currently pending transition." );
     } else {
       ActiveTransition tr = this.currentTransition.get( );
-      if ( !this.state.compareAndSet( tr.getToState( ), tr.getFromState( ), true, tr.getFromStateMark( ) ) ) {
-        this.state.set( this.state.getReference( ), false );
-        IllegalStateException ex = new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
-                                                              + this.toString( ) );
-        LOG.error( ex, ex );
-      }
+//      if ( !this.state.compareAndSet( tr.getToState( ), tr.getFromState( ), true, tr.getFromStateMark( ) ) ) {
+//        IllegalStateException ex = new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
+//                                                              + this.toString( ) );
+//        LOG.error( ex, ex );
+//      }
+      this.state.set( tr.getErrorState( ), false );
       this.currentTransition.set( null );
     }
   }

@@ -69,12 +69,12 @@ import edu.ucsb.eucalyptus.cloud.BucketLogData;
  *
  * Author: Neil Soman <neil@eucalyptus.com>
  */
-public class WalrusResponseType extends EucalyptusMessage {
+public class WalrusResponseType extends BaseMessage {
 	BucketLogData logData;
 	def WalrusResponseType() {}
 }
 
-public class WalrusRequestType extends EucalyptusMessage {
+public class WalrusRequestType extends BaseMessage {
 	protected String accessKeyID;
 	protected Date timeStamp;
 	protected String signature;
@@ -83,14 +83,14 @@ public class WalrusRequestType extends EucalyptusMessage {
 	protected String bucket;
 	protected String key;
 
-	def WalrusRequestType() {}
+	public WalrusRequestType() {}
 
-  def WalrusRequestType( String bucket, String key ) {
+  public WalrusRequestType( String bucket, String key ) {
     this.bucket = bucket;
     this.key = key;
   }
 
-  def WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
+  public WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
 		this.accessKeyID = accessKeyID;
 		this.timeStamp = timeStamp;
 		this.signature = signature;

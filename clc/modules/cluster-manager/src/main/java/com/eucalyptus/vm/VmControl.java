@@ -95,6 +95,8 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
 import com.eucalyptus.records.EventRecord;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
@@ -221,5 +223,10 @@ public class VmControl {
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
       Callbacks.newClusterRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     }
+  }
+  
+  public DescribeBundleTasksResponseType describeBundleTasks( DescribeBundleTasksType request ) {
+    DescribeBundleTasksResponseType  reply = request.getReply( );
+    return reply;
   }
 }

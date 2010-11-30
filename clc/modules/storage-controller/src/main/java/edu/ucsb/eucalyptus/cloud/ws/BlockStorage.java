@@ -81,6 +81,7 @@ import org.apache.tools.ant.util.DateUtils;
 import org.mule.RequestContext;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.config.StorageControllerBuilder;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.storage.BlockStorageChecker;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
@@ -140,7 +141,7 @@ public class BlockStorage {
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 
-	public static void configure() {
+	public static void configure() throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
 		StorageProperties.updateStorageHost();
@@ -177,6 +178,29 @@ public class BlockStorage {
 				LOG.error("unable to transfer pending snapshots", ex);
 			}
 		}
+	}
+
+	public static void check() throws EucalyptusCloudException {
+		blockManager.checkReady();
+	}
+
+	public static void stop() throws EucalyptusCloudException {
+		blockManager.stop();
+		//clean all state.
+		blockManager = null;
+		checker = null;
+		blockStorageStatistics = null;
+		volumeService.shutdown();
+		snapshotService.shutdown();
+		StorageProperties.enableSnapshots = StorageProperties.enableStorage = false;
+	}
+
+	public static void enable() throws EucalyptusCloudException {
+		blockManager.enable();
+	}
+	
+	public static void disable() throws EucalyptusCloudException {
+		blockManager.disable();
 	}
 
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
@@ -679,19 +703,30 @@ public class BlockStorage {
 				} catch(InterruptedException ex) {
 					throw new EucalyptusCloudException("semaphore could not be acquired");
 				}
-				List<String> returnValues = blockManager.createSnapshot(volumeId, snapshotId);
+				Boolean shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
+				List<String> returnValues = blockManager.createSnapshot(volumeId, 
+						snapshotId, 
+						shouldTransferSnapshots);
 				semaphore.release();
-				if(returnValues.size() < 2) {
-					throw new EucalyptusCloudException("Unable to transfer snapshot");
+				if(shouldTransferSnapshots) {
+					if(returnValues.size() < 2) {
+						throw new EucalyptusCloudException("Unable to transfer snapshot");
+					}
+					snapshotFileName = returnValues.get(0);
+					transferSnapshot(returnValues.get(1));
+					try {
+						blockManager.finishVolume(snapshotId);
+					} catch(EucalyptusCloudException ex) {
+						blockManager.cleanSnapshot(snapshotId);
+						LOG.error(ex);
+					}
 				}
-				snapshotFileName = returnValues.get(0);
-				transferSnapshot(returnValues.get(1));
-				blockManager.finishVolume(snapshotId);
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 				try {
 					SnapshotInfo snapshotInfo = db.getUnique(snapInfo);
 					snapshotInfo.setStatus(StorageProperties.Status.available.toString());
+					snapshotInfo.setProgress("100");
 				} catch(EucalyptusCloudException e) {
 					LOG.error(e);
 				} finally {
@@ -702,6 +737,7 @@ public class BlockStorage {
 				try {
 					blockManager.finishVolume(snapshotId);
 				} catch (EucalyptusCloudException e1) {
+					blockManager.cleanSnapshot(snapshotId);
 					LOG.error(e1);
 				}
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
@@ -948,7 +984,7 @@ public class BlockStorage {
 				for(VolumeInfo volume : volumes) {
 					try {
 						String volumeId = volume.getVolumeId();
-						LOG.info("Converting volume: " + volumeId);
+						LOG.info("Converting volume: " + volumeId + " please wait...");
 						String volumePath = fromBlockManager.getVolumePath(volumeId);
 						blockManager.importVolume(volumeId, volumePath, volume.getSize());
 						fromBlockManager.finishVolume(volumeId);
@@ -962,7 +998,7 @@ public class BlockStorage {
 				for(SnapshotInfo snap : snapshots) {
 					try {
 						String snapshotId = snap.getSnapshotId();
-						LOG.info("Converting snapshot: " + snapshotId);
+						LOG.info("Converting snapshot: " + snapshotId + " please wait...");
 						String snapPath = fromBlockManager.getSnapshotPath(snapshotId);
 						int size = fromBlockManager.getSnapshotSize(snapshotId);
 						blockManager.importSnapshot(snapshotId, snap.getVolumeId(), snapPath, size);
@@ -978,4 +1014,5 @@ public class BlockStorage {
 			}
 		}
 	}
+
 }

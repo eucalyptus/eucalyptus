@@ -96,10 +96,13 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.HasName;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
-public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, Comparable {
+public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, HasName<ComponentConfiguration> {
+  @Column( name = "config_component_partition" )
+  String partition;
   @Column( name = "config_component_name" )
   String name;
   @Column( name = "config_component_hostname" )
@@ -111,13 +114,15 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   
   public ComponentConfiguration( ) {}
   
-  public ComponentConfiguration( String name, String hostName, String servicePath ) {
+  public ComponentConfiguration( String partition, String name, String hostName, String servicePath ) {
     super( );
+    this.partition = partition;
     this.name = name;
     this.hostName = hostName;
     this.servicePath = servicePath;
   }
-  public ComponentConfiguration( String name, String hostName, Integer port, String servicePath ) {
+  public ComponentConfiguration( String partition, String name, String hostName, Integer port, String servicePath ) {
+    this.partition = partition;
     this.name = name;
     this.hostName = hostName;
     this.port = port;
@@ -146,10 +151,8 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     }
   }
 
-  public String toString() {
-    return this.dump( );
-  }
-
+  
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -164,17 +167,27 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     if ( obj == null ) return false;
     if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     ComponentConfiguration other = ( ComponentConfiguration ) obj;
-    if ( hostName == null ) {
-      if ( other.hostName != null ) return false;
-    } else if ( !hostName.equals( other.hostName ) ) return false;
+//    if ( hostName == null ) {
+//      if ( other.hostName != null ) return false;
+//    } else if ( !hostName.equals( other.hostName ) ) return false;
     if ( name == null ) {
       if ( other.name != null ) return false;
     } else if ( !name.equals( other.name ) ) return false;
+    if ( partition == null ) {
+      if ( other.partition != null ) return false;
+    } else if ( !partition.equals( other.partition ) ) return false;
     return true;
   }
 
-  public int compareTo(Object o) {
-	  return name.compareTo(((ComponentConfiguration) o).getName());
+  public int compareTo(ComponentConfiguration that) {
+    //ASAP: FIXME: GRZE useful ordering here plox.
+    return (partition + name).compareTo( that.partition + that.name );
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s uuid=%s hostName=%s port=%s servicePath=%s",
+                          this.getComponent( ), this.isLocal( ), this.partition, this.name, this.getId(), this.hostName, this.port, this.servicePath );
   }
 }
 /**
@@ -184,7 +197,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 public class BogoConfig extends ComponentConfiguration {
   Component c;
   public BogoConfig( Component c, String name, String hostName, Integer port, String servicePath ) {
-    super( name, hostName, port, servicePath );
+    super( null /* ASAP: FIXME: GRZE */, name, hostName, port, servicePath );
     this.c = c;
   }
   @Override
@@ -201,13 +214,13 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   URI uri;
   Component c;
   
-  public EphemeralConfiguration( String name, Component c, URI uri ) {
-    super( name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+  public EphemeralConfiguration( String partition, String name, Component c, URI uri ) {
+    super( partition, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }
-  public EphemeralConfiguration( Component c, URI uri ) {
-    super( c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+  public EphemeralConfiguration( String partition, Component c, URI uri ) {
+    super( partition, c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }  
@@ -222,16 +235,16 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   }  
 }
 public class LocalConfiguration extends EphemeralConfiguration {
-  public LocalConfiguration( Component c, URI uri ) {
-    super( c, uri );
+  public LocalConfiguration( String partition, Component c, URI uri ) {
+    super( partition, c, uri );
   }
   public Boolean isLocal() {
     return true;
   }
 }
 public class RemoteConfiguration extends EphemeralConfiguration {
-  public RemoteConfiguration( Component c, URI uri ) {
-    super( c, uri );
+  public RemoteConfiguration( String partition, Component c, URI uri ) {
+    super( partition, c, uri );
   }
   public Boolean isLocal() {
     return false;
@@ -253,11 +266,11 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   Integer maxVlan;
   
   public ClusterConfiguration( ) {}
-  public ClusterConfiguration( String name, String hostName, Integer port ) {
-    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
-  public ClusterConfiguration( String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
-    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  public ClusterConfiguration( String partition, String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
     this.minVlan = minVlan;
     this.maxVlan = maxVlan;
   }
@@ -295,8 +308,8 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Storage";
   public StorageControllerConfiguration( ) {}
-  public StorageControllerConfiguration( String name, String hostName, Integer port ) {
-    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  public StorageControllerConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public Component getComponent() {
     return Component.storage;
@@ -311,8 +324,8 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   private static String DEFAULT_SERVICE_PATH = "/services/Walrus";
   public WalrusConfiguration( ) {
   }
-  public WalrusConfiguration( String name, String hostName, Integer port ) {
-    super( name, hostName, port, DEFAULT_SERVICE_PATH );
+  public WalrusConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public Component getComponent() {
     return Component.walrus;

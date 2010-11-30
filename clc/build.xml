@@ -91,21 +91,23 @@
 		<ant dir="modules/database" inheritall="false" target="builder" />
 		<ant dir="modules/hsqldb" inheritall="false" target="builder" />
 		<ant dir="modules/authentication" inheritall="false" target="builder" />
-		<ant dir="modules/cloud" inheritall="false" target="builder" />
 		<ant dir="modules/configuration" inheritall="false" target="builder" />
 		<ant dir="modules/core" inheritall="false" target="builder" />
 		<ant dir="modules/wsstack" inheritall="false" target="builder" />
 		<ant dir="modules/component" inheritall="false" target="builder" />
-		<ant dir="modules/interface" inheritall="false" target="builder" />
-		<ant dir="modules/group-manager" inheritall="false" target="builder" />
+		<ant dir="modules/cloud" inheritall="false" target="builder" />
 		<ant dir="modules/cluster-manager" inheritall="false" target="builder" />
-		<ant dir="modules/image-manager" inheritall="false" target="builder" />
-		<ant dir="modules/key-manager" inheritall="false" target="builder" />
 		<ant dir="modules/storage-common" inheritall="false" target="builder" />
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
 		<ant dir="modules/www" inheritall="false" target="builder" />
+		<!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
+    <ant dir=".deprecated/image-manager" inheritall="false" target="builder" />
+		<ant dir=".deprecated/group-manager" inheritall="false" target="builder" />
+		<ant dir=".deprecated/interface" inheritall="false" target="builder" />
+		<ant dir=".deprecated/key-manager" inheritall="false" target="builder" />
+		<!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 		<ant dir="." inheritall="false" target="jar" />
 	</target>
 	<target name="jar" depends="bind">
@@ -118,16 +120,18 @@
 		<ant dir="modules/component" inheritall="false" target="jar" />
 		<ant dir="modules/core" inheritall="false" target="jar" />
 		<ant dir="modules/wsstack" inheritall="false" target="jar" />
-		<ant dir="modules/interface" inheritall="false" target="jar" />
-		<ant dir="modules/group-manager" inheritall="false" target="jar" />
 		<ant dir="modules/cluster-manager" inheritall="false" target="jar" />
-		<ant dir="modules/image-manager" inheritall="false" target="jar" />
-		<ant dir="modules/key-manager" inheritall="false" target="jar" />
 		<ant dir="modules/storage-common" inheritall="false" target="jar" />
 		<ant dir="modules/walrus" inheritall="false" target="jar" />
 		<ant dir="modules/storage-controller" inheritall="false" target="jar" />
 		<ant dir="modules/dns" inheritall="false" target="jar" />
 		<ant dir="modules/www" inheritall="false" target="jar" />
+    <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
+    <ant dir=".deprecated/image-manager" inheritall="false" target="jar" />
+    <ant dir=".deprecated/group-manager" inheritall="false" target="jar" />
+    <ant dir=".deprecated/interface" inheritall="false" target="jar" />
+    <ant dir=".deprecated/key-manager" inheritall="false" target="jar" />
+    <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 	</target>
 	<target name="shouldBind">
 		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
@@ -171,16 +175,18 @@
 		<ant dir="modules/component" inheritall="false" target="clean" />
 		<ant dir="modules/core" inheritall="false" target="clean" />
 		<ant dir="modules/wsstack" inheritall="false" target="clean" />
-		<ant dir="modules/interface" inheritall="false" target="clean" />
 		<ant dir="modules/cluster-manager" inheritall="false" target="clean" />
-		<ant dir="modules/image-manager" inheritall="false" target="clean" />
-		<ant dir="modules/group-manager" inheritall="false" target="clean" />
-		<ant dir="modules/key-manager" inheritall="false" target="clean" />
 		<ant dir="modules/storage-common" inheritall="false" target="clean" />
 		<ant dir="modules/walrus" inheritall="false" target="clean" />
 		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
 		<ant dir="modules/dns" inheritall="false" target="clean" />
 		<ant dir="modules/www" inheritall="false" target="clean" />
+    <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
+    <ant dir=".deprecated/image-manager" inheritall="false" target="clean" />
+    <ant dir=".deprecated/group-manager" inheritall="false" target="clean" />
+    <ant dir=".deprecated/interface" inheritall="false" target="clean" />
+    <ant dir=".deprecated/key-manager" inheritall="false" target="clean" />
+    <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 		<delete dir="${target.dir}" />
 	</target>
 	<target name="distclean" depends="clean">
@@ -219,6 +225,8 @@
 		</chmod>
 		<mkdir dir="${DESTDIR}${euca.conf.dir}" />
 		<chmod dir="${DESTDIR}${euca.conf.dir}" perm="0755" />
+    <mkdir dir="${DESTDIR}${euca.conf.dir}/conf" />
+    <chmod dir="${DESTDIR}${euca.conf.dir}/conf" perm="0755" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/db" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/keys" />
@@ -236,15 +244,17 @@
 		<ant dir="modules/core" inheritall="false" target="install" />
 		<ant dir="modules/wsstack" inheritall="false" target="install" />
 		<ant dir="modules/storage-common" inheritall="false" target="install" />
-		<ant dir="modules/interface" inheritall="false" target="install" />
 		<ant dir="modules/cluster-manager" inheritall="false" target="install" />
-		<ant dir="modules/image-manager" inheritall="false" target="install" />
-		<ant dir="modules/group-manager" inheritall="false" target="install" />
-		<ant dir="modules/key-manager" inheritall="false" target="install" />
 		<ant dir="modules/walrus" inheritall="false" target="install" />
 		<ant dir="modules/storage-controller" inheritall="false" target="install" />
 		<ant dir="modules/dns" inheritall="false" target="install" />
 		<ant dir="modules/www" inheritall="false" target="install" />
+    <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
+    <ant dir=".deprecated/image-manager" inheritall="false" target="install" />
+    <ant dir=".deprecated/group-manager" inheritall="false" target="install" />
+    <ant dir=".deprecated/interface" inheritall="false" target="install" />
+    <ant dir=".deprecated/key-manager" inheritall="false" target="install" />
+    <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 	</target>
 	<!--================================== unzipping target ==================================-->
 	<target name="deps">

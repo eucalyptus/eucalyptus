@@ -120,7 +120,7 @@ public class RemoteInfoHandler {
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
-      clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ),
+      clusterConfig.add( new ClusterConfiguration( null /**ASAP: FIXME: GRZE **/, clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ),
                                                    clusterWeb.getMaxVlans( ) ) );
     }
     updateClusterConfigurations( clusterConfig );
@@ -140,7 +140,7 @@ public class RemoteInfoHandler {
   public static synchronized void setStorageList( List<StorageInfoWeb> newStorageList ) throws EucalyptusCloudException {
     List<StorageControllerConfiguration> storageControllerConfig = Lists.newArrayList( );
     for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
-      storageControllerConfig.add( new StorageControllerConfiguration( storageControllerWeb.getName( ), storageControllerWeb.getHost( ),
+      storageControllerConfig.add( new StorageControllerConfiguration( null /**ASAP: FIXME: GRZE **/, storageControllerWeb.getName( ), storageControllerWeb.getHost( ),
                                                                        storageControllerWeb.getPort( ) ) );
     }
     updateStorageControllerConfigurations( storageControllerConfig );
@@ -167,7 +167,7 @@ public class RemoteInfoHandler {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
     for ( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
       try {
-        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( Component.storage ).isRunning( ) ) {
+        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( Component.storage ).isRunningLocally( ) ) {
           storageList.add( StorageInfoWeb.DEFAULT_SC );
           continue;
         }
@@ -208,7 +208,7 @@ public class RemoteInfoHandler {
   public static synchronized void setWalrusList( List<WalrusInfoWeb> newWalrusList ) throws EucalyptusCloudException {
     List<WalrusConfiguration> walrusConfig = Lists.newArrayList( );
     for ( WalrusInfoWeb walrusControllerWeb : newWalrusList ) {
-      walrusConfig.add( new WalrusConfiguration( walrusControllerWeb.getName( ), walrusControllerWeb.getHost( ), walrusControllerWeb.getPort( ) ) );
+      walrusConfig.add( new WalrusConfiguration( null /**ASAP: FIXME: GRZE **/, walrusControllerWeb.getName( ), walrusControllerWeb.getHost( ), walrusControllerWeb.getPort( ) ) );
     }
     updateWalrusConfigurations( walrusConfig );
     

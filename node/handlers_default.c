@@ -103,8 +103,8 @@ prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName
     
     for (i=0; i<meta->servicesLen; i++) {
         serviceInfoType * service = &(meta->services[i]);
-        if (strcmp(service->type, typeName)==0 && service->urisLen>0) {
-            char * l = vbr->resourceLocation + (strlen (typeName) + 1); // +1 for ":", so 'l' points past, e.g., "walrus:"
+        if (strncmp(service->type, typeName, strlen(typeName)-3)==0 && service->urisLen>0) {
+            char * l = vbr->resourceLocation + (strlen (typeName) + 3); // +3 for "://", so 'l' points past, e.g., "walrus:"
             snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s%s", service->uris[0], l); // TODO: for now we just pick the first one
             return OK;
         }
@@ -116,6 +116,7 @@ prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName
 static int
 doRunInstance(	struct nc_state_t *nc,
                 ncMetadata *meta,
+		char *uuid,
                 char *instanceId,
                 char *reservationId,
                 virtualMachine *params, 
@@ -144,7 +145,8 @@ doRunInstance(	struct nc_state_t *nc,
         logprintfl (EUCAFATAL, "Error: instance %s already running\n", instanceId);
         return 1; /* TODO: return meaningful error codes? */
     }
-    if (!(instance = allocate_instance (instanceId, 
+    if (!(instance = allocate_instance (uuid,
+					instanceId, 
                                         reservationId,
                                         params, 
                                         instance_state_names[PENDING], 
@@ -163,7 +165,7 @@ doRunInstance(	struct nc_state_t *nc,
     for (i=0, j=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]);
         // get the type (the only mandatory field)
-        if (strstr (vbr->typeName, "image") == vbr->typeName) { 
+        if (strstr (vbr->typeName, "machine") == vbr->typeName) { 
             vbr->type = NC_RESOURCE_IMAGE; 
             instance->params.image = vbr;
         } else if (strstr (vbr->typeName, "kernel") == vbr->typeName) { 
@@ -191,19 +193,19 @@ doRunInstance(	struct nc_state_t *nc,
         if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation) { 
             vbr->locationType = NC_LOCATION_URL;
             strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
-        } else if (strcasestr (vbr->resourceLocation, "iqn:") == vbr->resourceLocation) { 
+        } else if (strcasestr (vbr->resourceLocation, "iqn://") == vbr->resourceLocation) {
             vbr->locationType = NC_LOCATION_IQN;
             // TODO: prep iqn location?
-        } else if (strcasestr (vbr->resourceLocation, "aoe:") == vbr->resourceLocation) { 
+        } else if (strcasestr (vbr->resourceLocation, "aoe://") == vbr->resourceLocation) {
             vbr->locationType = NC_LOCATION_AOE;
             // TODO: prep aoe location?
-        } else if (strcasestr (vbr->resourceLocation, "walrus:") == vbr->resourceLocation) { 
+        } else if (strcasestr (vbr->resourceLocation, "walrus://") == vbr->resourceLocation) {
             vbr->locationType = NC_LOCATION_WALRUS;
             error = prep_location (vbr, meta, "walrus");
-        } else if (strcasestr (vbr->resourceLocation, "clc:") == vbr->resourceLocation) { 
+        } else if (strcasestr (vbr->resourceLocation, "cloud://") == vbr->resourceLocation) {
             vbr->locationType = NC_LOCATION_CLC;
-            error = prep_location (vbr, meta, "clc");
-        } else if (strcasestr (vbr->resourceLocation, "sc:") == vbr->resourceLocation) { 
+            error = prep_location (vbr, meta, "cloud");
+        } else if (strcasestr (vbr->resourceLocation, "sc://") == vbr->resourceLocation) {//'sc' should be 'storage'
             vbr->locationType = NC_LOCATION_SC;
             error = prep_location (vbr, meta, "sc");
         } else if (strcasestr (vbr->resourceLocation, "none") == vbr->resourceLocation) { 
@@ -618,6 +620,7 @@ doPowerDown(	struct nc_state_t *nc,
 static int
 doStartNetwork(	struct nc_state_t *nc,
 		ncMetadata *ccMeta, 
+		char *uuid,
 		char **remoteHosts, 
 		int remoteHostsLen, 
 		int port, 
@@ -625,7 +628,7 @@ doStartNetwork(	struct nc_state_t *nc,
 	int rc, ret, i, status;
 	char *brname;
 
-	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, &brname);
+	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
 	if (rc) {
 		ret = 1;
 		logprintfl (EUCAERROR, "StartNetwork(): ERROR return from vnetStartNetwork %d\n", rc);

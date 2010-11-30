@@ -526,6 +526,7 @@ int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub
   */
   adb_assignAddressType_set_source(sn, env, src);
   adb_assignAddressType_set_dest(sn, env, dst);
+  adb_assignAddressType_set_uuid(sn, env, "the-uuid");
 
   adb_AssignAddress_set_AssignAddress(input, env, sn);
 
@@ -626,14 +627,18 @@ int cc_describePublicAddresses(axutil_env_t *env, axis2_stub_t *stub) {
     return(1);
   }
   snrt = adb_DescribePublicAddressesResponse_get_DescribePublicAddressesResponse(output, env);
-  len = adb_describePublicAddressesResponseType_sizeof_sourceAddresses(snrt, env);
+  len = adb_describePublicAddressesResponseType_sizeof_addresses(snrt, env);
   for (i=0; i<len; i++) {
     char *ip;
     char *dstip;
-    ip = adb_describePublicAddressesResponseType_get_sourceAddresses_at(snrt, env, i);
-    dstip = adb_describePublicAddressesResponseType_get_destAddresses_at(snrt, env, i);
+    char *uuid;
+    adb_publicAddressType_t *addr;
+    addr = adb_describePublicAddressesResponseType_get_addresses_at(snrt, env, i);
+    ip = adb_publicAddressType_get_sourceAddress(addr, env);
+    dstip = adb_publicAddressType_get_destAddress(addr, env);
+    uuid = adb_publicAddressType_get_uuid(addr, env);
 
-    printf("IP: %s ALLOC: %s\n", ip, dstip);
+    printf("UUID: %s IP: %s ALLOC: %s\n", uuid, ip, dstip);
   }
   // len = ...for (i=0....
   //  printf("descibePublicAddresses returned status %d\n", adb_describePublicAddressesResponseType_get_networkStatus(snrt, env));
@@ -675,6 +680,7 @@ int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_
 
   adb_startNetworkType_set_vlan(sn, env, vlan);
   adb_startNetworkType_set_netName(sn, env, netName);
+  adb_startNetworkType_set_uuid(sn, env, "the-uuid");
   
   for (i=0; i<ccsLen; i++) {
     printf("adding %s\n", ccs[i]);
@@ -754,7 +760,7 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
     for (i=0; i<numnets; i++) {
       adb_networkType_t *nt;
       nt = adb_describeNetworksResponseType_get_activeNetworks_at(snrt, env, i);
-      printf("\tvlan: %d netName: %s userName: %s\n", adb_networkType_get_vlan(nt, env), adb_networkType_get_netName(nt, env), adb_networkType_get_userName(nt, env));
+      printf("\tvlan: %d uuid: %s nnetName: %s userName: %s\n", adb_networkType_get_vlan(nt, env), adb_networkType_get_uuid(nt, env), adb_networkType_get_netName(nt, env), adb_networkType_get_userName(nt, env));
       numaddrs = adb_networkType_sizeof_activeAddrs(nt, env);
       printf("\tnumber of active addrs: %d - ", numaddrs);
       for (j=0; j<numaddrs; j++) {
@@ -920,6 +926,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	char *state;
 	char *reservationId;
 	char *ownerId, *keyName;
+	char *uuid;
 	int networkIndex;
 	
 	it = adb_describeInstancesResponseType_get_instances_at(dirt, env, i);
@@ -931,6 +938,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	state = adb_ccInstanceType_get_stateName(it, env);
 	nct = adb_ccInstanceType_get_netParams(it, env);
 	vm = adb_ccInstanceType_get_instanceType(it, env);
+	uuid = adb_ccInstanceType_get_uuid(it, env);
 	//	networkIndex = adb_ccInstanceType_get_networkIndex(it, env);
 
 	if (0)
@@ -966,7 +974,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	volId = adb_volumeType_get_volumeId(vol, env);
 
 	networkIndex = adb_netConfigType_get_networkIndex(nct, env);
-	printf("Desc: %s %s %s %s %s %s %s %d %s %s %d %d %d %s %s %s %s %s %d\n", instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
+	printf("Desc: uuid=%s instanceId=%s reservationId=%s ownerId=%s state=%s privMac=%s privIp=%s pubIp=%s vlan=%d keyName=%s vmTypeName=%s cores=%d mem=%d disk=%d serviceTag=%s userData=%s launchIndex=%s groupName=%s volId=%s networkIndex=%d\n", uuid, instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
 	
       }
     }

@@ -1,31 +1,35 @@
-import boto,sys,euca_admin
+import boto,sys,euca_admin,re
 from boto.exception import EC2ResponseError
 from euca_admin.generic import BooleanResponse
 from euca_admin import EucaAdmin
 from optparse import OptionParser
-import re
 
 SERVICE_PATH = '/services/Configuration'
 class Cluster():
   
   def __init__(self, cluster_name=None, host_name=None,
-               port=None, partition=None):
+               port=None, partition=None, state=None):
     self.cluster_name = cluster_name
     self.host_name = host_name
     self.port = port
     self.partition = partition
+    self.state = state
     self.euca = EucaAdmin(path=SERVICE_PATH)
 
           
   def __repr__(self):
-      return 'CLUSTER\t%s\t%s\t%s' % (self.cluster_name, self.partition,
-                                      self.host_name) 
+      return 'CLUSTER\t%s\t%s\t%s\t%s\t%s' % (self.partition, self.cluster_name,
+                                      self.host_name, self.state, self.detail) 
 
   def startElement(self, name, attrs, connection):
       return None
 
   def endElement(self, name, value, connection):
     if name == 'euca:detail':
+      self.detail = value
+    elif name == 'euca:state':
+      self.state = value
+    elif name == 'euca:hostName':
       self.host_name = value
     elif name == 'euca:name':
       self.cluster_name = value
@@ -85,6 +89,7 @@ class Cluster():
       params['Partition'] = partition
     try:
       reply = self.euca.connection.get_object('RegisterCluster',
+                                              params,
                                               BooleanResponse)
       print reply
     except EC2ResponseError, ex:
@@ -94,6 +99,8 @@ class Cluster():
   def get_deregister_parser(self):
     parser = OptionParser("usage: %prog [options] CLUSTERNAME",
                           version="Eucalyptus %prog VERSION")
+    parser.add_option("-P","--partition",dest="partition",
+                      help="Partition for the cluster.")                          
     (options,args) = parser.parse_args()    
     if len(args) != 1:
       print "ERROR  Required argument CLUSTERNAME is missing or malformed."
@@ -106,10 +113,13 @@ class Cluster():
     (options,args) = self.get_deregister_parser()
     self.deregister(args[0])
 
-  def deregister(self, name):
+  def deregister(self, name, partition=None):
+    params = {'Name':name}
+    if partition:
+      params['Partition'] = partition
     try:
       reply = self.euca.connection.get_object('DeregisterCluster',
-                                              {'Name' : name},
+                                              params,
                                               BooleanResponse)
       print reply
     except EC2ResponseError, ex:
@@ -122,6 +132,8 @@ class Cluster():
                       action="append",
                       help="Modify KEY to be VALUE.  Can be given multiple times.",
                       metavar="KEY=VALUE")
+    parser.add_option("-P","--partition",dest="partition",
+                      help="Partition for the cluster.")                          
     (options,args) = parser.parse_args()    
     if len(args) != 1:
       print "ERROR  Required argument CLUSTERNAME is missing or malformed."
@@ -140,14 +152,14 @@ class Cluster():
 
   def cli_modify(self):
     (options,args) = self.get_modify_parser()
-    self.modify(options.props)
+    self.modify(options.partition,args[0],options.props)
 
-  def modify(self,modify_list):
+  def modify(self,partition,name,modify_list):
     for entry in modify_list:
       key, value = entry.split("=")
       try:
-        reply = self.euca.connection.get_object('ModifyCluster',
-                                                {'Name' : key,'Value' : value},
+        reply = self.euca.connection.get_object('ModifyClusterAttribute',
+                                                {'Partition' : partition, 'Name' : name, 'Attribute' : key,'Value' : value},
                                                 BooleanResponse)
         print reply
       except EC2ResponseError, ex:

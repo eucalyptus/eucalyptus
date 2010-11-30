@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.server;
 
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Initialisable;
@@ -74,7 +75,7 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
   private static Logger LOG      = Logger.getLogger( NioHttpConnector.class );
 
   public static String  PROTOCOL = "euca";
-  private NioServer     server;
+  private static AtomicReference<NioServer>     server = new AtomicReference<NioServer>( null );
 
   public NioHttpConnector( ) {
     super.registerSupportedProtocol( "http" );
@@ -82,7 +83,7 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
   }
 
   public void doConnect( ) throws MuleException {
-    this.server = new NioServer( );
+    this.server.compareAndSet( null, new NioServer( ) );
   }
 
   public String getProtocol( ) {
@@ -95,14 +96,13 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
 
   @Override
   public void doStart( ) throws MuleException {
-    if ( this.server == null ) {
-      this.doConnect( );
-    }
-    this.server.start( );
+    this.doConnect( );
+    this.server.get( ).start( );
   }
 
   @Override
   public void doStop( ) throws MuleException {
+//  server.get( ).stop( );
   }
 
   @Override

@@ -80,7 +80,7 @@ import javax.persistence.*;
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "storage_info" )
-@Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(root = "storage", alias="basic", description = "Basic storage controller configuration.", singleton=false, deferred = true)
 public class
 StorageInfo {
@@ -99,8 +99,11 @@ StorageInfo {
 	@ConfigurableField( description = "Max volume size", displayName = "Max volume size" )
 	@Column( name = "system_storage_max_volume_size_gb")
 	private Integer maxVolumeSizeInGB;
+	@ConfigurableField( description = "Should transfer snapshots" )
+	@Column( name = "system_storage_transfer_snapshots")
+	private Boolean shouldTransferSnapshots;
 
-	public StorageInfo(){
+	public StorageInfo() {
 		this.name = StorageProperties.NAME;
 	}
 
@@ -111,10 +114,12 @@ StorageInfo {
 
 	public StorageInfo(final String name, 
 			final Integer maxTotalVolumeSizeInGb,
-			final Integer maxVolumeSizeInGB) {
+			final Integer maxVolumeSizeInGB,
+			final Boolean shouldTransferSnapshots) {
 		this.name = name;
 		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
+		this.shouldTransferSnapshots = shouldTransferSnapshots;
 	}
 
 	public Long getId()
@@ -144,6 +149,14 @@ StorageInfo {
 
 	public void setMaxVolumeSizeInGB(Integer maxVolumeSizeInGB) {
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
+	}
+
+	public Boolean getShouldTransferSnapshots() {
+		return shouldTransferSnapshots;
+	}
+
+	public void setShouldTransferSnapshots(Boolean shouldTransferSnapshots) {
+		this.shouldTransferSnapshots = shouldTransferSnapshots;
 	}
 
 	@Override
@@ -188,7 +201,8 @@ StorageInfo {
 			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
 			conf =  new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-					StorageProperties.MAX_VOLUME_SIZE);
+					StorageProperties.MAX_VOLUME_SIZE,
+					true);
 			storageDb.add(conf);
 			storageDb.commit();
 		}
@@ -197,7 +211,8 @@ StorageInfo {
 			storageDb.rollback();
 			return new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
-					StorageProperties.MAX_VOLUME_SIZE);
+					StorageProperties.MAX_VOLUME_SIZE,
+					true);
 		}
 		return conf;
 	}
