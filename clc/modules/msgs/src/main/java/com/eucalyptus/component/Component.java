@@ -520,6 +520,8 @@ public class Component implements ComponentInformation, HasName<Component> {
       }
     } catch ( IllegalStateException ex ) {
       LOG.trace( ex );
+    } catch ( NoSuchElementException ex ) {
+      LOG.trace( ex );
     }
   }
   
