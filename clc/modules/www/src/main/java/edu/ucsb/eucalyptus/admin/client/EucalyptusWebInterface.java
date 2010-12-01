@@ -1136,6 +1136,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 			hpanel.add (firstButton);
 		}
 		hpanel.add (ok_button);
+		EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(ok_button);
 
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
@@ -1150,7 +1151,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         wrapper.setSize("100%", "100%");
         wrapper.setCellHorizontalAlignment(vpanel, VerticalPanel.ALIGN_CENTER);
         wrapper.setCellVerticalAlignment(vpanel, VerticalPanel.ALIGN_MIDDLE);
-
+        wrapper.addKeyboardListener(sl);
+        
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
 
