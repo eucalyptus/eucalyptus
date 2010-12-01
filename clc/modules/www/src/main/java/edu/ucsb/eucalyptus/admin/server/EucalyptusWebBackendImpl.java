@@ -567,6 +567,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			}
 			UserInfoWeb new_user = EucalyptusManagement.getWebUser(userName);
 			if (action.equals("approve")) {
+				if (new_user.isApproved()) {
+					throw new SerializableException("User already approved");
+				}
 				new_user.setApproved(true);
 				new_user.setEnabled(true);
 				new_user.setConfirmed(false);
