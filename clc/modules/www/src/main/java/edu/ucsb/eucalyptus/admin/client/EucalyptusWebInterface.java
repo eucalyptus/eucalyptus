@@ -577,7 +577,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         final TextBox realName_box = new TextBox();
 		realName_box.setText (userToEdit.getRealName());
         realName_box.setWidth("180");
-        realname_box.setTabIndex(i);
+        realName_box.setTabIndex(i);
         g1.setWidget( i++, 1, realName_box );
 
         final int emailAddress_row = i;
