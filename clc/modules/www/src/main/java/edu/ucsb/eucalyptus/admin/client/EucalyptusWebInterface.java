@@ -1129,6 +1129,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         panel.setCellHorizontalAlignment(m, HasHorizontalAlignment.ALIGN_CENTER);
         panel.setCellVerticalAlignment(m, HasVerticalAlignment.ALIGN_MIDDLE);
         Button ok_button = new Button( "Ok", DefaultPageButtonListener );
+        ok_button.setFocus(true);
 
 		HorizontalPanel hpanel = new HorizontalPanel();
 		hpanel.setSpacing (10);
@@ -1150,7 +1151,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         wrapper.setSize("100%", "100%");
         wrapper.setCellHorizontalAlignment(vpanel, VerticalPanel.ALIGN_CENTER);
         wrapper.setCellVerticalAlignment(vpanel, VerticalPanel.ALIGN_MIDDLE);
-
+        
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
 
