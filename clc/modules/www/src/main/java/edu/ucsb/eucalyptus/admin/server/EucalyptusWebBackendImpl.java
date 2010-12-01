@@ -355,6 +355,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		if (web_user.getPassword()==null) { // someone is initiating password recovery
 			try {
 				UserInfoWeb db_user = EucalyptusManagement.getWebUser(web_user.getUserName());
+				if (!db_user.isConfirmed() || !db_user.isEnabled()) {
+					throw new SerializableException("Illegal request"); // no password recoveries before confirmation or while disabled
+				}
 				if (db_user.getEmail().equalsIgnoreCase(web_user.getEmail())) {
 					long expires = System.currentTimeMillis() + recovery_expiration_ms;
 					db_user.setConfirmationCode(String.format("%015d", expires) + Crypto.generateSessionToken( db_user.getUserName() ) );
@@ -564,6 +567,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			}
 			UserInfoWeb new_user = EucalyptusManagement.getWebUser(userName);
 			if (action.equals("approve")) {
+				if (new_user.isApproved()) {
+					throw new SerializableException("User already approved");
+				}
 				new_user.setApproved(true);
 				new_user.setEnabled(true);
 				new_user.setConfirmed(false);
