@@ -330,7 +330,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         label_box.setText( greeting );
         label_box.setStyleName("euca-greeting-normal");
         final TextBox login_box = new TextBox();
-        login_box.setFocus(true); // this box gets focus first
         final PasswordTextBox pass_box = new PasswordTextBox();
 
         ClickListener LoginButtonListener = new ClickListener() {
@@ -448,6 +447,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
+        login_box.setFocus(true); // this box gets focus first
     }
 
     public void displayLoginErrorPage ( String message )
@@ -1154,9 +1154,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
-
-        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(ok_button);
-        ok_button.setFocus(true);
+        ok_button.setFocus(true); // so user can just hit 'Enter'
+        
         return ok_button;
 	}
 
