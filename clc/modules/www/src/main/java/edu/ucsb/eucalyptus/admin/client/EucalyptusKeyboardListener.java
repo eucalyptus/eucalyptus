@@ -62,7 +62,7 @@ package edu.ucsb.eucalyptus.admin.client;
 import com.google.gwt.user.client.ui.*;
 import com.google.gwt.event.dom.client.*;
 
-public class EucalyptusKeyboardListener implements KeyPressHandler {
+public class EucalyptusKeyboardListener implements KeyUpHandler {
 	
 	private Button enterButton = null;
 	private Button escapeButton = null;
@@ -78,17 +78,13 @@ public class EucalyptusKeyboardListener implements KeyPressHandler {
 		this.escapeButton = escapeButton;
 	}
 
-	public void onKeyUp (KeyPressEvent event) {
+	@Override
+	public void onKeyUp (KeyUpEvent event) {
 		if (KeyCodes.KEY_ENTER == event.getNativeEvent().getKeyCode() && enterButton != null) {
 			enterButton.click();
 		}
 		if (KeyCodes.KEY_ESCAPE == event.getNativeEvent().getKeyCode() && escapeButton != null) {
 			escapeButton.click();
 		}
-	}
-
-	@Override
-	public void onKeyPress(KeyPressEvent event) {
-		return;
 	}
 }
