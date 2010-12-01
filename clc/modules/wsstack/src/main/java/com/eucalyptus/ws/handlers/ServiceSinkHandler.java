@@ -106,6 +106,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.ReplyQueue;
@@ -279,7 +280,11 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   }
   
   private static void dispatchRequest( final BaseMessage msg ) throws MuleException, DispatchException {
-    ServiceContext.dispatch( "RequestQueue", msg );//ASAP: omg urgent.
+    try {
+      ServiceContext.send( "RequestQueue", msg );
+    } catch ( EucalyptusCloudException ex ) {
+      LOG.error( ex , ex );
+    }//ASAP: omg urgent.
 //    OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
 //    if ( !endpoint.getConnector( ).isStarted( ) ) {
 //      endpoint.getConnector( ).start( );
