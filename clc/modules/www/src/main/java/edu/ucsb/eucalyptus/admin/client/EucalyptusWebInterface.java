@@ -75,7 +75,6 @@ import com.google.gwt.user.client.ui.*;
 import edu.ucsb.eucalyptus.admin.client.extensions.store.ImageStoreClient;
 import edu.ucsb.eucalyptus.admin.client.extensions.store.ImageStoreWidget;
 
-import java.awt.Button;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -1131,9 +1130,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         panel.setCellHorizontalAlignment(m, HasHorizontalAlignment.ALIGN_CENTER);
         panel.setCellVerticalAlignment(m, HasVerticalAlignment.ALIGN_MIDDLE);
         Button ok_button = new Button( "Ok", DefaultPageButtonListener );
-        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(ok_button);
-        ok_button.isFocusable();
-        ok_button.setFocus(true);
 
 		HorizontalPanel hpanel = new HorizontalPanel();
 		hpanel.setSpacing (10);
@@ -1159,6 +1155,8 @@ public class EucalyptusWebInterface implements EntryPoint {
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
 
+        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(ok_button);
+        ok_button.setFocus(true);
         return ok_button;
 	}
 
