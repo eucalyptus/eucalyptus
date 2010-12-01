@@ -33,6 +33,8 @@
 	  <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
 	  <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	  <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
+	  <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
 	  
 	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
 	  <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
