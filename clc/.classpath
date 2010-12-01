@@ -118,7 +118,7 @@
 	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar" sourcepath="/bzr/third-party/mule-2.0.1.orig"/>
 	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar" sourcepath="/bzr/third-party/mule-2.0.1.orig"/>
 	<classpathentry kind="lib" path="lib/asm-3.2.jar"/>
 	<classpathentry kind="lib" path="lib/groovy-1.7.0.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-api-checker-2.0.jar"/>

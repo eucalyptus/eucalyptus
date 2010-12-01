@@ -20,6 +20,7 @@ import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
+import org.mule.transport.vm.VMMessageDispatcherFactory;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Component;
@@ -36,7 +37,7 @@ import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
-  static Logger                                LOG                      = Logger.getLogger( ServiceContext.class );
+  private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
   @ConfigurableField( initial = "16", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
   public static Integer                        MAX_OUTSTANDING_MESSAGES = 16;
@@ -53,7 +54,9 @@ public class ServiceContext {
   }
   
   private static AtomicReference<MuleContext>           context           = new AtomicReference<MuleContext>( null );
+  private static AtomicBoolean ready = new AtomicBoolean( false );
   private static ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<String, String>( );
+  private static VMMessageDispatcherFactory             dispatcherFactory = new VMMessageDispatcherFactory( );
   private static AtomicReference<MuleClient>            client            = new AtomicReference<MuleClient>( null );
   private static final BootstrapException               failEx            = new BootstrapException(
                                                                                                     "Attempt to use esb client before the service bus has been started." );
@@ -71,7 +74,18 @@ public class ServiceContext {
   }
   
   public static void dispatch( String dest, Object msg ) {
+    
     try {
+      OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
+      if ( !endpoint.getConnector( ).isStarted( ) ) {
+        endpoint.getConnector( ).start( );
+      }
+      MuleMessage muleMsg = new DefaultMuleMessage( msg );
+      MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
+                                                        ServiceContext.getContext( ) );
+      MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
+      dispatcherFactory.create( endpoint ).dispatch( muleEvent );
+      
       send( dest, msg );
     } catch ( EucalyptusCloudException ex ) {
       LOG.error( ex, ex );
@@ -79,29 +93,36 @@ public class ServiceContext {
   }
   
   public static <T> T send( String dest, Object msg ) throws EucalyptusCloudException {
-    if( ( dest.startsWith( "vm://" ) && !endpointToService.containsKey( dest ) ) || dest == null ) {
-      throw new EucalyptusCloudException( "Failed to find destination: " + dest, new IllegalArgumentException( "No such endpoint: " + dest + " in endpoints=" + endpointToService.entrySet( ) ) );
-    }
-    if( dest.startsWith( "vm://" ) ) {
-      dest = endpointToService.get( dest );
-    }
+    dest = ServiceContext.transformDestination( dest );
     MuleEvent context = RequestContext.getEvent( );
     try {
       MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
-
+      
       if ( reply.getExceptionPayload( ) != null ) {
-        EucalyptusCloudException ex = new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
+        EucalyptusCloudException ex = new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ),
+                                                                    reply.getExceptionPayload( ).getRootException( ) );
         LOG.trace( ex, ex );
         throw ex;
-      }
-      else return (T) reply.getPayload( );
+      } else return ( T ) reply.getPayload( );
     } catch ( Throwable e ) {
-      EucalyptusCloudException ex = new EucalyptusCloudException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest + " because of " + e.getMessage( ), e );
+      EucalyptusCloudException ex = new EucalyptusCloudException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest
+                                                                  + " because of " + e.getMessage( ), e );
       LOG.trace( ex, ex );
       throw ex;
     } finally {
       RequestContext.setEvent( context );
     }
+  }
+  
+  private static String transformDestination( String dest ) throws EucalyptusCloudException {
+    if ( ( dest.startsWith( "vm://" ) && !endpointToService.containsKey( dest ) ) || dest == null ) {
+      throw new EucalyptusCloudException( "Failed to find destination: " + dest, new IllegalArgumentException( "No such endpoint: " + dest + " in endpoints="
+                                                                                                               + endpointToService.entrySet( ) ) );
+    }
+    if ( dest.startsWith( "vm://" ) ) {
+      dest = endpointToService.get( dest );
+    }
+    return dest;
   }
   
   public static void buildContext( List<ConfigResource> configs ) {
@@ -133,10 +154,10 @@ public class ServiceContext {
     try {
       ServiceContext.getContext( ).start( );
       endpointToService.clear( );
-      for( Object o : ServiceContext.getContext( ).getRegistry( ).lookupServices( ) ) {
-        Service s = (Service) o;
-        for( Object p : s.getInboundRouter( ).getEndpoints( ) ) {
-          InboundEndpoint in = (InboundEndpoint) p;
+      for ( Object o : ServiceContext.getContext( ).getRegistry( ).lookupServices( ) ) {
+        Service s = ( Service ) o;
+        for ( Object p : s.getInboundRouter( ).getEndpoints( ) ) {
+          InboundEndpoint in = ( InboundEndpoint ) p;
           endpointToService.put( in.getEndpointURI( ).toString( ), s.getName( ) );
         }
       }

@@ -121,7 +121,6 @@ import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
-  private static VMMessageDispatcherFactory dispatcherFactory = new VMMessageDispatcherFactory( );
   private static Logger                     LOG               = Logger.getLogger( ServiceSinkHandler.class );
   private AtomicLong                        startTime         = new AtomicLong( 0l );
   
@@ -287,15 +286,6 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
     } catch ( EucalyptusCloudException ex ) {
       LOG.error( ex , ex );
     }//ASAP: omg urgent.
-//    OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
-//    if ( !endpoint.getConnector( ).isStarted( ) ) {
-//      endpoint.getConnector( ).start( );
-//    }
-//    MuleMessage muleMsg = new DefaultMuleMessage( msg );
-//    MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
-//                                                      ServiceContext.getContext( ) );
-//    MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
-//    dispatcherFactory.create( endpoint ).dispatch( muleEvent );
   }
   
   @Override
