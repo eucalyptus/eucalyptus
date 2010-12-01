@@ -119,12 +119,10 @@
 	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/asm-3.2.jar"/>
-	<classpathentry kind="lib" path="lib/groovy-1.7.0.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-api-checker-2.0.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-dev-2.0.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-servlet-2.0.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.0.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-user-2.0.jar"/>
+	<classpathentry kind="lib" path="lib/asm2-2.2.3.jar"/>
+	<classpathentry kind="lib" path="lib/groovy-1.6.3.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-dev-linux-1.6.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-servlet-1.6.4.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-user-1.6.4.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
