@@ -533,7 +533,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         final TextBox userName_box = new TextBox();
 		userName_box.setText (userToEdit.getUserName());
         userName_box.setWidth("180");
-        userName_box.setTabIndex(tabIndex++);
 		if ( ! newUser ) {
 			userName_box.setEnabled (false);
 		}
@@ -544,7 +543,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         userIsAdmin.setChecked(isAdminChecked);
         userIsAdmin.setStyleName("euca-remember-text");
         if (admin) {
-            userIsAdmin.setTabIndex(tabIndex++);        	
             g1.setWidget ( i++, 1, userIsAdmin);
         }
 
@@ -554,7 +552,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         final PasswordTextBox cleartextPassword1_box = new PasswordTextBox();
 		cleartextPassword1_box.setText (userToEdit.getPassword());
         cleartextPassword1_box.setWidth ("180");
-		cleartextPassword1_box.setTabIndex(tabIndex++);
 		if ( (! admin && ! newUser ) || userToEdit.isAdministrator().booleanValue()) {
 			cleartextPassword1_box.setEnabled (false);
 		}
@@ -566,7 +563,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         final PasswordTextBox cleartextPassword2_box = new PasswordTextBox();
 		cleartextPassword2_box.setText (userToEdit.getPassword());
         cleartextPassword2_box.setWidth("180");
-		cleartextPassword2_box.setTabIndex(tabIndex++);
 		if ( ( ! admin && ! newUser ) || userToEdit.isAdministrator().booleanValue()) {
 			cleartextPassword2_box.setEnabled (false);
 		}
@@ -578,7 +574,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         final TextBox realName_box = new TextBox();
 		realName_box.setText (userToEdit.getRealName());
         realName_box.setWidth("180");
-        realName_box.setTabIndex(tabIndex++);
         g1.setWidget( i++, 1, realName_box );
 
         final int emailAddress_row = i;
@@ -587,7 +582,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         final TextBox emailAddress_box = new TextBox();
 		emailAddress_box.setText (userToEdit.getEmail());
         emailAddress_box.setWidth("180");
-        emailAddress_box.setTabIndex(tabIndex++);
         g1.setWidget( i++, 1, emailAddress_box );
 
         // optional row
@@ -595,7 +589,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         skipConfirmation.setChecked(skipConfirmationChecked);
         skipConfirmation.setStyleName("euca-remember-text");
         if (admin && showSkipConfirmed) {
-        	skipConfirmation.setTabIndex(tabIndex++);
             g1.setWidget ( i++, 1, skipConfirmation);
         }
 
@@ -625,7 +618,6 @@ public class EucalyptusWebInterface implements EntryPoint {
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
                 telephoneNumber_box.setWidth("180");
 				telephoneNumber_box.setText (userToEdit.getTelephoneNumber());
-				telephoneNumber_box.setTabIndex(tabIndex++);
                 g2.setWidget( i++, 1, telephoneNumber_box );
             }
 
@@ -634,7 +626,6 @@ public class EucalyptusWebInterface implements EntryPoint {
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				projectPIName_box.setText (userToEdit.getProjectPIName());
                 projectPIName_box.setWidth("180");
-                projectPIName_box.setTabIndex(tabIndex++);
                 g2.setWidget( i++, 1, projectPIName_box );
             }
 
@@ -643,7 +634,6 @@ public class EucalyptusWebInterface implements EntryPoint {
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				affiliation_box.setText (userToEdit.getAffiliation());
                 affiliation_box.setWidth("360");
-                affiliation_box.setTabIndex(tabIndex++);
                 g2.setWidget( i++, 1, affiliation_box );
             }
 
@@ -653,7 +643,6 @@ public class EucalyptusWebInterface implements EntryPoint {
 				projectDescription_box.setText (userToEdit.getProjectDescription());
                 projectDescription_box.setWidth("360");
                 projectDescription_box.setHeight("50");
-                projectDescription_box.setTabIndex(tabIndex++);
                 g2.setWidget( i++, 1, projectDescription_box );
             }
         }
@@ -852,9 +841,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		} else {
 			submit_button = new Button ( "Update Record", SignupButtonListener );
 		}
-		submit_button.setTabIndex (i++);
 		Button cancel_button = new Button( "Cancel", DefaultPageButtonListener );
-		cancel_button.setTabIndex (i++);
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( label_mandatory );
         mpanel.add( g1 );
@@ -899,8 +886,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         projectPIName_box.addKeyPressHandler(sl);
         affiliation_box.addKeyPressHandler(sl);
         projectDescription_box.addKeyPressHandler(sl);
-        submit_button.addKeyPressHandler(sl);
-        cancel_button.addKeyPressHandler(sl);
         if (newUser) {
         	userName_box.setFocus(true);
         } else {
@@ -2679,7 +2664,6 @@ public class EucalyptusWebInterface implements EntryPoint {
     	);
 
     	EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(change_button);
-    	change_button.addKeyPressHandler(sl);
     	newCleartextPassword1_box.addKeyPressHandler(sl);
     	newCleartextPassword2_box.addKeyPressHandler(sl);
     	emailAddress_box.addKeyPressHandler(sl);
