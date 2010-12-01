@@ -393,7 +393,6 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         /* enable login by pressing Enter */
         EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button);
-        submit_button.addKeyboardListener(sl);
         login_box.addKeyboardListener(sl);
         pass_box.addKeyboardListener(sl);
 
@@ -511,6 +510,19 @@ public class EucalyptusWebInterface implements EntryPoint {
 		}
         label_box.setStyleName("euca-greeting-normal");
 
+        Button submit_button; // define button and attach its keyboard listener to all text boxes
+		EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button);
+		submit_button.addKeyboardListener(sl);
+		if (newUser) {
+	        if (admin) {
+				submit_button = new Button ( "Add user", SignupButtonListener);
+			} else {
+				submit_button = new Button ( "Sign up", SignupButtonListener);
+			}
+		} else {
+			submit_button = new Button ( "Update Record", SignupButtonListener );
+		}
+		
         int rowsMandatory = 5;
         if (admin) {
             rowsMandatory++; // for admin checkbox
@@ -533,6 +545,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         final TextBox userName_box = new TextBox();
 		userName_box.setText (userToEdit.getUserName());
         userName_box.setWidth("180");
+        userName_box.addKeyboardListener(sl);
 		if ( ! newUser ) {
 			userName_box.setEnabled (false);
 		}
@@ -552,6 +565,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         final PasswordTextBox cleartextPassword1_box = new PasswordTextBox();
 		cleartextPassword1_box.setText (userToEdit.getPassword());
         cleartextPassword1_box.setWidth ("180");
+        cleartextPassword1_box.addKeyboardListener(sl);
 		if ( (! admin && ! newUser ) || userToEdit.isAdministrator().booleanValue()) {
 			cleartextPassword1_box.setEnabled (false);
 		}
@@ -563,6 +577,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         final PasswordTextBox cleartextPassword2_box = new PasswordTextBox();
 		cleartextPassword2_box.setText (userToEdit.getPassword());
         cleartextPassword2_box.setWidth("180");
+        cleartextPassword2_box.addKeyboardListener(sl);
 		if ( ( ! admin && ! newUser ) || userToEdit.isAdministrator().booleanValue()) {
 			cleartextPassword2_box.setEnabled (false);
 		}
@@ -574,6 +589,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         final TextBox realName_box = new TextBox();
 		realName_box.setText (userToEdit.getRealName());
         realName_box.setWidth("180");
+        realName_box.addKeyboardListener(sl);
         g1.setWidget( i++, 1, realName_box );
 
         final int emailAddress_row = i;
@@ -582,6 +598,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         final TextBox emailAddress_box = new TextBox();
 		emailAddress_box.setText (userToEdit.getEmail());
         emailAddress_box.setWidth("180");
+        emailAddress_box.addKeyboardListener(sl);
         g1.setWidget( i++, 1, emailAddress_box );
 
         // optional row
@@ -617,6 +634,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 g2.setWidget( i, 0, new Label( "Telephone Number:" ));
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
                 telephoneNumber_box.setWidth("180");
+                telephoneNumber_box.addKeyboardListener(sl);
 				telephoneNumber_box.setText (userToEdit.getTelephoneNumber());
                 g2.setWidget( i++, 1, telephoneNumber_box );
             }
@@ -626,6 +644,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				projectPIName_box.setText (userToEdit.getProjectPIName());
                 projectPIName_box.setWidth("180");
+                projectPIName_box.addKeyboardListener(sl);
                 g2.setWidget( i++, 1, projectPIName_box );
             }
 
@@ -634,6 +653,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 g2.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
 				affiliation_box.setText (userToEdit.getAffiliation());
                 affiliation_box.setWidth("360");
+                affiliation_box.addKeyboardListener(sl);
                 g2.setWidget( i++, 1, affiliation_box );
             }
 
@@ -643,6 +663,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 				projectDescription_box.setText (userToEdit.getProjectDescription());
                 projectDescription_box.setWidth("360");
                 projectDescription_box.setHeight("50");
+                projectDescription_box.addKeyboardListener(sl);
                 g2.setWidget( i++, 1, projectDescription_box );
             }
         }
@@ -831,18 +852,8 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         };
 
-		Button submit_button;
-		if (newUser) {
-	        if (admin) {
-				submit_button = new Button ( "Add user", SignupButtonListener);
-			} else {
-				submit_button = new Button ( "Sign up", SignupButtonListener);
-			}
-		} else {
-			submit_button = new Button ( "Update Record", SignupButtonListener );
-		}
-
         Button cancel_button = new Button( "Cancel", DefaultPageButtonListener );
+        cancel_button.addKeyboardListener(sl);
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( label_mandatory );
         mpanel.add( g1 );
@@ -876,6 +887,11 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         parent.clear();
         parent.add( wrapper );
+        if (newUser) {
+        	userName_box.setFocus(true);
+        } else {
+        	cancel_button.setFocus(true);
+        }
     }
 
     public void displayInitiatePasswordRecoveryPage()
@@ -972,6 +988,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         Button submit_button = new Button ( "Recover Password", RecoverButtonListener );
         Button cancel_button = new Button ( "Cancel", DefaultPageButtonListener );
+        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button, cancel_button);
+		username_box.addKeyboardListener(sl);
+		email_box.addKeyboardListener(sl);
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( g1 );
 
@@ -996,6 +1015,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
+        username_box.setFocus(true);
     }
     
     public void displayCompletePasswordRecoveryPage(final String code)
@@ -1083,6 +1103,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         Button submit_button = new Button ( "Change Password", RecoverButtonListener );
         Button cancel_button = new Button ( "Cancel", DefaultPageButtonListener );
+        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button, cancel_button);
+        cleartextPassword1_box.addKeyboardListener(sl);
+        cleartextPassword2_box.addKeyboardListener(sl);
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( g1 );
 
@@ -1107,6 +1130,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
+        cleartextPassword1_box.setFocus(true);
     }
 
     private Button displayDialog ( String greeting, String message )
