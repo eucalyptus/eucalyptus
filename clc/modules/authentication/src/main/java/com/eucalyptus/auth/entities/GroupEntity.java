@@ -198,5 +198,10 @@ public class GroupEntity extends AbstractPersistent implements Group, Serializab
   public List<UserEntity> getUsers( ) {
     return this.users;
   }
+
+  @Override
+  public String getGroupId( ) {
+    return this.getId( );
+  }
   
 }

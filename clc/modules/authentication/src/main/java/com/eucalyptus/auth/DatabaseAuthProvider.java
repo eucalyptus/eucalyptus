@@ -706,12 +706,10 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   }
   
   @Override
-  public List<? extends Authorization> lookupQuotas( String resourceType, String userId, boolean forUser ) throws AuthException {
-    GroupEntity searchGroup = new GroupEntity( forUser );
+  public List<? extends Authorization> lookupQuotas( String resourceType, String userId ) throws AuthException {
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
     Session session = db.getSession( );
     try {
-      Example groupExample = Example.create( searchGroup ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
@@ -720,7 +718,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
                   Restrictions.eq( "effect", EffectType.Limit ) ) )
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
-          .createCriteria( "group" ).setCacheable( true ).add( groupExample )
+          .createCriteria( "group" ).setCacheable( true )
           .createCriteria( "users" ).add(Restrictions.idEq( userId ) )
           .list( );
       db.commit( );

@@ -162,7 +162,7 @@ public class AuthTest {
           "}" +
         "}," +
         "{" +
-          "'Effect':'Deny'," +
+          "'Effect':'Allow'," +
           "'Action':'ec2:RunInstances'," +
           "'Resource':'arn:aws:ec2:::image/emi-12345678'," +
         "}]" +

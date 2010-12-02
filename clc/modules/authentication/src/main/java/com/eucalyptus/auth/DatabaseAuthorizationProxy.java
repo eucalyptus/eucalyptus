@@ -3,11 +3,13 @@ package com.eucalyptus.auth;
 import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
@@ -106,6 +108,21 @@ public class DatabaseAuthorizationProxy implements Authorization {
       Debugging.logError( LOG, e, "Failed to getResources for " + this.delegate );
     }
     return results;
+  }
+
+  @Override
+  public Group getGroup( ) {
+    final List<DatabaseGroupProxy> results = Lists.newArrayList( );
+    try {
+      Transactions.one( AuthorizationEntity.class, this.delegate.getId( ), new Tx<AuthorizationEntity>( ) {
+        public void fire( AuthorizationEntity t ) throws Throwable {
+          results.add( new DatabaseGroupProxy( ( GroupEntity) t.getGroup( ) ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getGroup for " + this.delegate );
+    }
+    return results.get( 0 );
   }
   
 }

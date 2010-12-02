@@ -20,10 +20,11 @@ public interface PolicyEngine {
   /**
    * Evaluate quota for resource allocation. Throw exception if the resource allocation is denied.
    * 
+   * @param quantity The quantity of the resource to allocate
    * @param <T> the resource type.
    * @param resourceClass The type class of the resource
    * @throws AuthException if allocation is denied.
    */
-  public <T> void evaluateQuota( Class<T> resourceClass, String resourceName ) throws AuthException;
+  public <T> void evaluateQuota( Integer quantity, Class<T> resourceClass, String resourceName ) throws AuthException;
   
 }

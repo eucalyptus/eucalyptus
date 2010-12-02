@@ -173,5 +173,10 @@ public class DatabaseGroupProxy implements Group {
     }
     return results;
   }
+
+  @Override
+  public String getGroupId( ) {
+    return this.delegate.getGroupId( );
+  }
   
 }

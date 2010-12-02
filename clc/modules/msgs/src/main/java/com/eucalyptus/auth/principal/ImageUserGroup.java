@@ -79,5 +79,11 @@ public class ImageUserGroup implements Group {
     // TODO Auto-generated method stub
     return null;
   }
+
+  @Override
+  public String getGroupId( ) {
+    // TODO Auto-generated method stub
+    return null;
+  }
   
 }

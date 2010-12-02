@@ -53,7 +53,7 @@ public class Authorizations {
    * @throws AuthException
    * @throws ResourceLookupException
    */
-  public static <T extends HasName<T>> T lookupPrivileged( String resourceName, ResourceLookup<T> resolver ) throws AuthException, ResourceLookupException {
+  public static <T> T lookupPrivileged( String resourceName, String resourceAccountId, ResourceLookup<T> resolver ) throws AuthException, ResourceLookupException {
     T resource;
     try {
       resource = resolver.resolve( resourceName );
@@ -62,18 +62,10 @@ public class Authorizations {
       throw new ResourceLookupException( "Failure occurred while trying to resolve a resource using: "
                                          + resolver.getClass( ).getCanonicalName( ), ex );
     }
-    /** The following should be a true statement **/
-    if ( !resourceName.equals( resource.getName( ) ) ) {
-      throw new ResourceLookupException( "Broken resolver implementation, returned resource "
-                                         + resource.getClass( ).getSimpleName( )
-                                         + " which doesn't match requested resource name "
-                                         + resourceName + ": "
-                                         + resolver.getClass( ).getCanonicalName( ) );
-    }
     /** Can also use the returned resourceType to do policy evaluation **/
     @SuppressWarnings( "unchecked" )
     Class<T> resourceType = ( Class<T> ) resource.getClass( );
-    //policyEngine.evaluateAuthorization( resourceType, resourceName );
+    policyEngine.evaluateAuthorization( resourceType, resourceName, resourceAccountId );
     return resource;
   }
   
@@ -84,7 +76,7 @@ public class Authorizations {
    * @throws AuthException 
    * @throws ResourceAllocationException 
    */
-  public static <T extends HasName<T>> void allocatePrivileged( Integer quantity, ResourceAllocator<T> allocator ) throws AuthException, ResourceAllocationException {
+  public static <T> void allocatePrivileged( Integer quantity, ResourceAllocator<T> allocator ) throws AuthException, ResourceAllocationException {
     /*
     try {
       NavigableSet<T> resources = allocator.allocate( quantity );

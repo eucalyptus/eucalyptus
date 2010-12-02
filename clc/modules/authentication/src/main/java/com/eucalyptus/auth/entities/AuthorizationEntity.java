@@ -21,6 +21,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -143,6 +144,11 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
   @Override
   public Set<String> getResources( ) {
     return this.resources;
+  }
+
+  @Override
+  public Group getGroup( ) {
+    return this.statement.policy.group;
   }
   
 }

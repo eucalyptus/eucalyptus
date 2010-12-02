@@ -43,12 +43,8 @@ public class Policies {
     return Policies.getPolicyProvider( ).lookupAccountGlobalAuthorizations( resourceType, accountId );
   }
   
-  public static List<? extends Authorization> lookupUserQuotas( String resourceType, String userId ) throws AuthException {
-    return Policies.getPolicyProvider( ).lookupQuotas( resourceType, userId, true );
-  }
-  
-  public static List<? extends Authorization> lookupGroupQuotas( String resourceType, String userId ) throws AuthException {
-    return Policies.getPolicyProvider( ).lookupQuotas( resourceType, userId, false );
+  public static List<? extends Authorization> lookupQuotas( String resourceType, String userId ) throws AuthException {
+    return Policies.getPolicyProvider( ).lookupQuotas( resourceType, userId );
   }
   
   public static List<? extends Authorization> lookupAccountGlobalQuotas( String resourceType, String accountId ) throws AuthException {

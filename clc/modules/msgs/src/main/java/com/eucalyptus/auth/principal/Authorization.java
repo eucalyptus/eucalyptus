@@ -30,4 +30,6 @@ public interface Authorization extends Serializable {
   
   public List<? extends Condition> getConditions( );
   
+  public Group getGroup( );
+  
 }

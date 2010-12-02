@@ -69,6 +69,6 @@ import com.eucalyptus.util.HasName;
 /**
  * Perform the allocation of 'quantity' number of resources of type T
  */
-public abstract interface ResourceAllocator<T extends HasName<T>> {
+public abstract interface ResourceAllocator<T> {
   public abstract NavigableSet<T> allocate( Integer quantity ) throws ResourceAllocationException;
 }

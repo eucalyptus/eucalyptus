@@ -6,23 +6,21 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.AuthTest;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.Policies;
 import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.Conditions;
-import com.eucalyptus.auth.policy.condition.NumericLessThan;
-import com.eucalyptus.auth.policy.condition.NumericLessThanEquals;
+import com.eucalyptus.auth.policy.condition.NumericGreaterThan;
 import com.eucalyptus.auth.policy.key.CachedKeyEvaluator;
 import com.eucalyptus.auth.policy.key.ContractKey;
 import com.eucalyptus.auth.policy.key.ContractKeyEvaluator;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
-import com.eucalyptus.auth.policy.key.QuotaKeyEvaluator;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -48,7 +46,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   public PolicyEngineImpl( ) {
   }
   
-  /**
+  /*
    * The authorization evaluation algorithm is a combination of AWS IAM policy evaluation logic and
    * AWS inter-account permission checking logic (including EC2 image and snapshot permission, and
    * S3 bucket ACL and bucket policy). The algorithm is described in the following:
@@ -64,7 +62,8 @@ public class PolicyEngineImpl implements PolicyEngine {
    * 4. Otherwise, check local (intra-account) authorizations.
    *    If explicitly or default denied, access is DENIED.
    *    If explicitly allowed, access is GRANTED.
-   *    
+   *
+   * (non-Javadoc)
    * @see com.eucalyptus.auth.api.PolicyEngine#evaluateAuthorization(java.lang.Class, java.lang.String, java.lang.String)
    */
   @Override
@@ -116,6 +115,17 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
   }
   
+  /**
+   * Process a list of authorizations against the current request. Collecting contracts from matching authorizations.
+   * 
+   * @param authorizations The list of authorizations to process
+   * @param action The request action
+   * @param resource The requested resource
+   * @param keyEval The key cache for condition evaluation (optimization purpose)
+   * @param contractEval The contract evaluator and collector.
+   * @return The final decision: DEFAULT - no matching authorization, DENY - explicit deny, ALLOW = explicit allow
+   * @throws AuthException
+   */
   private Decision processAuthorizations( List<Authorization> authorizations, String action, String resource, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
     Decision result = Decision.DEFAULT; 
     for ( Authorization auth : authorizations ) {
@@ -139,6 +149,14 @@ public class PolicyEngineImpl implements PolicyEngine {
     return result;
   }
   
+  /**
+   * Match action or resource patterns with an action or resource name instance.
+   * 
+   * @param patterns The list of input patterns
+   * @param isNot If the action list or resource list is a negated list.
+   * @param instance The action or resource name instance
+   * @return true if matched, false otherwise.
+   */
   private boolean evaluatePatterns( Set<String> patterns, boolean isNot, String instance ) {
     boolean matched = false;
     for ( String pattern : patterns ) {
@@ -153,6 +171,17 @@ public class PolicyEngineImpl implements PolicyEngine {
     return false;
   }
   
+  /**
+   * Evaluate conditions for an authorization.
+   * 
+   * @param conditions
+   * @param action
+   * @param resourceType
+   * @param keyEval
+   * @param contractEval
+   * @return
+   * @throws AuthException
+   */
   private boolean evaluateConditions( List<? extends Condition> conditions, String action, String resourceType, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
     for ( Condition cond : conditions ) {
       ConditionOp op = Conditions.getOpInstance( Conditions.CONDITION_MAP.get( cond.getType( ) ) );
@@ -224,17 +253,27 @@ public class PolicyEngineImpl implements PolicyEngine {
     return resource;
   }
 
+  /*
+   * Quota evaluation algorithm is very simple: going through all quotas that can be applied to the request (by user
+   * and resource), at all levels (account, group and user), if any of the quota is exceeded, reject the request.
+   * 
+   * (non-Javadoc)
+   * @see com.eucalyptus.auth.api.PolicyEngine#evaluateQuota(java.lang.Integer, java.lang.Class, java.lang.String)
+   */
   @Override
-  public <T> void evaluateQuota( Class<T> resourceClass, String resourceName ) throws AuthException {
+  public <T> void evaluateQuota( Integer quantity, Class<T> resourceClass, String resourceName ) throws AuthException {
     try {
       User requestUser = RequestContext.getRequestUser( );
+      if ( requestUser.isSystemAdmin( ) ) {
+        return;
+      }
       BaseMessage request = RequestContext.getRequest( );
       String userId = requestUser.getUserId( );
       String accountId = requestUser.getAccount( ).getAccountId( );
       String resourceType = getResourceType( resourceClass );
       String action = getAction( request.getClass( ) );
-      Map<Class<? extends QuotaKey>, String> matchedQuotas = lookupMatchedQuotas( action, resourceType, resourceName, userId, accountId );
-      processQuotas( matchedQuotas );
+      List<Authorization> quotas = lookupQuotas( resourceType, userId, accountId, requestUser.isAccountAdmin( ) );
+      processQuotas( quotas, action, resourceType, resourceName, quantity );
     } catch ( AuthException e ) {
       //throw by the policy engine implementation 
       throw e;
@@ -246,44 +285,108 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
   }
 
-  private void processQuotas( Map<Class<? extends QuotaKey>, String> matchedQuotas ) throws AuthException {
-    NumericLessThanEquals nlte = new NumericLessThanEquals( );
-    for ( Map.Entry<Class<? extends QuotaKey>, String> entry : matchedQuotas.entrySet( ) ) {
-      Key key = Keys.getKeyInstance( entry.getKey( ) );
-      if ( !nlte.check( key.value( ), entry.getValue( ) ) ) {
-        LOG.error( "Quota " + key.getClass( ).getName( ) + " is exceeded." );
-        throw new AuthException( AuthException.QUOTA_EXCEEDED );
-      }
+  /**
+   * Find all quotas that can be applied for the request, by resource type, user and account.
+   * 
+   * @param resourceType The resource type to allocate.
+   * @param userId The request user ID.
+   * @param accountId The request user account ID.
+   * @param isAccountAdmin If the request user is account admin.
+   * @return The list of authorizations (quotas) that match.
+   * @throws AuthException for any error.
+   */
+  private List<Authorization> lookupQuotas( String resourceType, String userId, String accountId, boolean isAccountAdmin ) throws AuthException {
+    List<Authorization> results = Lists.newArrayList( );
+    results.addAll( Policies.lookupAccountGlobalAuthorizations( resourceType, accountId ) );
+    results.addAll( Policies.lookupAccountGlobalAuthorizations( PolicySpecConstants.ALL_RESOURCE, accountId ) );
+    if ( !isAccountAdmin ) {
+      results.addAll( Policies.lookupAuthorizations( resourceType, userId ) );
+      results.addAll( Policies.lookupAuthorizations( PolicySpecConstants.ALL_RESOURCE, userId ) );
     }
+    return results;    
   }
-
-  private Map<Class<? extends QuotaKey>, String> lookupMatchedQuotas( String action, String resourceType, String resourceName, String userId, String accountId ) throws AuthException {
-    QuotaKeyEvaluator quotaEval = new QuotaKeyEvaluator( );
-    processQuotaAuthorizations( QuotaKeyEvaluator.Level.ACCOUNT, Policies.lookupAccountGlobalAuthorizations( resourceType, accountId ), action, resourceName, quotaEval );
-    processQuotaAuthorizations( QuotaKeyEvaluator.Level.GROUP, Policies.lookupGroupQuotas( resourceType, userId ), action, resourceName, quotaEval );
-    processQuotaAuthorizations( QuotaKeyEvaluator.Level.USER, Policies.lookupUserQuotas( resourceType, userId ), action, resourceName, quotaEval );
-    return quotaEval.getQuotas( );
-  }
-
-  private void processQuotaAuthorizations( QuotaKeyEvaluator.Level level, List<? extends Authorization> auths, String action, String resourceName, QuotaKeyEvaluator quotaEval ) throws AuthException {
-    for ( Authorization auth : auths ) {
+  
+  /**
+   * Process each of the quota authorizations. If any of them is exceeded, deny access.
+   * 
+   * @param quotas The quota authorizations
+   * @param action The request action.
+   * @param resourceType The resource type for allocation
+   * @param resourceName The resource associated with the allocation
+   * @param quantity The quantity to allocate.
+   * @throws AuthException for any error.
+   */
+  private void processQuotas( List<Authorization> quotas, String action, String resourceType, String resourceName, Integer quantity ) throws AuthException {
+    NumericGreaterThan ngt = new NumericGreaterThan( );
+    for ( Authorization auth : quotas ) {
       if ( !evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
         continue;
       }
       if ( !evaluatePatterns( auth.getResources( ), auth.isNotResource( ), resourceName ) ) {
         continue;
       }
+      QuotaKey.Scope scope = getAuthorizationScope( auth );
+      String principalId = getAuthorizationPrincipalId( auth, scope );
       for ( Condition cond : auth.getConditions( ) ) {
         Key key = Keys.getKeyInstance( Keys.KEY_MAP.get( cond.getKey( ) ) );
         if ( !( key instanceof QuotaKey ) ) {
           continue;
         }
-        if ( !key.canApply( null, auth.getType( ) ) ) {
+        QuotaKey quotaKey = ( QuotaKey ) key;
+        if ( !key.canApply( action, resourceType ) ) {
           continue;
         }
-        quotaEval.addLevelQuota( level, ( ( QuotaKey ) key ).getClass( ), cond.getValues( ).toArray( new String[0] )[0] );
+        String usageValue = quotaKey.value( scope, principalId, resourceName, quantity );
+        String quotaValue = cond.getValues( ).toArray( new String[0] )[0];
+        if ( ngt.check( usageValue, quotaValue ) ) {
+          LOG.error( "Quota " + key.getClass( ).getName( ) + " is exceeded: quoat=" + quotaValue + ", usage=" + usageValue );
+          throw new AuthException( AuthException.QUOTA_EXCEEDED );
+        }
       }
     }
+  }
+  
+  /**
+   * Get the principal ID for an authorization based on scope.
+   * 
+   * @param auth The authorization
+   * @param scope The scope of the authorization
+   * @return The principal ID (account, group or user)
+   * @throws AuthException for any error
+   */
+  private String getAuthorizationPrincipalId( Authorization auth, QuotaKey.Scope scope ) throws AuthException {
+    Group group = auth.getGroup( );
+    switch ( scope ) {
+      case ACCOUNT:
+        return group.getAccount( ).getAccountId( );
+      case GROUP:
+        return group.getGroupId( );
+      case USER:
+        return group.getUsers( ).get( 0 ).getUserId( );
+    }
+    throw new RuntimeException( "Should not reach here: unrecognized scope." );
+  }
+  
+  /**
+   * Found out the scope of the authorization.
+   * 
+   * @param auth The authorization to be inspected.
+   * @return The scope of the authorization, ACCOUNT, GROUP or USER.
+   * @throws AuthException for any error.
+   */
+  private QuotaKey.Scope getAuthorizationScope( Authorization auth ) throws AuthException {
+    Group group = auth.getGroup( );
+    if ( !group.isUserGroup( ) ) {
+      return QuotaKey.Scope.GROUP;
+    }
+    User user = group.getUsers( ).get( 0 );
+    if ( user == null ) {
+      throw new RuntimeException( "Empty user group " + group.getName( ) );
+    }
+    if ( user.isAccountAdmin( ) ) {
+      return QuotaKey.Scope.ACCOUNT;
+    }
+    return QuotaKey.Scope.USER;
   }
   
 }

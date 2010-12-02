@@ -74,11 +74,10 @@ public interface PolicyProvider {
    * 
    * @param resourceType Search by resource type
    * @param userId Search by user ID
-   * @param forUser If true, returns quotas for the user; otherwise returns quota for groups that the user belongs to.
    * @return The list of quotas that can be potentially applied to the user or the groups of the user.
    * @throws AuthException for any error
    */
-  public List<? extends Authorization> lookupQuotas( String resourceType, String userId, boolean forUser ) throws AuthException;
+  public List<? extends Authorization> lookupQuotas( String resourceType, String userId ) throws AuthException;
   
   /**
    * Lookup account global quotas.

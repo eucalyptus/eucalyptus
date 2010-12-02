@@ -175,6 +175,8 @@ public class PolicyParser {
       String[] parsed = parseResourceArn( resource );
       addToSetMap( resourceMap, parsed[0], parsed[1] );
     }
+    boolean notAction = Boolean.valueOf( PolicySpecConstants.NOTACTION.equals( actionElement ) );
+    boolean notResource = Boolean.valueOf( PolicySpecConstants.NOTRESOURCE.equals( resourceElement ) );
     // Permute action and resource groups and construct authorizations.
     List<AuthorizationEntity> results = Lists.newArrayList( );
     for ( Map.Entry<String, Set<String>> actionSetEntry : actionMap.entrySet( ) ) {
@@ -186,12 +188,7 @@ public class PolicyParser {
         if ( PolicySpecConstants.ALL_ACTION.equals( vendor )
             || PolicySpecConstants.ALL_RESOURCE.equals( type )
             || type.startsWith( vendor ) ) {
-          results.add( new AuthorizationEntity( EffectType.valueOf( effect ),
-              type,
-              actionSet,
-              Boolean.valueOf( PolicySpecConstants.NOTACTION.equals( actionElement ) ),
-              resourceSet,
-              Boolean.valueOf( PolicySpecConstants.NOTRESOURCE.equals( resourceElement ) ) ) );
+          results.add( new AuthorizationEntity( EffectType.valueOf( effect ), type, actionSet, notAction, resourceSet, notResource ) );
         }
       }
     }
@@ -352,6 +349,9 @@ public class PolicyParser {
     keyObj.validateConditionType( typeClass );
     if ( values.size( ) < 1 ) {
       throw new JSONException( "No value for key '" + key + "'" );
+    }
+    if ( isQuota && values.size( ) > 1 ) {
+      throw new JSONException( "Quota key can only have one value" );
     }
     for ( String v : values ) {
       keyObj.validateValueType( v );

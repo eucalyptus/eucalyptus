@@ -31,7 +31,7 @@ public abstract class ContractKey implements Key {
   public abstract boolean isBetter( Contract current, Contract update );
   
   @Override
-  public String value( ) throws AuthException {
+  public final String value( ) throws AuthException {
     throw new RuntimeException( "ContractKey has no value." );
   }
   

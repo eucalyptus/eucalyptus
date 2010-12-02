@@ -63,8 +63,6 @@
 
 package com.eucalyptus.component;
 
-import com.eucalyptus.util.HasName;
-
-public abstract interface ResourceLookup<T extends HasName<T>> {
+public abstract interface ResourceLookup<T> {
   public abstract T resolve( String name ) throws ResourceLookupException;
 }
