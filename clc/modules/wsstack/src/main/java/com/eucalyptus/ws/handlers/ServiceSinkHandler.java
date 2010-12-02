@@ -280,10 +280,10 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   
   private static void dispatchRequest( final BaseMessage msg ) throws MuleException, DispatchException {
     try {
-      ServiceContext.send( "RequestQueue", msg );
+      ServiceContext.dispatch( "RequestQueue", msg );
     } catch ( EucalyptusCloudException ex ) {
       LOG.error( ex , ex );
-    }//ASAP: omg urgent.
+    }
   }
   
   @Override
