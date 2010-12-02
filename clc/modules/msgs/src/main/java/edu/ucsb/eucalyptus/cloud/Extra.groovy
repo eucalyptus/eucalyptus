@@ -161,6 +161,8 @@ public class VmInfo extends EucalyptusData {
   String serviceTag;
   String userData;
   String launchIndex;
+  Long networkBytes = 0l;
+  Long blockBytes = 0l;
   ArrayList<String> groupNames = new ArrayList<String>();
   ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
   String placement;

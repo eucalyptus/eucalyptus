@@ -1084,6 +1084,10 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   if (strlen(src->bundleTaskStateName)) {
     adb_ccInstanceType_set_bundleTaskStateName(dst, env, src->bundleTaskStateName);
   }
+
+  adb_ccInstanceType_set_blkbytes(dst, env, src->blkbytes);
+  adb_ccInstanceType_set_netbytes(dst, env, src->netbytes);
+
   for (i=0; i<64; i++) {
     if (src->groupNames[i][0] != '\0') {
       adb_ccInstanceType_add_groupNames(dst, env, src->groupNames[i]);
