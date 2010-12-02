@@ -15,7 +15,7 @@ public class TestQuota extends QuotaKey {
   
   @Override
   public String value( Scope scope, String id, String resource, Integer quantity ) {
-    return "10";
+    return "11";
   }
   
 }
