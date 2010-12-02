@@ -1,27 +1,32 @@
 package com.eucalyptus.context;
 
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.mule.DefaultMuleEvent;
 import org.mule.DefaultMuleMessage;
+import org.mule.DefaultMuleSession;
 import org.mule.RequestContext;
 import org.mule.api.MuleContext;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
+import org.mule.api.MuleSession;
 import org.mule.api.context.MuleContextFactory;
 import org.mule.api.endpoint.InboundEndpoint;
+import org.mule.api.endpoint.OutboundEndpoint;
 import org.mule.api.registry.Registry;
 import org.mule.api.service.Service;
+import org.mule.api.transport.DispatchException;
 import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
+import org.mule.transport.AbstractConnector;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
@@ -32,7 +37,6 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
@@ -54,7 +58,7 @@ public class ServiceContext {
   }
   
   private static AtomicReference<MuleContext>           context           = new AtomicReference<MuleContext>( null );
-  private static AtomicBoolean ready = new AtomicBoolean( false );
+  private static AtomicBoolean                          ready             = new AtomicBoolean( false );
   private static ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<String, String>( );
   private static VMMessageDispatcherFactory             dispatcherFactory = new VMMessageDispatcherFactory( );
   private static AtomicReference<MuleClient>            client            = new AtomicReference<MuleClient>( null );
@@ -73,8 +77,7 @@ public class ServiceContext {
     }
   }
   
-  public static void dispatch( String dest, Object msg ) {
-    
+  public static void dispatch( String dest, Object msg ) throws EucalyptusCloudException {
     try {
       OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
       if ( !endpoint.getConnector( ).isStarted( ) ) {
@@ -85,10 +88,9 @@ public class ServiceContext {
                                                         ServiceContext.getContext( ) );
       MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
       dispatcherFactory.create( endpoint ).dispatch( muleEvent );
-      
-      send( dest, msg );
-    } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex, ex );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+      throw new EucalyptusCloudException( "Failed to dispatch request to service " + dest + " for message type: " + msg.getClass( ).getSimpleName( ) + " because of an error: " + ex.getMessage( ), ex ); 
     }
   }
   
