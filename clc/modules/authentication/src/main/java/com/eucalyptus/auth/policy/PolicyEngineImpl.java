@@ -184,8 +184,8 @@ public class PolicyEngineImpl implements PolicyEngine {
    */
   private boolean evaluateConditions( List<? extends Condition> conditions, String action, String resourceType, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
     for ( Condition cond : conditions ) {
-      ConditionOp op = Conditions.getOpInstance( Conditions.CONDITION_MAP.get( cond.getType( ) ) );
-      Key key = Keys.getKeyInstance( Keys.KEY_MAP.get( cond.getKey( ) ) );
+      ConditionOp op = Conditions.getOpInstance( Conditions.getConditionOpClass( cond.getType( ) ) );
+      Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
       if ( !key.canApply( action, resourceType ) ) {
         continue;
       }
@@ -328,7 +328,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       QuotaKey.Scope scope = getAuthorizationScope( auth );
       String principalId = getAuthorizationPrincipalId( auth, scope );
       for ( Condition cond : auth.getConditions( ) ) {
-        Key key = Keys.getKeyInstance( Keys.KEY_MAP.get( cond.getKey( ) ) );
+        Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
         if ( !( key instanceof QuotaKey ) ) {
           continue;
         }

@@ -20,7 +20,7 @@ public class Keys {
   
   public static final String EC2_VMNUMBER = "ec2:vmnumber";
   
-  public static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
+  private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
     
   public static Key getKeyInstance( Class<? extends Key> keyClass ) {
     try {
@@ -35,6 +35,10 @@ public class Keys {
     } catch ( SecurityException e ) {
       throw new RuntimeException( "Can not find key class " + keyClass.getName( ), e );
     }
+  }
+  
+  public static Class<? extends Key> getKeyClass( String name ) {
+    return KEY_MAP.get( name );
   }
   
   public synchronized static boolean registerKey( String keyName, Class<? extends Key> keyClass ) {

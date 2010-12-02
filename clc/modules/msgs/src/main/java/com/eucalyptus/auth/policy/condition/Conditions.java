@@ -71,7 +71,7 @@ public class Conditions {
   
   public static final String NOTIPADDRESS = "NotIpAddress";
   
-  public static final Map<String, Class<? extends ConditionOp>> CONDITION_MAP = Maps.newHashMap( );
+  private static final Map<String, Class<? extends ConditionOp>> CONDITION_MAP = Maps.newHashMap( );
   
   public synchronized static boolean registerCondition( String op, Class<? extends ConditionOp> conditionClass ) {
     if ( CONDITION_MAP.containsKey( op ) ) {
@@ -81,6 +81,10 @@ public class Conditions {
     return true;
   }
 
+  public static Class<? extends ConditionOp> getConditionOpClass( String op ) {
+    return CONDITION_MAP.get( op );
+  }
+  
   public static ConditionOp getOpInstance( Class<? extends ConditionOp> opClass ) {
     try {
       ConditionOp op = opClass.newInstance( );

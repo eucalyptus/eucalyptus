@@ -318,7 +318,7 @@ public class PolicyParser {
     if ( type == null ) {
       throw new JSONException( "Empty condition type" );
     }
-    Class<? extends ConditionOp> typeClass = Conditions.CONDITION_MAP.get( type );
+    Class<? extends ConditionOp> typeClass = Conditions.getConditionOpClass( type );
     if ( typeClass == null ) {
       throw new JSONException( "Condition type '" + type + "' is not supported" );
     }
@@ -338,7 +338,7 @@ public class PolicyParser {
     if ( key == null ) {
       throw new JSONException( "Empty key name" );
     }
-    Class<? extends Key> keyClass = Keys.KEY_MAP.get( key );
+    Class<? extends Key> keyClass = Keys.getKeyClass( key );
     if ( keyClass == null ) {
       throw new JSONException( "Condition key '" + key + "' is not supported" );
     }

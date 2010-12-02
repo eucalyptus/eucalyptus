@@ -15,7 +15,7 @@ public class KeyDiscovery extends ServiceJarDiscovery {
       String key = Ats.from( candidate ).get( PolicyKey.class ).value( );
       if ( key != null && !"".equals( key ) ) {
         LOG.debug( "Register policy key " + key + " for " + candidate.getCanonicalName( ) );
-        if ( !Conditions.registerCondition( key, candidate ) ) {
+        if ( !Keys.registerKey( key, candidate ) ) {
           LOG.error( "Registration conflict for " + candidate.getCanonicalName( ) );
         }
       }
