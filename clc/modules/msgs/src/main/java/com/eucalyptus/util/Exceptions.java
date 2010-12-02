@@ -44,10 +44,10 @@ public class Exceptions {
   }
   public static boolean eat( String message, Throwable t ) {
     StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[t==null?3:2];
-    Logger.getLogger( ste.getClassName( ) ).error( "Ignoring the error that occured: " + ste.getClassName( ) + "." + ste.getMethodName( ) + ":" + ste.getLineNumber( ) );
+    Logger.getLogger( ste.getClassName( ) ).error( "Ignoring the error that occured: " + ste.getClassName( ) + "." + ste.getMethodName( ) + ":" + ste.getLineNumber( ), t );
     Error ex = ( t ==null? new Error ( "Eating the exception.  Hopefully nothing goes wrong from here on out: "  + message ) : new Error( "Eating the exception.  Hopefully nothing goes wrong from here on out: "  + t.getMessage( ), t ) );
     ex.fillInStackTrace( );
-    LOG.error( t!=null?t:ex, t!=null?t:ex );
+    LOG.error( t!=null?t:ex );
     return false;
   }
   public static void ifNullArgument( Object ... args ) throws IllegalArgumentException {
@@ -58,5 +58,12 @@ public class Exceptions {
         throw ex;
       }
     }
+  }
+  public static <T extends Throwable> T trace( T ex ) {
+    LOG.trace( ex, ex );
+    return ex;
+  }
+  public static void trace( String string, Throwable t ) {
+    trace( new Error( string, t ) );
   }
 }
