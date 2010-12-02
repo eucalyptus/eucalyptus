@@ -69,6 +69,7 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.SimpleTransitionListener;
@@ -248,7 +249,11 @@ public class ComponentState {
   }
 
   public void transition( Transition transition ) {
-    this.stateMachine.startTransition( transition ).fire( );
+    try {
+      this.stateMachine.startTransition( transition ).fire( );
+    } catch ( IllegalStateException ex ) {
+      Exceptions.eat( "Error occurred while trying to apply component state transition: " + transition, ex );
+    }
   }
   
 }
