@@ -48,4 +48,15 @@ public class Keys {
     }
   }
   
+  /*
+   * For testing.
+   */
+  public static boolean registerKey( String keyName, Class<? extends Key> keyClass ) {
+    if ( KEY_MAP.containsKey( keyName ) ) {
+      return false;
+    }
+    KEY_MAP.put( keyName, keyClass );
+    return true;
+  }
+  
 }

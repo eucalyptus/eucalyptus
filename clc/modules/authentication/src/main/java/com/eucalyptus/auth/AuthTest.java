@@ -10,12 +10,15 @@ import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.RequestContext;
 import com.eucalyptus.auth.policy.RequestContext.ContextAdaptor;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
+import com.eucalyptus.auth.policy.key.Keys;
+import com.eucalyptus.auth.policy.key.TestQuota;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.images.Image;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -149,6 +152,8 @@ public class AuthTest {
     Group marketing = Groups.addGroup( "marketing", "/", "test" );
     marketing.addMember( jack );
     
+    Keys.registerKey( "ec2:test-quota", TestQuota.class );
+
     String policy =
       "{" +
         "'Statement':[{" +
@@ -162,9 +167,14 @@ public class AuthTest {
           "}" +
         "}," +
         "{" +
-          "'Effect':'Allow'," +
-          "'Action':'ec2:RunInstances'," +
-          "'Resource':'arn:aws:ec2:::image/emi-12345678'," +
+          "'Effect':'Limit'," +
+          "'Action':'*'," +
+          "'Resource':'arn:aws:ec2:::instance/*'," +
+          "'Condition':{" +
+            "'NumericLessThanEquals':{" +
+              "'ec2:test-quota':'10'" +
+            "}" +
+          "}" +
         "}]" +
       "}";
     
@@ -197,6 +207,7 @@ public class AuthTest {
     
     PolicyEngine engine = new PolicyEngineImpl( );
     engine.evaluateAuthorization( Image.class, "emi-12345678", user.getAccount( ).getAccountId( ) );
+    engine.evaluateQuota( 1, VmInstance.class, "" );
   }
   
   private static void printAuths( List<? extends Authorization> auths ) throws AuthException {

@@ -351,7 +351,7 @@ public class PolicyParser {
       throw new JSONException( "No value for key '" + key + "'" );
     }
     if ( isQuota && values.size( ) > 1 ) {
-      throw new JSONException( "Quota key can only have one value" );
+      throw new JSONException( "Quota key '" + key + "' can only have one value" );
     }
     for ( String v : values ) {
       keyObj.validateValueType( v );

@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
+import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.images.Image;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -399,6 +400,7 @@ public class PolicySpecConstants {
   
   static {
     RESOURCE_CLASS_TO_STRING.put( Image.class, VENDOR_EC2 + ":" + EC2_RESOURCE_IMAGE );
+    RESOURCE_CLASS_TO_STRING.put( VmInstance.class, VENDOR_EC2 + ":" + EC2_RESOURCE_INSTANCE );
   }
   
   // Map message class type to action string
