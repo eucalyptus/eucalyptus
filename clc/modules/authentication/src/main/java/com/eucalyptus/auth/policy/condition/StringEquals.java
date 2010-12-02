@@ -1,5 +1,6 @@
 package com.eucalyptus.auth.policy.condition;
 
+@PolicyCondition( { Conditions.STRINGEQUALS, Conditions.STRINGEQUALS_S } )
 public class StringEquals implements StringConditionOp {
   
   @Override

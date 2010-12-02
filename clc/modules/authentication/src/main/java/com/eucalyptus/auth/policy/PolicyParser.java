@@ -67,7 +67,7 @@ public class PolicyParser {
     }
     try {
       JSONObject policyJsonObj = JSONObject.fromObject( policy );
-      String version = JsonUtils.getByType( String.class, policyJsonObj, PolicySpecConstants.VERSION );
+      String version = JsonUtils.getByType( String.class, policyJsonObj, PolicySpec.VERSION );
       // Policy statements
       List<StatementEntity> statements = parseStatements( policyJsonObj );
       PolicyEntity policyEntity = new PolicyEntity( version, policy, statements );
@@ -86,7 +86,7 @@ public class PolicyParser {
    * @throws JSONException for syntax error.
    */
   private List<StatementEntity> parseStatements( JSONObject policy ) throws JSONException {
-    List<JSONObject> objs = JsonUtils.getArrayByType( JSONObject.class, policy, PolicySpecConstants.STATEMENT );
+    List<JSONObject> objs = JsonUtils.getArrayByType( JSONObject.class, policy, PolicySpec.STATEMENT );
     List<StatementEntity> statements = Lists.newArrayList( );
     for ( JSONObject o : objs ) {
       statements.add( parseStatement( o ) );
@@ -106,10 +106,10 @@ public class PolicyParser {
    */
   private StatementEntity parseStatement( JSONObject statement ) throws JSONException {
     // statement ID
-    String sid = JsonUtils.getByType( String.class, statement, PolicySpecConstants.SID );
+    String sid = JsonUtils.getByType( String.class, statement, PolicySpec.SID );
     // effect
-    JsonUtils.checkRequired( statement, PolicySpecConstants.EFFECT );
-    String effect = JsonUtils.getByType( String.class, statement, PolicySpecConstants.EFFECT );
+    JsonUtils.checkRequired( statement, PolicySpec.EFFECT );
+    String effect = JsonUtils.getByType( String.class, statement, PolicySpec.EFFECT );
     checkEffect( effect );
     // authorizations: action + resource
     List<AuthorizationEntity> authorizations = parseAuthorizations( statement, effect );
@@ -132,13 +132,13 @@ public class PolicyParser {
    */
   private List<AuthorizationEntity> parseAuthorizations( JSONObject statement, String effect ) throws JSONException {
     // actions
-    String actionElement = JsonUtils.checkBinaryOption( statement, PolicySpecConstants.ACTION, PolicySpecConstants.NOTACTION );
+    String actionElement = JsonUtils.checkBinaryOption( statement, PolicySpec.ACTION, PolicySpec.NOTACTION );
     List<String> actions = JsonUtils.parseStringOrStringList( statement, actionElement );
     if ( actions.size( ) < 1 ) {
       throw new JSONException( "Empty action values" );
     }
     // resources
-    String resourceElement = JsonUtils.checkBinaryOption( statement, PolicySpecConstants.RESOURCE, PolicySpecConstants.NOTRESOURCE );
+    String resourceElement = JsonUtils.checkBinaryOption( statement, PolicySpec.RESOURCE, PolicySpec.NOTRESOURCE );
     List<String> resources = JsonUtils.parseStringOrStringList( statement, resourceElement );
     if ( resources.size( ) < 1 ) {
       throw new JSONException( "Empty resource values" );
@@ -175,8 +175,8 @@ public class PolicyParser {
       String[] parsed = parseResourceArn( resource );
       addToSetMap( resourceMap, parsed[0], parsed[1] );
     }
-    boolean notAction = Boolean.valueOf( PolicySpecConstants.NOTACTION.equals( actionElement ) );
-    boolean notResource = Boolean.valueOf( PolicySpecConstants.NOTRESOURCE.equals( resourceElement ) );
+    boolean notAction = Boolean.valueOf( PolicySpec.NOTACTION.equals( actionElement ) );
+    boolean notResource = Boolean.valueOf( PolicySpec.NOTRESOURCE.equals( resourceElement ) );
     // Permute action and resource groups and construct authorizations.
     List<AuthorizationEntity> results = Lists.newArrayList( );
     for ( Map.Entry<String, Set<String>> actionSetEntry : actionMap.entrySet( ) ) {
@@ -185,8 +185,8 @@ public class PolicyParser {
       for ( Map.Entry<String, Set<String>> resourceSetEntry : resourceMap.entrySet( ) ) {
         String type = resourceSetEntry.getKey( );
         Set<String> resourceSet = resourceSetEntry.getValue( );
-        if ( PolicySpecConstants.ALL_ACTION.equals( vendor )
-            || PolicySpecConstants.ALL_RESOURCE.equals( type )
+        if ( PolicySpec.ALL_ACTION.equals( vendor )
+            || PolicySpec.ALL_RESOURCE.equals( type )
             || type.startsWith( vendor ) ) {
           results.add( new AuthorizationEntity( EffectType.valueOf( effect ), type, actionSet, notAction, resourceSet, notResource ) );
         }
@@ -220,7 +220,7 @@ public class PolicyParser {
    * @throws JSONException for syntax error.
    */
   private List<ConditionEntity> parseConditions( JSONObject statement, String effect ) throws JSONException {
-    JSONObject condsObj = JsonUtils.getByType( JSONObject.class, statement, PolicySpecConstants.CONDITION );
+    JSONObject condsObj = JsonUtils.getByType( JSONObject.class, statement, PolicySpec.CONDITION );
     boolean isQuota = EffectType.Limit.name( ).equals( effect );
     List<ConditionEntity> results = Lists.newArrayList( );
     if ( condsObj != null ) {    
@@ -248,16 +248,16 @@ public class PolicyParser {
    * @throws JSONException for any error
    */
   private String checkAction( String action ) throws JSONException {
-    Matcher matcher = PolicySpecConstants.ACTION_PATTERN.matcher( action );
+    Matcher matcher = PolicySpec.ACTION_PATTERN.matcher( action );
     if ( !matcher.matches( ) ) {
       throw new JSONException( "'" + action + "' is not a valid action" );
     }
-    if ( PolicySpecConstants.ALL_ACTION.equals( action ) ) {
-      return PolicySpecConstants.ALL_ACTION;
+    if ( PolicySpec.ALL_ACTION.equals( action ) ) {
+      return PolicySpec.ALL_ACTION;
     }
     String prefix = matcher.group( 1 ); // vendor
     String pattern = matcher.group( 2 ); // action pattern
-    for ( String defined : PolicySpecConstants.VENDOR_ACTIONS.get( prefix ) ) {
+    for ( String defined : PolicySpec.VENDOR_ACTIONS.get( prefix ) ) {
       if ( Pattern.matches( PatternUtils.toJavaPattern( pattern ), defined ) ) {
         return prefix;
       }
@@ -274,35 +274,35 @@ public class PolicyParser {
    */
   private String[] parseResourceArn( String resource ) throws JSONException {
     String[] parsed = new String[2];
-    Matcher matcher = PolicySpecConstants.ARN_PATTERN.matcher( resource );
+    Matcher matcher = PolicySpec.ARN_PATTERN.matcher( resource );
     if ( !matcher.matches( ) ) {
       throw new JSONException( "'" + resource + "' is not a valid ARN" );
     }
-    if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM ) != null ) {
-      parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM ) + ":" +
-          matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM_USERGROUP ).toLowerCase( );
-      parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_IAM_ID );
-    } else if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 ) != null ) {
-      String type = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
-      parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2 ) + ":" + type;
-      if ( !PolicySpecConstants.EC2_RESOURCES.contains( type ) ) {
+    if ( matcher.group( PolicySpec.ARN_PATTERNGROUP_IAM ) != null ) {
+      parsed[0] = matcher.group( PolicySpec.ARN_PATTERNGROUP_IAM ) + ":" +
+          matcher.group( PolicySpec.ARN_PATTERNGROUP_IAM_USERGROUP ).toLowerCase( );
+      parsed[1] = matcher.group( PolicySpec.ARN_PATTERNGROUP_IAM_ID );
+    } else if ( matcher.group( PolicySpec.ARN_PATTERNGROUP_EC2 ) != null ) {
+      String type = matcher.group( PolicySpec.ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
+      parsed[0] = matcher.group( PolicySpec.ARN_PATTERNGROUP_EC2 ) + ":" + type;
+      if ( !PolicySpec.EC2_RESOURCES.contains( type ) ) {
         throw new JSONException( "EC2 type '" + type + "' is not supported" );
       }
-      parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_EC2_ID ).toLowerCase( );
-    } else if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3 ) != null ) {
-      parsed[0] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3 ) + ":";
-      if ( matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_OBJECT ) != null ) {
-        parsed[0] += PolicySpecConstants.S3_RESOURCE_OBJECT;
-        parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_BUCKET ) +
-            matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_OBJECT );
+      parsed[1] = matcher.group( PolicySpec.ARN_PATTERNGROUP_EC2_ID ).toLowerCase( );
+    } else if ( matcher.group( PolicySpec.ARN_PATTERNGROUP_S3 ) != null ) {
+      parsed[0] = matcher.group( PolicySpec.ARN_PATTERNGROUP_S3 ) + ":";
+      if ( matcher.group( PolicySpec.ARN_PATTERNGROUP_S3_OBJECT ) != null ) {
+        parsed[0] += PolicySpec.S3_RESOURCE_OBJECT;
+        parsed[1] = matcher.group( PolicySpec.ARN_PATTERNGROUP_S3_BUCKET ) +
+            matcher.group( PolicySpec.ARN_PATTERNGROUP_S3_OBJECT );
       } else {
-        parsed[0] += PolicySpecConstants.S3_RESOURCE_BUCKET;
-        parsed[1] = matcher.group( PolicySpecConstants.ARN_PATTERNGROUP_S3_BUCKET );
+        parsed[0] += PolicySpec.S3_RESOURCE_BUCKET;
+        parsed[1] = matcher.group( PolicySpec.ARN_PATTERNGROUP_S3_BUCKET );
       }
 
     } else {
-      parsed[0] = PolicySpecConstants.ALL_RESOURCE;
-      parsed[1] = PolicySpecConstants.ALL_RESOURCE;
+      parsed[0] = PolicySpec.ALL_RESOURCE;
+      parsed[1] = PolicySpec.ALL_RESOURCE;
     }    
     return parsed;
   }
@@ -368,7 +368,7 @@ public class PolicyParser {
     if ( effect == null ) {
       throw new JSONException( "Effect can not be empty" );
     }
-    if ( effect != null && !PolicySpecConstants.EFFECTS.contains( effect ) ) {
+    if ( effect != null && !PolicySpec.EFFECTS.contains( effect ) ) {
       throw new JSONException( "Invalid Effect value: " + effect );
     }
   }

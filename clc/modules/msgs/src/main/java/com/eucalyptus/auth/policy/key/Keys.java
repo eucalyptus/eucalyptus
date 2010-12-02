@@ -21,18 +21,7 @@ public class Keys {
   public static final String EC2_VMNUMBER = "ec2:vmnumber";
   
   public static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
-  
-  static {
-    KEY_MAP.put( AWS_CURRENTTIME, CurrentTime.class );
     
-    KEY_MAP.put( S3_MAX_KEYS, MaxKeys.class );
-    
-    KEY_MAP.put( EC2_KEEPALIVE, KeeyAlive.class );
-    KEY_MAP.put( EC2_EXPIRATIONTIME, ExpirationTime.class );
-    
-    KEY_MAP.put( EC2_VMNUMBER, VmNumber.class );
-  }
-  
   public static Key getKeyInstance( Class<? extends Key> keyClass ) {
     try {
       Key key = keyClass.newInstance( );
@@ -48,10 +37,7 @@ public class Keys {
     }
   }
   
-  /*
-   * For testing.
-   */
-  public static boolean registerKey( String keyName, Class<? extends Key> keyClass ) {
+  public synchronized static boolean registerKey( String keyName, Class<? extends Key> keyClass ) {
     if ( KEY_MAP.containsKey( keyName ) ) {
       return false;
     }

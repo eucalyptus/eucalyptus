@@ -2,6 +2,7 @@ package com.eucalyptus.auth.policy.condition;
 
 import org.apache.log4j.Logger;
 
+@PolicyCondition( { Conditions.NUMERICNOTEQUALS, Conditions.NUMERICNOTEQUALS_S } )
 public class NumericNotEquals implements NumericConditionOp {
   
   private static final Logger LOG = Logger.getLogger( NumericEquals.class );

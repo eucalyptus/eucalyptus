@@ -218,7 +218,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   private List<Authorization> lookupGlobalAuthorizations( String resourceType, String accountId ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( Policies.lookupAccountGlobalAuthorizations( resourceType, accountId ) );
-    results.addAll( Policies.lookupAccountGlobalAuthorizations( PolicySpecConstants.ALL_RESOURCE, accountId ) );
+    results.addAll( Policies.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE, accountId ) );
     return results;
   }
   
@@ -233,12 +233,12 @@ public class PolicyEngineImpl implements PolicyEngine {
   private List<Authorization> lookupLocalAuthorizations( String resourceType, String userId ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( Policies.lookupAuthorizations( resourceType, userId ) );
-    results.addAll( Policies.lookupAuthorizations( PolicySpecConstants.ALL_RESOURCE, userId ) );
+    results.addAll( Policies.lookupAuthorizations( PolicySpec.ALL_RESOURCE, userId ) );
     return results;
   }
   
   private String getAction( Class<? extends BaseMessage> messageClass ) throws AuthException {
-    String action = PolicySpecConstants.MESSAGE_CLASS_TO_ACTION.get( messageClass );
+    String action = PolicySpec.MESSAGE_CLASS_TO_ACTION.get( messageClass );
     if ( action == null ) {
       throw new AuthException( "The message class does not map to a supported action: " + messageClass.getName( ) );
     }
@@ -246,7 +246,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   }
   
   private <T> String getResourceType( Class<T> resourceClass ) throws AuthException {
-    String resource = PolicySpecConstants.RESOURCE_CLASS_TO_STRING.get( resourceClass );
+    String resource = PolicySpec.RESOURCE_CLASS_TO_STRING.get( resourceClass );
     if ( resource == null ) {
       throw new AuthException( "Can not translate resource type: " + resourceClass.getName( ) );
     }
@@ -298,10 +298,10 @@ public class PolicyEngineImpl implements PolicyEngine {
   private List<Authorization> lookupQuotas( String resourceType, String userId, String accountId, boolean isAccountAdmin ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( Policies.lookupAccountGlobalAuthorizations( resourceType, accountId ) );
-    results.addAll( Policies.lookupAccountGlobalAuthorizations( PolicySpecConstants.ALL_RESOURCE, accountId ) );
+    results.addAll( Policies.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE, accountId ) );
     if ( !isAccountAdmin ) {
       results.addAll( Policies.lookupAuthorizations( resourceType, userId ) );
-      results.addAll( Policies.lookupAuthorizations( PolicySpecConstants.ALL_RESOURCE, userId ) );
+      results.addAll( Policies.lookupAuthorizations( PolicySpec.ALL_RESOURCE, userId ) );
     }
     return results;    
   }

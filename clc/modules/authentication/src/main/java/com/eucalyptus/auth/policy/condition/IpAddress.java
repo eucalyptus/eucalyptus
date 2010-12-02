@@ -4,6 +4,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.policy.key.Cidr;
 import com.eucalyptus.auth.policy.key.CidrParseException;
 
+@PolicyCondition( { Conditions.IPADDRESS } )
 public class IpAddress implements AddressConditionOp {
   
   private static final Logger LOG = Logger.getLogger( IpAddress.class );

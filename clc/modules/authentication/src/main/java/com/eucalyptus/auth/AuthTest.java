@@ -18,7 +18,6 @@ import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.images.Image;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -169,7 +168,7 @@ public class AuthTest {
         "{" +
           "'Effect':'Limit'," +
           "'Action':'*'," +
-          "'Resource':'arn:aws:ec2:::instance/*'," +
+          "'Resource':'arn:aws:ec2:::image/*'," +
           "'Condition':{" +
             "'NumericLessThanEquals':{" +
               "'ec2:test-quota':'10'" +
@@ -207,7 +206,7 @@ public class AuthTest {
     
     PolicyEngine engine = new PolicyEngineImpl( );
     engine.evaluateAuthorization( Image.class, "emi-12345678", user.getAccount( ).getAccountId( ) );
-    engine.evaluateQuota( 1, VmInstance.class, "" );
+    engine.evaluateQuota( 1, Image.class, "" );
   }
   
   private static void printAuths( List<? extends Authorization> auths ) throws AuthException {

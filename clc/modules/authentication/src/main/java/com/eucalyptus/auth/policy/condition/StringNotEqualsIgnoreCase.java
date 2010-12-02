@@ -1,5 +1,6 @@
 package com.eucalyptus.auth.policy.condition;
 
+@PolicyCondition( { Conditions.STRINGNOTEQUALSIGNORECASE, Conditions.STRINGNOTEQUALSIGNORECASE_S } )
 public class StringNotEqualsIgnoreCase implements StringConditionOp {
   
   @Override

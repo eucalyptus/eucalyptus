@@ -76,6 +76,8 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.BundleCallback;
@@ -99,6 +101,7 @@ import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
+@PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_INSTANCE )
 public class VmInstance implements HasName<VmInstance> {
   private static Logger LOG          = Logger.getLogger( VmInstance.class );
   public static String  DEFAULT_IP   = "0.0.0.0";

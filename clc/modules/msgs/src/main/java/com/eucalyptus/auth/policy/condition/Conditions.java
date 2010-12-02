@@ -73,48 +73,14 @@ public class Conditions {
   
   public static final Map<String, Class<? extends ConditionOp>> CONDITION_MAP = Maps.newHashMap( );
   
-  static {
-    CONDITION_MAP.put( STRINGEQUALS, StringEquals.class );
-    CONDITION_MAP.put( STRINGEQUALS_S, StringEquals.class );
-    CONDITION_MAP.put( STRINGNOTEQUALS, StringNotEquals.class );
-    CONDITION_MAP.put( STRINGNOTEQUALS_S, StringNotEquals.class );
-    CONDITION_MAP.put( STRINGEQUALSIGNORECASE, StringEqualsIgnoreCase.class );
-    CONDITION_MAP.put( STRINGEQUALSIGNORECASE_S, StringEqualsIgnoreCase.class );
-    CONDITION_MAP.put( STRINGNOTEQUALSIGNORECASE, StringNotEqualsIgnoreCase.class );
-    CONDITION_MAP.put( STRINGNOTEQUALSIGNORECASE_S, StringNotEqualsIgnoreCase.class );
-    CONDITION_MAP.put( STRINGLIKE, StringLike.class );
-    CONDITION_MAP.put( STRINGLIKE_S, StringLike.class );
-    CONDITION_MAP.put( STRINGNOTLIKE, StringNotLike.class );
-    CONDITION_MAP.put( STRINGNOTLIKE_S, StringNotLike.class );
-    CONDITION_MAP.put( NUMERICEQUALS, NumericEquals.class );
-    CONDITION_MAP.put( NUMERICEQUALS_S, NumericEquals.class );
-    CONDITION_MAP.put( NUMERICNOTEQUALS, NumericNotEquals.class );
-    CONDITION_MAP.put( NUMERICNOTEQUALS_S, NumericNotEquals.class );
-    CONDITION_MAP.put( NUMERICLESSTHAN, NumericLessThan.class );
-    CONDITION_MAP.put( NUMERICLESSTHAN_S, NumericLessThan.class );
-    CONDITION_MAP.put( NUMERICLESSTHANEQUALS, NumericLessThanEquals.class );
-    CONDITION_MAP.put( NUMERICLESSTHANEQUALS_S, NumericLessThanEquals.class );
-    CONDITION_MAP.put( NUMERICGREATERTHAN, NumericGreaterThan.class );
-    CONDITION_MAP.put( NUMERICGREATERTHAN_S, NumericGreaterThan.class );
-    CONDITION_MAP.put( NUMERICGREATERTHANEQUALS, NumericGreaterThanEquals.class );
-    CONDITION_MAP.put( NUMERICGREATERTHANEQUALS_S, NumericGreaterThanEquals.class );
-    CONDITION_MAP.put( DATEEQUALS, DateEquals.class );
-    CONDITION_MAP.put( DATEEQUALS_S, DateEquals.class );
-    CONDITION_MAP.put( DATENOTEQUALS, DateNotEquals.class );
-    CONDITION_MAP.put( DATENOTEQUALS_S, DateNotEquals.class );
-    CONDITION_MAP.put( DATELESSTHAN, DateLessThan.class );
-    CONDITION_MAP.put( DATELESSTHAN_S, DateLessThan.class );
-    CONDITION_MAP.put( DATELESSTHANEQUALS, DateLessThanEquals.class );
-    CONDITION_MAP.put( DATELESSTHANEQUALS_S, DateLessThanEquals.class );
-    CONDITION_MAP.put( DATEGREATERTHAN, DateGreaterThan.class );
-    CONDITION_MAP.put( DATEGREATERTHAN_S, DateGreaterThan.class );
-    CONDITION_MAP.put( DATEGREATERTHANEQUALS, DateGreaterThanEquals.class );
-    CONDITION_MAP.put( DATEGREATERTHANEQUALS_S, DateGreaterThanEquals.class );
-    CONDITION_MAP.put( BOOL, Bool.class );
-    CONDITION_MAP.put( IPADDRESS, IpAddress.class );
-    CONDITION_MAP.put( NOTIPADDRESS, NotIpAddress.class );
+  public synchronized static boolean registerCondition( String op, Class<? extends ConditionOp> conditionClass ) {
+    if ( CONDITION_MAP.containsKey( op ) ) {
+      return false;
+    }
+    CONDITION_MAP.put( op, conditionClass );
+    return true;
   }
-  
+
   public static ConditionOp getOpInstance( Class<? extends ConditionOp> opClass ) {
     try {
       ConditionOp op = opClass.newInstance( );

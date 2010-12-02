@@ -4,6 +4,7 @@ import java.text.ParseException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 
+@PolicyCondition( { Conditions.DATELESSTHANEQUALS, Conditions.DATELESSTHANEQUALS_S } )
 public class DateLessThanEquals implements DateConditionOp {
   
   private static final Logger LOG = Logger.getLogger( DateEquals.class );

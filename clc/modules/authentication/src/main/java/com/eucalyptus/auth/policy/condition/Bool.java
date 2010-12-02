@@ -1,5 +1,6 @@
 package com.eucalyptus.auth.policy.condition;
 
+@PolicyCondition( { Conditions.BOOL } )
 public class Bool implements ConditionOp {
   
   @Override

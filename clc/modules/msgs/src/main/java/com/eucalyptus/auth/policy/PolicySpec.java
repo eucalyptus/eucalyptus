@@ -4,14 +4,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.images.Image;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
-public class PolicySpecConstants {
+public class PolicySpec {
   
   public static final String VERSION = "Version";
   
@@ -398,15 +396,23 @@ public class PolicySpecConstants {
   // Map resource class type to resource string
   public static final Map<Class<? extends Object>, String> RESOURCE_CLASS_TO_STRING = Maps.newHashMap( );
   
-  static {
-    RESOURCE_CLASS_TO_STRING.put( Image.class, VENDOR_EC2 + ":" + EC2_RESOURCE_IMAGE );
-    RESOURCE_CLASS_TO_STRING.put( VmInstance.class, VENDOR_EC2 + ":" + EC2_RESOURCE_INSTANCE );
+  public static synchronized <T> boolean registerResourceType( Class<T> resourceClass, String resourceType ) {
+    if ( RESOURCE_CLASS_TO_STRING.containsKey( resourceClass ) ) {
+      return false;
+    }
+    RESOURCE_CLASS_TO_STRING.put( resourceClass, resourceType );
+    return true;
   }
   
   // Map message class type to action string
   public static final Map<Class<? extends BaseMessage>, String> MESSAGE_CLASS_TO_ACTION = Maps.newHashMap( );
   
-  static {
-    MESSAGE_CLASS_TO_ACTION.put( RunInstancesType.class, VENDOR_EC2 + ":" + EC2_RUNINSTANCES );
+  public static synchronized <T> boolean registerAction( Class<? extends BaseMessage> messageClass, String action ) {
+    if ( RESOURCE_CLASS_TO_STRING.containsKey( messageClass ) ) {
+      return false;
+    }
+    MESSAGE_CLASS_TO_ACTION.put( messageClass, action );
+    return true;
   }
+  
 }

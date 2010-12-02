@@ -3,16 +3,17 @@ package com.eucalyptus.auth.policy.key;
 import java.util.List;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.Contract;
-import com.eucalyptus.auth.policy.PolicySpecConstants;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.DateEquals;
 import com.eucalyptus.auth.policy.condition.DateGreaterThan;
 
+@PolicyKey( Keys.EC2_EXPIRATIONTIME )
 public class ExpirationTime extends ContractKey {
 
   private static final String KEY = Keys.EC2_EXPIRATIONTIME;
   
-  private static final String ACTION_RUNINSTANCES = PolicySpecConstants.VENDOR_EC2 + ":" + PolicySpecConstants.EC2_RUNINSTANCES;
+  private static final String ACTION_RUNINSTANCES = PolicySpec.VENDOR_EC2 + ":" + PolicySpec.EC2_RUNINSTANCES;
   
   @Override
   public void validateConditionType( Class<? extends ConditionOp> conditionClass ) throws JSONException {
