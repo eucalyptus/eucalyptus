@@ -193,6 +193,7 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /var/run/eucalyptus
 /usr/share/eucalyptus/add_key.pl
 /usr/share/eucalyptus/euca_ipt
+/usr/share/eucalyptus/getstats.pl
 /usr/share/eucalyptus/populate_arp.pl
 /usr/share/eucalyptus/euca_upgrade
 /usr/lib/eucalyptus/euca_rootwrap
@@ -214,6 +215,7 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/sbin/euca-deregister-storage-controller
 /usr/sbin/euca-deregister-walrus
 /usr/sbin/euca-describe-clusters
+/usr/sbin/euca-describe-components
 /usr/sbin/euca-describe-properties
 /usr/sbin/euca-describe-storage-controllers
 /usr/sbin/euca-describe-user-groups
@@ -229,6 +231,7 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/sbin/euca-register-walrus
 /usr/sbin/euca_admin/__init__.py
 /usr/sbin/euca_admin/clusters.py
+/usr/sbin/euca_admin/components.py
 /usr/sbin/euca_admin/generic.py
 /usr/sbin/euca_admin/groups.py
 /usr/sbin/euca_admin/properties.py
