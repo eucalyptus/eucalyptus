@@ -263,7 +263,7 @@ public class ComponentState {
     try {
       return this.stateMachine.startTransitionTo( this.stateMachine.getState( ) );
     } catch ( Throwable ex ) {
-      throw Exceptions.trace( "CHECK transition " + this.getState( ) + " for " + this.parent.toString( ) + "failed because: " + ex.getMessage( ), ex );
+      throw Exceptions.trace( "The transition from " + this.getState( ) + " to " + state + " for " + this.parent.toString( ) + "failed because: " + ex.getMessage( ), ex );
     }
   }
 
@@ -277,7 +277,7 @@ public class ComponentState {
   
   public void transitionSelf( ) {
     try {
-      this.transition( this.getState( ) ).fire( );
+      this.transitionNow( this.getState( ) );
     } catch ( Throwable ex ) {
       LOG.trace( ex , ex );
     }
