@@ -78,8 +78,9 @@ public class ServiceContext {
   }
   
   public static void dispatch( String dest, Object msg ) throws EucalyptusCloudException {
+    dest = ServiceContext.transformDestination( dest );
     try {
-      OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
+      OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( dest );
       if ( !endpoint.getConnector( ).isStarted( ) ) {
         endpoint.getConnector( ).start( );
       }
