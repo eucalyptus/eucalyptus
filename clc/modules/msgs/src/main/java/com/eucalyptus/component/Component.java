@@ -132,7 +132,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     public void transit( Component c ) {
       if ( c.isAvailableLocally( ) ) {
         try {
-          c.stateMachine.transition( Transition.this );
+          c.stateMachine.transitionNow( Transition.this );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
           throw new IllegalStateException( "Error while applying transtition " + this.name( ) + " to " + c.getName( ) + " currently in state "
