@@ -211,7 +211,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     Service service = new Service( this, config );
     this.setupService( service );
     if ( service.isLocal( ) && State.INITIALIZED.equals( this.getState( ) ) ) {
-      this.stateMachine.transition( Transition.LOADING );
+      this.stateMachine.transitionNow( Transition.LOADING );
     }
   }
   
@@ -244,7 +244,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   public void startService( ServiceConfiguration service ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     if ( service.isLocal( ) && this.inState( State.LOADED ) ) {
-      this.stateMachine.transition( Transition.STARTING );
+      this.stateMachine.transitionNow( Transition.STARTING );
       if ( this.inState( State.NOTREADY ) ) {
         Threads.lookup( Empyrean.class.getName( ) ).submit( new Runnable( ) {
           @Override
