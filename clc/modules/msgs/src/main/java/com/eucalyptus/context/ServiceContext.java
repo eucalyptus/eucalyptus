@@ -159,11 +159,13 @@ public class ServiceContext {
     try {
       ServiceContext.getContext( ).start( );
       endpointToService.clear( );
+      serviceToEndpoint.clear( );
       for ( Object o : ServiceContext.getContext( ).getRegistry( ).lookupServices( ) ) {
         Service s = ( Service ) o;
         for ( Object p : s.getInboundRouter( ).getEndpoints( ) ) {
           InboundEndpoint in = ( InboundEndpoint ) p;
           endpointToService.put( in.getEndpointURI( ).toString( ), s.getName( ) );
+          serviceToEndpoint.put( s.getName( ), in.getEndpointURI( ).toString( ) );
         }
       }
     } catch ( Throwable e ) {
