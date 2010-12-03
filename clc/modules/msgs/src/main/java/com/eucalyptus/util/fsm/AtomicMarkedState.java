@@ -1,5 +1,6 @@
 package com.eucalyptus.util.fsm;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -26,6 +27,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   
   private volatile ImmutableList<Transition<P, S, T>> immutableTransitions = null;
   private final Multimap<T, Transition<P, S, T>>      transitions          = Multimaps.newArrayListMultimap( );
+  private final Map<S, Map<S, Transition<P, S, T>>>     stateTransitions;
   
   private final AtomicMarkableReference<S>            state;
   private final AtomicLong                            id                   = new AtomicLong( 0l );
@@ -36,12 +38,18 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     this.startState = startState;
     this.name = String.format( "State-%s-%s", parent.getClass( ).getSimpleName( ), parent.getName( ) );
     this.parent = parent;
-    S[] states = this.startState.getDeclaringClass( ).getEnumConstants( );
+    final S[] states = this.startState.getDeclaringClass( ).getEnumConstants( );
+    this.stateTransitions = new HashMap<S,Map<S,Transition<P,S,T>>>(){{
+      for( S s : states ) {
+        this.put( s, new HashMap<S,Transition<P,S,T>>( ) );
+      }
+    }};
     this.immutableStates = ImmutableList.of( states );
     this.state = new AtomicMarkableReference<S>( this.startState, false );
     this.immutableTransitions = ImmutableList.copyOf( transitions );
     for ( Transition<P, S, T> t : transitions ) {
       this.transitions.put( t.getName( ), t );
+      this.stateTransitions.get( t.getFromState( ) ).put( t.getToState( ), t );
     }
     this.inStateListeners.putAll( inStateListeners );
     this.outStateListeners.putAll( outStateListeners );
@@ -49,7 +57,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   
   public ActiveTransition startTransition( T transitionName ) throws IllegalStateException {
     if ( !this.transitions.containsKey( transitionName ) ) {
-      throw new NoSuchElementException( transitionName.toString( ) + " known transitions: " + this.getTransitions( ) );
+      throw new NoSuchElementException( "No such transition named: " + transitionName.toString( ) + ". Known transitions: " + this.getTransitions( ) );
     } else {
       this.checkTransition( transitionName );
       final ActiveTransition tid = this.beforeLeave( transitionName );
@@ -62,6 +70,22 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     this.startTransition( transition ).fire( );
   }
   
+  public ActiveTransition startTransitionTo( S nextState ) {
+    if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
+      throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: " + this.getTransitions( ) );
+    } else {
+      T transitionName = this.stateTransitions.get( this.state.getReference( ) ).get( nextState ).getName( );
+      this.checkTransition( transitionName );
+      final ActiveTransition tid = this.beforeLeave( transitionName );
+      this.afterLeave( transitionName, tid );
+      return tid;
+    }
+  }
+
+  public void transitionTo( S nextState ) throws IllegalStateException {
+    this.startTransitionTo( nextState ).fire( );
+  }
+
   /**
    * @see com.eucalyptus.util.fsm.State#request(com.eucalyptus.util.fsm.TransitionRule)
    * @param rule

@@ -63,7 +63,9 @@ public class Exceptions {
     LOG.trace( ex, ex );
     return ex;
   }
-  public static void trace( String string, Throwable t ) {
-    trace( new Error( string, t ) );
+  public static Error trace( String string, Throwable t ) {
+    Error e;
+    trace( e = new Error( string, t ) );
+    return e;
   }
 }

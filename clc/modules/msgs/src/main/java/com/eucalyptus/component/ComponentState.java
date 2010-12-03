@@ -64,14 +64,17 @@
 package com.eucalyptus.component;
 
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
+import com.eucalyptus.util.fsm.AtomicMarkedState.ActiveTransition;
 import com.eucalyptus.util.fsm.SimpleTransitionListener;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 
@@ -248,12 +251,36 @@ public class ComponentState {
     }.newAtomicState( );
   }
 
-  public void transition( Transition transition ) {
+  public Callback.Completion transition( Transition transition ) throws IllegalStateException, NoSuchElementException {
     try {
-      this.stateMachine.startTransition( transition ).fire( );
-    } catch ( IllegalStateException ex ) {
-      Exceptions.eat( "Error occurred while trying to apply component state transition: " + transition, ex );
+      return this.stateMachine.startTransition( transition );
+    } catch ( Throwable ex ) {
+      throw Exceptions.trace( "Service transition " + transition + " for " + this.parent.toString( ) + "failed because: " + ex.getMessage( ), ex );
     }
   }
   
+  public Callback.Completion transition( State state ) throws IllegalStateException, NoSuchElementException {
+    try {
+      return this.stateMachine.startTransitionTo( this.stateMachine.getState( ) );
+    } catch ( Throwable ex ) {
+      throw Exceptions.trace( "CHECK transition " + this.getState( ) + " for " + this.parent.toString( ) + "failed because: " + ex.getMessage( ), ex );
+    }
+  }
+
+  public void transitionNow( Transition transition ) throws IllegalStateException, NoSuchElementException {
+    this.transition( transition ).fire( );
+  }
+
+  public void transitionNow( State nextState ) throws IllegalStateException, NoSuchElementException {
+    this.transition( nextState ).fire( );
+  }
+  
+  public void transitionSelf( ) {
+    try {
+      this.transition( this.getState( ) ).fire( );
+    } catch ( Throwable ex ) {
+      LOG.trace( ex , ex );
+    }
+  }
+
 }
