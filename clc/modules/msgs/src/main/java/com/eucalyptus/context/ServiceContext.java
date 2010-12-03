@@ -60,6 +60,7 @@ public class ServiceContext {
   private static AtomicReference<MuleContext>           context           = new AtomicReference<MuleContext>( null );
   private static AtomicBoolean                          ready             = new AtomicBoolean( false );
   private static ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<String, String>( );
+  private static ConcurrentNavigableMap<String, String> serviceToEndpoint = new ConcurrentSkipListMap<String, String>( );
   private static VMMessageDispatcherFactory             dispatcherFactory = new VMMessageDispatcherFactory( );
   private static AtomicReference<MuleClient>            client            = new AtomicReference<MuleClient>( null );
   private static final BootstrapException               failEx            = new BootstrapException(
@@ -78,7 +79,13 @@ public class ServiceContext {
   }
   
   public static void dispatch( String dest, Object msg ) throws EucalyptusCloudException {
-    dest = ServiceContext.transformDestination( dest );
+    if ( !( dest.startsWith( "vm://" ) && !serviceToEndpoint.containsKey( dest ) ) || dest == null ) {
+      throw new EucalyptusCloudException( "Failed to find destination: " + dest, new IllegalArgumentException( "No such endpoint: " + dest + " in endpoints="
+                                                                                                               + serviceToEndpoint.entrySet( ) ) );
+    }
+    if ( !dest.startsWith( "vm://" ) ) {
+      dest = serviceToEndpoint.get( dest );
+    }
     try {
       OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( dest );
       if ( !endpoint.getConnector( ).isStarted( ) ) {
@@ -96,7 +103,13 @@ public class ServiceContext {
   }
   
   public static <T> T send( String dest, Object msg ) throws EucalyptusCloudException {
-    dest = ServiceContext.transformDestination( dest );
+    if ( ( dest.startsWith( "vm://" ) && !endpointToService.containsKey( dest ) ) || dest == null ) {
+      throw new EucalyptusCloudException( "Failed to find destination: " + dest, new IllegalArgumentException( "No such endpoint: " + dest + " in endpoints="
+                                                                                                               + endpointToService.entrySet( ) ) );
+    }
+    if ( dest.startsWith( "vm://" ) ) {
+      dest = endpointToService.get( dest );
+    }
     MuleEvent context = RequestContext.getEvent( );
     try {
       MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
@@ -115,17 +128,6 @@ public class ServiceContext {
     } finally {
       RequestContext.setEvent( context );
     }
-  }
-  
-  private static String transformDestination( String dest ) throws EucalyptusCloudException {
-    if ( ( dest.startsWith( "vm://" ) && !endpointToService.containsKey( dest ) ) || dest == null ) {
-      throw new EucalyptusCloudException( "Failed to find destination: " + dest, new IllegalArgumentException( "No such endpoint: " + dest + " in endpoints="
-                                                                                                               + endpointToService.entrySet( ) ) );
-    }
-    if ( dest.startsWith( "vm://" ) ) {
-      dest = endpointToService.get( dest );
-    }
-    return dest;
   }
   
   public static void buildContext( List<ConfigResource> configs ) {
