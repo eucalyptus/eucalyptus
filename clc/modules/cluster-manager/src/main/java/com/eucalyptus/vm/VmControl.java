@@ -211,7 +211,11 @@ public class VmControl {
     if ( !request.isAdministrator( ) && !v.getOwnerId( ).equals( request.getUserId( ) ) ) {
       throw new EucalyptusCloudException( "Permission denied for vm: " + request.getInstanceId( ) );
     } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
-      throw new EucalyptusCloudException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
+      GetConsoleOutputResponseType reply = request.getReply( );
+      reply.setInstanceId( request.getInstanceId( ) );
+      reply.setTimestamp( new Date( ) );
+      reply.setOutput( v.getConsoleOutputString( ) );
+      ServiceContext.dispatch( "ReplyQueue", reply );
     } else {
       Cluster cluster = null;
       try {

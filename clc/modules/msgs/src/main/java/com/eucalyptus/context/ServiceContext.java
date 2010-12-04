@@ -37,6 +37,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
@@ -81,8 +82,7 @@ public class ServiceContext {
   public static void dispatch( String dest, Object msg ) throws EucalyptusCloudException {
     if ( !( dest.startsWith( "vm://" ) && !serviceToEndpoint.containsKey( dest ) ) || dest == null ) {
       dest = "vm://RequestQueue";
-    }
-    if ( !dest.startsWith( "vm://" ) ) {
+    } else if ( !dest.startsWith( "vm://" ) ) {
       dest = serviceToEndpoint.get( dest );
     }
     try {
@@ -94,10 +94,12 @@ public class ServiceContext {
       MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
                                                         ServiceContext.getContext( ) );
       MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
+      LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException(), 3 ) );
       dispatcherFactory.create( endpoint ).dispatch( muleEvent );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
-      throw new EucalyptusCloudException( "Failed to dispatch request to service " + dest + " for message type: " + msg.getClass( ).getSimpleName( ) + " because of an error: " + ex.getMessage( ), ex ); 
+      LOG.error( ex, ex );
+      throw new EucalyptusCloudException( "Failed to dispatch request to service " + dest + " for message type: " + msg.getClass( ).getSimpleName( )
+                                          + " because of an error: " + ex.getMessage( ), ex );
     }
   }
   
@@ -111,6 +113,7 @@ public class ServiceContext {
     }
     MuleEvent context = RequestContext.getEvent( );
     try {
+      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException(), 3 ) );
       MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
       
       if ( reply.getExceptionPayload( ) != null ) {
