@@ -274,7 +274,7 @@ public class SystemBootstrapper {
     		banner += "\n[8m-----------------[0;10m[1m Version: " + singleton.getVersion( ) + "\n";
     		banner += "\n[8m-----------------[0;10m[1m System Bootstrap Configuration: \n";
     		for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-          banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "\n", "\n" + prefix + stage.name() + SEP ).replaceAll( "^\\w* ", "" );
+          banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "\n", "\n" + "  " + stage.name() + SEP ).replaceAll( "^\\w* ", "" );
         }
     		banner += "\n[8m-----------------[0;10m[1m Component Bootstrap Configuration: \n";
     		for( Component c : Components.list( ) ) {
