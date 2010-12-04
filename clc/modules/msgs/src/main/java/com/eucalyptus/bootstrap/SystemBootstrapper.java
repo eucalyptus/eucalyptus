@@ -227,7 +227,8 @@ public class SystemBootstrapper {
   public static native void hello( );
 
   private static String printBanner( ) {
-    String prefix = "\n[8m-----------------------------------------------------[0;10m[1m";
+//    String prefix = "\n[8m-----------------------------------------------------[0;10m[1m";
+    String prefix = "\n\t";
     String banner = "[8m-----------------[0;10m[1m._______________________________________________________.[0;10m\n" + 
     		"[8m-----------------[0;10m[1m|#######################################################|[0;10m\n" + 
     		"[8m----------------.[0;10m[1m|#[0;10m[8m                                                  [0;10m[1m.____[0;10m,[8m+[0;10m\n" + 
@@ -274,7 +275,7 @@ public class SystemBootstrapper {
     		banner += "\n[8m-----------------[0;10m[1m Version: " + singleton.getVersion( ) + "\n";
     		banner += "\n[8m-----------------[0;10m[1m System Bootstrap Configuration: \n";
     		for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-          banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "\n", "\n" + "  " + stage.name() + SEP ).replaceAll( "^\\w* ", "" );
+          banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "\n", prefix + stage.name() + SEP ).replaceAll( "^\\w* ", "" );
         }
     		banner += "\n[8m-----------------[0;10m[1m Component Bootstrap Configuration: \n";
     		for( Component c : Components.list( ) ) {
