@@ -128,7 +128,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   private final String                               name;
   private final com.eucalyptus.bootstrap.Component   component;
-  private final Configuration                        configuration;
+  private final ComponentConfiguration                        configuration;
   private final AtomicBoolean                        enabled      = new AtomicBoolean( false );
   private final AtomicBoolean                        local        = new AtomicBoolean( false );
   private final Map<String, Service>                 services     = Maps.newConcurrentHashMap( );
@@ -147,9 +147,9 @@ public class Component implements ComponentInformation, HasName<Component> {
       }
     }
     if ( configFile != null ) {
-      this.configuration = new Configuration( this, configFile );
+      this.configuration = new ComponentConfiguration( this, configFile );
     } else {
-      this.configuration = new Configuration( this );
+      this.configuration = new ComponentConfiguration( this );
     }
     if ( ServiceBuilderRegistry.get( this.component ) != null ) {
       this.builder = ServiceBuilderRegistry.get( this.component );
@@ -316,7 +316,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.name;
   }
   
-  public Configuration getConfiguration( ) {
+  public ComponentConfiguration getConfiguration( ) {
     return this.configuration;
   }
   
@@ -439,8 +439,8 @@ public class Component implements ComponentInformation, HasName<Component> {
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s name=%s enabled=%s local=%s state=%s builder=%s\nservices=%s\nconfiguration=%s", this.component,
-                          this.name, this.enabled, this.local, this.getState( ), this.builder, this.services, this.configuration );
+    return String.format( "Component %s name=%s enabled=%s local=%s state=%s builder=%s\n", this.component,
+                          this.name, this.enabled, this.local, this.getState( ), this.builder );
   }
   
   /**
