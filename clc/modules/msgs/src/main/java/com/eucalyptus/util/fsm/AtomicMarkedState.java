@@ -1,5 +1,6 @@
 package com.eucalyptus.util.fsm;
 
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -91,12 +92,13 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    * @see com.eucalyptus.util.fsm.State#request(com.eucalyptus.util.fsm.TransitionRule)
    * @param rule
    * @return
+   * @throws ExistingTransitionException 
    */
-  protected ActiveTransition request( T transitionName ) {
+  protected ActiveTransition request( T transitionName ) throws ExistingTransitionException {
     Transition<P, S, T> transition = lookupTransition( transitionName );
     TransitionRule<S, T> r = transition.getRule( );
     if ( !this.currentTransition.compareAndSet( null, new ActiveTransition( this.id.incrementAndGet( ), transition ) ) ) {
-      throw new IllegalStateException( "There is a currently pending transition: " + this.toString( ) );
+      throw new ExistingTransitionException( "There is a currently pending transition: " + this.toString( ) );
     } else if ( !this.state.compareAndSet( r.getFromState( ), r.getToState( ), r.getFromStateMark( ), true ) ) {
       this.id.decrementAndGet( );
       this.currentTransition.set( null );
@@ -127,7 +129,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    */
   private void commit( ) {
     if ( this.currentTransition.get( ) == null ) {
-      Exceptions.trace( new IllegalStateException( "There is no currently pending transition: " + this.toString( ) ) );
+      Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
       ActiveTransition tr = this.currentTransition.get( );
       if ( !this.state.compareAndSet( tr.getToState( ), tr.getToState( ), true, tr.getToStateMark( ) ) ) {
@@ -142,7 +144,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   
   private void error( ) {
     if ( this.currentTransition.get( ) == null ) {
-      Exceptions.trace( new IllegalStateException( "There is no currently pending transition: " + this.toString( ) ) );
+      Exceptions.trace( new IllegalStateException( "error() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
       ActiveTransition tr = this.currentTransition.get( );
       if ( !this.state.compareAndSet( tr.getToState( ), tr.getErrorState( ), true, tr.getErrorStateMark( ) ) ) {
@@ -160,7 +162,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       if( this.state.isMarked( ) ) {
         this.state.set( this.state.getReference( ), false );
       }
-      Exceptions.trace( new IllegalStateException( "There is no currently pending transition: " + this.toString( ) ) );
+      Exceptions.trace( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
       ActiveTransition tr = this.currentTransition.get( );
       if ( !this.state.compareAndSet( tr.getToState( ), tr.getFromState( ), true, tr.getFromStateMark( ) ) ) {
@@ -252,7 +254,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    * @return
    */
   public String toString( ) {
-    return String.format( "State:name=%s:state=%s:mark=%s", this.name, this.state.getReference( ), this.state.isMarked( ) );
+    ActiveTransition t = this.currentTransition.get( );
+    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), t != null ? t.toString( ) : "idle" );
   }
   
   /**
