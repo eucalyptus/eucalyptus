@@ -29,7 +29,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   
   private volatile ImmutableList<Transition<P, S, T>> immutableTransitions = null;
   private final Multimap<T, Transition<P, S, T>>      transitions          = Multimaps.newArrayListMultimap( );
-  private final Map<S, Map<S, Transition<P, S, T>>>     stateTransitions;
+  private final Map<S, Map<S, Transition<P, S, T>>>   stateTransitions;
   
   private final AtomicMarkableReference<S>            state;
   private final AtomicLong                            id                   = new AtomicLong( 0l );
@@ -41,11 +41,13 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     this.name = String.format( "State-%s-%s", parent.getClass( ).getSimpleName( ), parent.getName( ) );
     this.parent = parent;
     final S[] states = this.startState.getDeclaringClass( ).getEnumConstants( );
-    this.stateTransitions = new HashMap<S,Map<S,Transition<P,S,T>>>(){{
-      for( S s : states ) {
-        this.put( s, new HashMap<S,Transition<P,S,T>>( ) );
+    this.stateTransitions = new HashMap<S, Map<S, Transition<P, S, T>>>( ) {
+      {
+        for ( S s : states ) {
+          this.put( s, new HashMap<S, Transition<P, S, T>>( ) );
+        }
       }
-    }};
+    };
     this.immutableStates = ImmutableList.of( states );
     this.state = new AtomicMarkableReference<S>( this.startState, false );
     this.immutableTransitions = ImmutableList.copyOf( transitions );
@@ -74,7 +76,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   
   public ActiveTransition startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
     if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
-      throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: " + this.getTransitions( ) );
+      throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: "
+                                        + this.getTransitions( ) );
     } else {
       T transitionName = this.stateTransitions.get( this.state.getReference( ) ).get( nextState ).getName( );
       this.checkTransition( transitionName );
@@ -83,16 +86,16 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       return tid;
     }
   }
-
+  
   public void transitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
     this.startTransitionTo( nextState ).fire( );
   }
-
+  
   /**
    * @see com.eucalyptus.util.fsm.State#request(com.eucalyptus.util.fsm.TransitionRule)
    * @param rule
    * @return
-   * @throws ExistingTransitionException 
+   * @throws ExistingTransitionException
    */
   protected ActiveTransition request( T transitionName ) throws ExistingTransitionException {
     Transition<P, S, T> transition = lookupTransition( transitionName );
@@ -159,7 +162,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   
   private void rollback( ) {
     if ( this.currentTransition.get( ) == null ) {
-      if( this.state.isMarked( ) ) {
+      if ( this.state.isMarked( ) ) {
         this.state.set( this.state.getReference( ), false );
       }
       Exceptions.trace( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
@@ -257,7 +260,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    */
   public String toString( ) {
     ActiveTransition t = this.currentTransition.get( );
-    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), t != null ? t.toString( ) : "idle" );
+    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), t != null
+      ? t.toString( )
+      : "idle" );
   }
   
   /**
@@ -271,25 +276,43 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     private final Long                id;
     private final String              name;
     private final Long                startTime;
+    private Long                      endTime;
     private final Transition<P, S, T> transition;
-    private final Throwable           stackTrace;
+    private final Throwable           startStackTrace;
+    private final Throwable           endStackTrace = new RuntimeException( );
     
     public void fire( ) {
       try {
         this.transition.enter( AtomicMarkedState.this.parent );
         try {
+          this.teardown( );
           AtomicMarkedState.this.commit( );
         } catch ( IllegalStateException t ) {
           LOG.trace( t, t );
         }
       } catch ( Throwable t ) {
         LOG.error( t, t );
+        this.teardown( );
         AtomicMarkedState.this.rollback( );
       }
       try {
         this.transition.after( AtomicMarkedState.this.parent );
       } catch ( Throwable t ) {
         LOG.error( t, t );
+      }
+    }
+
+    private void teardown( ) {
+      if ( LogLevels.DEBUG ) {
+        RuntimeException ex = new RuntimeException();
+        if ( this.endTime != 0 ) {
+          LOG.error( "Transition being committed for a second time!" );
+          LOG.error( "FIRST: " + Exceptions.filterStackTraceElements( this.endStackTrace ), this.endStackTrace );
+          LOG.error( "SECOND: " + Exceptions.filterStackTraceElements( ex ), ex );
+        } else {
+          this.endTime = System.nanoTime( );
+          this.endStackTrace.setStackTrace( ( StackTraceElement[] ) Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( ) );
+        }
       }
     }
     
@@ -300,12 +323,13 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     public ActiveTransition( Long id, Transition<P, S, T> transition ) {
       this.id = id;
       this.startTime = System.nanoTime( );
+      this.endTime = 0l;
       this.transition = transition;
       this.name = AtomicMarkedState.this.getName( ) + "-" + this.transition.getName( ) + "-" + id;
-      if( LogLevels.DEBUG ) {
-        this.stackTrace = Exceptions.filterStackTrace( new RuntimeException( ) );
+      if ( LogLevels.DEBUG ) {
+        this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ) );
       } else {
-        this.stackTrace = null;
+        this.startStackTrace = null;
       }
     }
     
@@ -352,10 +376,10 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     public String toString( ) {
       StringBuilder sb = new StringBuilder( );
       sb.append( "ActiveTransition name=" ).append( this.name ).append( "id=" ).append( this.id ).append( "startTime=" ).append( this.startTime ).append( "transition=" ).append( this.transition.toString( ) );
-      StackTraceElement[] stes = this.stackTrace.getStackTrace( );
-      if( this.stackTrace != null ) {
-        for( int i = 0; /*i < 7 &&*/ i < stes.length; i++ ) {
-          sb.append( "\nActiveTransition name=" ).append( this.name ).append( "id=" ).append( this.id ).append( stes[ i ].toString( ) ); 
+      StackTraceElement[] stes = this.startStackTrace.getStackTrace( );
+      if ( this.startStackTrace != null ) {
+        for ( int i = 0; /*i < 7 &&*/i < stes.length; i++ ) {
+          sb.append( "\nActiveTransition name=" ).append( this.name ).append( "id=" ).append( this.id ).append( stes[i].toString( ) );
         }
       }
       return sb.toString( );

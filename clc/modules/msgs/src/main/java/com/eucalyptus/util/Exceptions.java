@@ -28,6 +28,10 @@ public class Exceptions {
     return ex;
   }
   
+  public static List<StackTraceElement> filterStackTraceElements( Throwable ex ) {
+    return Exceptions.filterStackTraceElements( ex, DEFAULT_FILTER_MAX_DEPTH, DEFAULT_FILTER_PREFIXES, DEFAULT_FILTER_MATCHES );
+  }
+  
   public static List<StackTraceElement> filterStackTraceElements( Throwable ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
     StringBuilder sb = new StringBuilder( );
     List<StackTraceElement> filteredStes = Lists.newArrayList( );
