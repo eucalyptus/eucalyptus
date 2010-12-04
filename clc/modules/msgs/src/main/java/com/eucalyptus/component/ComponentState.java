@@ -76,7 +76,7 @@ import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.AtomicMarkedState.ActiveTransition;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
-import com.eucalyptus.util.fsm.SimpleTransitionListener;
+import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 
 public class ComponentState {
@@ -99,7 +99,7 @@ public class ComponentState {
   }
   
   private AtomicMarkedState<Component, State, Transition> buildStateMachine( ) {
-    final SimpleTransitionListener<Component> loadTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> loadTransition = new TransitionAction<Component>( ) {
       
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
@@ -115,7 +115,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> startTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> startTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -133,7 +133,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> enableTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> enableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -157,7 +157,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> disableTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> disableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -173,7 +173,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> stopTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> stopTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -191,7 +191,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> checkTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> checkTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -221,7 +221,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> destroyTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> destroyTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
