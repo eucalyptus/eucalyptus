@@ -457,17 +457,6 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   /**
-   * @param transitionName
-   * @return
-   * @throws IllegalStateException
-   * @throws ExistingTransitionException
-   * @see com.eucalyptus.util.fsm.AtomicMarkedState#startTransition(java.lang.Enum)
-   */
-  public AtomicMarkedState<Cluster, State, Transition>.ActiveTransition startTransition( Transition transitionName ) throws IllegalStateException, ExistingTransitionException {
-    return this.stateMachine.startTransition( transitionName );
-  }
-  
-  /**
    * @param msgClass
    * @param nextState
    * @return
