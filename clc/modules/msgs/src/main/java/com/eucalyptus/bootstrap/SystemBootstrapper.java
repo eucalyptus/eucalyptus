@@ -278,7 +278,7 @@ public class SystemBootstrapper {
     		for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
           banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "\n", prefix + stage.name() + SEP ).replaceAll( "^\\w* ", "" );
         }
-    		banner += "\n[8m-----------------[0;10m[1m Component Bootstrap Configuration: \n";
+    		banner += String.format( headerFormat, "Component Bootstrap Configuration");
     		for( Component c : Components.list( ) ) {
     		  if( c.isAvailableLocally( ) && c.isLocal( ) ) {
     		    for( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
@@ -286,7 +286,7 @@ public class SystemBootstrapper {
     		    }
     		  }
     		}
-        banner += "\n[8m-----------------[0;10m[1m Local Services: \n"; 
+    		banner += String.format( headerFormat, "Local Services"); 
         for( Component c : Components.list( ) ) {
           if( c.isAvailableLocally( ) ) {
             banner += prefix + c.getName( ) + SEP + c.getBuilder( ).toString( );
@@ -299,7 +299,7 @@ public class SystemBootstrapper {
             }
           }
         }
-        banner += "\n[8m-----------------[0;10m[1m Detected Interfaces: \n";
+        banner += String.format( headerFormat, "Detected Interfaces" );
         for( NetworkInterface iface : NetworkUtil.getNetworkInterfaces( ) ) {
           banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING  );
           for( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
