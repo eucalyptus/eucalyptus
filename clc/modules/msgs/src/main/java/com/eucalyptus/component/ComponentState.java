@@ -268,7 +268,7 @@ public class ComponentState {
   
   public Callback.Completion transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
-      return this.stateMachine.startTransitionTo( this.stateMachine.getState( ) );
+      return this.stateMachine.startTransitionTo( state );
     } catch ( IllegalStateException ex ) {
       throw Exceptions.trace( ex );
     } catch ( NoSuchElementException ex ) {
@@ -288,7 +288,7 @@ public class ComponentState {
     }
   }
 
-  public void transitionNow( State nextState ) throws IllegalStateException, NoSuchElementException{
+  public void transitionNow( State nextState ) throws IllegalStateException, NoSuchElementException {
     try {
       this.transition( nextState ).fire( );
     } catch ( ExistingTransitionException ex ) {
