@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
@@ -263,6 +264,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     private final String              name;
     private final Long                startTime;
     private final Transition<P, S, T> transition;
+    private final Throwable           stackTrace;
     
     public void fire( ) {
       try {
@@ -292,6 +294,11 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       this.startTime = System.nanoTime( );
       this.transition = transition;
       this.name = AtomicMarkedState.this.getName( ) + "-" + this.transition.getName( ) + "-" + id;
+      if( LogLevels.DEBUG ) {
+        this.stackTrace = new RuntimeException( );
+      } else {
+        this.stackTrace = null;
+      }
     }
     
     public final Long getId( ) {
@@ -335,7 +342,15 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
     
     public String toString( ) {
-      return String.format( "ActiveTransition:name=%s:id=%s:startTime=%s:transition=%s", this.name, this.id, this.startTime, this.transition );
+      StringBuilder sb = new StringBuilder( );
+      sb.append( "ActiveTransition name=" ).append( this.name ).append( "id=" ).append( this.id ).append( "startTime=" ).append( this.startTime ).append( "transition=" ).append( this.transition.toString( ) );
+      StackTraceElement[] stes = this.stackTrace.getStackTrace( );
+      if( this.stackTrace != null ) {
+        for( int i = 0; /*i < 7 &&*/ i < stes.length; i++ ) {
+          sb.append( "\nActiveTransition name=" ).append( this.name ).append( "id=" ).append( this.id ).append( stes[ i ].toString( ) ); 
+        }
+      }
+      return sb.toString( );
     }
   }
 }

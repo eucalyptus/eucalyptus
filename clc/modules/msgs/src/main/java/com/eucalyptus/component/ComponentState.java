@@ -255,7 +255,7 @@ public class ComponentState {
     try {
       return this.stateMachine.startTransition( transition );
     } catch ( Throwable ex ) {
-      throw Exceptions.trace( "Service transition " + transition + " for " + this.parent.toString( ) + "failed because: " + ex.getMessage( ), ex );
+      throw Exceptions.trace( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex );
     }
   }
   
@@ -263,7 +263,7 @@ public class ComponentState {
     try {
       return this.stateMachine.startTransitionTo( this.stateMachine.getState( ) );
     } catch ( Throwable ex ) {
-      throw Exceptions.trace( "The transition from " + this.getState( ) + " to " + state + " for " + this.parent.toString( ) + "failed because: " + ex.getMessage( ), ex );
+      throw Exceptions.trace( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex );
     }
   }
 
