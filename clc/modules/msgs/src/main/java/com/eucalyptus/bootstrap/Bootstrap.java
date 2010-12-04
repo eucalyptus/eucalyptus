@@ -481,7 +481,9 @@ public class Bootstrap {
 
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
     Iterables.all( Stage.list( ), loadConfigs );
-    Iterables.all( Components.list( ), Component.Transition.INITIALIZING.getCallback( ) );
+    for( Component c : Components.list( ) ) {
+      Component.Transition.INITIALIZING.transit( c );
+    }
 
     LOG.info( LogUtil.header( "Initial component configuration:" ) );
     Iterables.all( Components.list( ), Components.configurationPrinter( ) );

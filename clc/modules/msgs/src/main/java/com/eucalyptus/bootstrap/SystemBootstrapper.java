@@ -187,13 +187,17 @@ public class SystemBootstrapper {
     }
     /** ASAP:FIXME:GRZE **/
     for( Component c : Components.list( ) ) {
-      if( Components.lookup( "eucalyptus" ).isLocal( ) && c.getPeer( ).isCloudLocal( ) ) {
+      if( ( Components.lookup( "eucalyptus" ).isLocal( ) && c.getPeer( ).isCloudLocal( ) || ( c.getPeer( ).isAlwaysLocal( ) ) ) ) {
         Component.Transition.STARTING.transit( c );
-      } else if( c.getPeer( ).isAlwaysLocal( ) ) {
-        Component.Transition.STARTING.transit( c );
+        Component.Transition.READY_CHECK.transit( c );
+        Component.Transition.ENABLING.transit( c );
       } 
     }
-//    SystemBootstrapper.printBanner( );
+    try {
+      SystemBootstrapper.printBanner( );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+    }
     return true;
   }
   

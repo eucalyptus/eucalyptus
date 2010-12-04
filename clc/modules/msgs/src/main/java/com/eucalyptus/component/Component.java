@@ -111,24 +111,6 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   public enum Transition {
     INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING;
-    /**
-     * @see Component#stateMachine
-     * @see com.eucalyptus.util.fsm.AtomicMarkedState#transition(java.lang.Enum)
-     * @return
-     */
-    public Callback.Success<Component> getCallback( ) {
-      return new Callback.Success<Component>( ) {
-        @Override
-        public void fire( Component t ) {
-          try {
-            Transition.this.transit( t );
-          } catch ( IllegalStateException ex ) {
-            LOG.debug( ex );
-          }
-        }
-      };
-    }
-    
     public void transit( Component c ) {
       if ( c.isAvailableLocally( ) ) {
         try {
