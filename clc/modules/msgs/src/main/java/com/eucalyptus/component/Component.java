@@ -246,7 +246,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     if ( service.isLocal( ) && this.inState( State.LOADED ) ) {
       this.stateMachine.transitionNow( Transition.STARTING );
       if ( this.inState( State.NOTREADY ) ) {
-        this.stateMachine.transitionNow( Transition.READY_CHECK );
+        this.stateMachine.transitionNow( State.DISABLED );
       }
     } else {
       this.builder.fireStart( service );
