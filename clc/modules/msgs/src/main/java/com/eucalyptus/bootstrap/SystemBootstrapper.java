@@ -89,10 +89,9 @@ import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
  * Java entry point from eucalyptus-bootstrap
  */
 public class SystemBootstrapper {
-  /**
-   * 
-   */
   private static final String SEP = " -- ";
+  static { System.setProperty( "euca.log.level", "TRACE" ); }
+
 
   private static Logger               LOG          = Logger.getLogger( SystemBootstrapper.class );
   
