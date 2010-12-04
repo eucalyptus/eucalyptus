@@ -112,6 +112,7 @@ import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.SimpleTransitionListener;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
+import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.TransitionListener;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -137,8 +138,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public enum State {
     DISABLED, /* just like down, but is explicitly requested */
     DOWN, /* cluster either down, unreachable, or responds with errors */
-    AUTHENTICATING, STARTING, /* init sequence: CERTS -> RESOURCES, NETWORKS, INSTANCES, ADDRESSES, INSTANCES_2, ADDRESSES_2, LOGS, MSG_QUEUE*/
-    RUNNING, /* available */
+    AUTHENTICATING, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS, 
+    RUNNING, RUNNING1, RUNNING2, RUNNING3, /* available */
   }
   
   public enum Transition {
@@ -150,8 +151,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
 //    NETWORK_ERROR, /* any -> DOWN: error reaching cluster host */
 //    CONFIG_ERROR, /* any -> DOWN: configuration error on the cluster */
     INIT_CERTS, /* AUTHENTICATING -> STARTING */
-    INIT_STATE, /* STARTING -> RUNNING */
-    UPDATE, /* RUNNING -> RUNNING */
+    INIT_STATE, INIT_RSRC, INIT_NET, INIT_VMS, INIT_ADDRS, INIT_VMS2, /* STARTING -> RUNNING */
+    UPDATE, RUNNING_ADDRS, RUNNING_VMS, RUNNING_NET, RUNNING_RSC, /* RUNNING -> RUNNING */
   }
   
   public Cluster( ClusterConfiguration configuration, ClusterCredentials credentials ) {
@@ -161,7 +162,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
     this.credentials = credentials;
-    this.threadFactory = Threads.lookup( "cluster-"+this.getName( ) );
+    this.threadFactory = Threads.lookup( "cluster-" + this.getName( ) );
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.DOWN ) {
       {
         //when entering state DOWN
@@ -188,17 +189,17 @@ public class Cluster implements HasName<Cluster>, EventListener {
         on( Transition.INIT_CERTS )//
         .from( State.AUTHENTICATING ).to( State.STARTING ).error( State.DOWN ).run( newRefresh( ClusterCertsCallback.class ) );
         
-        on( Transition.INIT_STATE )//
-        .from( State.STARTING ).to( State.RUNNING ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ),
-                                                                             newRefresh( NetworkStateCallback.class ),
-                                                                             newRefresh( VmStateCallback.class ),
-                                                                             newRefresh( PublicAddressStateCallback.class ),
-                                                                             newRefresh( VmStateCallback.class ), newRefresh( PublicAddressStateCallback.class ) );
+        on( Transition.INIT_RSRC ).from( State.STARTING ).to( State.STARTING_RESOURCES ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
+        on( Transition.INIT_NET ).from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
+        on( Transition.INIT_VMS ).from( State.STARTING_NET ).to( State.STARTING_VMS ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
+        on( Transition.INIT_ADDRS ).from( State.STARTING_VMS ).to( State.STARTING_ADDRS ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
+        on( Transition.INIT_VMS2 ).from( State.STARTING_ADDRS ).to( State.STARTING_VMS2 ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
+        on( Transition.INIT_VMS2 ).from( State.STARTING_VMS2 ).to( State.RUNNING ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
         
-        on( Transition.UPDATE )//
-        .from( State.RUNNING ).to( State.RUNNING ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ),
-                                                                            newRefresh( NetworkStateCallback.class ),
-                                                                            newRefresh( VmStateCallback.class ), newRefresh( PublicAddressStateCallback.class ) );
+        on( Transition.RUNNING_RSC ).from( State.RUNNING ).to( State.RUNNING1 ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
+        on( Transition.RUNNING_NET ).from( State.RUNNING1 ).to( State.RUNNING2 ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
+        on( Transition.RUNNING_VMS ).from( State.RUNNING2 ).to( State.RUNNING3 ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
+        on( Transition.RUNNING_ADDRS ).from( State.RUNNING3 ).to( State.RUNNING ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
         
         on( Transition.ENABLE ).from( State.DISABLED ).to( State.DOWN ).noop( );
         
@@ -212,11 +213,11 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   public void transitionIfSafe( Transition transition ) {
     try {
-      this.stateMachine.transition( transition );
+      this.stateMachine.transitionNow( transition );
     } catch ( IllegalStateException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     } catch ( ExistingTransitionException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
   }
   
@@ -262,6 +263,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
       }
     }
   }
+  
   public void updateNodeInfo( List<NodeType> nodeTags ) {
     NodeInfo ret = null;
     for ( NodeType node : nodeTags )
@@ -458,21 +460,20 @@ public class Cluster implements HasName<Cluster>, EventListener {
    * @param transitionName
    * @return
    * @throws IllegalStateException
-   * @throws ExistingTransitionException 
+   * @throws ExistingTransitionException
    * @see com.eucalyptus.util.fsm.AtomicMarkedState#startTransition(java.lang.Enum)
    */
   public AtomicMarkedState<Cluster, State, Transition>.ActiveTransition startTransition( Transition transitionName ) throws IllegalStateException, ExistingTransitionException {
     return this.stateMachine.startTransition( transitionName );
   }
   
-  
   /**
    * @param msgClass
    * @param nextState
    * @return
    */
-  private TransitionListener<Cluster> newRefresh( final Class msgClass ) {
-    return new SimpleTransitionListener<Cluster>( ) {
+  private TransitionAction<Cluster> newRefresh( final Class msgClass ) {
+    return new TransitionAction<Cluster>( ) {
       private final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( msgClass, Cluster.this );
       
       @Override
@@ -491,13 +492,13 @@ public class Cluster implements HasName<Cluster>, EventListener {
         };
         //TODO: retry.
         try {
-          if( ClusterLogMessageCallback.class.isAssignableFrom( msgClass ) ) {
+          if ( ClusterLogMessageCallback.class.isAssignableFrom( msgClass ) ) {
             Callbacks.newLogRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
           } else {
             Callbacks.newClusterRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
           }
         } catch ( ExecutionException e ) {
-          if( e.getCause( ) instanceof FailedRequestException ) {
+          if ( e.getCause( ) instanceof FailedRequestException ) {
             LOG.error( e.getCause( ).getMessage( ) );
           } else if ( e.getCause( ) instanceof ConnectionException || e.getCause( ) instanceof IOException ) {
             //REVIEW: this is LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) ); 
@@ -505,7 +506,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
             LOG.error( e, e );
           }
         } catch ( InterruptedException e ) {
-          LOG.error( e , e );
+          LOG.error( e, e );
         }
       }
     };
@@ -520,26 +521,26 @@ public class Cluster implements HasName<Cluster>, EventListener {
       try {
         switch ( this.stateMachine.getState( ) ) {
           case DOWN:
-            this.stateMachine.transition( Transition.START );
+            this.stateMachine.transitionNow( Transition.START );
             break;
           case AUTHENTICATING:
-            this.stateMachine.transition( Transition.INIT_CERTS );
+            this.stateMachine.transitionNow( Transition.INIT_CERTS );
             break;
           case STARTING:
-            this.stateMachine.transition( Transition.INIT_STATE );
+            this.stateMachine.transitionNow( Transition.INIT_STATE );
             break;
           case RUNNING:
-            this.stateMachine.transition( Transition.UPDATE );
+            this.stateMachine.transitionNow( Transition.UPDATE );
             break;
           default:
             break;
         }
       } catch ( IllegalStateException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
   }
-
+  
 }

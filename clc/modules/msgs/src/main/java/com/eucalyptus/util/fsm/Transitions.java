@@ -8,9 +8,9 @@ public class Transitions {
   public static final SimpleTransitionListener NOOP = new SimpleTransitionListener( ) {
                                                     };
                                                     
-  public static <P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> Transition<P, S, T> create( T name, S fromState, S toState, S errorState, TransitionListener<P>... listeners ) {
+  public static <P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> Transition<P, S, T> create( T name, S fromState, S toState, S errorState, TransitionAction<P> action, TransitionListener<P>... listeners ) {
     TransitionRule<S, T> rule = new BasicTransitionRule<S, T>( name, fromState, toState );
-    return new Transition<P, S, T>( rule, listeners );
+    return new Transition<P, S, T>( rule, action, listeners );
   }
   
   static class BasicTransitionRule<S extends Enum<S>, T extends Enum<T>> implements TransitionRule<S, T> {

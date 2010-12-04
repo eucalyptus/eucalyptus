@@ -59,22 +59,29 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     this.outStateListeners.putAll( outStateListeners );
   }
   
-  public ActiveTransition startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException {
+  public Callback.Completion startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException {
     if ( !this.transitions.containsKey( transitionName ) ) {
       throw new NoSuchElementException( "No such transition named: " + transitionName.toString( ) + ". Known transitions: " + this.getTransitions( ) );
     } else {
       this.checkTransition( transitionName );
       final ActiveTransition tid = this.beforeLeave( transitionName );
       this.afterLeave( transitionName, tid );
-      return tid;
+      if( !( tid.transition.getAction( ) == TransitionAction.OUTOFBAND ) ) {
+        return tid;
+      } else {
+        return new Callback.Completion( ) {
+          public void fire( ) {}
+          public void fireException( Throwable t ) {}
+        };
+      }
     }
   }
   
-  public void transition( T transition ) throws IllegalStateException, ExistingTransitionException {
+  public void transitionNow( T transition ) throws IllegalStateException, ExistingTransitionException {
     this.startTransition( transition ).fire( );
   }
   
-  public ActiveTransition startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
+  public Callback.Completion startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
     if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
       throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: "
                                         + this.getTransitions( ) );
@@ -83,7 +90,14 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       this.checkTransition( transitionName );
       final ActiveTransition tid = this.beforeLeave( transitionName );
       this.afterLeave( transitionName, tid );
-      return tid;
+      if( !( tid.transition.getAction( ) == TransitionAction.OUTOFBAND ) ) {
+        return tid;
+      } else {
+        return new Callback.Completion( ) {
+          public void fire( ) {}
+          public void fireException( Throwable t ) {}
+        };
+      }
     }
   }
   

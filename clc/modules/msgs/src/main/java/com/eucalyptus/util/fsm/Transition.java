@@ -20,9 +20,11 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
   private final AtomicInteger                                 index     = new AtomicInteger( 0 );
   private final TransitionRule<S, T>                          rule;
   private final ConcurrentMap<Integer, TransitionListener<P>> listeners = Maps.newConcurrentHashMap( );
+  private final TransitionAction<P>                           action;
   
-  public Transition( final TransitionRule<S, T> transitionRule, TransitionListener<P>... listeners ) {
+  public Transition( final TransitionRule<S, T> transitionRule, final TransitionAction<P> action, TransitionListener<P>... listeners ) {
     this.rule = transitionRule;
+    this.action = action;
     for ( TransitionListener<P> listener : listeners ) {
       this.addListener( listener );
     }
@@ -108,9 +110,9 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
     } else {
       for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
         final TransitionListener<P> tl = entry.getValue( );
-        if( LogLevels.TRACE ) {
-          EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, ""+parent.getName( ), this.toString( ), phase.toString( ),//
-                            entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll("^(\\w.)*","") ).trace( );
+        if ( LogLevels.TRACE ) {
+          EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ), phase.toString( ),//
+                            entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) ).trace( );
         }
         try {
           if ( !pred.apply( entry.getValue( ) ) ) {
@@ -221,6 +223,13 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
     if ( getClass( ) != obj.getClass( ) ) return false;
     Transition other = ( Transition ) obj;
     return this.rule.equals( other.rule );
+  }
+
+  /**
+   * @return the action
+   */
+  public TransitionAction<P> getAction( ) {
+    return this.action;
   }
   
 }
