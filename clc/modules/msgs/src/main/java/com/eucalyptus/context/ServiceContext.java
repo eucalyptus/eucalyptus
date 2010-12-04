@@ -80,7 +80,7 @@ public class ServiceContext {
   }
   
   public static void dispatch( String dest, Object msg ) throws EucalyptusCloudException {
-    if ( !( dest.startsWith( "vm://" ) && !serviceToEndpoint.containsKey( dest ) ) || dest == null ) {
+    if ( ( !dest.startsWith( "vm://" ) && !serviceToEndpoint.containsKey( dest ) ) || dest == null ) {
       dest = "vm://RequestQueue";
     } else if ( !dest.startsWith( "vm://" ) ) {
       dest = serviceToEndpoint.get( dest );
