@@ -13,22 +13,22 @@ public class Exceptions {
   private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 5;
   private static final StackTraceElement[] steArrayType             = new StackTraceElement[1];
   
-  public static Throwable filterStackTrace( Throwable ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
-    ex.setStackTrace( Exceptions.filter( ex, maxDepth, fqClassPrefixes, matchPatterns ).toArray( steArrayType ) );
+  public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
+    ex.setStackTrace( Exceptions.filterStackTraceElements( ex, maxDepth, fqClassPrefixes, matchPatterns ).toArray( steArrayType ) );
     return ex;
   }
   
-  public static Throwable filterStackTrace( Throwable ex, int maxDepth ) {
-    ex.setStackTrace( Exceptions.filter( ex, maxDepth, DEFAULT_FILTER_PREFIXES, DEFAULT_FILTER_MATCHES ).toArray( steArrayType ) );
+  public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth ) {
+    ex.setStackTrace( Exceptions.filterStackTraceElements( ex, maxDepth, DEFAULT_FILTER_PREFIXES, DEFAULT_FILTER_MATCHES ).toArray( steArrayType ) );
     return ex;
   }
   
-  public static Throwable filterStackTrace( Throwable ex ) {
-    ex.setStackTrace( Exceptions.filter( ex, DEFAULT_FILTER_MAX_DEPTH, DEFAULT_FILTER_PREFIXES, DEFAULT_FILTER_MATCHES ).toArray( steArrayType ) );
+  public static <T extends Throwable> T filterStackTrace( T ex ) {
+    ex.setStackTrace( Exceptions.filterStackTraceElements( ex, DEFAULT_FILTER_MAX_DEPTH, DEFAULT_FILTER_PREFIXES, DEFAULT_FILTER_MATCHES ).toArray( steArrayType ) );
     return ex;
   }
   
-  private static List<StackTraceElement> filter( Throwable ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
+  public static List<StackTraceElement> filterStackTraceElements( Throwable ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
     StringBuilder sb = new StringBuilder( );
     List<StackTraceElement> filteredStes = Lists.newArrayList( );
     for ( final StackTraceElement ste : ex.getStackTrace( ) ) {

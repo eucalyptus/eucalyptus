@@ -295,7 +295,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       this.transition = transition;
       this.name = AtomicMarkedState.this.getName( ) + "-" + this.transition.getName( ) + "-" + id;
       if( LogLevels.DEBUG ) {
-        this.stackTrace = new RuntimeException( );
+        this.stackTrace = Exceptions.filterStackTrace( new RuntimeException( ) );
       } else {
         this.stackTrace = null;
       }

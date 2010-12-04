@@ -246,16 +246,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     if ( service.isLocal( ) && this.inState( State.LOADED ) ) {
       this.stateMachine.transitionNow( Transition.STARTING );
       if ( this.inState( State.NOTREADY ) ) {
-        Threads.lookup( Empyrean.class.getName( ) ).submit( new Runnable( ) {
-          @Override
-          public void run( ) {
-            try {
-              Component.this.stateMachine.transitionNow( Transition.READY_CHECK );
-            } catch ( Throwable t ) {
-              LOG.trace( t, t );
-            }
-          }
-        } );
+        this.stateMachine.transitionNow( Transition.READY_CHECK );
       }
     } else {
       this.builder.fireStart( service );
@@ -266,7 +257,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_ENABLED, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     if ( service.isLocal( ) ) {
       if ( State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
-        this.stateMachine.transitionNow( State.DISABLED );
+        this.stateMachine.transitionNow( Transition.READY_CHECK );
       }
       this.stateMachine.transitionNow( State.ENABLED );
     } else {
