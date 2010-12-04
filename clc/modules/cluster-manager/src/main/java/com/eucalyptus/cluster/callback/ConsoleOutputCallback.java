@@ -100,7 +100,7 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
     reply.setTimestamp( new Date( ) );
     reply.setOutput( vm.getConsoleOutputString( ) );
     try {
-      ServiceContext.dispatch( "ReplyQueue", reply );
+      ServiceContext.send( "ReplyQueue", reply );
     } catch ( EucalyptusCloudException ex ) {
       LOG.error( ex , ex );
     }
