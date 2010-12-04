@@ -276,7 +276,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     private final Long                id;
     private final String              name;
     private final Long                startTime;
-    private Long                      endTime;
+    private Long                      endTime = 0l;
     private final Transition<P, S, T> transition;
     private final Throwable           startStackTrace;
     private final Throwable           endStackTrace = new RuntimeException( );
@@ -305,13 +305,13 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     private void teardown( ) {
       if ( LogLevels.DEBUG ) {
         RuntimeException ex = new RuntimeException();
-        if ( this.endTime != 0 ) {
+        if ( this.endTime != 0l ) {
           LOG.error( "Transition being committed for a second time!" );
           LOG.error( "FIRST: " + Exceptions.filterStackTraceElements( this.endStackTrace ), this.endStackTrace );
           LOG.error( "SECOND: " + Exceptions.filterStackTraceElements( ex ), ex );
         } else {
           this.endTime = System.nanoTime( );
-          this.endStackTrace.setStackTrace( ( StackTraceElement[] ) Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( ) );
+          this.endStackTrace.setStackTrace( Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( new StackTraceElement[] {} ) );
         }
       }
     }
