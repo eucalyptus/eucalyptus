@@ -75,6 +75,7 @@ import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.AtomicMarkedState.ActiveTransition;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.SimpleTransitionListener;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 
@@ -251,28 +252,48 @@ public class ComponentState {
     }.newAtomicState( );
   }
 
-  public Callback.Completion transition( Transition transition ) throws IllegalStateException, NoSuchElementException {
+  public Callback.Completion transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
       return this.stateMachine.startTransition( transition );
+    } catch ( IllegalStateException ex ) {
+      throw Exceptions.trace( ex );
+    } catch ( NoSuchElementException ex ) {
+      throw Exceptions.trace( ex );
+    } catch ( ExistingTransitionException ex ) {
+      throw Exceptions.trace( ex );
     } catch ( Throwable ex ) {
       throw Exceptions.trace( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex );
     }
   }
   
-  public Callback.Completion transition( State state ) throws IllegalStateException, NoSuchElementException {
+  public Callback.Completion transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
       return this.stateMachine.startTransitionTo( this.stateMachine.getState( ) );
+    } catch ( IllegalStateException ex ) {
+      throw Exceptions.trace( ex );
+    } catch ( NoSuchElementException ex ) {
+      throw Exceptions.trace( ex );
+    } catch ( ExistingTransitionException ex ) {
+      throw Exceptions.trace( ex );
     } catch ( Throwable ex ) {
       throw Exceptions.trace( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex );
     }
   }
 
   public void transitionNow( Transition transition ) throws IllegalStateException, NoSuchElementException {
-    this.transition( transition ).fire( );
+    try {
+      this.transition( transition ).fire( );
+    } catch ( ExistingTransitionException ex ) {
+      LOG.error( ex );
+    }
   }
 
-  public void transitionNow( State nextState ) throws IllegalStateException, NoSuchElementException {
-    this.transition( nextState ).fire( );
+  public void transitionNow( State nextState ) throws IllegalStateException, NoSuchElementException{
+    try {
+      this.transition( nextState ).fire( );
+    } catch ( ExistingTransitionException ex ) {
+      LOG.error( ex );
+    }
   }
   
   public void transitionSelf( ) {

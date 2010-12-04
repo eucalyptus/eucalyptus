@@ -109,6 +109,7 @@ import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.SimpleTransitionListener;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.TransitionListener;
@@ -167,7 +168,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
         in( State.DOWN ).run( new Callback<State>( ) {
           @Override
           public void fire( State t ) {
-            Cluster.this.transition( Transition.START );
+            Cluster.this.transitionIfSafe( Transition.START );
           }
         } );
         
@@ -175,7 +176,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
         in( State.AUTHENTICATING ).run( new Callback<State>( ) {
           @Override
           public void fire( State t ) {
-            Cluster.this.transition( Transition.INIT_CERTS );
+            Cluster.this.transitionIfSafe( Transition.INIT_CERTS );
           }
         } );
         
@@ -209,8 +210,14 @@ public class Cluster implements HasName<Cluster>, EventListener {
     return this.hasClusterCert && this.hasNodeCert && Bootstrap.isFinished( );
   }
   
-  public void transition( Transition transition ) {
-    this.stateMachine.transition( transition );
+  public void transitionIfSafe( Transition transition ) {
+    try {
+      this.stateMachine.transition( transition );
+    } catch ( IllegalStateException ex ) {
+      LOG.error( ex , ex );
+    } catch ( ExistingTransitionException ex ) {
+      LOG.error( ex , ex );
+    }
   }
   
   public ServiceEndpoint getServiceEndpoint( ) {
@@ -451,9 +458,10 @@ public class Cluster implements HasName<Cluster>, EventListener {
    * @param transitionName
    * @return
    * @throws IllegalStateException
+   * @throws ExistingTransitionException 
    * @see com.eucalyptus.util.fsm.AtomicMarkedState#startTransition(java.lang.Enum)
    */
-  public AtomicMarkedState<Cluster, State, Transition>.ActiveTransition startTransition( Transition transitionName ) throws IllegalStateException {
+  public AtomicMarkedState<Cluster, State, Transition>.ActiveTransition startTransition( Transition transitionName ) throws IllegalStateException, ExistingTransitionException {
     return this.stateMachine.startTransition( transitionName );
   }
   
@@ -509,21 +517,27 @@ public class Cluster implements HasName<Cluster>, EventListener {
   @Override
   public void fireEvent( Event event ) {
     if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
-      switch ( this.stateMachine.getState( ) ) {
-        case DOWN:
-          this.stateMachine.transition( Transition.START );
-          break;
-        case AUTHENTICATING:
-          this.stateMachine.transition( Transition.INIT_CERTS );
-          break;
-        case STARTING:
-          this.stateMachine.transition( Transition.INIT_STATE );
-          break;
-        case RUNNING:
-          this.stateMachine.transition( Transition.UPDATE );
-          break;
-        default:
-          break;
+      try {
+        switch ( this.stateMachine.getState( ) ) {
+          case DOWN:
+            this.stateMachine.transition( Transition.START );
+            break;
+          case AUTHENTICATING:
+            this.stateMachine.transition( Transition.INIT_CERTS );
+            break;
+          case STARTING:
+            this.stateMachine.transition( Transition.INIT_STATE );
+            break;
+          case RUNNING:
+            this.stateMachine.transition( Transition.UPDATE );
+            break;
+          default:
+            break;
+        }
+      } catch ( IllegalStateException ex ) {
+        LOG.error( ex , ex );
+      } catch ( ExistingTransitionException ex ) {
+        LOG.error( ex , ex );
       }
     }
   }

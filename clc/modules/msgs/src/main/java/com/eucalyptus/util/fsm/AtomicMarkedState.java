@@ -57,7 +57,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     this.outStateListeners.putAll( outStateListeners );
   }
   
-  public ActiveTransition startTransition( T transitionName ) throws IllegalStateException {
+  public ActiveTransition startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException {
     if ( !this.transitions.containsKey( transitionName ) ) {
       throw new NoSuchElementException( "No such transition named: " + transitionName.toString( ) + ". Known transitions: " + this.getTransitions( ) );
     } else {
@@ -68,11 +68,11 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
   }
   
-  public void transition( T transition ) throws IllegalStateException {
+  public void transition( T transition ) throws IllegalStateException, ExistingTransitionException {
     this.startTransition( transition ).fire( );
   }
   
-  public ActiveTransition startTransitionTo( S nextState ) {
+  public ActiveTransition startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
     if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
       throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: " + this.getTransitions( ) );
     } else {
@@ -84,7 +84,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
   }
 
-  public void transitionTo( S nextState ) throws IllegalStateException {
+  public void transitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
     this.startTransitionTo( nextState ).fire( );
   }
 
@@ -217,10 +217,12 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
   }
   
-  private final ActiveTransition beforeLeave( final T transitionName ) throws IllegalStateException {
+  private final ActiveTransition beforeLeave( final T transitionName ) throws IllegalStateException, ExistingTransitionException {
     final ActiveTransition tid;
     try {
       tid = this.request( transitionName );
+    } catch ( ExistingTransitionException t ) {
+      throw Exceptions.trace( t );
     } catch ( Throwable t ) {
       this.rollback( );
       throw Exceptions.trace( new IllegalStateException( String.format( "Failed to apply transition %s because request() threw an exception.",
