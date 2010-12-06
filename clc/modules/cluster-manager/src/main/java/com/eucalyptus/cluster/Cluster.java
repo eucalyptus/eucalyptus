@@ -212,7 +212,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   public void transitionIfSafe( Transition transition ) {
     try {
-      this.stateMachine.transitionNow( transition );
+      this.stateMachine.startTransition( transition );
     } catch ( IllegalStateException ex ) {
       LOG.error( ex, ex );
     } catch ( ExistingTransitionException ex ) {
@@ -509,16 +509,16 @@ public class Cluster implements HasName<Cluster>, EventListener {
       try {
         switch ( this.stateMachine.getState( ) ) {
           case DOWN:
-            this.stateMachine.transitionNow( Transition.START );
+            this.stateMachine.startTransition( Transition.START );
             break;
           case AUTHENTICATING:
-            this.stateMachine.transitionNow( Transition.INIT_CERTS );
+            this.stateMachine.startTransition( Transition.INIT_CERTS );
             break;
           case STARTING:
-            this.stateMachine.transitionNow( Transition.INIT_STATE );
+            this.stateMachine.startTransition( Transition.INIT_STATE );
             break;
           case RUNNING:
-            this.stateMachine.transitionNow( Transition.UPDATE );
+            this.stateMachine.startTransition( Transition.UPDATE );
             break;
           default:
             break;
