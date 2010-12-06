@@ -297,11 +297,11 @@ public class PolicyEngineImpl implements PolicyEngine {
    */
   private List<Authorization> lookupQuotas( String resourceType, String userId, String accountId, boolean isAccountAdmin ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
-    results.addAll( Policies.lookupAccountGlobalAuthorizations( resourceType, accountId ) );
-    results.addAll( Policies.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE, accountId ) );
+    results.addAll( Policies.lookupAccountGlobalQuotas( resourceType, accountId ) );
+    results.addAll( Policies.lookupAccountGlobalQuotas( PolicySpec.ALL_RESOURCE, accountId ) );
     if ( !isAccountAdmin ) {
-      results.addAll( Policies.lookupAuthorizations( resourceType, userId ) );
-      results.addAll( Policies.lookupAuthorizations( PolicySpec.ALL_RESOURCE, userId ) );
+      results.addAll( Policies.lookupQuotas( resourceType, userId ) );
+      results.addAll( Policies.lookupQuotas( PolicySpec.ALL_RESOURCE, userId ) );
     }
     return results;    
   }
