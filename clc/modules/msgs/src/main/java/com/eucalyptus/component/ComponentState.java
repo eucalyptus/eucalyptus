@@ -280,25 +280,9 @@ public class ComponentState {
     }
   }
 
-  public void transitionNow( Transition transition ) throws IllegalStateException, NoSuchElementException {
-    try {
-      this.transition( transition ).fire( );
-    } catch ( ExistingTransitionException ex ) {
-      LOG.error( ex );
-    }
-  }
-
-  public void transitionNow( State nextState ) throws IllegalStateException, NoSuchElementException {
-    try {
-      this.transition( nextState ).fire( );
-    } catch ( ExistingTransitionException ex ) {
-      LOG.error( ex );
-    }
-  }
-  
   public void transitionSelf( ) {
     try {
-      this.transitionNow( this.getState( ) );
+      this.transition( this.getState( ) );
     } catch ( Throwable ex ) {
       LOG.trace( ex , ex );
     }
