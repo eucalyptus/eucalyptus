@@ -319,7 +319,6 @@ public class PolicyEngineImpl implements PolicyEngine {
   private void processQuotas( List<Authorization> quotas, String action, String resourceType, String resourceName, Integer quantity ) throws AuthException {
     NumericGreaterThan ngt = new NumericGreaterThan( );
     for ( Authorization auth : quotas ) {
-      LOG.debug( "YE: evaluate quota " + auth );
       if ( !evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
         continue;
       }
@@ -330,7 +329,6 @@ public class PolicyEngineImpl implements PolicyEngine {
       String principalId = getAuthorizationPrincipalId( auth, scope );
       for ( Condition cond : auth.getConditions( ) ) {
         Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
-        LOG.debug( "YE: key = " + key.getClass( ).getCanonicalName( ) );
         if ( !( key instanceof QuotaKey ) ) {
           continue;
         }
@@ -340,9 +338,8 @@ public class PolicyEngineImpl implements PolicyEngine {
         }
         String usageValue = quotaKey.value( scope, principalId, resourceName, quantity );
         String quotaValue = cond.getValues( ).toArray( new String[0] )[0];
-        LOG.debug( "YE: usage = " + usageValue + ", quota = " + quotaValue );
         if ( ngt.check( usageValue, quotaValue ) ) {
-          LOG.error( "Quota " + key.getClass( ).getName( ) + " is exceeded: quoat=" + quotaValue + ", usage=" + usageValue );
+          LOG.error( "Quota " + key.getClass( ).getName( ) + " is exceeded: quota=" + quotaValue + ", usage=" + usageValue );
           throw new AuthException( AuthException.QUOTA_EXCEEDED );
         }
       }
