@@ -89,7 +89,6 @@ import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
-import com.eucalyptus.util.fsm.SimpleTransitionListener;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
