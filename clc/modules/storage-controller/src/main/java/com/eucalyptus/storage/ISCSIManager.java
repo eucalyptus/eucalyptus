@@ -234,7 +234,9 @@ public class ISCSIManager implements StorageExportManager {
 				}
 			}
 		} catch(EucalyptusCloudException ex) {
-			String password = Hashes.getRandom(20);
+			// Windows iscsi initiator requires the password length to be 12-16 bytes
+			String password = Hashes.getRandom(16);
+			password = password.substring(0,16);
 			try {
 				addUser("eucalyptus", password);
 			} catch (ExecutionException e1) {

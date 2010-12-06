@@ -102,6 +102,7 @@
 		<ant dir="modules/dns" inheritall="false" target="builder" />
 		<ant dir="modules/www" inheritall="false" target="builder" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
+		<ant dir="modules/reporting" inheritall="false" target="builder" />
 		<!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
     <ant dir=".deprecated/image-manager" inheritall="false" target="builder" />
 		<ant dir=".deprecated/group-manager" inheritall="false" target="builder" />
@@ -126,6 +127,7 @@
 		<ant dir="modules/dns" inheritall="false" target="jar" />
 		<ant dir="modules/www" inheritall="false" target="jar" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="jar" />
+		<ant dir="modules/reporting" inheritall="false" target="jar" />
                 <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
                 <ant dir=".deprecated/image-manager" inheritall="false" target="jar" />
                 <ant dir=".deprecated/group-manager" inheritall="false" target="jar" />
@@ -181,6 +183,7 @@
 		<ant dir="modules/dns" inheritall="false" target="clean" />
 		<ant dir="modules/www" inheritall="false" target="clean" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="clean" />
+		<ant dir="modules/reporting" inheritall="false" target="clean" />
                 <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
                 <ant dir=".deprecated/image-manager" inheritall="false" target="clean" />
                 <ant dir=".deprecated/group-manager" inheritall="false" target="clean" />
@@ -248,6 +251,8 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="install" />
 		<ant dir="modules/dns" inheritall="false" target="install" />
 		<ant dir="modules/www" inheritall="false" target="install" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
+		<ant dir="modules/reporting" inheritall="false" target="install" />
 	<ant dir="modules/vmware-broker" inheritall="false" target="install" />
     <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
     <ant dir=".deprecated/image-manager" inheritall="false" target="install" />

@@ -294,6 +294,7 @@ refresh_instance_info(	struct nc_state_t *nc,
         /* else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED */
         return;
     }
+
     virDomainInfo info;
     sem_p(hyp_sem);
     int error = virDomainGetInfo(dom, &info);
@@ -1475,4 +1476,3 @@ char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     } 
     return retval;
 }
-
