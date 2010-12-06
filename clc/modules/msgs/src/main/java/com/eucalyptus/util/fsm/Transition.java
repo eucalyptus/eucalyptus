@@ -10,12 +10,13 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.fsm.TransitionListener.Phases;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
-public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> implements TransitionListener<P> {
+public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> extends TransitionAction<P> {
   private static Logger                                       LOG       = Logger.getLogger( Transition.class );
   private final AtomicInteger                                 index     = new AtomicInteger( 0 );
   private final TransitionRule<S, T>                          rule;
@@ -130,7 +131,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
     if ( this.action == null ) {
       throw new IllegalStateException( "Attempt to apply delegated transition before it is defined." );
     } else {
-      return this.fireListeners( Phases.before, new Predicate<TransitionListener<P>>( ) {
+      this.fireListeners( Phases.before, new Predicate<TransitionListener<P>>( ) {
         @Override
         public boolean apply( TransitionListener<P> listener ) {
           return listener.before( parent );
@@ -156,7 +157,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
       this.fireListeners( Phases.leave, new Predicate<TransitionListener<P>>( ) {
         @Override
         public boolean apply( TransitionListener<P> listener ) {
-          listener.leave( parent, transitionCallback );
+          listener.leave( parent );
           return true;
         }
       }, parent );
