@@ -206,7 +206,7 @@ public class AuthTest {
     
     PolicyEngine engine = new PolicyEngineImpl( );
     engine.evaluateAuthorization( Image.class, "emi-12345678", user.getAccount( ).getAccountId( ) );
-    engine.evaluateQuota( 1, Image.class, "" );
+    engine.evaluateQuota( 1, Image.class, "arn:aws:ec2:::image/*" );
   }
   
   private static void printAuths( List<? extends Authorization> auths ) throws AuthException {
