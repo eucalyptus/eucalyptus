@@ -22,7 +22,6 @@ import org.jboss.netty.util.internal.ConcurrentHashMap;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.EucaKeyStore;
@@ -121,7 +120,6 @@ public class StandalonePersistence {
     DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
     Users.setUserProvider( dbAuth );
     Groups.setGroupProvider( dbAuth );
-    UserInfoStore.setUserInfoProvider( dbAuth );
   }
   
   private static void setupOldDatabase( ) throws Exception {
