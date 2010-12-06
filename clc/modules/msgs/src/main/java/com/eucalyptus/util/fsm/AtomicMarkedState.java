@@ -77,10 +77,6 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
   }
   
-  public void transitionNow( T transition ) throws IllegalStateException, ExistingTransitionException {
-    this.startTransition( transition ).fire( );
-  }
-  
   public Callback.Completion startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
     if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
       throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: "
