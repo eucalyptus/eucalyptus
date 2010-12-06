@@ -203,13 +203,17 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
   
   @Override
   public String toString( ) {
+    String actionName = "null";
+    if( this.action != null ) {
+      actionName = this.action.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
+    }
     Iterable<String> listenerNames = Iterables.transform( this.listeners.values( ), new Function<TransitionListener<P>, String>( ) {
       public String apply( TransitionListener<P> arg0 ) {
         return arg0.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
       }
     } );
-    return String.format( "Transition:name=%s:from=%s/%s:to=%s/%s:listeners=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
-                          this.getToState( ), this.getToStateMark( ), listenerNames );
+    return String.format( "Transition:name=%s:from=%s/%s:to=%s/%s:action=%s:listeners=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
+                          this.getToState( ), this.getToStateMark( ), "" + this.action, listenerNames );
   }
   
   /**
