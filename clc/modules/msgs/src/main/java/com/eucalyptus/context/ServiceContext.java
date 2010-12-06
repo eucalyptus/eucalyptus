@@ -1,6 +1,7 @@
 package com.eucalyptus.context;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,6 +40,7 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
@@ -132,7 +134,7 @@ public class ServiceContext {
     }
   }
   
-  public static void buildContext( List<ConfigResource> configs ) {
+  public static void buildContext( Set<ConfigResource> configs ) {
     ServiceContext.builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
   }
   
@@ -199,7 +201,7 @@ public class ServiceContext {
   }
   
   static boolean loadContext( ) {
-    List<ConfigResource> configs = Lists.newArrayList( );
+    Set<ConfigResource> configs = Sets.newHashSet( );
     configs.addAll( Components.lookup( Component.bootstrap ).getConfiguration( ).getResource( ).getConfigurations( ) );
     if ( Components.lookup( Component.eucalyptus ).isAvailableLocally( ) ) {
 //      configs.addAll( Components.lookup( Component.eucalyptus ).getConfiguration( ).getResource( ).getConfigurations( ) );
