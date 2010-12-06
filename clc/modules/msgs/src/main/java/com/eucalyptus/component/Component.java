@@ -562,7 +562,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   public void runChecks( ) {
     if ( this.isAvailableLocally( ) && this.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
-      this.stateMachine.transition( );
+      this.stateMachine.transitionSelf( );
     } 
   }
   
