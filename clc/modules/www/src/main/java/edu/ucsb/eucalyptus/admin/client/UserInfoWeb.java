@@ -101,6 +101,8 @@ public class UserInfoWeb implements IsSerializable
     private String queryId;
     private String secretKey;
 
+    public static String BOGUS_ENTRY = "n/a"; // mirrors value in UserInfo
+    
 	// displayUserRecordPage relies on empty strings and isAdministrator set
     public UserInfoWeb() {
       this.userName = "";
