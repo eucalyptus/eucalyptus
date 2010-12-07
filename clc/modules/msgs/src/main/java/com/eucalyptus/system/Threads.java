@@ -189,6 +189,7 @@ public class Threads {
     private ThreadPool( String groupPrefix ) {
       this.name = "Eucalyptus." + groupPrefix;
       this.group = new ThreadGroup( this.name );
+      this.pool = Executors.newCachedThreadPool( );
       Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
         @Override
         public void run( ) {

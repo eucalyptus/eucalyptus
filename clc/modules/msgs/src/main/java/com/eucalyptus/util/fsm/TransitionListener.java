@@ -51,7 +51,7 @@ public interface TransitionListener<P extends HasName<P>> {
    * Implementors can assume that no other transitions will execute until this
    * transition has completed.
    */
-  public abstract void leave( P parent, Callback.Completion transitionCallback );
+  public abstract void leave( P parent );
   
   /**
    * Applies changes corresponding with having entered {@code toState} and is
