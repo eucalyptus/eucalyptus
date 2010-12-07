@@ -495,7 +495,7 @@ public class ListBucketResponseType extends WalrusResponseType {
 	boolean isTruncated;
 	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	ArrayList<ListEntry> contents = new ArrayList<ListEntry>();
-	ArrayList<PrefixEntry> commonPrefixes;
+	ArrayList<PrefixEntry> commonPrefixes = new ArrayList<PrefixEntry>();
 }
 
 public class ListEntry extends EucalyptusData {
