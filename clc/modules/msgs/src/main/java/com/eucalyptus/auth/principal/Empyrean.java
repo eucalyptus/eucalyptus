@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,64 +53,16 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTSâ€™ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTSÕ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cluster.callback;
 
-import java.util.Date;
-import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
-import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
+package com.eucalyptus.auth.principal;
 
-public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
-  
-  private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
-  
-  public ConsoleOutputCallback( GetConsoleOutputType msg ) {
-    this.setRequest( msg );
-  }
-  
-  @Override
-  public void initialize( GetConsoleOutputType msg )  {}
-  
-  @Override
-  public void fire( GetConsoleOutputResponseType reply )  {
-    VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
-    String output = null;
-    try {
-      output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );
-//for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
-      if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
-    } catch ( ArrayIndexOutOfBoundsException e1 ) {}
-    reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
-    reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
-    reply.setTimestamp( new Date( ) );
-    reply.setOutput( vm.getConsoleOutputString( ) );
-    try {
-      ServiceContext.dispatch( "ReplyQueue", reply );
-    } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex , ex );
-    }
-  }
+public interface Empyrean extends ComponentPrincipal {
 
-
-  @Override
-  public void fireException( Throwable e ) {
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
-    LOG.debug( e, e );
-  }
-  
 }

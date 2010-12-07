@@ -53,98 +53,32 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTSâ€™ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTSÕ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cluster;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.cluster.event.NewClusterEvent;
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.event.AbstractNamedRegistry;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
+package com.eucalyptus.util.fsm;
 
-public class Clusters extends AbstractNamedRegistry<Cluster> {
-  private static Clusters singleton = getInstance( );
-  private static Logger   LOG       = Logger.getLogger( Clusters.class );
-  
-  public static Clusters getInstance( ) {
-    synchronized ( Clusters.class ) {
-      if ( singleton == null ) singleton = new Clusters( );
-    }
-    return singleton;
-  }
-    
-  public static Cluster start( ClusterConfiguration c ) throws EucalyptusCloudException {
-    String clusterName = c.getName( );
-    if ( Clusters.getInstance( ).contains( clusterName ) ) {
-      return Clusters.getInstance( ).lookup( clusterName );
-    } else {
-      ClusterCredentials credentials = null;//ASAP: fix it.
-      EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-      try {
-        credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
-        credDb.rollback( );
-      } catch ( EucalyptusCloudException e ) {
-        LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
-        credDb.rollback( );
-        throw e;
-      }
-      Cluster newCluster = new Cluster( c, credentials );
-      Clusters.getInstance( ).register( newCluster );
-      ListenerRegistry.getInstance( ).register( ClockTick.class, newCluster );
-      newCluster.start( );
-      newCluster.transitionIfSafe( Cluster.Transition.START );
-      return newCluster;
-    }
+public class ExistingTransitionException extends Exception {
+
+  public ExistingTransitionException( ) {
+    super( );
   }
 
-  public boolean hasNetworking( ) {
-    return Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-      @Override
-      public boolean apply( Cluster arg0 ) {
-        return arg0.getState( ).getMode( ) == 1;
-      }
-    } );
+  public ExistingTransitionException( String message, Throwable cause ) {
+    super( message, cause );
   }
-  
-  public List<RegisterClusterType> getClusters( ) {
-    List<RegisterClusterType> list = new ArrayList<RegisterClusterType>( );
-    for ( Cluster c : this.listValues( ) )
-      list.add( c.getWeb( ) );
-    return list;
+
+  public ExistingTransitionException( String message ) {
+    super( message );
   }
-  
-  public List<String> getClusterAddresses( ) {
-    SortedSet<String> hostOrdered = new TreeSet<String>( );
-    for ( Cluster c : this.listValues( ) )
-      hostOrdered.add( c.getConfiguration( ).getHostName( ) );
-    return Lists.newArrayList( hostOrdered );
+
+  public ExistingTransitionException( Throwable cause ) {
+    super( cause );
   }
-  
-  public static void stop( String name ) {
-    Cluster cluster = Clusters.getInstance( ).lookup( name );
-    ListenerRegistry.getInstance( ).deregister( Component.cluster, cluster );
-    cluster.stop( );
-    Clusters.getInstance( ).deregister( name );
-  }
-  
+
 }

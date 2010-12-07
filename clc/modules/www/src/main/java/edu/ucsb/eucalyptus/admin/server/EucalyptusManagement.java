@@ -191,7 +191,6 @@ public class EucalyptusManagement {
         user = Users.addUser( webUser.getUserName( ), webUser.isAdministrator( ), webUser.isEnabled( ) );
         try {
           UserInfo userInfo = Composites.updateNew( webUser, UserInfo.class );
-          userInfo.setConfirmationCode( Crypto.generateSessionToken( webUser.getUserName() ) );
           try {
             NetworkGroupUtil.createUserNetworkRulesGroup( userInfo.getUserName( ), NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
           } catch ( EucalyptusCloudException e1 ) {

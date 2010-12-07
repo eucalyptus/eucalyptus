@@ -74,6 +74,7 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.*;
 import edu.ucsb.eucalyptus.admin.client.extensions.store.ImageStoreClient;
 import edu.ucsb.eucalyptus.admin.client.extensions.store.ImageStoreWidget;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -128,6 +129,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     private static String admin_first_time_config_text;
     private static String admin_email_change_text;
 	private static String admin_cloud_ip_setup_text;
+	private static boolean enable_signups;
     private static boolean request_telephone;
     private static boolean request_project_leader;
     private static boolean request_affiliation;
@@ -260,6 +262,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         }
 
         /* optional parameters (booleans will be 'yes' if not specified) */
+        enable_signups = str2bool((String)props.get("enable-signups"));
         request_telephone = str2bool((String)props.get("request-telephone"));
         request_project_leader = str2bool((String)props.get("request-project-leader"));
         request_affiliation = str2bool((String)props.get("request-affiliation"));
@@ -327,7 +330,6 @@ public class EucalyptusWebInterface implements EntryPoint {
         label_box.setText( greeting );
         label_box.setStyleName("euca-greeting-normal");
         final TextBox login_box = new TextBox();
-        login_box.setFocus(true); // this box gets focus first
         final PasswordTextBox pass_box = new PasswordTextBox();
 
         ClickListener LoginButtonListener = new ClickListener() {
@@ -378,7 +380,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         ClickListener RecoverButtonListener = new ClickListener() {
             public void onClick( Widget sender )
             {
-                displayPasswordRecoveryPage();
+                displayInitiatePasswordRecoveryPage();
             }
         };
 
@@ -391,9 +393,8 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         /* enable login by pressing Enter */
         EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button);
-        submit_button.addKeyboardListener(sl);
-        login_box.addKeyboardListener(sl);
-        pass_box.addKeyboardListener(sl);
+        login_box.addKeyUpHandler(sl);
+        pass_box.addKeyUpHandler(sl);
 
         Grid g = new Grid( 4, 2 );
         g.setCellSpacing(4);
@@ -415,8 +416,10 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         HorizontalPanel hpanel = new HorizontalPanel();
         hpanel.setSpacing(2);
-        hpanel.add( signup_button );
-        hpanel.add( new HTML("&nbsp;" + MSG.forAccount() + "&nbsp;&nbsp;|&nbsp;&nbsp;") );
+        if (enable_signups) {
+        	hpanel.add( signup_button );
+        	hpanel.add( new HTML("&nbsp;" + MSG.forAccount() + "&nbsp;&nbsp;|&nbsp;&nbsp;") );
+        }
         hpanel.add( recover_button );
         hpanel.add( new HTML("&nbsp;" + MSG.thePassword()) );
 
@@ -443,6 +446,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
+        login_box.setFocus(true); // this box gets focus first
     }
 
     public void displayLoginErrorPage ( String message )
@@ -505,7 +509,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 			label_box.setText ("Editing information for user '" + userToEdit.getUserName() +"' (" + status + ")" );
 		}
         label_box.setStyleName("euca-greeting-normal");
-
+		
         int rowsMandatory = 5;
         if (admin) {
             rowsMandatory++; // for admin checkbox
@@ -518,6 +522,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         g1.getColumnFormatter().setWidth(1, "180");
         g1.getColumnFormatter().setWidth(2, "180");
         int i = 0;
+        int tabIndex = 0;
 
         final Label label_mandatory = new Label( "Mandatory fields:" );
         label_mandatory.setStyleName("euca-section-header");
@@ -826,7 +831,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         };
 
-		Button submit_button;
+        Button submit_button;
 		if (newUser) {
 	        if (admin) {
 				submit_button = new Button ( "Add user", SignupButtonListener);
@@ -836,8 +841,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 		} else {
 			submit_button = new Button ( "Update Record", SignupButtonListener );
 		}
-
-        Button cancel_button = new Button( "Cancel", DefaultPageButtonListener );
+		Button cancel_button = new Button( "Cancel", DefaultPageButtonListener );
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( label_mandatory );
         mpanel.add( g1 );
@@ -871,85 +875,78 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         parent.clear();
         parent.add( wrapper );
+        
+        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button, cancel_button);
+        userName_box.addKeyUpHandler(sl);
+        cleartextPassword1_box.addKeyUpHandler(sl);
+        cleartextPassword2_box.addKeyUpHandler(sl);
+        realName_box.addKeyUpHandler(sl);
+        emailAddress_box.addKeyUpHandler(sl);
+        telephoneNumber_box.addKeyUpHandler(sl);
+        projectPIName_box.addKeyUpHandler(sl);
+        affiliation_box.addKeyUpHandler(sl);
+        projectDescription_box.addKeyUpHandler(sl);
+        if (newUser) {
+        	userName_box.setFocus(true);
+        } else {
+        	cancel_button.setFocus(true);
+        }
     }
 
-    public void displayPasswordRecoveryPage()
+    public void displayInitiatePasswordRecoveryPage()
     {
-        label_box.setText ("Please, choose the new password");
+        label_box.setText ("Enter the following to reset your password");
         label_box.setStyleName("euca-greeting-normal");
 
-        final Grid g1 = new Grid ( 3, 3 );
+        final Grid g1 = new Grid ( 2, 3 ); // rows, cols
         g1.getColumnFormatter().setWidth(0, "230");
         g1.getColumnFormatter().setWidth(1, "180");
         g1.getColumnFormatter().setWidth(2, "180");
         int i = 0;
 
-        final int usernameOrEmail_row = i;
-        g1.setWidget( i, 0, new Label( "Username OR email address:" ) );
+        final int username_row = i;
+        g1.setWidget( i, 0, new Label( "Username:" ) );
         g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        final TextBox usernameOrEmail_box = new TextBox();
-        usernameOrEmail_box.setWidth("180");
-        g1.setWidget( i++, 1, usernameOrEmail_box );
+        final TextBox username_box = new TextBox();
+        username_box.setWidth("180");
+        g1.setWidget( i++, 1, username_box );
 
-        final int password1_row = i;
-        g1.setWidget( i, 0, new Label( "New password:" ) );
+        final int email_row = i;
+        g1.setWidget( i, 0, new Label( "Email address:" ) );
         g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        final PasswordTextBox cleartextPassword1_box = new PasswordTextBox();
-        cleartextPassword1_box.setWidth("180");
-        g1.setWidget( i++, 1, cleartextPassword1_box );
-
-        final int password2_row = i;
-        g1.setWidget( i, 0, new Label( "The password, again:" ) );
-        g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
-        final PasswordTextBox cleartextPassword2_box = new PasswordTextBox();
-        cleartextPassword2_box.setWidth("180");
-        g1.setWidget( i++, 1, cleartextPassword2_box );
+        final TextBox email_box = new TextBox();
+        email_box.setWidth("180");
+        g1.setWidget( i++, 1, email_box );
 
         ClickListener RecoverButtonListener = new ClickListener() {
             public void onClick( Widget sender )
             {
                 boolean formOk = true;
 
-                for ( int j = 0; j < 3; j++ )
+                for ( int j = 0; j < 2; j++ )
                 {
-                    g1.clearCell( j, 2 ); /* clear previous right-hand-side annotations */
+                    g1.clearCell( j, 2 ); // clear previous right-hand-side annotations 
                 }
 
-                /* perform checks */
-                if ( usernameOrEmail_box.getText().length() < 1 )
+                // perform checks
+                if ( username_box.getText().length() < 1 )
                 {
                     Label l = new Label( "Username is empty!" );
                     l.setStyleName("euca-error-hint");
-                    g1.setWidget( usernameOrEmail_row, 2, l);
+                    g1.setWidget( username_row, 2, l);
                     formOk = false;
                 }
-				/* no spaces in username */
-				if ( usernameOrEmail_box.getText().matches(".*[ \t]+.*") ) {
+				if ( username_box.getText().matches(".*[ \t]+.*") ) {
 					Label l = new Label ("Username cannot have spaces, sorry!");
 					l.setStyleName ("euca-error-hint");
-					g1.setWidget (usernameOrEmail_row, 2, l);
+					g1.setWidget (username_row, 2, l);
 					formOk = false;
 				}
-
-                if ( cleartextPassword1_box.getText().length() < minPasswordLength )
+                if ( ! email_box.getText().contains("@") )
                 {
-                    Label l = new Label( "Password must be at least " + minPasswordLength + " characters long!" );
+                    Label l = new Label( "Valid email is mandatory!" );
                     l.setStyleName("euca-error-hint");
-                    g1.setWidget( password1_row, 2, l );
-                    formOk = false;
-                }
-                if ( !cleartextPassword1_box.getText().equals( cleartextPassword2_box.getText() ) )
-                {
-                    Label l = new Label( "Passwords do not match!" );
-                    l.setStyleName("euca-error-hint");
-                    g1.setWidget( password2_row, 2, l );
-                    formOk = false;
-                }
-                if ( cleartextPassword1_box.getText().toLowerCase().matches(".*" +
-                        usernameOrEmail_box.getText().toLowerCase() + ".*")) {
-                    Label l = new Label ( "Password may not contain the username!");
-                    l.setStyleName("euca-error-hint");
-                    g1.setWidget( password1_row, 2, l );
+                    g1.setWidget( email_row, 2, l );
                     formOk = false;
                 }
 
@@ -959,10 +956,10 @@ public class EucalyptusWebInterface implements EntryPoint {
                     label_box.setStyleName("euca-greeting-pending");
 
                     UserInfoWeb user = new UserInfoWeb(
-                            usernameOrEmail_box.getText(),
-                            "", /* don't care about the name */
-                            usernameOrEmail_box.getText(), /* same as login */
-                            GWTUtils.md5(cleartextPassword1_box.getText()) );
+                            username_box.getText(),
+                            "", // don't care about real name
+                            email_box.getText(),
+                            null ); // null => reset requested
                     EucalyptusWebBackend.App.getInstance().recoverPassword(
                             user,
                             new AsyncCallback() {
@@ -990,6 +987,9 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         Button submit_button = new Button ( "Recover Password", RecoverButtonListener );
         Button cancel_button = new Button ( "Cancel", DefaultPageButtonListener );
+        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button, cancel_button);
+		username_box.addKeyUpHandler(sl);
+		email_box.addKeyUpHandler(sl);
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( g1 );
 
@@ -1014,6 +1014,122 @@ public class EucalyptusWebInterface implements EntryPoint {
 
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
+        username_box.setFocus(true);
+    }
+    
+    public void displayCompletePasswordRecoveryPage(final String code)
+    {
+        label_box.setText ("Please, choose the new password");
+        label_box.setStyleName("euca-greeting-normal");
+
+        final Grid g1 = new Grid ( 2, 3 ); // rows, cols
+        g1.getColumnFormatter().setWidth(0, "230");
+        g1.getColumnFormatter().setWidth(1, "180");
+        g1.getColumnFormatter().setWidth(2, "180");
+        int i = 0;
+
+        final int password1_row = i;
+        g1.setWidget( i, 0, new Label( "New password:" ) );
+        g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+        final PasswordTextBox cleartextPassword1_box = new PasswordTextBox();
+        cleartextPassword1_box.setWidth("180");
+        g1.setWidget( i++, 1, cleartextPassword1_box );
+
+        final int password2_row = i;
+        g1.setWidget( i, 0, new Label( "The password, again:" ) );
+        g1.getCellFormatter().setHorizontalAlignment(i, 0, HasHorizontalAlignment.ALIGN_RIGHT);
+        final PasswordTextBox cleartextPassword2_box = new PasswordTextBox();
+        cleartextPassword2_box.setWidth("180");
+        g1.setWidget( i++, 1, cleartextPassword2_box );
+
+        ClickListener RecoverButtonListener = new ClickListener() {
+            public void onClick( Widget sender )
+            {
+                boolean formOk = true;
+
+                for ( int j = 0; j < 2; j++ )
+                {
+                    g1.clearCell( j, 2 ); // clear previous right-hand-side annotations
+                }
+
+                if ( cleartextPassword1_box.getText().length() < minPasswordLength )
+                {
+                    Label l = new Label( "Password must be at least " + minPasswordLength + " characters long!" );
+                    l.setStyleName("euca-error-hint");
+                    g1.setWidget( password1_row, 2, l );
+                    formOk = false;
+                }
+                if ( !cleartextPassword1_box.getText().equals( cleartextPassword2_box.getText() ) )
+                {
+                    Label l = new Label( "Passwords do not match!" );
+                    l.setStyleName("euca-error-hint");
+                    g1.setWidget( password2_row, 2, l );
+                    formOk = false;
+                }
+
+                if ( formOk )
+                {
+                    label_box.setText( "Checking with the server..." );
+                    label_box.setStyleName("euca-greeting-pending");
+
+                    UserInfoWeb user = new UserInfoWeb();
+                    user.setConfirmationCode(code);
+                    user.setPassword(GWTUtils.md5(cleartextPassword1_box.getText()));
+                    EucalyptusWebBackend.App.getInstance().recoverPassword(
+                            user,
+                            new AsyncCallback() {
+                                public void onSuccess( Object result )
+                                {
+                                    displayDialog( "Thank you!", ( String ) result );
+                                }
+
+                                public void onFailure( Throwable caught )
+                                {
+                                    String m = caught.getMessage();
+                                	displayErrorPage(m);
+                                }
+                            }
+                    );
+
+                }
+                else
+                {
+                    label_box.setText( "Please, fix the errors and resubmit:" );
+                    label_box.setStyleName("euca-greeting-warning");
+                }
+            }
+        };
+
+        Button submit_button = new Button ( "Change Password", RecoverButtonListener );
+        Button cancel_button = new Button ( "Cancel", DefaultPageButtonListener );
+        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button, cancel_button);
+        cleartextPassword1_box.addKeyUpHandler(sl);
+        cleartextPassword2_box.addKeyUpHandler(sl);
+        VerticalPanel mpanel = new VerticalPanel();
+        mpanel.add( g1 );
+
+        HorizontalPanel bpanel = new HorizontalPanel();
+        bpanel.add( submit_button );
+        bpanel.add( new HTML( "&nbsp;&nbsp;or&nbsp;&nbsp;" ) );
+        bpanel.add( cancel_button );
+
+        VerticalPanel vpanel = new VerticalPanel();
+        vpanel.setSpacing(15);
+        vpanel.setHorizontalAlignment(HasHorizontalAlignment.ALIGN_CENTER);
+        if (logo!=null) { vpanel.add (logo); }
+        vpanel.add (label_box);
+        vpanel.add (mpanel);
+        vpanel.add (bpanel);
+
+        VerticalPanel wrapper = new VerticalPanel();
+        wrapper.add (vpanel);
+        wrapper.setSize("100%", "100%");
+        wrapper.setCellHorizontalAlignment(vpanel, VerticalPanel.ALIGN_CENTER);
+        wrapper.setCellVerticalAlignment(vpanel, VerticalPanel.ALIGN_MIDDLE);
+
+        RootPanel.get().clear();
+        RootPanel.get().add( wrapper );
+        cleartextPassword1_box.setFocus(true);
     }
 
     private Button displayDialog ( String greeting, String message )
@@ -1058,10 +1174,11 @@ public class EucalyptusWebInterface implements EntryPoint {
         wrapper.setSize("100%", "100%");
         wrapper.setCellHorizontalAlignment(vpanel, VerticalPanel.ALIGN_CENTER);
         wrapper.setCellVerticalAlignment(vpanel, VerticalPanel.ALIGN_MIDDLE);
-
+        
         RootPanel.get().clear();
         RootPanel.get().add( wrapper );
-
+        ok_button.setFocus(true); // so user can just hit 'Enter'
+        
         return ok_button;
 	}
 
@@ -1182,14 +1299,18 @@ public class EucalyptusWebInterface implements EntryPoint {
         else if ( action.equals( "confirm" )
  			|| action.equals ("recover") )
         {
-            String confirmationCode = ( String ) urlParams.get( "code" );
-            if ( confirmationCode == null )
+            String code = ( String ) urlParams.get( "code" );
+            if ( code == null )
             {
                 displayErrorPage( "Confirmation code not specified" );
             }
             else
             {
-                attemptAction( action, confirmationCode );
+            	if (action.equals( "confirm" )) {
+            		attemptAction( action, code );
+            	} else if (action.equals( "recover")) {
+            		displayCompletePasswordRecoveryPage(code);
+            	}
             }
         }
         else
@@ -1217,7 +1338,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         if (loggedInUser!=null) {
             if ( loggedInUser.isAdministrator().booleanValue() )
             {
-                if (loggedInUser.getEmail().equalsIgnoreCase( "" ) ) {
+                if (loggedInUser.getEmail().equalsIgnoreCase( UserInfoWeb.BOGUS_ENTRY ) ) {
                     displayFirstTimeConfiguration();
                 } else {
                     displayBarAndTabs(message);
@@ -1874,7 +1995,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                                 }
                                 public void onFailure( Throwable caught )
                                 {
-                                    loggedInUser.setEmail( "" );
+                                    loggedInUser.setEmail( UserInfoWeb.BOGUS_ENTRY );
                                     displayLoginErrorPage( caught.getMessage() );
                                 }
                             });
@@ -2532,7 +2653,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     						}
     						public void onFailure( Throwable caught )
     						{
-    							loggedInUser.setEmail( "" );
+    							loggedInUser.setEmail( UserInfoWeb.BOGUS_ENTRY );
     							String m = caught.getMessage();
     							label_box.setText( m );
     							label_box.setStyleName("euca-greeting-warning");
@@ -2543,11 +2664,10 @@ public class EucalyptusWebInterface implements EntryPoint {
     	);
 
     	EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(change_button);
-    	change_button.addKeyboardListener(sl);
-    	newCleartextPassword1_box.addKeyboardListener(sl);
-    	newCleartextPassword2_box.addKeyboardListener(sl);
-    	emailAddress_box.addKeyboardListener(sl);
-    	cloudUrl_box.addKeyboardListener(sl);
+    	newCleartextPassword1_box.addKeyUpHandler(sl);
+    	newCleartextPassword2_box.addKeyUpHandler(sl);
+    	emailAddress_box.addKeyUpHandler(sl);
+    	cloudUrl_box.addKeyUpHandler(sl);
 
     	HTML message = new HTML (admin_first_time_config_text);
     	message.setWidth( "600" );

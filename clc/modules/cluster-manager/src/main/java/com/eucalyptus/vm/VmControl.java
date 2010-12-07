@@ -85,7 +85,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.vm.SystemState.Reason;
-import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
@@ -212,7 +211,11 @@ public class VmControl {
     if ( !request.isAdministrator( ) && !v.getOwnerId( ).equals( request.getUserId( ) ) ) {
       throw new EucalyptusCloudException( "Permission denied for vm: " + request.getInstanceId( ) );
     } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
-      throw new EucalyptusCloudException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
+      GetConsoleOutputResponseType reply = request.getReply( );
+      reply.setInstanceId( request.getInstanceId( ) );
+      reply.setTimestamp( new Date( ) );
+      reply.setOutput( v.getConsoleOutputString( ) );
+      ServiceContext.dispatch( "ReplyQueue", reply );
     } else {
       Cluster cluster = null;
       try {
