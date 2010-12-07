@@ -1,6 +1,7 @@
 package com.eucalyptus.context;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,7 +38,9 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
@@ -79,10 +82,9 @@ public class ServiceContext {
   }
   
   public static void dispatch( String dest, Object msg ) throws EucalyptusCloudException {
-    if ( !( dest.startsWith( "vm://" ) && !serviceToEndpoint.containsKey( dest ) ) || dest == null ) {
+    if ( ( !dest.startsWith( "vm://" ) && !serviceToEndpoint.containsKey( dest ) ) || dest == null ) {
       dest = "vm://RequestQueue";
-    }
-    if ( !dest.startsWith( "vm://" ) ) {
+    } else if ( !dest.startsWith( "vm://" ) ) {
       dest = serviceToEndpoint.get( dest );
     }
     try {
@@ -94,10 +96,12 @@ public class ServiceContext {
       MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
                                                         ServiceContext.getContext( ) );
       MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
+      LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException(), 3 ) );
       dispatcherFactory.create( endpoint ).dispatch( muleEvent );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
-      throw new EucalyptusCloudException( "Failed to dispatch request to service " + dest + " for message type: " + msg.getClass( ).getSimpleName( ) + " because of an error: " + ex.getMessage( ), ex ); 
+      LOG.error( ex, ex );
+      throw new EucalyptusCloudException( "Failed to dispatch request to service " + dest + " for message type: " + msg.getClass( ).getSimpleName( )
+                                          + " because of an error: " + ex.getMessage( ), ex );
     }
   }
   
@@ -111,6 +115,7 @@ public class ServiceContext {
     }
     MuleEvent context = RequestContext.getEvent( );
     try {
+      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException(), 3 ) );
       MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
       
       if ( reply.getExceptionPayload( ) != null ) {
@@ -129,7 +134,7 @@ public class ServiceContext {
     }
   }
   
-  public static void buildContext( List<ConfigResource> configs ) {
+  public static void buildContext( Set<ConfigResource> configs ) {
     ServiceContext.builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
   }
   
@@ -196,7 +201,7 @@ public class ServiceContext {
   }
   
   static boolean loadContext( ) {
-    List<ConfigResource> configs = Lists.newArrayList( );
+    Set<ConfigResource> configs = Sets.newHashSet( );
     configs.addAll( Components.lookup( Component.bootstrap ).getConfiguration( ).getResource( ).getConfigurations( ) );
     if ( Components.lookup( Component.eucalyptus ).isAvailableLocally( ) ) {
 //      configs.addAll( Components.lookup( Component.eucalyptus ).getConfiguration( ).getResource( ).getConfigurations( ) );

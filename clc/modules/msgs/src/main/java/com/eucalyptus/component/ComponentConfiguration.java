@@ -9,16 +9,16 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.util.NetworkUtil;
 import com.google.common.collect.Lists;
 
-public class Configuration implements ComponentInformation {
-  private static Logger LOG = Logger.getLogger( Configuration.class );
+public class ComponentConfiguration implements ComponentInformation {
+  private static Logger LOG = Logger.getLogger( ComponentConfiguration.class );
   private final Component          parent;
   private final Resource           resource;
   private final String             propertyKey;
   private URI                      uriLocal;
   private String                   uriPattern;
   private Integer                  port;
-  
-  Configuration( Component parent ) {
+
+  ComponentConfiguration( Component parent ) {
     this.parent = parent;
     this.propertyKey = "euca." + this.parent.getName( ) + ".host";
     //    this.resource = new Resource( this, URI.create( "/dev/null" ) );
@@ -28,7 +28,7 @@ public class Configuration implements ComponentInformation {
     this.uriLocal = URI.create( "vm://"+parent.getName( ).substring( 0, 1 ).toUpperCase( ) + parent.getName( ).substring( 1 )+"RequestQueue" );
   }
   
-  Configuration( Component parent, URI u ) {
+  ComponentConfiguration( Component parent, URI u ) {
     this.parent = parent;
     this.propertyKey = "euca." + this.parent.getName( ) + ".host";
     this.resource = new Resource( this, u );
@@ -111,35 +111,24 @@ public class Configuration implements ComponentInformation {
     if ( this == obj ) return true;
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
-    Configuration other = ( Configuration ) obj;
+    ComponentConfiguration other = ( ComponentConfiguration ) obj;
     if ( this.resource.getOrigin( ) == null ) {
       if ( this.resource.getOrigin( ) != null ) return false;
     } else if ( !this.resource.getOrigin( ).equals( other.resource.getOrigin( ) ) ) return false;
     return true;
   }
   
-  @Override
-  public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
-    builder.append( "Configuration [" );
-    if ( this.parent.getName( ) != null ) {
-      builder.append( "name=" ).append( this.parent.getName( ) ).append( ", " );
-    }
-    if ( this.propertyKey != null ) {
-      builder.append( "propertyKey=" ).append( this.propertyKey ).append( ", " );
-    }
-    if ( this.resource != null ) {
-      builder.append( "resource=" ).append( this.resource );
-    }
-    builder.append( "]" );
-    return builder.toString( );
-  }
   
   /**
    * @return the parent
    */
   protected final Component getParent( ) {
     return this.parent;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentConfiguration:parent=%s:propertyKey=%s:resource=%s", this.parent.getName( ), this.propertyKey , this.resource);
   }
   
 }

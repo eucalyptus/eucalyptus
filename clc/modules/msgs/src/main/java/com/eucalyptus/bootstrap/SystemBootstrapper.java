@@ -97,6 +97,7 @@ public class SystemBootstrapper {
   private static final String SEP = " -- ";
   static { System.setProperty( "euca.log.level", "TRACE" ); }
 
+  
   private static Logger               LOG          = Logger.getLogger( SystemBootstrapper.class );
   
   private static SystemBootstrapper   singleton;
@@ -191,13 +192,17 @@ public class SystemBootstrapper {
     }
     /** ASAP:FIXME:GRZE **/
     for( Component c : Components.list( ) ) {
-      if( Components.lookup( "eucalyptus" ).isLocal( ) && c.getPeer( ).isCloudLocal( ) ) {
+      if( ( Components.lookup( "eucalyptus" ).isLocal( ) && c.getPeer( ).isCloudLocal( ) || ( c.getPeer( ).isAlwaysLocal( ) ) ) ) {
         Component.Transition.STARTING.transit( c );
-      } else if( c.getPeer( ).isAlwaysLocal( ) ) {
-        Component.Transition.STARTING.transit( c );
+        Component.Transition.READY_CHECK.transit( c );
+        Component.Transition.ENABLING.transit( c );
       } 
     }
-//    SystemBootstrapper.printBanner( );
+    try {
+      SystemBootstrapper.printBanner( );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+    }
     return true;
   }
   
@@ -227,7 +232,11 @@ public class SystemBootstrapper {
   public static native void hello( );
 
   private static String printBanner( ) {
-    String prefix = "\n[8m-----------------------------------------------------[0;10m[1m";
+//    String prefix = "\n[8m-----------------------------------------------------[0;10m[1m";
+    String prefix = "\n\t";
+    String headerHeader = "\n[8m-----------------[0;10m[1m_________________________________________________________[0;10m\n[8m-----------------[0;10m[1m|";
+      String headerFormat = "  %-54.54s";
+      String headerFooter = "|[0;10m\n[8m-----------------[0;10m[1m|#######################################################|[0;10m\n";
     String banner = "[8m-----------------[0;10m[1m._______________________________________________________.[0;10m\n" + 
     		"[8m-----------------[0;10m[1m|#######################################################|[0;10m\n" + 
     		"[8m----------------.[0;10m[1m|#[0;10m[8m                                                  [0;10m[1m.____[0;10m,[8m+[0;10m\n" + 
@@ -272,19 +281,19 @@ public class SystemBootstrapper {
     		"[8m---------------..     ------------------  ................................[0;10m\n"; 
     		
     		banner += "\n[8m-----------------[0;10m[1m Version: " + singleton.getVersion( ) + "\n";
-    		banner += "\n[8m-----------------[0;10m[1m System Bootstrap Configuration: \n";
+    		banner += headerHeader + String.format( headerFormat, "System Bootstrap Configuration" ) + headerFooter;
     		for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-          banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "\n", "\n" + prefix + stage.name() + SEP ).replaceAll( "^\\w* ", "" );
+          banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "(\\w*)\\w\n","\1\n" + prefix + stage.name() + SEP ).replaceAll( "^\\w* ", "" );
         }
-    		banner += "\n[8m-----------------[0;10m[1m Component Bootstrap Configuration: \n";
+    		banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration") + headerFooter;
     		for( Component c : Components.list( ) ) {
     		  if( c.isAvailableLocally( ) && c.isLocal( ) ) {
     		    for( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
-    		      banner += prefix + c.getName( ) + SEP + b.toString( );
+    		      banner += prefix + String.format( "%-15.15s", c.getName( ) ) + SEP + b.toString( );
     		    }
     		  }
     		}
-        banner += "\n[8m-----------------[0;10m[1m Local Services: \n"; 
+    		banner += headerHeader + String.format( headerFormat, "Local Services") + headerFooter; 
         for( Component c : Components.list( ) ) {
           if( c.isAvailableLocally( ) ) {
             banner += prefix + c.getName( ) + SEP + c.getBuilder( ).toString( );
@@ -297,7 +306,7 @@ public class SystemBootstrapper {
             }
           }
         }
-        banner += "\n[8m-----------------[0;10m[1m Detected Interfaces: \n";
+        banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
         for( NetworkInterface iface : NetworkUtil.getNetworkInterfaces( ) ) {
           banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING  );
           for( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {

@@ -75,7 +75,8 @@ import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.AtomicMarkedState.ActiveTransition;
-import com.eucalyptus.util.fsm.SimpleTransitionListener;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 
 public class ComponentState {
@@ -98,7 +99,7 @@ public class ComponentState {
   }
   
   private AtomicMarkedState<Component, State, Transition> buildStateMachine( ) {
-    final SimpleTransitionListener<Component> loadTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> loadTransition = new TransitionAction<Component>( ) {
       
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
@@ -114,7 +115,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> startTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> startTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -132,7 +133,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> enableTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> enableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -156,7 +157,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> disableTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> disableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -172,7 +173,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> stopTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> stopTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -190,7 +191,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> checkTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> checkTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -220,7 +221,7 @@ public class ComponentState {
       }
     };
     
-    final SimpleTransitionListener<Component> destroyTransition = new SimpleTransitionListener<Component>( ) {
+    final TransitionAction<Component> destroyTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
         ComponentState.this.details.clear( );
@@ -251,33 +252,37 @@ public class ComponentState {
     }.newAtomicState( );
   }
 
-  public Callback.Completion transition( Transition transition ) throws IllegalStateException, NoSuchElementException {
+  public Callback.Completion transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
       return this.stateMachine.startTransition( transition );
+    } catch ( IllegalStateException ex ) {
+      throw Exceptions.trace( ex );
+    } catch ( NoSuchElementException ex ) {
+      throw Exceptions.trace( ex );
+    } catch ( ExistingTransitionException ex ) {
+      throw Exceptions.trace( ex );
     } catch ( Throwable ex ) {
-      throw Exceptions.trace( "Service transition " + transition + " for " + this.parent.toString( ) + "failed because: " + ex.getMessage( ), ex );
+      throw Exceptions.trace( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex );
     }
   }
   
-  public Callback.Completion transition( State state ) throws IllegalStateException, NoSuchElementException {
+  public Callback.Completion transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
-      return this.stateMachine.startTransitionTo( this.stateMachine.getState( ) );
+      return this.stateMachine.startTransitionTo( state );
+    } catch ( IllegalStateException ex ) {
+      throw Exceptions.trace( ex );
+    } catch ( NoSuchElementException ex ) {
+      throw Exceptions.trace( ex );
+    } catch ( ExistingTransitionException ex ) {
+      throw Exceptions.trace( ex );
     } catch ( Throwable ex ) {
-      throw Exceptions.trace( "The transition from " + this.getState( ) + " to " + state + " for " + this.parent.toString( ) + "failed because: " + ex.getMessage( ), ex );
+      throw Exceptions.trace( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex );
     }
   }
 
-  public void transitionNow( Transition transition ) throws IllegalStateException, NoSuchElementException {
-    this.transition( transition ).fire( );
-  }
-
-  public void transitionNow( State nextState ) throws IllegalStateException, NoSuchElementException {
-    this.transition( nextState ).fire( );
-  }
-  
   public void transitionSelf( ) {
     try {
-      this.transitionNow( this.getState( ) );
+      this.transition( this.getState( ) );
     } catch ( Throwable ex ) {
       LOG.trace( ex , ex );
     }

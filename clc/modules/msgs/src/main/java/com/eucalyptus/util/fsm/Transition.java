@@ -10,19 +10,22 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.fsm.TransitionListener.Phases;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
-public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> implements TransitionListener<P> {
+public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> extends TransitionAction<P> {
   private static Logger                                       LOG       = Logger.getLogger( Transition.class );
   private final AtomicInteger                                 index     = new AtomicInteger( 0 );
   private final TransitionRule<S, T>                          rule;
   private final ConcurrentMap<Integer, TransitionListener<P>> listeners = Maps.newConcurrentHashMap( );
+  private final TransitionAction<P>                           action;
   
-  public Transition( final TransitionRule<S, T> transitionRule, TransitionListener<P>... listeners ) {
+  public Transition( final TransitionRule<S, T> transitionRule, final TransitionAction<P> action, TransitionListener<P>... listeners ) {
     this.rule = transitionRule;
+    this.action = action;
     for ( TransitionListener<P> listener : listeners ) {
       this.addListener( listener );
     }
@@ -103,38 +106,44 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
   }
   
   private boolean fireListeners( final TransitionListener.Phases phase, final Predicate<TransitionListener<P>> pred, P parent ) {
-    if ( this.listeners.isEmpty( ) ) {
-      throw new IllegalStateException( "Attempt to apply delegated transition before it is defined." );
-    } else {
-      for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
-        final TransitionListener<P> tl = entry.getValue( );
-        if( LogLevels.TRACE ) {
-          EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, ""+parent.getName( ), this.toString( ), phase.toString( ),//
-                            entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll("^(\\w.)*","") ).trace( );
-        }
-        try {
-          if ( !pred.apply( entry.getValue( ) ) ) {
-            throw new TransitionListenerException( entry.getValue( ).getClass( ).getSimpleName( ) + "." + phase + "( ) returned false." );
-          }
-        } catch ( Throwable t ) {
-          LOG.error( t, t );
-          return false;
-        }
+    for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
+      final TransitionListener<P> tl = entry.getValue( );
+      if ( LogLevels.TRACE ) {
+        EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ), phase.toString( ),//
+                          entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) ).trace( );
       }
-      return true;
+      try {
+        if ( !pred.apply( entry.getValue( ) ) ) {
+          throw new TransitionListenerException( entry.getValue( ).getClass( ).getSimpleName( ) + "." + phase + "( ) returned false." );
+        }
+      } catch ( Throwable t ) {
+        LOG.error( t, t );
+        return false;
+      }
     }
+    return true;
   }
   
   /**
    * @see com.eucalyptus.util.fsm.TransitionListener#before()
    */
   public boolean before( final P parent ) {
-    return this.fireListeners( Phases.before, new Predicate<TransitionListener<P>>( ) {
-      @Override
-      public boolean apply( TransitionListener<P> listener ) {
-        return listener.before( parent );
+    if ( this.action == null ) {
+      throw new IllegalStateException( "Attempt to apply delegated transition before it is defined." );
+    } else {
+      this.fireListeners( Phases.before, new Predicate<TransitionListener<P>>( ) {
+        @Override
+        public boolean apply( TransitionListener<P> listener ) {
+          return listener.before( parent );
+        }
+      }, parent );
+      try {
+        return this.action.before( parent );
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
+        return false;
       }
-    }, parent );
+    }
   }
   
   /**
@@ -142,50 +151,69 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
    */
   @Override
   public void leave( final P parent, final Completion transitionCallback ) {
-    this.fireListeners( Phases.leave, new Predicate<TransitionListener<P>>( ) {
-      @Override
-      public boolean apply( TransitionListener<P> listener ) {
-        listener.leave( parent, transitionCallback );
-        return true;
-      }
-    }, parent );
+    if ( this.action == null ) {
+      throw new IllegalStateException( "Attempt to apply delegated transition before it is defined." );
+    } else {
+      this.fireListeners( Phases.leave, new Predicate<TransitionListener<P>>( ) {
+        @Override
+        public boolean apply( TransitionListener<P> listener ) {
+          listener.leave( parent );
+          return true;
+        }
+      }, parent );
+      this.action.leave( parent, transitionCallback );
+    }
   }
   
   /**
    * @see com.eucalyptus.util.fsm.TransitionListener#enter()
    */
   public void enter( final P parent ) {
-    this.fireListeners( Phases.enter, new Predicate<TransitionListener<P>>( ) {
-      @Override
-      public boolean apply( TransitionListener<P> listener ) {
-        listener.enter( parent );
-        return true;
-      }
-    }, parent );
+    if ( this.action == null ) {
+      throw new IllegalStateException( "Attempt to apply delegated transition before it is defined." );
+    } else {
+      this.fireListeners( Phases.enter, new Predicate<TransitionListener<P>>( ) {
+        @Override
+        public boolean apply( TransitionListener<P> listener ) {
+          listener.enter( parent );
+          return true;
+        }
+      }, parent );
+      this.action.enter( parent );
+    }
   }
   
   /**
    * @see com.eucalyptus.util.fsm.TransitionListener#after()
    */
   public void after( final P parent ) {
-    this.fireListeners( Phases.after, new Predicate<TransitionListener<P>>( ) {
-      @Override
-      public boolean apply( TransitionListener<P> listener ) {
-        listener.after( parent );
-        return true;
-      }
-    }, parent );
+    if ( this.action == null ) {
+      throw new IllegalStateException( "Attempt to apply delegated transition before it is defined." );
+    } else {
+      this.fireListeners( Phases.after, new Predicate<TransitionListener<P>>( ) {
+        @Override
+        public boolean apply( TransitionListener<P> listener ) {
+          listener.after( parent );
+          return true;
+        }
+      }, parent );
+      this.action.after( parent );
+    }
   }
   
   @Override
   public String toString( ) {
+    String actionName = "null";
+    if( this.action != null ) {
+      actionName = this.action.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
+    }
     Iterable<String> listenerNames = Iterables.transform( this.listeners.values( ), new Function<TransitionListener<P>, String>( ) {
       public String apply( TransitionListener<P> arg0 ) {
         return arg0.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
       }
     } );
-    return String.format( "Transition:name=%s:from=%s/%s:to=%s/%s:listeners=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
-                          this.getToState( ), this.getToStateMark( ), listenerNames );
+    return String.format( "Transition:name=%s:from=%s/%s:to=%s/%s:action=%s:listeners=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
+                          this.getToState( ), this.getToStateMark( ), "" + this.action, listenerNames );
   }
   
   /**
@@ -221,6 +249,13 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
     if ( getClass( ) != obj.getClass( ) ) return false;
     Transition other = ( Transition ) obj;
     return this.rule.equals( other.rule );
+  }
+
+  /**
+   * @return the action
+   */
+  public TransitionAction<P> getAction( ) {
+    return this.action;
   }
   
 }
