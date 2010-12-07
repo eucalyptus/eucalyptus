@@ -120,8 +120,6 @@ public class Component implements ComponentInformation, HasName<Component> {
           throw new IllegalStateException( "Error while applying transtition " + this.name( ) + " to " + c.getName( ) + " currently in state "
                                            + c.stateMachine.toString( ), ex );
         }
-      } else {
-        throw new IllegalStateException( "Error while applying transtition " + this.name( ) + " to " + c.getName( ) + " since it is not available locally." );
       }
     }
   }
