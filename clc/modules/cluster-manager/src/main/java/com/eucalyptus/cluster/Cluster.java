@@ -138,7 +138,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     DISABLED, /* just like down, but is explicitly requested */
     DOWN, /* cluster either down, unreachable, or responds with errors */
     AUTHENTICATING, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS, 
-    RUNNING, RUNNING1, RUNNING2, RUNNING3, /* available */
+    RUNNING_ADDRS, RUNNING_RSC, RUNNING_NET, RUNNING_VMS, /* available */
   }
   
   public enum Transition {
@@ -150,8 +150,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
 //    NETWORK_ERROR, /* any -> DOWN: error reaching cluster host */
 //    CONFIG_ERROR, /* any -> DOWN: configuration error on the cluster */
     INIT_CERTS, /* AUTHENTICATING -> STARTING */
-    INIT_STATE, INIT_RSRC, INIT_NET, INIT_VMS, INIT_ADDRS, INIT_VMS2, /* STARTING -> RUNNING */
-    UPDATE, RUNNING_ADDRS, RUNNING_VMS, RUNNING_NET, RUNNING_RSC, /* RUNNING -> RUNNING */
+    INIT_RESOURCES, INIT_NET, INIT_VMS, INIT_ADDRS, INIT_VMS2, INIT_ADDRS2,/* STARTING -> RUNNING */
+    RUNNING_ADDRS, RUNNING_VMS, RUNNING_NET, RUNNING_RSC, /* RUNNING -> RUNNING */
   }
   
   public Cluster( ClusterConfiguration configuration, ClusterCredentials credentials ) {
@@ -188,17 +188,17 @@ public class Cluster implements HasName<Cluster>, EventListener {
         on( Transition.INIT_CERTS )//
         .from( State.AUTHENTICATING ).to( State.STARTING ).error( State.DOWN ).run( newRefresh( ClusterCertsCallback.class ) );
         
-        on( Transition.INIT_RSRC ).from( State.STARTING ).to( State.STARTING_RESOURCES ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
+        on( Transition.INIT_RESOURCES ).from( State.STARTING ).to( State.STARTING_RESOURCES ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
         on( Transition.INIT_NET ).from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
         on( Transition.INIT_VMS ).from( State.STARTING_NET ).to( State.STARTING_VMS ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
         on( Transition.INIT_ADDRS ).from( State.STARTING_VMS ).to( State.STARTING_ADDRS ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
         on( Transition.INIT_VMS2 ).from( State.STARTING_ADDRS ).to( State.STARTING_VMS2 ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
-        on( Transition.INIT_VMS2 ).from( State.STARTING_VMS2 ).to( State.RUNNING ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
+        on( Transition.INIT_ADDRS2 ).from( State.STARTING_VMS2 ).to( State.RUNNING_ADDRS ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
         
-        on( Transition.RUNNING_RSC ).from( State.RUNNING ).to( State.RUNNING1 ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
-        on( Transition.RUNNING_NET ).from( State.RUNNING1 ).to( State.RUNNING2 ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
-        on( Transition.RUNNING_VMS ).from( State.RUNNING2 ).to( State.RUNNING3 ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
-        on( Transition.RUNNING_ADDRS ).from( State.RUNNING3 ).to( State.RUNNING ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
+        on( Transition.RUNNING_RSC ).from( State.RUNNING_ADDRS ).to( State.RUNNING_RSC ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
+        on( Transition.RUNNING_NET ).from( State.RUNNING_RSC ).to( State.RUNNING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
+        on( Transition.RUNNING_VMS ).from( State.RUNNING_NET ).to( State.RUNNING_VMS ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
+        on( Transition.RUNNING_ADDRS ).from( State.RUNNING_VMS ).to( State.RUNNING_ADDRS ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
         
         on( Transition.ENABLE ).from( State.DISABLED ).to( State.DOWN ).noop( );
         
@@ -515,10 +515,34 @@ public class Cluster implements HasName<Cluster>, EventListener {
             this.stateMachine.startTransition( Transition.INIT_CERTS );
             break;
           case STARTING:
-            this.stateMachine.startTransition( Transition.INIT_STATE );
+            this.stateMachine.startTransition( Transition.INIT_RESOURCES );
             break;
-          case RUNNING:
-            this.stateMachine.startTransition( Transition.UPDATE );
+          case STARTING_RESOURCES: 
+            this.stateMachine.startTransition( Transition.INIT_NET );
+            break;
+          case STARTING_NET: 
+            this.stateMachine.startTransition( Transition.INIT_VMS );
+            break;
+          case STARTING_VMS: 
+            this.stateMachine.startTransition( Transition.INIT_ADDRS );
+            break;
+          case STARTING_ADDRS: 
+            this.stateMachine.startTransition( Transition.INIT_VMS2 );
+            break;
+          case STARTING_VMS2: 
+            this.stateMachine.startTransition( Transition.INIT_ADDRS2 );
+            break;
+          case RUNNING_ADDRS:
+            this.stateMachine.startTransition( Transition.RUNNING_RSC );
+            break;
+          case RUNNING_RSC:
+            this.stateMachine.startTransition( Transition.RUNNING_NET );
+            break;
+          case RUNNING_NET:
+            this.stateMachine.startTransition( Transition.RUNNING_VMS );
+            break;
+          case RUNNING_VMS:
+            this.stateMachine.startTransition( Transition.RUNNING_ADDRS );
             break;
           default:
             break;
