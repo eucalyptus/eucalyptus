@@ -69,6 +69,7 @@ permission notice:
 #define DEFAULT_WALRUS_HOSTPORT "localhost:8773"
 #define DEFAULT_NC_HOSTPORT "localhost:8775"
 #define DEFAULT_MAC_ADDR "aa:bb:cc:dd:ee:ff"
+#define DEFAULT_PUBLIC_IP "10.1.2.3"
 #define BUFSIZE 1024
 char debug = 0;
 
@@ -122,6 +123,7 @@ int main (int argc, char **argv)
     char * reservation_id = NULL;
     char * uu_id = NULL;
     char * mac_addr = strdup (DEFAULT_MAC_ADDR);
+    char * public_ip = strdup (DEFAULT_PUBLIC_IP);
     char * volume_id = NULL;
     char * remote_dev = NULL;
     char * local_dev = NULL;
@@ -134,7 +136,7 @@ int main (int argc, char **argv)
     int count = 1;
 	int ch;
     
-	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:u:V:R:L:FU:I:G:")) != -1) {
+	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:")) != -1) {
 		switch (ch) {
         case 'c':
             count = atoi (optarg);
@@ -150,6 +152,9 @@ int main (int argc, char **argv)
             break;
         case 'i':
             instance_id = optarg; 
+            break;
+        case 'p':
+            public_ip = optarg; 
             break;
         case 'm':
             image_id = strtok (optarg, ":");
@@ -382,6 +387,8 @@ int main (int argc, char **argv)
         /***********************************************************/
     } else if (!strcmp(command, "powerDown")) {
       int rc = ncPowerDownStub(stub, &meta);
+    } else if (!strcmp(command, "assignAddress")) {
+      int rc = ncAssignAddressStub(stub, &meta, instance_id, public_ip);
     } else if (!strcmp(command, "terminateInstance")) {
         CHECK_PARAM(instance_id, "instance ID");
         

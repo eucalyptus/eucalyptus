@@ -14,6 +14,10 @@ my @blkdevs = split(",", $blkdevstr);
 my @ifaces = split(",", $ifacestr);
 
 foreach $blkdev (@blkdevs) {
+    $blkdev =~ s/\d*$//;
+    $blks{$blkdev} = 1;
+}
+foreach $blkdev (keys((%blks))) {
     open(RFH, "virsh domblkstat $id $blkdev 2>/dev/null|");
     while(<RFH>) {
 	chomp;

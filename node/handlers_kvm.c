@@ -536,6 +536,7 @@ struct handlers kvm_libvirt_handlers = {
     .doGetConsoleOutput  = doGetConsoleOutput,
     .doDescribeResource  = NULL,
     .doStartNetwork      = NULL,
+    .doAssignAddress     = NULL,
     .doPowerDown         = NULL,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume

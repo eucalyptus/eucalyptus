@@ -543,6 +543,44 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
     return status;
 }
 
+int ncAssignAddressStub  (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp) {
+  axutil_env_t * env  = st->env;
+  axis2_stub_t * stub = st->stub;
+  adb_ncAssignAddress_t     * input   = adb_ncAssignAddress_create (env);
+  adb_ncAssignAddressType_t * request = adb_ncAssignAddressType_create (env);
+  
+  // set standard input fields
+  adb_ncAssignAddressType_set_nodeName(request, env, st->node_name);
+  if (meta) {
+    if (meta->correlationId) { meta->correlationId = NULL; }
+    EUCA_MESSAGE_MARSHAL(ncAssignAddressType, request, meta);
+  }
+  
+  // set op-specific input fields
+  adb_ncAssignAddressType_set_instanceId(request, env, instanceId);
+  adb_ncAssignAddressType_set_publicIp(request, env, publicIp);
+
+  adb_ncAssignAddress_set_ncAssignAddress(input, env, request);
+  
+  int status = 0;
+  { // do it
+    adb_ncAssignAddressResponse_t * output = axis2_stub_op_EucalyptusNC_ncAssignAddress (stub, env, input);
+    
+    if (!output) {
+      logprintfl (EUCAERROR, "ERROR: AssignAddress" NULL_ERROR_MSG);
+      status = -1;
+    } else {
+      adb_ncAssignAddressResponseType_t * response = adb_ncAssignAddressResponse_get_ncAssignAddressResponse (output, env);
+      if ( adb_ncAssignAddressResponseType_get_return(response, env) == AXIS2_FALSE ) {
+	logprintfl (EUCAERROR, "ERROR: AssignAddress returned an error\n");
+	status = 1;
+      }
+    }
+  }
+  
+  return status;
+}
+
 int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
   axutil_env_t * env  = st->env;
   axis2_stub_t * stub = st->stub;
