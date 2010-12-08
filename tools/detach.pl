@@ -86,7 +86,7 @@ if ( ! -x "$rootwrap" ) {
 $rc = check_devexists($rootwrap, $virsh, $instanceId, $localdev);
 if ($rc == 1) {
     print STDERR "device to detach is not attached\n";
-    exit(0);
+    exit $inputfail;
 }
 
 if ($distro eq "GENERIC") {
@@ -144,7 +144,7 @@ sub check_devexists() {
     while(<RFH>) {
 	chomp;
 	my $line = $_;
-	if ($line =~ /target dev='$localdev' bus='scsi'/) {
+	if ($line =~ /target dev='$localdev'/) {
 	    close(RFH);
 	    return(0);
 	}
