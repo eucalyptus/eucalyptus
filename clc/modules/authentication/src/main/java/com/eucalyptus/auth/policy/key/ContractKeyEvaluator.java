@@ -12,6 +12,10 @@ public class ContractKeyEvaluator {
 
   private Map<String, Contract> contracts;
   
+  public ContractKeyEvaluator( ) {
+    this.contracts = Maps.newHashMap( );
+  }
+  
   public ContractKeyEvaluator( Map<String, Contract> contracts ) {
     this.contracts = contracts;
   }

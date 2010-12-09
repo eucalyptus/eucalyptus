@@ -58,17 +58,10 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author chris grzegorczyk <grze@eucalyptus.com>
+ * @author Ye Wen <wenye@eucalyptus.com>
  */
-
 package com.eucalyptus.component;
 
-import java.util.NavigableSet;
-import com.eucalyptus.util.HasName;
-
-/**
- * Perform the allocation of 'quantity' number of resources of type T
- */
-public abstract interface ResourceAllocator<T> {
-  public abstract NavigableSet<T> allocate( Integer quantity ) throws ResourceAllocationException;
+public interface ResourceOwnerLookup<T> {
+  public String getOwningAccountId( T resource );
 }

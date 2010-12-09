@@ -3,12 +3,16 @@ package com.eucalyptus.sla;
 import java.util.List;
 import java.util.NavigableMap;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Authorizations;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmTypeAvailability;
+import com.eucalyptus.component.ResourceLookup;
+import com.eucalyptus.component.ResourceLookupException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
@@ -94,19 +98,23 @@ public class NodeResourceAllocator implements ResourceAllocator {
   
   private List<Cluster> doPrivilegedLookup( String clusterName, String vmTypeName ) throws NotEnoughResourcesAvailable {
     if ( "default".equals( clusterName ) ) {
-      //Group group = Contexts.lookup( ).getGroups( ).get( 0 );
       Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
         @Override
         public boolean apply( final Cluster c ) {
-          /*
-          return Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
-            @Override
-            public boolean apply( Authorization arg0 ) {
-              return arg0.check( new AvailabilityZonePermission( c.getName( ) ) );
-            }
-          } );
-          */
-          return true;
+          try {
+            Authorizations.lookupPrivileged( Cluster.class, c.getName( ), null, new ResourceLookup<Cluster>( ) {
+
+              @Override
+              public Cluster resolve( String name ) throws ResourceLookupException {
+                return c;
+              }
+              
+            });
+            return true;
+          } catch ( Exception e ) {
+            LOG.debug( e, e );
+          }
+          return false;
         }
       } );
       Multimap<VmTypeAvailability, Cluster> sorted = Multimaps.newTreeMultimap( );
@@ -119,24 +127,26 @@ public class NodeResourceAllocator implements ResourceAllocator {
         return Lists.newArrayList( sorted.values( ) );
       }
     } else {
-      final Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-      /*
-      if ( Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
-        @Override
-        public boolean apply( Authorization arg0 ) {
-          return arg0.check( new AvailabilityZonePermission( cluster.getName( ) ) );
+      Cluster cluster = null;
+      try {
+        cluster = Authorizations.lookupPrivileged( Cluster.class, clusterName, null, new ResourceLookup<Cluster>( ) {
+
+          @Override
+          public Cluster resolve( String name ) throws ResourceLookupException {
+            return Clusters.getInstance( ).lookup( name );
+          }
+          
+        });
+        
+        if ( cluster == null ) {
+          throw new ResourceLookupException( "Can't find cluster " + clusterName );
         }
-      } ) ) {
-      */
-      if ( true ) {
-        return Lists.newArrayList( cluster );
-      } else {
-        if ( Clusters.getInstance( ).contains( clusterName ) ) {
-          throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName );
-        } else {
-          throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName );
-        }
+      } catch ( AuthException e ) {
+        throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName, e );
+      } catch ( ResourceLookupException e ) {
+        throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName, e );
       }
+      return Lists.newArrayList( cluster );
     }
   }
   

@@ -63,24 +63,46 @@
  */
 package com.eucalyptus.cluster;
 
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Authorizations;
+import com.eucalyptus.component.ResourceAllocationException;
+import com.eucalyptus.component.ResourceLookup;
+import com.eucalyptus.component.ResourceLookupException;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmTypeVerify {
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
   {
-    String instanceType = vmAllocInfo.getRequest().getInstanceType();
-    VmType v = VmTypes.getVmType( (instanceType==null)?"m1.small":instanceType );
-    if( v == null ) {
-      throw new EucalyptusCloudException( "instance type does not exist: " + vmAllocInfo.getRequest().getInstanceType() );
+    try {
+      String instanceType = vmAllocInfo.getRequest().getInstanceType();
+      instanceType = (instanceType==null)?"m1.small":instanceType;
+      // Resolve
+      VmType v = Authorizations.lookupPrivileged( VmType.class, instanceType, null, new ResourceLookup<VmType>( ) {
+  
+        @Override
+        public VmType resolve( String name ) throws ResourceLookupException {
+          VmType v = VmTypes.getVmType( (name==null)?"m1.small":name );
+          if( v == null ) {
+            throw new ResourceLookupException( "instance type does not exist: " + name );
+          }
+          return v;
+        }
+        
+      });
+      // Allocate. Should do this in CreateVmInstances since only then we know the exact number
+      // of instances being allocated.
+      //Authorizations.allocatePrivileged( VmType.class, instanceType, 1, null );
+      vmAllocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
+      return vmAllocInfo;
+    } catch ( AuthException e ) {
+      throw new EucalyptusCloudException( "Access to instance type is denied.", e );
+    } catch ( ResourceLookupException e ) {
+      throw new EucalyptusCloudException( e );
     }
-
-    vmAllocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
-    return vmAllocInfo;
   }
 
 }

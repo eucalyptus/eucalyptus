@@ -6,7 +6,13 @@ import java.io.OutputStreamWriter;
 import java.security.PrivateKey;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Authorizations;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Certs;
+import com.eucalyptus.component.ResourceLookup;
+import com.eucalyptus.component.ResourceLookupException;
+import com.eucalyptus.component.ResourceOwnerLookup;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -21,6 +27,16 @@ import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
 
 public class KeyPairManager {
+  
+  private static class KeyPairOwnerLookup implements ResourceOwnerLookup<SshKeyPair> {
+
+    @Override
+    public String getOwningAccountId( SshKeyPair resource ) {
+      return resource.getUserName( );
+    }
+    
+  }
+  
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );
 
   public VmKeyInfo resolve( VmInfo vmInfo ) throws EucalyptusCloudException {
@@ -47,9 +63,31 @@ public class KeyPairManager {
         return vmAllocInfo;
 //      }
     }
-    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( vmAllocInfo.getRequest( ).getUserId( ), vmAllocInfo.getRequest( ).getKeyName( ) );
-    if ( keypair == null ) {
-      throw new EucalyptusCloudException( "Failed to find keypair: " + vmAllocInfo.getRequest().getKeyName() );
+    String keyName = vmAllocInfo.getRequest( ).getKeyName( );
+    SshKeyPair keypair = null;
+    try {
+      final String accountId = Users.lookupUserById( vmAllocInfo.getRequest( ).getUserId( ) ).getAccount( ).getAccountId( );
+      keypair = Authorizations.lookupPrivileged( SshKeyPair.class, keyName, new KeyPairOwnerLookup( ), new ResourceLookup<SshKeyPair>( ) {
+  
+        @Override
+        public SshKeyPair resolve( String name ) throws ResourceLookupException {
+          SshKeyPair kp = null;
+          try {
+            kp = KeyPairUtil.getUserKeyPair( accountId, name );
+          } catch ( EucalyptusCloudException e ) {
+            throw new ResourceLookupException( "Failed to find keypair: " + name, e );
+          }
+          if ( kp == null ) {
+            throw new ResourceLookupException( "Failed to find keypair: " + name );
+          }
+          return kp;
+        }
+        
+      });
+    } catch ( ResourceLookupException e ) {
+      throw new EucalyptusCloudException( e );
+    } catch ( AuthException e ) {
+      throw new EucalyptusCloudException( "Access to the key pair " + keyName + " is denied.", e );
     }
     vmAllocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey(), keypair.getFingerPrint() ) );
     return vmAllocInfo;

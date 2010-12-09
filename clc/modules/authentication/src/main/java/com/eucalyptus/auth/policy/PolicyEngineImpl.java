@@ -67,34 +67,42 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @see com.eucalyptus.auth.api.PolicyEngine#evaluateAuthorization(java.lang.Class, java.lang.String, java.lang.String)
    */
   @Override
-  public <T> void evaluateAuthorization( Class<T> resourceClass, String resourceName, String resourceAccountId ) throws AuthException {
+  public <T> Map<String, Contract> evaluateAuthorization( Class<T> resourceClass, String resourceName, String resourceAccountId, BaseMessage request, User requestUser ) throws AuthException {
     try {
-      User requestUser = RequestContext.getRequestUser( );
-      // System admin can do everything
-      if ( requestUser.isSystemAdmin( ) ) {
-        return;
+      // Check input validity
+      if ( resourceClass == null ) {
+        throw new AuthException( "Empty resource class" );
+      }
+      if ( request == null ) {
+        throw new AuthException( "Empty request" );
+      }
+      if ( requestUser == null ) {
+        throw new AuthException( "Empty request user" );
       }
       
-      BaseMessage request = RequestContext.getRequest( );
-      Map<String, Contract> contracts = RequestContext.getContracts( );
+      ContractKeyEvaluator contractEval = new ContractKeyEvaluator( );
+      CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
+
+      // System admin can do everything
+      if ( requestUser.isSystemAdmin( ) ) {
+        return contractEval.getContracts( );
+      }
+      
       String userId = requestUser.getUserId( );
       String accountId = requestUser.getAccount( ).getAccountId( );
       String resourceType = getResourceType( resourceClass );
       String action = getAction( request.getClass( ) );
       
-      CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
-      ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
-      
       // Check global (inter-account) authorizations first
       Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, accountId ), action, resourceName, keyEval, contractEval );
       if ( ( decision == Decision.DENY )
-          || ( decision == Decision.DEFAULT && !resourceAccountId.equals( accountId ) ) ) {
+          || ( decision == Decision.DEFAULT && resourceAccountId != null && !resourceAccountId.equals( accountId ) ) ) {
         LOG.debug( request + " is rejected by global authorization check, due to decision " + decision );
         throw new AuthException( AuthException.ACCESS_DENIED ); 
       }
       // Account admin can do everything within the account
       if ( requestUser.isAccountAdmin( ) ) {
-        return;
+        return contractEval.getContracts( );
       }
       // If not denied by global authorizations, check local (intra-account) authorizations.
       decision = processAuthorizations( lookupLocalAuthorizations( resourceType, userId ), action, resourceName, keyEval, contractEval );
@@ -104,6 +112,7 @@ public class PolicyEngineImpl implements PolicyEngine {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
       // Allowed
+      return contractEval.getContracts( );
     } catch ( AuthException e ) {
       //throw by the policy engine implementation 
       throw e;
@@ -261,13 +270,22 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @see com.eucalyptus.auth.api.PolicyEngine#evaluateQuota(java.lang.Integer, java.lang.Class, java.lang.String)
    */
   @Override
-  public <T> void evaluateQuota( Integer quantity, Class<T> resourceClass, String resourceName ) throws AuthException {
+  public <T> void evaluateQuota( Class<T> resourceClass, String resourceName, Integer quantity, BaseMessage request, User requestUser ) throws AuthException {
     try {
-      User requestUser = RequestContext.getRequestUser( );
+      // Check input validity
+      if ( resourceClass == null ) {
+        throw new AuthException( "Empty resource class" );
+      }
+      if ( request == null ) {
+        throw new AuthException( "Empty request" );
+      }
+      if ( requestUser == null ) {
+        throw new AuthException( "Empty request user" );
+      }
+      
       if ( requestUser.isSystemAdmin( ) ) {
         return;
       }
-      BaseMessage request = RequestContext.getRequest( );
       String userId = requestUser.getUserId( );
       String accountId = requestUser.getAccount( ).getAccountId( );
       String resourceType = getResourceType( resourceClass );
