@@ -90,6 +90,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 
 	public DRBDStorageManager(String rootDirectory) {
 		super(rootDirectory);
+		LOG.info("Initializing DRBD Info: " + DRBDInfo.getDRBDInfo().getName());
 	}
 
 	private String getConnectionStatus() throws ExecutionException, EucalyptusCloudException {
