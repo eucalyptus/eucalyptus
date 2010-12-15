@@ -70,7 +70,6 @@ import java.io.Serializable;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.lob.SerializableBlob;
 
 import com.eucalyptus.util.StorageProperties;
 

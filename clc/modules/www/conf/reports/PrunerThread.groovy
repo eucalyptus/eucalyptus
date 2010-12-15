@@ -29,14 +29,13 @@ class PrunerThread
 			sql = new Sql( db.getSession( ).connection( ) )
 			new Pruner( sql ).prune()
 		} finally {
-			if ( sql != null ) db?.commit()
+			db?.commit()
 		}
 	}
 
 
 	/**
-	 * Start a single thread which prunes the database at periodic intervals. Only one thread
-	 * is ever created, even if this is called repeatedly
+	 * Start a single thread which prunes the database at periodic intervals.
 	 */
 	public static void startThreadIfNotRunning()
 	{

@@ -2676,6 +2676,7 @@ void *monitor_thread(void *in) {
   ncMetadata ccMeta;
   char pidfile[MAX_PATH], *pidstr=NULL;
 
+  bzero(&ccMeta, sizeof(ncMetadata));
   ccMeta.correlationId = strdup("monitor");
   ccMeta.userId = strdup("eucalyptus");
   if (!ccMeta.correlationId || !ccMeta.userId) {

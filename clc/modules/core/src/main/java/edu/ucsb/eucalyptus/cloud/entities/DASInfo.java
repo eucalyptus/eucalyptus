@@ -93,7 +93,7 @@ DASInfo {
 	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
-	@ConfigurableField( description = "Direct attached storage device location", displayName = "Direct attached storage device" )
+	@ConfigurableField( description = "Direct attached storage device location", displayName = "Direct attached block device or volume group" )
 	@Column(name = "das_device")
 	private String DASDevice;
 

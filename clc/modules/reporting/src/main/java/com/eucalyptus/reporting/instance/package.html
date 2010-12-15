@@ -1,0 +1,21 @@
+
+<p>The reporting.instance package stores and retrieves instance
+usage data. The stored usage data is used for subsequent report generation. 
+Usage data includes things like disk bandwidth, network bandwidth, etc, for
+each instance.
+
+<p>The reporting mechanism gathers <i>samples</i> of usage data, meaning it
+collects usage data from nodes every <i>n</i> seconds, and it assumes
+continuous usage within those <i>n</i> seconds.  This results in a small
+sampling error because the boundaries of reporting periods (ie months) will not
+exactly correspond to the boundaries of the samples.
+
+<p>Internally, the reporting mechanism stores its data as a series of usage
+snapshots, every <i>n</i> seconds apart, for each instance.  Each snapshot
+contains the cumulative resource usage of an instance up to the point when the
+snapshot was taken. The reason it uses cumulative totals is to gain resilience
+to lost packets despite unreliable transmission. If the reporting mechanism
+misses an event, it will find out later (when the next event arrives) how many
+resources had been used in the mean time. Lost messages result only in less
+granular logs with larger intervals, but not any loss of essential information.
+
