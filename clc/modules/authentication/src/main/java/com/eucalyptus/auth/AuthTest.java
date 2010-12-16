@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
-import com.eucalyptus.auth.policy.RequestContext;
-import com.eucalyptus.auth.policy.RequestContext.ContextAdaptor;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.TestQuota;
@@ -180,33 +178,10 @@ public class AuthTest {
     Policies.attachGroupPolicy( policy, "sales", "test" );
 
     final User user = Users.lookupUserByName( "tom", "test" );
-    RequestContext.setAdaptor( new ContextAdaptor( ) {
-
-      @Override
-      public User getRequestUser( ) {
-        return user;
-      }
-
-      @Override
-      public BaseMessage getRequest( ) {
-        return new RunInstancesType( );
-      }
-
-      @Override
-      public SocketAddress getRemoteAddress( ) {
-        return new InetSocketAddress( "192.168.7.54", 80808 );
-      }
-
-      @Override
-      public Map<String, Contract> getContracts( ) {
-        return Maps.newHashMap( );
-      }
-      
-    } );
     
     PolicyEngine engine = new PolicyEngineImpl( );
-    engine.evaluateAuthorization( Image.class, "emi-12345678", user.getAccount( ).getAccountId( ) );
-    engine.evaluateQuota( 1, Image.class, "" );
+    engine.evaluateAuthorization( Image.class, "emi-12345678", user.getAccount( ).getAccountId( ), new RunInstancesType( ), user );
+    engine.evaluateQuota( Image.class, "", 1, new RunInstancesType( ), user );
   }
   
   private static void printAuths( List<? extends Authorization> auths ) throws AuthException {
