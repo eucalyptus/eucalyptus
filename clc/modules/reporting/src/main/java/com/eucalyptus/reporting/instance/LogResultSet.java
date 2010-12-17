@@ -3,71 +3,77 @@ package com.eucalyptus.reporting.instance;
 import java.util.*;
 
 /**
- * <p>LogResultSet contains the results of a log query from InstanceUsageLog.
+ * <p>LogResultSet contains the results of a query of InstanceUsageLog.
  * LogResultSet is conceptually similar to a jdbc ResultSet; it has a
- * "cursor" which you can move forward by calling <i>next()</i>, and a set of
- * objects for each cursor position.
+ * "cursor" which you can move forward by calling <pre>next()</pre>, and a set
+ * of objects for each cursor position.
+ *
+ * <p>As with a JDBC ResultSet, you must call <pre>next()</pre> once before
+ * any results become available.
  * 
- * <p>LogResultSet is lazily loading.
+ * <p>LogResultSet should be used as follows:
+ * <pre>
+ * while (logResultSet.next()) {
+ *    System.out.println(logResultSet.getInstanceAttributes().getInstanceId());
+ *    //...whatever other code you want...
+ * }
+ * </pre>
+ *
+ * <p>At some point in the future, LogResultSet may be lazily loaded.
  * 
  * @author tom.werges
  */
 public class LogResultSet
 {
-	private final Iterator iter;
-	private final Period period;
-
-	private UsageSnapshot nextSnapshot;
-	private InstanceAttributes nextInsAttrs;
-
-	private List<UsageSnapshot> snapshotList;
-	private InstanceAttributes insAttrs = null;
-
-	LogResultSet(Iterator iter, Period period)
+	private final List<Item> list;
+	private int pos;
+	
+	LogResultSet()
 	{
-		this.iter = iter;
-		this.period = period;
+		list = new ArrayList<Item>();
+		pos = -1;
+	}
+
+	void addItem(InstanceAttributes insAttrs, PeriodUsageData pud)
+	{
+		list.add(new Item(insAttrs, pud));
 	}
 
 	public boolean next()
 	{
-		if (nextSnapshot != null) {
-			snapshotList = new ArrayList<UsageSnapshot>();
-			snapshotList.add(this.nextSnapshot);
-			insAttrs = this.nextInsAttrs;
-			nextSnapshot = null;
-		}
-
-		while (iter.hasNext()) {
-			Object[] row = (Object[]) iter.next();
-			InstanceAttributes ia = (InstanceAttributes) row[0];
-			InstanceUsageSnapshot ius = (InstanceUsageSnapshot) row[1];
-			UsageSnapshot us = ius.getUsageSnapshot();
-
-			if (insAttrs == null) {
-				insAttrs = ia;
-				snapshotList = new ArrayList<UsageSnapshot>();
-				snapshotList.add(us);
-			} else	if (insAttrs.getUuid().equals(ia.getUuid())) {
-				snapshotList.add(us);
-			} else {
-				nextInsAttrs = ia;
-				nextSnapshot = us;
-				break;
-			}
-		}
-
-		return (iter.hasNext() || nextSnapshot != null);
+		return (++pos >= list.size());
 	}
 
 	public InstanceAttributes getInstanceAttributes()
 	{
-		return insAttrs;
+		return list.get(pos).getInstanceAttributes();
 	}
 
 	public PeriodUsageData getPeriodUsageData()
 	{
-		return new PeriodUsageData(period, snapshotList);
+		return list.get(pos).getPeriodUsageData();
 	}
 
+	private class Item
+	{
+		private final InstanceAttributes insAttrs;
+		private final PeriodUsageData pud;
+		
+		Item(InstanceAttributes insAttrs, PeriodUsageData pud)
+		{
+			this.insAttrs = insAttrs;
+			this.pud = pud;
+		}
+		
+		InstanceAttributes getInstanceAttributes()
+		{
+			return this.insAttrs;
+		}
+		
+		PeriodUsageData getPeriodUsageData()
+		{
+			return this.pud;
+		}
+	}
+	
 }
