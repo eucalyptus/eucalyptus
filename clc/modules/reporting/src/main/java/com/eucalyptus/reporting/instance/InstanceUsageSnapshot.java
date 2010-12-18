@@ -6,6 +6,9 @@ import javax.persistence.*;
  * <p>InstanceUsageSnapshot is a record of cumulative instance resource usage
  * at a certain point in time, keyed by instance uuid.
  * 
+ * <p>InstanceUsageSnapshot allows null values for some of its fields. Null values
+ * indicate unknown usage and not zero usage.
+ * 
  * @author tom.werges
  */
 @Entity
@@ -13,32 +16,68 @@ import javax.persistence.*;
 @Table(name="instance_usage_snapshot")
 class InstanceUsageSnapshot
 {
+	//Hibernate can override final fields.
 	@Id
 	@Column(name="uuid", nullable=false)
-	protected String uuid;
-	@Embedded
-	protected UsageSnapshot usageSnapshot;
+	protected final String uuid;
+	@Column(name="timestamp_ms", nullable=false)
+	protected final Long timestampMs;
+	@Column(name="total_network_io_megs", nullable=true)
+	protected final Long networkIoMegs;
+	@Column(name="total_disk_io_megs", nullable=true)
+	protected final Long diskIoMegs;
 
-	protected InstanceUsageSnapshot(String uuid, UsageSnapshot usageSnapshot)
+
+	protected InstanceUsageSnapshot()
 	{
+		//hibernate will override these thru reflection despite finality
+		this.uuid = null;
+		this.timestampMs = null;
+		this.networkIoMegs = null;
+		this.diskIoMegs = null;
+	}
+
+	InstanceUsageSnapshot(String uuid, Long timestampMs,
+			Long networkIoMegs, Long diskIoMegs)
+	{
+		if (timestampMs == null)
+			throw new IllegalArgumentException("timestampMs can't be null");
 		this.uuid = uuid;
-		this.usageSnapshot = usageSnapshot;
+		this.timestampMs = timestampMs;
+		this.networkIoMegs = networkIoMegs;
+		this.diskIoMegs = diskIoMegs;
 	}
 
-	public InstanceUsageSnapshot(InstanceUsageSnapshot copyFromThis)
+	String getUuid()
 	{
-		this.uuid = copyFromThis.uuid;
-		this.usageSnapshot = copyFromThis.usageSnapshot;
+		return uuid;
 	}
-
-	public String getUuid()
+	
+	Long getTimestampMs()
 	{
-		return this.uuid;
+		return timestampMs;
 	}
-
-	public UsageSnapshot getUsageSnapshot()
+	
+	/**
+	 * @return Cumulative network IO as of the instantiation of this object.
+	 *   Can return null, which indicates unknown usage and not zero usage.
+	 *   Null should be represented as "N/A" or something similar in any
+	 *   UI.
+	 */
+	Long getCumulativeNetworkIoMegs()
 	{
-		return this.usageSnapshot;
+		return networkIoMegs;
+	}
+	
+	/**
+	 * @return Cumulative network IO as of the instantiation of this object.
+	 *   Can return null, which indicates unknown usage and not zero usage.
+	 *   Null should be represented as "N/A" or something similar in any
+	 *   UI.
+	 */
+	Long getCumulativeDiskIoMegs()
+	{
+		return diskIoMegs;
 	}
 
 }
