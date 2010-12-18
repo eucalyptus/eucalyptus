@@ -1,9 +1,5 @@
 package com.eucalyptus.reporting.instance;
 
-import java.io.Serializable;
-
-import javax.persistence.*;
-
 /**
  * <p>UsageData represents usage of resources (like disk bandwidth, etc)
  * by some instance over some period. UsageData is immutable because there
@@ -14,25 +10,10 @@ import javax.persistence.*;
  * 
  * @author tom.werges
  */
-@Embeddable
 public class UsageData
-	implements Serializable
 {
-	//NOTE: hibernate can modify final fields using reflection
-	@Column(name="total_network_io_megs", nullable=true)
 	private final Long networkIoMegs;
-	@Column(name="total_disk_io_megs", nullable=true)
 	private final Long diskIoMegs;
-
-	/**
-	 * For hibernate usage only; don't extend this class
-	 */
-	protected UsageData()
-	{
-		//NOTE: hibernate will override these despite finality
-		this.networkIoMegs = null;
-		this.diskIoMegs = null;
-	}
 
 	public UsageData(Long totalNetworkIoMegs, Long totalDiskIoMegs)
 	{
@@ -52,9 +33,9 @@ public class UsageData
 
 	/**
 	 * Sum usage data objects, meaning sum the numeric fields.
-	 * The numeric fields can be null, in which case the result fields will
-	 * be null. If <i>either</i> value for a field is null, the result is
-	 * null, not the value. Null plus anything is null.
+	 * The numeric fields can be null, in which case the result will
+	 * be null. If <i>either</i> operand is null, the result is null. Null
+	 * plus anything is null.
 	 */
 	public UsageData sum(UsageData other)
 	{
@@ -74,8 +55,8 @@ public class UsageData
 	/**
 	 * Subtract one usage data from another, meaning subtract the numeric
 	 * fields. Fields can be null, in which case the resultant field
-	 * is null. If <i>either</i> value of a field is null, the result
-	 * is null. Null minus anything is null.
+	 * is null. If <i>either</i> operand is null, the result is null.
+	 * Null minus anything is null.
 	 */
 	public UsageData subtractFrom(UsageData other)
 	{
