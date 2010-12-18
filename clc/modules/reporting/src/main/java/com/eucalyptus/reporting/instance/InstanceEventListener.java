@@ -46,11 +46,9 @@ public class InstanceEventListener
 				InstanceAttributes insAttrs = new InstanceAttributes(uuid,
 						event.getInstanceId(), event.getInstanceType(), event.getUserId(),
 						event.getClusterName(), event.getAvailabilityZone());
-				UsageData usageData = new UsageData(event.getCumulativeNetworkIoMegs(),
-						event.getCumulativeDiskIoMegs());
-				UsageSnapshot usageSnapshot = new UsageSnapshot(receivedEventMs, usageData);
 				InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(uuid,
-						usageSnapshot);
+						receivedEventMs, event.getCumulativeNetworkIoMegs(),
+						event.getCumulativeDiskIoMegs());
 
 				/* Only write the instance attributes if we don't have them
 				 * already.
