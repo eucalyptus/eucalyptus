@@ -337,10 +337,13 @@ public class PolicyEngineImpl implements PolicyEngine {
   private void processQuotas( List<Authorization> quotas, String action, String resourceType, String resourceName, Integer quantity ) throws AuthException {
     NumericGreaterThan ngt = new NumericGreaterThan( );
     for ( Authorization auth : quotas ) {
+      LOG.debug( "YE " + "evaluate quota " + auth );
       if ( !evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
+        LOG.debug( " YE " + "action " + action + " not matching" );
         continue;
       }
       if ( !evaluatePatterns( auth.getResources( ), auth.isNotResource( ), resourceName ) ) {
+        LOG.debug( " YE " + "resource " + resourceName + " not matching" );
         continue;
       }
       QuotaKey.Scope scope = getAuthorizationScope( auth );
@@ -348,10 +351,12 @@ public class PolicyEngineImpl implements PolicyEngine {
       for ( Condition cond : auth.getConditions( ) ) {
         Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
         if ( !( key instanceof QuotaKey ) ) {
+          LOG.debug( " YE " + "not quota key" );
           continue;
         }
         QuotaKey quotaKey = ( QuotaKey ) key;
         if ( !key.canApply( action, resourceType ) ) {
+          LOG.debug( " YE " + "can not apply key" );
           continue;
         }
         String usageValue = quotaKey.value( scope, principalId, resourceName, quantity );
