@@ -372,27 +372,12 @@ sync_keys() {
 }
 
 print_token() {
-  if [ "$USELDAP" = "Y" ]; then
-    ldapsearch -x -w ${DB_PASS} -H ldap://localhost:8778 -D "cn=EucalyptusManager,dc=eucalyptus,dc=com" -b "ou=people,dc=eucalyptus,dc=com" -LLL -z 1 uid=admin token | grep -v 'dn:' | awk '/token:/ { x = $2 } /^ / { print x $1 }'
-  else
-    echo "select auth_user_token from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1
+  echo "select u.auth_user_token from auth_user u inner join auth_group_has_users gu on u.id=gu.auth_user_id join auth_group g on gu.auth_group_id=g.id join auth_account a on g.auth_group_owning_account=a.id where a.auth_account_name='system' and g.auth_group_name='_admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1
   fi
 }
 
-print_secret_key() {
-  if [ "$USELDAP" = "Y" ]; then
-    ldapsearch -x -w ${DB_PASS} -H ldap://localhost:8778 -D "cn=EucalyptusManager,dc=eucalyptus,dc=com" -b "ou=people,dc=eucalyptus,dc=com" -LLL -z 1 uid=admin secretKey | grep -v 'dn:' | awk '/secretKey:/ { print $2 }'
-  else
-    echo "select auth_user_secretkey from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth  | tail -n1
-  fi
-}
-
-print_query_id() {
-  if [ "$USELDAP" = "Y" ]; then
-    ldapsearch -x -w ${DB_PASS} -H ldap://localhost:8778 -D "cn=EucalyptusManager,dc=eucalyptus,dc=com" -b "ou=people,dc=eucalyptus,dc=com" -LLL -z 1 uid=admin queryId | grep -v 'dn:' | awk '/queryId:/ { print $2 }'
-  else
-    echo "select auth_user_query_id from auth_users where auth_user_name='admin';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1
-  fi
+print_secret_key_and_id() {
+  echo "select k.id, k.auth_access_key_key from auth_access_key k inner join auth_user_has_keys uk on k.id=uk.auth_access_key_id join auth_user u on u.id=uk.auth_user_id join auth_group_has_users gu on u.id=gu.auth_user_id join auth_group g on gu.auth_group_id=g.id join auth_account a on g.auth_group_owning_account=a.id where a.auth_account_name='system' and g.auth_group_name='_admin' and k.auth_access_key_active=1;" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth  | tail -n1
 }
 
 if [ $# -eq 0 ]; then
@@ -1070,8 +1055,9 @@ createCloudURL () {
 	  -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
 	  -hex)
       DB_PASS=`echo $DB_PASS | sed "s/(stdin)= //g"`
-      AKEY=$(print_query_id)
-      SKEY=$(print_secret_key)
+      KEY_AND_ID=$(print_secret_key_and_id)
+      AKEY=`echo $KEY_AND_ID | awk '{print $1;}'`
+      SKEY=`echo $KEY_AND_ID | awk '{print $2;}'`
   fi
 
   if [[ -z "${AKEY}" && -z "${SKEY}" ]]; then 
