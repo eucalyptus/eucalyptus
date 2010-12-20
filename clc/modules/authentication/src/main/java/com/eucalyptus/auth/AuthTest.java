@@ -43,7 +43,7 @@ public class AuthTest {
     Map<String, String> info = Maps.newHashMap( );
     info.put( "Full name", "User 11" );
     info.put( "Email", "user11@foobar.com" );
-    User user = Users.addUser( "user11", "/", true, true, info, true, true, true, "account1" );
+    User user = Users.addUser( "user11", "/", true, true, info, true, true, "account1" );
     user.setInfo( "Department", "sales" );
     
     user.addSecretKey( "testkey" );
@@ -86,7 +86,7 @@ public class AuthTest {
     printUsers( "account1" );
     printGroups( "account1" );
 
-    user = Users.addUser( "user12", "/", true, true, info, true, true, true, "account1" );
+    user = Users.addUser( "user12", "/", true, true, info, true, true, "account1" );
     group.addMember( user );
     
     Users.deleteUser( "user11", "account1", false, true );
@@ -106,7 +106,7 @@ public class AuthTest {
     info = Maps.newHashMap( );
     info.put( "Full name", "User 12" );
     info.put( "Email", "user12@foobar.com" );
-    user = Users.addUser( "user12", "/", true, true, info, true, true, true, "account2" );
+    user = Users.addUser( "user12", "/", true, true, info, true, true, "account2" );
     
     group = Groups.addGroup( "group1", "/", "account2" );
     group.addMember( user );
@@ -141,9 +141,9 @@ public class AuthTest {
   public static void test2( ) throws Exception {
     Accounts.addAccount( "test" );
     Users.addAccountAdmin( "test", "foobar" );
-    User tom = Users.addUser( "tom", "/", true, true, null, true, true, true, "test" );
-    User jack = Users.addUser( "jack", "/", true, true, null, true, true, true, "test" );
-    User chris = Users.addUser( "chris", "/", true, true, null, true, true, true, "test" );
+    User tom = Users.addUser( "tom", "/", true, true, null, true, true, "test" );
+    User jack = Users.addUser( "jack", "/", true, true, null, true, true, "test" );
+    User chris = Users.addUser( "chris", "/", true, true, null, true, true, "test" );
     Group sales = Groups.addGroup( "sales", "/", "test" );
     sales.addMember( tom );
     Group marketing = Groups.addGroup( "marketing", "/", "test" );

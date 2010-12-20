@@ -111,7 +111,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   
   @Override
   public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info,
-                       boolean createKey, boolean createCert, boolean createPassword, String accountName ) throws AuthException {
+                       boolean createKey, boolean createPassword, String accountName ) throws AuthException {
     checkUserName( userName );
     checkPath( path );
     if ( accountName == null ) {
@@ -140,9 +140,6 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
       }
       if ( createKey ) {
         newUser.addSecretKey( Hmacs.generateSecretKey( userName ) );
-      }
-      if ( createCert ) {
-        newUser.addX509Certificate( X509CertHelper.createCertificate( userName ) );
       }
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to generate credentials for user: " + userName );
@@ -815,12 +812,12 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   
   @Override
   public void addSystemAdmin( ) throws AuthException {
-    this.addUser( User.ACCOUNT_ADMIN_USER_NAME, "/", true, true, null, true, true, true, User.SYSTEM_ADMIN_ACCOUNT_NAME );
+    this.addUser( User.ACCOUNT_ADMIN_USER_NAME, "/", true, true, null, true, true, User.SYSTEM_ADMIN_ACCOUNT_NAME );
   }
   
   @Override
   public void addAccountAdmin( String accountName, String password ) throws AuthException {
-    User admin = this.addUser( User.ACCOUNT_ADMIN_USER_NAME, "/", true, true, null, true, true, true, accountName );
+    User admin = this.addUser( User.ACCOUNT_ADMIN_USER_NAME, "/", true, true, null, true, true, accountName );
     admin.setPassword( password );
   }
   

@@ -24,14 +24,13 @@ public interface UserProvider {
    * @param enabled If the new user is enabled.
    * @param info The informational content of the user.
    * @param createKey Whether to generate a secret key.
-   * @param createCert Whether to generate a certificate.
    * @param createPassword Whether to generate a Web password.
    * @param groupNames The names of the groups the user should belong to.
    * @return The newly created user object.
    * @throws AuthException for any error, e.g. user already exists, groups can't be found, etc.
    */
   public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info,
-                       boolean createKey, boolean createCert, boolean createPassword, String accountName ) throws AuthException;
+                       boolean createKey, boolean createPassword, String accountName ) throws AuthException;
   
   /**
    * Delete a user from an account, recursively removing it from all the groups

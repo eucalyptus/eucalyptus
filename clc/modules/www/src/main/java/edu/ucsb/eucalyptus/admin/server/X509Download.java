@@ -90,17 +90,19 @@ public class X509Download extends HttpServlet {
   private static Logger LOG                = Logger.getLogger( X509Download.class );
   public static String  NAME_SHORT         = "euca2";
   public static String  PARAMETER_USERNAME = "user";
+  public static String  PARAMETER_ACCOUNTNAME = "account";
   public static String  PARAMETER_KEYNAME  = "keyName";
   public static String  PARAMETER_CODE     = "code";
   
   public void doGet( HttpServletRequest request, HttpServletResponse response ) {
     String code = request.getParameter( PARAMETER_CODE );
     String userName = request.getParameter( PARAMETER_USERNAME );
-    String keyName = request.getParameter( PARAMETER_KEYNAME );
+    String accountName = request.getParameter( PARAMETER_ACCOUNTNAME );
     String mimetype = "application/zip";
-    Calendar now = Calendar.getInstance( );
-    keyName = ( keyName == null || "".equals( keyName ) ) ? "default" : keyName;
-    keyName = userName + String.format( "-%1$ty%1$tm%1$te%1$tk%1$tM%1$tS", now );
+    if ( accountName == null || "".equals( accountName ) ) {
+      hasError( "No user name provided", response );
+      return;
+    }    
     if ( userName == null || "".equals( userName ) ) {
       hasError( "No user name provided", response );
       return;
@@ -112,12 +114,7 @@ public class X509Download extends HttpServlet {
     
     User user = null;
     try {
-      if ( "admin".equals( userName ) ) {
-        user = Users.lookupSystemAdmin( );
-        userName = user.getUserId( );
-      } else {
-        user = Users.lookupUserById( userName );
-      }
+      user = Users.lookupUserByName( userName, accountName );
     } catch ( Exception e ) {
       hasError( "User does not exist", response );
       return;
@@ -131,7 +128,7 @@ public class X509Download extends HttpServlet {
     LOG.info( "pushing out the X509 certificate for user " + userName );
     
     try {
-      byte[] x509zip = getX509Zip( userName, keyName );
+      byte[] x509zip = getX509Zip( user );
       ServletOutputStream op = response.getOutputStream( );
       
       response.setContentLength( x509zip.length );
@@ -153,26 +150,18 @@ public class X509Download extends HttpServlet {
     }
   }
   
-  public static byte[] getX509Zip( String userName, String newKeyName ) throws Exception {
+  private static byte[] getX509Zip( User u ) throws Exception {
     X509Certificate cloudCert = null;
     final X509Certificate x509;
-    User u = Users.lookupUserById( userName );
     String userAccessKey = u.getFirstActiveSecretKeyId( );
     String userSecretKey = u.getSecretKey( userAccessKey );
     KeyPair keyPair = null;
     try {
       keyPair = Certs.generateKeyPair( );
-      x509 = Certs.generateCertificate( keyPair, userName );
+      x509 = Certs.generateCertificate( keyPair, u.getName( ) );
       x509.checkValidity( );
-      cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
       u.addX509Certificate( x509 );
-      //      Transactions.one( new UserEntity( userName ), new Tx<UserEntity>() {
-      //        public void fire( UserEntity user ) throws Throwable {
-      //          user.revokeX509Certificate( );
-      //          user.setCertificate( B64.url.encString( PEMFiles.getBytes( x509 ) ) );
-      //        }});
-      User now = Users.lookupUserById( userName );
-      //LOG.info( "Current user certificate: " + now.getX509Certificate( ) != null ? now.getX509Certificate( ).getSerialNumber( ) : null );
+      cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
@@ -181,12 +170,12 @@ public class X509Download extends HttpServlet {
     ZipOutputStream zipOut = new ZipOutputStream( byteOut );
     String fingerPrint = Certs.getFingerPrint( keyPair.getPublic( ) );
     if ( fingerPrint != null ) {
-      String baseName = X509Download.NAME_SHORT + "-" + userName + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
+      String baseName = X509Download.NAME_SHORT + "-" + u.getName( ) + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
       
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
       StringBuffer sb = new StringBuffer( );
       
-      BigInteger number = Users.lookupUserById( userName ).getNumber( );
+      BigInteger number = u.getNumber( );
       String userNumber = null;
       if ( number != null ) {
 	    userNumber = number.toString( );

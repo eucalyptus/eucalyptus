@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityManager;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.GroupEntity;

@@ -95,8 +95,8 @@ public class Users {
   }
 
   public static User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info,
-                                     boolean createKey, boolean createCert, boolean createPassword, String accountName ) throws AuthException {
-    return Users.getUserProvider( ).addUser( userName, path, skipRegistration, enabled, info, createKey, createCert, createPassword, accountName );
+                                     boolean createKey, boolean createPassword, String accountName ) throws AuthException {
+    return Users.getUserProvider( ).addUser( userName, path, skipRegistration, enabled, info, createKey, createPassword, accountName );
   }
 
   public static void deleteUser( String userName, String accountName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {
