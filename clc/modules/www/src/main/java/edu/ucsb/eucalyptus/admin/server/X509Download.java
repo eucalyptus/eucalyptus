@@ -100,7 +100,7 @@ public class X509Download extends HttpServlet {
     String accountName = request.getParameter( PARAMETER_ACCOUNTNAME );
     String mimetype = "application/zip";
     if ( accountName == null || "".equals( accountName ) ) {
-      hasError( "No user name provided", response );
+      hasError( "No account name provided", response );
       return;
     }    
     if ( userName == null || "".equals( userName ) ) {
