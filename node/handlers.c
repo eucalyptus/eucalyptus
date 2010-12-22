@@ -746,10 +746,6 @@ static int init (void)
 
 	bzero (&nc_state, sizeof(struct nc_state_t)); // ensure that MAXes are zeroed out
 
-	/* from now on we have unrecoverable failure, so no point in
-	 * retrying to re-init */
-	initialized = -1;
-
 	/* read in configuration - this should be first! */
 	tmp = getenv(EUCALYPTUS_ENV_VAR_NAME);
 	if (!tmp) {
@@ -801,6 +797,15 @@ static int init (void)
 
 	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
 	strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
+
+	if (euca_init_cert ()) {
+	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
+	  return 1;
+	}
+
+	/* from now on we have unrecoverable failure, so no point in
+	 * retrying to re-init */
+	initialized = -1;
 
 	hyp_sem = sem_alloc (1, "mutex");
 	inst_sem = sem_alloc (1, "mutex");
@@ -1019,6 +1024,23 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	free(file_name);
 
 	return ret;
+}
+
+int doAssignAddress(ncMetadata *meta, char *instanceId, char *publicIp) {
+  int ret=0;
+  
+  if (init()) {    
+    return(1);
+  }
+  
+  logprintfl(EUCADEBUG, "doAssignAddress() invoked\n");
+
+  if (nc_state.H->doAssignAddress) 
+    ret = nc_state.H->doAssignAddress(&nc_state, meta, instanceId, publicIp);
+  else 
+    ret = nc_state.D->doAssignAddress(&nc_state, meta, instanceId, publicIp);
+  
+  return ret;
 }
 
 int doPowerDown(ncMetadata *meta) {
@@ -1297,11 +1319,11 @@ void parse_target(char *dev_string) {
     }  
 }
 
-char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     char buf [MAX_PATH];
     char *retval;
     
-    snprintf (buf, MAX_PATH, "%s %s", storage_cmd_path, dev_string);
+    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
     logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
@@ -1311,20 +1333,20 @@ char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     return retval;
 }
 
-int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    if (vrun("%s %s", storage_cmd_path, dev_string) != 0) {
+    if (vrun("%s %s,%s", storage_cmd_path, euca_home, dev_string) != 0) {
 	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
 	return -1;
     }
     return 0;
 }
 
-char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     char buf [MAX_PATH];
     char *retval;
     
-    snprintf (buf, MAX_PATH, "%s %s", storage_cmd_path, dev_string);
+    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
     logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");
@@ -1337,94 +1359,67 @@ char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
 int get_instance_stats(virDomainPtr dom, ncInstance *instance)
 {
   char *xml;
-  int ret=1;
+  int ret=0, n;
   long long b=0, i=0;
-	      
+  char bstr[512], istr[512];
+
+  // get the block device string from VBR
+  bzero(bstr, 512);
+  for (n=0; n<instance->params.virtualBootRecordLen; n++) {
+    if (strcmp(instance->params.virtualBootRecord[n].guestDeviceName, "none")) {
+      if (strlen(bstr) < (510 - strlen(instance->params.virtualBootRecord[n].guestDeviceName))) {
+	strcat(bstr, instance->params.virtualBootRecord[n].guestDeviceName);
+	strcat(bstr, ",");
+      }
+    }
+  }
+  
+  // get the name of the network interface from libvirt
   sem_p(hyp_sem);
   xml = virDomainGetXMLDesc(dom, 0);
-  //      logprintfl(EUCADEBUG, "MEH: '%s'\n", xml);
+  sem_v(hyp_sem);
+
   if (xml) {
     char *el;
-    //	blkdev = xpath_content(xml, "domain/devices/disk[1]/target/@dev");
-    el = xpath_content(xml, "domain/devices/disk");
-    if (el) {
-      char *start, *end;
-      //	  logprintfl(EUCADEBUG, "FOOMEH: %s\n", el);
-      start = strstr(el, "target dev='");
-      if (start) {
-	start += strlen("target dev='");
-	end = strstr(start, "'");
-	if (end) {
-	  *end = '\0';
-	  //	      logprintfl(EUCADEBUG, "WOOTMEH: %s\n", start);
-	  int rc;
-	  virDomainBlockStatsStruct bstats;
-	  b = 0;
-	  rc = virDomainBlockStats(dom, start, &bstats, sizeof(virDomainBlockStatsStruct));
-	  if (rc) {
-	    char cmd[MAX_PATH], *output;
-	    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b %s", nc_state.home, nc_state.home, instance->instanceId, start);
-	    output = system_output(cmd);
-	    if (output) {
-	      sscanf(output, "OUTPUT %lld %lld", &b, &i);
-	      if (b > 0) {
-		rc = 0;
-	      }
-	      free(output);
-	    }
-	  } else {
-	    b = bstats.rd_bytes + bstats.wr_bytes;
-	  }
-	  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, dev=%s, bytes=%lld\n", instance->instanceId, start, b);
-	  instance->blkbytes = b;
-	  if (!rc) {
-	    ret = 0;
-	  }
-	}
-      }
-      free(el);
-    }
-    
     el = xpath_content(xml, "domain/devices/interface");
     if (el) {
       char *start, *end;
-      //	  logprintfl(EUCADEBUG, "FOOMEH: %s\n", el);
       start = strstr(el, "target dev='");
       if (start) {
 	start += strlen("target dev='");
 	end = strstr(start, "'");
 	if (end) {
 	  *end = '\0';
-	  //	      logprintfl(EUCADEBUG, "WOOTMEH: %s\n", start);
-	  int rc;
-	  virDomainInterfaceStatsStruct istats;
-	  rc = virDomainInterfaceStats(dom, start, &istats, sizeof(virDomainInterfaceStatsStruct));
-	  if (rc) {
-	    char cmd[MAX_PATH], *output;
-	    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -n %s", nc_state.home, nc_state.home, instance->instanceId, start);
-	    output = system_output(cmd);
-	    if (output) {
-	      sscanf(output, "OUTPUT %lld %lld", &b, &i);
-	      if (i > 0) {
-		rc = 0;
-	      }
-	      free(output);
-	    }
-	  } else {
-	    i = istats.rx_bytes + istats.tx_bytes;
-	  }
-	  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, dev=%s, bytes=%lld\n", instance->instanceId, start, i);
-	  instance->netbytes = i;
-	  if (!rc) {
-	    ret = 0;
-	  }
+	  snprintf(istr, 512, "%s", start);
 	}
       }
       free(el);
     }
-
     free(xml);
   }
-  sem_v(hyp_sem);
+
+  char cmd[MAX_PATH], *output;
+  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b '%s' -n '%s'", nc_state.home, nc_state.home, instance->instanceId, bstr, istr);
+  output = system_output(cmd);
+  if (output) {
+    sscanf(output, "OUTPUT %lld %lld", &b, &i);
+    free(output);
+  } else {
+    logprintfl(EUCAWARN, "get_instance_stat(): empty output from getstats command\n");
+    ret = 1;
+  }
+  
+  if (b > 0) {
+    instance->blkbytes = b;
+  } else {
+    instance->blkbytes = 0;
+  }
+  if (i > 0) {
+    instance->netbytes = i;
+  } else {
+    instance->netbytes = 0;
+  }
+  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, blkdevs=%s, blkbytes=%lld, netdevs=%s, netbytes=%lld\n", instance->instanceId, bstr, instance->blkbytes, istr, instance->netbytes);
+
   return(ret);
 }

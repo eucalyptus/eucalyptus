@@ -113,6 +113,10 @@ struct nc_state_t {
 struct handlers {
     char name [CHAR_BUFFER_SIZE];
     int (*doInitialize)		(struct nc_state_t *nc);
+    int (*doAssignAddress)	(struct nc_state_t *nc,
+				 ncMetadata *meta,
+				 char *instanceId,
+				 char *publicIp);
     int (*doPowerDown)		(struct nc_state_t *nc,
 		    		ncMetadata *meta);
     int (*doDescribeInstances)	(struct nc_state_t *nc,
@@ -180,6 +184,7 @@ struct handlers {
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
+int doAssignAddress		(ncMetadata *meta, char *instanceId, char *publicIp);
 int doPowerDown			(ncMetadata *meta);
 int doDescribeInstances		(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
 int doRunInstance		(ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst);
@@ -227,9 +232,9 @@ void * startup_thread(		void *arg);
 
 int check_iscsi(char* dev_string);
 void parse_target(char *dev_string);
-char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string);
-int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string);
-char* get_iscsi_target(const char *storage_cmd_path, char *dev_string);
+char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
+int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
+char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
 
 int get_instance_stats(virDomainPtr dom, ncInstance *instance);
 

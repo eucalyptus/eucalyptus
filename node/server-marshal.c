@@ -72,6 +72,46 @@ permission notice:
 
 pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
+adb_ncAssignAddressResponse_t* ncAssignAddressMarshal (adb_ncAssignAddress_t* ncAssignAddress, const axutil_env_t *env) {
+  adb_ncAssignAddressType_t * input          = adb_ncAssignAddress_get_ncAssignAddress(ncAssignAddress, env);
+  adb_ncAssignAddressResponse_t * response   = adb_ncAssignAddressResponse_create(env);
+  adb_ncAssignAddressResponseType_t * output = adb_ncAssignAddressResponseType_create(env);
+
+  char * instanceId = adb_ncAssignAddressType_get_instanceId(input, env);
+  char * publicIp = adb_ncAssignAddressType_get_publicIp(input, env);
+  
+  // get operation-specific fields from input
+  { 
+    ncMetadata meta;
+    EUCA_MESSAGE_UNMARSHAL(ncAssignAddressType, input, (&meta));
+    
+    int error = doAssignAddress (&meta, instanceId, publicIp);
+    
+    if (error) {
+      logprintfl (EUCAERROR, "ERROR: doAssignAddress() failed error=%d\n", error);
+      adb_ncAssignAddressResponseType_set_correlationId(output, env, meta.correlationId);
+      adb_ncAssignAddressResponseType_set_userId(output, env, meta.userId);
+      adb_ncAssignAddressResponseType_set_return(output, env, AXIS2_FALSE);
+      
+      // set operation-specific fields in output
+      adb_ncAssignAddressResponseType_set_statusMessage(output, env, "2");
+      
+    } else {
+      // set standard fields in output
+      adb_ncAssignAddressResponseType_set_return(output, env, AXIS2_TRUE);
+      adb_ncAssignAddressResponseType_set_correlationId(output, env, meta.correlationId);
+      adb_ncAssignAddressResponseType_set_userId(output, env, meta.userId);
+      
+      // set operation-specific fields in output
+      adb_ncAssignAddressResponseType_set_statusMessage(output, env, "0");
+    }
+  }
+  
+  // set response to output
+  adb_ncAssignAddressResponse_set_ncAssignAddressResponse(response, env, output);  
+  return response;
+}
+
 adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, const axutil_env_t *env) 
 {
   //    pthread_mutex_lock(&ncHandlerLock);
