@@ -13,7 +13,7 @@ public class InstanceEventListener
 {
 	private static Logger log = Logger.getLogger( InstanceEventListener.class );
 
-	private static long WRITE_INTERVAL_SECS; //TODO: configurable
+	private static long WRITE_INTERVAL_SECS = 60 * 20; //TODO: configurable
 
 	private final Set<String> recentlySeenUuids;
 	private final Set<InstanceUsageSnapshot> recentUsageSnapshots;
@@ -34,14 +34,15 @@ public class InstanceEventListener
 
 			final String uuid = event.getUuid();
 		
-			EntityWrapper entityWrapper = EntityWrapper.get(InstanceAttributes.class);
+			EntityWrapper<InstanceAttributes> entityWrapper =
+				EntityWrapper.get(InstanceAttributes.class);
 			Session sess = null;
 			try {
 				sess = entityWrapper.getSession();
 
 				/* Convert InstanceEvents to internal types. Internal types are
 				 * not exposed because the reporting.instance package won't be
-				 * present in the OS version so nothing in it can be referenced
+				 * present in the open src version so nothing in it can be referenced
 				 */
 				InstanceAttributes insAttrs = new InstanceAttributes(uuid,
 						event.getInstanceId(), event.getInstanceType(), event.getUserId(),
