@@ -2,11 +2,10 @@ package com.eucalyptus.reporting.instance;
 
 /**
  * <p>UsageData represents usage of resources (like disk bandwidth, etc)
- * by some instance over some period. UsageData is immutable because there
+ * by some instance over some period. UsageData is immutable, because there
  * can be multiple references to one UsageData.
  * 
- * <p>UsageData allows null values for its fields. Null values indicate unknown
- * usage and not zero usage.
+ * <p>Null values for a field indicate unknown usage, not zero usage.
  * 
  * @author tom.werges
  */
@@ -32,10 +31,8 @@ public class UsageData
 	}
 
 	/**
-	 * Sum usage data objects, meaning sum the numeric fields.
-	 * The numeric fields can be null, in which case the result will
-	 * be null. If <i>either</i> operand is null, the result is null. Null
-	 * plus anything is null.
+	 * Sum the numeric fields of two UsageData objects. If either operand is null
+	 * for any field then the resultant field is null.
 	 */
 	public UsageData sum(UsageData other)
 	{
@@ -53,10 +50,8 @@ public class UsageData
 	}
 
 	/**
-	 * Subtract one usage data from another, meaning subtract the numeric
-	 * fields. Fields can be null, in which case the resultant field
-	 * is null. If <i>either</i> operand is null, the result is null.
-	 * Null minus anything is null.
+	 * Subtract the numeric fields of one UsageData from another. If either 
+	 * operand is null for any field then the resultant field is null.
 	 */
 	public UsageData subtractFrom(UsageData other)
 	{
