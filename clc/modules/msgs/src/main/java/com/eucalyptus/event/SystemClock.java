@@ -95,7 +95,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy() );
         ListenerRegistry.getInstance( ).register( Hertz.class, new Dummy() );
         timer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: make configurable
-        hzTimer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: make configurable
+        hzTimer.scheduleAtFixedRate( hertz, 0, 1000 );
         Runtime.getRuntime( ).addShutdownHook( new Thread() {
 
           @Override
