@@ -77,6 +77,8 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger LOG = Logger.getLogger( SystemClock.class );
   private static SystemClock clock;
   private static Timer timer;
+  private static Timer hzTimer;
+  private static HzClock hertz;
   private int phase = 0;
   
   public SystemClock( ) {
@@ -87,15 +89,24 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     synchronized(SystemClock.class) {
       if( timer == null ) {
         timer = new Timer("SystemClockTimer");
+        hzTimer = new Timer("SystemHzTimer");
         clock = new SystemClock();
+        hertz = new HzClock( );
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy() );
+        ListenerRegistry.getInstance( ).register( Hertz.class, new Dummy() );
         timer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: make configurable
-        final Timer ref = timer;
+        hzTimer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: make configurable
         Runtime.getRuntime( ).addShutdownHook( new Thread() {
 
           @Override
           public void run( ) {
             timer.cancel( );
+          }} );
+        Runtime.getRuntime( ).addShutdownHook( new Thread() {
+
+          @Override
+          public void run( ) {
+            hzTimer.cancel( );
           }} );
       }
     }
@@ -123,7 +134,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   @Override
   public void uncaughtException( Thread t, Throwable e ) {
     LOG.fatal( e, e );
-    System.exit( -2 );
+//    System.exit( -2 );
   }
 
   @Provides( Component.bootstrap )
@@ -167,4 +178,24 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     
   }
   
+  public static class HzClock extends TimerTask implements UncaughtExceptionHandler {
+    private int phase = 0;
+
+    @Override
+    public void uncaughtException( Thread thread, Throwable t ) {
+      LOG.error( t, t );
+    }
+
+    public void run( ) {
+      Thread.currentThread().setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
+      try {
+        long sign = (long) (Math.pow(-1f,(float)(++phase%2)));
+        ListenerRegistry.getInstance( ).fireEvent( new Hertz().setMessage( sign * System.currentTimeMillis( ) ) );
+      } catch ( EventVetoedException e ) {
+      } catch ( Throwable t ) {
+        LOG.error( t, t );
+      }    
+    }
+  }
+
 }

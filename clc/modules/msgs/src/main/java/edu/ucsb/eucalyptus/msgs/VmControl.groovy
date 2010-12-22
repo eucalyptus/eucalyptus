@@ -240,6 +240,8 @@ public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  *
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
   String virtualName; // ephemeralN, root, ami, swap
   String deviceName;
+  Integer size; // in megabytes
+  String format; // optional, defaults to none (none, ext3, ntfs, swap)
   EbsDeviceMapping ebsDev;
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
     this.virtualName = virtualName;
