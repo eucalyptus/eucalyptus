@@ -65,6 +65,10 @@
 
 <binding force-classes="true" add-constructors="true" xmlns:tns="https://iam.amazonaws.com/doc/2010-05-08/" name="iam_amazonaws_com_doc_2010_05_08">
     
+    <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true">
+        <value name="requestId" field="correlationId" usage="optional"/>
+    </mapping>
+    
     <mapping name="ListUsers" class="edu.ucsb.eucalyptus.msgs.ListUsersType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
         <value name="PathPrefix" field="pathPrefix" usage="optional"/>
