@@ -5,6 +5,7 @@ euca.model.runtime=eucalyptus-runtime.xml
 euca.model.storage=eucalyptus-storage.xml
 euca.model.userdata=eucalyptus-userdata.xml
 euca.model.verification=eucalyptus-verification.xml
+euca.model.accounts=eucalyptus-accounts.xml
 euca.url.local=vm://EucalyptusRequestQueue
 euca.url.pattern=http://%s:%d/internal/EucalyptusInternal
 euca.url.port=8773

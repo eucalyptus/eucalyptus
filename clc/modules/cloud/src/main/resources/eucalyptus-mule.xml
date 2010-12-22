@@ -83,6 +83,7 @@
         <spring:import resource="classpath:eucalyptus-verification.xml"/>
         <spring:import resource="classpath:eucalyptus-runtime.xml"/>
         <spring:import resource="classpath:eucalyptus-storage.xml"/>
+        <spring:import resource="classpath:eucalyptus-accounts.xml"/>
     </spring:beans>
 
     <!--===========  This enables walrus ===========-->

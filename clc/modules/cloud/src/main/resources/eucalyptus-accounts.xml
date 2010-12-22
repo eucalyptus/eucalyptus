@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
   ~
@@ -59,10 +58,9 @@
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ~ Author: chris grzegorczyk grze@eucalyptus.com
+  ~ Author: Ye Wen wenye@eucalyptus.com
   -->
-
-<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
+  <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xmlns:spring="http://www.springframework.org/schema/beans"
       xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
@@ -72,31 +70,25 @@
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
-  <!--user data services-->
-  <euca:endpoint name="EucalyptusWS" connector-ref="eucaws" address="http://127.0.0.1:${euca.ws.port}/services/Eucalyptus" synchronous="true" />
-  <endpoint name="ShortBusWS" address="vm://ShortBus" synchronous="false" />
-  <endpoint name="ImageWS" address="vm://Image" synchronous="false" />
-  <endpoint name="VolumeWS" address="vm://Volume" synchronous="false" />
-  <endpoint name="SnapshotWS" address="vm://Snapshot" synchronous="false" />
-  <endpoint name="KeyPairWS" address="vm://KeyPair" synchronous="false" />
-  <endpoint name="GroupsWS" address="vm://Groups" synchronous="false" />
-  <!--vm request verification pipeline-->
-  <endpoint name="StartVerifyWS" address="vm://VmVerify" synchronous="false" />
-  <endpoint name="ImageVerifyWS" address="vm://ImageVerify" synchronous="false" />
-  <endpoint name="KeyPairVerifyWS" address="vm://KeyPairVerify" synchronous="false" />
-  <endpoint name="GroupsVerifyWS" address="vm://GroupsVerify" synchronous="false" />
-  <endpoint name="VmTypeVerifyWS" address="vm://VmTypeVerify" synchronous="false" />
-  <endpoint name="FinishedVerifyWS" address="vm://VmVerified" synchronous="false" />
-  <!--run-time system state services-->
-  <endpoint name="ClusterEndpointWS" address="vm://ClusterEndpoint" synchronous="false" />
-  <endpoint name="ClusterSinkWS" address="vm://ClusterSink" synchronous="false" />
-  <endpoint name="VmMetadataWS" address="vm://VmMetadata" synchronous="true" />
-  <endpoint name="VmControlWS" address="vm://VmControl" synchronous="false" />
-  <endpoint name="AddressWS" address="vm://Address" synchronous="false" />
-  <endpoint name="UpdateSystemWS" address="vm://UpdateSystemState" synchronous="false" />
-  <endpoint name="SystemStateWS" address="vm://SystemState" synchronous="false" />
-  <endpoint name="TransformReplyWS" address="vm://TransformReply" synchronous="false" />
-  <!--accounts management services-->
-  <endpoint name="AccountsWS" address="vm://Accounts" synchronous="false" />
+
+
+    <model name="eucalyptus-accounts">
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="ReplyQueueEndpoint"/>
+        </default-service-exception-strategy>
+
+        <service name="Accounts">
+            <inbound>
+                <inbound-endpoint ref="AccountsWS"/>
+            </inbound>
+            <component class="com.eucalyptus.auth.AccountsManager"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+    </model>
+
 </mule>
-  
