@@ -201,7 +201,7 @@ public class RemoteInfoHandler {
   private static GetStorageConfigurationResponseType sendForStorageInfo( ClusterConfiguration cc, StorageControllerConfiguration c ) throws EucalyptusCloudException {
     GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType( c.getName( ) );
     Dispatcher scDispatch = ServiceDispatcher.lookup( Component.storage, c.getHostName( ) );
-    GetStorageConfigurationResponseType getStorageConfigResponse = scDispatch.send( getStorageConfiguration, GetStorageConfigurationResponseType.class );
+    GetStorageConfigurationResponseType getStorageConfigResponse = scDispatch.send( getStorageConfiguration );
     return getStorageConfigResponse;
   }
   
@@ -226,7 +226,7 @@ public class RemoteInfoHandler {
     for ( WalrusConfiguration c : Configuration.getWalrusConfigurations( ) ) {
       GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
       Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Component.walrus );
-      GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration, GetWalrusConfigurationResponseType.class );
+      GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
       walrusList.add( new WalrusInfoWeb( c.getName( ), 
     		  c.getHostName( ), 
     		  c.getPort( ),

@@ -127,7 +127,7 @@ public class SnapshotManager {
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
         DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) )
-                                                                       .send( descVols, DescribeStorageVolumesResponseType.class );
+                                                                       .send( descVols );
         if ( !volState.getVolumeSet( ).isEmpty( ) ) {
           vol.setMappedState( volState.getVolumeSet( ).get( 0 ).getStatus( ) );
         } else {
@@ -160,7 +160,7 @@ public class SnapshotManager {
     CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName( ), newId );
     CreateStorageSnapshotResponseType scReply = null;
     try {
-      scReply = StorageUtil.lookup( sc.getHostName( ) ).send( scRequest, CreateStorageSnapshotResponseType.class );
+      scReply = StorageUtil.send( sc.getName( ), scRequest );
       snap.setCluster( sc.getName( ) );
       snap.setMappedState( scReply.getStatus( ) );
     } catch ( EucalyptusCloudException e ) {
@@ -226,8 +226,7 @@ public class SnapshotManager {
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
           try {
             StorageControllerConfiguration sc = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
-            DescribeStorageSnapshotsResponseType snapshotInfo = StorageUtil.lookup( sc.getHostName( ) ).send( scRequest,
-                                                                                                              DescribeStorageSnapshotsResponseType.class );
+            DescribeStorageSnapshotsResponseType snapshotInfo = StorageUtil.send( sc.getName( ), scRequest );
             for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
               v.setMappedState( storageSnapshot.getStatus( ) );
               edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );

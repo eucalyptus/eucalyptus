@@ -112,7 +112,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       Clusters.getInstance( ).register( newCluster );
       ListenerRegistry.getInstance( ).register( ClockTick.class, newCluster );
       newCluster.start( );
-      newCluster.transition( Cluster.Transition.START );
+      newCluster.transitionIfSafe( Cluster.Transition.START );
       return newCluster;
     }
   }

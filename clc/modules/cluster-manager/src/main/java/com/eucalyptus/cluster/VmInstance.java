@@ -96,9 +96,9 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmInstance implements HasName<VmInstance> {
-  private static Logger LOG          = Logger.getLogger( VmInstance.class );
-  public static String  DEFAULT_IP   = "0.0.0.0";
-  public static String  DEFAULT_TYPE = "m1.small";
+  private static Logger                               LOG           = Logger.getLogger( VmInstance.class );
+  public static String                                DEFAULT_IP    = "0.0.0.0";
+  public static String                                DEFAULT_TYPE  = "m1.small";
   
   private final String                                reservationId;
   private final int                                   launchIndex;
@@ -114,7 +114,7 @@ public class VmInstance implements HasName<VmInstance> {
   private final AtomicMarkableReference<VmState>      state         = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   private final ConcurrentSkipListSet<AttachedVolume> volumes       = new ConcurrentSkipListSet<AttachedVolume>( );
   private final StopWatch                             stopWatch     = new StopWatch( );
-  private final StopWatch                             updateWatch     = new StopWatch( );
+  private final StopWatch                             updateWatch   = new StopWatch( );
   
   private Date                                        launchTime    = new Date( );
   private String                                      serviceTag;
@@ -123,6 +123,8 @@ public class VmInstance implements HasName<VmInstance> {
   private StringBuffer                                consoleOutput = new StringBuffer( );
   private String                                      passwordData;
   private Boolean                                     privateNetwork;
+  private Long                                        blockBytes    = 0l;
+  private Long                                        networkBytes  = 0l;
   
   public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement,
                      final byte[] userData, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final List<Network> networks,
@@ -144,6 +146,14 @@ public class VmInstance implements HasName<VmInstance> {
     this.updateWatch.start( );
     this.updateDns( );
     this.store( );
+  }
+  
+  public void updateBlockBytes( long blkbytes ) {
+    this.blockBytes += blkbytes;
+  }
+  
+  public void updateNetworkBytes( long netbytes ) {
+    this.networkBytes += netbytes;
   }
   
   public void updateNetworkIndex( Integer newIndex ) {
@@ -203,7 +213,9 @@ public class VmInstance implements HasName<VmInstance> {
     if ( this.reason == null ) {
       this.reason = Reason.NORMAL;
     }
-    return this.reason.name( ) + ": " + this.reason + ( this.reasonDetails != null ? " -- " + this.reasonDetails : "" );
+    return this.reason.name( ) + ": " + this.reason + ( this.reasonDetails != null
+      ? " -- " + this.reasonDetails
+      : "" );
   }
   
   private int           stateCounter        = 0;
@@ -217,7 +229,7 @@ public class VmInstance implements HasName<VmInstance> {
   
   public void setState( final VmState newState, SystemState.Reason reason, String... extra ) {
     this.updateWatch.split( );
-    if( this.updateWatch.getSplitTime( ) > 1000*60*60 ) {
+    if ( this.updateWatch.getSplitTime( ) > 1000 * 60 * 60 ) {
       this.store( );
       this.updateWatch.unsplit( );
     } else {
@@ -275,12 +287,13 @@ public class VmInstance implements HasName<VmInstance> {
       }
     }
   }
-
+  
   private void store( ) {
     EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE )
                .withDetails( this.getOwnerId( ), this.getInstanceId( ), "type", this.getVmTypeInfo( ).getName( ) )
                .withDetails( "state", this.state.getReference( ).name( ) ).withDetails( "cluster", this.placement )
-               /** ASAP: FIXME: GRZE .withDetails( "image", this.imageInfo.getImageId( ) )**/.withDetails( "started", this.launchTime.getTime( ) + "" ).info( );
+               /** ASAP: FIXME: GRZE .withDetails( "image", this.imageInfo.getImageId( ) ) **/
+               .withDetails( "started", this.launchTime.getTime( ) + "" ).info( );
   }
   
   public String getByKey( String path ) {
@@ -382,22 +395,21 @@ public class VmInstance implements HasName<VmInstance> {
     try {
       runningInstance.setImageId( this.vmTypeInfo.lookupRoot( ).getId( ) );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       runningInstance.setImageId( "unknown" );
     }
     try {
       runningInstance.setKernel( this.vmTypeInfo.lookupKernel( ).getId( ) );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       runningInstance.setKernel( "unknown" );
     }
     try {
       runningInstance.setRamdisk( this.vmTypeInfo.lookupRamdisk( ).getId( ) );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       runningInstance.setRamdisk( "unknown" );
     }
-
     
     if ( dns ) {
       runningInstance.setDnsName( this.getNetworkConfig( ).getPublicDnsName( ) );
@@ -480,7 +492,7 @@ public class VmInstance implements HasName<VmInstance> {
   public String getConsoleOutputString( ) {
     return new String( Base64.encode( this.consoleOutput.toString( ).getBytes( ) ) );
   }
-
+  
   public StringBuffer getConsoleOutput( ) {
     return this.consoleOutput;
   }
@@ -525,7 +537,7 @@ public class VmInstance implements HasName<VmInstance> {
   public String getPublicAddress( ) {
     return networkConfig.getIgnoredPublicIp( );
   }
-
+  
   public String getPrivateDnsName( ) {
     return networkConfig.getPrivateDnsName( );
   }
@@ -559,7 +571,7 @@ public class VmInstance implements HasName<VmInstance> {
     }
     Set<AttachedVolume> oldVolumes = Sets.newHashSet( this.getVolumes( ) );
     this.volumes.retainAll( volumes );
-    this.volumes.addAll( volumes );
+    this.volumes.addAll( newVolumes );
     for ( AttachedVolume v : oldVolumes ) {
       if ( "attaching".equals( v.getStatus( ) ) && !this.volumes.contains( v ) ) {
         this.volumes.add( v );

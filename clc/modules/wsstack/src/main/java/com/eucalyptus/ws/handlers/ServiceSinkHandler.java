@@ -106,6 +106,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.ReplyQueue;
@@ -120,7 +121,6 @@ import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
-  private static VMMessageDispatcherFactory dispatcherFactory = new VMMessageDispatcherFactory( );
   private static Logger                     LOG               = Logger.getLogger( ServiceSinkHandler.class );
   private AtomicLong                        startTime         = new AtomicLong( 0l );
   
@@ -281,16 +281,11 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   }
   
   private static void dispatchRequest( final BaseMessage msg ) throws MuleException, DispatchException {
-//    ServiceContext.dispatch( "RequestQueue", msg );//ASAP: omg urgent.
-    OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
-    if ( !endpoint.getConnector( ).isStarted( ) ) {
-      endpoint.getConnector( ).start( );
+    try {
+      ServiceContext.dispatch( "RequestQueue", msg );
+    } catch ( EucalyptusCloudException ex ) {
+      LOG.error( ex , ex );
     }
-    MuleMessage muleMsg = new DefaultMuleMessage( msg );
-    MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
-                                                      ServiceContext.getContext( ) );
-    MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
-    dispatcherFactory.create( endpoint ).dispatch( muleEvent );
   }
   
   @Override
