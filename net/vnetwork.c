@@ -2423,7 +2423,7 @@ int getdevinfo(char *dev, uint32_t **outips, uint32_t **outnms, int *len) {
   count=0;
   for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
     if (!strcmp(dev, "all") || !strcmp(ifa->ifa_name, dev)) {
-      if (ifa->ifa_addr->sa_family == AF_INET) {
+      if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
 	rc = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
 	if (!rc) {
 	  void *tmpAddrPtr;

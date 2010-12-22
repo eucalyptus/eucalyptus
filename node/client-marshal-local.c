@@ -93,6 +93,9 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int
 {
     return doTerminateInstance (meta, instanceId, shutdownState, previousState);
 }
+int ncAssignAddressStub (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp){
+  return(0);
+}
 int ncPowerDownStub (ncStub *st, ncMetadata *meta){
   return(0);
 }

@@ -607,6 +607,30 @@ doDescribeResource(	struct nc_state_t *nc,
 }
 
 static int
+doAssignAddress(struct nc_state_t *nc,
+		ncMetadata *ccMeta,
+		char *instanceId,
+		char *publicIp)
+{
+  int ret = OK;
+  ncInstance *instance=NULL;
+
+  if (instanceId == NULL || publicIp == NULL) {
+    logprintfl(EUCAERROR, "doAssignAddress(): bad input params\n");
+    return(ERROR);
+  }
+
+  sem_p (inst_sem); 
+  instance = find_instance(&global_instances, instanceId);
+  if ( instance ) {
+    snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);  
+  }
+  sem_v (inst_sem);
+  
+  return ret;
+}
+
+static int
 doPowerDown(	struct nc_state_t *nc,
 		ncMetadata *ccMeta)
 {
@@ -1047,6 +1071,7 @@ struct handlers default_libvirt_handlers = {
     .doGetConsoleOutput  = doGetConsoleOutput,
     .doDescribeResource  = doDescribeResource,
     .doStartNetwork      = doStartNetwork,
+    .doAssignAddress     = doAssignAddress,
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume,

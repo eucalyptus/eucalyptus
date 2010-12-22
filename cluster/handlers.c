@@ -350,6 +350,12 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       rc = ncDetachVolumeStub(ncs, meta, instanceId, volumeId, remoteDev, localDev, force);
     } else if (!strcmp(ncOp, "ncPowerDown")) {
       rc = ncPowerDownStub(ncs, meta);
+    } else if (!strcmp(ncOp, "ncAssignAddress")) {
+      char *instanceId = va_arg(al, char *);
+      char *publicIp = va_arg(al, char *);
+
+      rc = ncAssignAddressStub(ncs, meta, instanceId, publicIp);
+      //rc = 0;
     } else if (!strcmp(ncOp, "ncRebootInstance")) {
       char *instId = va_arg(al, char *);
 
@@ -1532,7 +1538,16 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		
 		if (ip) free(ip);
 	      }
-	      
+	    
+	    // check for network instance IP inconsistency
+	    if ( strcmp(myInstance->ccnet.publicIp, ncOutInsts[j]->ncnet.publicIp) ) {
+	      logprintfl(EUCADEBUG, "refresh_instances(): instId=%s, publicIP reported by NC (%s) differs from publicIp assigned at CC (%s), updating.\n", myInstance->instanceId, ncOutInsts[j]->ncnet.publicIp, myInstance->ccnet.publicIp);
+	      rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
+	      if (rc) {
+		logprintfl(EUCAERROR, "refresh_instance(): could not update publicIP (%s) of instance (%s) at NC (%s)\n", myInstance->ccnet.publicIp, myInstance->instanceId, resourceCacheStage->resources[i].ncURL);
+	      }
+	    }
+	    
 	      refresh_instanceCache(myInstance->instanceId, myInstance);
 	      if (!strcmp(myInstance->state, "Extant")) {
 	       if (myInstance->ccnet.vlan < 0) {

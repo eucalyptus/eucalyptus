@@ -903,9 +903,10 @@ if [ -n "$SETUP" ]; then
 			echo "Failed to create instance path!"
 			exit 1
 		fi
-		if ! chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH ; then
-			exit 1
-		fi
+	fi
+	if ! chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH ; then
+                echo "Failed to modify ownership of $INSTANCE_PATH (must be owned by $EUCA_USER:$EUCA_GROUP)!"
+		exit 1
 	fi
 
 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus
