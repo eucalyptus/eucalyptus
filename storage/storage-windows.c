@@ -188,7 +188,8 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
   bzero(password, sizeof(char)*16);
   for (i=0; i<8; i++) {
     char c[4];
-    snprintf(c, 2, "%c", RANDALPHANUM);
+    c[0] = '0';
+    while(c[0] == '0' || c[0] == 'O') snprintf(c, 2, "%c", RANDALPHANUM);
     strcat(password, c);
   }
   snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
