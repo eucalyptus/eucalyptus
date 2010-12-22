@@ -77,7 +77,7 @@
             <outbound-endpoint ref="ReplyQueueEndpoint"/>
         </default-service-exception-strategy>
 
-        <service name="Accounts">
+        <service name="AccountsManage">
             <inbound>
                 <inbound-endpoint ref="AccountsManageWS"/>
             </inbound>
