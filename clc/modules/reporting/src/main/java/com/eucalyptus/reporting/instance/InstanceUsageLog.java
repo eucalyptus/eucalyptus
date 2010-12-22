@@ -58,9 +58,10 @@ public class InstanceUsageLog
 
 
 	/**
-	 * <p>Scans through the usage log and summarizes and groups the data it finds.
-	 * For example, scans through the usage log and adds up all usage data
-	 * for each user, then returns a Map of UserId:UsageSummary. 
+	 * <p>Scans through the usage log, then summarizes and groups the data it finds.
+	 * For example, if you provide the criterion of "user", in scans through the usage
+	 * log and adds up all usage data for each user, then returns a Map of
+	 * UserId:UsageSummary. 
 	 *
 	 * @return A summary of all usage and instance data for a given criterion
 	 *   keyed by the criterion value. For example, a summary of all instance
@@ -93,7 +94,7 @@ public class InstanceUsageLog
 	
 
 	/**
-	 * <p>Scans through the usage log, and summarizes and groups the data it finds.
+	 * <p>Scans through the usage log, then summarizes and groups the data it finds.
 	 * For example, scans through the usage log and adds up all usage data
 	 * for each user, within each Availability Zone, then returns the results
 	 * as <pre>AvailZone->UserId->UsageSummary</pre>. 
@@ -203,8 +204,8 @@ public class InstanceUsageLog
 				.setLong(1, period.getEndingMs())
 				.iterate();
 
-			/* Gather instance attributes, earliest and latest timestamp, earliest
-			 * and latest usage stats for each instance.
+			/* Gather instance attributes, and earliest and latest timestamp, and
+			 * earliest and latest usage stats for each instance.
 			 */
 			while (iter.hasNext()) {
 				Object[] row = (Object[]) iter.next();
