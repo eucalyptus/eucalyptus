@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import javax.persistence.*;
 
+@SuppressWarnings("serial")
 @Entity
 @PersistenceContext(name="reporting")
 @Table(name="reporting_instance")
