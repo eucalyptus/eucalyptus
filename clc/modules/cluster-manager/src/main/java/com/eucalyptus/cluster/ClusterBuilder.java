@@ -194,6 +194,19 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Tearing down cluster: " + config );
     Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
+    for( Group g : Groups.listAllGroups( ) ) {
+      for( Authorization auth : g.getAuthorizations( ) ) {
+        if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {
+          g.removeAuthorization( auth );
+        }
+      }
+    }
+    try {
+      EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
+      Clusters.stop( cluster.getName( ) );
+    } catch ( Throwable ex1 ) {
+      LOG.error( ex1 , ex1 );
+    }
     EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
     try {
       List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
@@ -205,30 +218,25 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       LOG.error( e, e );
       credDb.rollback( );
     }
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
-    Clusters.stop( cluster.getName( ) );
-    for( Group g : Groups.listAllGroups( ) ) {
-      for( Authorization auth : g.getAuthorizations( ) ) {
-        if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {
-          g.removeAuthorization( auth );
+    try {
+      String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
+      File keyDir = new File( directory );
+      if ( keyDir.exists( ) ) {
+        for( File f : keyDir.listFiles( ) ) {
+          if( f.delete( ) ) {
+            LOG.info( "Removing cluster key file: " + f.getAbsolutePath( ) );
+          } else {
+            LOG.info( "Failed to remove cluster key file: " + f.getAbsolutePath( ) );
+          }        
+        }
+        if( keyDir.delete( ) ) {
+          LOG.info( "Removing cluster key directory: " + keyDir.getAbsolutePath( ) );
+        } else {
+          LOG.info( "Failed to remove cluster key directory: " + keyDir.getAbsolutePath( ) );
         }
       }
-    }
-    String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
-    File keyDir = new File( directory );
-    if ( keyDir.exists( ) ) {
-      for( File f : keyDir.listFiles( ) ) {
-        if( f.delete( ) ) {
-          LOG.info( "Removing cluster key file: " + f.getAbsolutePath( ) );
-        } else {
-          LOG.info( "Failed to remove cluster key file: " + f.getAbsolutePath( ) );
-        }        
-      }
-      if( keyDir.delete( ) ) {
-        LOG.info( "Removing cluster key directory: " + keyDir.getAbsolutePath( ) );
-      } else {
-        LOG.info( "Failed to remove cluster key directory: " + keyDir.getAbsolutePath( ) );
-      }
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
     }    
     super.fireStop( config );
   }
