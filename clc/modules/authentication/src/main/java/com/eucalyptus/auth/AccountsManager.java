@@ -5,7 +5,7 @@ import edu.ucsb.eucalyptus.msgs.ListUsersResponseType;
 import edu.ucsb.eucalyptus.msgs.ListUsersType;
 import edu.ucsb.eucalyptus.msgs.UserType;
 
-public class AccountsManagement {
+public class AccountsManager {
   
   public ListUsersResponseType listUsers( ListUsersType request ) {
     ListUsersResponseType response = request.getReply( );
