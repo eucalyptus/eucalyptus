@@ -97,6 +97,6 @@
   <endpoint name="SystemStateWS" address="vm://SystemState" synchronous="false" />
   <endpoint name="TransformReplyWS" address="vm://TransformReply" synchronous="false" />
   <!--accounts management services-->
-  <endpoint name="AccountsWS" address="vm://Accounts" synchronous="false" />
+  <endpoint name="AccountsManageWS" address="vm://AccountsManage" synchronous="false" />
 </mule>
   

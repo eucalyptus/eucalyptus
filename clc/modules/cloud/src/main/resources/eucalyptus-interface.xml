@@ -126,7 +126,7 @@
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage" />
 				</filtering-router>
                 <filtering-router>
-                    <outbound-endpoint ref="AccountsWS" />
+                    <outbound-endpoint ref="AccountsManageWS" />
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.AccountsManagementMessage" />
                 </filtering-router>
         <filtering-router>

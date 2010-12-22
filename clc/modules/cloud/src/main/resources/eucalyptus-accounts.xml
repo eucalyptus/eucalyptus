@@ -79,7 +79,7 @@
 
         <service name="Accounts">
             <inbound>
-                <inbound-endpoint ref="AccountsWS"/>
+                <inbound-endpoint ref="AccountsManageWS"/>
             </inbound>
             <component class="com.eucalyptus.auth.AccountsManager"/>
             <outbound>
