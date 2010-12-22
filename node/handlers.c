@@ -800,10 +800,6 @@ static int init (void)
 
 	bzero (&nc_state, sizeof(struct nc_state_t)); // ensure that MAXes are zeroed out
 
-	/* from now on we have unrecoverable failure, so no point in
-	 * retrying to re-init */
-	initialized = -1;
-
 	/* read in configuration - this should be first! */
 	tmp = getenv(EUCALYPTUS_ENV_VAR_NAME);
 	if (!tmp) {
@@ -855,6 +851,15 @@ static int init (void)
 
 	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
 	strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
+
+	if (euca_init_cert ()) {
+	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
+	  return 1;
+	}
+
+	/* from now on we have unrecoverable failure, so no point in
+	 * retrying to re-init */
+	initialized = -1;
 
 	hyp_sem = sem_alloc (1, "mutex");
 	inst_sem = sem_alloc (1, "mutex");
