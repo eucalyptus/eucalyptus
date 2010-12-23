@@ -1,5 +1,7 @@
 package edu.ucsb.eucalyptus.msgs
 
+import com.google.common.collect.Lists;
+
 class AccountsManagementMessage extends ManagementMessage { }
 
 class ListUsersType extends AccountsManagementMessage {
@@ -16,7 +18,7 @@ class UserType extends EucalyptusData {
 }
 
 class ListUsersResponseType extends AccountsManagementMessage {
-  ArrayList<UserType> users;
+  ArrayList<UserType> users = Lists.newArrayList( );
   Boolean isTruncated;
   String marker;
 }
