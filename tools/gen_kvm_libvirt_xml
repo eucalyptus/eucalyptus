@@ -82,6 +82,8 @@ if ( -x "/usr/bin/kvm" ) {
     $local_kvm="/usr/bin/kvm";
 } elsif ( -x "/usr/bin/qemu-kvm" ) {
     $local_kvm="/usr/bin/qemu-kvm";
+} elsif ( -x "/usr/libexec/qemu-kvm" ) {
+    $local_kvm="/usr/libexec/qemu-kvm";
 } else {
     $local_kvm="kvm";
 }

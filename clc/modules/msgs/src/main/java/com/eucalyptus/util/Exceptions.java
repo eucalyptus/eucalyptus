@@ -10,7 +10,7 @@ public class Exceptions {
   private static Logger                    LOG                      = Logger.getLogger( Exceptions.class );
   private static final List<String>        DEFAULT_FILTER_PREFIXES  = Lists.newArrayList( "com.eucalyptus", "edu.ucsb.eucalyptus" );
   private static final List<String>        DEFAULT_FILTER_MATCHES   = Lists.newArrayList( );
-  private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 5;
+  private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 10;
   private static final StackTraceElement[] steArrayType             = new StackTraceElement[1];
   
   public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {

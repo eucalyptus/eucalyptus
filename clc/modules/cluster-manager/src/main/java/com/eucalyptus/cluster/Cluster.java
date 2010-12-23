@@ -85,6 +85,7 @@ import com.eucalyptus.cluster.callback.LogDataCallback;
 import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
+import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
@@ -95,6 +96,8 @@ import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
@@ -303,9 +306,13 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   public void start( ) {
     this.getServiceEndpoint( ).start( );
+    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
+    ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   public void stop( ) {
+    ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
+    ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
     this.getServiceEndpoint( ).stop( );
   }
   
@@ -505,7 +512,15 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
+    if ( event instanceof Hertz && ( ( Hertz ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
+      try {
+        Callbacks.newClusterRequest( new VmPendingCallback( ) ).sendSync( this.getServiceEndpoint( ) );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex , ex );
+      } catch ( InterruptedException ex ) {
+        LOG.error( ex , ex );
+      }
+    } else if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
       try {
         switch ( this.stateMachine.getState( ) ) {
           case DOWN:
