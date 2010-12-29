@@ -99,33 +99,45 @@ public class FalseDataGenerator
 		}
 	}
 
-	public static void printFalseDataByCluster()
+	private static InstanceUsageLog.GroupByCriterion getCriterion(String name)
+	{
+		return InstanceUsageLog.GroupByCriterion.valueOf(name.toUpperCase());
+	}
+	
+	public static void summarizeFalseDataOneCriterion(
+			String criterion)
 	{
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
-		System.out.println(" ----> PRINTING FALSE DATA BY CLUSTER");
+		InstanceUsageLog.GroupByCriterion crit = getCriterion(criterion);
+		System.out.println(" ----> PRINTING FALSE DATA BY " + crit);
 		
 		Map<String, UsageSummary> summaryMap = usageLog.scanSummarize(
-				new Period(0L, MAX_MS),
-				InstanceUsageLog.GroupByCriterion.CLUSTER);
-		for (String cluster: summaryMap.keySet()) {
-			System.out.printf("Cluster:%s Summary:%s\n", cluster, summaryMap.get(cluster));
+				new Period(0L, MAX_MS), crit);
+		for (String critVal: summaryMap.keySet()) {
+			System.out.printf("%s:%s Summary:%s\n", crit, critVal,
+					summaryMap.get(critVal));
 		}
 	}
 	
-	public static void printFalseDataByZoneCluster()
+	public static void summarizeFalseDataTwoCriteria(
+			String outerCriterion,
+			String innerCriterion)
 	{
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
-		System.out.println(" ----> PRINTING FALSE DATA BY ZONE,CLUSTER");
+		InstanceUsageLog.GroupByCriterion outerCrit = getCriterion(outerCriterion);
+		InstanceUsageLog.GroupByCriterion innerCrit = getCriterion(innerCriterion);
+		System.out.printf(" ----> PRINTING FALSE DATA BY %s,%s\n", outerCrit,
+				innerCrit);
 		
 		Map<String, Map<String, UsageSummary>> summaryMap =
 			usageLog.scanSummarize(new Period(0L, MAX_MS),
-					InstanceUsageLog.GroupByCriterion.AVAILABILITY_ZONE,
-					InstanceUsageLog.GroupByCriterion.CLUSTER);
-		for (String zone: summaryMap.keySet()) {
-			Map<String, UsageSummary> innerMap = summaryMap.get(zone);
-			for (String cluster: innerMap.keySet()) {
-				System.out.printf("Zone:%s Cluster:%s Summary:%s\n", zone, 
-						cluster, innerMap.get(cluster));
+					outerCrit, innerCrit);
+		for (String outerCritVal: summaryMap.keySet()) {
+			Map<String, UsageSummary> innerMap = summaryMap.get(outerCritVal);
+			for (String innerCritVal: innerMap.keySet()) {
+				System.out.printf("%s:%s %S:%s Summary:%s\n", outerCrit,
+						outerCritVal, innerCrit, innerCritVal,
+						innerMap.get(innerCritVal));
 			}
 		}
 	}
