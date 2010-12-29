@@ -67,5 +67,14 @@ public class UsageData
 
 		return new UsageData(subtractedNetworkIoMegs, subtractedDiskIoMegs);
 	}
+	
+	
+	/**
+	 * toString() for debugging and logs
+	 */
+	public String toString()
+	{
+		return String.format("[disk:%d,net:%d]", this.diskIoMegs, this.networkIoMegs);
+	}
 
 }
