@@ -215,7 +215,7 @@ public class UsageSummary
 	{
 		long timeMs = period.getEndingMs() - period.getBeginningMs();
 
-		//Autoboxing should work because I prevented nulls everywhere
+		//Autoboxing should work because we prevented nulls everywhere
 		if (type.equalsIgnoreCase("m1small")) {
 			this.m1SmallNum = this.m1SmallNum + 1;
 			this.m1SmallTimeMs = this.m1SmallTimeMs + timeMs;
@@ -231,6 +231,21 @@ public class UsageSummary
 		} else if (type.equalsIgnoreCase("c1xlarge")) {
 			this.c1XLargeNum = this.c1XLargeNum + 1;
 			this.c1XLargeTimeMs = this.c1XLargeTimeMs + timeMs;
+		} else {
+			System.err.println("Unrecognized type:" + type);
 		}
+	}
+	
+	/**
+	 * toString() for logging and debugging
+	 */
+	public String toString()
+	{
+		return String.format("[num,timeMs m1Small:%d,%d c1Medium:%d,%d m1Large"
+				+ ":%d,%d m1XLarge:%d,%d c1XLarge:%d,%d disk:%d net:%d]",
+				this.m1SmallNum, this.m1SmallTimeMs, this.c1MediumNum,
+				this.c1MediumTimeMs, this.m1LargeNum, this.m1LargeTimeMs,
+				this.m1XLargeNum, this.m1XLargeTimeMs, this.c1XLargeNum,
+				this.c1XLargeTimeMs, this.diskIoMegs, this.networkIoMegs);
 	}
 }
