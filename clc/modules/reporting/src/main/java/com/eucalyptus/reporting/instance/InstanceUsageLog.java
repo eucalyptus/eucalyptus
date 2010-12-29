@@ -196,10 +196,10 @@ public class InstanceUsageLog
 			sess = entityWrapper.getSession();
 			@SuppressWarnings("rawtypes")
 			Iterator iter = sess.createQuery(
-				"from InstanceAttributes, InstanceUsageSnapshot"
-				+ " where InstanceAttributes.uuid = InstanceUsageSnapshot.uuid"
-				+ " and InstanceUsageSnapshot.timestampMs > ?"
-				+ " and InstanceUsageSnapshot.timestampMs < ?")
+				"from InstanceAttributes as ia, InstanceUsageSnapshot as ius"
+				+ " where ia.uuid = ius.uuid"
+				+ " and ius.timestampMs > ?"
+				+ " and ius.timestampMs < ?")
 				.setLong(0, period.getBeginningMs())
 				.setLong(1, period.getEndingMs())
 				.iterate();
@@ -246,6 +246,7 @@ public class InstanceUsageLog
 		final List<LogScanResult> results =
 			new ArrayList<LogScanResult>(instanceDataMap.keySet().size());
 		for (InstanceData insData: instanceDataMap.values()) {
+			//System.out.println("-> InstanceData:" + insData);
 			Period resultPeriod = new Period(insData.getBeginMs(), insData.getEndMs());
 			UsageData resultUsage =
 				insData.getEarliestUsageData().subtractFrom(insData.getLatestUsageData());
@@ -279,10 +280,10 @@ public class InstanceUsageLog
 			 * MySQL's fancy multi-table delete with left outer join syntax.
 			 */
 			sess.createSQLQuery(
-					"DELETE instance_attributes" 
-					+ " FROM instance_attributes"
+					"DELETE reporting_instance" 
+					+ " FROM reporting_instance"
 					+ " LEFT OUTER JOIN instance_usage_snapshot"
-					+ " ON instance_attributes.uuid = instance_usage_snapshot.uuid"
+					+ " ON reporting_instance.uuid = instance_usage_snapshot.uuid"
 					+ " WHERE instance_usage_snapshot.uuid IS NULL")
 				.executeUpdate();
 			entityWrapper.commit();
@@ -357,7 +358,16 @@ public class InstanceUsageLog
 		{
 			this.latestUsageData = latestUsageData;
 		}
-		
+
+		/**
+		 * toString() for logs and debugging
+		 */
+		public String toString()
+		{
+			return String.format("[uuid:%s,time:%d-%d,earlyUsage:%s,lateUsage:%s]",
+					insAttrs.getUuid(), beginMs, endMs, earliestUsageData,
+					latestUsageData);
+		}
 	}
 
 }
