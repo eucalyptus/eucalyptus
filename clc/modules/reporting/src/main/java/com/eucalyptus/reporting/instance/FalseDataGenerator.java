@@ -2,8 +2,8 @@ package com.eucalyptus.reporting.instance;
 
 import java.util.*;
 
-import org.junit.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.upgrade.TestDescription;
 
 /**
  * <p>FalseDataGenerator generates false data about instances,
@@ -16,11 +16,12 @@ import com.eucalyptus.reporting.event.InstanceEvent;
  * professional... False data can cause one to make stupid mistakes..."</i>
  *   - L. Ron Hubbard
  */
+@TestDescription("Generates false instance reporting data")
 public class FalseDataGenerator
 {
-	private static final int NUM_USAGE = 4096;
-	private static final int NUM_INSTANCE = 128;
-	private static final int TIME_USAGE_APART = 1000; //ms
+	private static final int NUM_USAGE = 32;
+	private static final int NUM_INSTANCE = 16;
+	private static final int TIME_USAGE_APART = 100000; //ms
 	private static final long MAX_MS = ((NUM_USAGE+1) * TIME_USAGE_APART);
 
 	private static final int NUM_USER = 32;
@@ -29,15 +30,16 @@ public class FalseDataGenerator
 
 	private enum FalseInstanceType
 	{
-		TINY, SMALL, MEDIUM, BIG;
+		M1SMALL, C1MEDIUM, M1LARGE, M1XLARGE, C1XLARGE;
 	}
 
-	@Test
-	public void generateFalseData()
+	public static void generateFalseData()
 	{
 		List<InstanceAttributes> fakeInstances =
 				new ArrayList<InstanceAttributes>();
 		
+		System.out.println(" ----> GENERATING FALSE DATA");
+
 		for (int i = 0; i < NUM_INSTANCE; i++) {
 			String uuid = new Long(i).toString();
 			String instanceId = String.format("instance-%d", (i % NUM_INSTANCE));
@@ -64,22 +66,24 @@ public class FalseDataGenerator
 						insAttrs.getUserId(), insAttrs.getClusterName(),
 						insAttrs.getAvailabilityZone(), new Long(netIo),
 						new Long(diskIo));
+				System.out.println("Generating:" + i);
 				listener.receiveEvent(event);
 			}
 		}
 		
 	}
 
-	@Test
-	public void removeFalseData()
+	public static void removeFalseData()
 	{
+		System.out.println(" ----> REMOVING FALSE DATA");
+
 		InstanceUsageLog.getInstanceUsageLog().purgeLog(MAX_MS);
 	}
 	
-	@Test
-	public void printFalseData()
+	public static void printFalseData()
 	{
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
+		System.out.println(" ----> PRINTING FALSE DATA");
 		for (InstanceUsageLog.LogScanResult result: usageLog.scanLog(new Period(0L, MAX_MS))) {
 
 			InstanceAttributes insAttrs = result.getInstanceAttributes();
@@ -95,12 +99,43 @@ public class FalseDataGenerator
 		}
 	}
 
+	public static void printFalseDataByCluster()
+	{
+		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
+		System.out.println(" ----> PRINTING FALSE DATA BY CLUSTER");
+		
+		Map<String, UsageSummary> summaryMap = usageLog.scanSummarize(
+				new Period(0L, MAX_MS),
+				InstanceUsageLog.GroupByCriterion.CLUSTER);
+		for (String cluster: summaryMap.keySet()) {
+			System.out.printf("Cluster:%s Summary:%s\n", cluster, summaryMap.get(cluster));
+		}
+	}
+	
+	public static void printFalseDataByZoneCluster()
+	{
+		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
+		System.out.println(" ----> PRINTING FALSE DATA BY ZONE,CLUSTER");
+		
+		Map<String, Map<String, UsageSummary>> summaryMap =
+			usageLog.scanSummarize(new Period(0L, MAX_MS),
+					InstanceUsageLog.GroupByCriterion.AVAILABILITY_ZONE,
+					InstanceUsageLog.GroupByCriterion.CLUSTER);
+		for (String zone: summaryMap.keySet()) {
+			Map<String, UsageSummary> innerMap = summaryMap.get(zone);
+			for (String cluster: innerMap.keySet()) {
+				System.out.printf("Zone:%s Cluster:%s Summary:%s\n", zone, 
+						cluster, innerMap.get(cluster));
+			}
+		}
+	}
+	
 	/**
 	 * TestEventListener provides fake times which you can modify.
 	 * 
 	 * @author twerges
 	 */
-	private class TestEventListener
+	private static class TestEventListener
 		extends InstanceEventListener
 	{
 		private long fakeCurrentTimeMillis = 0l;
