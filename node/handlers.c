@@ -295,6 +295,12 @@ refresh_instance_info(	struct nc_state_t *nc,
         return;
     }
 
+    int rc;
+    rc = get_instance_stats(dom, instance);
+    if (rc) {
+      logprintfl(EUCAWARN, "refresh_instances(): cannot get instance stats (block, network)\n");
+    }
+
     virDomainInfo info;
     sem_p(hyp_sem);
     int error = virDomainGetInfo(dom, &info);
@@ -578,7 +584,7 @@ void *startup_thread (void * arg)
         return NULL;
     }
     
-    error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, &brname);
+    error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname);
     if ( error ) {
         logprintfl (EUCAFATAL, "start network failed for instance %s, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
@@ -1119,6 +1125,23 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	return ret;
 }
 
+int doAssignAddress(ncMetadata *meta, char *instanceId, char *publicIp) {
+  int ret=0;
+  
+  if (init()) {    
+    return(1);
+  }
+  
+  logprintfl(EUCADEBUG, "doAssignAddress() invoked\n");
+
+  if (nc_state.H->doAssignAddress) 
+    ret = nc_state.H->doAssignAddress(&nc_state, meta, instanceId, publicIp);
+  else 
+    ret = nc_state.D->doAssignAddress(&nc_state, meta, instanceId, publicIp);
+  
+  return ret;
+}
+
 int doPowerDown(ncMetadata *meta) {
 	int ret;
 
@@ -1135,7 +1158,7 @@ int doPowerDown(ncMetadata *meta) {
 	return ret;
 }
 
-int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
     int ret;
     
@@ -1247,9 +1270,9 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
     }
    
     if (nc_state.H->doRunInstance)
-      ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
+      ret = nc_state.H->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
     else
-      ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
+      ret = nc_state.D->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
     
     return ret;
 }
@@ -1324,6 +1347,7 @@ int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource **outRe
 
 int
 doStartNetwork (	ncMetadata *ccMeta,
+			char *uuid,
 			char **remoteHosts,
 			int remoteHostsLen,
 			int port,
@@ -1337,9 +1361,9 @@ doStartNetwork (	ncMetadata *ccMeta,
 	logprintfl(EUCADEBUG, "doStartNetwork() invoked\n");
 
 	if (nc_state.H->doStartNetwork) 
-		ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+	        ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	else 
-		ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+	        ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	
 	return ret;
 }
@@ -1445,11 +1469,11 @@ void parse_target(char *dev_string) {
     }  
 }
 
-char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     char buf [MAX_PATH];
     char *retval;
     
-    snprintf (buf, MAX_PATH, "%s %s", storage_cmd_path, dev_string);
+    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
     logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
@@ -1459,20 +1483,20 @@ char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     return retval;
 }
 
-int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    if (vrun("%s %s", storage_cmd_path, dev_string) != 0) {
+    if (vrun("%s %s,%s", storage_cmd_path, euca_home, dev_string) != 0) {
 	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
 	return -1;
     }
     return 0;
 }
 
-char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     char buf [MAX_PATH];
     char *retval;
     
-    snprintf (buf, MAX_PATH, "%s %s", storage_cmd_path, dev_string);
+    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
     logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");
@@ -1480,4 +1504,72 @@ char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
 	logprintfl (EUCAINFO, "Device: %s\n", retval);
     } 
     return retval;
+}
+
+int get_instance_stats(virDomainPtr dom, ncInstance *instance)
+{
+  char *xml;
+  int ret=0, n;
+  long long b=0, i=0;
+  char bstr[512], istr[512];
+
+  // get the block device string from VBR
+  bzero(bstr, 512);
+  for (n=0; n<instance->params.virtualBootRecordLen; n++) {
+    if (strcmp(instance->params.virtualBootRecord[n].guestDeviceName, "none")) {
+      if (strlen(bstr) < (510 - strlen(instance->params.virtualBootRecord[n].guestDeviceName))) {
+	strcat(bstr, instance->params.virtualBootRecord[n].guestDeviceName);
+	strcat(bstr, ",");
+      }
+    }
+  }
+  
+  // get the name of the network interface from libvirt
+  sem_p(hyp_sem);
+  xml = virDomainGetXMLDesc(dom, 0);
+  sem_v(hyp_sem);
+
+  if (xml) {
+    char *el;
+    el = xpath_content(xml, "domain/devices/interface");
+    if (el) {
+      char *start, *end;
+      start = strstr(el, "target dev='");
+      if (start) {
+	start += strlen("target dev='");
+	end = strstr(start, "'");
+	if (end) {
+	  *end = '\0';
+	  snprintf(istr, 512, "%s", start);
+	}
+      }
+      free(el);
+    }
+    free(xml);
+  }
+
+  char cmd[MAX_PATH], *output;
+  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b '%s' -n '%s'", nc_state.home, nc_state.home, instance->instanceId, bstr, istr);
+  output = system_output(cmd);
+  if (output) {
+    sscanf(output, "OUTPUT %lld %lld", &b, &i);
+    free(output);
+  } else {
+    logprintfl(EUCAWARN, "get_instance_stat(): empty output from getstats command\n");
+    ret = 1;
+  }
+  
+  if (b > 0) {
+    instance->blkbytes = b;
+  } else {
+    instance->blkbytes = 0;
+  }
+  if (i > 0) {
+    instance->netbytes = i;
+  } else {
+    instance->netbytes = 0;
+  }
+  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, blkdevs=%s, blkbytes=%lld, netdevs=%s, netbytes=%lld\n", instance->instanceId, bstr, instance->blkbytes, istr, instance->netbytes);
+
+  return(ret);
 }
