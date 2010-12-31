@@ -514,7 +514,11 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public void fireEvent( Event event ) {
     if ( event instanceof Hertz && ( ( Hertz ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
       try {
-        Callbacks.newClusterRequest( new VmPendingCallback( ) ).sendSync( this.getServiceEndpoint( ) );
+        Callbacks.newClusterRequest( new VmPendingCallback( ) {
+          {
+            setSubject( Cluster.this );
+          }
+        } ).sendSync( this.getServiceEndpoint( ) );
       } catch ( ExecutionException ex ) {
         LOG.error( ex , ex );
       } catch ( InterruptedException ex ) {
