@@ -101,16 +101,28 @@ public class FalseDataGenerator
 
 	private static InstanceUsageLog.GroupByCriterion getCriterion(String name)
 	{
+		/* throws an IllegalArgument if no such criterion exists, which is the
+		 * appropriate exception for our uses here, so we let it percolate up.
+		 */
 		return InstanceUsageLog.GroupByCriterion.valueOf(name.toUpperCase());
 	}
-	
+
+	/**
+	 * This method takes a String as a parameter rather than an
+	 * InstanceUsageLog.GroupByCriterion, because it's intended to be called
+	 * from the command-line test harness. It converts the String into a
+	 * GroupByCriterion. Possible values include "user","cluster",etc.
+	 * 
+	 * @throws IllegalArgumentException if criterion does not match
+	 *   any InstanceUsageLog.GroupByCriterion
+	 */
 	public static void summarizeFalseDataOneCriterion(
 			String criterion)
 	{
-		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
 		InstanceUsageLog.GroupByCriterion crit = getCriterion(criterion);
 		System.out.println(" ----> PRINTING FALSE DATA BY " + crit);
-		
+
+		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
 		Map<String, UsageSummary> summaryMap = usageLog.scanSummarize(
 				new Period(0L, MAX_MS), crit);
 		for (String critVal: summaryMap.keySet()) {
@@ -118,24 +130,33 @@ public class FalseDataGenerator
 					summaryMap.get(critVal));
 		}
 	}
-	
+
+	/**
+	 * This method takes Strings as parameters rather than
+	 * InstanceUsageLog.GroupByCriterion's, because it's intended to be called
+	 * from the command-line test harness. It converts the Strings into 
+	 * GroupByCriterions. Possible values include "user","cluster",etc.
+	 * 
+	 * @throws IllegalArgumentException if criterion does not match
+	 *   any InstanceUsageLog.GroupByCriterion
+	 */
 	public static void summarizeFalseDataTwoCriteria(
 			String outerCriterion,
 			String innerCriterion)
 	{
-		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
 		InstanceUsageLog.GroupByCriterion outerCrit = getCriterion(outerCriterion);
 		InstanceUsageLog.GroupByCriterion innerCrit = getCriterion(innerCriterion);
 		System.out.printf(" ----> PRINTING FALSE DATA BY %s,%s\n", outerCrit,
 				innerCrit);
-		
+
+		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
 		Map<String, Map<String, UsageSummary>> summaryMap =
 			usageLog.scanSummarize(new Period(0L, MAX_MS),
 					outerCrit, innerCrit);
 		for (String outerCritVal: summaryMap.keySet()) {
 			Map<String, UsageSummary> innerMap = summaryMap.get(outerCritVal);
 			for (String innerCritVal: innerMap.keySet()) {
-				System.out.printf("%s:%s %S:%s Summary:%s\n", outerCrit,
+				System.out.printf("%s:%s %s:%s Summary:%s\n", outerCrit,
 						outerCritVal, innerCrit, innerCritVal,
 						innerMap.get(innerCritVal));
 			}
@@ -161,6 +182,6 @@ public class FalseDataGenerator
 		{
 			return fakeCurrentTimeMillis;
 		}
-		
 	}
+
 }
