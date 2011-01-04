@@ -200,7 +200,7 @@ public class NetappProvider implements SANProvider {
 				} else {
 					throw new EucalyptusCloudException("Invalid remote device string.");
 				}
-				String deviceName = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
+				String deviceName = SystemUtil.run(new String[]{StorageProperties.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
 						deviceString});
 				if(deviceName.length() == 0) {
 					throw new EucalyptusCloudException("Unable to get device name. Connect failed.");
@@ -607,7 +607,7 @@ public class NetappProvider implements SANProvider {
 					} else {
 						throw new EucalyptusCloudException("Invalid remote device string.");
 					}
-					String returnValue = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + 
+					String returnValue = SystemUtil.run(new String[]{StorageProperties.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, BaseDirectory.LIB.toString() + File.separator + 
 							"disconnect_iscsitarget_sc.pl", deviceString});
 					if(returnValue.length() == 0) {
 						throw new EucalyptusCloudException("Unable to disconnect target");
