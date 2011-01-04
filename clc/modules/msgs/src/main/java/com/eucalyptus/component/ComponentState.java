@@ -212,8 +212,8 @@ public class ComponentState {
               if( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
                 parent.getBuilder( ).fireDisable( parent.getLocalService( ).getServiceConfiguration( ) );
               }
-            } catch ( ServiceRegistrationException ex1 ) {
-              LOG.error( ex1 , ex1 );
+            } catch ( Throwable ex1 ) {
+              LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex1.toString( ), ex1 );
             }
           } 
           transitionCallback.fireException( ex );
