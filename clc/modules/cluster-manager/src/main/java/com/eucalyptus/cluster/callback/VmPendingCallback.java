@@ -9,8 +9,6 @@ import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -24,18 +22,14 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
     this.setRequest( new VmDescribeType( ) {
       {
         regarding( );
-        Iterables.all( VmInstances.getInstance( ).listKeys( ), new Predicate<String>() {
-          @Override
-          public boolean apply( String arg0 ) {
-            VmInstance vm = VmInstances.getInstance( ).lookup( arg0 );
-            if( vm.getPlacement( ).equals( VmPendingCallback.this.getSubject( ).getName( ) ) ) {
-              if( VmState.PENDING.equals( vm.getState( ) ) 
-                  || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-                VmPendingCallback.this.getRequest( ).getInstancesSet( ).add( arg0 );
-              }
+        for( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+          if( vm.getPlacement( ).equals( VmPendingCallback.this.getSubject( ).getName( ) ) ) {
+            if( VmState.PENDING.equals( vm.getState( ) ) 
+                || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+              this.getInstancesSet( ).add( vm.getInstanceId( ) );
             }
-            return false;
-          }} ) ;
+          }          
+        }
       }
     } );
   }
