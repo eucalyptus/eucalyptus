@@ -19,7 +19,8 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
   private static Logger LOG = Logger.getLogger( VmPendingCallback.class );
   
-  public VmPendingCallback( ) {
+  public VmPendingCallback( Cluster cluster ) {
+    this.setSubject( cluster );
     this.setRequest( new VmDescribeType( ) {
       {
         regarding( );
