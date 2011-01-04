@@ -327,6 +327,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
     
     public void fireException( Throwable t ) {
+      LOG.error( "Error occurred during transition " + this.toString( ) + ": " + t.getMessage( ), t );
       AtomicMarkedState.this.error( );
     }
     
