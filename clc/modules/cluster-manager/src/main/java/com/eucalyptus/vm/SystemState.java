@@ -197,6 +197,8 @@ public class SystemState {
     VmState oldState = vm.getState( );
     
     vm.setServiceTag( runVm.getServiceTag( ) );
+    vm.setPlatform( runVm.getPlatform( ) );
+    vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
     if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
