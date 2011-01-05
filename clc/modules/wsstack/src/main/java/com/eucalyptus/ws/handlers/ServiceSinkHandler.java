@@ -87,7 +87,9 @@ import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
 import org.mule.api.MuleSession;
+import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.endpoint.OutboundEndpoint;
+import org.mule.api.service.Service;
 import org.mule.api.transport.DispatchException;
 import org.mule.transport.AbstractConnector;
 import org.mule.transport.NullPayload;
@@ -104,18 +106,21 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
+import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
+import edu.ucsb.eucalyptus.msgs.ServiceTransitionType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceSinkHandler extends SimpleChannelHandler {
-  private static VMMessageDispatcherFactory dispatcherFactory = new VMMessageDispatcherFactory( );
   private static Logger                     LOG               = Logger.getLogger( ServiceSinkHandler.class );
   private AtomicLong                        startTime         = new AtomicLong( 0l );
   
@@ -147,6 +152,14 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
         BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
+        if( ( RegisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || DeregisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || ServiceTransitionType.class.isAssignableFrom( reply.getClass( ) ) ) && reply.get_return( ) ) {
+          try {
+            ServiceContext.shutdown( );
+            ServiceContext.startup( );
+          } catch ( Throwable ex ) {
+            LOG.error( ex , ex );
+          }
+        }
         if ( reply instanceof WalrusDataGetResponseType
              && !( reply instanceof GetObjectResponseType && ( ( GetObjectResponseType ) reply ).getBase64Data( ) != null ) ) {
           e.getFuture( ).cancel( );
@@ -221,7 +234,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( this.msgReceiver == null ) {
           ServiceSinkHandler.dispatchRequest( msg );
         } else if ( ( user == null ) || ( ( user != null ) && user.isAdministrator( ) ) ) {
-          this.dispatchRequest( ctx, request, msg );
+//          this.dispatchRequest( ctx, request, msg );
+          ServiceSinkHandler.dispatchRequest( msg );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
           ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
@@ -240,6 +254,13 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
    */
   private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final BaseMessage msg ) throws NoSuchContextException {
     try {
+      /** ASAP:FIXME:GRZE this is a temporary hack around mule reloading issue **/
+      if( !this.msgReceiver.getConnector( ).isStarted( ) ) {
+        InboundEndpoint inbound = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory().getInboundEndpoint( this.msgReceiver.getEndpointURI( ) );
+        Service service = ServiceContext.getContext( ).getRegistry( ).lookupService( this.msgReceiver.getService( ).getName( ) );
+        this.msgReceiver = new NioMessageReceiver( inbound.getConnector( ), service, inbound );
+//        this.msgReceiver.doConnect( );
+      }
       final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
       if ( reply != null ) {
         ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
@@ -258,16 +279,11 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   }
   
   private static void dispatchRequest( final BaseMessage msg ) throws MuleException, DispatchException {
-//    ServiceContext.dispatch( "RequestQueue", msg );//ASAP: omg urgent.
-    OutboundEndpoint endpoint = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( "vm://RequestQueue" );
-    if ( !endpoint.getConnector( ).isStarted( ) ) {
-      endpoint.getConnector( ).start( );
+    try {
+      ServiceContext.dispatch( "RequestQueue", msg );
+    } catch ( EucalyptusCloudException ex ) {
+      LOG.error( ex , ex );
     }
-    MuleMessage muleMsg = new DefaultMuleMessage( msg );
-    MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
-                                                      ServiceContext.getContext( ) );
-    MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
-    dispatcherFactory.create( endpoint ).dispatch( muleEvent );
   }
   
   @Override

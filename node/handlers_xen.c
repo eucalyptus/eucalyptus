@@ -364,7 +364,7 @@ doAttachVolume (	struct nc_state_t *nc,
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*login to target*/
-                local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev);
+                local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, nc->home, remoteDev);
 		if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
 		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
 		  rc = 1;
@@ -473,7 +473,7 @@ doDetachVolume (	struct nc_state_t *nc,
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*logout from target*/
-                if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, remoteDev)) == NULL)
+                if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, nc->home, remoteDev)) == NULL)
                     return ERROR;
                 snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
             } else {
@@ -547,7 +547,7 @@ doDetachVolume (	struct nc_state_t *nc,
             virDomainFree(dom);
 	    sem_v(hyp_sem);
             if(is_iscsi_target) {
-                if(disconnect_iscsi_target(nc->disconnect_storage_cmd_path, remoteDev) != 0) {
+                if(disconnect_iscsi_target(nc->disconnect_storage_cmd_path, nc->home, remoteDev) != 0) {
                     logprintfl (EUCAERROR, "disconnect_iscsi_target failed for %s\n", remoteDev);
                     ret = ERROR;
                 }
@@ -592,6 +592,7 @@ struct handlers xen_libvirt_handlers = {
     .doGetConsoleOutput  = doGetConsoleOutput,
     .doDescribeResource  = NULL,
     .doStartNetwork      = NULL,
+    .doAssignAddress     = NULL,
     .doPowerDown         = NULL,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume

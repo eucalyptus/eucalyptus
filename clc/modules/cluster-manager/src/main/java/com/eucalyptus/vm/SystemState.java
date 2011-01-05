@@ -197,6 +197,8 @@ public class SystemState {
     VmState oldState = vm.getState( );
     
     vm.setServiceTag( runVm.getServiceTag( ) );
+    vm.setPlatform( runVm.getPlatform( ) );
+    vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
     if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
@@ -310,7 +312,7 @@ public class SystemState {
           notwork = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + netName );
           networks.add( notwork );
           try {
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
+            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
           } catch ( NetworkAlreadyExistsException e ) {
@@ -326,7 +328,7 @@ public class SystemState {
               notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
             }
             networks.add( notwork );
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
+            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
             Networks.getInstance( ).registerIfAbsent( notwork, Networks.State.ACTIVE );

@@ -203,10 +203,10 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ).debug( );
             }
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ),
+              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-                Callbacks.newClusterRequest( stopNet.newInstance( ) ).dispatch( cluster.getServiceEndpoint( ) );
+                Callbacks.newClusterRequest( stopNet.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
               }
             }
           }

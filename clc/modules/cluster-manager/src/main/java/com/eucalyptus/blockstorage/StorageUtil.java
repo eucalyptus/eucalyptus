@@ -93,10 +93,6 @@ import edu.ucsb.eucalyptus.msgs.StorageVolume;
 public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
   
-  public static Dispatcher lookup( String hostName ) {
-    return ServiceDispatcher.lookup( Component.storage, hostName );
-  }
-  
   public static <TYPE> TYPE send( String clusterName, EucalyptusMessage message ) throws EucalyptusCloudException {
     StorageControllerConfiguration scConfig = Configuration.lookupSc( clusterName );
     Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
@@ -127,7 +123,7 @@ public class StorageUtil {
       } );
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
       Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
-      DescribeStorageVolumesResponseType volState = sc.send( descVols, DescribeStorageVolumesResponseType.class );    
+      DescribeStorageVolumesResponseType volState = sc.send( descVols );    
       for ( StorageVolume vol : volState.getVolumeSet( ) ) {
         idStorageVolumeMap.put( vol.getVolumeId( ), vol );
       }

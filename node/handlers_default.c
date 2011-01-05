@@ -117,6 +117,7 @@ prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName
 static int
 doRunInstance(	struct nc_state_t *nc,
                 ncMetadata *meta,
+		char *uuid,
                 char *instanceId,
                 char *reservationId,
                 virtualMachine *params, 
@@ -145,7 +146,8 @@ doRunInstance(	struct nc_state_t *nc,
         logprintfl (EUCAFATAL, "Error: instance %s already running\n", instanceId);
         return 1; /* TODO: return meaningful error codes? */
     }
-    if (!(instance = allocate_instance (instanceId, 
+    if (!(instance = allocate_instance (uuid,
+					instanceId, 
                                         reservationId,
                                         params, 
                                         instance_state_names[PENDING], 
@@ -605,6 +607,30 @@ doDescribeResource(	struct nc_state_t *nc,
 }
 
 static int
+doAssignAddress(struct nc_state_t *nc,
+		ncMetadata *ccMeta,
+		char *instanceId,
+		char *publicIp)
+{
+  int ret = OK;
+  ncInstance *instance=NULL;
+
+  if (instanceId == NULL || publicIp == NULL) {
+    logprintfl(EUCAERROR, "doAssignAddress(): bad input params\n");
+    return(ERROR);
+  }
+
+  sem_p (inst_sem); 
+  instance = find_instance(&global_instances, instanceId);
+  if ( instance ) {
+    snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);  
+  }
+  sem_v (inst_sem);
+  
+  return ret;
+}
+
+static int
 doPowerDown(	struct nc_state_t *nc,
 		ncMetadata *ccMeta)
 {
@@ -624,6 +650,7 @@ doPowerDown(	struct nc_state_t *nc,
 static int
 doStartNetwork(	struct nc_state_t *nc,
 		ncMetadata *ccMeta, 
+		char *uuid,
 		char **remoteHosts, 
 		int remoteHostsLen, 
 		int port, 
@@ -631,7 +658,7 @@ doStartNetwork(	struct nc_state_t *nc,
 	int rc, ret, i, status;
 	char *brname;
 
-	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, &brname);
+	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
 	if (rc) {
 		ret = 1;
 		logprintfl (EUCAERROR, "StartNetwork(): ERROR return from vnetStartNetwork %d\n", rc);
@@ -1044,6 +1071,7 @@ struct handlers default_libvirt_handlers = {
     .doGetConsoleOutput  = doGetConsoleOutput,
     .doDescribeResource  = doDescribeResource,
     .doStartNetwork      = doStartNetwork,
+    .doAssignAddress     = doAssignAddress,
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume,

@@ -388,7 +388,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char **clusterControllers=NULL, *nameserver=NULL;
+  char **clusterControllers=NULL, *nameserver=NULL, *vnetSubnet=NULL, *vnetNetmask=NULL;
   int clusterControllersLen=0;
   ncMetadata ccMeta;
   vnetConfig *outvnetConfig=NULL;
@@ -426,11 +426,29 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 	adb_describeNetworksResponseType_set_mode(snrt, env, 0);
       }
       adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, outvnetConfig->numaddrs);
+
+      /*
+      vnetSubnet = hex2dot(outvnetConfig->nw);
+      if (vnetSubnet) {
+	adb_describeNetworksResponseType_set_vnetSubnet(snrt, env, vnetSubnet);
+	free(vnetSubnet);
+      }
+
+      vnetNetmask = hex2dot(outvnetConfig->nm);
+      if (vnetNetmask) {
+	adb_describeNetworksResponseType_set_vnetNetmask(snrt, env, vnetNetmask);
+	free(vnetNetmask);
+	}
+      adb_describeNetworksResponseType_set_vlanMin(snrt, env, 2);
+      adb_describeNetworksResponseType_set_vlanMax(snrt, env, outvnetConfig->max_vlan);
+      */
+
       
       for (i=2; i<NUMBER_OF_VLANS; i++) {
 	if (outvnetConfig->networks[i].active) {
 	  adb_networkType_t *nt=NULL;
 	  nt = adb_networkType_create(env);
+	  adb_networkType_set_uuid(nt, env, outvnetConfig->users[i].uuid);
 	  adb_networkType_set_vlan(nt, env, i);
 	  adb_networkType_set_netName(nt, env, outvnetConfig->users[i].netName);
 	  adb_networkType_set_userName(nt, env, outvnetConfig->users[i].userName);
@@ -505,18 +523,24 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   dpart = adb_describePublicAddressesResponseType_create(env);
   for (i=0; i<outAddressesLen; i++) {
     if (outAddresses[i].ip) {
+      adb_publicAddressType_t *addr;
+      addr = adb_publicAddressType_create(env);
+
+      adb_publicAddressType_set_uuid(addr, env, outAddresses[i].uuid);
+
       ipstr = hex2dot(outAddresses[i].ip);
-      adb_describePublicAddressesResponseType_add_sourceAddresses(dpart, env, ipstr);
+      adb_publicAddressType_set_sourceAddress(addr, env, ipstr);
       if (ipstr) free(ipstr);
 
       if (outAddresses[i].dstip) {
 	ipstr = hex2dot(outAddresses[i].dstip);
-	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, ipstr);
+	adb_publicAddressType_set_destAddress(addr, env, ipstr);
 	if (ipstr) free(ipstr);
-
       } else {
-	adb_describePublicAddressesResponseType_add_destAddresses(dpart, env, "");
+	adb_publicAddressType_set_destAddress(addr, env, "");
       }
+
+      adb_describePublicAddressesResponseType_add_addresses(dpart, env, addr);
     }
   }
   
@@ -541,7 +565,7 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t *assignAdd
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *src, *dst, *cid;
+  char *src, *dst, *cid, *uuid=NULL;
   ncMetadata ccMeta;
   
   aat = adb_AssignAddress_get_AssignAddress(assignAddress, env);
@@ -554,10 +578,11 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t *assignAdd
   
   src = adb_assignAddressType_get_source(aat, env);
   dst = adb_assignAddressType_get_dest(aat, env);
+  uuid = adb_assignAddressType_get_uuid(aat, env);
 
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doAssignAddress(&ccMeta, src, dst);
+    rc = doAssignAddress(&ccMeta, uuid, src, dst);
     if (rc) {
       logprintf("ERROR: doAssignAddress() returned FAIL\n");
       status = AXIS2_FALSE;
@@ -819,7 +844,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *netName=NULL, **clusterControllers=NULL, *nameserver=NULL;
+  char *netName=NULL, **clusterControllers=NULL, *nameserver=NULL, *uuid=NULL;
   
   int vlan, clusterControllersLen=0;
   ncMetadata ccMeta;
@@ -832,6 +857,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   vlan = adb_startNetworkType_get_vlan(snt, env);
   netName = adb_startNetworkType_get_netName(snt, env);
   nameserver = adb_startNetworkType_get_nameserver(snt, env);
+  uuid = adb_startNetworkType_get_uuid(snt, env);
 
   clusterControllersLen = adb_startNetworkType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
@@ -842,7 +868,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   snrt = adb_startNetworkResponseType_create(env);
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doStartNetwork(&ccMeta, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
+    rc = doStartNetwork(&ccMeta, uuid, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
     if (rc) {
       logprintf("ERROR: doStartNetwork() returned fail %d\n", rc);
       status = AXIS2_FALSE;
@@ -1007,7 +1033,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
       
       it = adb_ccInstanceType_create(env);
   
-      myInstance->ccvm.virtualBootRecordLen = 0;
+      //      myInstance->ccvm.virtualBootRecordLen = 0;
       rc = ccInstanceUnmarshal(it, myInstance, env);
       adb_describeInstancesResponseType_add_instances(dirt, env, it);
     }
@@ -1037,6 +1063,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   dt = axutil_date_time_create_with_offset(env, src->ts - time(NULL));
   
   adb_ccInstanceType_set_instanceId(dst, env, src->instanceId);
+  adb_ccInstanceType_set_uuid(dst, env, src->uuid);
   adb_ccInstanceType_set_reservationId(dst, env, src->reservationId);
   adb_ccInstanceType_set_ownerId(dst, env, src->ownerId);
   adb_ccInstanceType_set_imageId(dst, env, src->amiId);
@@ -1057,6 +1084,10 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   if (strlen(src->bundleTaskStateName)) {
     adb_ccInstanceType_set_bundleTaskStateName(dst, env, src->bundleTaskStateName);
   }
+
+  adb_ccInstanceType_set_blkbytes(dst, env, src->blkbytes);
+  adb_ccInstanceType_set_netbytes(dst, env, src->netbytes);
+
   for (i=0; i<64; i++) {
     if (src->groupNames[i][0] != '\0') {
       adb_ccInstanceType_add_groupNames(dst, env, src->groupNames[i]);
@@ -1101,11 +1132,11 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   adb_virtualMachineType_t *vm=NULL;
 
   ccInstance *outInsts=NULL, *myInstance=NULL;
-  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList=NULL, networkIndexListLen;
+  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList=NULL, networkIndexListLen, uuidsLen;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *platform, *tmp;
+  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *platform, *tmp, **uuids=NULL;
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
@@ -1167,6 +1198,12 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
     macAddrs[i] = adb_runInstancesType_get_macAddresses_at(rit, env, i);
   }
 
+  uuidsLen = adb_runInstancesType_sizeof_uuids(rit, env);
+  uuids = malloc(sizeof(char *) * uuidsLen);  
+  for (i=0; i<uuidsLen; i++) {
+    uuids[i] = adb_runInstancesType_get_uuids_at(rit, env, i);
+  }
+
   networkIndexList = NULL;
   networkIndexListLen = adb_runInstancesType_sizeof_networkIndexList(rit, env);
   if (networkIndexListLen) {
@@ -1180,7 +1217,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   rc=1;
   if (!DONOTHING) {
-    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, NULL, &outInsts, &outInstsLen);
+    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, NULL, &outInsts, &outInstsLen);
   }
   
   if (rc) {

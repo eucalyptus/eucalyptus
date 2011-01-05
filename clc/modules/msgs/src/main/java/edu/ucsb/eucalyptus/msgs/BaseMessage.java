@@ -32,6 +32,13 @@ public class BaseMessage {
     this.statusMessage = null;
   }
   
+  public BaseMessage( BaseMessage copy ) {
+    this( );
+    this.userId = copy.getUserId( );
+    this.effectiveUserId = copy.getEffectiveUserId( );
+    this.correlationId = copy.getCorrelationId( );
+  }
+  
   public String getCorrelationId( ) {
     return this.correlationId;
   }
@@ -134,7 +141,8 @@ public class BaseMessage {
       mctx.marshalDocument( this, "UTF-8", null, temp );
     } catch ( JiBXException e ) {
       Logger.getLogger( BaseMessage.class ).debug( e, e );
-      return null;
+    } catch ( Throwable e ) {
+      Logger.getLogger( BaseMessage.class ).error( e, e );
     }
     return temp.toString( );
   }

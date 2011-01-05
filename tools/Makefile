@@ -55,6 +55,7 @@ install: build
 	@$(INSTALL) -m 755 dynserv.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 644 libvirt-kvm-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 libvirt-xen-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
+	@$(INSTALL) -m 755 getstats.pl $(DESTDIR)$(datarootdir)/eucalyptus
 
 uninstall: 
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud

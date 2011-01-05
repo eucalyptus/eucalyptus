@@ -503,21 +503,24 @@ public class VmInstance implements HasName<VmInstance> {
     runningInstance.setStateName( this.state.getReference( ).getName( ) );
     runningInstance.setInstanceId( this.instanceId );
 //ASAP:FIXME:GRZE: restore.
-//    runningInstance.setProductCodes( this.imageInfo.getProductCodes( ) );
+    runningInstance.setProductCodes( new ArrayList<String>( ) );
     try {
       runningInstance.setImageId( this.vmTypeInfo.lookupRoot( ).getId( ) );
     } catch ( Exception ex ) {
       LOG.error( ex , ex );
+      runningInstance.setImageId( "unknown" );
     }
     try {
       runningInstance.setKernel( this.vmTypeInfo.lookupKernel( ).getId( ) );
     } catch ( Exception ex ) {
       LOG.error( ex , ex );
+      runningInstance.setKernel( "unknown" );
     }
     try {
       runningInstance.setRamdisk( this.vmTypeInfo.lookupRamdisk( ).getId( ) );
     } catch ( Exception ex ) {
       LOG.error( ex , ex );
+      runningInstance.setRamdisk( "unknown" );
     }
 
     
@@ -692,8 +695,7 @@ public class VmInstance implements HasName<VmInstance> {
       vol.setStatus( "attached" );
     }
     Set<AttachedVolume> oldVolumes = Sets.newHashSet( this.getVolumes( ) );
-    this.volumes.retainAll( volumes );
-    this.volumes.addAll( volumes );
+    this.volumes.retainAll( newVolumes );
     for ( AttachedVolume v : oldVolumes ) {
       if ( "attaching".equals( v.getStatus( ) ) && !this.volumes.contains( v ) ) {
         this.volumes.add( v );

@@ -74,6 +74,46 @@ permission notice:
 
 pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
+adb_ncAssignAddressResponse_t* ncAssignAddressMarshal (adb_ncAssignAddress_t* ncAssignAddress, const axutil_env_t *env) {
+  adb_ncAssignAddressType_t * input          = adb_ncAssignAddress_get_ncAssignAddress(ncAssignAddress, env);
+  adb_ncAssignAddressResponse_t * response   = adb_ncAssignAddressResponse_create(env);
+  adb_ncAssignAddressResponseType_t * output = adb_ncAssignAddressResponseType_create(env);
+
+  char * instanceId = adb_ncAssignAddressType_get_instanceId(input, env);
+  char * publicIp = adb_ncAssignAddressType_get_publicIp(input, env);
+  
+  // get operation-specific fields from input
+  { 
+    ncMetadata meta;
+    EUCA_MESSAGE_UNMARSHAL(ncAssignAddressType, input, (&meta));
+    
+    int error = doAssignAddress (&meta, instanceId, publicIp);
+    
+    if (error) {
+      logprintfl (EUCAERROR, "ERROR: doAssignAddress() failed error=%d\n", error);
+      adb_ncAssignAddressResponseType_set_correlationId(output, env, meta.correlationId);
+      adb_ncAssignAddressResponseType_set_userId(output, env, meta.userId);
+      adb_ncAssignAddressResponseType_set_return(output, env, AXIS2_FALSE);
+      
+      // set operation-specific fields in output
+      adb_ncAssignAddressResponseType_set_statusMessage(output, env, "2");
+      
+    } else {
+      // set standard fields in output
+      adb_ncAssignAddressResponseType_set_return(output, env, AXIS2_TRUE);
+      adb_ncAssignAddressResponseType_set_correlationId(output, env, meta.correlationId);
+      adb_ncAssignAddressResponseType_set_userId(output, env, meta.userId);
+      
+      // set operation-specific fields in output
+      adb_ncAssignAddressResponseType_set_statusMessage(output, env, "0");
+    }
+  }
+  
+  // set response to output
+  adb_ncAssignAddressResponse_set_ncAssignAddressResponse(response, env, output);  
+  return response;
+}
+
 adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, const axutil_env_t *env) 
 {
   //    pthread_mutex_lock(&ncHandlerLock);
@@ -136,6 +176,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
     //    axis2_char_t * userId = adb_ncStartNetworkType_get_userId(input, env);
 
     // get operation-specific fields from input
+    char * uuid = adb_ncStartNetworkType_get_uuid(input, env);
     int port = adb_ncStartNetworkType_get_remoteHostPort(input, env);
     int vlan = adb_ncStartNetworkType_get_vlan(input, env);
     int peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env);
@@ -150,7 +191,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
       //ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
 	EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
-        int error = doStartNetwork (&meta, peers, peersLen, port, vlan);
+        int error = doStartNetwork (&meta, uuid, peers, peersLen, port, vlan);
 
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doStartNetwork() failed error=%d\n", error);
@@ -244,6 +285,7 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     // NOTE: the order of set operations reflects the order in the WSDL
 
     // passed into runInstances
+    adb_instanceType_set_uuid(instance, env, outInst->uuid);
     adb_instanceType_set_reservationId(instance, env, outInst->reservationId);
     adb_instanceType_set_instanceId(instance, env, outInst->instanceId);
     adb_instanceType_set_imageId(instance, env, outInst->imageId);
@@ -266,7 +308,10 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
 	adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
     axutil_date_time_t * dt = axutil_date_time_create_with_offset(env, outInst->launchTime - time(NULL));
     adb_instanceType_set_launchTime(instance, env, dt);
-    
+    adb_instanceType_set_blkbytes(instance, env, outInst->blkbytes);
+    adb_instanceType_set_netbytes(instance, env, outInst->netbytes);
+
+
     // passed into RunInstances for safekeeping by NC
     adb_instanceType_set_userData(instance, env, outInst->userData);
     adb_instanceType_set_launchIndex(instance, env, outInst->launchIndex);
@@ -301,6 +346,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     //    axis2_char_t * userId = adb_ncRunInstanceType_get_userId(input, env);
 
     // get operation-specific fields from input
+    axis2_char_t * uuid = adb_ncRunInstanceType_get_uuid(input, env);
     axis2_char_t * instanceId = adb_ncRunInstanceType_get_instanceId(input, env);
     axis2_char_t * reservationId = adb_ncRunInstanceType_get_reservationId(input, env);
     virtualMachine params;
@@ -340,7 +386,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
 	    EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
             ncInstance * outInst;
             
-            int error = doRunInstance (&meta, instanceId, reservationId, &params, 
+            int error = doRunInstance (&meta, uuid, instanceId, reservationId, &params, 
                                        imageId, imageURL, 
                                        kernelId, kernelURL, 
                                        ramdiskId, ramdiskURL, 

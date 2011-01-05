@@ -956,6 +956,14 @@ public class OverlayManager implements LogicalStorageManager {
 				if(lvmVolumeInfo instanceof ISCSIVolumeInfo) {
 					ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + iscsiVolumeInfo.getVgName() + PATH_SEPARATOR + iscsiVolumeInfo.getLvName();
+					//enable logical volumes
+					try {
+						enableLogicalVolume(absoluteLVName);
+					} catch(ExecutionException ex) {
+						String error = "Unable to run command: " + ex.getMessage();
+						LOG.error(error);
+						return;
+					}
 					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
 				} else {
 					ISCSIVolumeInfo volumeInfo = new ISCSIVolumeInfo();
@@ -1001,7 +1009,7 @@ public class OverlayManager implements LogicalStorageManager {
 						LOG.error(e);
 						return null;
 					}
-					return System.getProperty("euca.home") + "," + StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
+					return StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
 				}
 			}
 			return null;

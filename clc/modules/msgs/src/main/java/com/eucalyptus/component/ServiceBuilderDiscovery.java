@@ -2,6 +2,7 @@ package com.eucalyptus.component;
 
 import java.lang.reflect.Modifier;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.system.Ats;
 
@@ -15,9 +16,16 @@ public class ServiceBuilderDiscovery extends ServiceJarDiscovery {
   @Override
   public boolean processClass( Class candidate ) throws Throwable {
     if( ServiceBuilder.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( DiscoverableServiceBuilder.class ) ) {
+      /** GRZE: this implies that service builder is a singleton **/
+      ServiceBuilder b = ( ServiceBuilder ) candidate.newInstance( );
       DiscoverableServiceBuilder at = Ats.from( candidate ).get( DiscoverableServiceBuilder.class );
       for( Component c : at.value( ) ) {
-        Components.lookup( c ).setBuilder( ( ServiceBuilder ) candidate.newInstance( ) );
+        ServiceBuilderRegistry.addBuilder( c, b );
+      }
+      if( Ats.from( candidate ).has( Handles.class ) ) {
+        for( Class c : Ats.from( candidate ).get( Handles.class ).value( ) ) {
+          ServiceBuilderRegistry.addBuilder( c, b );
+        }
       }
       return true;
     } else {
