@@ -103,6 +103,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
@@ -564,9 +565,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
             break;
         }
       } catch ( IllegalStateException ex ) {
-        LOG.error( ex, ex );
+        Exceptions.trace( ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex, ex );
+        Exceptions.trace( ex );
       }
     }
   }
