@@ -695,8 +695,7 @@ public class VmInstance implements HasName<VmInstance> {
       vol.setStatus( "attached" );
     }
     Set<AttachedVolume> oldVolumes = Sets.newHashSet( this.getVolumes( ) );
-    this.volumes.retainAll( volumes );
-    this.volumes.addAll( volumes );
+    this.volumes.retainAll( newVolumes );
     for ( AttachedVolume v : oldVolumes ) {
       if ( "attaching".equals( v.getStatus( ) ) && !this.volumes.contains( v ) ) {
         this.volumes.add( v );

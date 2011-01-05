@@ -262,7 +262,7 @@ public class ComponentState {
     } catch ( ExistingTransitionException ex ) {
       throw Exceptions.trace( ex );
     } catch ( Throwable ex ) {
-      throw Exceptions.trace( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex );
+      throw Exceptions.trace( new RuntimeException( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
     }
   }
   
@@ -276,7 +276,7 @@ public class ComponentState {
     } catch ( ExistingTransitionException ex ) {
       throw Exceptions.trace( ex );
     } catch ( Throwable ex ) {
-      throw Exceptions.trace( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex );
+      throw Exceptions.trace( new RuntimeException( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( ) + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
     }
   }
 
