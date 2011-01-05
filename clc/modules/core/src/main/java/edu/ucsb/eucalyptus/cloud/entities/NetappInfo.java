@@ -97,6 +97,9 @@ NetappInfo {
 	@ConfigurableField( description = "Aggregate for Netapp filer", displayName = "Reserved aggregate", type = ConfigurableFieldType.KEYVALUE )
 	@Column(name = "netapp_aggregate")
 	private String aggregate;
+	@ConfigurableField( description = "Snapshot Reserve", displayName = "Snapshot Reserve (percent)")
+	@Column(name = "snap_reserve")
+	private Integer snapReserve;
 
 	public NetappInfo(){
 		this.name = StorageProperties.NAME;
@@ -108,9 +111,10 @@ NetappInfo {
 	}
 
 	public NetappInfo(final String name, 
-			final String aggregate) {
+			final String aggregate, final int snapReserve) {
 		this.name = name;
 		this.aggregate = aggregate;
+		this.snapReserve = snapReserve;
 	}
 
 	public Long getId()
@@ -132,6 +136,14 @@ NetappInfo {
 
 	public void setAggregate(String aggregate) {
 		this.aggregate = aggregate;
+	}
+
+	public Integer getSnapReserve() {
+		return snapReserve;
+	}
+
+	public void setSnapReserve(Integer snapReserve) {
+		this.snapReserve = snapReserve;
 	}
 
 	@Override
@@ -175,7 +187,8 @@ NetappInfo {
 		catch ( EucalyptusCloudException e ) {
 			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
 			conf =  new NetappInfo(StorageProperties.NAME, 
-					StorageProperties.AGGR_NAME);
+					StorageProperties.AGGR_NAME,
+					StorageProperties.SNAP_RESERVE);
 			storageDb.add(conf);
 			storageDb.commit();
 		}
@@ -183,7 +196,8 @@ NetappInfo {
 			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
 			storageDb.rollback();
 			return new NetappInfo(StorageProperties.NAME, 
-					StorageProperties.AGGR_NAME);
+					StorageProperties.AGGR_NAME,
+					StorageProperties.SNAP_RESERVE);
 		}
 		return conf;
 	}
