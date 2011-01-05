@@ -517,9 +517,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
       try {
         Callbacks.newClusterRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex , ex );
+        Exceptions.trace( ex );
       } catch ( InterruptedException ex ) {
-        LOG.error( ex , ex );
+        Exceptions.trace( ex );
       }
     } 
     if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
