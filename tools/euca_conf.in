@@ -957,18 +957,6 @@ fi
 if [ -n "$CHECK" ]; then
 	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 
-	# vblade and aoe may be needed
-	if [ "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then
-		if [ "$CHECK" = "sc" ]; then
-			VBLADE="`which vblade 2> /dev/null`"
-			if [ -z "$VBLADE" ]; then
-				echo
-				echo "ERROR: EBS is enabled and vblade was not found"
-				exit 1
-			fi
-		fi
-	fi
-	
 	# first of all check euca_rootwrap
 	if [ ! -x $ROOTWRAP ]; then
 		echo "Cannot find euca_rootwrap!"

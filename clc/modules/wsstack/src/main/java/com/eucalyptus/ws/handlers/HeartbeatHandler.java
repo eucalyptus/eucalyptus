@@ -168,7 +168,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       try {
         final Component comp = safeLookupComponent( component.getComponent( ) );
         URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
-        ServiceConfiguration config = new BogoConfig( comp.getPeer( ), comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) );
+        ServiceConfiguration config = new BogoConfig( comp.getPeer( ), component.getName( ), uri.getHost( ), 8773, uri.getPath( ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
         comp.loadService( config );
         initializedComponents.add( component.getComponent( ) );
