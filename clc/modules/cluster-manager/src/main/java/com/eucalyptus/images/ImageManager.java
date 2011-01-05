@@ -306,29 +306,36 @@ public class ImageManager {
       if ( !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       imageInfo.setImageType( ImageManager.IMAGE_KERNEL );
       imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_KERNEL_PREFIX, imageInfo.getImageLocation( ) ) );
+      imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );
     } else if ( "yes".equals( ramdiskId ) || "true".equals( ramdiskId ) || imagePathParts[1].startsWith( "initrd" ) ) {
       if ( !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
       imageInfo.setImageType( ImageManager.IMAGE_RAMDISK );
       imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_RAMDISK_PREFIX, imageInfo.getImageLocation( ) ) );
+      imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );
     } else {
-      if ( kernelId != null ) {
-        try {
-          ImageUtil.getImageInfobyId( kernelId );
-        } catch ( EucalyptusCloudException e ) {
-          throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kernelId );
+      if ( imagePathParts[1].startsWith( ImageManager.IMAGE_PLATFORM_WINDOWS ) && System.getProperty( "euca.disable.windows" ) == null ) {
+        imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_WINDOWS );
+      } else {
+        imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );
+        if ( kernelId != null ) {
+          try {
+            ImageUtil.getImageInfobyId( kernelId );
+          } catch ( EucalyptusCloudException e ) {
+            throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kernelId );
+          }
         }
-      }
-      if ( ramdiskId != null ) {
-        try {
-          ImageUtil.getImageInfobyId( ramdiskId );
-        } catch ( EucalyptusCloudException e ) {
-          throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
+        if ( ramdiskId != null ) {
+          try {
+            ImageUtil.getImageInfobyId( ramdiskId );
+          } catch ( EucalyptusCloudException e ) {
+            throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
+          }
         }
+        imageInfo.setImageType( ImageManager.IMAGE_MACHINE );
+        imageInfo.setKernelId( kernelId );
+        imageInfo.setRamdiskId( ramdiskId );
+        imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
       }
-      imageInfo.setImageType( ImageManager.IMAGE_MACHINE );
-      imageInfo.setKernelId( kernelId );
-      imageInfo.setRamdiskId( ramdiskId );
-      imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
     }
     
     String signature = null;
