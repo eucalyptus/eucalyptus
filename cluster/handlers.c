@@ -2230,6 +2230,8 @@ int initialize(void) {
 void *monitor_thread(void *in) {
   int rc;
   ncMetadata ccMeta;
+
+  bzero(&ccMeta, sizeof(ncMetadata));
   ccMeta.correlationId = strdup("monitor");
   ccMeta.userId = strdup("eucalyptus");
   if (!ccMeta.correlationId || !ccMeta.userId) {
