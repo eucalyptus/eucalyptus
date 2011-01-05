@@ -103,6 +103,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
@@ -514,13 +515,14 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public void fireEvent( Event event ) {
     if ( event instanceof Hertz && ( ( Hertz ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
       try {
-        Callbacks.newClusterRequest( new VmPendingCallback( ) ).sendSync( this.getServiceEndpoint( ) );
+        Callbacks.newClusterRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex , ex );
+        Exceptions.trace( ex );
       } catch ( InterruptedException ex ) {
-        LOG.error( ex , ex );
+        Exceptions.trace( ex );
       }
-    } else if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
+    } 
+    if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
       try {
         switch ( this.stateMachine.getState( ) ) {
           case DOWN:
@@ -563,9 +565,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
             break;
         }
       } catch ( IllegalStateException ex ) {
-        LOG.error( ex, ex );
+        Exceptions.trace( ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex, ex );
+        Exceptions.trace( ex );
       }
     }
   }

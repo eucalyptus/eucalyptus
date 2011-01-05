@@ -141,7 +141,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
           if( LogLevels.TRACE ) {
-            Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ), Exceptions.filterStackTrace( new RuntimeException() ) );
+            Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
           }
         } catch ( final InterruptedException e ) {
           LOG.debug( e, e );

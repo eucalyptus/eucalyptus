@@ -1,16 +1,22 @@
 package com.eucalyptus.cluster.callback;
 
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.SystemState;
+import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -19,43 +25,51 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
   private static Logger LOG = Logger.getLogger( VmPendingCallback.class );
   
-  public VmPendingCallback( ) {
+  public VmPendingCallback( Cluster cluster ) {
+    this.setSubject( cluster );
     this.setRequest( new VmDescribeType( ) {
       {
         regarding( );
-        Iterables.all( VmInstances.getInstance( ).listKeys( ), new Predicate<String>() {
-          @Override
-          public boolean apply( String arg0 ) {
-            VmInstance vm = VmInstances.getInstance( ).lookup( arg0 );
-            if( vm.getPlacement( ).equals( VmPendingCallback.this.getSubject( ).getName( ) ) ) {
-              if( VmState.PENDING.equals( vm.getState( ) ) 
-                  || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-                VmPendingCallback.this.getRequest( ).getInstancesSet( ).add( arg0 );
-              }
+        for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+          if ( vm.getPlacement( ).equals( VmPendingCallback.this.getSubject( ).getName( ) ) ) {
+            if ( VmState.PENDING.equals( vm.getState( ) )
+                 || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+              this.getInstancesSet( ).add( vm.getInstanceId( ) );
             }
-            return false;
-          }} ) ;
+          }
+        }
       }
     } );
   }
   
   @Override
   public void fire( VmDescribeResponseType reply ) {
-    reply.setOriginCluster( this.getSubject( ).getConfiguration( ).getName( ) );
-    for ( VmInfo vmInfo : reply.getVms( ) ) {
-      vmInfo.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
-      VmTypeInfo typeInfo = vmInfo.getInstanceType( );
-      if ( typeInfo.getName( ) == null || "".equals( typeInfo.getName( ) ) ) {
-        for ( VmType t : VmTypes.list( ) ) {
-          if ( t.getCpu( ).equals( typeInfo.getCores( ) ) && t.getDisk( ).equals( typeInfo.getDisk( ) ) && t.getMemory( ).equals( typeInfo.getMemory( ) ) ) {
-            typeInfo.setName( t.getName( ) );
+    for ( VmInfo runVm : reply.getVms( ) ) {
+      runVm.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
+      VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+      VmInstance vm = null;
+      try {
+        vm = VmInstances.getInstance( ).lookup( runVm.getInstanceId( ) );
+        vm.setServiceTag( runVm.getServiceTag( ) );
+        if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME ) {
+          vm.setState( VmState.TERMINATED, Reason.EXPIRED );
+        } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+          vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
+        } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
+                    && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+          if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
+            vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
           }
+          vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
+          vm.updateNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
+          vm.setVolumes( runVm.getVolumes( ) );
         }
+      } catch ( NoSuchElementException e ) {
+        LOG.debug( "Ignoring update for uncached vm: " + runVm.getInstanceId( ) );
       }
     }
-    SystemState.handle( reply );
   }
-
+  
   /**
    * @see com.eucalyptus.cluster.callback.StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
    * @param t
