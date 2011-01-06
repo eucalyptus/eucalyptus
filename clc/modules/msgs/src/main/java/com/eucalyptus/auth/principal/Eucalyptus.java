@@ -16,7 +16,7 @@ public class Eucalyptus implements ComponentPrincipal {
 
   @Override
   public X509Certificate getX509Certificate( ) {
-    return SystemCredentialProvider.getCredentialProvider( null );
+    return null;
   }
 
   /**
