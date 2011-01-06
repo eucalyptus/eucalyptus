@@ -114,7 +114,7 @@ public class SystemCredentialProvider extends Bootstrapper {
     return SystemCredentialProvider.keypairs.get( this.name );
   }
 
-  static void init( Component name ) throws Exception {
+  public static void init( Component name ) throws Exception {
     new SystemCredentialProvider( name ).init( );
   }
 
