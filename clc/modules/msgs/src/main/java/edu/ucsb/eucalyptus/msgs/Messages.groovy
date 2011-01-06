@@ -609,6 +609,7 @@ public class BundleTask extends EucalyptusData {
   }
 }
 public class DescribeBundleTasksType extends VmBundleMessage {
+  @HttpParameterMapping (parameter = "BundleId")
   ArrayList<String> bundleIds = new ArrayList<String>();
 }
 public class DescribeBundleTasksResponseType extends VmBundleMessage {

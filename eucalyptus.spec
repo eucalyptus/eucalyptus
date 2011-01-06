@@ -107,6 +107,7 @@ alongside the cluster-controller.
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
 Requires:     eucalyptus-common-java = 2.0.1, %{euca_java}, lvm2
+Requires:     python-boto >= 1.9b
 Group:        Applications/System
 
 %description cloud

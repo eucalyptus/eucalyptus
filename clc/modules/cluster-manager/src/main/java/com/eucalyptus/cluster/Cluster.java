@@ -85,6 +85,7 @@ import com.eucalyptus.cluster.callback.LogDataCallback;
 import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
+import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
@@ -95,11 +96,14 @@ import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
@@ -303,9 +307,13 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   public void start( ) {
     this.getServiceEndpoint( ).start( );
+    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
+    ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   public void stop( ) {
+    ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
+    ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
     this.getServiceEndpoint( ).stop( );
   }
   
@@ -505,6 +513,15 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   @Override
   public void fireEvent( Event event ) {
+    if ( event instanceof Hertz && ( ( Hertz ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
+      try {
+        Callbacks.newClusterRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
+      } catch ( ExecutionException ex ) {
+        Exceptions.trace( ex );
+      } catch ( InterruptedException ex ) {
+        Exceptions.trace( ex );
+      }
+    } 
     if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
       try {
         switch ( this.stateMachine.getState( ) ) {
@@ -548,9 +565,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
             break;
         }
       } catch ( IllegalStateException ex ) {
-        LOG.error( ex, ex );
+        Exceptions.trace( ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex, ex );
+        Exceptions.trace( ex );
       }
     }
   }

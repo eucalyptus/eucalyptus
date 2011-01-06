@@ -10,7 +10,7 @@ public class Exceptions {
   private static Logger                    LOG                      = Logger.getLogger( Exceptions.class );
   private static final List<String>        DEFAULT_FILTER_PREFIXES  = Lists.newArrayList( "com.eucalyptus", "edu.ucsb.eucalyptus" );
   private static final List<String>        DEFAULT_FILTER_MATCHES   = Lists.newArrayList( );
-  private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 5;
+  private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 10;
   private static final StackTraceElement[] steArrayType             = new StackTraceElement[1];
   
   public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
@@ -142,14 +142,18 @@ public class Exceptions {
     }
   }
   
-  public static <T extends Throwable> T trace( T ex ) {
-    LOG.trace( ex, ex );
-    return ex;
+  public static RuntimeException trace( String message ) {
+    return trace( new RuntimeException( message ) );
+  }
+
+  public static <T extends Throwable> T trace( T t ) {
+    return trace( t.getMessage( ), t );
   }
   
-  public static Error trace( String string, Throwable t ) {
-    Error e;
-    trace( e = new Error( string, t ) );
-    return e;
+  public static <T extends Throwable> T trace( String message, T t ) {
+    Throwable filtered = new RuntimeException( t.getMessage( ) );
+    filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
+    LOG.trace( message, filtered );
+    return t;
   }
 }

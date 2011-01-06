@@ -146,7 +146,6 @@
                 </structure>
             </collection>
         </structure>
-        <value name="additionalInfo" field="additionalInfo" usage="optional"/>
         <!--2006-10-01-->
         <structure name="userData" usage="optional">
             <value name="data" field="userData"/>
@@ -168,10 +167,13 @@
                 <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType"/>
             </collection>
         </structure>
+        <!--2009-04-04-->
         <structure name="monitoring" usage="optional">
             <value name="enabled" field="monitoring"/>
         </structure>
+        <!--2009-07-15-->
         <value name="subnetId" field="subnetId" usage="optional"/>
+        <!--2009-10-31-->
         <value name="disableApiTermination" field="disableTerminate" usage="optional"/>
         <value name="instanceInitiatedShutdownBehavior" field="shutdownAction" usage="optional"/>
     </mapping>
