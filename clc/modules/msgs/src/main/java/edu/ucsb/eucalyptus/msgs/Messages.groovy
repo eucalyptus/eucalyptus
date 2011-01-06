@@ -177,7 +177,7 @@ public class WalrusStateType extends EucalyptusMessage{
 public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
 }
 
-@ServiceMessage(
+//@ServiceMessage(
 public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
     
   public EucalyptusMessage() {
