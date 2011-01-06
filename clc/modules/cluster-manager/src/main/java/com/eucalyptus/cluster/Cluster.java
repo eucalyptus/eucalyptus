@@ -513,7 +513,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof Hertz && ( ( Hertz ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
+    if( !Bootstrap.isFinished( ) ) {
+      LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" ); 
+    } else if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5 ) ) {
       try {
         Callbacks.newClusterRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
       } catch ( ExecutionException ex ) {
@@ -521,8 +523,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
       } catch ( InterruptedException ex ) {
         Exceptions.trace( ex );
       }
-    } 
-    if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
+    } else if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) ) {
       try {
         switch ( this.stateMachine.getState( ) ) {
           case DOWN:

@@ -66,6 +66,7 @@ package com.eucalyptus.event;
 import org.apache.log4j.Logger;
 
 public class Hertz extends GenericEvent<Long>{
+  private static 
   private static Logger LOG = Logger.getLogger( ClockTick.class );
   @Override
   public Exception getFail( ) {
@@ -93,8 +94,8 @@ public class Hertz extends GenericEvent<Long>{
     return Math.abs( super.getMessage( ) );
   }
 
-  public boolean isBackEdge() {
-    return super.getMessage( ) > 0;
+  public boolean isAsserted( int modulo ) {
+    return ( super.getMessage( ) % modulo ) == 0;
   }
   
   

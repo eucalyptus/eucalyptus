@@ -70,7 +70,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
@@ -85,6 +88,8 @@ import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -112,7 +117,7 @@ public class VmInstance implements HasName<VmInstance> {
   private VmTypeInfo                                  vmTypeInfo;
   
   private final AtomicMarkableReference<VmState>      state         = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
-  private final ConcurrentSkipListSet<AttachedVolume> volumes       = new ConcurrentSkipListSet<AttachedVolume>( );
+  private final ConcurrentMap<String,AttachedVolume>  volumes       = new ConcurrentSkipListMap<String,AttachedVolume>( );
   private final StopWatch                             stopWatch     = new StopWatch( );
   private final StopWatch                             updateWatch   = new StopWatch( );
   
@@ -550,35 +555,84 @@ public class VmInstance implements HasName<VmInstance> {
     return networkConfig;
   }
   
-  public void updateVolumeState( final String volumeId, String state ) {
-    AttachedVolume v = Iterables.find( this.volumes, new Predicate<AttachedVolume>( ) {
+  private AttachedVolume resolveVolumeId( String volumeId ) throws NoSuchElementException {
+    AttachedVolume v = this.volumes.get( volumeId );
+    if( v == null ) {
+      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
+    } else {
+      return v;
+    }
+  }
+  
+  public AttachedVolume removeVolumeAttachment( String volumeId ) throws NoSuchElementException {
+    AttachedVolume v = this.volumes.remove( volumeId );
+    if( v == null ) {
+      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
+    } else { 
+      return v;
+    }
+  }
+  
+  public void updateVolumeAttachment( String volumeId, String state ) throws NoSuchElementException {
+    AttachedVolume v = this.resolveVolumeId( volumeId );
+    v.setStatus( state );
+    v.setInstanceId( this.getInstanceId( ) );
+  }
+  
+  public AttachedVolume lookupVolumeAttachment( String volumeId ) throws NoSuchElementException {
+    return this.resolveVolumeId( volumeId );
+  }
+
+  public AttachedVolume lookupVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
+    AttachedVolume v = Iterables.find( this.volumes.values( ), pred );
+    if( v == null ) {
+      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " using predicate " + pred.getClass( ).getCanonicalName( ) );
+    } else {
+      return v;
+    }
+  }
+  
+  public boolean eachVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
+    return Iterables.all( this.volumes.values( ), pred );
+  }
+
+  public void addVolumeAttachment( AttachedVolume volume ) {
+    String volumeId = volume.getVolumeId( );
+    volume.setStatus( "attaching" );
+    volume.setInstanceId( this.getInstanceId( ) );
+    AttachedVolume v = this.volumes.put( volumeId, volume );
+    if( v != null ) {
+      this.volumes.replace( volumeId, v );
+    }
+  }
+  
+  public void updateVolumeAttachments( final List<AttachedVolume> volList ) throws NoSuchElementException {
+    final Map<String, AttachedVolume> volMap = new HashMap<String, AttachedVolume>( ) {
+      {
+        for ( AttachedVolume v : volList ) {
+          put( v.getVolumeId( ), v );
+        }
+      }
+    };
+    this.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
       @Override
       public boolean apply( AttachedVolume arg0 ) {
-        return arg0.getVolumeId( ).equals( volumeId );
+        String volId = arg0.getVolumeId( );
+        if ( "detaching".equals( arg0.getStatus( ) ) && !volMap.containsKey( volId ) ) {
+          VmInstance.this.removeVolumeAttachment( volId );
+        } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) {
+          VmInstance.this.updateVolumeAttachment( volId, volMap.get( volId ).getStatus( ) );
+        }
+        volMap.remove( volId );
+        return true;
       }
     } );
-    v.setStatus( state );
-  }
-  
-  public NavigableSet<AttachedVolume> getVolumes( ) {
-    return this.volumes;
-  }
-  
-  public void setVolumes( final List<AttachedVolume> newVolumes ) {
-    for ( AttachedVolume vol : newVolumes ) {
-      vol.setInstanceId( this.getInstanceId( ) );
-      vol.setStatus( "attached" );
-    }
-    Set<AttachedVolume> oldVolumes = Sets.newHashSet( this.getVolumes( ) );
-    this.volumes.retainAll( volumes );
-    this.volumes.addAll( newVolumes );
-    for ( AttachedVolume v : oldVolumes ) {
-      if ( "attaching".equals( v.getStatus( ) ) && !this.volumes.contains( v ) ) {
-        this.volumes.add( v );
-      }
+    for( AttachedVolume v : volMap.values( ) ) {
+      LOG.warn( "Restoring volume attachment state for " + this.getInstanceId( ) + " with " + v.toString( ) );
+      this.addVolumeAttachment( v );
     }
   }
-  
+    
   public String getPasswordData( ) {
     return this.passwordData;
   }
