@@ -63,7 +63,7 @@
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-package edu.ucsb.eucalyptus.cloud.ws.tests;
+package edu.ucsb.eucalyptus.util;
 
 import edu.ucsb.eucalyptus.util.XMLParser;
 import junit.framework.TestCase;

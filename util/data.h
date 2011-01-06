@@ -67,6 +67,12 @@ permission notice:
 #define CHAR_BUFFER_SIZE 512
 #define BIG_CHAR_BUFFER_SIZE 1024
 
+typedef struct publicAddressType_t {
+  char uuid[48];
+  char sourceAddress[32];
+  char destAddress[32];
+} publicAddressType;
+
 typedef struct serviceInfoType_t {
   char type[32];
   char name[32];
@@ -201,6 +207,7 @@ typedef struct ncVolume_t {
 } ncVolume;
 
 typedef struct ncInstance_t {
+    char uuid[CHAR_BUFFER_SIZE];
     char instanceId[CHAR_BUFFER_SIZE];
     char reservationId[CHAR_BUFFER_SIZE];
     char userId[CHAR_BUFFER_SIZE];
@@ -241,6 +248,8 @@ typedef struct ncInstance_t {
     // updated by NC upon Attach/DetachVolume
     ncVolume volumes[EUCA_MAX_VOLUMES];
     int volumesSize;
+  
+    long long blkbytes, netbytes;
 } ncInstance;
 
 typedef struct ncResource_t {
@@ -278,7 +287,8 @@ int total_instances (bunchOfInstances **head);
 ncMetadata * allocate_metadata(char *correlationId, char *userId);
 void free_metadata(ncMetadata ** meta);
 
-ncInstance * allocate_instance(char *instanceId, char *reservationId, 
+ncInstance * allocate_instance(char *uuid,
+			       char *instanceId, char *reservationId, 
                                virtualMachine *params, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,

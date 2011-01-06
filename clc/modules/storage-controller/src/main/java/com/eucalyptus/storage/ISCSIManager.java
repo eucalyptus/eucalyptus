@@ -124,6 +124,7 @@ public class ISCSIManager implements StorageExportManager {
 	}
 
 	public void exportTarget(int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
+		checkAndAddUser();
 		try
 		{
 			Runtime rt = Runtime.getRuntime();
@@ -223,6 +224,10 @@ public class ISCSIManager implements StorageExportManager {
 			db.rollback();
 			LOG.error(e);
 		}
+		checkAndAddUser();
+	}
+
+	private void checkAndAddUser() {
 		EntityWrapper<CHAPUserInfo> dbUser = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));

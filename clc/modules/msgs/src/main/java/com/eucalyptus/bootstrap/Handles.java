@@ -1,4 +1,4 @@
-package com.eucalyptus.config;
+package com.eucalyptus.bootstrap;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

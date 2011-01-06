@@ -21,7 +21,7 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   }
   
   @Override
-  public Boolean checkRemove( String name ) throws ServiceRegistrationException {
+  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     return this.services.containsKey( name );
   }
 
@@ -54,7 +54,7 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   }
 
   @Override
-  public Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     return !this.services.containsKey( name );
   }
   
@@ -71,6 +71,11 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   @Override
   public ServiceConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException {
     return this.services.remove( config.getName( ) );
+  }
+
+  @Override
+  public ServiceConfiguration lookup( String partition, String name ) throws ServiceRegistrationException {
+    return this.services.get( name );
   }
     
 }

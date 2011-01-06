@@ -92,7 +92,7 @@ class Property():
     else:
       if options.props:
         for i in options.props:
-          if not re.match("^[\w.]+=[\w\.]+$",i):
+          if not re.match("^[\w.]+=[/\w\.]+$",i):
             print "ERROR Options must be of the form KEY=VALUE.  Illegally formatted option: %s" % i
             parser.print_help()
             sys.exit(1)

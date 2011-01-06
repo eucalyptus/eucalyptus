@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,28 +61,44 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.config;
+package com.eucalyptus.event;
 
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import com.eucalyptus.component.ServiceBuilder;
-import com.google.common.collect.Maps;
-//ASAP: TODO: GRZE: move up in deps tree
-public class ServiceBuilderRegistry {
+import org.apache.log4j.Logger;
 
-  private static Map<Class,ServiceBuilder<ComponentConfiguration>> builders = Maps.newConcurrentHashMap( );
-
-  public static void addBuilder( Class c, ServiceBuilder b ) {
-    builders.put( c, b );
+public class Hertz extends GenericEvent<Long>{
+  private static Logger LOG = Logger.getLogger( ClockTick.class );
+  @Override
+  public Exception getFail( ) {
+    if( super.getFail( ) != null ) {
+      LOG.warn("An innfallible event has failed: " + this + " " + super.getFail( ) );      
+    }
+    return null;
+  }
+  
+  @Override
+  public void setFail( Exception fail ) {
+    LOG.debug(fail,fail);
   }
 
-  public static Set<Entry<Class, ServiceBuilder<ComponentConfiguration>>> entrySet( ) {
-    return builders.entrySet( );
+  @Override
+  public boolean isVetoed( ) {
+    if( super.isVetoed( ) ) {
+      LOG.warn("An unvetoable event was vetoed: " + this + " " + super.getCause( )!=null?super.getCause( ):"");
+    }
+    return false;
   }
 
-  public static ServiceBuilder<ComponentConfiguration> get( Class arg0 ) {
-    return builders.get( arg0 );
+  @Override
+  public Long getMessage( ) {
+    return Math.abs( super.getMessage( ) );
   }
+
+  public boolean isBackEdge() {
+    return super.getMessage( ) > 0;
+  }
+  
+  
+  
+  
   
 }

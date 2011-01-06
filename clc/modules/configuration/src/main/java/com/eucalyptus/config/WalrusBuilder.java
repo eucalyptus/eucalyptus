@@ -1,15 +1,17 @@
 package com.eucalyptus.config;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import edu.ucsb.eucalyptus.msgs.DeregisterWalrusType;
 import edu.ucsb.eucalyptus.msgs.DescribeWalrusesType;
+import edu.ucsb.eucalyptus.msgs.ModifyWalrusAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterWalrusType;
 
 @DiscoverableServiceBuilder(com.eucalyptus.bootstrap.Component.walrus)
-@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, WalrusConfiguration.class } )
+@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, WalrusConfiguration.class, ModifyWalrusAttributeType.class } )
 public class WalrusBuilder extends DatabaseServiceBuilder<WalrusConfiguration> {
   
   @Override

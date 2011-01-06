@@ -99,25 +99,6 @@ public class ServiceInfoType extends EucalyptusData {
   String type;
   ArrayList<String> uris = new ArrayList<String>( );
 }
-public class ServiceId extends EucalyptusData {
-  String uuid;/** A UUID of the registration **/
-  String partition;/** The resource partition name **/
-  String name;/** The registration name **/
-  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
-  String uri;/** this is here to account for possibly overlapping private subnets allow for multiple **/
-}
-public class ServiceStatusType extends EucalyptusData {
-  ServiceId serviceId;
-  String localState;/** one of DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED **/
-  Integer localEpoch;
-  ArrayList<String> details = new ArrayList<String>( );
-}
-public class DescribeServicesType extends EucalyptusMessage {
-  ArrayList<ServiceId> ids = new ArrayList<ServiceId>();
-}
-public class DescribeServicesResponseType extends EucalyptusMessage {
-  ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>();
-}
 
 public class ComponentType extends EucalyptusData {
   String component;
@@ -628,6 +609,7 @@ public class BundleTask extends EucalyptusData {
   }
 }
 public class DescribeBundleTasksType extends VmBundleMessage {
+  @HttpParameterMapping (parameter = "BundleId")
   ArrayList<String> bundleIds = new ArrayList<String>();
 }
 public class DescribeBundleTasksResponseType extends VmBundleMessage {

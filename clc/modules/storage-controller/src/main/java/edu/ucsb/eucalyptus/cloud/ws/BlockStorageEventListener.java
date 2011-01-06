@@ -87,12 +87,12 @@ public class BlockStorageEventListener implements EventListener {
 	public void fireEvent(Event event) {
 		if(event instanceof StartComponentEvent) {			
 			//TODO: This needs to be moved to a Bootstrapper
-			if(((StartComponentEvent) event).isLocal())
-				try {
-					BlockStorage.configure();
-				} catch (EucalyptusCloudException e) {
-					LOG.error(e);
-				}
+//			if(((StartComponentEvent) event).isLocal())
+//				try {
+//					BlockStorage.configure();
+//				} catch (EucalyptusCloudException e) {
+//					LOG.error(e);
+//				}
 		} 
 	}
 }

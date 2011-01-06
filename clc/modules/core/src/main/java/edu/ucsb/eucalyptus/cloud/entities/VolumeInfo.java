@@ -65,6 +65,7 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.*;
 import org.hibernate.annotations.Cache;
 

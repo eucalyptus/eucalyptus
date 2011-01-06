@@ -329,6 +329,11 @@ public class VolumeManager {
       db.rollback( );
       throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId( ) );
     }
+    if ( userName != null ) {
+      if ( !userName.equals( vm.getOwnerId( ) ) ) {
+        throw new EucalyptusCloudException( "Can only attach volume " + request.getVolumeId() + " to your own instance" );
+      }
+    }
     StorageControllerConfiguration sc;
     try {
       sc = Configuration.lookupSc( volume.getCluster( ) );

@@ -63,64 +63,35 @@
 
 package com.eucalyptus.context;
 
-import java.util.List;
 import org.apache.log4j.Logger;
-import org.mule.config.ConfigResource;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Resource;
-import com.google.common.collect.Lists;
+import com.eucalyptus.component.event.DisableComponentEvent;
+import com.eucalyptus.component.event.EnableComponentEvent;
+import com.eucalyptus.component.event.StartComponentEvent;
+import com.eucalyptus.component.event.StopComponentEvent;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
 
 @Provides( Component.bootstrap )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
-public class ServiceBootstrapper extends Bootstrapper {
+public class ServiceBootstrapper extends Bootstrapper implements EventListener {
   private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
+  
   public ServiceBootstrapper( ) {}
   
   @Override
   public boolean load( ) throws Exception {
-    List<ConfigResource> configs = Lists.newArrayList( );
-    for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
-      if ( comp.isEnabled( ) ) {
-        Resource rsc = comp.getConfiguration( ).getResource( );
-        if( rsc != null ) {
-          ServiceContext.LOG.info( "-> Preparing cfg: " + rsc );
-          configs.addAll( rsc.getConfigurations( ) );
-        }
-      }
-    }
-    for ( ConfigResource cfg : configs ) {
-      ServiceContext.LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );
-    }
-    try {
-      ServiceContext.buildContext( configs );
-    } catch ( Exception e ) {
-      ServiceContext.LOG.fatal( "Failed to bootstrap services.", e );
-      return false;
-    }
     return true;
   }
   
   @Override
   public boolean start( ) throws Exception {
-    try {
-      ServiceContext.LOG.info( "Starting up system bus." );
-      ServiceContext.createContext( );
-    } catch ( Exception e ) {
-      ServiceContext.LOG.fatal( "Failed to configure services.", e );
-      return false;
-    }
-    try {
-      ServiceContext.startContext( );
-    } catch ( Exception e ) {
-      ServiceContext.LOG.fatal( "Failed to start services.", e );
-      return false;
-    }
-    return true;
+    return ServiceContext.startup( );
   }
   
   /**
@@ -130,22 +101,22 @@ public class ServiceBootstrapper extends Bootstrapper {
   public boolean enable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
    */
   @Override
   public boolean stop( ) throws Exception {
-    ServiceContext.stopContext( );
+    ServiceContext.shutdown( );
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
    */
   @Override
   public void destroy( ) throws Exception {}
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
    */
@@ -153,12 +124,29 @@ public class ServiceBootstrapper extends Bootstrapper {
   public boolean disable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#check()
    */
   @Override
   public boolean check( ) throws Exception {
     return true;
+  }
+  
+  public void advertiseEvent( Event event ) {}
+  
+  public void fireEvent( Event event ) {
+    if ( ( event instanceof StartComponentEvent ) || ( event instanceof StopComponentEvent ) ) {
+      LOG.info( "Reloading service context." );
+      ServiceContext.shutdown( );
+      ServiceContext.startup( );
+    }
+  }
+  
+  public static void register( ) {
+    ListenerRegistry.getInstance( ).register( StartComponentEvent.class, new ServiceBootstrapper( ) );
+    ListenerRegistry.getInstance( ).register( StopComponentEvent.class, new ServiceBootstrapper( ) );
+    ListenerRegistry.getInstance( ).register( DisableComponentEvent.class, new ServiceBootstrapper( ) );
+    ListenerRegistry.getInstance( ).register( EnableComponentEvent.class, new ServiceBootstrapper( ) );
   }
 }
