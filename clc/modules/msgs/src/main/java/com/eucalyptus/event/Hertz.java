@@ -66,7 +66,6 @@ package com.eucalyptus.event;
 import org.apache.log4j.Logger;
 
 public class Hertz extends GenericEvent<Long>{
-  private static 
   private static Logger LOG = Logger.getLogger( ClockTick.class );
   @Override
   public Exception getFail( ) {
