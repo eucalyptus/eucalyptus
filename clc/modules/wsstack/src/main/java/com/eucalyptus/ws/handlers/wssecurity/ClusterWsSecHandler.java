@@ -65,8 +65,8 @@ package com.eucalyptus.ws.handlers.wssecurity;
 
 import java.util.Collection;
 import org.apache.ws.security.WSEncryptionPart;
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;
 

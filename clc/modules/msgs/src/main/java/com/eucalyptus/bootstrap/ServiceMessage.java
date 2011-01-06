@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,97 +57,19 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
- * Author: Neil Soman neil@eucalyptus.com
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.auth.login;
 
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.cert.X509Certificate;
+package com.eucalyptus.bootstrap;
 
-import org.apache.log4j.Logger;
-import org.apache.xml.security.utils.Base64;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.api.BaseLoginModule;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
-
-public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedComponentCredentials> {
-	private static Logger LOG = Logger.getLogger( WalrusComponentLoginModule.class );
-	public WalrusComponentLoginModule() {}
-
-	@Override
-	public boolean accepts( ) {
-		return super.getCallbackHandler( ) instanceof WalrusWrappedComponentCredentials;
-	}
-
-	@Override
-	public boolean authenticate( WalrusWrappedComponentCredentials credentials ) throws Exception {
-		Signature sig;
-		boolean valid = false;
-		String data = credentials.getLoginData();
-		String signature = credentials.getSignature();
-		try {
-			try {
-				PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getCertificate().getPublicKey();
-				sig = Signature.getInstance("SHA1withRSA");
-				sig.initVerify(publicKey);
-				sig.update(data.getBytes());
-				valid = sig.verify(Base64.decode(signature));
-			} catch ( Exception e ) {
-				LOG.warn ("Authentication: certificate not found in keystore");
-			} finally {
-				if( !valid && credentials.getCertString() != null ) {
-					try {
-						X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( credentials.getCertString() ) );
-						if(nodeCert != null) {
-							PublicKey publicKey = nodeCert.getPublicKey( );
-							sig = Signature.getInstance( "SHA1withRSA" );
-							sig.initVerify( publicKey );
-							sig.update( data.getBytes( ) );
-							valid = sig.verify( Base64.decode( signature ) );
-						}
-					} catch ( Exception e2 ) {
-						LOG.error ("Authentication error: " + e2.getMessage());
-						return false;
-					}            
-				}
-			}
-		} catch (Exception ex) {
-			LOG.error ("Authentication error: " + ex.getMessage());
-			return false;
-		}
-
-		if(valid) {					
-			try {
-				User user;
-				String queryId = credentials.getQueryId();
-				if(queryId != null) {
-					user = Users.lookupQueryId(queryId);  
-				} else {
-					user = Users.lookupUser( "admin" );			
-					user.setAdministrator(true);
-				}
-				super.setCredential(queryId);
-				super.setPrincipal(user);
-				super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
-				return true;	
-			} catch (NoSuchUserException e) {
-				LOG.error(e);
-				return false;
-			}
-		}
-		return false;	
-	}
-
-	@Override
-	public void reset( ) {}
+@Target({ ElementType.TYPE, ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ServiceMessage {
+  Class[] value();
 }
