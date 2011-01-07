@@ -63,9 +63,15 @@
 
 package com.eucalyptus.event;
 
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 
 public class Hertz extends GenericEvent<Long>{
+  private static AtomicLong counter = new AtomicLong( System.currentTimeMillis( ) );
+  public Hertz( ) {
+    super( counter.incrementAndGet( ) );
+  }
+
   private static Logger LOG = Logger.getLogger( ClockTick.class );
   @Override
   public Exception getFail( ) {
