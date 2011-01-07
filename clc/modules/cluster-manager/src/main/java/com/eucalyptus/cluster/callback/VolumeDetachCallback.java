@@ -91,7 +91,10 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
   public void fire( DetachVolumeResponseType reply ) {
     if ( reply.get_return( ) ) {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
-      vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "detached" );
+      vm.removeVolumeAttachment( this.getRequest( ).getVolumeId( ) );
+    } else {
+      VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+      vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
     }
   }
 
@@ -108,6 +111,8 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
       LOG.error( e, e );
     }
     LOG.trace( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) );
+    VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+    vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
   }
   
 }
