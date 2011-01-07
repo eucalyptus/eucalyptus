@@ -77,12 +77,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class X509Download extends HttpServlet {

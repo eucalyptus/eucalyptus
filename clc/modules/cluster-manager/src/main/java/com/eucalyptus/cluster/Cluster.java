@@ -67,6 +67,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
@@ -513,16 +514,19 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof Hertz && ( ( Hertz ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
+    if( !Bootstrap.isFinished( ) ) {
+      LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" ); 
+    } else if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5 ) ) {
       try {
         Callbacks.newClusterRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
       } catch ( ExecutionException ex ) {
         Exceptions.trace( ex );
       } catch ( InterruptedException ex ) {
         Exceptions.trace( ex );
+      } catch ( CancellationException ex ) {
+        /** operation self-cancelled **/
       }
-    } 
-    if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
+    } else if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) ) {
       try {
         switch ( this.stateMachine.getState( ) ) {
           case DOWN:

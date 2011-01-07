@@ -189,8 +189,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     public void run( ) {
       Thread.currentThread().setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
       try {
-        long sign = (long) (Math.pow(-1f,(float)(++phase%2)));
-        ListenerRegistry.getInstance( ).fireEvent( new Hertz().setMessage( sign * System.currentTimeMillis( ) ) );
+        ListenerRegistry.getInstance( ).fireEvent( new Hertz() );
       } catch ( EventVetoedException e ) {
       } catch ( Throwable t ) {
         LOG.error( t, t );
