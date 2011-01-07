@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Networks;
@@ -39,11 +40,20 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
             if ( VmState.PENDING.equals( vm.getState( ) )
                  || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
               this.getInstancesSet( ).add( vm.getInstanceId( ) );
+            } else if( vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+              @Override
+              public boolean apply( AttachedVolume arg0 ) {
+                return !arg0.getStatus( ).endsWith( "ing" );
+              }} ) ) {
+              
             }
           }
         }
       }
     } );
+    if( this.getRequest( ).getInstancesSet( ).isEmpty( ) ) {
+      throw new CancellationException( );
+    }
   }
   
   @Override

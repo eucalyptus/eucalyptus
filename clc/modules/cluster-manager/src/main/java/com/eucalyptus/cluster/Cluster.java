@@ -67,6 +67,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
@@ -522,6 +523,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
         Exceptions.trace( ex );
       } catch ( InterruptedException ex ) {
         Exceptions.trace( ex );
+      } catch ( CancellationException ex ) {
+        /** operation self-cancelled **/
       }
     } else if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) ) {
       try {
