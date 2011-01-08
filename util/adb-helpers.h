@@ -42,6 +42,36 @@
   }
 
 
+static inline int datetime_to_unix (axutil_date_time_t *dt, const axutil_env_t *env)
+{
+    time_t tsu, ts, tsdelta, tsdelta_min;
+    struct tm *tmu;
+    
+    if (!dt || !env) {
+      return(0);
+    }
+
+    ts = time(NULL);
+    tmu = gmtime(&ts);
+    tsu = mktime(tmu);
+    tsdelta = (tsu - ts) / 3600;
+    tsdelta_min = ((tsu - ts) - (tsdelta * 3600)) / 60;
+    
+    struct tm t = {
+        axutil_date_time_get_second(dt, env),
+        axutil_date_time_get_minute(dt, env) - tsdelta_min,
+        axutil_date_time_get_hour(dt, env) - tsdelta,
+        axutil_date_time_get_date(dt, env),
+        axutil_date_time_get_month(dt, env)-1,
+        axutil_date_time_get_year(dt, env)-1900,
+        0,
+        0,
+        0
+    };
+    
+    return (int) mktime(&t);
+}
+
 static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMachineType_t * vm_type, const axutil_env_t *env)
 {
   int i;

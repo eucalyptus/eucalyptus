@@ -155,32 +155,6 @@ int ncStubDestroy (ncStub * st)
 
 /************************** stubs **************************/
 
-static int datetime_to_unix (axutil_date_time_t *dt, axutil_env_t *env)
-{
-    time_t tsu, ts, tsdelta, tsdelta_min;
-    struct tm *tmu;
-    
-    ts = time(NULL);
-    tmu = gmtime(&ts);
-    tsu = mktime(tmu);
-    tsdelta = (tsu - ts) / 3600;
-    tsdelta_min = ((tsu - ts) - (tsdelta * 3600)) / 60;
-    
-    struct tm t = {
-        axutil_date_time_get_second(dt, env),
-        axutil_date_time_get_minute(dt, env) - tsdelta_min,
-        axutil_date_time_get_hour(dt, env) - tsdelta,
-        axutil_date_time_get_date(dt, env),
-        axutil_date_time_get_month(dt, env)-1,
-        axutil_date_time_get_year(dt, env)-1900,
-        0,
-        0,
-        0
-    };
-    
-    return (int) mktime(&t);
-}
-
 static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axutil_env_t * env)
 {
     int i;
@@ -203,6 +177,9 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     for (i = 0; i<EUCA_MAX_GROUPS && i<groupNamesSize; i++) {
         groupNames[i] = adb_instanceType_get_groupNames_at (instance, env, i);
     }
+    int expiryTime=0;
+    axutil_date_time_t *dt = adb_instanceType_get_expiryTime(instance, env);
+    expiryTime = datetime_to_unix(dt, env);
 
     ncInstance * outInst = allocate_instance(
         (char *)adb_instanceType_get_uuid(instance, env),
@@ -216,13 +193,14 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         (char *)adb_instanceType_get_keyName(instance, env),
         (char *)adb_instanceType_get_userData(instance, env),
         (char *)adb_instanceType_get_launchIndex(instance, env),
+	expiryTime,
         groupNames, groupNamesSize
         );
 
     outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
     outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
 
-    axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);
+    dt = adb_instanceType_get_launchTime(instance, env);
     if (dt!=NULL) {
         outInst->launchTime = datetime_to_unix (dt, env);
         axutil_date_time_free(dt, env);
@@ -242,7 +220,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     return outInst;
 }
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
     int i;
     axutil_env_t * env = st->env;
@@ -282,6 +260,8 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceI
     //    adb_ncRunInstanceType_set_vlan(request, env, vlan);
     adb_ncRunInstanceType_set_userData(request, env, userData);
     adb_ncRunInstanceType_set_launchIndex(request, env, launchIndex);
+    axutil_date_time_t *dt = axutil_date_time_create_with_offset(env, expiryTime);
+    adb_ncRunInstanceType_set_expiryTime(request, env, dt);
     for (i=0; i<groupNamesSize; i++) {
         adb_ncRunInstanceType_add_groupNames(request, env, groupNames[i]);
     }

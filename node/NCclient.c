@@ -369,7 +369,7 @@ int main (int argc, char **argv)
                                        "", /* key */
 									   &netparams,
 									   //                                       privMac, privIp, vlan, 
-                                       user_data, launch_index, group_names, group_names_size, /* CC stuff */
+                                       user_data, launch_index, 0, group_names, group_names_size, /* CC stuff */
                                        &outInst);
             if (rc != 0) {
                 printf("ncRunInstance() failed: instanceId=%s error=%d\n", instance_id, rc);
