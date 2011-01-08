@@ -1,5 +1,7 @@
 package com.eucalyptus.util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.google.common.base.Predicate;
@@ -12,6 +14,19 @@ public class Exceptions {
   private static final List<String>        DEFAULT_FILTER_MATCHES   = Lists.newArrayList( );
   private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 10;
   private static final StackTraceElement[] steArrayType             = new StackTraceElement[1];
+  
+  public static <T extends Throwable> String string( String message, T ex ) {
+    return message + "\n" + string( ex );
+  }
+  
+  public static <T extends Throwable> String string( T ex ) {
+    ByteArrayOutputStream os = new ByteArrayOutputStream( );
+    PrintWriter p = new PrintWriter( os );
+    ex.printStackTrace( p );
+    p.flush( );
+    p.close( );
+    return os.toString( );
+  }
   
   public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
     ex.setStackTrace( Exceptions.filterStackTraceElements( ex, maxDepth, fqClassPrefixes, matchPatterns ).toArray( steArrayType ) );
@@ -145,7 +160,7 @@ public class Exceptions {
   public static RuntimeException trace( String message ) {
     return trace( new RuntimeException( message ) );
   }
-
+  
   public static <T extends Throwable> T trace( T t ) {
     return trace( t.getMessage( ), t );
   }

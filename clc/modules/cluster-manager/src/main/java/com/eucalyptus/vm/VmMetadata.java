@@ -69,6 +69,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Join;
 
@@ -209,15 +210,20 @@ public class VmMetadata {
   
   public byte[] handle( String path ) {
     String[] parts = path.split( ":" );
-    MetadataRequest request = new MetadataRequest( parts[0], parts.length == 2
-      ? parts[1]
-      : "/" );
-    if ( metadataEndpoints.containsKey( request.getMetadataName( ) ) && ( request.isInstance( ) || request.isSystem( ) ) ) {
-      return metadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
-    } else if ( publicMetadataEndpoints.containsKey( request.getMetadataName( ) ) ) {
-      return publicMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
-    } else {
-      return "".getBytes( );
+    try {
+      MetadataRequest request = new MetadataRequest( parts[0], parts.length == 2
+        ? parts[1]
+        : "/" );
+      if ( metadataEndpoints.containsKey( request.getMetadataName( ) ) && ( request.isInstance( ) || request.isSystem( ) ) ) {
+        return metadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
+      } else if ( publicMetadataEndpoints.containsKey( request.getMetadataName( ) ) ) {
+        return publicMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
+      } else {
+        return "".getBytes( );
+      }
+    } catch ( Throwable ex ) {
+      LOG.error( "Metadata request failed: " + path + " cause: " + ex.getMessage( ), ex );
+      return Exceptions.string( ex ).getBytes( );
     }
   }
   
