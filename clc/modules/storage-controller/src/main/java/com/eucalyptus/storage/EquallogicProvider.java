@@ -493,7 +493,7 @@ public class EquallogicProvider implements SANProvider {
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
-		
+		sessionManager.stop();
 	}
 }
 

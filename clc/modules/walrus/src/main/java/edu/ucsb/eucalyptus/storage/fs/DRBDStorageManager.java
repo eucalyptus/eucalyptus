@@ -90,6 +90,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 
 	public DRBDStorageManager(String rootDirectory) {
 		super(rootDirectory);
+		LOG.info("Initializing DRBD Info: " + DRBDInfo.getDRBDInfo().getName());
 	}
 
 	private String getConnectionStatus() throws ExecutionException, EucalyptusCloudException {
@@ -219,6 +220,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			throw new EucalyptusCloudException("Unable to get resource dstate.");
 		}		
 	}
+
 	private void checkLocalDisk() throws EucalyptusCloudException {		
 		String blockDevice = DRBDInfo.getDRBDInfo().getBlockDevice();
 		File mount = new File(blockDevice);
@@ -248,6 +250,9 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			mountPrimary();
 		}
 		//verify state
+		if(!isPrimary()) {
+			throw new EucalyptusCloudException("Unable to make resource primary.");
+		}
 	}
 
 	public void becomeSlave() throws EucalyptusCloudException, ExecutionException {
@@ -265,6 +270,9 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		//make secondary
 		makeSecondary();
 		//verify state
+		if(!isSecondary()) {
+			throw new EucalyptusCloudException("Unable to make resource secondary.");
+		}
 	}
 	//check status
 
@@ -289,8 +297,16 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 
 	@Override
 	public void check() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		try {
+			if(!isConnected()) {
+				throw new EucalyptusCloudException("Resource is not connected to peer.");			
+			}
+			if(!isUpToDate()) {
+				throw new EucalyptusCloudException("Resource is not up to date");
+			}
+		} catch(ExecutionException ex) {
+			throw new EucalyptusCloudException(ex);
+		}
 	}
 
 }
