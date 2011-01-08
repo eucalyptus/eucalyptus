@@ -559,14 +559,13 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void disable() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		
+		connectionManager.stop();	
 	}
 
 	@Override
 	public void enable() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		
+		connectionManager.configure();
+		connectionManager.checkConnection();
 	}
 }
 

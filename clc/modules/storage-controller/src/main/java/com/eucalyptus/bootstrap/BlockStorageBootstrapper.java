@@ -126,7 +126,9 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
 	 */
 	@Override
-	public void destroy( ) throws Exception {}
+	public void destroy( ) throws Exception {
+		BlockStorage.stop();
+	}
 
 	/**
 	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()

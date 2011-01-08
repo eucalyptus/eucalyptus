@@ -904,8 +904,8 @@ public class NetappProvider implements SANProvider {
 		this.configure();
 	}
 
-        @Override
-        public void stop() throws EucalyptusCloudException {
-        }
+	@Override
+	public void stop() throws EucalyptusCloudException {
+	}
 }
 
