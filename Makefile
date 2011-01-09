@@ -29,8 +29,8 @@ help:
 
 tags:
 	@echo making tags for emacs and vi
-	find cluster net node storage tools util -name "*.[chCH]" -print | ctags -L -
-	find cluster net node storage tools util -name "*.[chCH]" -print | etags -L -
+	find cluster net node storage tools util -name "*.[chCH]" -print | xargs ctags 
+	find cluster net node storage tools util -name "*.[chCH]" -print | xargs etags
 
 build: Makedefs 
 	@for subdir in $(SUBDIRS); do \

@@ -180,7 +180,7 @@ typedef struct virtualMachine_t {
     virtualBootRecord * swap;
     virtualBootRecord * ephemeral0;
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS];
-    int virtualBootRecordLen; // TODO: dan ask dmitrii
+    int virtualBootRecordLen;
 } virtualMachine;
 
 int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in);

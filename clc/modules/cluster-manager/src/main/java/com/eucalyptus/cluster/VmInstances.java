@@ -72,8 +72,12 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
+import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -85,11 +89,16 @@ import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
@@ -215,34 +224,33 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       LOG.error( e, e );
     }
   }
-
+  
+  private static final Predicate<AttachedVolume> anyVolumePred = new Predicate<AttachedVolume>( ) {
+    public boolean apply( AttachedVolume arg0 ) {
+      return true;
+    }
+  };
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
-    Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-    if ( !vm.getVolumes( ).isEmpty( ) ) {
-      try {
-//MERGE    
-//        StorageControllerConfiguration sc = Configuration.lookupScHack( vm.getPlacement( ) );
-//        for ( AttachedVolume volume : vm.getVolumes( ) ) {
-//          try {
-//            ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) ).send( new DetachStorageVolumeType(
-//                                                                                                                cluster.getNode( vm.getServiceTag( ) ).getIqn( ),
-//                                                                                                                volume.getVolumeId( ) ) );
-//            vm.getVolumes( ).remove( volume );
-//          } catch ( Throwable e ) {
-//            LOG.error( "Failed sending Detach Storage Volume for: " + volume.getVolumeId( )
-//                       + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
-//          }
-//        }
-      } catch ( Exception ex ) {
-        LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPlacement( ) + ").  " +
-                   "The the following volumes are attached: " + Iterables.transform( vm.getVolumes( ), new Function<AttachedVolume, String>( ) {
-                     
-                     @Override
-                     public String apply( AttachedVolume arg0 ) {
-                       return arg0.getVolumeId( );
-                     }
-                   } ) );
-      }
+    try {
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+      final StorageControllerConfiguration sc = Configuration.lookupSc( vm.getPlacement( ) );
+      vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        @Override
+        public boolean apply( AttachedVolume arg0 ) {
+          try {
+            vm.removeVolumeAttachment( arg0.getVolumeId( ) );
+            Dispatcher scDispatcher = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) );
+            scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+            return true;
+          } catch ( Throwable e ) {
+            LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
+                       + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
+            return false;
+          }
+        }
+      } );
+    } catch ( Exception ex ) {
+      LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPlacement( ) + ").  " );
     }
   }
 

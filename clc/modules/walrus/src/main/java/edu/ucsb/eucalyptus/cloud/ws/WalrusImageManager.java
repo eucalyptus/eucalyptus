@@ -83,11 +83,9 @@ import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
@@ -144,12 +142,12 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;

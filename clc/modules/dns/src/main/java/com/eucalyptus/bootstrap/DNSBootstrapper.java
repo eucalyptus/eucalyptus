@@ -63,7 +63,6 @@ package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.cloud.ws.DNSControl;

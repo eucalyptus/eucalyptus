@@ -16,11 +16,11 @@ import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.api.CertificateProvider;
 import com.eucalyptus.auth.api.CryptoProvider;
 import com.eucalyptus.auth.api.HmacProvider;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
 

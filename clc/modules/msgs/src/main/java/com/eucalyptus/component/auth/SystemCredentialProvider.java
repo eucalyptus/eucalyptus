@@ -61,7 +61,7 @@
 /*
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.auth;
+package com.eucalyptus.component.auth;
 
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -70,7 +70,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Certs;
-import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -115,7 +114,7 @@ public class SystemCredentialProvider extends Bootstrapper {
     return SystemCredentialProvider.keypairs.get( this.name );
   }
 
-  static void init( Component name ) throws Exception {
+  public static void init( Component name ) throws Exception {
     new SystemCredentialProvider( name ).init( );
   }
 
