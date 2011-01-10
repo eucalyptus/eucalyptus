@@ -1,6 +1,7 @@
 package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -30,13 +31,6 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
   
   public boolean start( ) throws Exception {
-    this.eusureSystemAdminExist( );
-    this.ensureCountersExist( );
-    this.ensureVmTypesExist( );
-    
-    // Remove once done.
-    AuthTest.test( );
-    
     return true;
   }
   
@@ -45,6 +39,14 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean enable( ) throws Exception {
+    this.eusureSystemAdminExist( );
+    this.ensureCountersExist( );
+    this.ensureVmTypesExist( );
+    LdapSync.start( );
+    
+    // Remove once done.
+    AuthTest.test( );
+    
     return true;
   }
 
@@ -75,7 +77,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean check( ) throws Exception {
-    return true;
+    return LdapSync.check( );
   }
   
   private void ensureVmTypesExist( ) {

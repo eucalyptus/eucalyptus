@@ -23,11 +23,11 @@ public class Policies {
      return users;
   }
   
-  public static String attachGroupPolicy( String policy, String groupName, String accountName ) throws AuthException, PolicyException {
+  public static String attachGroupPolicy( String policy, String groupName, String accountName ) throws AuthException, PolicyParseException {
     return Policies.getPolicyProvider( ).attachGroupPolicy( policy, groupName, accountName );
   }
   
-  public static String attachUserPolicy( String policy, String userName, String accountName ) throws AuthException, PolicyException {
+  public static String attachUserPolicy( String policy, String userName, String accountName ) throws AuthException, PolicyParseException {
     return Policies.getPolicyProvider( ).attachUserPolicy( policy, userName, accountName );
   }
   

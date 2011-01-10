@@ -237,16 +237,6 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
     }
   }
   
-  @Override
-  public User lookupSystemAdmin( ) throws AuthException {
-    return lookupUserByName( User.ACCOUNT_ADMIN_USER_NAME, User.SYSTEM_ADMIN_ACCOUNT_NAME );
-  }
-  
-  @Override
-  public User lookupAccountAdmin( String accountName ) throws AuthException {
-    return lookupUserByName( User.ACCOUNT_ADMIN_USER_NAME, accountName );
-  }
-  
   /**
    * Lookup enabled user by its access key ID. Only return the user if the key is active.
    * 
@@ -443,17 +433,46 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   }
   
   @Override
-  public void deleteAccount( String accountName ) throws AuthException {
+  @SuppressWarnings( "unchecked" )
+  public void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
     if ( accountName == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
-    if ( !isAccountEmpty( accountName ) ) {
+    if ( !forceDeleteSystem && isSystemAccount( accountName ) ) {
+      throw new AuthException( AuthException.DELETE_SYSTEM_ACCOUNT );
+    }
+    if ( !recursive && !isAccountEmpty( accountName ) ) {
       throw new AuthException( AuthException.ACCOUNT_DELETE_CONFLICT );
     }
+    Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
+    Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+    Session session = db.getSession( );
     try {
-      AccountEntity account = getUniqueAccount( db.getSession( ), accountName );
-      db.delete( account );
+      if ( recursive ) {
+        List<GroupEntity> groups = ( List<GroupEntity> ) session
+            .createCriteria( GroupEntity.class ).setCacheable( true )
+            .createCriteria( "account" ).setCacheable( true ).add( accountExample )
+            .list( );
+        List<UserEntity> users = ( List<UserEntity> ) session
+            .createCriteria( UserEntity.class ).setCacheable( true )
+            .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
+            .createCriteria( "account" ).setCacheable( true ).add( accountExample )
+            .list( );
+        for ( GroupEntity g : groups ) {
+          db.recast( GroupEntity.class ).delete( g );
+        }
+        for ( UserEntity u : users ) {
+          db.recast( UserEntity.class ).delete( u );
+        }
+      }
+      List<AccountEntity> accounts = ( List<AccountEntity> ) session
+          .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
+          .list( );
+      if ( accounts.size( ) != 1 ) {
+        throw new AuthException( "Found " + accounts.size( ) + " account(s)" );
+      }
+      db.delete( accounts.get( 0 ) );
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
@@ -505,8 +524,8 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     Session session = db.getSession( );
     try {
-      Example accountExample = Example.create( new AccountEntity( accountName ) );
-      Example groupExample = Example.create( new GroupEntity( true ) );
+      Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
+      Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<UserEntity> users = ( List<UserEntity> ) session
           .createCriteria( UserEntity.class ).setCacheable( true )
@@ -561,7 +580,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   }
 
   @Override
-  public String attachGroupPolicy( String policy, String groupName, String accountName ) throws AuthException, PolicyException {
+  public String attachGroupPolicy( String policy, String groupName, String accountName ) throws AuthException, PolicyParseException {
     if ( groupName == null ) {
       throw new AuthException( AuthException.EMPTY_GROUP_NAME );
     }
@@ -596,7 +615,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   }
   
   @Override
-  public String attachUserPolicy( String policy, String userName, String accountName ) throws AuthException, PolicyException {
+  public String attachUserPolicy( String policy, String userName, String accountName ) throws AuthException, PolicyParseException {
     return this.attachGroupPolicy( policy, getUserGroupName( userName ), accountName );
   }
   
@@ -671,7 +690,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
     if ( accountId == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_ID );
     }
-    GroupEntity searchGroup = new GroupEntity( getUserGroupName( User.ACCOUNT_ADMIN_USER_NAME ) );
+    GroupEntity searchGroup = new GroupEntity( getUserGroupName( User.ACCOUNT_ADMIN ) );
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
     Session session = db.getSession( );
     try {
@@ -739,7 +758,7 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
     if ( accountId == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
-    GroupEntity searchGroup = new GroupEntity( getUserGroupName( User.ACCOUNT_ADMIN_USER_NAME ) );
+    GroupEntity searchGroup = new GroupEntity( getUserGroupName( User.ACCOUNT_ADMIN ) );
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
     Session session = db.getSession( );
     try {
@@ -805,22 +824,6 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
     return false;
   }
 
-  @Override
-  public void addSystemAccount( ) throws AuthException {
-    this.addAccount( User.SYSTEM_ADMIN_ACCOUNT_NAME );
-  }
-  
-  @Override
-  public void addSystemAdmin( ) throws AuthException {
-    this.addUser( User.ACCOUNT_ADMIN_USER_NAME, "/", true, true, null, true, true, User.SYSTEM_ADMIN_ACCOUNT_NAME );
-  }
-  
-  @Override
-  public void addAccountAdmin( String accountName, String password ) throws AuthException {
-    User admin = this.addUser( User.ACCOUNT_ADMIN_USER_NAME, "/", true, true, null, true, true, accountName );
-    admin.setPassword( password );
-  }
-  
   /**
    * Must call within a transaction.
    * 
@@ -1055,12 +1058,8 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
     }
   }
   
-  private static boolean isSystemAdmin( String accountName ) {
-    return User.SYSTEM_ADMIN_ACCOUNT_NAME.equals( accountName );
-  }
-  
   private static boolean isAccountAdmin( String userName ) {
-    return User.ACCOUNT_ADMIN_USER_NAME.equals( userName );
+    return User.ACCOUNT_ADMIN.equals( userName );
   }
   
   public static String getUserGroupName( String userName ) {
@@ -1069,6 +1068,10 @@ public class DatabaseAuthProvider implements UserProvider, GroupProvider, Accoun
   
   private static boolean isUserGroupName( String groupName ) {
     return groupName.startsWith( User.USER_GROUP_PREFIX );
+  }
+  
+  private static boolean isSystemAccount( String accountName ) {
+    return Account.SYSTEM_ACCOUNT.equals( accountName );
   }
   
   /**

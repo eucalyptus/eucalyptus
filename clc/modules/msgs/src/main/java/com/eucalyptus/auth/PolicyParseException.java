@@ -6,7 +6,7 @@ package com.eucalyptus.auth;
  * @author wenye
  *
  */
-public class PolicyException extends Exception {
+public class PolicyParseException extends Exception {
 
   private static final long serialVersionUID = 1L;
 
@@ -14,19 +14,19 @@ public class PolicyException extends Exception {
   public static final String SIZE_TOO_LARGE = "Policy size is too large";
   public static final String SYNTAX_ERROR = "Policy has syntax error";
   
-  public PolicyException( ) {
+  public PolicyParseException( ) {
     super( );
   }
   
-  public PolicyException( String message, Throwable cause ) {
+  public PolicyParseException( String message, Throwable cause ) {
     super( message, cause );
   }
   
-  public PolicyException( String message ) {
+  public PolicyParseException( String message ) {
     super( message );
   }
   
-  public PolicyException( Throwable cause ) {
+  public PolicyParseException( Throwable cause ) {
     super( cause );
   }
   

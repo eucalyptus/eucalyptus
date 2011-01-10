@@ -73,23 +73,6 @@ public interface UserProvider {
   public User lookupUserByCertificate( X509Certificate cert ) throws AuthException;
   
   /**
-   * Lookup the system admin.
-   * 
-   * @return The user of system admin
-   * @throws AuthException for any error.
-   */
-  public User lookupSystemAdmin( ) throws AuthException;
-
-  /**
-   * Lookup the account admin for an account.
-   * 
-   * @param accountName The account name.
-   * @return The user of account admin of the account.
-   * @throws AuthException for any error.
-   */
-  public User lookupAccountAdmin( String accountName ) throws AuthException;
-  
-  /**
    * Lookup user by its unique ID.
    * 
    * @param userId
@@ -122,21 +105,5 @@ public interface UserProvider {
    * @throws AuthException for any error
    */
   public List<User> listAllUsers( String accountName ) throws AuthException;
-
-  /**
-   * Add system admin user.
-   * 
-   * @throws AuthException for any error
-   */
-  public void addSystemAdmin( ) throws AuthException;
-  
-  /**
-   * Add an account admin user.
-   * 
-   * @param accountName The name of the account
-   * @param password The admin password
-   * @throws AuthException for any error
-   */
-  public void addAccountAdmin( String accountName, String password ) throws AuthException;
   
 }

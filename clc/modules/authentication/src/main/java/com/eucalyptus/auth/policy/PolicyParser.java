@@ -9,7 +9,7 @@ import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Debugging;
-import com.eucalyptus.auth.PolicyException;
+import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
@@ -38,13 +38,13 @@ public class PolicyParser {
   
   private static final Logger LOG = Logger.getLogger( PolicyParser.class );
   
-  private static PolicyParser parser;
+  private static PolicyParser instance = null;
   
   public static PolicyParser getInstance( ) {
-    if ( parser == null ) {
-      parser = new PolicyParser( );
+    if ( instance == null ) {
+      instance = new PolicyParser( );
     }
-    return parser;
+    return instance;
   }
   
   public PolicyParser( ) {
@@ -56,14 +56,14 @@ public class PolicyParser {
    * 
    * @param policy The input policy text.
    * @return The parsed the policy entity.
-   * @throws PolicyException for policy syntax error.
+   * @throws PolicyParseException for policy syntax error.
    */
-  public PolicyEntity parse( String policy ) throws PolicyException {
+  public PolicyEntity parse( String policy ) throws PolicyParseException {
     if ( policy == null ) {
-      throw new PolicyException( PolicyException.EMPTY_POLICY );
+      throw new PolicyParseException( PolicyParseException.EMPTY_POLICY );
     }
     if ( policy.length( ) > MAX_POLICY_SIZE ) {
-      throw new PolicyException( PolicyException.SIZE_TOO_LARGE );
+      throw new PolicyParseException( PolicyParseException.SIZE_TOO_LARGE );
     }
     try {
       JSONObject policyJsonObj = JSONObject.fromObject( policy );
@@ -74,7 +74,7 @@ public class PolicyParser {
       return policyEntity;
     } catch ( JSONException e ) {
       Debugging.logError( LOG, e, "Syntax error in input policy" );
-      throw new PolicyException( PolicyException.SYNTAX_ERROR, e );
+      throw new PolicyParseException( PolicyParseException.SYNTAX_ERROR, e );
     }
   }
   

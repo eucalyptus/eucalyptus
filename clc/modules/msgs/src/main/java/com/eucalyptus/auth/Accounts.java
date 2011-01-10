@@ -27,8 +27,8 @@ public class Accounts {
     return Accounts.getAccountProvider( ).addAccount( accountName );
   }
   
-  public static void deleteAccount( String accountName ) throws AuthException {
-    Accounts.getAccountProvider( ).deleteAccount( accountName );
+  public static void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
+    Accounts.getAccountProvider( ).deleteAccount( accountName, forceDeleteSystem, recursive );
   }
   
   public static List<Group> listAllGroups( String accountName ) throws AuthException {
@@ -43,8 +43,8 @@ public class Accounts {
     return Accounts.getAccountProvider( ).listAllAccounts( );
   }
   
-  public static void addSystemAccount( ) throws AuthException {
-    Accounts.getAccountProvider( ).addSystemAccount( );
+  public static Account addSystemAccount( ) throws AuthException {
+    return addAccount( Account.SYSTEM_ACCOUNT );
   }
   
 }

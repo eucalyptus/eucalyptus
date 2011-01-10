@@ -77,8 +77,7 @@ import com.eucalyptus.auth.principal.credential.X509Principal;
 public interface User extends BasePrincipal, X509Principal, HmacPrincipal {
   
   public static final String USER_GROUP_PREFIX = "_";  
-  public static final String SYSTEM_ADMIN_ACCOUNT_NAME = "system";
-  public static final String ACCOUNT_ADMIN_USER_NAME = "admin";
+  public static final String ACCOUNT_ADMIN = "eucaadmin";
   
   public static enum RegistrationStatus {
     REGISTERED,

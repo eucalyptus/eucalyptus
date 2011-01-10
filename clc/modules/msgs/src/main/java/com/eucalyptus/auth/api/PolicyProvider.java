@@ -3,7 +3,7 @@ package com.eucalyptus.auth.api;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.PolicyException;
+import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.principal.Authorization;
 
 /**
@@ -22,9 +22,9 @@ public interface PolicyProvider {
    * @param accountName The name of the account of the group.
    * @return The new policy ID
    * @throws AuthException for auth data errors
-   * @throws PolicyException for policy parsing errors
+   * @throws PolicyParseException for policy parsing errors
    */
-  public String attachGroupPolicy( String policy, String groupName, String accountName ) throws AuthException, PolicyException;
+  public String attachGroupPolicy( String policy, String groupName, String accountName ) throws AuthException, PolicyParseException;
   
   /**
    * Attach a new policy (in JSON text) to a user.
@@ -34,9 +34,9 @@ public interface PolicyProvider {
    * @param accountName The name of the account of the user.
    * @return The new policy ID
    * @throws AuthException for auth data errors
-   * @throws PolicyException for policy parsing errors
+   * @throws PolicyParseException for policy parsing errors
    */
-  public String attachUserPolicy( String policy, String userName, String accountName ) throws AuthException, PolicyException;
+  public String attachUserPolicy( String policy, String userName, String accountName ) throws AuthException, PolicyParseException;
   
  
   /**

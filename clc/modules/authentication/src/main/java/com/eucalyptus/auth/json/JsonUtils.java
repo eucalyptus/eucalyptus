@@ -46,11 +46,13 @@ public class JsonUtils {
   public static <T> List<T> getArrayByType( Class<T> type, JSONObject map, String key ) throws JSONException {
     List<T> results = Lists.newArrayList( );
     JSONArray array = getByType( JSONArray.class, map, key );
-    for ( Object o : array ) {
-      if ( o.getClass( ) == type ) {
-        results.add( ( T ) o );
-      } else {
-        throw new JSONException( "Expecting array element type " + type.getName( ) + " but got " + o.getClass( ).getName( ) );
+    if ( array != null ) {
+      for ( Object o : array ) {
+        if ( o.getClass( ) == type ) {
+          results.add( ( T ) o );
+        } else {
+          throw new JSONException( "Expecting array element type " + type.getName( ) + " but got " + o.getClass( ).getName( ) );
+        }
       }
     }
     return results;
@@ -68,4 +70,20 @@ public class JsonUtils {
     return ( T ) value;
   }
 
+  public static <T> T getRequiredByType( Class<T> type, JSONObject map, String key ) throws JSONException {
+    T value = getByType( type, map, key );
+    if ( value == null ) {
+      throw new JSONException( "Expecting required element " + key );
+    }
+    return value;
+  }
+  
+  public static <T> List<T> getRequiredArrayByType( Class<T> type, JSONObject map, String key ) throws JSONException {
+    List<T> results = getArrayByType( type, map, key );
+    if ( results.size( ) < 1 ) {
+      throw new JSONException( "Expecting required element " + key );
+    }
+    return results;
+  }
+  
 }

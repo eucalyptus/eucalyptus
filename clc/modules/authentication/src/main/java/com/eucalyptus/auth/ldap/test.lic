@@ -1,0 +1,34 @@
+{
+  "ldap-service":{
+    "context-factory":"com.sun.jndi.ldap.LdapCtxFactory",
+    "server-url":"ldap://ldapserver.foo.com:7733",
+    "auth-method":"simple",
+    "auth-principal":"cn=ldapadmin,dc=foo,dc=com",
+    "auth-credentials":"blahblah",
+    "use-ssl":"false",    
+  },
+  "accounting-groups":{
+    "base-dn":"ou=groups,dc=foo,dc=com",
+    "id-attribute":"cn",
+    "select":["salesmarket", "engineering"],
+    "member-attribute":"groups",
+  },
+  "groups":{
+    "base-dn":"ou=groups,dc=foo,dc=com",
+    "id-attribute":"cn",
+    "select":["sales", "marketing", "dev", "qa"],
+    "member-attribute":"member",
+  },
+  "users":{
+    "base-dn":"ou=people,dc=foo,dc=com",
+    "id-attribute":"uid",
+    "select":["Tom", "Jack"],
+    "user-info-attributes":["name", "full name"],
+    "password-attribute":"password",
+  },
+  "sync":{
+    "enable":"true",
+    "auto":"true",
+    "interval":"900000",
+  },
+}

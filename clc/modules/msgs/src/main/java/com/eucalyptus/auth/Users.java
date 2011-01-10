@@ -67,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.UserProvider;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
@@ -116,11 +117,11 @@ public class Users {
   }
   
   public static User lookupSystemAdmin( ) throws AuthException {
-    return Users.getUserProvider( ).lookupSystemAdmin( );
+    return lookupUserByName( User.ACCOUNT_ADMIN, Account.SYSTEM_ACCOUNT );
   }
   
   public static User lookupAccountAdmin( String accountName ) throws AuthException {
-    return Users.getUserProvider( ).lookupAccountAdmin( accountName );
+    return lookupUserByName( User.ACCOUNT_ADMIN, accountName );
   }
   
   public static User lookupUserById( String userId ) throws AuthException {
@@ -135,12 +136,12 @@ public class Users {
     return Users.getUserProvider( ).listAllUsers( );
   }
   
-  public static void addSystemAdmin( ) throws AuthException {
-    Users.getUserProvider( ).addSystemAdmin( );
+  public static User addSystemAdmin( ) throws AuthException {
+    return addUser( User.ACCOUNT_ADMIN, "/", true, true, null, true, true, Account.SYSTEM_ACCOUNT );
   }
   
-  public static void addAccountAdmin( String accountName, String password ) throws AuthException {
-    Users.getUserProvider( ).addAccountAdmin( accountName, password );
+  public static User addAccountAdmin( String accountName ) throws AuthException {
+    return addUser( User.ACCOUNT_ADMIN, "/", true, true, null, true, true, accountName );
   }
   
 }

@@ -69,6 +69,9 @@ import org.apache.log4j.Logger;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger LOG = Logger.getLogger( SystemClock.class );
+  
+  private static final long RATE = 10000;
+  
   private static SystemClock clock;
   private static Timer timer;
   private int phase = 0;
@@ -77,13 +80,17 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     super( );
   }
 
+  public static long getRate( ) {
+    return RATE;
+  }
+  
   public static void setupTimer( ) {
     synchronized(SystemClock.class) {
       if( timer == null ) {
         timer = new Timer("SystemClockTimer");
         clock = new SystemClock();
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy() );
-        timer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: make configurable
+        timer.scheduleAtFixedRate( clock, 0, getRate( ) );//TODO: make configurable
         final Timer ref = timer;
         Runtime.getRuntime( ).addShutdownHook( new Thread() {
 

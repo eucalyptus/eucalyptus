@@ -11,6 +11,8 @@ import java.security.Principal;
  */
 public interface Account extends BasePrincipal, Serializable {
   
+  public static final String SYSTEM_ACCOUNT = "eucasystem";
+
   public String getAccountId( );
   
 }

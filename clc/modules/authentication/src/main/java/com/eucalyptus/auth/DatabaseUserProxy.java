@@ -433,7 +433,7 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public boolean isSystemAdmin( ) {
-    return SYSTEM_ADMIN_ACCOUNT_NAME.equals( this.getAccount( ).getName( ) );
+    return Account.SYSTEM_ACCOUNT.equals( this.getAccount( ).getName( ) );
   }
 
   @Override

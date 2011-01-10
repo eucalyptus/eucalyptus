@@ -38,7 +38,8 @@ public class AuthTest {
   public static void test1( ) throws Exception {
     LOG.debug( MARK + "Add account1" );
     Accounts.addAccount( "account1" );
-    Users.addAccountAdmin( "account1", "foobar" );
+    User admin = Users.addAccountAdmin( "account1" );
+    admin.setPassword( "foobar" );
     
     Map<String, String> info = Maps.newHashMap( );
     info.put( "Full name", "User 11" );
@@ -101,7 +102,8 @@ public class AuthTest {
     
     LOG.debug( MARK + "Add account2" );
     Accounts.addAccount( "account2" );
-    Users.addAccountAdmin( "account2", "foobar" );
+    admin = Users.addAccountAdmin( "account2" );
+    admin.setPassword( "foobar" );
     
     info = Maps.newHashMap( );
     info.put( "Full name", "User 12" );
@@ -140,7 +142,8 @@ public class AuthTest {
   
   public static void test2( ) throws Exception {
     Accounts.addAccount( "test" );
-    Users.addAccountAdmin( "test", "foobar" );
+    User admin = Users.addAccountAdmin( "test" );
+    admin.setPassword( "foobar" );
     User tom = Users.addUser( "tom", "/", true, true, null, true, true, "test" );
     User jack = Users.addUser( "jack", "/", true, true, null, true, true, "test" );
     User chris = Users.addUser( "chris", "/", true, true, null, true, true, "test" );

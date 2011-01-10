@@ -1,38 +1,52 @@
 package com.eucalyptus.auth.policy;
 
-import net.sf.json.JSONArray;
-import net.sf.json.JSONException;
-import net.sf.json.JSONObject;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import org.apache.commons.io.output.ByteArrayOutputStream;
+import com.eucalyptus.auth.entities.AuthorizationEntity;
+import com.eucalyptus.auth.entities.ConditionEntity;
+import com.eucalyptus.auth.entities.PolicyEntity;
+import com.eucalyptus.auth.entities.StatementEntity;
 
 public class PolicyParserTest {
+
+  public static void main( String[] args ) throws Exception {
+    if ( args.length < 1 ) {
+      System.err.println( "Requires input policy file" );
+      System.exit( 1 ); 
+    }
+    InputStream input = new FileInputStream( args[0] );
+    
+    String policy = readInputAsString( input );
+        
+    PolicyEntity parsed = PolicyParser.getInstance( ).parse( policy );
+    
+    printPolicy( parsed );
+  }
   
-  public static void main( String args[ ] ) {
-    String jsonText =
-      "{'key':'value', 'array':['e1', 'e2'], 'object':{'k1':'v1', 'k2':'v2'}}";
+  private static String readInputAsString( InputStream in ) throws Exception {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream( );
     
-    JSONObject json = JSONObject.fromObject( jsonText );
+    byte[] buf = new byte[512];
+    int nRead = 0;
+    while ( ( nRead = in.read( buf ) ) >= 0 ) {
+      baos.write( buf, 0, nRead );
+    }
     
-    System.out.println( "Field: key = " + json.getString( "key" ) );
-    
-    System.out.println( "Field: array = " + getByType( String.class, json, "array" ) );
-    
-    Object value = json.get( "foo" );
-    if ( value instanceof JSONObject ) {
-      System.out.println( "'array' value is object" );
-    } else if ( value instanceof JSONArray ) {
-      System.out.println( "'array' value is array" );
+    return new String( baos.toByteArray( ), "UTF-8" );
+  }
+  
+  private static void printPolicy( PolicyEntity parsed ) {
+    System.out.println( "Policy:\n" + parsed.getPolicyText( ) + "\n" + "Version = " + parsed.getPolicyVersion( ) );
+    for ( StatementEntity statement : parsed.getStatements( ) ) {
+      System.out.println( "Statement: " + statement.getSid( ) );
+      for ( AuthorizationEntity auth : statement.getAuthorizations( ) ) {
+        System.out.println( "Authorization: " + auth );
+      }
+      for ( ConditionEntity cond : statement.getConditions( ) ) {
+        System.out.println( "Condition: " + cond );
+      }
     }
   }
   
-  @SuppressWarnings( "unchecked" )
-  private static <T> T getByType( Class<T> type, JSONObject map, String key ) throws JSONException {
-    Object value = map.get( key );
-    if ( value == null ) {
-      return null;
-    }
-    if ( value.getClass( ) != type ) {
-      throw new JSONException( "Expecting " + type.getName( ) + " value but got " + value.getClass( ).getName( ) );
-    }
-    return ( T ) value;
-  }
 }

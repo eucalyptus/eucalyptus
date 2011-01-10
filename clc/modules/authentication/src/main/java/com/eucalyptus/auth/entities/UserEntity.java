@@ -430,7 +430,7 @@ public class UserEntity extends AbstractPersistent implements User, Serializable
 
   @Override
   public boolean isSystemAdmin( ) {
-    return SYSTEM_ADMIN_ACCOUNT_NAME.equals( this.getAccount( ).getName( ) );
+    return Account.SYSTEM_ACCOUNT.equals( this.getAccount( ).getName( ) );
   }
 
   @Override
@@ -489,7 +489,7 @@ public class UserEntity extends AbstractPersistent implements User, Serializable
 
   @Override
   public boolean isAccountAdmin( ) {
-    return ACCOUNT_ADMIN_USER_NAME.equals( this.getName( ) );
+    return ACCOUNT_ADMIN.equals( this.getName( ) );
   }
   
 }

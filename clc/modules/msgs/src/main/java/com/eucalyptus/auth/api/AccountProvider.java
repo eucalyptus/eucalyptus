@@ -21,9 +21,11 @@ public interface AccountProvider {
    * Delete an account. The account must be already empty (no group or user).
    * 
    * @param accountName The name of the account to delete.
+   * @param forceDeleteSystem If forcing to delete the system account.
+   * @param recursive If delete the account recursively (by destroying all groups and users in the account)
    * @throws AuthException for any error.
    */
-  public void deleteAccount( String accountName ) throws AuthException;
+  public void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException;
   
   /**
    * List all the accounts
@@ -50,12 +52,5 @@ public interface AccountProvider {
    * @throws AuthException for any error
    */
   public List<Group> listAllGroups( String accountName ) throws AuthException;
-  
-  /**
-   * Add the system account.
-   * 
-   * @throws AuthException for any error
-   */
-  public void addSystemAccount( ) throws AuthException;
   
 }
