@@ -45,9 +45,9 @@ public class LdapSync {
   
   private static final BasicAttributes WILDCARD_FILTER = new BasicAttributes( );
   
-  private static final LdapIntegrationConfiguration DUMMY_LIC = new LdapIntegrationConfiguration( );
+  private static final LdapIntegrationConfiguration DEFAULT_LIC = new LdapIntegrationConfiguration( );
   
-  private static LdapIntegrationConfiguration lic = DUMMY_LIC;
+  private static LdapIntegrationConfiguration lic = DEFAULT_LIC;
   private static boolean inSync = false;
   private static long timeTillNextSync;
   

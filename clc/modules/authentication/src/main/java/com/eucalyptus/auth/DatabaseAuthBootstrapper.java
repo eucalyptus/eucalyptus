@@ -45,7 +45,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     LdapSync.start( );
     
     // Remove once done.
-    AuthTest.test( );
+    //AuthTest.test( );
     
     return true;
   }
