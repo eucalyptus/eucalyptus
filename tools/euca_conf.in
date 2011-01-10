@@ -1157,7 +1157,7 @@ if [ -n "$CREDENTIALZIPFILE" ]; then
   	echo "cannot find code in database, please go to the Eucalyptus web UI to obtain credentials."
   	exit 1
   fi
-  CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?account=system&user=admin&code=$KEY\" -O $CREDENTIALZIPFILE"
+  CMD="$WGET --no-check-certificate \"https://localhost:8443/getX509?account=eucasystem&user=eucaadmin&code=$KEY\" -O $CREDENTIALZIPFILE"
   if ! eval $CMD ; then
     echo "failed to obtain credentals, please try again or go to the Eucalyptus web UI."
     exit 1
