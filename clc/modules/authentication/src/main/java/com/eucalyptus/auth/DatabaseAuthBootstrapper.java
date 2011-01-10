@@ -31,6 +31,14 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
   
   public boolean start( ) throws Exception {
+    this.eusureSystemAdminExist( );
+    this.ensureCountersExist( );
+    this.ensureVmTypesExist( );
+    LdapSync.start( );
+    
+    // Remove once done.
+    //AuthTest.test( );
+    
     return true;
   }
   
@@ -39,13 +47,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean enable( ) throws Exception {
-    this.eusureSystemAdminExist( );
-    this.ensureCountersExist( );
-    this.ensureVmTypesExist( );
-    LdapSync.start( );
-    
-    // Remove once done.
-    //AuthTest.test( );
+
     
     return true;
   }
