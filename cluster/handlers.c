@@ -2237,6 +2237,104 @@ int initialize(void) {
   return(ret);
 }
 
+int ccIsEnabled() {
+  // initialized, but ccState is disabled (refuse to service operations)
+
+  if (!config || config->ccState != ENABLED) {
+    return(1);
+  }
+  return(0);
+}
+
+int ccIsDisabled() {
+  // initialized, but ccState is disabled (refuse to service operations)
+
+  if (!config || config->ccState != DISABLED) {
+    return(1);
+  }
+  return(0);
+}
+
+int ccChangeState(int newstate) {
+  if (config) {
+    char localState[32];
+    config->ccLastState = config->ccState;
+    config->ccState = newstate;
+    ccGetStateString(localState, 32);
+    snprintf(config->ccStatus.localState, 32, "%s", localState);
+    return(0);
+  }
+  return(1);
+}
+
+int ccGetStateString(char *statestr, int n) {
+  if (config->ccState == ENABLED) {
+    snprintf(statestr, n, "ENABLED");
+  } else if (config->ccState == DISABLED) {
+    snprintf(statestr, n, "DISABLED");
+  } else if (config->ccState == STOPPED) {
+    snprintf(statestr, n, "STOPPED");
+  } else if (config->ccState == LOADED) {
+    snprintf(statestr, n, "LOADED");
+  } else if (config->ccState == INITIALIZED) {
+    snprintf(statestr, n, "INITIALIZED");
+  } else if (config->ccState == PRIMORDIAL) {
+    snprintf(statestr, n, "PRIMORDIAL");
+  }
+  return(0);
+}
+
+int ccCheckState() {
+  char localDetails[1024];
+  int ret=0;
+
+  if (!config) {
+    return(1);
+  }
+  // check local configuration
+  
+  // configuration
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "%s", config->eucahome);
+    if (check_directory(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find directory '%s'\n", cmd);
+      ret++;
+    }
+  }
+  
+  // shellouts
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", config->eucahome);
+    if (check_file(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      ret++;
+    }
+
+    snprintf(cmd, MAX_PATH, "%s/usr/share/eucalyptus/dynserv.pl", config->eucahome);
+    if (check_file(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      ret++;
+    }
+    
+    snprintf(cmd, MAX_PATH, "ip addr show");
+    if (system(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot run shellout '%s'\n", cmd);
+      ret++;
+    }    
+  }
+  // filesystem
+  
+  // network
+
+  snprintf(localDetails, 1023, "ERRORS=%d", ret);
+  sem_mywait(CONFIG);
+  snprintf(config->ccStatus.details, 1023, "%s", localDetails);
+  sem_mypost(CONFIG);
+  return(ret);
+}
+
 /* 
    As of 1.6.2, the CC will start a background thread to poll its
    collection of nodes.  This thread populates an in-memory cache of

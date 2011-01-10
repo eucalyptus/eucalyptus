@@ -77,6 +77,7 @@ permission notice:
 
 enum {SHARED_MEM, SHARED_FILE};
 enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, NCCALL, ENDLOCK};
+enum {PRIMORDIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED};
 
 typedef struct instance_t {
   char instanceId[16];
@@ -162,6 +163,8 @@ typedef struct ccConfig_t {
   int idleThresh, wakeThresh;
   time_t configMtime, instanceTimeout, ncPollingFrequency;
   int threads[3];
+  int ccState, ccLastState, kick_network;
+  serviceStatusType ccStatus;
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
@@ -243,6 +246,11 @@ int maintainNetworkState();
 int powerDown(ncMetadata *ccMeta, ccResource *node);
 int powerUp(ccResource *node);
 int changeState(ccResource *in, int newstate);
+
+int ccIsEnabled(void);
+int ccIsDisabled(void);
+int ccChangeState(int newstate);
+int ccGetStateString(char *outstr, int n);
 
 void *monitor_thread(void *);
 #endif

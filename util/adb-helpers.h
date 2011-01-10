@@ -127,4 +127,28 @@ static inline adb_virtualMachineType_t * copy_vm_type_to_adb (const axutil_env_t
   return vm_type;
 }
 
+static inline adb_serviceInfoType_t * copy_service_info_type_to_adb(const axutil_env_t *env, serviceInfoType * input) {
+  int i;
+  adb_serviceInfoType_t *sit = adb_serviceInfoType_create(env);
+
+  adb_serviceInfoType_set_type(sit, env, input->type);
+  adb_serviceInfoType_set_name(sit, env, input->name);
+  for (i=0; i<input->urisLen; i++) {
+    adb_serviceInfoType_add_uris(sit, env, input->uris[i]);
+  }
+  
+  return (sit);
+}
+
+static inline void copy_service_info_type_from_adb(serviceInfoType * input, adb_serviceInfoType_t * sit, const axutil_env_t *env) {
+  int i;
+
+  snprintf(input->type, 32, "%s", adb_serviceInfoType_get_type(sit, env));
+  snprintf(input->name, 32, "%s", adb_serviceInfoType_get_name(sit, env));
+  input->urisLen = adb_serviceInfoType_sizeof_uris(sit, env);
+  for (i=0; i<input->urisLen && i<8; i++) {
+    snprintf(input->uris[i], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, i));
+  }
+}
+
 #endif // _ADB_HELPERS_H

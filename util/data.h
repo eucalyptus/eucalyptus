@@ -80,6 +80,13 @@ typedef struct serviceInfoType_t {
   int urisLen;
 } serviceInfoType;
 
+typedef struct serviceStatusType_t {
+  char localState[32];
+  int localEpoch;
+  char details[1024];
+  serviceInfoType serviceId;
+} serviceStatusType;
+
 typedef struct ncMetadata_t {
     char *correlationId;
     char *userId;
