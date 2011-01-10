@@ -416,11 +416,12 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *userData = va_arg(al, char *);
       char *launchIndex = va_arg(al, char *);
       char *platform = va_arg(al, char *);
+      int expiryTime = va_arg(al, int);
       char **netNames = va_arg(al, char **);
       int netNamesLen = va_arg(al, int);
       ncInstance **outInst = va_arg(al, ncInstance **);
       
-      rc = ncRunInstanceStub(ncs, meta, uuid, instId, reservationId, ncvm, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, ncnet, userData, launchIndex, platform, netNames, netNamesLen, outInst);
+      rc = ncRunInstanceStub(ncs, meta, uuid, instId, reservationId, ncvm, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, ncnet, userData, launchIndex, platform, expiryTime, netNames, netNamesLen, outInst);
       if (timeout && outInst) {
 	if (!rc && *outInst) {
 	  len = sizeof(ncInstance);
@@ -597,6 +598,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *userData = va_arg(al, char *);
       char *launchIndex = va_arg(al, char *);
       char *platform = va_arg(al, char *);
+      int expiryTime = va_arg(al, int);
       char **netNames = va_arg(al, char **);
       int netNamesLen = va_arg(al, int);
       ncInstance **outInst = va_arg(al, ncInstance **);
@@ -915,7 +917,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
   logprintfl(EUCAINFO,"AssignAddress(): called\n");
   logprintfl(EUCADEBUG,"AssignAddress(): params: src=%s, dst=%s\n", SP(src), SP(dst));
 
-  if (!src || !dst || !strcmp(src, "0.0.0.0") || !strcmp(dst, "0.0.0.0")) {
+  if (!src || !dst || !strcmp(src, "0.0.0.0")) {
     logprintfl(EUCADEBUG, "AssignAddress(): bad input params\n");
     return(1);
   }
@@ -927,6 +929,14 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
   } else {
     
     sem_mywait(VNET);
+
+    ret = vnetReassignAddress(vnetconfig, uuid, src, dst);
+    if (ret) {
+      logprintfl(EUCAERROR, "doAssignAddress(): vnetReassignAddress() failed\n");
+      ret = 1;
+    }
+
+    /*
     rc = vnetGetPublicIP(vnetconfig, src, NULL, &allocated, &addrdevno);
     if (rc) {
       logprintfl(EUCAERROR,"AssignAddress(): failed to retrieve publicip record %s\n", src);
@@ -958,10 +968,11 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
 	ret = 0;
       }
     }
+    */
     sem_mypost(VNET);
   }
   
-  if (!ret) {
+  if (!ret && strcmp(dst, "0.0.0.0")) {
     // everything worked, update instance cache
 
     rc = map_instanceCache(privIpCmp, dst, pubIpSet, src);
@@ -1027,6 +1038,13 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   } else {
     
     sem_mywait(VNET);
+
+    ret = vnetReassignAddress(vnetconfig, "UNSET", src, "0.0.0.0");
+    if (ret) {
+      logprintfl(EUCAERROR, "UnassignAddress(): vnetReassignAddress() failed\n");
+      ret = 1;
+    }
+    /*
     ret=0;
     rc = vnetGetPublicIP(vnetconfig, src, NULL, &allocated, &addrdevno);
     if (rc) {
@@ -1053,6 +1071,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       	logprintfl(EUCAWARN,"UnassignAddress(): cmd failed '%s'\n", cmd);
       }
     }
+    */
     sem_mypost(VNET);
   }
 
@@ -1979,7 +1998,8 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
   return(0);
 }
 
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
+
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
   int rc=0, i=0, done=0, runCount=0, resid=0, foundnet=0, error=0, networkIdx=0, nidx=0, thenidx=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
@@ -2194,7 +2214,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
             // call StartNetwork client
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncStartNetwork", uuid, NULL, 0, 0, vlan, NULL);
 
-	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, &ncnet, userData, launchIndex, platform, netNames, netNamesLen, &outInst);
+	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, NCCALL, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, &ncnet, userData, launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);
 
 	    if (rc) {
 	      sleep(1);

@@ -26,6 +26,7 @@
 	  <xs:element minOccurs="0" name="instanceType" type="tns:virtualMachineType"/>
 	  <xs:element minOccurs="0" name="keyName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchTime" type="xs:dateTime"/>
+	  <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
 	  <xs:element minOccurs="0" name="stateName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="netParams" type="tns:netConfigType"/>
 	  <xs:element minOccurs="0" name="ownerId" type="xs:string"/>
@@ -112,7 +113,7 @@
 	  <xs:element maxOccurs="unbounded" minOccurs="0" name="details" type="xs:string" />
 	</xs:sequence>
       </xs:complexType>
-      
+
       <xs:complexType abstract="true" name="eucalyptusMessage">
 	<xs:sequence>
 	  <xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
@@ -549,6 +550,7 @@
 	      <xs:element name="userData" type="xs:string"/>
 	      <xs:element name="launchIndex" type="xs:string"/>
 	      <xs:element minOccurs="0" name="platform" type="xs:string"/>
+	      <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -739,6 +741,31 @@
       
     </xs:schema>
   </wsdl:types>
+
+  <wsdl:message name="DescribeServicesResponse">
+    <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StartServiceResponse">
+    <wsdl:part element="tns:StartServiceResponse" name="StartServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StopServiceResponse">
+    <wsdl:part element="tns:StopServiceResponse" name="StopServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="EnableServiceResponse">
+    <wsdl:part element="tns:EnableServiceResponse" name="EnableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DisableServiceResponse">
+    <wsdl:part element="tns:DisableServiceResponse" name="DisableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
   
   <wsdl:message name="DescribeServicesResponse">
     <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
@@ -879,7 +906,7 @@
     <wsdl:part element="tns:DisableService" name="DisableService">
     </wsdl:part>
   </wsdl:message>
-  
+
   <wsdl:message name="AttachVolume">
     <wsdl:part element="tns:AttachVolume" name="AttachVolume">
     </wsdl:part>
@@ -1013,7 +1040,7 @@
       <wsdl:output message="tns:DisableServiceResponse" name="DisableServiceResponse">
       </wsdl:output>
     </wsdl:operation>
-    
+
     <wsdl:operation name="AttachVolume">
       <wsdl:input message="tns:AttachVolume" name="AttachVolume">
       </wsdl:input>

@@ -187,7 +187,7 @@ typedef struct virtualMachine_t {
     virtualBootRecord * swap;
     virtualBootRecord * ephemeral0;
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS];
-    int virtualBootRecordLen; // TODO: dan ask dmitrii
+    int virtualBootRecordLen;
 } virtualMachine;
 
 int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in);
@@ -230,6 +230,7 @@ typedef struct ncInstance_t {
     char privateDnsName[CHAR_BUFFER_SIZE];
     char dnsName[CHAR_BUFFER_SIZE];
     int launchTime; // timestamp of RunInstances request arrival
+    int expiryTime;
     int bootTime; // timestamp of STAGING->BOOTING transition
 	int bundlingTime; // timestamp of ->BUNDLING transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
@@ -292,7 +293,7 @@ ncInstance * allocate_instance(char *uuid,
                                virtualMachine *params, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,
-                               char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize);
+                               char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 

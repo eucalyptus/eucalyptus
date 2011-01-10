@@ -306,6 +306,7 @@
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
+	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	  </xs:sequence>
 	</xs:extension>
@@ -340,6 +341,7 @@
 	    <xs:element minOccurs="1" name="stateName" type="xs:string"/>
 	    <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string" />
 	    <xs:element minOccurs="0" name="launchTime" type="xs:dateTime" />
+	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime" />
 	    <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	    <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
 
