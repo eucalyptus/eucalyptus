@@ -109,7 +109,7 @@
   <endpoint name="EmpyreanReplyQueueVM" address="vm://EmpyreanReplyQueue" synchronous="false" />
   <model name="empyrean">
     <default-service-exception-strategy>
-      <outbound-endpoint ref="EmpyreanReplyQueueWS" />
+      <outbound-endpoint ref="EmpyreanReplyQueueVM" />
     </default-service-exception-strategy>
     <service name="EmpyreanRequestQueue">
       <inbound>
@@ -138,9 +138,9 @@
 
     <service name="EmpyreanReplyQueue">
       <inbound>
-        <inbound-endpoint ref="EmpyreanReplyQueueWS" />
+        <inbound-endpoint ref="EmpyreanReplyQueueVM" />
       </inbound>
-      <component class="edu.ucsb.eucalyptus.ic.EmpyreanReplyQueue" />
+      <component class="com.eucalyptus.ws.util.ReplyQueue" />
     </service>
 
   </model>
