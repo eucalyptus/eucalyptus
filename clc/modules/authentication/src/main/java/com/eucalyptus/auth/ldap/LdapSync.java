@@ -41,6 +41,8 @@ public class LdapSync {
   
   private static final Logger LOG = Logger.getLogger( LdapSync.class );
   
+  private static final boolean VERBOSE = true;
+  
   private static final String LDAP_SYNC_THREAD = "LDAP sync";
   
   private static final BasicAttributes WILDCARD_FILTER = new BasicAttributes( );
@@ -204,6 +206,13 @@ public class LdapSync {
     if ( !lic.hasAccountingGroups( ) ) {
       accountingGroups = lic.getGroupsPartition( );
     }
+    
+    if ( VERBOSE ) {
+      LOG.debug( "Sync remote accounts: " + accountingGroups );
+      LOG.debug( "Sync remote groups: " + groups );
+      LOG.debug( "Sync remote users: " + users );
+    }
+    
     checkConflictingIdentities( accountingGroups, groups, users );
     rebuildLocalAuthDatabase( lic, accountingGroups, groups, users );
   }
