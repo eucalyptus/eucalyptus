@@ -139,7 +139,7 @@ class Service():
     self.service_epoch = service_epoch
     self.service_state = service_state
     self.service_detail = StringList()
-	self.service_id = ServiceStatus()
+    self.service_id = ServiceStatus()
     self.euca = EucaAdmin(path=SERVICE_PATH)
     self.verbose = False
 
