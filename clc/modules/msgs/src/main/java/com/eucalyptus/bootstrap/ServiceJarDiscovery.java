@@ -53,7 +53,6 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             try {
               ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
               discovery.add( discover );
-              EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, discover.getClass( ).getCanonicalName( ) ).info( );
             } catch ( Exception e ) {
               LOG.fatal( e, e );
               jar.close( );
@@ -97,6 +96,9 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   }
   
   public static void runDiscovery( ) {
+    for ( ServiceJarDiscovery s : discovery ) {
+      EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, s.getClass( ).getCanonicalName( ) ).info( );
+    }
     for ( ServiceJarDiscovery s : discovery ) {
       runDiscovery( s );
     }
