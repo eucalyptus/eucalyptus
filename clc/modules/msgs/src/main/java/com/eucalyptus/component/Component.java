@@ -121,7 +121,6 @@ public class Component implements ComponentInformation, HasName<Component> {
   private final AtomicBoolean                        enabled      = new AtomicBoolean( false );
   private final AtomicBoolean                        local        = new AtomicBoolean( false );
   private final Map<String, Service>                 services     = Maps.newConcurrentHashMap( );
-  private final ServiceBuilder<ServiceConfiguration> builder;
   private final ComponentBootstrapper                bootstrapper;
   private final ComponentState                       stateMachine;
   private final AtomicReference<Service>             localService = new AtomicReference( null );
@@ -136,11 +135,6 @@ public class Component implements ComponentInformation, HasName<Component> {
       if ( System.getProperty( "euca.remote." + this.name ) == null ) {
         this.local.set( true );
       }
-    }
-    if ( ServiceBuilderRegistry.get( this.component ) != null ) {
-      this.builder = ServiceBuilderRegistry.get( this.component );
-    } else {
-      this.builder = new DummyServiceBuilder( this );
     }
     this.bootstrapper = new ComponentBootstrapper( this );
     this.stateMachine = new ComponentState( this );
@@ -159,7 +153,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    */
   public void initService( ) throws ServiceRegistrationException {
     if ( this.enabled.get( ) ) {
-      ServiceConfiguration config = this.builder.toConfiguration( this.getIdentity( ).getLocalEndpointUri( ) );
+      ServiceConfiguration config = this.getBuilder( ).toConfiguration( this.getIdentity( ).getLocalEndpointUri( ) );
       Service service = new Service( this, config );
       this.setupService( service );
       
@@ -241,7 +235,7 @@ public class Component implements ComponentInformation, HasName<Component> {
         }
       }
     } else {
-      this.builder.fireStart( service );
+      this.getBuilder( ).fireStart( service );
     }
   }
   
@@ -269,7 +263,7 @@ public class Component implements ComponentInformation, HasName<Component> {
         LOG.error( ex, ex );
       }
     } else {
-      this.builder.fireEnable( service );
+      this.getBuilder( ).fireEnable( service );
     }
   }
   
@@ -286,7 +280,7 @@ public class Component implements ComponentInformation, HasName<Component> {
         LOG.error( ex, ex );
       }
     } else {
-      this.builder.fireDisable( service );
+      this.getBuilder( ).fireDisable( service );
     }
   }
   
@@ -315,7 +309,7 @@ public class Component implements ComponentInformation, HasName<Component> {
         LOG.error( ex, ex );
       }
     } else {
-      this.builder.fireStop( service );
+      this.getBuilder( ).fireStop( service );
     }
   }
   
@@ -383,7 +377,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   }
   
   public ServiceBuilder<ServiceConfiguration> getBuilder( ) {
-    return this.builder;
+    return ServiceBuilderRegistry.get( this.identity );
   }
   
   /**
@@ -413,7 +407,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public List<ServiceConfiguration> list( ) throws ServiceRegistrationException {
-    return this.builder.list( );
+    return this.getBuilder( ).list( );
   }
   
   /**
@@ -522,7 +516,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   @Override
   public String toString( ) {
     return String.format( "Component %s name=%s enabled=%s local=%s state=%s builder=%s\n", this.component,
-                          this.name, this.enabled, this.local, this.getState( ), this.builder );
+                          this.name, this.enabled, this.local, this.getState( ), this.getBuilder( ) );
   }
   
   /**

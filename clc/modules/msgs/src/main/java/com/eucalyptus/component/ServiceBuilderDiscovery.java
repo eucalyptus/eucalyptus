@@ -18,8 +18,9 @@ public class ServiceBuilderDiscovery extends ServiceJarDiscovery {
       /** GRZE: this implies that service builder is a singleton **/
       ServiceBuilder b = ( ServiceBuilder ) candidate.newInstance( );
       DiscoverableServiceBuilder at = Ats.from( candidate ).get( DiscoverableServiceBuilder.class );
-      for( Component c : at.value( ) ) {
-        ServiceBuilderRegistry.addBuilder( c, b );
+      for( Class c : at.value( ) ) {
+        ComponentId compId = (ComponentId) c.newInstance( );
+        ServiceBuilderRegistry.addBuilder( compId, b );
       }
       if( Ats.from( candidate ).has( Handles.class ) ) {
         for( Class c : Ats.from( candidate ).get( Handles.class ).value( ) ) {

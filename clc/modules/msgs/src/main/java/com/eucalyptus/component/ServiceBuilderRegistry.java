@@ -72,14 +72,14 @@ import com.google.common.collect.Maps;
 public class ServiceBuilderRegistry {
   private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );
   private static Map<Class,ServiceBuilder<ServiceConfiguration>> builders = Maps.newConcurrentHashMap( );
-  private static Map<Component,ServiceBuilder<ServiceConfiguration>> componentBuilders = Maps.newConcurrentHashMap( );
+  private static Map<ComponentId,ServiceBuilder<ServiceConfiguration>> componentBuilders = Maps.newConcurrentHashMap( );
 
   public static void addBuilder( Class c, ServiceBuilder b ) {
     LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     builders.put( c, b );
   }
 
-  public static void addBuilder( Component c, ServiceBuilder b ) {
+  public static void addBuilder( ComponentId c, ServiceBuilder b ) {
     LOG.info( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     componentBuilders.put( c, b );
   }
@@ -92,7 +92,7 @@ public class ServiceBuilderRegistry {
     return builders.get( arg0 );
   }
 
-  public static ServiceBuilder<ServiceConfiguration> get( Component arg0 ) {
+  public static ServiceBuilder<ServiceConfiguration> get( ComponentId arg0 ) {
     return componentBuilders.get( arg0 );
   }
   
