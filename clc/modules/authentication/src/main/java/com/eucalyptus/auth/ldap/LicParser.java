@@ -125,7 +125,7 @@ public class LicParser {
   private void parseAccountingGroups( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject accountingGroups = JsonUtils.getByType( JSONObject.class, licJson, LicSpec.ACCOUNTING_GROUPS );
     lic.setAccountingGroupBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.ACCOUNTING_GROUP_BASE_DN ) ) );
-    parseSelection( accountingGroups, lic.getAccountingGroups( ) );
+    lic.setAccountingGroups( parseSelection( accountingGroups ) );
     lic.setAccountingGroupIdAttribute( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.ID_ATTRIBUTE ) );
     lic.setGroupsAttribute( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.GROUPS_ATTRIBUTE ) );
   }
@@ -133,7 +133,7 @@ public class LicParser {
   private void parseGroups( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject groups = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.GROUPS );
     lic.setGroupBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, groups, LicSpec.GROUP_BASE_DN ) ) );
-    parseSelection( groups, lic.getGroups( ) );
+    lic.setGroups( parseSelection( groups ) );
     lic.setGroupIdAttribute( JsonUtils.getRequiredByType( String.class, groups, LicSpec.ID_ATTRIBUTE ) );
     lic.setUsersAttribute( JsonUtils.getRequiredByType( String.class, groups, LicSpec.USERS_ATTRIBUTE ) );
   }
@@ -141,20 +141,27 @@ public class LicParser {
   private void parseUsers( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject users = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.USERS );
     lic.setUserBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, users, LicSpec.USER_BASE_DN ) ) );
-    parseSelection( users, lic.getUsers( ) );
+    lic.setUsers( parseSelection( users ) );
     lic.setUserIdAttribute( JsonUtils.getRequiredByType( String.class, users, LicSpec.ID_ATTRIBUTE ) );
     lic.getUserInfoAttributes( ).addAll( JsonUtils.getArrayByType( String.class, users, LicSpec.USER_INFO_ATTRIBUTES ) );
     lic.setPasswordAttribute( JsonUtils.getRequiredByType( String.class, users, LicSpec.PASSWORD_ATTRIBUTE ) );
   }
   
-  private void parseSelection( JSONObject obj, SetFilter filter ) {
-    String which = JsonUtils.checkBinaryOption( obj, LicSpec.SELECT, LicSpec.NOT_SELECT );
-    if ( LicSpec.SELECT.equals( which ) ) {
-      filter.setComplement( false );
-    } else {
-      filter.setComplement( true );
+  private SetFilter parseSelection( JSONObject obj ) {
+    try {
+      SetFilter filter = new SetFilter( );
+      String which = JsonUtils.checkBinaryOption( obj, LicSpec.SELECT, LicSpec.NOT_SELECT );
+      if ( LicSpec.SELECT.equals( which ) ) {
+        filter.setComplement( false );
+      } else {
+        filter.setComplement( true );
+      }
+      filter.addAll( JsonUtils.getArrayByType( String.class, obj, which ) );
+      return filter;
+    } catch ( JSONException e ) {
+      // Return a contain-all filter, i.e. *
+      return new SetFilter( true );
     }
-    filter.addAll( JsonUtils.getArrayByType( String.class, obj, which ) );
   }
   
   private void parseSyncConfig( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {

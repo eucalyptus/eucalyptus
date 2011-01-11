@@ -8,13 +8,16 @@ public class SetFilter {
 
   private static final long serialVersionUID = 1L;
 
-  private Set<String> set;
+  private Set<String> set = Sets.newHashSet( );
   private boolean complement;
   
   public SetFilter( ) {
-    this.set = Sets.newHashSet( );
   }
 
+  public SetFilter( boolean complement ) {
+    this.complement = complement;
+  }
+  
   public void setComplement( boolean complement ) {
     this.complement = complement;
   }
