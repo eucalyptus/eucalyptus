@@ -41,7 +41,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
 import edu.ucsb.eucalyptus.msgs.ModifyClusterAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
-@DiscoverableServiceBuilder( Cluster.class )
+@DiscoverableServiceBuilder( com.eucalyptus.component.id.Cluster.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   private static Logger LOG = Logger.getLogger( ClusterBuilder.class );
