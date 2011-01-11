@@ -106,7 +106,7 @@ class Component():
 class Service():
 
   def __init__(self, service_uuid=None, service_name=None, service_partition=None,
-               service_type=None, service_url=None, service_epoch=None, service_state=None
+               service_type=None, service_url=None, service_epoch=None, service_state=None,
                service_detail=None):
     self.service_uuid = service_uuid
     self.service_name = service_name
