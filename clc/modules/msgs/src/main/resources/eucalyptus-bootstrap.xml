@@ -149,7 +149,7 @@
       <inbound>
         <inbound-endpoint ref="EmpyreanInternalVM" />
       </inbound>
-      <component class="com.eucalyptus.cloud.ws.Empyrean" />
+      <component class="com.eucalyptus.ws.Empyrean" />
     </service>
   </model>
 
