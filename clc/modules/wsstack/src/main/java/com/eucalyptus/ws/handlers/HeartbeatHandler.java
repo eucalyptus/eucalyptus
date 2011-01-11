@@ -360,12 +360,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       }
     }
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
-      if ( !initializedComponents.contains( component.getComponent( ) ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
+      if ( !initializedComponents.contains( component.getComponent( ) ) && !Components.lookup( "eucalyptus" ).isLocal( ) ) {
         System.exit( 123 );//HUP
       }
       registeredComponents.add( component.getComponent( ) );
     }
-    if ( !registeredComponents.containsAll( initializedComponents ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
+    if ( !registeredComponents.containsAll( initializedComponents ) && !Components.lookup( "eucalyptus" ).isLocal( ) ) {
       System.exit( 123 );//HUP
     }
     //FIXME: end.

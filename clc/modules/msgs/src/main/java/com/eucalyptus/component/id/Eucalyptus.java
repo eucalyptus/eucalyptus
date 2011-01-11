@@ -66,10 +66,24 @@ package com.eucalyptus.component.id;
 import com.eucalyptus.component.ComponentId;
 
 public class Eucalyptus extends ComponentId {
-
+  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://EucalyptusRequestQueue";
   }
 
+  @Override
+  public Boolean hasDispatcher( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return true;
+  }
 }

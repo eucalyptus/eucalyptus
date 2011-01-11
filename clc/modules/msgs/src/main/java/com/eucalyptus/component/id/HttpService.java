@@ -77,4 +77,18 @@ public class HttpService extends ComponentId {
     return "vm://HttpServer";
   }
   
+  @Override
+  public Boolean hasDispatcher( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return true;
+  }
 }

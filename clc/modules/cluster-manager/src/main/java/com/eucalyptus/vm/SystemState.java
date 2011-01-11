@@ -91,6 +91,7 @@ import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.TerminateCallback;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -356,7 +357,7 @@ public class SystemState {
   
   public static ArrayList<ReservationInfoType> handle( String userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
-    boolean dns = Component.dns.isLocal( ) && !( instancesSet.remove( DESCRIBE_NO_DNS ) || instancesSet.remove( ALT_PREFIX + DESCRIBE_NO_DNS ) );
+    boolean dns = Components.lookup( "dns" ).isLocal( ) && !( instancesSet.remove( DESCRIBE_NO_DNS ) || instancesSet.remove( ALT_PREFIX + DESCRIBE_NO_DNS ) );
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( ( !isAdmin && !userId.equals( v.getOwnerId( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {

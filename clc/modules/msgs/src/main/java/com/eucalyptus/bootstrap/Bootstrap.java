@@ -73,6 +73,8 @@ import java.util.List;
 import java.util.Properties;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -332,26 +334,27 @@ public class Bootstrap {
       String bc = bootstrap.getClass( ).getCanonicalName( );
       Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
       comp = bootstrap.getProvides( );
+      Component component = Components.lookup( comp.name( ) );
       if ( Components.delegate.any.equals( comp ) ) {
         for( Component c : Components.list( ) ) {
           if ( !bootstrap.checkLocal( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
-                              "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", component.getName( ),
+                              "Component." + component.getName( ) + ".isLocal", component.isLocal( ).toString( ) ).info( );
           } else if ( !bootstrap.checkRemote( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
-                              "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", component.getName( ),
+                              "Component." + component.getName( ) + ".isLocal", component.isLocal( ).toString( ) ).info( );
           } else {
             c.getBootstrapper( ).addBootstrapper( bootstrap );
           }
         }
       } else if ( Components.delegate.bootstrap.equals( comp ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + comp.name( ) ).info( );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + component.getName( ) ).info( );
         if ( !bootstrap.checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
-                            "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", component.getName( ),
+                            "Component." + component.getName( ) + ".isLocal", component.isLocal( ).toString( ) ).info( );
         } else if ( !bootstrap.checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
-                            "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", component.getName( ),
+                            "Component." + component.getName( ) + ".isLocal", component.isLocal( ).toString( ) ).info( );
         } else {
           stage.addBootstrapper( bootstrap );
         }
@@ -462,7 +465,6 @@ public class Bootstrap {
     Bootstrap.doDiscovery( );
 
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
-//    Iterables.all( Stage.list( ), loadConfigs );
     for( Component c : Components.list( ) ) {
       Component.Transition.INITIALIZING.transit( c );
     }
@@ -475,10 +477,11 @@ public class Bootstrap {
      * and satisfy any forward references from bootstrappers.
      */
     LOG.info( LogUtil.header( "Building core local services." ) );
+    final Component eucalyptusComp = Components.lookup( "eucalyptus" );
     Iterables.all( Components.list( ), new Callback.Success<Component>( ) {
       @Override
       public void fire( Component comp ) {
-        if( ( comp.getPeer( ).isEnabled( ) && comp.getPeer( ).isAlwaysLocal( ) ) || ( Components.delegate.eucalyptus.isLocal( ) && comp.getPeer( ).isCloudLocal( ) ) ){
+        if( ( comp.isAvailableLocally( ) && comp.getIdentity( ).isAlwaysLocal( ) ) || ( eucalyptusComp.isLocal( ) && comp.getIdentity( ).isCloudLocal( ) ) ){
           try {
             comp.initService( );
           } catch ( ServiceRegistrationException ex ) {

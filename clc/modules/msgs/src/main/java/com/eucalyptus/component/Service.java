@@ -94,7 +94,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   public Service( Component parent, ServiceConfiguration serviceConfig ) {
     this.parent = parent;
     this.serviceConfiguration = serviceConfig;
-    if ( "cluster".equals( parent.getName( ) ) && com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
+    if ( "cluster".equals( parent.getName( ) ) && Components.lookup( "eucalyptus" ).isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
       this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
       URI uri = this.parent.getConfiguration( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
       this.endpoint = new ServiceEndpoint( this, false, uri );

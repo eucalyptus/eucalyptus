@@ -77,5 +77,19 @@ public class Empyrean extends ComponentId {
     return "eucalyptus-bootstrap.xml";
   }
   
+  @Override
+  public Boolean hasDispatcher( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return false;
+  }
   
 }

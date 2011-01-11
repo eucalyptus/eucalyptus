@@ -87,4 +87,18 @@ public class Database extends ComponentId {
     return "hsqls://%s:%d/eucalyptus";
   }
   
+  @Override
+  public Boolean hasDispatcher( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return true;
+  }
 }

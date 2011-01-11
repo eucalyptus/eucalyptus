@@ -77,4 +77,18 @@ public class ComponentService extends ComponentId {
     return "vm://ComponentInternal";
   }
   
+  @Override
+  public Boolean hasDispatcher( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return false;
+  }
 }

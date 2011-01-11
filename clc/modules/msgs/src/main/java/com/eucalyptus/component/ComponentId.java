@@ -46,6 +46,10 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     return this.name;
   }
   
+  public abstract Boolean isCloudLocal( );
+  public abstract Boolean hasDispatcher( );
+  public abstract Boolean isAlwaysLocal( );
+
   
   /**
    * Get the HTTP service path

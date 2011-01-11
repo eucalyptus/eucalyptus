@@ -135,7 +135,7 @@ public class SystemCredentialProvider extends Bootstrapper {
         LOG.fatal( e, e );
         throw e;
       }
-    } else if ( Component.eucalyptus.isLocal( ) ) {
+    } else if ( Components.lookup( "eucalyptus" ).isLocal( ) ) {
       this.createSystemCredentialProviderKey( this.name );
       return;
     }

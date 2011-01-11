@@ -77,4 +77,18 @@ public class ConfigurationService extends ComponentId {
     return "vm://ConfigurationInternal";
   }
   
+  @Override
+  public Boolean hasDispatcher( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return true;
+  }
 }

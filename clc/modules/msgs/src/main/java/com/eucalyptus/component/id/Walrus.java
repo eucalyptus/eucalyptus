@@ -73,4 +73,18 @@ public class Walrus extends ComponentId {
     return "vm://BukkitInternal";
   }
   
+  @Override
+  public Boolean hasDispatcher( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return false;
+  }
 }

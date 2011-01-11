@@ -107,24 +107,12 @@ public enum Component {
     this.cloudLocal = cloudLocal;
   }
   
-  public Boolean isEnabled( ) {
-    try {
-      return Components.lookup( this ).isAvailableLocally( );
-    } catch ( NoSuchElementException ex ) {
-      return false;
-    }
-  }
-  
   public Boolean isLocal( ) {
     try {
       return Components.lookup( this ).isLocal( );
     } catch ( NoSuchElementException ex ) {
       return false;
     }
-  }
-  
-  public String getLocalAddress( ) {
-    return this.getLocalUri( ).toASCIIString( );
   }
   
   public URI getUri( ) {
@@ -166,12 +154,5 @@ public enum Component {
     return Arrays.asList( Component.values( ) );
   }
 
-  public String getRegistryKey( String hostName ) {
-    if( NetworkUtil.testLocal( hostName ) ) {
-      return this.name( ) + "@localhost";
-    } else {
-      return this.name( ) + "@" + hostName;
-    }
-  }
   
 }

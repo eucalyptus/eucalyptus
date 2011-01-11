@@ -80,6 +80,7 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -310,6 +311,7 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   private Map<String, String> getMetadataMap( ) {
+    boolean dns = Components.lookup( "dns" ).isLocal( );
     Map<String, String> m = new HashMap<String, String>( );
     //ASAP: FIXME: GRZE:
 //    m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
@@ -321,13 +323,13 @@ public class VmInstance implements HasName<VmInstance> {
     m.put( "hostname", this.getPublicAddress( ) );
     m.put( "instance-id", this.getInstanceId( ) );
     m.put( "instance-type", this.getVmTypeInfo( ).getName( ) );
-    if ( Component.dns.isLocal( ) ) {
+    if ( dns ) {
       m.put( "local-hostname", this.getNetworkConfig( ).getPrivateDnsName( ) );
     } else {
       m.put( "local-hostname", this.getNetworkConfig( ).getIpAddress( ) );
     }
     m.put( "local-ipv4", this.getNetworkConfig( ).getIpAddress( ) );
-    if ( Component.dns.isLocal( ) ) {
+    if ( dns ) {
       m.put( "public-hostname", this.getNetworkConfig( ).getPublicDnsName( ) );
     } else {
       m.put( "public-hostname", this.getPublicAddress( ) );

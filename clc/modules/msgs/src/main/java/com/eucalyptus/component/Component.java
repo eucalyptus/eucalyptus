@@ -376,6 +376,15 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.name;
   }
   
+  public String getRegistryKey( String hostName ) {
+    if( NetworkUtil.testLocal( hostName ) ) {
+      return this.getName( ) + "@localhost";
+    } else {
+      return this.getName( ) + "@" + hostName;
+    }
+  }
+
+  
   public ComponentConfiguration getConfiguration( ) {
     return this.configuration;
   }
@@ -579,5 +588,31 @@ public class Component implements ComponentInformation, HasName<Component> {
    */
   public ComponentId getIdentity( ) {
     return this.identity;
+  }
+
+  /**
+   * @return
+   * @see com.eucalyptus.component.ComponentId#name()
+   */
+  public String name( ) {
+    return this.identity.name( );
+  }
+
+  /**
+   * @param hostName
+   * @param port
+   * @return
+   * @see com.eucalyptus.component.ComponentId#makeRemoteUri(java.lang.String, java.lang.Integer)
+   */
+  public URI makeRemoteUri( String hostName, Integer port ) {
+    return this.identity.makeRemoteUri( hostName, port );
+  }
+
+  /**
+   * @return
+   * @see com.eucalyptus.component.ComponentId#getLocalEndpointName()
+   */
+  public String getLocalEndpointName( ) {
+    return this.identity.getLocalEndpointName( );
   }
 }

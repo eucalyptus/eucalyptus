@@ -72,4 +72,18 @@ public class Dns extends ComponentId {
     return "vm://DNSControlInternal";
   }  
   
+  @Override
+  public Boolean hasDispatcher( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return true;
+  }
 }
