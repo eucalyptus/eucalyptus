@@ -145,7 +145,7 @@ class Service():
     self.verbose = False
 
   def __repr__(self):
-      return 'SERVICE\t%s\t%s\t%s\t%s' % (self.service_id, self.service_epoch, self.service_state, self.service_detail)
+      return 'SERVICE\t%s\t%s\t%s' % (self.service_id, self.service_epoch, self.service_state)
 
   def startElement(self, name, attrs, connection):
     if name == 'euca:serviceId':
