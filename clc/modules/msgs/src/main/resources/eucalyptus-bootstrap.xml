@@ -124,7 +124,7 @@
       </outbound>
     </service>
 
-    <service name="Empyrean">
+    <service name="EmpyreanService">
       <inbound>
         <inbound-endpoint ref="EmpyreanVM" />
       </inbound>
@@ -144,7 +144,7 @@
     </service>
 
   </model>
-  <model name="EmpyreanInternal">
+  <model name="empyrean-internal">
     <service name="EmpyreanInternal">
       <inbound>
         <inbound-endpoint ref="EmpyreanInternalVM" />
