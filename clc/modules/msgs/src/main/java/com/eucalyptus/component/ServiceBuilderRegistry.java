@@ -93,7 +93,11 @@ public class ServiceBuilderRegistry {
   }
 
   public static ServiceBuilder<ServiceConfiguration> get( ComponentId arg0 ) {
-    return componentBuilders.get( arg0 );
+    if( componentBuilders.containsKey( arg0 ) ) {
+      return componentBuilders.get( arg0 );
+    } else {
+      return new DummyServiceBuilder( Components.lookup( arg0 ) );
+    }
   }
   
 }

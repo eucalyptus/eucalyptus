@@ -187,6 +187,10 @@ public class Components {
     return Components.lookup( Component.class, componentName );
   }
   
+  public static Component lookup( ComponentId componentId ) throws NoSuchElementException {
+    return Components.lookup( Component.class, componentId.getName( ) );
+  }
+
   public static Component lookup( com.eucalyptus.bootstrap.Component component ) throws NoSuchElementException {
     return Components.lookup( Component.class, component.name( ) );
   }
