@@ -128,10 +128,10 @@ public class ServiceStatusType extends EucalyptusData {
   Integer localEpoch;
   ArrayList<String> details = new ArrayList<String>( );
 }
-public class DescribeServicesType extends EucalyptusMessage {
-  List<String> uris;
+public class DescribeServicesType extends EmpyreanMessage {
+  ArrayList<String> uris = new ArrayList<String>( );
 }
-public class DescribeServicesResponseType extends EucalyptusMessage {
+public class DescribeServicesResponseType extends EmpyreanMessage {
   List<ServiceStatusType> serviceStatus;
 }
 public class RegisterComponentType extends ConfigurationMessage {
