@@ -71,6 +71,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
@@ -123,7 +124,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
         try {
           Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
           StorageControllerConfiguration sc = Configuration.lookupSc( cluster.getName( ) );
-          Dispatcher dispatcher = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) );
+          Dispatcher dispatcher = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) );
           String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
           LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher=" + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );
           dispatcher.send( new DetachStorageVolumeType( iqn, volume.getVolumeId( ) ) );
