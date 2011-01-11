@@ -91,4 +91,9 @@ public class HttpService extends ComponentId {
   public Boolean isCloudLocal( ) {
     return true;
   }
+
+  @Override
+  public String getModelConfiguration( ) {
+    return "eucalyptus-www.xml";
+  }
 }
