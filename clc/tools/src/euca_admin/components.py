@@ -120,7 +120,7 @@ class Service():
   def __repr__(self):
       return 'SERVICE\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (self.service_uuid, self.service_name,
                                       self.service_partition, self.service_type, self.service_url, 
-									  self.service_epoch, self.service_state)
+                                      self.service_epoch, self.service_state)
 
   def startElement(self, name, attrs, connection):
       return None
@@ -128,18 +128,18 @@ class Service():
   def endElement(self, name, value, connection):
     if name == 'euca:item':
       self.detail = '%s, %s' % (self.detail, value)
-	elif name == 'euca:localState':
-	  self.service_state = value
-	elif name == 'euca:localEpoch':
-	  self.service_epoch = value
-	elif name == 'euca:uuid':
-	  self.service_uuid = value
-	elif name == 'euca:partition':
-	  self.service_partition = value
-	elif name == 'euca:name':
-	  self.service_name = value
-	elif name == 'euca:type':
-	  self.service_type = value
+    elif name == 'euca:localState':
+      self.service_state = value
+    elif name == 'euca:localEpoch':
+      self.service_epoch = value
+    elif name == 'euca:uuid':
+      self.service_uuid = value
+    elif name == 'euca:partition':
+      self.service_partition = value
+    elif name == 'euca:name':
+      self.service_name = value
+    elif name == 'euca:type':
+      self.service_type = value
     elif name == 'euca:uri':
       self.service_uri = value
     else:
