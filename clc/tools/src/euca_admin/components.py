@@ -113,7 +113,7 @@ class ServiceStatus():
     self.service_url = service_url
 
   def __repr__(self):
-      return '%-15.15s\t%30.30s\t%s' % (self.service_type.upper(), ('%15.15s.%-15.15s'% (self.service_partition, self.service_name)), self.service_url)
+      return '%-15.15s\t%s\t%s' % (self.service_type.upper(), ('%s.%s'% (self.service_partition, self.service_name)))
 
   def startElement(self, name, attrs, connection):
       return None    
@@ -144,8 +144,7 @@ class Service():
     self.verbose = False
 
   def __repr__(self):
-      return 'SERVICE\t%s\nSERVICE\t%15.15s.%-15.15s\t%s\t%s' % (self.service_id, self.service_id.service_name, self.service_id.service_partition,
-																self.service_state, self.service_epoch )
+      return 'SERVICE\t%s\t%s\t%s\t%s' % (self.service_id, self.service_state, self.service_epoch, self.service_id.service_url )
 
   def startElement(self, name, attrs, connection):
     if name == 'euca:serviceId':
