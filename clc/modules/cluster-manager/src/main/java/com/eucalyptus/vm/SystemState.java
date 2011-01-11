@@ -225,7 +225,7 @@ public class SystemState {
         GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
         msg.setUserId( userId );
 
-        reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Component.walrus ).send( msg );
+        reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
       }
       catch ( Exception e ) {
         throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
