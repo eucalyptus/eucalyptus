@@ -132,7 +132,7 @@ public class DescribeServicesType extends EmpyreanMessage {
   ArrayList<String> uris = new ArrayList<String>( );
 }
 public class DescribeServicesResponseType extends EmpyreanMessage {
-  List<ServiceStatusType> serviceStatus;
+  ArrayList<ServiceStatusType> serviceStatus = new ArrayList<ServiceStatusType>( );
 }
 public class RegisterComponentType extends ConfigurationMessage {
   String partition;
