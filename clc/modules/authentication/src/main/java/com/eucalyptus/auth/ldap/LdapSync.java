@@ -194,7 +194,7 @@ public class LdapSync {
                                   lic.getUsersAttribute( ),
                                   lic.getUserIdAttribute( ) );
       users = loadLdapUsers( ldap, lic );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       LOG.error( e, e );
       LOG.error( "Failed to sync with LDAP", e );
       return;
@@ -251,7 +251,7 @@ public class LdapSync {
       }
       // Remaining accounts are obsolete
       removeObsoleteAccounts( oldAccountSet );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       LOG.error( e, e );
       LOG.error( "Error in rebuilding local auth database", e );
     }
@@ -265,7 +265,11 @@ public class LdapSync {
       for ( String user : getAccountUserSet( accountMembers, groups ) ) {
         try {
           LOG.debug( "Adding new user " + user );
-          Users.addUser( user, "/", true /* skipRegistration */, true /* enabled */, users.get( user ), true /* createKey */, false /* createPassword */, accountName );
+          Map<String, String> info = users.get( user );
+          if ( info == null ) {
+            LOG.warn( "Empty user info for user " + user );
+          }
+          Users.addUser( user, "/", true /* skipRegistration */, true /* enabled */, info, true /* createKey */, false /* createPassword */, accountName );
         } catch ( AuthException e ) {
           LOG.error( e, e );
           LOG.warn( "Failed add new user " + user, e );
@@ -276,9 +280,14 @@ public class LdapSync {
         try {
           LOG.debug( "Adding new group " + group );
           dbGroup = Groups.addGroup( group, "/", accountName );
-          for ( String user : groups.get( group ) ) {
-            LOG.debug( "Adding " + user + " to group " + group );
-            dbGroup.addMember( new DummyPrincipal( user ) );
+          Set<String> groupUsers = groups.get( group );
+          if ( groupUsers == null ) {
+            LOG.error( "Empty user set for group " + group );
+          } else {
+            for ( String user : groupUsers ) {
+              LOG.debug( "Adding " + user + " to group " + group );
+              dbGroup.addMember( new DummyPrincipal( user ) );
+            }
           }
         } catch ( AuthException e ) {
           LOG.error( e, e );
@@ -294,7 +303,12 @@ public class LdapSync {
   private static Set<String> getAccountUserSet( Set<String> members, Map<String, Set<String>> groups ) {
     Set<String> userSet = Sets.newHashSet( );
     for ( String member : members ) {
-      userSet.addAll( groups.get( member ) );
+      Set<String> groupMembers = groups.get( member );
+      if ( groupMembers == null ) {
+        LOG.error( "Empty user set of group " + member );
+      } else {
+        userSet.addAll( groupMembers );
+      }
     }
     return userSet;
   }
@@ -354,6 +368,10 @@ public class LdapSync {
 
   private static void addNewGroup( String accountName, String group, Set<String> users ) {
     LOG.debug( "Adding new group " + group + " in account " + accountName );
+    if ( users == null ) {
+      LOG.error( "Empty new user set of group " + group );
+      return;
+    }
     try {
       Group g = Groups.addGroup( group, "/", accountName );
       for ( String user : users ) {
@@ -368,6 +386,10 @@ public class LdapSync {
 
   private static void updateGroup( String accountName, String group, Set<String> users ) {
     LOG.debug( "Updating group " + group + " in account " + accountName );
+    if ( users == null ) {
+      LOG.error( "Empty new user set of group " + group );
+      return;
+    }
     try {
       // Get local user set of the group
       Set<String> localUserSet = Sets.newHashSet( );
@@ -419,12 +441,19 @@ public class LdapSync {
 
   private static void addNewUser( String accountName, String user, Map<String, String> info ) throws AuthException {
     LOG.debug( "Adding new user " + user + " in account " + accountName );
+    if ( info == null ) {
+      LOG.warn( "Empty user info for user " + user );
+    }
     Users.addUser( user, "/", true /* skipRegistration */, true /* enabled */, info, true /* createKey */, false /* createPassword */, accountName );
   }
 
   private static void updateUser( String accountName, String user, Map<String, String> map ) throws AuthException {
     LOG.debug( "Updating user " + user + " in account " + accountName );
-    Users.lookupUserByName( user, accountName ).setInfo( map );
+    if ( map == null ) {
+      LOG.error( "Empty info map of user " + user );
+    } else {
+      Users.lookupUserByName( user, accountName ).setInfo( map );
+    }
   }
 
   private static Set<String> getLocalUserSet( String accountName ) throws AuthException {
@@ -539,6 +568,7 @@ public class LdapSync {
         for ( String attr : lic.getUserInfoAttributes( ) ) {
           infoMap.put( attr, ( String ) attrs.get( attr ).get( ) );
         }
+        userMap.put( getId( lic.getUserIdAttribute( ), attrs ), infoMap );
       }
       return userMap;
     } catch ( NamingException e ) {
