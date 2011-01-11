@@ -132,7 +132,7 @@ public class DescribeServicesType extends EucalyptusMessage {
   List<String> uris;
 }
 public class DescribeServicesResponseType extends EucalyptusMessage {
-  List<ServiceStatusType> services;
+  List<ServiceStatusType> serviceStatus;
 }
 public class RegisterComponentType extends ConfigurationMessage {
   String partition;
