@@ -214,12 +214,6 @@ public class Components {
     return c;
   }
 
-  public static Component create( String name, URI uri ) throws ServiceRegistrationException {
-    Component c = new Component( name, uri );
-    register( c );
-    return c;
-  }
-
   private final static Function<Component, String> componentToString = componentToString( );
   
   public static Function<Component, String> componentToString( ) {
