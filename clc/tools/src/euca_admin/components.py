@@ -115,7 +115,7 @@ class Service():
     self.service_url = service_url
     self.service_epoch = service_epoch
     self.service_state = service_state
-	self.service_detail = service_detail
+    self.service_detail = service_detail
     self.euca = EucaAdmin(path=SERVICE_PATH)
     self.verbose = False
 
