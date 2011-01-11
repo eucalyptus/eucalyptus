@@ -161,7 +161,7 @@ class Service():
       self.euca.connection.build_list_params(params,components,'Name')
     try:
       list = self.euca.connection.get_list('DescribeServices', params,
-                                           [('euca:item', Services)])
+                                           [('euca:item', Service)])
       for i in list:
         if verbose:
           print i
