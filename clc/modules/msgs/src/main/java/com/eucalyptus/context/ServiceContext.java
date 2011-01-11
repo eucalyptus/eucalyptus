@@ -211,7 +211,7 @@ public class ServiceContext {
     }
     for ( Component comp : Components.list( ) ) {
       if ( comp.isRunningLocally( ) ) {
-        if ( comp.getIdentity( ).isCloudLocal( ) ) {
+        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
           LOG.info( "-> Preparing component cfg: " + comp.getIdentity( ).getModelConfiguration( ) );
           configs.add( comp.getIdentity( ).getModel( ) );
         }
