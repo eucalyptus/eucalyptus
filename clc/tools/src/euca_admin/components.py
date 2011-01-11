@@ -167,7 +167,7 @@ class Service():
       for i in list:
         if verbose:
           print i
-        elif not verbose and not i.host_name == 'detail':
+        elif not verbose:
           print i
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
