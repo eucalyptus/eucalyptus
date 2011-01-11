@@ -94,6 +94,8 @@ import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -373,7 +375,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     final Component c;
     if ( !Components.contains( componentName ) ) {
       try {
-        c = Components.create( componentName, null );
+        ComponentId compId = ComponentIds.lookup( componentName );
+        c = Components.create( compId );
       } catch ( ServiceRegistrationException ex ) {
         LOG.error( ex , ex );
         throw new RuntimeException( ex );

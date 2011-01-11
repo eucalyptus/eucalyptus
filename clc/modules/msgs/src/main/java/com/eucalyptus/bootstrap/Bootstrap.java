@@ -327,15 +327,6 @@ public class Bootstrap {
    */
   @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
-    for( com.eucalyptus.bootstrap.Component comp : com.eucalyptus.bootstrap.Component.values( ) ) {
-      if( !Components.contains( comp ) && !comp.any.equals( comp ) ) {
-        try {
-          Components.create( comp.name( ), null );
-        } catch ( ServiceRegistrationException ex ) {
-          LOG.error( ex , ex );
-        }
-      }
-    }
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
       com.eucalyptus.bootstrap.Component comp;
       String bc = bootstrap.getClass( ).getCanonicalName( );
@@ -364,15 +355,6 @@ public class Bootstrap {
         } else {
           stage.addBootstrapper( bootstrap );
         }
-//      } else if ( !comp.isCloudLocal( ) && !comp.isEnabled( ) && Components.contains( comp ) ) { //report skipping a bootstrapper for an enabled component
-//        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "Provides", comp.name( ),
-//                          "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
-//      } else if ( !bootstrap.checkLocal( ) ) {
-//        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
-//                          "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
-//      } else if ( !bootstrap.checkRemote( ) ) {
-//        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
-//                          "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
       } else {
         Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
       } 
@@ -511,48 +493,5 @@ public class Bootstrap {
 
     LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
   }
-  
-  private static Callback.Success<Bootstrap.Stage> loadConfigs = new Callback.Success<Bootstrap.Stage>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public void fire( Bootstrap.Stage stage ) {
-                                                                   Enumeration<URL> p1;
-                                                                   URI u = null;
-                                                                   try {
-                                                                     p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( String.format( "com.eucalyptus.%sProvider",
-                                                                                                                                                        stage.name( ).replaceAll( "Init\\Z",
-                                                                                                                                                                                  "" ) ) );
-                                                                     if ( !p1.hasMoreElements( ) ) return;
-                                                                     while ( p1.hasMoreElements( ) ) {
-                                                                       u = p1.nextElement( ).toURI( );
-                                                                       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_RESOURCES, stage.name( ),
-                                                                                         u.toString( ) ).trace( );
-                                                                       Properties props = new Properties( );
-                                                                       props.load( u.toURL( ).openStream( ) );
-                                                                       String name = props.getProperty( "name" );
-                                                                       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_CONFIGURATION, name ).trace( );
-                                                                       if ( Components.contains( name ) ) {
-                                                                         Components.deregister( Components.lookup( name ) );
-                                                                       }
-                                                                       try {
-                                                                         Components.create( name, u );
-                                                                         LOG.debug( "Loaded " + name + " from " + u );
-                                                                       } catch ( ServiceRegistrationException e ) {
-                                                                         LOG.debug( e, e );
-                                                                         throw BootstrapException.throwFatal( "Error in component bootstrap: "
-                                                                                                                  + e.getMessage( ), e );
-                                                                       }
-                                                                       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_COMPONENT, name ).info( );
-                                                                     }
-                                                                   } catch ( IOException e ) {
-                                                                     LOG.error( e, e );
-                                                                     throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-                                                                   } catch ( URISyntaxException e ) {
-                                                                     LOG.error( e, e );
-                                                                     throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-                                                                   }
-                                                                 }
-                                                                 
-                                                               };
   
 }

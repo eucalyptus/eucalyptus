@@ -148,29 +148,6 @@ public class Component implements ComponentInformation, HasName<Component> {
     this.stateMachine = new ComponentState( this );
   }
   
-  Component( String name, URI configFile ) throws ServiceRegistrationException {
-    this.name = name;
-    this.component = initComponent( );
-    if ( System.getProperty( "euca.disable." + this.name ) == null ) {
-      this.enabled.set( true );
-      if ( System.getProperty( "euca.remote." + this.name ) == null ) {
-        this.local.set( true );
-      }
-    }
-    if ( configFile != null ) {
-      this.configuration = new ComponentConfiguration( this, configFile );
-    } else {
-      this.configuration = new ComponentConfiguration( this );
-    }
-    if ( ServiceBuilderRegistry.get( this.component ) != null ) {
-      this.builder = ServiceBuilderRegistry.get( this.component );
-    } else {
-      this.builder = new DummyServiceBuilder( this );
-    }
-    this.bootstrapper = new ComponentBootstrapper( this );
-    this.stateMachine = new ComponentState( this );
-  }
-  
   public Service getLocalService( ) {
     return this.localService.get( );
   }

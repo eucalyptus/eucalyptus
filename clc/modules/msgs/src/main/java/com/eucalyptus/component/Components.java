@@ -171,7 +171,8 @@ public class Components {
   public static <T extends ComponentInformation> T lookup( Class<T> type, String name ) throws NoSuchElementException {
     if ( !contains( type, name ) ) {
       try {
-        Components.create( name, null );
+        ComponentId compId = ComponentIds.lookup( name );
+        Components.create( compId );
         return Components.lookup( type, name );
       } catch ( ServiceRegistrationException ex ) {
         throw new NoSuchElementException( "Missing entry for component '" + name + "' info type: " + type.getSimpleName( ) + " ("
