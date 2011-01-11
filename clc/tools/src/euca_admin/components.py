@@ -106,7 +106,8 @@ class Component():
 class Service():
 
   def __init__(self, service_uuid=None, service_name=None, service_partition=None,
-               service_type=None, service_url=None, service_epoch=None, service_state=None):
+               service_type=None, service_url=None, service_epoch=None, service_state=None
+               service_detail=None):
     self.service_uuid = service_uuid
     self.service_name = service_name
     self.service_partition = service_partition
@@ -114,20 +115,21 @@ class Service():
     self.service_url = service_url
     self.service_epoch = service_epoch
     self.service_state = service_state
+	self.service_detail = service_detail
     self.euca = EucaAdmin(path=SERVICE_PATH)
     self.verbose = False
 
   def __repr__(self):
-      return 'SERVICE\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (self.service_uuid, self.service_name,
+      return 'SERVICE\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (self.service_uuid, self.service_name,
                                       self.service_partition, self.service_type, self.service_url, 
-                                      self.service_epoch, self.service_state)
+                                      self.service_epoch, self.service_state, self.service_detail)
 
   def startElement(self, name, attrs, connection):
       return None
 
   def endElement(self, name, value, connection):
     if name == 'euca:item':
-      self.detail = '%s, %s' % (self.detail, value)
+      self.service_detail = '%s, %s' % (self.detail, value)
     elif name == 'euca:localState':
       self.service_state = value
     elif name == 'euca:localEpoch':
