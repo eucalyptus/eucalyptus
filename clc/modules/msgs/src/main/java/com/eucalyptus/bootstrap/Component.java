@@ -89,7 +89,7 @@ public enum Component {
   private static Logger LOG = Logger.getLogger( Component.class );
 
   /**
-   * @note is a sub-service of {@link Component.eucalyptus}
+   * @note is a sub-service of {@link ComponentService.eucalyptus}
    */
   private final Boolean cloudLocal;
   /**

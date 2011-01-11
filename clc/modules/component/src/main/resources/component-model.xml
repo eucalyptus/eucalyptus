@@ -57,6 +57,10 @@
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0 http://eucalyptus.cs.ucsb.edu/schema/cloud/1.0/euca.xsd">
 
+    <spring:beans>
+        <spring:import resource="classpath:component-services.xml"/>
+    </spring:beans>
+
 	<model name="component">
 
 		<default-service-exception-strategy>

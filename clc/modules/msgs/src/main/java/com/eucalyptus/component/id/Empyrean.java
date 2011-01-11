@@ -61,25 +61,21 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.component.id;
 
-import java.lang.reflect.Modifier;
-import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentIdentity;
 
-public class ComponentDiscovery extends ServiceJarDiscovery {
 
-  @Override
-  public boolean processClass( Class candidate ) throws Throwable {
-    if( ComponentIdentity.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
-      
-    }
-    // find root message types for each service
-    return false;
+public class Empyrean extends ComponentIdentity {
+  
+  public Empyrean( ) {
+    super( "bootstrap" );
   }
 
   @Override
-  public Double getPriority( ) {
-    return 0.0;
+  public String getModelConfiguration( ) {
+    return "eucalyptus-bootstrap.xml";
   }
-
+  
+  
 }

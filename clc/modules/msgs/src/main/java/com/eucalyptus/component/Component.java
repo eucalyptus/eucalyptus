@@ -62,41 +62,32 @@
  */
 package com.eucalyptus.component;
 
-import java.net.InetAddress;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.Empyrean;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.component.id.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.records.Record;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callback.Completion;
-import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
-import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.ServiceId;
 import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
 
 /**
@@ -125,8 +116,9 @@ public class Component implements ComponentInformation, HasName<Component> {
   }
   
   private final String                               name;
+  private final ComponentIdentity                    identity;
   private final com.eucalyptus.bootstrap.Component   component;
-  private final ComponentConfiguration                        configuration;
+  private final ComponentConfiguration               configuration;
   private final AtomicBoolean                        enabled      = new AtomicBoolean( false );
   private final AtomicBoolean                        local        = new AtomicBoolean( false );
   private final Map<String, Service>                 services     = Maps.newConcurrentHashMap( );
@@ -134,6 +126,26 @@ public class Component implements ComponentInformation, HasName<Component> {
   private final ComponentBootstrapper                bootstrapper;
   private final ComponentState                       stateMachine;
   private final AtomicReference<Service>             localService = new AtomicReference( null );
+  
+  Component( ComponentIdentity componentId ) throws ServiceRegistrationException {
+    this.name = componentId.getName( );
+    this.identity = componentId;
+    this.component = initComponent( );
+    /** remove **/
+    if ( System.getProperty( "euca.disable." + this.name ) == null ) {
+      this.enabled.set( true );
+      if ( System.getProperty( "euca.remote." + this.name ) == null ) {
+        this.local.set( true );
+      }
+    }
+    if ( ServiceBuilderRegistry.get( this.component ) != null ) {
+      this.builder = ServiceBuilderRegistry.get( this.component );
+    } else {
+      this.builder = new DummyServiceBuilder( this );
+    }
+    this.bootstrapper = new ComponentBootstrapper( this );
+    this.stateMachine = new ComponentState( this );
+  }
   
   Component( String name, URI configFile ) throws ServiceRegistrationException {
     this.name = name;
@@ -194,11 +206,11 @@ public class Component implements ComponentInformation, HasName<Component> {
       try {
         this.stateMachine.transition( Transition.LOADING );
       } catch ( IllegalStateException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
   }
@@ -235,21 +247,21 @@ public class Component implements ComponentInformation, HasName<Component> {
       try {
         this.stateMachine.transition( Transition.STARTING );
       } catch ( IllegalStateException ex1 ) {
-        LOG.error( ex1 , ex1 );
+        LOG.error( ex1, ex1 );
       } catch ( NoSuchElementException ex1 ) {
-        LOG.error( ex1 , ex1 );
+        LOG.error( ex1, ex1 );
       } catch ( ExistingTransitionException ex1 ) {
-        LOG.error( ex1 , ex1 );
+        LOG.error( ex1, ex1 );
       }
       if ( this.inState( State.NOTREADY ) ) {
         try {
           this.stateMachine.transition( State.DISABLED );
         } catch ( IllegalStateException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( NoSuchElementException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( ExistingTransitionException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
     } else {
@@ -264,21 +276,21 @@ public class Component implements ComponentInformation, HasName<Component> {
         try {
           this.stateMachine.transition( Transition.READY_CHECK );
         } catch ( IllegalStateException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( NoSuchElementException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( ExistingTransitionException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
       try {
         this.stateMachine.transition( State.ENABLED );
       } catch ( IllegalStateException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     } else {
       this.builder.fireEnable( service );
@@ -291,11 +303,11 @@ public class Component implements ComponentInformation, HasName<Component> {
       try {
         this.stateMachine.transition( State.DISABLED );
       } catch ( IllegalStateException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     } else {
       this.builder.fireDisable( service );
@@ -309,22 +321,22 @@ public class Component implements ComponentInformation, HasName<Component> {
         try {
           this.stateMachine.transition( State.DISABLED );
         } catch ( IllegalStateException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( NoSuchElementException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( ExistingTransitionException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
       DispatcherFactory.remove( this.services.get( service ) );
       try {
         this.stateMachine.transition( State.STOPPED );
       } catch ( IllegalStateException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     } else {
       this.builder.fireStop( service );
@@ -343,11 +355,11 @@ public class Component implements ComponentInformation, HasName<Component> {
         try {
           this.stateMachine.transition( Transition.DESTROYING );
         } catch ( IllegalStateException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( NoSuchElementException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( ExistingTransitionException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
       EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
@@ -406,7 +418,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   /**
    * True if the component has not been explicitly configured as running remotely. That is, even if
    * the code is available locally we do not prepare the service bootstrappers to run, but the local
-   * service endpoint is still configured (i.e. for {@link com.eucalyptus.bootstrap.Component.dns}).
+   * service endpoint is still configured (i.e. for {@link com.eucalyptus.component.id.ComponentService.dns}).
    * 
    * @return true if the component has not been explicitly marked as remote.
    */
@@ -561,7 +573,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   public void runChecks( ) {
     if ( this.isAvailableLocally( ) && this.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
       this.stateMachine.transitionSelf( );
-    } 
+    }
   }
   
   public static class CheckEvent implements EventListener {
@@ -576,10 +588,18 @@ public class Component implements ComponentInformation, HasName<Component> {
           @Override
           public void run( ) {
             c.runChecks( );
-          } } );
+          }
+        } );
       }
     }
     
     public void advertiseEvent( Event event ) {}
+  }
+
+  /**
+   * @return the identity
+   */
+  public ComponentIdentity getIdentity( ) {
+    return this.identity;
   }
 }
