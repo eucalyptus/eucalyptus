@@ -423,7 +423,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   public URI getUri( ) {
     NavigableSet<Service> services = this.getServices( );
-    if( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.name ) ) {
+    if( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && !"db".equals( this.name ) ) {
       throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
     } else if( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.name ) ) {
       return this.getIdentity( ).getLocalEndpointUri( );
