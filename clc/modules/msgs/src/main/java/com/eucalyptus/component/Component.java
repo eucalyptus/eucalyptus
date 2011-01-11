@@ -377,7 +377,8 @@ public class Component implements ComponentInformation, HasName<Component> {
   }
   
   public ServiceBuilder<ServiceConfiguration> getBuilder( ) {
-    return ServiceBuilderRegistry.get( this.identity );
+    ServiceBuilder<ServiceConfiguration> ret = ServiceBuilderRegistry.get( this.identity );
+    return ret != null ? ret : new DummyServiceBuilder( this );
   }
   
   /**

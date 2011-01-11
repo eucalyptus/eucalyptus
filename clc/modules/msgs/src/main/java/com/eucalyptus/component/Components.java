@@ -103,6 +103,10 @@ public class Components {
   public static List<Component> list( ) {
     return new ArrayList( Components.lookup( Component.class ).values( ) );
   }
+  @SuppressWarnings( "unchecked" )
+  public static List<ComponentId> listIds( ) {
+    return new ArrayList( Components.lookup( ComponentId.class ).values( ) );
+  }
   
   private static <T extends ComponentInformation> Class getRealType( Class<T> maybeSubclass ) {
     Class type = null;
