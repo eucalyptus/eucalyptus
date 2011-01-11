@@ -90,7 +90,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   }
 
   public URI getLocalUri( ) {
-    URI uri = URI.create( this.uriLocal );
+    URI uri = URI.create( this.getLocalEndpointName( ) );
     try {
       uri.parseServerAuthority( );
     } catch ( URISyntaxException ex ) {
