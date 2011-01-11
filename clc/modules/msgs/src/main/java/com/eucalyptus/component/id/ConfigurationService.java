@@ -91,4 +91,9 @@ public class ConfigurationService extends ComponentId {
   public Boolean isCloudLocal( ) {
     return true;
   }
+
+  @Override
+  public String getModelConfiguration( ) {
+    return "eucalyptus-configuration.xml";
+  }
 }
