@@ -74,7 +74,6 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
 
   public boolean load( ) throws Exception {
     LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
-//    System.setProperty( "euca.db.password", Hmacs.generateSystemSignature( ) );
     return true;
   }
 
@@ -90,7 +89,6 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
 
   @Override
   public void hup( ) {
-    //TODO: remote hup.
   }
 
   

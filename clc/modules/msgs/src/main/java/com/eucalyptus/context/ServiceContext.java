@@ -201,7 +201,6 @@ public class ServiceContext {
     Set<ConfigResource> configs = Sets.newHashSet( );
     configs.add( Components.lookup( "bootstrap" ).getIdentity( ).getModel( ) );
     if ( Components.lookup( "eucalyptus" ).isAvailableLocally( ) ) {
-//      configs.addAll( Components.lookup( Component.eucalyptus ).getConfiguration( ).getResource( ).getConfigurations( ) );
       for ( Component comp : Components.list( ) ) {
         if ( comp.getIdentity( ).isCloudLocal( ) ) {
           LOG.info( "-> Preparing cloud-local cfg: " + comp.getIdentity( ).getModelConfiguration( ) );

@@ -114,7 +114,7 @@ public class ComponentBootstrapper {
     this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
       for ( Bootstrapper b : this.bootstrappers.get( s ) ) {
-        EventRecord.here( Bootstrap.class, transition, this.component.getName( ), "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).info( );
+        EventRecord.here( Bootstrap.class, transition, this.component.getName( ), "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).debug( );
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {
@@ -122,7 +122,6 @@ public class ComponentBootstrapper {
           }
         } catch ( Throwable e ) {
           LOG.error( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.component.getName( ), b.getClass( ).getCanonicalName( ), e.getMessage( ) ).info( ).toString( ), e );
-//          throw BootstrapException.throwError( b.getClass( ).getSimpleName( ) + " threw an error in " + name + "( ): " + e.getMessage( ), e );
           return false;
         }
       }      
