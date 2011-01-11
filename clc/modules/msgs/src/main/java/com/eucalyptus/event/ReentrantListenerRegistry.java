@@ -87,8 +87,8 @@ public class ReentrantListenerRegistry<T> {
     }
     for ( EventListener ce : listeners ) {
       Record record = EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getSimpleName( ), e.toString( ));
-      if ( e instanceof ClockTick ) {
-        record.trace( );
+      if ( e instanceof ClockTick || e instanceof Hertz ) {
+//        record.trace( );
       } else {
         record.debug( );
       }
