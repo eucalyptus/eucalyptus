@@ -52,38 +52,29 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS  DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
-#ifndef CLIENT_MARSHAL_H
-#define CLIENT_MARSHAL_H
+#ifndef INCLUDE_HANDLERS_STATE_H
+#define INCLUDE_HANDLERS_STATE_H
 
-#include "axis2_stub_EucalyptusNC.h" /* for axis2_ and axutil_ defs */
-#include "data.h" /* for eucalyptus defs */
+#include <eucalyptus.h>
+#include <semaphore.h>
+#include <data.h>
+#include <client-marshal.h>
+#include <vnetwork.h>
+#include <linux/limits.h>
 
-typedef struct ncStub_t {
-  axutil_env_t * env;
-  axis2_char_t * client_home;
-  axis2_char_t * endpoint_uri;
-  axis2_char_t * node_name;
-  axis2_stub_t * stub;
-} ncStub;
+int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen);
+int doStartService(ncMetadata *ccMeta);
+int doStopService(ncMetadata *ccMeta);
+int doEnableService(ncMetadata *ccMeta);
+int doDisableService(ncMetadata *ccMeta);
 
-ncStub * ncStubCreate  (char *endpoint, char *logfile, char *homedir);
-int      ncStubDestroy (ncStub * stub);
-
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr);
-int ncGetConsoleOutputStub (ncStub *stub, ncMetadata *meta, char *instanceId, char **consoleOutput);
-int ncRebootInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId);
-int ncTerminateInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
-int ncDescribeInstancesStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-int ncDescribeResourceStub  (ncStub *stub, ncMetadata *meta, char *resourceType, ncResource **outRes);
-int ncStartNetworkStub  (ncStub *stub, ncMetadata *meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus);
-int ncAssignAddressStub  (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp);
-int ncPowerDownStub  (ncStub *st, ncMetadata *meta);
-int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int validCmp(ccInstance *inst, void *in);
+int instNetParamsSet(ccInstance *inst, void *in);
+int clean_network_state(void);
 
 #endif

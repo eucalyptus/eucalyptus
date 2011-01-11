@@ -362,6 +362,11 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     snprintf(netparams.publicIp, 24, "%s", adb_netConfigType_get_publicIp(net_type, env));
     axis2_char_t * userData = adb_ncRunInstanceType_get_userData(input, env);
     axis2_char_t * launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
+
+    int expiryTime=0;
+    axutil_date_time_t *dt = adb_ncRunInstanceType_get_expiryTime(input, env);
+    expiryTime = datetime_to_unix(dt, env);
+
     int groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
     char ** groupNames = calloc (groupNamesSize, sizeof(char *));
     if (groupNames==NULL) {
@@ -386,7 +391,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
                                        ramdiskId, ramdiskURL, 
                                        keyName, 
                                        &netparams, 
-                                       userData, launchIndex, groupNames, groupNamesSize,
+                                       userData, launchIndex, expiryTime, groupNames, groupNamesSize,
                                        &outInst);
             
             if (error) {

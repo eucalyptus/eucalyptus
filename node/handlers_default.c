@@ -125,7 +125,7 @@ doRunInstance(	struct nc_state_t *nc,
                 char *ramdiskId, char *ramdiskURL, // ignored
                 char *keyName, 
                 netConfig *netparams,
-                char *userData, char *launchIndex,
+                char *userData, char *launchIndex, int expiryTime,
                 char **groupNames, int groupNamesSize,
                 ncInstance **outInst)
 {
@@ -153,7 +153,7 @@ doRunInstance(	struct nc_state_t *nc,
                                         PENDING, 
                                         meta->userId, 
                                         &ncnet, keyName,
-                                        userData, launchIndex, groupNames, groupNamesSize))) {
+                                        userData, launchIndex, expiryTime, groupNames, groupNamesSize))) {
         logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
         return ERROR;
     }

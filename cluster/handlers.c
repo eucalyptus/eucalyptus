@@ -234,11 +234,12 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       netConfig *ncnet = va_arg(al, netConfig *);
       char *userData = va_arg(al, char *);
       char *launchIndex = va_arg(al, char *);
+      int expiryTime = va_arg(al, int);
       char **netNames = va_arg(al, char **);
       int netNamesLen = va_arg(al, int);
       ncInstance **outInst = va_arg(al, ncInstance **);
       
-      rc = ncRunInstanceStub(ncs, meta, uuid, instId, reservationId, ncvm, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, ncnet, userData, launchIndex, netNames, netNamesLen, outInst);
+      rc = ncRunInstanceStub(ncs, meta, uuid, instId, reservationId, ncvm, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, ncnet, userData, launchIndex, expiryTime, netNames, netNamesLen, outInst);
       if (timeout && outInst) {
 	if (!rc && *outInst) {
 	  len = sizeof(ncInstance);
@@ -400,6 +401,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       netConfig *ncnet = va_arg(al, netConfig *);
       char *userData = va_arg(al, char *);
       char *launchIndex = va_arg(al, char *);
+      int expiryTime = va_arg(al, int);
       char **netNames = va_arg(al, char **);
       int netNamesLen = va_arg(al, int);
       ncInstance **outInst = va_arg(al, ncInstance **);
@@ -718,7 +720,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
   logprintfl(EUCAINFO,"AssignAddress(): called\n");
   logprintfl(EUCADEBUG,"AssignAddress(): params: src=%s, dst=%s\n", SP(src), SP(dst));
 
-  if (!src || !dst || !strcmp(src, "0.0.0.0") || !strcmp(dst, "0.0.0.0")) {
+  if (!src || !dst || !strcmp(src, "0.0.0.0")) {
     logprintfl(EUCADEBUG, "AssignAddress(): bad input params\n");
     return(1);
   }
@@ -730,6 +732,14 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
   } else {
     
     sem_mywait(VNET);
+
+    ret = vnetReassignAddress(vnetconfig, uuid, src, dst);
+    if (ret) {
+      logprintfl(EUCAERROR, "doAssignAddress(): vnetReassignAddress() failed\n");
+      ret = 1;
+    }
+
+    /*
     rc = vnetGetPublicIP(vnetconfig, src, NULL, &allocated, &addrdevno);
     if (rc) {
       logprintfl(EUCAERROR,"AssignAddress(): failed to retrieve publicip record %s\n", src);
@@ -761,10 +771,11 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
 	ret = 0;
       }
     }
+    */
     sem_mypost(VNET);
   }
   
-  if (!ret) {
+  if (!ret && strcmp(dst, "0.0.0.0")) {
     // everything worked, update instance cache
 
     rc = map_instanceCache(privIpCmp, dst, pubIpSet, src);
@@ -830,6 +841,13 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   } else {
     
     sem_mywait(VNET);
+
+    ret = vnetReassignAddress(vnetconfig, "UNSET", src, "0.0.0.0");
+    if (ret) {
+      logprintfl(EUCAERROR, "UnassignAddress(): vnetReassignAddress() failed\n");
+      ret = 1;
+    }
+    /*
     ret=0;
     rc = vnetGetPublicIP(vnetconfig, src, NULL, &allocated, &addrdevno);
     if (rc) {
@@ -856,6 +874,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
       	logprintfl(EUCAWARN,"UnassignAddress(): cmd failed '%s'\n", cmd);
       }
     }
+    */
     sem_mypost(VNET);
   }
 
@@ -1685,7 +1704,7 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
   return(0);
 }
 
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, int expiryTime, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
   int rc=0, i=0, done=0, runCount=0, resid=0, foundnet=0, error=0, networkIdx=0, nidx=0, thenidx=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
@@ -1851,7 +1870,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
             // call StartNetwork client
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, NCCALL, res->ncURL, "ncStartNetwork", uuid, NULL, 0, 0, vlan, NULL);
 
-	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, NCCALL, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, &ncnet, userData, launchIndex, netNames, netNamesLen, &outInst);
+	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, NCCALL, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, &ncnet, userData, launchIndex, expiryTime, netNames, netNamesLen, &outInst);
 
 	    if (rc) {
 	      sleep(1);
@@ -2215,6 +2234,104 @@ int initialize(void) {
     init=1;
   }
   
+  return(ret);
+}
+
+int ccIsEnabled() {
+  // initialized, but ccState is disabled (refuse to service operations)
+
+  if (!config || config->ccState != ENABLED) {
+    return(1);
+  }
+  return(0);
+}
+
+int ccIsDisabled() {
+  // initialized, but ccState is disabled (refuse to service operations)
+
+  if (!config || config->ccState != DISABLED) {
+    return(1);
+  }
+  return(0);
+}
+
+int ccChangeState(int newstate) {
+  if (config) {
+    char localState[32];
+    config->ccLastState = config->ccState;
+    config->ccState = newstate;
+    ccGetStateString(localState, 32);
+    snprintf(config->ccStatus.localState, 32, "%s", localState);
+    return(0);
+  }
+  return(1);
+}
+
+int ccGetStateString(char *statestr, int n) {
+  if (config->ccState == ENABLED) {
+    snprintf(statestr, n, "ENABLED");
+  } else if (config->ccState == DISABLED) {
+    snprintf(statestr, n, "DISABLED");
+  } else if (config->ccState == STOPPED) {
+    snprintf(statestr, n, "STOPPED");
+  } else if (config->ccState == LOADED) {
+    snprintf(statestr, n, "LOADED");
+  } else if (config->ccState == INITIALIZED) {
+    snprintf(statestr, n, "INITIALIZED");
+  } else if (config->ccState == PRIMORDIAL) {
+    snprintf(statestr, n, "PRIMORDIAL");
+  }
+  return(0);
+}
+
+int ccCheckState() {
+  char localDetails[1024];
+  int ret=0;
+
+  if (!config) {
+    return(1);
+  }
+  // check local configuration
+  
+  // configuration
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "%s", config->eucahome);
+    if (check_directory(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find directory '%s'\n", cmd);
+      ret++;
+    }
+  }
+  
+  // shellouts
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", config->eucahome);
+    if (check_file(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      ret++;
+    }
+
+    snprintf(cmd, MAX_PATH, "%s/usr/share/eucalyptus/dynserv.pl", config->eucahome);
+    if (check_file(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      ret++;
+    }
+    
+    snprintf(cmd, MAX_PATH, "ip addr show");
+    if (system(cmd)) {
+      logprintfl(EUCAERROR, "ccCheckState(): cannot run shellout '%s'\n", cmd);
+      ret++;
+    }    
+  }
+  // filesystem
+  
+  // network
+
+  snprintf(localDetails, 1023, "ERRORS=%d", ret);
+  sem_mywait(CONFIG);
+  snprintf(config->ccStatus.details, 1023, "%s", localDetails);
+  sem_mypost(CONFIG);
   return(ret);
 }
 

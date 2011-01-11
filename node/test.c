@@ -119,7 +119,7 @@ int main (int argc, char **argv)
 
         free_instance (NULL);
         free_instance (&inst);
-        inst = allocate_instance ("the-uuid", "i1", NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0);
+        inst = allocate_instance ("the-uuid", "i1", NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
         assert(inst!=NULL);
         free_instance (&inst);
         assert(inst==NULL);
@@ -139,7 +139,7 @@ int main (int argc, char **argv)
         for (i=0; i<INSTS; i++) {
             char id[10];
             sprintf(id, "i-%d", i);
-            inst = Insts[i] = allocate_instance("the-uuid", id, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0);
+            inst = Insts[i] = allocate_instance("the-uuid", id, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
             assert (inst!=NULL);
             n = add_instance(&bag, inst);
             assert (n==0);

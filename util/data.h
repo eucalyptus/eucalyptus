@@ -80,6 +80,13 @@ typedef struct serviceInfoType_t {
   int urisLen;
 } serviceInfoType;
 
+typedef struct serviceStatusType_t {
+  char localState[32];
+  int localEpoch;
+  char details[1024];
+  serviceInfoType serviceId;
+} serviceStatusType;
+
 typedef struct ncMetadata_t {
     char *correlationId;
     char *userId;
@@ -220,6 +227,7 @@ typedef struct ncInstance_t {
     char privateDnsName[CHAR_BUFFER_SIZE];
     char dnsName[CHAR_BUFFER_SIZE];
     int launchTime; // timestamp of RunInstances request arrival
+    int expiryTime;
     int bootTime; // timestamp of STAGING->BOOTING transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
@@ -279,7 +287,7 @@ ncInstance * allocate_instance(char *uuid,
                                virtualMachine *params, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,
-                               char *userData, char *launchIndex, char **groupNames, int groupNamesSize);
+                               char *userData, char *launchIndex, int expiryTime, char **groupNames, int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 

@@ -123,7 +123,7 @@ ncInstance * allocate_instance (char *uuid,
                                 virtualMachine *params, 
                                 char *stateName, int stateCode, char *userId, 
                                 netConfig *ncnet, char *keyName,
-                                char *userData, char *launchIndex, char **groupNames, int groupNamesSize)
+                                char *userData, char *launchIndex, int expiryTime, char **groupNames, int groupNamesSize)
 {
     ncInstance * inst;
 
@@ -179,6 +179,7 @@ ncInstance * allocate_instance (char *uuid,
       memcpy(&(inst->params), params, sizeof(virtualMachine));
     }
     inst->stateCode = stateCode;
+    inst->expiryTime = expiryTime;
     return inst;
 }
 

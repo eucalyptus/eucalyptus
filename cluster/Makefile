@@ -44,8 +44,8 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 
 server: $(SERVICE_SO)
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so 
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o server-marshal-state.o handlers.o handlers-state.o $(AXIS2C_HOME)/lib/libaxutil.so 
+	$(CC) -shared generated/*.o server-marshal.o server-marshal-state.o handlers.o handlers-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
 client: $(CLIENT)_full $(CLIENTKILLALL)
 

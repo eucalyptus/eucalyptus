@@ -380,7 +380,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
 	adb_publicAddressType_set_destAddress(addr, env, ipstr);
 	if (ipstr) free(ipstr);
       } else {
-	adb_publicAddressType_set_destAddress(addr, env, "");
+	adb_publicAddressType_set_destAddress(addr, env, "0.0.0.0");
       }
 
       adb_describePublicAddressesResponseType_add_addresses(dpart, env, addr);
@@ -964,7 +964,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   adb_virtualMachineType_t *vm=NULL;
 
   ccInstance *outInsts=NULL, *myInstance=NULL;
-  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList=NULL, networkIndexListLen, uuidsLen;
+  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList=NULL, networkIndexListLen, uuidsLen, expiryTime;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
@@ -972,6 +972,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
+
+  axutil_date_time_t *dt=NULL;
   
   rit = adb_RunInstances_get_RunInstances(runInstances, env);
   //  ccMeta.correlationId = adb_runInstancesType_get_correlationId(rit, env);
@@ -1000,6 +1002,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   }
 
   launchIndex = adb_runInstancesType_get_launchIndex(rit, env);
+  dt = adb_runInstancesType_get_expiryTime(rit, env);
+  expiryTime = datetime_to_unix(dt, env);
   
   vm = adb_runInstancesType_get_instanceType(rit, env);
   copy_vm_type_from_adb (&ccvm, vm, env);
@@ -1045,7 +1049,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   rc=1;
   if (!DONOTHING) {
-    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, NULL, &outInsts, &outInstsLen);
+    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, expiryTime, NULL, &outInsts, &outInstsLen);
   }
   
   if (rc) {
