@@ -63,12 +63,16 @@
 
 package com.eucalyptus.ws;
 
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import edu.ucsb.eucalyptus.msgs.DescribeServicesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeServicesType;
 import edu.ucsb.eucalyptus.msgs.DisableServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.DisableServiceType;
 import edu.ucsb.eucalyptus.msgs.EnableServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.EnableServiceType;
+import edu.ucsb.eucalyptus.msgs.ServiceStatusType;
 import edu.ucsb.eucalyptus.msgs.StartServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.StartServiceType;
 import edu.ucsb.eucalyptus.msgs.StopServiceResponseType;
@@ -92,7 +96,18 @@ public class Empyrean {
     return reply;
   }
   public DescribeServicesResponseType describeService( DescribeServicesType request ) {
-    DescribeServicesResponseType reply = request.getReply( );
+    final DescribeServicesResponseType reply = request.getReply( );
+    for( Component comp : Components.list( ) ) {
+      if( comp.isRunningLocally( ) ) {
+        final Service localService = comp.getLocalService( );
+        reply.getServiceStatus( ).add( new ServiceStatusType( ) {{
+          setServiceId( localService.getServiceId( ) );
+          setLocalEpoch( reply.getEpoch( ) );
+          setLocalState( localService.getState( ).toString( ) );
+          getDetails( ).addAll( localService.getDetails( ) );
+        }} );
+      }
+    }
     return reply;
   }
 
