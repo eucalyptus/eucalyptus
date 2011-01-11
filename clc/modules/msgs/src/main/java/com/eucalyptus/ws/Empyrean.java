@@ -102,7 +102,7 @@ public class Empyrean {
         final Service localService = comp.getLocalService( );
         reply.getServiceStatus( ).add( new ServiceStatusType( ) {{
           setServiceId( localService.getServiceId( ) );
-          setLocalEpoch( reply.getEpoch( ) );
+          setLocalEpoch( reply.getBaseEpoch( ) );
           setLocalState( localService.getState( ).toString( ) );
           getDetails( ).addAll( localService.getDetails( ) );
         }} );
