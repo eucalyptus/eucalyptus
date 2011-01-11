@@ -32,7 +32,7 @@
       <inbound>
         <inbound-endpoint ref="EmpyreanVM" />
       </inbound>
-      <component class="com.eucalyptus.cloud.ws.Empyrean" />
+      <component class="com.eucalyptus.ws.Empyrean" />
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="EmpyreanReplyQueueVM" />
