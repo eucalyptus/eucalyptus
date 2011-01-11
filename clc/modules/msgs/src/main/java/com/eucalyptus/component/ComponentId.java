@@ -88,6 +88,16 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   public String getLocalEndpointName( ) {
     return this.uriLocal;
   }
+
+  public URI getLocalUri( ) {
+    URI uri = URI.create( this.uriLocal );
+    try {
+      uri.parseServerAuthority( );
+    } catch ( URISyntaxException ex ) {
+      LOG.error( ex , ex );
+    }
+    return uri;
+  }
   
   protected String getModelConfiguration( ) {
     return String.format( "%s-model.xml", this.getName( ) );

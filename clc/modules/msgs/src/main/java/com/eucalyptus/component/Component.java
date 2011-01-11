@@ -434,6 +434,26 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.getConfiguration( ).makeUri( hostName, port );
   }
   
+  public URI getUri( ) {
+    NavigableSet<Service> services = this.getServices( );
+    if( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.name ) ) {
+      throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
+    } else if( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.name ) ) {
+      return this.getIdentity( ).getLocalUri( );
+    } else if( this.getIdentity( ).isCloudLocal( ) && services.size( ) == 1 ) {
+      return services.first( ).getUri( );
+    } else {
+      for( Service s : services ) {
+        if( s.isLocal( ) ) {
+          return s.getUri( );
+        }
+      }
+      throw new RuntimeException( "Attempting to get the URI for a service which is either not a singleton or has no locally defined service endpoint." );
+    }
+  }
+
+
+  
   /**
    * @return {@link NavigableSet<Service>} of the registered service of this {@link Component} type.
    */
