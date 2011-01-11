@@ -68,6 +68,9 @@ import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -79,6 +82,7 @@ import javax.persistence.Table;
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.READ_WRITE )
+//@ConfigurableClass(root="eucalyptus",alias="vmtypes",deferred=true,singleton=false,description="Virtual Machine type definitions")
 public class VmType extends AbstractPersistent implements Serializable, Comparable {
   //TODO: enumerate.
   public static String M1_SMALL  = "m1.small";
@@ -87,12 +91,16 @@ public class VmType extends AbstractPersistent implements Serializable, Comparab
   public static String C1_MEDIUM = "c1.medium";
   public static String C1_XLARGE = "c1.xlarge";
   
+//  @ConfigurableIdentifier
   @Column( name = "vm_type_name" )
   private String       name;
+//  @ConfigurableField( description = "Number of CPUs per instance.", displayName = "CPUs" )
   @Column( name = "vm_type_cpu" )
   private Integer      cpu;
+//  @ConfigurableField( description = "Gigabytes of disk per instance.", displayName = "Disk (GB)" )
   @Column( name = "vm_type_disk" )
   private Integer      disk;
+//  @ConfigurableField( description = "Gigabytes of RAM per instance.", displayName = "RAM (GB)" )
   @Column( name = "vm_type_memory" )
   private Integer      memory;
   
