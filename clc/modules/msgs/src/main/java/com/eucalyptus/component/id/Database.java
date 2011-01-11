@@ -65,7 +65,6 @@ package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
 
-
 public class Database extends ComponentId {
 
   public Database( ) {

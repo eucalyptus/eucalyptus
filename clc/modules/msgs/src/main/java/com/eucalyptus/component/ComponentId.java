@@ -20,8 +20,8 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   
   private final String name;
   private final Integer port;
-  private final String uriPattern;
-  private final String uriLocal;
+  private String uriPattern;
+  private String uriLocal;
   
   protected ComponentId( String name ) {
     this.name = name;
@@ -89,7 +89,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     return this.uriLocal;
   }
 
-  public URI getLocalUri( ) {
+  public URI getLocalEndpointUri( ) {
     URI uri = URI.create( this.getLocalEndpointName( ) );
     try {
       uri.parseServerAuthority( );
@@ -146,7 +146,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
 
   @Override
   public String toString( ) {
-    return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.name, this.port, this.uriPattern, this.uriLocal );
+    return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.getName( ), this.getPort( ), this.getUriPattern( ), this.getLocalEndpointName( ) );
   }
 
   @Override public BigInteger getNumber( ) { throw new RuntimeException( "getNumber is not implemented for component principals." ); }

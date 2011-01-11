@@ -118,7 +118,6 @@ public class Component implements ComponentInformation, HasName<Component> {
   private final String                               name;
   private final ComponentId                    identity;
   private final com.eucalyptus.bootstrap.Component   component;
-  private final ComponentConfiguration               configuration;
   private final AtomicBoolean                        enabled      = new AtomicBoolean( false );
   private final AtomicBoolean                        local        = new AtomicBoolean( false );
   private final Map<String, Service>                 services     = Maps.newConcurrentHashMap( );
@@ -143,7 +142,6 @@ public class Component implements ComponentInformation, HasName<Component> {
     } else {
       this.builder = new DummyServiceBuilder( this );
     }
-    this.configuration = new ComponentConfiguration( this );
     this.bootstrapper = new ComponentBootstrapper( this );
     this.stateMachine = new ComponentState( this );
   }
@@ -161,7 +159,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    */
   public void initService( ) throws ServiceRegistrationException {
     if ( this.enabled.get( ) ) {
-      ServiceConfiguration config = this.builder.toConfiguration( this.getConfiguration( ).getLocalUri( ) );
+      ServiceConfiguration config = this.builder.toConfiguration( this.getIdentity( ).getLocalEndpointUri( ) );
       Service service = new Service( this, config );
       this.setupService( service );
       
@@ -383,11 +381,6 @@ public class Component implements ComponentInformation, HasName<Component> {
       return this.getName( ) + "@" + hostName;
     }
   }
-
-  
-  public ComponentConfiguration getConfiguration( ) {
-    return this.configuration;
-  }
   
   public ServiceBuilder<ServiceConfiguration> getBuilder( ) {
     return this.builder;
@@ -431,7 +424,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @return
    */
   public URI getUri( String hostName, Integer port ) {
-    return this.getConfiguration( ).makeUri( hostName, port );
+    return this.getIdentity( ).makeRemoteUri( hostName, port );
   }
   
   public URI getUri( ) {
@@ -439,7 +432,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     if( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.name ) ) {
       throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
     } else if( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.name ) ) {
-      return this.getIdentity( ).getLocalUri( );
+      return this.getIdentity( ).getLocalEndpointUri( );
     } else if( this.getIdentity( ).isCloudLocal( ) && services.size( ) == 1 ) {
       return services.first( ).getUri( );
     } else {
