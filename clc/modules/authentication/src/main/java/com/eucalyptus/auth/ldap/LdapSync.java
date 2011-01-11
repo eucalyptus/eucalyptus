@@ -84,10 +84,12 @@ public class LdapSync {
   }
   
   public static synchronized void start( ) {
-    if ( lic.isSyncEnabled( ) && lic.isAutoSync( ) ) {
-      ListenerRegistry.getInstance( ).register( ClockTick.class, TIMER_LISTENER );
+    if ( lic.isSyncEnabled( ) ) {
+      if ( lic.isAutoSync( ) ) {
+        ListenerRegistry.getInstance( ).register( ClockTick.class, TIMER_LISTENER );
+      }
+      startSync( );
     }
-    doForceSync( );
   }
   
   public static synchronized LdapIntegrationConfiguration getLic( ) {
@@ -95,19 +97,24 @@ public class LdapSync {
   }
   
   public static synchronized void setLic( LdapIntegrationConfiguration config ) {
+    LOG.debug( "A new LIC is being set: " + config );
     lic = config;
     if ( Bootstrap.isFinished( ) ) {
-      if ( lic.isSyncEnabled( ) && lic.isAutoSync( ) ) {
-        ListenerRegistry.getInstance( ).register( ClockTick.class, TIMER_LISTENER );
+      if ( lic.isSyncEnabled( ) ) {
+        if ( lic.isAutoSync( ) ) {
+          ListenerRegistry.getInstance( ).register( ClockTick.class, TIMER_LISTENER );
+        }
+        startSync( );
       } else {
         ListenerRegistry.getInstance( ).deregister( ClockTick.class, TIMER_LISTENER );
       }
-      doForceSync( );
     }
   }
   
   public static synchronized void forceSync( ) {
-    doForceSync( );
+    if ( lic.isSyncEnabled( ) ) {
+      startSync( );
+    }
   }
   
   public static synchronized boolean check( ) {
@@ -130,13 +137,6 @@ public class LdapSync {
     }
   }
   
-  private static void doForceSync( ) {
-    if ( lic.isSyncEnabled( ) ) {
-      timeTillNextSync = lic.getSyncInterval( );
-      startSync( );
-    }    
-  }
-  
   private static synchronized void setSyncCompleted( ) {
     inSync = false;
   }
@@ -145,13 +145,15 @@ public class LdapSync {
     if ( lic.isSyncEnabled( ) && lic.isAutoSync( ) ) {
       timeTillNextSync -= SystemClock.getRate( );
       if ( timeTillNextSync <= 0 ) {
-        timeTillNextSync = lic.getSyncInterval( );
         startSync( );
       }
     } 
   }
   
   private static void startSync( ) {
+    LOG.debug( "A new sync initiated." );
+    
+    timeTillNextSync = lic.getSyncInterval( );
     if ( !inSync ) {
       inSync = true;
       
@@ -199,16 +201,34 @@ public class LdapSync {
         ldap.close( );
       }
     }
+    if ( !lic.hasAccountingGroups( ) ) {
+      accountingGroups = lic.getGroupsPartition( );
+    }
+    checkConflictingIdentities( accountingGroups, groups, users );
     rebuildLocalAuthDatabase( lic, accountingGroups, groups, users );
   }
   
+  private static void checkConflictingIdentities( Map<String, Set<String>> accountingGroups, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
+    if ( accountingGroups.containsKey( Account.SYSTEM_ACCOUNT ) ) {
+      LOG.error( "Account " + Account.SYSTEM_ACCOUNT + " is reserved for Eucalyptus only. Sync will skip this account from LDAP." );
+      accountingGroups.remove( Account.SYSTEM_ACCOUNT );
+    }
+    if ( users.containsKey( User.ACCOUNT_ADMIN ) ) {
+      LOG.error( "User " + User.ACCOUNT_ADMIN + " is reserved for Eucalyptus only. Sync will skip this user from LDAP." );
+      users.remove( User.ACCOUNT_ADMIN );
+    }
+    for ( String group : groups.keySet( ) ) {
+      if ( group.startsWith( User.USER_GROUP_PREFIX ) ) {
+        LOG.error( "Group name starting with " + User.USER_GROUP_PREFIX + " is reserved for Eucalyptus only. Sync will skip this group " + group );
+        groups.remove( group );
+      }
+    }
+  }
+
   private static void rebuildLocalAuthDatabase( LdapIntegrationConfiguration lic, Map<String, Set<String>> accountingGroups,
                                                 Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
     try {
-      Set<String> oldAccountSet = getLocalAccountSet( );
-      if ( !lic.hasAccountingGroups( ) ) {
-        accountingGroups = lic.getGroupsPartition( );
-      }
+      Set<String> oldAccountSet = getLocalAccountSet( );      
       for ( Map.Entry<String, Set<String>> entry : accountingGroups.entrySet( ) ) {
         String accountName = entry.getKey( );
         Set<String> accountMembers = entry.getValue( );
@@ -229,11 +249,13 @@ public class LdapSync {
   }
 
   private static void addNewAccount( String accountName, Set<String> accountMembers, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
+    LOG.debug( "Adding new account " + accountName );
     try {
       Accounts.addAccount( accountName );
       Users.addAccountAdmin( accountName );
       for ( String user : getAccountUserSet( accountMembers, groups ) ) {
         try {
+          LOG.debug( "Adding new user " + user );
           Users.addUser( user, "/", true /* skipRegistration */, true /* enabled */, users.get( user ), true /* createKey */, false /* createPassword */, accountName );
         } catch ( AuthException e ) {
           LOG.error( e, e );
@@ -243,8 +265,10 @@ public class LdapSync {
       for ( String group : accountMembers ) {
         Group dbGroup = null;
         try {
+          LOG.debug( "Adding new group " + group );
           dbGroup = Groups.addGroup( group, "/", accountName );
           for ( String user : groups.get( group ) ) {
+            LOG.debug( "Adding " + user + " to group " + group );
             dbGroup.addMember( new DummyPrincipal( user ) );
           }
         } catch ( AuthException e ) {
@@ -267,6 +291,7 @@ public class LdapSync {
   }
   
   private static void updateAccount( String accountName, Set<String> accountMembers, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
+    LOG.debug( "Updating account " + accountName );
     try {
       // Update users first
       Set<String> newUserSet = getAccountUserSet( accountMembers, groups );
@@ -319,9 +344,11 @@ public class LdapSync {
   }
 
   private static void addNewGroup( String accountName, String group, Set<String> users ) {
+    LOG.debug( "Adding new group " + group + " in account " + accountName );
     try {
       Group g = Groups.addGroup( group, "/", accountName );
       for ( String user : users ) {
+        LOG.debug( "Adding " + user + " to " + group );
         g.addMember( new DummyPrincipal( user ) );
       }
     } catch ( AuthException e ) {
@@ -331,6 +358,7 @@ public class LdapSync {
   }
 
   private static void updateGroup( String accountName, String group, Set<String> users ) {
+    LOG.debug( "Updating group " + group + " in account " + accountName );
     try {
       // Get local user set of the group
       Set<String> localUserSet = Sets.newHashSet( );
@@ -343,10 +371,12 @@ public class LdapSync {
         if ( localUserSet.contains( user ) ) {
           localUserSet.remove( user );
         } else {
+          LOG.debug( "Adding " + user + " to " + g.getName( ) );
           g.addMember( new DummyPrincipal( user ) );
         }
       }
       for ( String user : localUserSet ) {
+        LOG.debug( "Removing " + user + " from " + g.getName( ) );
         g.removeMember( new DummyPrincipal( user ) );
       }
     } catch ( AuthException e ) {
@@ -366,6 +396,8 @@ public class LdapSync {
   private static void removeObsoleteUsers( String accountName, Set<String> oldUserSet ) {
     // We don't want to remove account admin when updating an account
     oldUserSet.remove( User.ACCOUNT_ADMIN );
+    
+    LOG.debug( "Removing obsolete users: " + oldUserSet + ", in account " + accountName );
     for ( String user : oldUserSet ) {
       try {
         Users.deleteUser( user, accountName, true /* forceDeleteAdmin */, true /* recursive */ );
@@ -377,10 +409,12 @@ public class LdapSync {
   }
 
   private static void addNewUser( String accountName, String user, Map<String, String> info ) throws AuthException {
+    LOG.debug( "Adding new user " + user + " in account " + accountName );
     Users.addUser( user, "/", true /* skipRegistration */, true /* enabled */, info, true /* createKey */, false /* createPassword */, accountName );
   }
 
   private static void updateUser( String accountName, String user, Map<String, String> map ) throws AuthException {
+    LOG.debug( "Updating user " + user + " in account " + accountName );
     Users.lookupUserByName( user, accountName ).setInfo( map );
   }
 
@@ -395,6 +429,8 @@ public class LdapSync {
   private static void removeObsoleteAccounts( Set<String> oldAccountSet ) {
     // We don't want to remove system account
     oldAccountSet.remove( Account.SYSTEM_ACCOUNT );
+    
+    LOG.debug( "Removing obsolete accounts: " + oldAccountSet );
     for ( String account : oldAccountSet ) {
       try {
         Accounts.deleteAccount( account, false /* forceDeleteSystem */, true /* recursive */ );
