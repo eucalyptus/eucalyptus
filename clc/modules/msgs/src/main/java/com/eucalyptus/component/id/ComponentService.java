@@ -67,6 +67,10 @@ import com.eucalyptus.component.ComponentId;
 
 
 public class ComponentService extends ComponentId {
+  
+  public ComponentService( ) {
+    super( "component" );
+  }
 
   @Override
   public String getLocalEndpointName( ) {

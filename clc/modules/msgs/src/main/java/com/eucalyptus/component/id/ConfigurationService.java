@@ -68,4 +68,13 @@ import com.eucalyptus.component.ComponentId;
 
 public class ConfigurationService extends ComponentId {
 
+  public ConfigurationService( ) {
+    super( "configuration" );
+  }
+  
+  @Override
+  public String getLocalEndpointName( ) {
+    return "vm://ConfigurationInternal";
+  }
+  
 }
