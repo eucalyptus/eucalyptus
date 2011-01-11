@@ -75,7 +75,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     return this.port;
   }
   
-  private final ConfigResource getModel( ) {
+  public final ConfigResource getModel( ) {
     try {
       return new ConfigResource( this.getModelConfiguration( ) );
     } catch ( IOException ex ) {
@@ -99,7 +99,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     return uri;
   }
   
-  protected String getModelConfiguration( ) {
+  public String getModelConfiguration( ) {
     return String.format( "%s-model.xml", this.getName( ) );
   }
   

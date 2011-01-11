@@ -235,10 +235,6 @@ public class Components {
                         + System.getProperty( "euca." + comp.getPeer( ).name( ) + ".disable" )
                         + "/"
                         + System.getProperty( "euca." + comp.getPeer( ).name( ) + ".remote" ) ).append( "\n" );
-            buf.append( "-> Configuration:      "
-                        + ( comp.getConfiguration( ).getResource( ) != null
-                          ? comp.getConfiguration( ).getResource( ).getOrigin( )
-                          : "null" ) ).append( "\n" );
             for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
@@ -359,10 +355,6 @@ public class Components {
                                        System.getProperty( String.format( "euca.%s.remote", comp.getPeer( ).name( ) ) ) ) ).append( "\n" );
             buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
                                        comp.getName( ), comp.isAvailableLocally( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> configuration:        %s",
-                                       comp.getName( ), ( comp.getConfiguration( ).getResource( ) != null
-                                         ? comp.getConfiguration( ).getResource( ).getOrigin( )
-                                         : "null" ) ) ).append( "\n" );
             buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),
                                        Iterables.transform( comp.getBootstrapper( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
             return buf.toString( );

@@ -96,10 +96,10 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
     this.serviceConfiguration = serviceConfig;
     if ( "cluster".equals( parent.getName( ) ) && Components.lookup( "eucalyptus" ).isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
       this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
-      URI uri = this.parent.getConfiguration( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
+      URI uri = this.parent.getIdentity( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
       this.endpoint = new ServiceEndpoint( this, false, uri );
     } else if ( serviceConfig.isLocal( ) ) {
-      URI uri = this.parent.getConfiguration( ).getLocalUri( );
+      URI uri = this.parent.getIdentity( ).getLocalEndpointUri( );
       this.name = parent.getName( ) + LOCAL_HOSTNAME;
       this.endpoint = new ServiceEndpoint( this, true, uri );
     } else {
@@ -116,10 +116,10 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
       URI uri = null;
       if ( !local ) {
         this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
-        uri = this.parent.getConfiguration( ).makeUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
+        uri = this.parent.getIdentity( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
       } else {
         this.name = parent.getName( ) + LOCAL_HOSTNAME;
-        uri = this.parent.getConfiguration( ).getLocalUri( );
+        uri = this.parent.getIdentity( ).getLocalEndpointUri( );
       }
       this.endpoint = new ServiceEndpoint( this, local, uri );
     }

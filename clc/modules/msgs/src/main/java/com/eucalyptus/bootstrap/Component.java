@@ -135,7 +135,7 @@ public enum Component {
   }
 
   public URI getLocalUri( ) {
-    return Components.lookup( this ).getConfiguration( ).getLocalUri( );
+    return Components.lookup( this ).getIdentity( ).getLocalEndpointUri( );
   }
   
   public Boolean isCloudLocal( ) {
