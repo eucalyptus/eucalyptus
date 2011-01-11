@@ -58,7 +58,7 @@
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
 
     <spring:beans>
-        <spring:import resource="classpath:dns-services.xml"/>
+        <spring:import resource="classpath:storage-services.xml"/>
     </spring:beans>
 
 	<model name="storage">
