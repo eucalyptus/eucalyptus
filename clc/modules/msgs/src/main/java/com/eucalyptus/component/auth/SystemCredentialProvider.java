@@ -98,6 +98,10 @@ public class SystemCredentialProvider extends Bootstrapper {
     this.name = name;
   }
 
+  public static SystemCredentialProvider getCredentialProvider( Component name ) {
+    return new SystemCredentialProvider( name.name( ) );
+  }
+
   public static SystemCredentialProvider getCredentialProvider( String name ) {
     return new SystemCredentialProvider( name );
   }
