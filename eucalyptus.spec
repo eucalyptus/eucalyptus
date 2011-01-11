@@ -52,6 +52,7 @@ BuildRequires: ant
 BuildRequires: ant-nodeps
 BuildRequires: euca-axis2c >= 1.6.0
 BuildRequires: euca-rampartc >= 1.3.0
+BuildRequires: swig
 BuildRequires: %{euca_iscsi_client}
 BuildRequires: %{euca_libvirt}-devel
 BuildRequires: %{euca_libvirt}
