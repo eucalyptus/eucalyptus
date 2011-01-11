@@ -129,7 +129,7 @@ class Service():
 
   def endElement(self, name, value, connection):
     if name == 'euca:item':
-      self.service_detail = '%s, %s' % (self.detail, value)
+      self.service_detail = '%s, %s' % (self.service_detail, value)
     elif name == 'euca:localState':
       self.service_state = value
     elif name == 'euca:localEpoch':
