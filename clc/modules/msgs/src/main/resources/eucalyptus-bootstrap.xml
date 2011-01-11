@@ -118,13 +118,13 @@
       <bridge-component />
       <outbound>
         <filtering-router>
-          <outbound-endpoint ref="EmpyreanControlVM" />
+          <outbound-endpoint ref="EmpyreanVM" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EmpyreanRequestType" />
         </filtering-router>
       </outbound>
     </service>
 
-    <service name="EmpyreanControl">
+    <service name="Empyrean">
       <inbound>
         <inbound-endpoint ref="EmpyreanVM" />
       </inbound>
@@ -145,7 +145,7 @@
 
   </model>
   <model name="EmpyreanInternal">
-    <service name="EmpyreanControlInternal">
+    <service name="EmpyreanInternal">
       <inbound>
         <inbound-endpoint ref="EmpyreanInternalVM" />
       </inbound>
