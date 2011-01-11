@@ -194,7 +194,7 @@ public class LdapSync {
                                   lic.getUsersAttribute( ),
                                   lic.getUserIdAttribute( ) );
       users = loadLdapUsers( ldap, lic );
-    } catch ( LdapException e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       LOG.error( "Failed to sync with LDAP", e );
       return;
@@ -251,7 +251,7 @@ public class LdapSync {
       }
       // Remaining accounts are obsolete
       removeObsoleteAccounts( oldAccountSet );
-    } catch ( AuthException e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       LOG.error( "Error in rebuilding local auth database", e );
     }
@@ -492,13 +492,18 @@ public class LdapSync {
   }
   
   private static Map<String, Set<String>> loadLdapGroupType( LdapClient ldap, String baseDn, String idAttrName, String memberAttrName, String memberIdAttrName ) throws LdapException {
-    NamingEnumeration<SearchResult> results = ldap.search( baseDn, 
-                                                           WILDCARD_FILTER, 
-                                                           new String[]{ idAttrName, memberAttrName } );
+    String[] attrNames = new String[]{ idAttrName, memberAttrName };
+    if ( VERBOSE ) {
+      LOG.debug( "Search users by: baseDn=" + lic.getUserBaseDn( ) + ", attributes=" + attrNames );
+    }
+    NamingEnumeration<SearchResult> results = ldap.search( baseDn, WILDCARD_FILTER, attrNames );
     try {
       Map<String, Set<String>> groupMap = Maps.newHashMap( );
       while ( results.hasMore( ) ) {
         Attributes attrs = results.next( ).getAttributes( );
+        if ( VERBOSE ) {
+          LOG.debug( "Retrieved group: " + attrs );
+        }
         groupMap.put( getId( idAttrName, attrs ),
                       getMembers( memberIdAttrName, memberAttrName, attrs ) );
       }
@@ -517,6 +522,9 @@ public class LdapSync {
       attrNames.add( lic.getUserIdAttribute( ) );
     }
     // Retrieving from LDAP using a search
+    if ( VERBOSE ) {
+      LOG.debug( "Search users by: baseDn=" + lic.getUserBaseDn( ) + ", attributes=" + attrNames );
+    }
     NamingEnumeration<SearchResult> results = ldap.search( lic.getUserBaseDn( ),
                                                            WILDCARD_FILTER,
                                                            attrNames.toArray( new String[0] ) );
@@ -524,6 +532,9 @@ public class LdapSync {
       Map<String, Map<String, String>> userMap = Maps.newHashMap( );
       while ( results.hasMore( ) ) {
         Attributes attrs = results.next( ).getAttributes( );
+        if ( VERBOSE ) {
+          LOG.debug( "Retrieved user: " + attrs );
+        }
         Map<String, String> infoMap = Maps.newHashMap( );
         for ( String attr : lic.getUserInfoAttributes( ) ) {
           infoMap.put( attr, ( String ) attrs.get( attr ).get( ) );

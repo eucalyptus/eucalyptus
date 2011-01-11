@@ -18,7 +18,7 @@ public class LdapClientTest {
     lic.setUserBaseDn( "ou=People,dc=eucalyptus,dc=com" );
     
     LdapClient client = new LdapClient( lic );
-    NamingEnumeration<SearchResult> results = client.search( lic.getUserBaseDn( ), "(uid=*)", null );
+    NamingEnumeration<SearchResult> results = client.search( lic.getUserBaseDn( ), new BasicAttributes( ), new String[]{ "displayName" } );
     while ( results.hasMore( ) ) {
       SearchResult result = results.next( );
       System.out.println( result.getName( ) + ", " + result.getClassName( ) + ", " + result.getNameInNamespace( ) + ", " + result.getAttributes( ) );
