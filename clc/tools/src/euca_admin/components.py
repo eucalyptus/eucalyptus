@@ -103,38 +103,23 @@ class Component():
       except EC2ResponseError, ex:
         self.euca.handle_error(ex)
 
-class Service():
-
-  def __init__(self, service_uuid=None, service_name=None, service_partition=None,
-               service_type=None, service_url=None, service_epoch=None, service_state=None,
-               service_detail=None):
+class ServiceStatus():
+  def __init__(self, service_uuid=None, service_name=None, service_partition=None, service_type=None, service_url=None):
     self.service_uuid = service_uuid
     self.service_name = service_name
     self.service_partition = service_partition
     self.service_type = service_type
     self.service_url = service_url
-    self.service_epoch = service_epoch
-    self.service_state = service_state
-    self.service_detail = service_detail
-    self.euca = EucaAdmin(path=SERVICE_PATH)
-    self.verbose = False
 
   def __repr__(self):
-      return 'SERVICE\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (self.service_uuid, self.service_name,
-                                      self.service_partition, self.service_type, self.service_url, 
-                                      self.service_epoch, self.service_state, self.service_detail)
+      return 'ID[\t%s\t%s\t%s\t%s\t%s]' % (self.service_uuid, self.service_name,
+                                      self.service_partition, self.service_type, self.service_url)
 
   def startElement(self, name, attrs, connection):
-      return None
+      return None    
 
   def endElement(self, name, value, connection):
-    if name == 'euca:item':
-      self.service_detail = '%s, %s' % (self.service_detail, value)
-    elif name == 'euca:localState':
-      self.service_state = value
-    elif name == 'euca:localEpoch':
-      self.service_epoch = value
-    elif name == 'euca:uuid':
+    if name == 'euca:uuid':
       self.service_uuid = value
     elif name == 'euca:partition':
       self.service_partition = value
@@ -144,6 +129,38 @@ class Service():
       self.service_type = value
     elif name == 'euca:uri':
       self.service_uri = value
+    else:
+      setattr(self, name, value)
+
+
+class Service():
+
+  def __init__(self, service_epoch=None, service_state=None, service_detail=None):
+    self.service_epoch = service_epoch
+    self.service_state = service_state
+    self.service_detail = StringList()
+	self.service_id = ServiceStatus()
+    self.euca = EucaAdmin(path=SERVICE_PATH)
+    self.verbose = False
+
+  def __repr__(self):
+      return 'SERVICE\t%s\t%s\t%s\t%s' % (self.service_id, self.service_epoch, self.service_state, self.service_detail)
+
+  def startElement(self, name, attrs, connection):
+    if name == 'euca:serviceId':
+      return self.service_id
+    elif name == 'euca:details':
+      return self.service_detail
+    else:
+      return None    
+
+  def endElement(self, name, value, connection):
+    if name == 'euca:item':
+      self.service_detail = '%s, %s' % (self.service_detail, value)
+    elif name == 'euca:localState':
+      self.service_state = value
+    elif name == 'euca:localEpoch':
+      self.service_epoch = value
     else:
       setattr(self, name, value)
 
