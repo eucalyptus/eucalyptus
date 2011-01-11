@@ -113,7 +113,7 @@ class ServiceStatus():
     self.service_url = service_url
 
   def __repr__(self):
-      return '%-15.15s\t%s\t%s' % (self.service_type.upper(), ('%s.%s'% (self.service_partition, self.service_name)))
+      return '%-15.15s\t%s' % (self.service_type.upper(), ('%s.%s'% (self.service_partition, self.service_name)))
 
   def startElement(self, name, attrs, connection):
       return None    
