@@ -63,10 +63,10 @@
 
 package com.eucalyptus.component.id;
 
-import com.eucalyptus.component.ComponentIdentity;
+import com.eucalyptus.component.ComponentId;
 
 
-public class HttpService extends ComponentIdentity {
+public class HttpService extends ComponentId {
 
   public HttpService( ) {
     super( "jetty" );

@@ -63,9 +63,9 @@
 
 package com.eucalyptus.component.id;
 
-import com.eucalyptus.component.ComponentIdentity;
+import com.eucalyptus.component.ComponentId;
 
-public class Dns extends ComponentIdentity {
+public class Dns extends ComponentId {
 
   @Override
   public String getLocalEndpointName( ) {

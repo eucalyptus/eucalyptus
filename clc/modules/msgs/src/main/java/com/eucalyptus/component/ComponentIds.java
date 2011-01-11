@@ -61,16 +61,25 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.component;
 
-import com.eucalyptus.component.ComponentId;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
-
-public class Walrus extends ComponentId {
-
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://BukkitInternal";
-  }
+public class ComponentIds {
   
+  public static ComponentId lookup( String name ) {
+    Map<String,ComponentId> map = Components.lookup( ComponentId.class );
+    if( !map.containsKey( name ) ) {
+      throw new NoSuchElementException( "No ComponentId with name: " + name );
+    } else {
+      return map.get( name );
+    }
+  }
+
+  public static void register( ComponentId componentId ) {
+    Map<String,ComponentId> map = Components.lookup( ComponentId.class );
+    map.put( componentId.getName( ), componentId );
+  }
+
 }

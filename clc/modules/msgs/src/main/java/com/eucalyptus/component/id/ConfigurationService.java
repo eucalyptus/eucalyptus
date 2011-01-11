@@ -63,9 +63,9 @@
 
 package com.eucalyptus.component.id;
 
-import com.eucalyptus.component.ComponentIdentity;
+import com.eucalyptus.component.ComponentId;
 
 
-public class ConfigurationService extends ComponentIdentity {
+public class ConfigurationService extends ComponentId {
 
 }

@@ -94,6 +94,7 @@ public class Components {
                                                                           {
                                                                             put( Service.class, new ConcurrentHashMap<String, Service>( ) );
                                                                             put( Component.class, new ConcurrentHashMap<String, Component>( ) );
+                                                                            put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
                                                                           }
                                                                         };
   public static com.eucalyptus.bootstrap.Component delegate             = com.eucalyptus.bootstrap.Component.eucalyptus;
@@ -115,7 +116,7 @@ public class Components {
     throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Missing entry for component info type: " + maybeSubclass.getSimpleName( ) );
   }
   
-  private static <T> Map<String, T> lookup( Class type ) {
+  static <T> Map<String, T> lookup( Class type ) {
     return ( Map<String, T> ) componentInformation.get( getRealType( type ) );
   }
   
@@ -206,6 +207,12 @@ public class Components {
     return Components.contains( Component.class, component.name( ) );
   }
   
+  public static Component create( ComponentId id ) throws ServiceRegistrationException {
+    Component c = new Component( id );
+    register( c );
+    return c;
+  }
+
   public static Component create( String name, URI uri ) throws ServiceRegistrationException {
     Component c = new Component( name, uri );
     register( c );

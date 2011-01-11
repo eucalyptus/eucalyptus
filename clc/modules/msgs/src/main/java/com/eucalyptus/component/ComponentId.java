@@ -15,22 +15,22 @@ import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
 
-public abstract class ComponentIdentity implements HasName<ComponentIdentity>, X509Principal, HmacPrincipal {
-  private static Logger LOG = Logger.getLogger( ComponentIdentity.class );
+public abstract class ComponentId implements ComponentInformation, HasName<ComponentId>, X509Principal, HmacPrincipal {
+  private static Logger LOG = Logger.getLogger( ComponentId.class );
   
   private final String name;
   private final Integer port;
   private final String uriPattern;
   private final String uriLocal;
   
-  protected ComponentIdentity( String name ) {
+  protected ComponentId( String name ) {
     this.name = name;
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
   }
 
-  protected ComponentIdentity( ) {
+  protected ComponentId( ) {
     this.name = this.getClass( ).getSimpleName( ).toLowerCase( );
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
@@ -104,7 +104,7 @@ public abstract class ComponentIdentity implements HasName<ComponentIdentity>, X
   }
 
   @Override
-  public int compareTo( ComponentIdentity that ) {
+  public int compareTo( ComponentId that ) {
     return this.name.compareTo( that.name );
   }
 
@@ -123,12 +123,18 @@ public abstract class ComponentIdentity implements HasName<ComponentIdentity>, X
     if ( this == obj ) return true;
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
-    ComponentIdentity other = ( ComponentIdentity ) obj;
+    ComponentId other = ( ComponentId ) obj;
     if ( this.name == null ) {
       if ( other.name != null ) return false;
     } else if ( !this.name.equals( other.name ) ) return false;
     return true;
   }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.name, this.port, this.uriPattern, this.uriLocal );
+  }
+
   @Override public BigInteger getNumber( ) { throw new RuntimeException( "getNumber is not implemented for component principals." ); }
   @Override public void revokeSecretKey( ) { throw new RuntimeException( "getQueryId is not implemented for component principals." ); }
   @Override public final String getQueryId( ) { throw new RuntimeException( "getQueryId is not implemented for component principals." ); }  

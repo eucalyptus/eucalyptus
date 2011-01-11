@@ -480,7 +480,7 @@ public class Bootstrap {
     Bootstrap.doDiscovery( );
 
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    Iterables.all( Stage.list( ), loadConfigs );
+//    Iterables.all( Stage.list( ), loadConfigs );
     for( Component c : Components.list( ) ) {
       Component.Transition.INITIALIZING.transit( c );
     }

@@ -3,9 +3,9 @@ package com.eucalyptus.component.id;
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import com.eucalyptus.component.ComponentIdentity;
+import com.eucalyptus.component.ComponentId;
 
-public class Cluster extends ComponentIdentity {
+public class Cluster extends ComponentId {
 
   @Override
   public Integer getPort( ) {

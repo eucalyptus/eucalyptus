@@ -64,22 +64,32 @@
 package com.eucalyptus.component;
 
 import java.lang.reflect.Modifier;
+import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 
 public class ComponentDiscovery extends ServiceJarDiscovery {
-
+  private static Logger LOG = Logger.getLogger( ComponentDiscovery.class );
+  
   @Override
   public boolean processClass( Class candidate ) throws Throwable {
-    if( ComponentIdentity.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
-      
+    if ( ComponentId.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
+         && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
+      try {
+        ComponentId id = ( ComponentId ) candidate.newInstance( );
+        ComponentIds.register( id );
+        Components.create( id );
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
+      }
+      return true;
+    } else {
+      return false;
     }
-    // find root message types for each service
-    return false;
   }
-
+  
   @Override
   public Double getPriority( ) {
-    return 0.0;
+    return 0.0d;
   }
-
+  
 }

@@ -116,7 +116,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   }
   
   private final String                               name;
-  private final ComponentIdentity                    identity;
+  private final ComponentId                    identity;
   private final com.eucalyptus.bootstrap.Component   component;
   private final ComponentConfiguration               configuration;
   private final AtomicBoolean                        enabled      = new AtomicBoolean( false );
@@ -127,7 +127,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   private final ComponentState                       stateMachine;
   private final AtomicReference<Service>             localService = new AtomicReference( null );
   
-  Component( ComponentIdentity componentId ) throws ServiceRegistrationException {
+  Component( ComponentId componentId ) throws ServiceRegistrationException {
     this.name = componentId.getName( );
     this.identity = componentId;
     this.component = initComponent( );
@@ -143,6 +143,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     } else {
       this.builder = new DummyServiceBuilder( this );
     }
+    this.configuration = new ComponentConfiguration( this );
     this.bootstrapper = new ComponentBootstrapper( this );
     this.stateMachine = new ComponentState( this );
   }
@@ -599,7 +600,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   /**
    * @return the identity
    */
-  public ComponentIdentity getIdentity( ) {
+  public ComponentId getIdentity( ) {
     return this.identity;
   }
 }

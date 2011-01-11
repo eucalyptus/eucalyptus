@@ -98,17 +98,21 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   public static void runDiscovery( ) {
     for ( ServiceJarDiscovery s : discovery ) {
-      LOG.info( LogUtil.subheader( s.getClass( ).getSimpleName( ) ) );
-      for ( Class c : classList.keySet( ) ) {
-        try {
-          s.checkClass( c );
-        } catch ( Throwable t ) {
-          LOG.debug( t, t );
-        }
+      runDiscovery( s );
+    }
+  }
+
+  public static void runDiscovery( ServiceJarDiscovery s ) {
+    LOG.info( LogUtil.subheader( s.getClass( ).getSimpleName( ) ) );
+    for ( Class c : classList.keySet( ) ) {
+      try {
+        s.checkClass( c );
+      } catch ( Throwable t ) {
+        LOG.debug( t, t );
       }
     }
   }
-  
+
   private void checkClass( Class candidate ) {
     try {
       if ( this.processClass( candidate ) ) {

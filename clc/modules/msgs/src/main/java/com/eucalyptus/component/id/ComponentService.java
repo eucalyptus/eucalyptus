@@ -63,10 +63,10 @@
 
 package com.eucalyptus.component.id;
 
-import com.eucalyptus.component.ComponentIdentity;
+import com.eucalyptus.component.ComponentId;
 
 
-public class ComponentService extends ComponentIdentity {
+public class ComponentService extends ComponentId {
 
   @Override
   public String getLocalEndpointName( ) {

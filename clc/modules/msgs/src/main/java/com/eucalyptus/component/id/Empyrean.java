@@ -63,10 +63,10 @@
 
 package com.eucalyptus.component.id;
 
-import com.eucalyptus.component.ComponentIdentity;
+import com.eucalyptus.component.ComponentId;
 
 
-public class Empyrean extends ComponentIdentity {
+public class Empyrean extends ComponentId {
   
   public Empyrean( ) {
     super( "bootstrap" );
