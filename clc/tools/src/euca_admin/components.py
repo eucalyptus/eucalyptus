@@ -151,7 +151,7 @@ class Service():
     parser.add_option("-v", "--verbose", dest="verbose", default=False, action="store_true", help="Report verbose details about the state of the component.")
     return parser.parse_args()
 
-  def cli_service(self):
+  def cli_describe(self):
     (options, args) = self.get_describe_parser()
     self.service_describe(args,options.verbose)
 
