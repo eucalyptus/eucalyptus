@@ -233,7 +233,7 @@ VMware installation.
 
 %prep
 %setup -q
-%setup -q -T -D -a 1
+%setup -q -T -D -b 1
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
