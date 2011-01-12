@@ -107,8 +107,7 @@ if test -n "${LIBVIRT_HOME}" ; then
 	fi
 fi
 if test -n "${VDDK_HOME}" ; then
-        AS_IF([test "x$build_cpu" = "xx86_64",
-               LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"],
+        AS_IF([test "x$build_cpu" = "xx86_64"], [LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"],
               [LIBS="-L${VDDK_HOME}/lib32 ${LIBS}"])
 
         if test -d "${VDDK_HOME}"/include/ ; then
