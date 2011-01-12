@@ -18,6 +18,7 @@ AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
 AC_USE_SYSTEM_EXTENSIONS
+AC_CANONICAL_BUILD
 EUCA_VERSION="`cat VERSION`"
 
 # let's figure out where is the source tree
@@ -106,10 +107,15 @@ if test -n "${LIBVIRT_HOME}" ; then
 	fi
 fi
 if test -n "${VDDK_HOME}" ; then
-	if test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
-		INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
-		LIBS="-L${VDDK_HOME}/lib ${LIBS}"
-	fi
+        AS_IF([test "x$build_cpu" = "xx86_64",
+               LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"],
+              [LIBS="-L${VDDK_HOME}/lib32 ${LIBS}"])
+
+        if test -d "${VDDK_HOME}"/include/ ; then
+                INCLUDES="${INCLUDES} -I${VDDK_HOME}/include/"
+        elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
+                INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
+        fi
 fi
 
 
