@@ -182,9 +182,9 @@ public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPi
   }
 
   
-  @Provides(Component.bootstrap)
+  @Provides(com.eucalyptus.bootstrap.Component.bootstrap)
   @RunDuring(Bootstrap.Stage.RemoteServicesInit)
-  @DependsRemote(Component.eucalyptus)
+  @DependsRemote(com.eucalyptus.bootstrap.Component.eucalyptus)
   public static class DeferedRemoteServiceBootstrapper extends Bootstrapper {
     @Override
     public boolean start( ) throws Exception {
