@@ -88,8 +88,10 @@
 	<!--================================== build targets ==================================-->
 	<target name="build">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
+		<ant dir="modules/euare-common" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder" />
 		<ant dir="modules/authentication" inheritall="false" target="builder" />
+		<ant dir="modules/euare" inheritall="false" target="builder" />
 		<ant dir="modules/configuration" inheritall="false" target="builder" />
 		<ant dir="modules/core" inheritall="false" target="builder" />
 		<ant dir="modules/wsstack" inheritall="false" target="builder" />
@@ -113,8 +115,10 @@
 	</target>
 	<target name="jar" depends="bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
+		<ant dir="modules/euare-common" inheritall="false" target="jar" />
 		<ant dir="modules/mysql" inheritall="false" target="jar" />
 		<ant dir="modules/authentication" inheritall="false" target="jar" />
+		<ant dir="modules/euare" inheritall="false" target="jar" />
 		<ant dir="modules/cloud" inheritall="false" target="jar" />
 		<ant dir="modules/configuration" inheritall="false" target="jar" />
 		<ant dir="modules/component" inheritall="false" target="jar" />
@@ -169,9 +173,11 @@
 	<target name="clean">
 		<delete file="${bind.timestamp}"/>
 		<ant dir="modules/msgs" inheritall="false" target="clean" />
+		<ant dir="modules/euare-common" inheritall="false" target="clean" />
 		<ant dir="modules/mysql" inheritall="false" target="clean" />
 		<ant dir="modules/cloud" inheritall="false" target="clean" />
 		<ant dir="modules/authentication" inheritall="false" target="clean" />
+		<ant dir="modules/euare" inheritall="false" target="clean" />
 		<ant dir="modules/configuration" inheritall="false" target="clean" />
 		<ant dir="modules/component" inheritall="false" target="clean" />
 		<ant dir="modules/core" inheritall="false" target="clean" />

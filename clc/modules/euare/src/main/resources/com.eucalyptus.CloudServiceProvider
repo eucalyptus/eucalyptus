@@ -1,0 +1,6 @@
+name=euare
+euca.model.euare=euare-model.xml
+euca.model.euare.services=euare-services.xml
+euca.url.local=vm://EuareInternal
+euca.url.pattern=http://%s:%d/internal/EuareInternal
+euca.url.port=8773

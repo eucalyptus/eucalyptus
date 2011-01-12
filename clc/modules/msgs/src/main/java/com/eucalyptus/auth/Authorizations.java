@@ -89,4 +89,40 @@ public class Authorizations {
     }
   }
   
+  public static <T> void checkAuthorization( Class<T> resourceType, String resourceName, String accountId ) throws AuthException {
+    Context context = Contexts.lookup( );
+    context.getContracts( ).putAll(
+        policyEngine.evaluateAuthorization( resourceType, resourceName, accountId, context.getRequest( ), context.getUser( ) ) );    
+  }
+  
+  public static <T> void checkQuota( Class<T> resourceType, String resourceName, Integer quantity ) throws AuthException {
+    Context context = Contexts.lookup( );
+    policyEngine.evaluateQuota( resourceType, resourceName, quantity, context.getRequest( ), context.getUser( ) );
+  }
+  
+  public static <T> boolean isAuthorized( Class<T> resourceType, String resourceName, String accountId ) {
+    Context context = null;
+    try {
+      context = Contexts.lookup( );
+      context.getContracts( ).putAll(
+          policyEngine.evaluateAuthorization( resourceType, resourceName, accountId, context.getRequest( ), context.getUser( ) ) );
+      return true;
+    } catch ( AuthException e ) {
+      LOG.debug( "Resource access to " + resourceType.getCanonicalName( ) + ":" + resourceName + " of " + accountId + " for " + context.getUser( ), e );
+      return false;
+    }
+  }
+  
+  public static <T> boolean canAllocate( Class<T> resourceType, String resourceName, Integer quantity ) throws AuthException {
+    Context context = null;
+    try {
+      context = Contexts.lookup( );
+      policyEngine.evaluateQuota( resourceType, resourceName, quantity, context.getRequest( ), context.getUser( ) );
+      return true;
+    } catch ( AuthException e ) {
+      LOG.debug( "Allocate resource " + resourceType.getCanonicalName( ) + ":" + resourceName + " by " + quantity + " for " + context.getUser( ), e );
+      return false;
+    }
+  }
+  
 }

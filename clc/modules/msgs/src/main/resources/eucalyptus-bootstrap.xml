@@ -82,6 +82,7 @@
   <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" />
   <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" />
   <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" />
+  <endpoint name="EuareRequestQueueEndpoint" address="vm://EuareRequestQueue" synchronous="false" />
   <endpoint name="VMwareBrokerRequestQueueEndpoint" address="vm://VMwareBrokerRequestQueue" synchronous="false" />
   <endpoint name="ComponentRequestQueueEndpoint" address="vm://ComponentRequestQueue" synchronous="false" />
   <model name="eucalyptus-bootstrap">
@@ -119,6 +120,10 @@
         <filtering-router>
           <outbound-endpoint ref="ComponentRequestQueueEndpoint" synchronous="false" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ComponentMessageType" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="EuareRequestQueueEndpoint" synchronous="false" />
+          <payload-type-filter expectedType="com.eucalyptus.auth.euare.EuareMessage" />
         </filtering-router>
       </outbound>
     </service>

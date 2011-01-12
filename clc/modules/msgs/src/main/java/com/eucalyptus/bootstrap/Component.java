@@ -87,6 +87,7 @@ public enum Component {
   configuration( true, false, true ),
   cluster( false, false, false ),
   vmwarebroker( true, false, false ),
+  euare( true, false, true ),
   any( false, true, false );
   private static Logger LOG = Logger.getLogger( Component.class );
 

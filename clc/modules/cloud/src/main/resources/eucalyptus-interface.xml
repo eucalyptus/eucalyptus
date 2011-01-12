@@ -125,10 +125,12 @@
 					<outbound-endpoint ref="GroupsWS" />
 					<payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage" />
 				</filtering-router>
+<!--
                 <filtering-router>
                     <outbound-endpoint ref="AccountsManageWS" />
                     <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.AccountsManagementMessage" />
                 </filtering-router>
+-->
         <filtering-router>
           <outbound-endpoint ref="ShortBusWS" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
