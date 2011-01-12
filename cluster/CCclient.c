@@ -343,6 +343,12 @@ int main(int argc, char **argv) {
 	printf("cc_bundleInstance() failed\n");
 	exit(1);
       }
+    } else if (!strcmp(argv[2], "createImage")) {
+      rc = cc_createImage(argv[3], argv[4], argv[5], env, stub);
+      if (rc != 0) {
+	printf("cc_createImage() failed\n");
+	exit(1);
+      }
     } else if (!strcmp(argv[2], "describePublicAddresses")) {
       rc = cc_describePublicAddresses(env, stub);
       if (rc != 0) {

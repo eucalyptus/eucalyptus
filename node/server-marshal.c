@@ -368,6 +368,11 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     axis2_char_t * userData = adb_ncRunInstanceType_get_userData(input, env);
     axis2_char_t * launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
     axis2_char_t * platform = adb_ncRunInstanceType_get_platform(input, env);
+
+    int expiryTime=0;
+    axutil_date_time_t *dt = adb_ncRunInstanceType_get_expiryTime(input, env);
+    expiryTime = datetime_to_unix(dt, env);
+
     int groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
     char ** groupNames = calloc (groupNamesSize, sizeof(char *));
     if (groupNames==NULL) {
@@ -392,7 +397,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
                                        ramdiskId, ramdiskURL, 
                                        keyName, 
                                        &netparams, 
-                                       userData, launchIndex, platform, groupNames, groupNamesSize,
+                                       userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
                                        &outInst);
             
             if (error) {
@@ -725,6 +730,45 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
     pthread_mutex_unlock(&ncHandlerLock);
     
     //    eventlog("NC", userId, correlationId, "DetachVolume", "end");
+    return response;
+}
+
+adb_ncCreateImageResponse_t* ncCreateImageMarshal (adb_ncCreateImage_t* ncCreateImage, const axutil_env_t *env) {
+    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncCreateImageType_t * input          = adb_ncCreateImage_get_ncCreateImage(ncCreateImage, env);
+    adb_ncCreateImageResponse_t * response   = adb_ncCreateImageResponse_create(env);
+    adb_ncCreateImageResponseType_t * output = adb_ncCreateImageResponseType_create(env);
+
+    // get operation-specific fields from input
+    axis2_char_t * instanceId = adb_ncCreateImageType_get_instanceId(input, env);
+    axis2_char_t * volumeId = adb_ncCreateImageType_get_volumeId(input, env);
+    axis2_char_t * remoteDev = adb_ncCreateImageType_get_remoteDev(input, env);
+
+    //    eventlog("NC", userId, correlationId, "CreateImage", "begin");
+    { // do it
+      //        ncMetadata meta = { correlationId, userId };
+        ncMetadata meta;
+	EUCA_MESSAGE_UNMARSHAL(ncCreateImageType, input, (&meta));
+        int error = doCreateImage (&meta, instanceId, volumeId, remoteDev);
+    
+        if (error) {
+            logprintfl (EUCAERROR, "ERROR: doCreateImage() failed error=%d\n", error);
+            adb_ncCreateImageResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_ncCreateImageResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncCreateImageResponseType_set_userId(output, env, meta.userId);
+        } else {
+            // set standard fields in output
+            adb_ncCreateImageResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncCreateImageResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncCreateImageResponseType_set_userId(output, env, meta.userId);
+            // no operation-specific fields in output
+        }
+    }
+    // set response to output
+    adb_ncCreateImageResponse_set_ncCreateImageResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    //    eventlog("NC", userId, correlationId, "CreateImage", "end");
     return response;
 }
 

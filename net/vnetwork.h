@@ -189,6 +189,7 @@ int vnetSetPublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip, i
 int vnetGetPublicIP(vnetConfig *vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
 
 int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst);
+int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst);
 int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst);
 
 int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);

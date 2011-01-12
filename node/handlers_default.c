@@ -126,7 +126,7 @@ doRunInstance(	struct nc_state_t *nc,
                 char *ramdiskId, char *ramdiskURL, // ignored
                 char *keyName, 
                 netConfig *netparams,
-                char *userData, char *launchIndex, char *platform,
+                char *userData, char *launchIndex, char *platform, int expiryTime,
                 char **groupNames, int groupNamesSize,
                 ncInstance **outInst)
 {
@@ -154,7 +154,7 @@ doRunInstance(	struct nc_state_t *nc,
                                         PENDING, 
                                         meta->userId, 
                                         &ncnet, keyName,
-                                        userData, launchIndex, platform, groupNames, groupNamesSize))) {
+                                        userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize))) {
         logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
         return ERROR;
     }
@@ -500,7 +500,7 @@ doDescribeInstances(	struct nc_state_t *nc,
 	ncInstance *instance, *tmp;
 	int total, i, j, k;
 
-	logprintfl(EUCADEBUG, "eucalyptusMessageMarshal: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(meta->userId), SP(meta->correlationId), meta->epoch, SP(meta->services[0].name), SP(meta->services[0].type), SP(meta->services[0].uris[0])); 
+	logprintfl(EUCADEBUG, "doDescribeInstances: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(meta->userId), SP(meta->correlationId), meta->epoch, SP(meta->services[0].name), SP(meta->services[0].type), SP(meta->services[0].uris[0])); 
 
 	*outInstsLen = 0;
 	*outInsts = NULL;
@@ -696,6 +696,18 @@ doDetachVolume(	struct nc_state_t *nc,
 {
 	logprintfl(EUCAERROR, "no default for doDetachVolume!\n");
 	return ERROR_FATAL;
+}
+
+static int
+doCreateImage(	struct nc_state_t *nc,
+		ncMetadata *meta,
+		char *instanceId,
+		char *volumeId,
+		char *remoteDev)
+{
+	logprintfl (EUCAINFO, "CreateImage(): invoked\n");
+	
+	return 0;
 }
 
 // helper for changing bundling task state and stateName together
@@ -1075,6 +1087,7 @@ struct handlers default_libvirt_handlers = {
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume,
+    .doCreateImage       = doCreateImage,
     .doBundleInstance    = doBundleInstance,
     .doCancelBundleTask  = doCancelBundleTask,
     .doDescribeBundleTasks    = doDescribeBundleTasks
