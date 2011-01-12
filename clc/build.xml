@@ -244,9 +244,11 @@
 		<mkdir dir="${DESTDIR}${euca.var.dir}/modules" />
 		<mkdir dir="${DESTDIR}${euca.run.dir}" />
 		<ant dir="modules/msgs" inheritall="false" target="install" />
+		<ant dir="modules/euare-common" inheritall="false" target="install" />
 		<ant dir="modules/mysql" inheritall="false" target="install" />
 		<ant dir="modules/cloud" inheritall="false" target="install" />
 		<ant dir="modules/authentication" inheritall="false" target="install" />
+		<ant dir="modules/euare" inheritall="false" target="install" />
 		<ant dir="modules/configuration" inheritall="false" target="install" />
 		<ant dir="modules/component" inheritall="false" target="install" />
 		<ant dir="modules/core" inheritall="false" target="install" />
