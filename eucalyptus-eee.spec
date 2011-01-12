@@ -53,7 +53,8 @@ BuildRequires: euca-axis2c >= 1.6.0
 BuildRequires: euca-rampartc >= 1.3.0
 BuildRequires: swig
 BuildRequires: %{euca_iscsi_client}
-BuildRequires: %{euca_java}
+# The encryption we use doesn't work with OpenJDK
+BuildRequires: jdk
 BuildRequires: %{euca_libvirt}-devel
 BuildRequires: %{euca_libvirt}
 BuildRequires: %{euca_libcurl}
@@ -84,7 +85,7 @@ them).
 Summary:      Elastic Utility Computing Architecture - ws java stack
 Requires:     %{name} = %{version}-%{release}
 Requires:     lvm2
-Requires:     %{euca_java}
+Requires:     jre
 Group:        Applications/System
 
 %description common-java
@@ -237,6 +238,7 @@ VMware installation.
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
+export JAVA_HOME=/etc/alternatives/jre_1.6.0
 ./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/ --with-vddk=./vmware-vix-disklib-distrib
 cd clc
 make deps
