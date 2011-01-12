@@ -150,14 +150,6 @@ public class BlockStorage {
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
-		blockManager.configure();
-		blockManager.initialize();
-		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
-		try {
-			startupChecks();
-		} catch(EucalyptusCloudException ex) {
-			LOG.error("Startup checks failed ", ex);
-		}
 	}
 
 	public BlockStorage() {}
@@ -195,7 +187,15 @@ public class BlockStorage {
 	}
 
 	public static void enable() throws EucalyptusCloudException {
+		blockManager.configure();
+		blockManager.initialize();
+		try {
+			startupChecks();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error("Startup checks failed ", ex);
+		}
 		blockManager.enable();
+		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 	}
 	
 	public static void disable() throws EucalyptusCloudException {
