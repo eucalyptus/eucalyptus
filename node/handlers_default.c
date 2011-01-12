@@ -691,6 +691,18 @@ doDetachVolume(	struct nc_state_t *nc,
 	return ERROR_FATAL;
 }
 
+static int
+doCreateImage(	struct nc_state_t *nc,
+		ncMetadata *meta,
+		char *instanceId,
+		char *volumeId,
+		char *remoteDev)
+{
+	logprintfl (EUCAINFO, "CreateImage(): invoked\n");
+	
+	return 0;
+}
+
 struct handlers default_libvirt_handlers = {
     .name = "default",
     .doInitialize        = doInitialize,
@@ -704,6 +716,7 @@ struct handlers default_libvirt_handlers = {
     .doAssignAddress     = doAssignAddress,
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
-    .doDetachVolume      = doDetachVolume
+    .doDetachVolume      = doDetachVolume,
+    .doCreateImage       = doCreateImage
 };
 

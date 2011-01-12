@@ -182,6 +182,11 @@ struct handlers {
 				char *localDev,
 				int force,
                                 int grab_inst_sem);
+    int (*doCreateImage)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char *volumeId,
+				char *remoteDev);
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
@@ -196,6 +201,7 @@ int doDescribeResource		(ncMetadata *meta, char *resourceType, ncResource **outR
 int doStartNetwork		(ncMetadata *ccMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
+int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
 #endif /* HANDLERS_FANOUT */
 
 /* helper functions used by the low level handlers */

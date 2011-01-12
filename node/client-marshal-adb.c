@@ -728,6 +728,46 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     return status;
 }
 
+int ncCreateImageStub (ncStub *st, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev) 
+{
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
+    adb_ncCreateImage_t     * input   = adb_ncCreateImage_create (env); 
+    adb_ncCreateImageType_t * request = adb_ncCreateImageType_create (env);
+    
+    // set standard input fields
+    adb_ncCreateImageType_set_nodeName(request, env, st->node_name);
+    if (meta) {
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncCreateImageType, request, meta);
+    }
+    
+    // set op-specific input fields
+    adb_ncCreateImageType_set_instanceId(request, env, instanceId);
+    adb_ncCreateImageType_set_volumeId(request, env, volumeId);
+    adb_ncCreateImageType_set_remoteDev(request, env, remoteDev);
+    adb_ncCreateImage_set_ncCreateImage(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncCreateImageResponse_t * output = axis2_stub_op_EucalyptusNC_ncCreateImage (stub, env, input);
+        
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: CreateImage" NULL_ERROR_MSG);
+            status = -1;
+
+        } else {
+            adb_ncCreateImageResponseType_t * response = adb_ncCreateImageResponse_get_ncCreateImageResponse (output, env);
+            if ( adb_ncCreateImageResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: CreateImage returned an error\n");
+                status = 1;
+            }
+        }
+    }
+    
+    return status;
+}
+
 /*************************
  a template for future ops
  *************************

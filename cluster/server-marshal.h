@@ -61,6 +61,7 @@ permission notice:
 #define SERVER_MARSHAL_H
 
 #include "axis2_skel_EucalyptusCC.h"
+#include <server-marshal-state.h>
 #include <handlers.h>
 
 adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances, const axutil_env_t *env);
@@ -82,6 +83,8 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
 
 adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume, const axutil_env_t *env);
 adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume, const axutil_env_t *env);
+
+adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t *createImage, const axutil_env_t *env);
 
 void print_adb_ccInstanceType(adb_ccInstanceType_t *in);
 int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil_env_t *env);
