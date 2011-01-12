@@ -40,14 +40,12 @@
 %global euca_iscsi_server scsi-target-utils
 %endif
 
-%if %is_centos
-BuildRoot:     %{_tmppath}/%{name}-%{version}-root
-%endif
 Summary:       Elastic Utility Computing Architecture
-Name:          eucalyptus
+Name:          eucalyptus-eee
 Version:       2.1.0
 Release:       0
 License:       Eucalyptus EEE Software License
+URL:           http://www.eucalyptus.com
 Group:         Applications/System
 BuildRequires: ant
 BuildRequires: ant-nodeps
@@ -65,10 +63,11 @@ Requires:      perl(Crypt::OpenSSL::RSA)
 Requires:      perl(Crypt::OpenSSL::Random)
 Requires:      sudo
 
+BuildRoot:     %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+
 Source0:       %{name}-%{version}.tar.gz
 # The VMware VDDK may be non-redistributable.  We don't include it just in case.
 Source1:       vmware-vix-disklib-distrib.tgz
-URL:           http://www.eucalyptus.com
 
 %description
 EUCALYPTUS is a service overlay that implements elastic computing
@@ -135,7 +134,11 @@ Summary:      Elastic Utility Computing Architecture - cloud controller
 Requires:     %{name}-common-java = %{version}-%{release}
 Requires:     euca2ools-eee
 Requires:     lvm2
+%if %{is_centos}
+Requires:     python26-boto
+%else
 Requires:     python-boto >= 1.9b
+%endif
 Group:        Applications/System
 
 %description cloud
