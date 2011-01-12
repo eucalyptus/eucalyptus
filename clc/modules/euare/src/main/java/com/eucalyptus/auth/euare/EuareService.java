@@ -1,5 +1,8 @@
 package com.eucalyptus.auth.euare;
 
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.euare.AddUserToGroup;
 import com.eucalyptus.auth.euare.AddUserToGroupResponse;
 import com.eucalyptus.auth.euare.CreateAccessKey;
@@ -85,8 +88,10 @@ import com.eucalyptus.auth.euare.UploadServerCertificateResponse;
 import com.eucalyptus.auth.euare.UploadSigningCertificate;
 import com.eucalyptus.auth.euare.UploadSigningCertificateResponse;
 
-
 public class EuareService {
+  
+  private static final Logger LOG = Logger.getLogger( EuareService.class );
+  
   public ListGroupsResponse listGroups(ListGroups request) {
     ListGroupsResponse reply = request.getReply( );
     return reply;
@@ -158,8 +163,17 @@ public class EuareService {
   }
 
   public ListUsersResponse listUsers(ListUsers request) {
-    ListUsersResponse reply = request.getReply( );
-    return reply;
+    LOG.debug( "YE:" + "processing ListUsers" );
+    ListUsersResponse response = request.getReply( );
+    ArrayList<User> users = response.getListUsersResult( ).getUsers( ).getMemberList( );
+    User user = new User( );
+    user.setArn( "arn:aws:iam::123456789012:user/division_abc/subdivision_xyz/engineering/Andrew" );
+    user.setPath( "/division_abc/subdivision_xyz/engineering/" );
+    user.setUserId( "AID2MAB8DPLSRHEXAMPLE" );
+    user.setUserName( "Andrew" );
+    users.add( user );
+    response.getListUsersResult( ).setIsTruncated( false );
+    return response;
   }
 
   public UpdateGroupResponse updateGroup(UpdateGroup request) {
