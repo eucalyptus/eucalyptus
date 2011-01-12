@@ -75,6 +75,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
+import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -87,6 +88,9 @@ import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.HeartbeatHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
@@ -130,6 +134,27 @@ public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPi
           c.loadService( config );
         }
       }
+      for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+        stage.updateBootstrapDependencies( );
+      }
+      try {
+        GroovyUtil.evaluateScript( "after_database.groovy" );
+      } catch ( ScriptExecutionFailedException e1 ) {
+        LOG.error( "Failed with invalid DB address" );
+        LOG.debug( e1, e1 );
+        System.exit( 123 );
+      }
+      try {
+        if( NetworkUtil.testReachability( host ) ) {
+          LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
+        } else {
+          LOG.error( "Failed with invalid DB address" );
+          System.exit( -1 );
+        }
+      } catch ( Throwable e ) {
+        LOG.error( "Failed with invalid DB address" );
+      }
+
     } else {
       this.channel = this.bootstrap.bind( new InetSocketAddress( this.port ) );
       LOG.info( "Waiting for system properties before continuing bootstrap." );
