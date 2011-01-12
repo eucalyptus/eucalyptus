@@ -189,3 +189,27 @@ class Service():
     except EC2ResponseError, ex:
       self.euca.handle_error(ex)
 
+  def get_modify_parser(self):
+    parser = OptionParser("usage: %prog [COMPONENTS...]",
+                          version="Eucalyptus %prog VERSION")
+    parser.add_option("-s", "--state", dest="state", default=False, action="store_true", help="Attempt to change the state of the service to be <state>.")
+    return parser.parse_args()
+
+  def cli_modify(self):
+    (options, args) = self.get_modify_parser()
+    self.service_modify(args,options.verbose)
+
+  def service_modify(self,operation=None,service_type=None,service_partition=None,service_name=None,verbose=False):
+    params = {}
+    if components:
+      self.euca.connection.build_list_params(params,components,'Name')
+    try:
+      list = self.euca.connection.get_list('DescribeServices', params,
+                                           [('euca:item', Service)])
+      for i in list:
+        if verbose:
+          print i
+        elif not verbose:
+          print i
+    except EC2ResponseError, ex:
+      self.euca.handle_error(ex)

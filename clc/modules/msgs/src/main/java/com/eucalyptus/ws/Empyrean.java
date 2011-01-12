@@ -63,15 +63,20 @@
 
 package com.eucalyptus.ws;
 
+import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.msgs.DescribeServicesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeServicesType;
 import edu.ucsb.eucalyptus.msgs.DisableServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.DisableServiceType;
 import edu.ucsb.eucalyptus.msgs.EnableServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.EnableServiceType;
+import edu.ucsb.eucalyptus.msgs.ServiceId;
 import edu.ucsb.eucalyptus.msgs.ServiceStatusType;
 import edu.ucsb.eucalyptus.msgs.StartServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.StartServiceType;
@@ -79,6 +84,7 @@ import edu.ucsb.eucalyptus.msgs.StopServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.StopServiceType;
 
 public class Empyrean {
+  private static Logger LOG = Logger.getLogger( Empyrean.class );
   public StartServiceResponseType startService( StartServiceType request ) {
     StartServiceResponseType reply = request.getReply( );
     return reply;
@@ -93,6 +99,29 @@ public class Empyrean {
   }
   public DisableServiceResponseType disableService( DisableServiceType request ) {
     DisableServiceResponseType reply = request.getReply( );
+    for( ServiceId serviceId : request.getServiceIds( ) ) {
+      try {
+        Component c = Components.lookup( serviceId.getType( ) );
+        for( Service service : c.getServices( ) ) {
+          String partition = service.getServiceConfiguration( ).getPartition( );
+          String name = service.getServiceConfiguration( ).getName( );
+          if( partition.equals( serviceId.getPartition( ) ) && name.equals( serviceId.getName( ) ) ) {
+            if( Component.State.ENABLED.equals( service.getState( ) ) ) {
+              try {
+                c.disableService( service.getServiceConfiguration( ) );
+                reply.getServiceIds( ).add( serviceId );
+              } catch ( ServiceRegistrationException ex ) {
+                LOG.error( "DISABLE'ing service failed: " + ex.getMessage( ), ex );
+              }
+            } else {
+              LOG.error( "Attempt to DISABLE a service which is not currently ENABLED: " + service.toString( ) );
+            }
+          }
+        }
+      } catch ( NoSuchElementException ex ) {
+        Exceptions.trace( "Failed to lookup component of type: " + serviceId.getType( ), ex );
+      }
+    }
     return reply;
   }
   public DescribeServicesResponseType describeService( DescribeServicesType request ) {

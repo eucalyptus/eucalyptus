@@ -105,7 +105,7 @@ public class ConfigurationMessage extends BaseMessage {
   }
 }
 public class ServiceTransitionType extends EmpyreanMessage  {
-  ArrayList<ServiceId> serviceId = new ArrayList<ServiceId>();
+  ArrayList<ServiceId> serviceIds = new ArrayList<ServiceId>();
 }
 public class StartServiceType extends ServiceTransitionType {}
 public class StartServiceResponseType extends ServiceTransitionType {}
