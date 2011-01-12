@@ -2561,7 +2561,8 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
   done=0;
   for (j=start; j<stop && !done; j++) {
     timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
+    //    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
     if (rc) {
       ret = 1;
     } else {
@@ -3604,6 +3605,14 @@ int maintainNetworkState() {
 int restoreNetworkState() {
   int rc, ret=0, i;
   char cmd[MAX_PATH];
+
+  /* this function should query both internal and external information sources and restore the CC to correct networking state
+     1.) restore from internal instance state
+         - local IPs (instance and cloud)
+         - networks (bridges)
+     2.) query CLC for sec. group rules and apply (and/or apply from in-memory iptables?)
+     3.) (re)start local network processes (dhcpd)
+  */
 
   logprintfl(EUCADEBUG, "restoreNetworkState(): restoring network state\n");
   sem_mywait(VNET);
