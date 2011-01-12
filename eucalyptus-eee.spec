@@ -55,6 +55,7 @@ BuildRequires: swig
 BuildRequires: %{euca_iscsi_client}
 # The encryption we use doesn't work with OpenJDK
 BuildRequires: jdk
+BuildRequires: jre
 BuildRequires: %{euca_libvirt}-devel
 BuildRequires: %{euca_libvirt}
 BuildRequires: %{euca_libcurl}
