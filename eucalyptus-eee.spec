@@ -665,7 +665,7 @@ then
 fi
 
 %changelog
-* Wed Jan 12 2010 Eucalyptus Release Engineering <support@eucalyptus.com> - 2.1.0-1
+* Wed Jan 12 2011 Eucalyptus Release Engineering <support@eucalyptus.com> - 2.1.0-1
 - Version 2.1 of Eucalyptus Enterprise Cloud
 
 * Tue Jun  1 2010 Eucalyptus Release Engineering <support@eucalyptus.com> - 2.0.0-1
