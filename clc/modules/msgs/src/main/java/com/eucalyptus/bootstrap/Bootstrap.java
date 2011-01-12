@@ -334,28 +334,24 @@ public class Bootstrap {
       String bc = bootstrap.getClass( ).getCanonicalName( );
       Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
       comp = bootstrap.getProvides( );
-      Component component = Components.lookup( comp.name( ) );
       if ( Components.delegate.any.equals( comp ) ) {
         for( Component c : Components.list( ) ) {
           if ( !bootstrap.checkLocal( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", component.getName( ),
-                              "Component." + component.getName( ) + ".isLocal", component.isLocal( ).toString( ) ).info( );
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", bootstrap.getDependsLocal( ).toString( ) ).info( );
           } else if ( !bootstrap.checkRemote( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", component.getName( ),
-                              "Component." + component.getName( ) + ".isLocal", component.isLocal( ).toString( ) ).info( );
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", bootstrap.getDependsRemote( ).toString( ) ).info( );
           } else {
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
             c.getBootstrapper( ).addBootstrapper( bootstrap );
           }
         }
       } else if ( Components.delegate.bootstrap.equals( comp ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + component.getName( ) ).info( );
         if ( !bootstrap.checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", component.getName( ),
-                            "Component." + component.getName( ) + ".isLocal", component.isLocal( ).toString( ) ).info( );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", bootstrap.getDependsLocal( ).toString( ) ).info( );
         } else if ( !bootstrap.checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", component.getName( ),
-                            "Component." + component.getName( ) + ".isLocal", component.isLocal( ).toString( ) ).info( );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", bootstrap.getDependsRemote( ).toString( ) ).info( );
         } else {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + comp.name( ) ).info( );
           stage.addBootstrapper( bootstrap );
         }
       } else {
