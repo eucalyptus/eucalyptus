@@ -130,6 +130,27 @@
 	  </xs:complexContent>
     </xs:complexType>
 
+    <xs:complexType name="ncCreateImageType">
+      <xs:complexContent>
+        <xs:extension base="tns:eucalyptusMessage">
+          <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+            <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+            <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+          </xs:sequence>
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncCreateImageResponseType">
+      <xs:complexContent>
+        <xs:extension base="tns:eucalyptusMessage">
+          <xs:sequence>
+          </xs:sequence>
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
     <xs:complexType name="ncGetConsoleOutputType">
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
@@ -377,6 +398,9 @@
     <xs:element name="ncDetachVolume" nillable="true" type="tns:ncDetachVolumeType"/>
     <xs:element name="ncDetachVolumeResponse" nillable="true" type="tns:ncDetachVolumeResponseType"/>
 
+    <xs:element name="ncCreateImage" nillable="true" type="tns:ncCreateImageType"/>
+    <xs:element name="ncCreateImageResponse" nillable="true" type="tns:ncCreateImageResponseType"/>
+
     <xs:element name="ncGetConsoleOutput" nillable="true" type="tns:ncGetConsoleOutputType"/>
     <xs:element name="ncGetConsoleOutputResponse" nillable="true" type="tns:ncGetConsoleOutputResponseType"/>
     
@@ -434,6 +458,11 @@
   </wsdl:part>
 </wsdl:message>
 
+<wsdl:message name="ncCreateImageResponse">
+  <wsdl:part element="tns:ncCreateImageResponse" name="ncCreateImageResponse">
+  </wsdl:part>
+</wsdl:message>
+
 <wsdl:message name="ncGetConsoleOutputResponse">
   <wsdl:part element="tns:ncGetConsoleOutputResponse" name="ncGetConsoleOutputResponse">
   </wsdl:part>
@@ -486,6 +515,11 @@
 
 <wsdl:message name="ncDetachVolume">
   <wsdl:part element="tns:ncDetachVolume" name="ncDetachVolume">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncCreateImage">
+  <wsdl:part element="tns:ncCreateImage" name="ncCreateImage">
   </wsdl:part>
 </wsdl:message>
 
@@ -561,6 +595,13 @@
     <wsdl:input message="tns:ncDetachVolume" name="ncDetachVolume">
     </wsdl:input>
     <wsdl:output message="tns:ncDetachVolumeResponse" name="ncDetachVolumeResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncCreateImage">
+    <wsdl:input message="tns:ncCreateImage" name="ncCreateImage">
+    </wsdl:input>
+    <wsdl:output message="tns:ncCreateImageResponse" name="ncCreateImageResponse">
     </wsdl:output>
   </wsdl:operation>
 
@@ -673,6 +714,16 @@
     </wsdl:output>
   </wsdl:operation>
 
+  <wsdl:operation name="ncCreateImage">
+    <soap:operation soapAction="EucalyptusNC#ncCreateImage" style="document"/>
+    <wsdl:input name="ncCreateImage">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncCreateImageResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+  
   <wsdl:operation name="ncGetConsoleOutput">
     <soap:operation soapAction="EucalyptusNC#ncGetConsoleOutput" style="document"/>
     <wsdl:input name="ncGetConsoleOutput">

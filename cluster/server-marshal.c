@@ -1206,6 +1206,55 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
   return(ret);
 }
 
+adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t *createImage, const axutil_env_t *env) {
+  int rc;
+  adb_CreateImageResponse_t *ret=NULL;
+  adb_createImageResponseType_t *cirt=NULL;
+
+  // input vars
+  adb_createImageType_t *cit=NULL;
+  
+  // working vars
+  char *instanceId=NULL, *volumeId=NULL, *remoteDev=NULL;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  ncMetadata ccMeta;
+
+  cit = adb_CreateImage_get_CreateImage(createImage, env);
+
+  EUCA_MESSAGE_UNMARSHAL(createImageType, cit, (&ccMeta));
+  
+  instanceId = adb_createImageType_get_instanceId(cit, env);
+  volumeId = adb_createImageType_get_volumeId(cit, env);
+  remoteDev = adb_createImageType_get_remoteDev(cit, env);
+  
+  if (!DONOTHING) {
+    rc = doCreateImage(&ccMeta, instanceId, volumeId, remoteDev);
+  }
+  
+  cirt = adb_createImageResponseType_create(env);
+  if (rc) {
+    logprintf("ERROR: doCreateImage() failed %d\n", rc);
+    status=AXIS2_FALSE;
+    snprintf(statusMessage, 255, "ERROR");
+  } else {
+    status=AXIS2_TRUE;
+  }
+
+  adb_createImageResponseType_set_correlationId(cirt, env, ccMeta.correlationId);
+  adb_createImageResponseType_set_userId(cirt, env, ccMeta.userId);
+
+  adb_createImageResponseType_set_return(cirt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_createImageResponseType_set_statusMessage(cirt, env, statusMessage);
+  }
+  
+  ret = adb_CreateImageResponse_create(env);
+  adb_CreateImageResponse_set_CreateImageResponse(ret, env, cirt);
+  
+  return(ret);
+}
+
 void print_adb_ccInstanceType(adb_ccInstanceType_t *in) {
   
 }
