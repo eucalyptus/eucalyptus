@@ -9,7 +9,6 @@
 %if %is_suse
 %global euca_dhcp    dhcp-server
 %global euca_httpd   apache2
-%global euca_libvirt xen-tools, libvirt
 %global euca_hypervisor xen
 %global euca_curl    libcurl4
 %global euca_libcurl libcurl-devel
@@ -22,7 +21,6 @@
 %global euca_which util-linux
 %endif
 %if %is_centos
-%global euca_libvirt libvirt >= 0.6
 %global euca_hypervisor xen
 %global euca_bridge  xenbr0
 %global euca_java    java-sdk >= 1.6.0
@@ -32,7 +30,6 @@
 %global euca_which which
 %endif
 %if %is_fedora
-%global euca_libvirt libvirt
 %global euca_hypervisor kvm
 %global euca_bridge  br0
 %global euca_java    java-devel >= 1:1.6.0
@@ -47,17 +44,19 @@ Release:       0
 License:       Eucalyptus EEE Software License
 URL:           http://www.eucalyptus.com
 Group:         Applications/System
+
 BuildRequires: ant
 BuildRequires: ant-nodeps
 BuildRequires: euca-axis2c >= 1.6.0
 BuildRequires: euca-rampartc >= 1.3.0
+BuildRequires: libvirt-devel >= 0.6
 BuildRequires: swig
-BuildRequires: %{euca_iscsi_client}
-# The encryption we use doesn't work with OpenJDK
+%if %{is_suse}
+BuildRequires: xen-tools
+%endif
+# The bytecode encryption we use for EEE doesn't work with OpenJDK
 BuildRequires: jdk
-BuildRequires: jre
-BuildRequires: %{euca_libvirt}-devel
-BuildRequires: %{euca_libvirt}
+BuildRequires: %{euca_iscsi_client}
 BuildRequires: %{euca_libcurl}
 Requires:      %{euca_build_req}
 Requires:      %{euca_which}
@@ -186,7 +185,6 @@ Requires:     bridge-utils
 Requires:     %{euca_curl}
 Requires:     %{euca_httpd}
 Requires:     %{euca_hypervisor}
-Requires:     %{euca_libvirt}
 Requires:     %{euca_iscsi_client}
 Group:        Applications/System
 
