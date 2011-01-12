@@ -130,3 +130,8 @@ int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *
 {
     return doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force, 1);
 }
+
+int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev)
+{
+    return doCreateImage (meta, instanceId, volumeId, remoteDev);
+}

@@ -190,7 +190,11 @@ struct handlers {
 				char *localDev,
 				int force,
                                 int grab_inst_sem);
-
+    int (*doCreateImage)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char *volumeId,
+				char *remoteDev);
     int (*doBundleInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
 				char *instanceId,
@@ -226,6 +230,9 @@ int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *r
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
+
+int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
+
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);

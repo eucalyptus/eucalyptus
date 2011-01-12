@@ -698,6 +698,18 @@ doDetachVolume(	struct nc_state_t *nc,
 	return ERROR_FATAL;
 }
 
+static int
+doCreateImage(	struct nc_state_t *nc,
+		ncMetadata *meta,
+		char *instanceId,
+		char *volumeId,
+		char *remoteDev)
+{
+	logprintfl (EUCAINFO, "CreateImage(): invoked\n");
+	
+	return 0;
+}
+
 // helper for changing bundling task state and stateName together
 static void change_bundling_state (ncInstance * instance, bundling_progress state)
 {
@@ -1075,6 +1087,7 @@ struct handlers default_libvirt_handlers = {
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume,
+    .doCreateImage       = doCreateImage,
     .doBundleInstance    = doBundleInstance,
     .doCancelBundleTask  = doCancelBundleTask,
     .doDescribeBundleTasks    = doDescribeBundleTasks

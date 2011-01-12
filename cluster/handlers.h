@@ -207,6 +207,8 @@ int doRegisterImage(ncMetadata *meta, char *amiId, char *location);
 int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, ccResource **outNodes, int *outNodesLen);
 int doFlushNetwork(ncMetadata *ccMeta, char *destName);
 
+int doCreateImage(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
+
 int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine *vm, int *outresid);
 int schedule_instance_roundrobin(virtualMachine *vm, int *outresid);

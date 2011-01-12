@@ -233,6 +233,27 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="createImageType">
+        <xs:complexContent>
+          <xs:extension base="tns:eucalyptusMessage">
+            <xs:sequence>
+              <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="createImageResponseType">
+        <xs:complexContent>
+          <xs:extension base="tns:eucalyptusMessage">
+            <xs:sequence>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType name="bundleInstanceType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -691,6 +712,9 @@
       <xs:element name="DetachVolume" nillable="true" type="tns:detachVolumeType"/>
       <xs:element name="DetachVolumeResponse" nillable="true" type="tns:detachVolumeResponseType"/>
 
+      <xs:element name="CreateImage" nillable="true" type="tns:createImageType"/>
+      <xs:element name="CreateImageResponse" nillable="true" type="tns:createImageResponseType"/>
+
       <xs:element name="BundleInstance" nillable="true" type="tns:bundleInstanceType"/>
       <xs:element name="BundleInstanceResponse" nillable="true" type="tns:bundleInstanceResponseType"/>
 
@@ -799,6 +823,11 @@
 
   <wsdl:message name="DetachVolumeResponse">
     <wsdl:part element="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CreateImageResponse">
+    <wsdl:part element="tns:CreateImageResponse" name="CreateImageResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -914,6 +943,11 @@
 
   <wsdl:message name="DetachVolume">
     <wsdl:part element="tns:DetachVolume" name="DetachVolume">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CreateImage">
+    <wsdl:part element="tns:CreateImage" name="CreateImage">
     </wsdl:part>
   </wsdl:message>
 
@@ -1052,6 +1086,13 @@
       <wsdl:input message="tns:DetachVolume" name="DetachVolume">
       </wsdl:input>
       <wsdl:output message="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CreateImage">
+      <wsdl:input message="tns:CreateImage" name="CreateImage">
+      </wsdl:input>
+      <wsdl:output message="tns:CreateImageResponse" name="CreateImageResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -1247,6 +1288,16 @@
       </wsdl:input>
       <wsdl:output name="DetachVolumeResponse">
         <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CreateImage">
+      <soap:operation soapAction="EucalyptusCC#CreateImage" style="document"/>
+      <wsdl:input name="CreateImage">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="CreateImageResponse">
+	<soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
 

@@ -1454,6 +1454,23 @@ int doDescribeBundleTasks (ncMetadata *meta, char **instIds, int instIdsLen, bun
 	return ret;
 }
 
+int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev)
+{
+	int ret;
+
+	if (init())
+		return 1;
+
+	logprintfl (EUCAINFO, "doCreateImage() invoked (id=%s vol=%s remote=%s)\n", instanceId, volumeId, remoteDev);
+
+	if (nc_state.H->doCreateImage)
+		ret = nc_state.H->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
+	else 
+		ret = nc_state.D->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
+
+	return ret;
+}
+
 int check_iscsi(char* dev_string) {
     if(strchr(dev_string, ',') == NULL)
 	return 0;
