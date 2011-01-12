@@ -314,7 +314,9 @@ public class ImageManager {
       imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );
     } else {
       if ( imagePathParts[1].startsWith( ImageManager.IMAGE_PLATFORM_WINDOWS ) && System.getProperty( "euca.disable.windows" ) == null ) {
+        imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_KERNEL_PREFIX, imageInfo.getImageLocation( ) ) );
         imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_WINDOWS );
+        imageInfo.setImageType( ImageManager.IMAGE_MACHINE );
       } else {
         imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );
         if ( kernelId != null ) {
@@ -331,7 +333,6 @@ public class ImageManager {
             throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
           }
         }
-        imageInfo.setImageType( ImageManager.IMAGE_MACHINE );
         imageInfo.setKernelId( kernelId );
         imageInfo.setRamdiskId( ramdiskId );
         imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
