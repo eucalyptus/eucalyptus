@@ -52,6 +52,7 @@ BuildRequires: ant
 BuildRequires: ant-nodeps
 BuildRequires: euca-axis2c >= 1.6.0
 BuildRequires: euca-rampartc >= 1.3.0
+BuildRequires: swig
 BuildRequires: %{euca_iscsi_client}
 BuildRequires: %{euca_libvirt}-devel
 BuildRequires: %{euca_libvirt}
@@ -209,25 +210,25 @@ This package contains the internal log service of eucalyptus.
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
-./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=%{_prefix}
+./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/
 cd clc
 make deps
 cd ..
-make 2> err.log > out.log
+# Write builds logs to files so we can triage build failures.
+# mock logs stdout and stderr, so this hackery will eventually go away.
+(make 2>&1 1>&3 | tee err.log) 3>&1 1>&2 | tee out.log
+
 
 %install
-export DESTDIR=$RPM_BUILD_ROOT
-make install
+[ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
+make install DESTDIR=$RPM_BUILD_ROOT
 #CWD=`pwd`
 #cd $RPM_BUILD_ROOT
 #ls usr/share/eucalyptus/*jar | sed "s/^/\//" > $CWD/jar_list
 #cd $CWD
 
 %clean
-export DESTDIR=$RPM_BUILD_ROOT
-make uninstall
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
-rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}  # <-- bad
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
