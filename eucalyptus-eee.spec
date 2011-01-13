@@ -243,7 +243,7 @@ VMware installation.
 export DESTDIR=$RPM_BUILD_ROOT
 # Oracle JDK links to Java without using alternatives
 export JAVA_HOME=/usr/java/latest
-./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
+./configure --with-axis2=/opt/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
 cd clc
 make deps
 cd ..
