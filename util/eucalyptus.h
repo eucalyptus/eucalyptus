@@ -152,6 +152,10 @@ typedef enum instance_states_t { // these must match instance_sate_names[] below
     BUNDLING_SHUTDOWN,
     BUNDLING_SHUTOFF,
 
+    /* createImage states */
+    CREATEIMAGE_SHUTDOWN,
+    CREATEIMAGE_SHUTOFF,
+
     /* the only three states reported to CLC */
     PENDING,  /* staging in data, starting to boot, failed to boot */ 
     EXTANT,   /* guest OS booting, running, shutting down, cleaning up state */
@@ -195,6 +199,22 @@ static char * bundling_progress_names[] = {
 	"succeeded",
 	"failed",
         "cancelled"
+};
+
+typedef enum createImage_progress_t {
+  NOT_CREATEIMAGE = 0,
+  CREATEIMAGE_IN_PROGRESS,
+  CREATEIMAGE_SUCCESS,
+  CREATEIMAGE_FAILED,
+  CREATEIMAGE_CANCELLED
+} createImage_progress;
+
+static char * createImage_progress_names[] = {
+  "none",
+  "creating",
+  "succeeded",
+  "failed",
+  "cancelled"
 };
 
 #endif
