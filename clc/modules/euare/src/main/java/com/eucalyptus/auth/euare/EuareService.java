@@ -1,172 +1,172 @@
 package com.eucalyptus.auth.euare;
 
 import java.util.ArrayList;
-import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.euare.AddUserToGroup;
-import com.eucalyptus.auth.euare.AddUserToGroupResponse;
-import com.eucalyptus.auth.euare.CreateAccessKey;
-import com.eucalyptus.auth.euare.CreateAccessKeyResponse;
-import com.eucalyptus.auth.euare.CreateGroup;
-import com.eucalyptus.auth.euare.CreateGroupResponse;
-import com.eucalyptus.auth.euare.CreateLoginProfile;
-import com.eucalyptus.auth.euare.CreateLoginProfileResponse;
-import com.eucalyptus.auth.euare.CreateUser;
-import com.eucalyptus.auth.euare.CreateUserResponse;
-import com.eucalyptus.auth.euare.DeactivateMFADevice;
-import com.eucalyptus.auth.euare.DeactivateMFADeviceResponse;
-import com.eucalyptus.auth.euare.DeleteAccessKey;
-import com.eucalyptus.auth.euare.DeleteAccessKeyResponse;
-import com.eucalyptus.auth.euare.DeleteGroup;
-import com.eucalyptus.auth.euare.DeleteGroupPolicy;
-import com.eucalyptus.auth.euare.DeleteGroupPolicyResponse;
-import com.eucalyptus.auth.euare.DeleteGroupResponse;
-import com.eucalyptus.auth.euare.DeleteLoginProfile;
-import com.eucalyptus.auth.euare.DeleteLoginProfileResponse;
-import com.eucalyptus.auth.euare.DeleteServerCertificate;
-import com.eucalyptus.auth.euare.DeleteServerCertificateResponse;
-import com.eucalyptus.auth.euare.DeleteSigningCertificate;
-import com.eucalyptus.auth.euare.DeleteSigningCertificateResponse;
-import com.eucalyptus.auth.euare.DeleteUser;
-import com.eucalyptus.auth.euare.DeleteUserPolicy;
-import com.eucalyptus.auth.euare.DeleteUserPolicyResponse;
-import com.eucalyptus.auth.euare.DeleteUserResponse;
-import com.eucalyptus.auth.euare.EnableMFADevice;
-import com.eucalyptus.auth.euare.EnableMFADeviceResponse;
-import com.eucalyptus.auth.euare.GetGroup;
-import com.eucalyptus.auth.euare.GetGroupPolicy;
-import com.eucalyptus.auth.euare.GetGroupPolicyResponse;
-import com.eucalyptus.auth.euare.GetGroupResponse;
-import com.eucalyptus.auth.euare.GetLoginProfile;
-import com.eucalyptus.auth.euare.GetLoginProfileResponse;
-import com.eucalyptus.auth.euare.GetServerCertificate;
-import com.eucalyptus.auth.euare.GetServerCertificateResponse;
-import com.eucalyptus.auth.euare.GetUser;
-import com.eucalyptus.auth.euare.GetUserPolicy;
-import com.eucalyptus.auth.euare.GetUserPolicyResponse;
-import com.eucalyptus.auth.euare.GetUserResponse;
-import com.eucalyptus.auth.euare.ListAccessKeys;
-import com.eucalyptus.auth.euare.ListAccessKeysResponse;
-import com.eucalyptus.auth.euare.ListGroupPolicies;
-import com.eucalyptus.auth.euare.ListGroupPoliciesResponse;
-import com.eucalyptus.auth.euare.ListGroups;
-import com.eucalyptus.auth.euare.ListGroupsForUser;
-import com.eucalyptus.auth.euare.ListGroupsForUserResponse;
-import com.eucalyptus.auth.euare.ListGroupsResponse;
-import com.eucalyptus.auth.euare.ListMFADevices;
-import com.eucalyptus.auth.euare.ListMFADevicesResponse;
-import com.eucalyptus.auth.euare.ListServerCertificates;
-import com.eucalyptus.auth.euare.ListServerCertificatesResponse;
-import com.eucalyptus.auth.euare.ListSigningCertificates;
-import com.eucalyptus.auth.euare.ListSigningCertificatesResponse;
-import com.eucalyptus.auth.euare.ListUserPolicies;
-import com.eucalyptus.auth.euare.ListUserPoliciesResponse;
-import com.eucalyptus.auth.euare.ListUsers;
-import com.eucalyptus.auth.euare.ListUsersResponse;
-import com.eucalyptus.auth.euare.PutGroupPolicy;
-import com.eucalyptus.auth.euare.PutGroupPolicyResponse;
-import com.eucalyptus.auth.euare.PutUserPolicy;
-import com.eucalyptus.auth.euare.PutUserPolicyResponse;
-import com.eucalyptus.auth.euare.RemoveUserFromGroup;
-import com.eucalyptus.auth.euare.RemoveUserFromGroupResponse;
-import com.eucalyptus.auth.euare.ResyncMFADevice;
-import com.eucalyptus.auth.euare.ResyncMFADeviceResponse;
-import com.eucalyptus.auth.euare.UpdateAccessKey;
-import com.eucalyptus.auth.euare.UpdateAccessKeyResponse;
-import com.eucalyptus.auth.euare.UpdateGroup;
-import com.eucalyptus.auth.euare.UpdateGroupResponse;
-import com.eucalyptus.auth.euare.UpdateLoginProfile;
-import com.eucalyptus.auth.euare.UpdateLoginProfileResponse;
-import com.eucalyptus.auth.euare.UpdateServerCertificate;
-import com.eucalyptus.auth.euare.UpdateServerCertificateResponse;
-import com.eucalyptus.auth.euare.UpdateSigningCertificate;
-import com.eucalyptus.auth.euare.UpdateSigningCertificateResponse;
-import com.eucalyptus.auth.euare.UpdateUser;
-import com.eucalyptus.auth.euare.UpdateUserResponse;
-import com.eucalyptus.auth.euare.UploadServerCertificate;
-import com.eucalyptus.auth.euare.UploadServerCertificateResponse;
-import com.eucalyptus.auth.euare.UploadSigningCertificate;
-import com.eucalyptus.auth.euare.UploadSigningCertificateResponse;
+import com.eucalyptus.auth.euare.AddUserToGroupResponseType;
+import com.eucalyptus.auth.euare.AddUserToGroupType;
+import com.eucalyptus.auth.euare.CreateAccessKeyResponseType;
+import com.eucalyptus.auth.euare.CreateAccessKeyType;
+import com.eucalyptus.auth.euare.CreateGroupResponseType;
+import com.eucalyptus.auth.euare.CreateGroupType;
+import com.eucalyptus.auth.euare.CreateLoginProfileResponseType;
+import com.eucalyptus.auth.euare.CreateLoginProfileType;
+import com.eucalyptus.auth.euare.CreateUserResponseType;
+import com.eucalyptus.auth.euare.CreateUserType;
+import com.eucalyptus.auth.euare.DeactivateMFADeviceResponseType;
+import com.eucalyptus.auth.euare.DeactivateMFADeviceType;
+import com.eucalyptus.auth.euare.DeleteAccessKeyResponseType;
+import com.eucalyptus.auth.euare.DeleteAccessKeyType;
+import com.eucalyptus.auth.euare.DeleteGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.DeleteGroupPolicyType;
+import com.eucalyptus.auth.euare.DeleteGroupResponseType;
+import com.eucalyptus.auth.euare.DeleteGroupType;
+import com.eucalyptus.auth.euare.DeleteLoginProfileResponseType;
+import com.eucalyptus.auth.euare.DeleteLoginProfileType;
+import com.eucalyptus.auth.euare.DeleteServerCertificateResponseType;
+import com.eucalyptus.auth.euare.DeleteServerCertificateType;
+import com.eucalyptus.auth.euare.DeleteSigningCertificateResponseType;
+import com.eucalyptus.auth.euare.DeleteSigningCertificateType;
+import com.eucalyptus.auth.euare.DeleteUserPolicyResponseType;
+import com.eucalyptus.auth.euare.DeleteUserPolicyType;
+import com.eucalyptus.auth.euare.DeleteUserResponseType;
+import com.eucalyptus.auth.euare.DeleteUserType;
+import com.eucalyptus.auth.euare.EnableMFADeviceResponseType;
+import com.eucalyptus.auth.euare.EnableMFADeviceType;
+import com.eucalyptus.auth.euare.GetGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.GetGroupPolicyType;
+import com.eucalyptus.auth.euare.GetGroupResponseType;
+import com.eucalyptus.auth.euare.GetGroupType;
+import com.eucalyptus.auth.euare.GetLoginProfileResponseType;
+import com.eucalyptus.auth.euare.GetLoginProfileType;
+import com.eucalyptus.auth.euare.GetServerCertificateResponseType;
+import com.eucalyptus.auth.euare.GetServerCertificateType;
+import com.eucalyptus.auth.euare.GetUserPolicyResponseType;
+import com.eucalyptus.auth.euare.GetUserPolicyType;
+import com.eucalyptus.auth.euare.GetUserResponseType;
+import com.eucalyptus.auth.euare.GetUserType;
+import com.eucalyptus.auth.euare.ListAccessKeysResponseType;
+import com.eucalyptus.auth.euare.ListAccessKeysType;
+import com.eucalyptus.auth.euare.ListGroupPoliciesResponseType;
+import com.eucalyptus.auth.euare.ListGroupPoliciesType;
+import com.eucalyptus.auth.euare.ListGroupsForUserResponseType;
+import com.eucalyptus.auth.euare.ListGroupsForUserType;
+import com.eucalyptus.auth.euare.ListGroupsResponseType;
+import com.eucalyptus.auth.euare.ListGroupsType;
+import com.eucalyptus.auth.euare.ListMFADevicesResponseType;
+import com.eucalyptus.auth.euare.ListMFADevicesType;
+import com.eucalyptus.auth.euare.ListServerCertificatesResponseType;
+import com.eucalyptus.auth.euare.ListServerCertificatesType;
+import com.eucalyptus.auth.euare.ListSigningCertificatesResponseType;
+import com.eucalyptus.auth.euare.ListSigningCertificatesType;
+import com.eucalyptus.auth.euare.ListUserPoliciesResponseType;
+import com.eucalyptus.auth.euare.ListUserPoliciesType;
+import com.eucalyptus.auth.euare.ListUsersResponseType;
+import com.eucalyptus.auth.euare.ListUsersType;
+import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.PutGroupPolicyType;
+import com.eucalyptus.auth.euare.PutUserPolicyResponseType;
+import com.eucalyptus.auth.euare.PutUserPolicyType;
+import com.eucalyptus.auth.euare.RemoveUserFromGroupResponseType;
+import com.eucalyptus.auth.euare.RemoveUserFromGroupType;
+import com.eucalyptus.auth.euare.ResyncMFADeviceResponseType;
+import com.eucalyptus.auth.euare.ResyncMFADeviceType;
+import com.eucalyptus.auth.euare.UpdateAccessKeyResponseType;
+import com.eucalyptus.auth.euare.UpdateAccessKeyType;
+import com.eucalyptus.auth.euare.UpdateGroupResponseType;
+import com.eucalyptus.auth.euare.UpdateGroupType;
+import com.eucalyptus.auth.euare.UpdateLoginProfileResponseType;
+import com.eucalyptus.auth.euare.UpdateLoginProfileType;
+import com.eucalyptus.auth.euare.UpdateServerCertificateResponseType;
+import com.eucalyptus.auth.euare.UpdateServerCertificateType;
+import com.eucalyptus.auth.euare.UpdateSigningCertificateResponseType;
+import com.eucalyptus.auth.euare.UpdateSigningCertificateType;
+import com.eucalyptus.auth.euare.UpdateUserResponseType;
+import com.eucalyptus.auth.euare.UpdateUserType;
+import com.eucalyptus.auth.euare.UploadServerCertificateResponseType;
+import com.eucalyptus.auth.euare.UploadServerCertificateType;
+import com.eucalyptus.auth.euare.UploadSigningCertificateResponseType;
+import com.eucalyptus.auth.euare.UploadSigningCertificateType;
+
 
 public class EuareService {
   
-  private static final Logger LOG = Logger.getLogger( EuareService.class );
+  static private final Logger LOG = Logger.getLogger( EuareService.class );
   
-  public ListGroupsResponse listGroups(ListGroups request) {
-    ListGroupsResponse reply = request.getReply( );
+  public ListGroupsResponseType listGroups(ListGroupsType request) {
+    ListGroupsResponseType reply = request.getReply( );
     return reply;
   }
 
-  public DeleteAccessKeyResponse deleteAccessKey(DeleteAccessKey request) {
-    DeleteAccessKeyResponse reply = request.getReply( );
+  public DeleteAccessKeyResponseType deleteAccessKey(DeleteAccessKeyType request) {
+    DeleteAccessKeyResponseType reply = request.getReply( );
     return reply;
   }
 
-  public ListSigningCertificatesResponse listSigningCertificates(ListSigningCertificates request) {
-    ListSigningCertificatesResponse reply = request.getReply( );
+  public ListSigningCertificatesResponseType listSigningCertificates(ListSigningCertificatesType request) {
+    ListSigningCertificatesResponseType reply = request.getReply( );
     return reply;
   }
 
-  public UploadSigningCertificateResponse uploadSigningCertificate(UploadSigningCertificate request) {
-    UploadSigningCertificateResponse reply = request.getReply( );
+  public UploadSigningCertificateResponseType uploadSigningCertificate(UploadSigningCertificateType request) {
+    UploadSigningCertificateResponseType reply = request.getReply( );
     return reply;
   }
 
-  public DeleteUserPolicyResponse deleteUserPolicy(DeleteUserPolicy request) {
-    DeleteUserPolicyResponse reply = request.getReply( );
+  public DeleteUserPolicyResponseType deleteUserPolicy(DeleteUserPolicyType request) {
+    DeleteUserPolicyResponseType reply = request.getReply( );
     return reply;
   }
 
-  public PutUserPolicyResponse putUserPolicy(PutUserPolicy request) {
-    PutUserPolicyResponse reply = request.getReply( );
+  public PutUserPolicyResponseType putUserPolicy(PutUserPolicyType request) {
+    PutUserPolicyResponseType reply = request.getReply( );
     return reply;
   }
 
-  public ListServerCertificatesResponse listServerCertificates(ListServerCertificates request) {
-    ListServerCertificatesResponse reply = request.getReply( );
+  public ListServerCertificatesResponseType listServerCertificates(ListServerCertificatesType request) {
+    ListServerCertificatesResponseType reply = request.getReply( );
     return reply;
   }
 
-  public GetUserPolicyResponse getUserPolicy(GetUserPolicy request) {
-    GetUserPolicyResponse reply = request.getReply( );
+  public GetUserPolicyResponseType getUserPolicy(GetUserPolicyType request) {
+    GetUserPolicyResponseType reply = request.getReply( );
     return reply;
   }
 
-  public UpdateLoginProfileResponse updateLoginProfile(UpdateLoginProfile request) {
-    UpdateLoginProfileResponse reply = request.getReply( );
+  public UpdateLoginProfileResponseType updateLoginProfile(UpdateLoginProfileType request) {
+    UpdateLoginProfileResponseType reply = request.getReply( );
     return reply;
   }
 
-  public UpdateServerCertificateResponse updateServerCertificate(UpdateServerCertificate request) {
-    UpdateServerCertificateResponse reply = request.getReply( );
+  public UpdateServerCertificateResponseType updateServerCertificate(UpdateServerCertificateType request) {
+    UpdateServerCertificateResponseType reply = request.getReply( );
     return reply;
   }
 
-  public UpdateUserResponse updateUser(UpdateUser request) {
-    UpdateUserResponse reply = request.getReply( );
+  public UpdateUserResponseType updateUser(UpdateUserType request) {
+    UpdateUserResponseType reply = request.getReply( );
     return reply;
   }
 
-  public DeleteLoginProfileResponse deleteLoginProfile(DeleteLoginProfile request) {
-    DeleteLoginProfileResponse reply = request.getReply( );
+  public DeleteLoginProfileResponseType deleteLoginProfile(DeleteLoginProfileType request) {
+    DeleteLoginProfileResponseType reply = request.getReply( );
     return reply;
   }
 
-  public UpdateSigningCertificateResponse updateSigningCertificate(UpdateSigningCertificate request) {
-    UpdateSigningCertificateResponse reply = request.getReply( );
+  public UpdateSigningCertificateResponseType updateSigningCertificate(UpdateSigningCertificateType request) {
+    UpdateSigningCertificateResponseType reply = request.getReply( );
     return reply;
   }
 
-  public DeleteGroupPolicyResponse deleteGroupPolicy(DeleteGroupPolicy request) {
-    DeleteGroupPolicyResponse reply = request.getReply( );
+  public DeleteGroupPolicyResponseType deleteGroupPolicy(DeleteGroupPolicyType request) {
+    DeleteGroupPolicyResponseType reply = request.getReply( );
     return reply;
   }
 
-  public ListUsersResponse listUsers(ListUsers request) {
+  public ListUsersResponseType listUsers(ListUsersType request) {
     LOG.debug( "YE:" + "processing ListUsers" );
-    ListUsersResponse response = request.getReply( );
-    ArrayList<User> users = response.getListUsersResult( ).getUsers( ).getMemberList( );
-    User user = new User( );
+    ListUsersResponseType response = request.getReply( );
+    ArrayList<UserType> users = response.getListUsersResult( ).getUsers( ).getMemberList( );
+    UserType user = new UserType( );
     user.setArn( "arn:aws:iam::123456789012:user/division_abc/subdivision_xyz/engineering/Andrew" );
     user.setPath( "/division_abc/subdivision_xyz/engineering/" );
     user.setUserId( "AID2MAB8DPLSRHEXAMPLE" );
@@ -176,138 +176,138 @@ public class EuareService {
     return response;
   }
 
-  public UpdateGroupResponse updateGroup(UpdateGroup request) {
-    UpdateGroupResponse reply = request.getReply( );
+  public UpdateGroupResponseType updateGroup(UpdateGroupType request) {
+    UpdateGroupResponseType reply = request.getReply( );
     return reply;
   }
 
-  public GetServerCertificateResponse getServerCertificate(GetServerCertificate request) {
-    GetServerCertificateResponse reply = request.getReply( );
+  public GetServerCertificateResponseType getServerCertificate(GetServerCertificateType request) {
+    GetServerCertificateResponseType reply = request.getReply( );
     return reply;
   }
 
-  public PutGroupPolicyResponse putGroupPolicy(PutGroupPolicy request) {
-    PutGroupPolicyResponse reply = request.getReply( );
+  public PutGroupPolicyResponseType putGroupPolicy(PutGroupPolicyType request) {
+    PutGroupPolicyResponseType reply = request.getReply( );
     return reply;
   }
 
-  public CreateUserResponse createUser(CreateUser request) {
-    CreateUserResponse reply = request.getReply( );
+  public CreateUserResponseType createUser(CreateUserType request) {
+    CreateUserResponseType reply = request.getReply( );
     return reply;
   }
 
-  public DeleteSigningCertificateResponse deleteSigningCertificate(DeleteSigningCertificate request) {
-    DeleteSigningCertificateResponse reply = request.getReply( );
+  public DeleteSigningCertificateResponseType deleteSigningCertificate(DeleteSigningCertificateType request) {
+    DeleteSigningCertificateResponseType reply = request.getReply( );
     return reply;
   }
 
-  public EnableMFADeviceResponse enableMFADevice(EnableMFADevice request) {
-    EnableMFADeviceResponse reply = request.getReply( );
+  public EnableMFADeviceResponseType enableMFADevice(EnableMFADeviceType request) {
+    EnableMFADeviceResponseType reply = request.getReply( );
     return reply;
   }
 
-  public ListUserPoliciesResponse listUserPolicies(ListUserPolicies request) {
-    ListUserPoliciesResponse reply = request.getReply( );
+  public ListUserPoliciesResponseType listUserPolicies(ListUserPoliciesType request) {
+    ListUserPoliciesResponseType reply = request.getReply( );
     return reply;
   }
 
-  public ListAccessKeysResponse listAccessKeys(ListAccessKeys request) {
-    ListAccessKeysResponse reply = request.getReply( );
+  public ListAccessKeysResponseType listAccessKeys(ListAccessKeysType request) {
+    ListAccessKeysResponseType reply = request.getReply( );
     return reply;
   }
 
-  public GetLoginProfileResponse getLoginProfile(GetLoginProfile request) {
-    GetLoginProfileResponse reply = request.getReply( );
+  public GetLoginProfileResponseType getLoginProfile(GetLoginProfileType request) {
+    GetLoginProfileResponseType reply = request.getReply( );
     return reply;
   }
 
-  public ListGroupsForUserResponse listGroupsForUser(ListGroupsForUser request) {
-    ListGroupsForUserResponse reply = request.getReply( );
+  public ListGroupsForUserResponseType listGroupsForUser(ListGroupsForUserType request) {
+    ListGroupsForUserResponseType reply = request.getReply( );
     return reply;
   }
 
-  public CreateGroupResponse createGroup(CreateGroup request) {
-    CreateGroupResponse reply = request.getReply( );
+  public CreateGroupResponseType createGroup(CreateGroupType request) {
+    CreateGroupResponseType reply = request.getReply( );
     return reply;
   }
 
-  public UploadServerCertificateResponse uploadServerCertificate(UploadServerCertificate request) {
-    UploadServerCertificateResponse reply = request.getReply( );
+  public UploadServerCertificateResponseType uploadServerCertificate(UploadServerCertificateType request) {
+    UploadServerCertificateResponseType reply = request.getReply( );
     return reply;
   }
 
-  public GetGroupPolicyResponse getGroupPolicy(GetGroupPolicy request) {
-    GetGroupPolicyResponse reply = request.getReply( );
+  public GetGroupPolicyResponseType getGroupPolicy(GetGroupPolicyType request) {
+    GetGroupPolicyResponseType reply = request.getReply( );
     return reply;
   }
 
-  public DeleteUserResponse deleteUser(DeleteUser request) {
-    DeleteUserResponse reply = request.getReply( );
+  public DeleteUserResponseType deleteUser(DeleteUserType request) {
+    DeleteUserResponseType reply = request.getReply( );
     return reply;
   }
 
-  public DeactivateMFADeviceResponse deactivateMFADevice(DeactivateMFADevice request) {
-    DeactivateMFADeviceResponse reply = request.getReply( );
+  public DeactivateMFADeviceResponseType deactivateMFADevice(DeactivateMFADeviceType request) {
+    DeactivateMFADeviceResponseType reply = request.getReply( );
     return reply;
   }
 
-  public RemoveUserFromGroupResponse removeUserFromGroup(RemoveUserFromGroup request) {
-    RemoveUserFromGroupResponse reply = request.getReply( );
+  public RemoveUserFromGroupResponseType removeUserFromGroup(RemoveUserFromGroupType request) {
+    RemoveUserFromGroupResponseType reply = request.getReply( );
     return reply;
   }
 
-  public DeleteServerCertificateResponse deleteServerCertificate(DeleteServerCertificate request) {
-    DeleteServerCertificateResponse reply = request.getReply( );
+  public DeleteServerCertificateResponseType deleteServerCertificate(DeleteServerCertificateType request) {
+    DeleteServerCertificateResponseType reply = request.getReply( );
     return reply;
   }
 
-  public ListGroupPoliciesResponse listGroupPolicies(ListGroupPolicies request) {
-    ListGroupPoliciesResponse reply = request.getReply( );
+  public ListGroupPoliciesResponseType listGroupPolicies(ListGroupPoliciesType request) {
+    ListGroupPoliciesResponseType reply = request.getReply( );
     return reply;
   }
 
-  public CreateLoginProfileResponse createLoginProfile(CreateLoginProfile request) {
-    CreateLoginProfileResponse reply = request.getReply( );
+  public CreateLoginProfileResponseType createLoginProfile(CreateLoginProfileType request) {
+    CreateLoginProfileResponseType reply = request.getReply( );
     return reply;
   }
 
-  public CreateAccessKeyResponse createAccessKey(CreateAccessKey request) {
-    CreateAccessKeyResponse reply = request.getReply( );
+  public CreateAccessKeyResponseType createAccessKey(CreateAccessKeyType request) {
+    CreateAccessKeyResponseType reply = request.getReply( );
     return reply;
   }
 
-  public GetUserResponse getUser(GetUser request) {
-    GetUserResponse reply = request.getReply( );
+  public GetUserResponseType getUser(GetUserType request) {
+    GetUserResponseType reply = request.getReply( );
     return reply;
   }
 
-  public ResyncMFADeviceResponse resyncMFADevice(ResyncMFADevice request) {
-    ResyncMFADeviceResponse reply = request.getReply( );
+  public ResyncMFADeviceResponseType resyncMFADevice(ResyncMFADeviceType request) {
+    ResyncMFADeviceResponseType reply = request.getReply( );
     return reply;
   }
 
-  public ListMFADevicesResponse listMFADevices(ListMFADevices request) {
-    ListMFADevicesResponse reply = request.getReply( );
+  public ListMFADevicesResponseType listMFADevices(ListMFADevicesType request) {
+    ListMFADevicesResponseType reply = request.getReply( );
     return reply;
   }
 
-  public UpdateAccessKeyResponse updateAccessKey(UpdateAccessKey request) {
-    UpdateAccessKeyResponse reply = request.getReply( );
+  public UpdateAccessKeyResponseType updateAccessKey(UpdateAccessKeyType request) {
+    UpdateAccessKeyResponseType reply = request.getReply( );
     return reply;
   }
 
-  public AddUserToGroupResponse addUserToGroup(AddUserToGroup request) {
-    AddUserToGroupResponse reply = request.getReply( );
+  public AddUserToGroupResponseType addUserToGroup(AddUserToGroupType request) {
+    AddUserToGroupResponseType reply = request.getReply( );
     return reply;
   }
 
-  public GetGroupResponse getGroup(GetGroup request) {
-    GetGroupResponse reply = request.getReply( );
+  public GetGroupResponseType getGroup(GetGroupType request) {
+    GetGroupResponseType reply = request.getReply( );
     return reply;
   }
 
-  public DeleteGroupResponse deleteGroup(DeleteGroup request) {
-    DeleteGroupResponse reply = request.getReply( );
+  public DeleteGroupResponseType deleteGroup(DeleteGroupType request) {
+    DeleteGroupResponseType reply = request.getReply( );
     return reply;
   }
 

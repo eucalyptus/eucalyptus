@@ -1,640 +1,642 @@
 package com.eucalyptus.auth.euare;
-
 import java.util.Date;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import java.math.BigInteger;
 import java.util.ArrayList;
 
-public class ListGroups extends EuareMessage {
-  String pathPrefix;
-  String marker;
-  BigInteger maxItems;
-  public ListGroups() {  }
-}
-public class UpdateUserResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public UpdateUserResponse() {  }
-}
+
+
 public class EuareMessage extends BaseMessage {
 }
-public class DeleteGroupResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public DeleteGroupResponse() {  }
-}
-public class GetLoginProfile extends EuareMessage {
-  String userName;
-  public GetLoginProfile() {  }
-}
-public class UploadServerCertificate extends EuareMessage {
-  String path;
-  String serverCertificateName;
-  String certificateBody;
-  String privateKey;
-  String certificateChain;
-  public UploadServerCertificate() {  }
-}
-public class GetGroupResult extends EucalyptusData {
-  Group group;
-  UserListType users;
-  Boolean isTruncated;
-  String marker;
-  public GetGroupResult() {  }
-}
-public class DeleteUserPolicy extends EuareMessage {
-  String userName;
-  String policyName;
-  public DeleteUserPolicy() {  }
-}
-public class CreateGroupResponse extends EuareMessage {
-  CreateGroupResult createGroupResult;
-  ResponseMetadata responseMetadata;
-  public CreateGroupResponse() {  }
-}
-public class UpdateAccessKey extends EuareMessage {
-  String userName;
-  String accessKeyId;
-  String status;
-  public UpdateAccessKey() {  }
-}
-public class ServerCertificateMetadata extends EucalyptusData {
-  String path;
-  String serverCertificateName;
-  String serverCertificateId;
-  String arn;
-  Date uploadDate;
-  public ServerCertificateMetadata() {  }
-}
-public class CreateAccessKeyResult extends EucalyptusData {
-  AccessKey accessKey;
-  public CreateAccessKeyResult() {  }
-}
-public class ResponseMetadata extends EucalyptusData {
-  String requestId;
-  public ResponseMetadata() {  }
-}
-public class ListUsers extends EuareMessage {
-  String pathPrefix;
-  String marker;
-  BigInteger maxItems;
-  public ListUsers() {  }
-}
-public class GroupListType extends EucalyptusData {
-  public GroupListType() {  }
-  ArrayList<Group> memberList = new ArrayList<Group>();
-}
-public class DeleteLoginProfileResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public DeleteLoginProfileResponse() {  }
-}
-public class DeleteUserResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public DeleteUserResponse() {  }
-}
-public class ListGroupsForUserResult extends EucalyptusData {
-  GroupListType groups;
-  Boolean isTruncated;
-  String marker;
-  public ListGroupsForUserResult() {  }
-}
-public class UpdateServerCertificateResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public UpdateServerCertificateResponse() {  }
-}
-public class ResyncMFADeviceResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public ResyncMFADeviceResponse() {  }
-}
-public class CreateAccessKey extends EuareMessage {
-  String userName;
-  public CreateAccessKey() {  }
-}
-public class CertificateListType extends EucalyptusData {
-  public CertificateListType() {  }
-  ArrayList<SigningCertificate> memberList = new ArrayList<SigningCertificate>();
-}
-public class GetUser extends EuareMessage {
-  String userName;
-  public GetUser() {  }
-}
-public class ResyncMFADevice extends EuareMessage {
-  String userName;
-  String serialNumber;
-  String authenticationCode1;
-  String authenticationCode2;
-  public ResyncMFADevice() {  }
-}
-public class ServerCertificateMetadataListType extends EucalyptusData {
-  public ServerCertificateMetadataListType() {  }
-  ArrayList<ServerCertificateMetadata> memberList = new ArrayList<ServerCertificateMetadata>();
-}
-public class ListGroupsResponse extends EuareMessage {
-  ListGroupsResult listGroupsResult;
-  ResponseMetadata responseMetadata;
-  public ListGroupsResponse() {  }
-}
-public class ErrorResponse extends EucalyptusData {
-  String requestId;
-  public ErrorResponse() {  }
-  ArrayList<Error> errorList = new ArrayList<Error>();
-}
-public class ListMFADevicesResponse extends EuareMessage {
-  ListMFADevicesResult listMFADevicesResult;
-  ResponseMetadata responseMetadata;
-  public ListMFADevicesResponse() {  }
-}
-public class GetServerCertificateResult extends EucalyptusData {
-  ServerCertificate serverCertificate;
-  public GetServerCertificateResult() {  }
-}
-public class EnableMFADevice extends EuareMessage {
-  String userName;
-  String serialNumber;
-  String authenticationCode1;
-  String authenticationCode2;
-  public EnableMFADevice() {  }
-}
-public class ListGroupPoliciesResult extends EucalyptusData {
-  PolicyNameListType policyNames;
-  Boolean isTruncated;
-  String marker;
-  public ListGroupPoliciesResult() {  }
-}
-public class GetUserResult extends EucalyptusData {
-  User user;
-  public GetUserResult() {  }
-}
-public class GetGroup extends EuareMessage {
-  String groupName;
-  String marker;
-  BigInteger maxItems;
-  public GetGroup() {  }
-}
-public class PolicyNameListType extends EucalyptusData {
-  public PolicyNameListType() {  }
-  ArrayList<String> memberList = new ArrayList<String>();
-}
-public class PutGroupPolicyResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public PutGroupPolicyResponse() {  }
-}
-public class Error extends EucalyptusData {
-  String type;
-  String code;
-  String message;
-  ErrorDetail detail;
-  public Error() {  }
-}
-public class GetUserPolicy extends EuareMessage {
-  String userName;
-  String policyName;
-  public GetUserPolicy() {  }
-}
-public class CreateLoginProfile extends EuareMessage {
-  String userName;
-  String password;
-  public CreateLoginProfile() {  }
-}
-public class PutGroupPolicy extends EuareMessage {
+public class PutGroupPolicyType extends EuareMessage {
   String groupName;
   String policyName;
   String policyDocument;
-  public PutGroupPolicy() {  }
+  public PutGroupPolicyType() {  }
 }
-public class UploadSigningCertificate extends EuareMessage {
-  String userName;
-  String certificateBody;
-  public UploadSigningCertificate() {  }
+public class UploadSigningCertificateResultType extends EucalyptusData {
+  SigningCertificateType certificate;
+  public UploadSigningCertificateResultType() {  }
 }
-public class ListAccessKeysResponse extends EuareMessage {
-  ListAccessKeysResult listAccessKeysResult;
-  ResponseMetadata responseMetadata;
-  public ListAccessKeysResponse() {  }
+public class ListAccessKeysResponseType extends EuareMessage {
+  ListAccessKeysResultType listAccessKeysResult;
+  ResponseMetadataType responseMetadata;
+  public ListAccessKeysResponseType() {  }
 }
-public class GetServerCertificate extends EuareMessage {
-  String serverCertificateName;
-  public GetServerCertificate() {  }
+public class AccessKeyMetadataListTypeType extends EucalyptusData {
+  public AccessKeyMetadataListTypeType() {  }
+  ArrayList<AccessKeyMetadataType> memberList = new ArrayList<AccessKeyMetadataType>();
 }
-public class GetLoginProfileResponse extends EuareMessage {
-  GetLoginProfileResult getLoginProfileResult;
-  ResponseMetadata responseMetadata;
-  public GetLoginProfileResponse() {  }
+public class ListGroupPoliciesType extends EuareMessage {
+  String groupName;
+  String marker;
+  BigInteger maxItems;
+  public ListGroupPoliciesType() {  }
 }
-public class ListSigningCertificatesResult extends EucalyptusData {
-  CertificateListType certificates;
+public class ListUserPoliciesResponseType extends EuareMessage {
+  ListUserPoliciesResultType listUserPoliciesResult;
+  ResponseMetadataType responseMetadata;
+  public ListUserPoliciesResponseType() {  }
+}
+public class ResyncMFADeviceResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public ResyncMFADeviceResponseType() {  }
+}
+public class ListMFADevicesResultType extends EucalyptusData {
+  MfaDeviceListTypeType mfaDevices;
   Boolean isTruncated;
   String marker;
-  public ListSigningCertificatesResult() {  }
+  public ListMFADevicesResultType() {  }
 }
-public class CreateUser extends EuareMessage {
-  String path;
-  String userName;
-  public CreateUser() {  }
-}
-public class ListAccessKeysResult extends EucalyptusData {
-  AccessKeyMetadataListType accessKeyMetadata;
-  Boolean isTruncated;
-  String marker;
-  public ListAccessKeysResult() {  }
-}
-public class GetGroupPolicyResult extends EucalyptusData {
-  String groupName;
-  String policyName;
-  String policyDocument;
-  public GetGroupPolicyResult() {  }
-}
-public class ListMFADevices extends EuareMessage {
-  String userName;
-  String marker;
-  BigInteger maxItems;
-  public ListMFADevices() {  }
-}
-public class ListUsersResult extends EucalyptusData {
-  UserListType users;
-  Boolean isTruncated;
-  String marker;
-  public ListUsersResult() {  }
-}
-public class DeleteGroup extends EuareMessage {
-  String groupName;
-  public DeleteGroup() {  }
-}
-public class UpdateSigningCertificate extends EuareMessage {
-  String userName;
-  String certificateId;
-  String status;
-  public UpdateSigningCertificate() {  }
-}
-public class ListServerCertificates extends EuareMessage {
-  String pathPrefix;
-  String marker;
-  BigInteger maxItems;
-  public ListServerCertificates() {  }
-}
-public class AccessKeyMetadataListType extends EucalyptusData {
-  public AccessKeyMetadataListType() {  }
-  ArrayList<AccessKeyMetadata> memberList = new ArrayList<AccessKeyMetadata>();
-}
-public class UpdateSigningCertificateResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public UpdateSigningCertificateResponse() {  }
-}
-public class DeleteGroupPolicy extends EuareMessage {
-  String groupName;
-  String policyName;
-  public DeleteGroupPolicy() {  }
-}
-public class UpdateAccessKeyResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public UpdateAccessKeyResponse() {  }
-}
-public class RemoveUserFromGroup extends EuareMessage {
-  String groupName;
-  String userName;
-  public RemoveUserFromGroup() {  }
-}
-public class MfaDeviceListType extends EucalyptusData {
-  public MfaDeviceListType() {  }
-  ArrayList<MFADevice> memberList = new ArrayList<MFADevice>();
-}
-public class ListGroupPolicies extends EuareMessage {
-  String groupName;
-  String marker;
-  BigInteger maxItems;
-  public ListGroupPolicies() {  }
-}
-public class CreateGroupResult extends EucalyptusData {
-  Group group;
-  public CreateGroupResult() {  }
-}
-public class ListGroupsForUser extends EuareMessage {
-  String userName;
-  String marker;
-  BigInteger maxItems;
-  public ListGroupsForUser() {  }
-}
-public class LoginProfile extends EuareMessage {
-  String userName;
-  public LoginProfile() {  }
-}
-public class ListUserPoliciesResponse extends EuareMessage {
-  ListUserPoliciesResult listUserPoliciesResult;
-  ResponseMetadata responseMetadata;
-  public ListUserPoliciesResponse() {  }
-}
-public class AddUserToGroupResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public AddUserToGroupResponse() {  }
-}
-public class ListSigningCertificatesResponse extends EuareMessage {
-  ListSigningCertificatesResult listSigningCertificatesResult;
-  ResponseMetadata responseMetadata;
-  public ListSigningCertificatesResponse() {  }
-}
-public class DeleteAccessKeyResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public DeleteAccessKeyResponse() {  }
-}
-public class DeleteLoginProfile extends EuareMessage {
-  String userName;
-  public DeleteLoginProfile() {  }
-}
-public class UpdateGroupResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public UpdateGroupResponse() {  }
-}
-public class UpdateLoginProfile extends EuareMessage {
+public class UpdateLoginProfileType extends EuareMessage {
   String userName;
   String password;
-  public UpdateLoginProfile() {  }
+  public UpdateLoginProfileType() {  }
 }
-public class DeleteAccessKey extends EuareMessage {
-  String userName;
-  String accessKeyId;
-  public DeleteAccessKey() {  }
+public class GetLoginProfileResponseType extends EuareMessage {
+  GetLoginProfileResultType getLoginProfileResult;
+  ResponseMetadataType responseMetadata;
+  public GetLoginProfileResponseType() {  }
 }
-public class GetUserPolicyResponse extends EuareMessage {
-  GetUserPolicyResult getUserPolicyResult;
-  ResponseMetadata responseMetadata;
-  public GetUserPolicyResponse() {  }
-}
-public class ListUserPolicies extends EuareMessage {
-  String userName;
+public class GetGroupType extends EuareMessage {
+  String groupName;
   String marker;
   BigInteger maxItems;
-  public ListUserPolicies() {  }
+  public GetGroupType() {  }
 }
-public class UploadServerCertificateResult extends EucalyptusData {
-  ServerCertificateMetadata serverCertificateMetadata;
-  public UploadServerCertificateResult() {  }
+public class CreateGroupType extends EuareMessage {
+  String path;
+  String groupName;
+  public CreateGroupType() {  }
 }
-public class UpdateServerCertificate extends EuareMessage {
+public class UpdateServerCertificateType extends EuareMessage {
   String serverCertificateName;
   String newPath;
   String newServerCertificateName;
-  public UpdateServerCertificate() {  }
+  public UpdateServerCertificateType() {  }
 }
-public class ListUsersResponse extends EuareMessage {
-  ListUsersResult listUsersResult;
-  ResponseMetadata responseMetadata;
-  public ListUsersResponse() {  }
+public class MfaDeviceListTypeType extends EucalyptusData {
+  public MfaDeviceListTypeType() {  }
+  ArrayList<MFADeviceType> memberList = new ArrayList<MFADeviceType>();
 }
-public class MFADevice extends EuareMessage {
-  String userName;
-  String serialNumber;
-  public MFADevice() {  }
+public class UploadServerCertificateResponseType extends EuareMessage {
+  UploadServerCertificateResultType uploadServerCertificateResult;
+  ResponseMetadataType responseMetadata;
+  public UploadServerCertificateResponseType() {  }
 }
-public class ListGroupsResult extends EucalyptusData {
-  GroupListType groups;
-  Boolean isTruncated;
-  String marker;
-  public ListGroupsResult() {  }
+public class DeleteGroupPolicyType extends EuareMessage {
+  String groupName;
+  String policyName;
+  public DeleteGroupPolicyType() {  }
 }
-public class PutUserPolicyResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public PutUserPolicyResponse() {  }
+public class DeleteAccessKeyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public DeleteAccessKeyResponseType() {  }
 }
-public class AccessKey extends EuareMessage {
+public class AccessKeyType extends EuareMessage {
   String userName;
   String accessKeyId;
   String status;
   String secretAccessKey;
   Date createDate;
-  public AccessKey() {  }
+  public AccessKeyType() {  }
 }
-public class DeleteSigningCertificate extends EuareMessage {
+public class AddUserToGroupResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public AddUserToGroupResponseType() {  }
+}
+public class DeleteServerCertificateType extends EuareMessage {
+  String serverCertificateName;
+  public DeleteServerCertificateType() {  }
+}
+public class UpdateAccessKeyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public UpdateAccessKeyResponseType() {  }
+}
+public class UploadServerCertificateType extends EuareMessage {
+  String path;
+  String serverCertificateName;
+  String certificateBody;
+  String privateKey;
+  String certificateChain;
+  public UploadServerCertificateType() {  }
+}
+public class UpdateGroupType extends EuareMessage {
+  String groupName;
+  String newPath;
+  String newGroupName;
+  public UpdateGroupType() {  }
+}
+public class AddUserToGroupType extends EuareMessage {
+  String groupName;
   String userName;
-  String certificateId;
-  public DeleteSigningCertificate() {  }
+  public AddUserToGroupType() {  }
 }
-public class CreateLoginProfileResponse extends EuareMessage {
-  CreateLoginProfileResult createLoginProfileResult;
-  ResponseMetadata responseMetadata;
-  public CreateLoginProfileResponse() {  }
+public class PutGroupPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public PutGroupPolicyResponseType() {  }
 }
-public class DeleteUser extends EuareMessage {
+public class ListSigningCertificatesResponseType extends EuareMessage {
+  ListSigningCertificatesResultType listSigningCertificatesResult;
+  ResponseMetadataType responseMetadata;
+  public ListSigningCertificatesResponseType() {  }
+}
+public class GetUserResponseType extends EuareMessage {
+  GetUserResultType getUserResult;
+  ResponseMetadataType responseMetadata;
+  public GetUserResponseType() {  }
+}
+public class AccessKeyMetadataType extends EucalyptusData {
   String userName;
-  public DeleteUser() {  }
+  String accessKeyId;
+  String status;
+  Date createDate;
+  public AccessKeyMetadataType() {  }
 }
-public class DeleteSigningCertificateResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public DeleteSigningCertificateResponse() {  }
+public class GetGroupPolicyResponseType extends EuareMessage {
+  GetGroupPolicyResultType getGroupPolicyResult;
+  ResponseMetadataType responseMetadata;
+  public GetGroupPolicyResponseType() {  }
 }
-public class ServerCertificate extends EuareMessage {
-  ServerCertificateMetadata serverCertificateMetadata;
+public class RemoveUserFromGroupType extends EuareMessage {
+  String groupName;
+  String userName;
+  public RemoveUserFromGroupType() {  }
+}
+public class ListSigningCertificatesType extends EuareMessage {
+  String userName;
+  String marker;
+  BigInteger maxItems;
+  public ListSigningCertificatesType() {  }
+}
+public class ListServerCertificatesResponseType extends EuareMessage {
+  ListServerCertificatesResultType listServerCertificatesResult;
+  ResponseMetadataType responseMetadata;
+  public ListServerCertificatesResponseType() {  }
+}
+public class DeleteGroupResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public DeleteGroupResponseType() {  }
+}
+public class UpdateGroupResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public UpdateGroupResponseType() {  }
+}
+public class CreateAccessKeyResponseType extends EuareMessage {
+  CreateAccessKeyResultType createAccessKeyResult;
+  ResponseMetadataType responseMetadata;
+  public CreateAccessKeyResponseType() {  }
+}
+public class ListGroupsResponseType extends EuareMessage {
+  ListGroupsResultType listGroupsResult;
+  ResponseMetadataType responseMetadata;
+  public ListGroupsResponseType() {  }
+}
+public class ServerCertificateType extends EuareMessage {
+  ServerCertificateMetadataType serverCertificateMetadata;
   String certificateBody;
   String certificateChain;
-  public ServerCertificate() {  }
+  public ServerCertificateType() {  }
 }
-public class CreateGroup extends EuareMessage {
-  String path;
+public class CreateAccessKeyType extends EuareMessage {
+  String userName;
+  public CreateAccessKeyType() {  }
+}
+public class EnableMFADeviceResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public EnableMFADeviceResponseType() {  }
+}
+public class GetGroupResultType extends EucalyptusData {
+  GroupType group;
+  UserListTypeType users;
+  Boolean isTruncated;
+  String marker;
+  public GetGroupResultType() {  }
+}
+public class UpdateUserResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public UpdateUserResponseType() {  }
+}
+public class ListGroupPoliciesResponseType extends EuareMessage {
+  ListGroupPoliciesResultType listGroupPoliciesResult;
+  ResponseMetadataType responseMetadata;
+  public ListGroupPoliciesResponseType() {  }
+}
+public class ListServerCertificatesResultType extends EucalyptusData {
+  ServerCertificateMetadataListTypeType serverCertificateMetadataList;
+  Boolean isTruncated;
+  String marker;
+  public ListServerCertificatesResultType() {  }
+}
+public class GetUserPolicyResultType extends EucalyptusData {
+  String userName;
+  String policyName;
+  String policyDocument;
+  public GetUserPolicyResultType() {  }
+}
+public class DeactivateMFADeviceResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public DeactivateMFADeviceResponseType() {  }
+}
+public class UserListTypeType extends EucalyptusData {
+  public UserListTypeType() {  }
+  ArrayList<UserType> memberList = new ArrayList<UserType>();
+}
+public class GetLoginProfileType extends EuareMessage {
+  String userName;
+  public GetLoginProfileType() {  }
+}
+public class ListUserPoliciesType extends EuareMessage {
+  String userName;
+  String marker;
+  BigInteger maxItems;
+  public ListUserPoliciesType() {  }
+}
+public class ResponseMetadataType extends EucalyptusData {
+  String requestId;
+  public ResponseMetadataType() {  }
+}
+public class PutUserPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public PutUserPolicyResponseType() {  }
+}
+public class CreateGroupResponseType extends EuareMessage {
+  CreateGroupResultType createGroupResult;
+  ResponseMetadataType responseMetadata;
+  public CreateGroupResponseType() {  }
+}
+public class CertificateListTypeType extends EucalyptusData {
+  public CertificateListTypeType() {  }
+  ArrayList<SigningCertificateType> memberList = new ArrayList<SigningCertificateType>();
+}
+public class CreateUserResponseType extends EuareMessage {
+  CreateUserResultType createUserResult;
+  ResponseMetadataType responseMetadata;
+  public CreateUserResponseType() {  }
+}
+public class GetGroupPolicyResultType extends EucalyptusData {
   String groupName;
-  public CreateGroup() {  }
+  String policyName;
+  String policyDocument;
+  public GetGroupPolicyResultType() {  }
 }
-public class ListUserPoliciesResult extends EucalyptusData {
-  PolicyNameListType policyNames;
-  Boolean isTruncated;
-  String marker;
-  public ListUserPoliciesResult() {  }
+public class ErrorDetailType extends EucalyptusData {
+  public ErrorDetailType() {  }
 }
-public class DeleteUserPolicyResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public DeleteUserPolicyResponse() {  }
+public class UpdateAccessKeyType extends EuareMessage {
+  String userName;
+  String accessKeyId;
+  String status;
+  public UpdateAccessKeyType() {  }
 }
-public class ListServerCertificatesResult extends EucalyptusData {
-  ServerCertificateMetadataListType serverCertificateMetadataList;
-  Boolean isTruncated;
-  String marker;
-  public ListServerCertificatesResult() {  }
+public class DeleteServerCertificateResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public DeleteServerCertificateResponseType() {  }
 }
-public class ListServerCertificatesResponse extends EuareMessage {
-  ListServerCertificatesResult listServerCertificatesResult;
-  ResponseMetadata responseMetadata;
-  public ListServerCertificatesResponse() {  }
+public class UploadSigningCertificateResponseType extends EuareMessage {
+  UploadSigningCertificateResultType uploadSigningCertificateResult;
+  ResponseMetadataType responseMetadata;
+  public UploadSigningCertificateResponseType() {  }
 }
-public class GetGroupPolicyResponse extends EuareMessage {
-  GetGroupPolicyResult getGroupPolicyResult;
-  ResponseMetadata responseMetadata;
-  public GetGroupPolicyResponse() {  }
+public class GetUserPolicyResponseType extends EuareMessage {
+  GetUserPolicyResultType getUserPolicyResult;
+  ResponseMetadataType responseMetadata;
+  public GetUserPolicyResponseType() {  }
 }
-public class UpdateUser extends EuareMessage {
+public class ErrorType extends EucalyptusData {
+  String type;
+  String code;
+  String message;
+  ErrorDetailType detail;
+  public ErrorType() {  }
+}
+public class UpdateUserType extends EuareMessage {
   String userName;
   String newPath;
   String newUserName;
-  public UpdateUser() {  }
+  public UpdateUserType() {  }
 }
-public class GetLoginProfileResult extends EucalyptusData {
-  LoginProfile loginProfile;
-  public GetLoginProfileResult() {  }
-}
-public class CreateAccessKeyResponse extends EuareMessage {
-  CreateAccessKeyResult createAccessKeyResult;
-  ResponseMetadata responseMetadata;
-  public CreateAccessKeyResponse() {  }
-}
-public class AddUserToGroup extends EuareMessage {
-  String groupName;
+public class PutUserPolicyType extends EuareMessage {
   String userName;
-  public AddUserToGroup() {  }
+  String policyName;
+  String policyDocument;
+  public PutUserPolicyType() {  }
 }
-public class CreateUserResponse extends EuareMessage {
-  CreateUserResult createUserResult;
-  ResponseMetadata responseMetadata;
-  public CreateUserResponse() {  }
+public class DeleteUserResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public DeleteUserResponseType() {  }
 }
-public class ErrorDetail extends EucalyptusData {
-  public ErrorDetail() {  }
+public class CreateUserResultType extends EucalyptusData {
+  UserType user;
+  public CreateUserResultType() {  }
 }
-public class GetServerCertificateResponse extends EuareMessage {
-  GetServerCertificateResult getServerCertificateResult;
-  ResponseMetadata responseMetadata;
-  public GetServerCertificateResponse() {  }
+public class UploadServerCertificateResultType extends EucalyptusData {
+  ServerCertificateMetadataType serverCertificateMetadata;
+  public UploadServerCertificateResultType() {  }
 }
-public class ListGroupPoliciesResponse extends EuareMessage {
-  ListGroupPoliciesResult listGroupPoliciesResult;
-  ResponseMetadata responseMetadata;
-  public ListGroupPoliciesResponse() {  }
+public class DeactivateMFADeviceType extends EuareMessage {
+  String userName;
+  String serialNumber;
+  public DeactivateMFADeviceType() {  }
 }
-public class EnableMFADeviceResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public EnableMFADeviceResponse() {  }
+public class ResyncMFADeviceType extends EuareMessage {
+  String userName;
+  String serialNumber;
+  String authenticationCode1;
+  String authenticationCode2;
+  public ResyncMFADeviceType() {  }
 }
-public class GetUserResponse extends EuareMessage {
-  GetUserResult getUserResult;
-  ResponseMetadata responseMetadata;
-  public GetUserResponse() {  }
+public class UserType extends EuareMessage {
+  String path;
+  String userName;
+  String userId;
+  String arn;
+  public UserType() {  }
 }
-public class UserListType extends EucalyptusData {
-  public UserListType() {  }
-  ArrayList<User> memberList = new ArrayList<User>();
+public class GetUserPolicyType extends EuareMessage {
+  String userName;
+  String policyName;
+  public GetUserPolicyType() {  }
 }
-public class Group extends EuareMessage {
+public class DeleteUserPolicyType extends EuareMessage {
+  String userName;
+  String policyName;
+  public DeleteUserPolicyType() {  }
+}
+public class CreateLoginProfileResponseType extends EuareMessage {
+  CreateLoginProfileResultType createLoginProfileResult;
+  ResponseMetadataType responseMetadata;
+  public CreateLoginProfileResponseType() {  }
+}
+public class DeleteLoginProfileResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public DeleteLoginProfileResponseType() {  }
+}
+public class ListAccessKeysResultType extends EucalyptusData {
+  AccessKeyMetadataListTypeType accessKeyMetadata;
+  Boolean isTruncated;
+  String marker;
+  public ListAccessKeysResultType() {  }
+}
+public class ListGroupsForUserResultType extends EucalyptusData {
+  GroupListTypeType groups;
+  Boolean isTruncated;
+  String marker;
+  public ListGroupsForUserResultType() {  }
+}
+public class GetUserResultType extends EucalyptusData {
+  UserType user;
+  public GetUserResultType() {  }
+}
+public class DeleteSigningCertificateType extends EuareMessage {
+  String userName;
+  String certificateId;
+  public DeleteSigningCertificateType() {  }
+}
+public class LoginProfileType extends EuareMessage {
+  String userName;
+  public LoginProfileType() {  }
+}
+public class UpdateServerCertificateResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public UpdateServerCertificateResponseType() {  }
+}
+public class ListUsersResponseType extends EuareMessage {
+  ListUsersResultType listUsersResult;
+  ResponseMetadataType responseMetadata;
+  public ListUsersResponseType() {  }
+}
+public class ServerCertificateMetadataListTypeType extends EucalyptusData {
+  public ServerCertificateMetadataListTypeType() {  }
+  ArrayList<ServerCertificateMetadataType> memberList = new ArrayList<ServerCertificateMetadataType>();
+}
+public class DeleteGroupPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public DeleteGroupPolicyResponseType() {  }
+}
+public class DeleteAccessKeyType extends EuareMessage {
+  String userName;
+  String accessKeyId;
+  public DeleteAccessKeyType() {  }
+}
+public class ListGroupsType extends EuareMessage {
+  String pathPrefix;
+  String marker;
+  BigInteger maxItems;
+  public ListGroupsType() {  }
+}
+public class ListGroupsForUserType extends EuareMessage {
+  String userName;
+  String marker;
+  BigInteger maxItems;
+  public ListGroupsForUserType() {  }
+}
+public class GroupType extends EuareMessage {
   String path;
   String groupName;
   String groupId;
   String arn;
-  public Group() {  }
+  public GroupType() {  }
 }
-public class GetGroupPolicy extends EuareMessage {
+public class UploadSigningCertificateType extends EuareMessage {
+  String userName;
+  String certificateBody;
+  public UploadSigningCertificateType() {  }
+}
+public class UpdateLoginProfileResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public UpdateLoginProfileResponseType() {  }
+}
+public class ListGroupsResultType extends EucalyptusData {
+  GroupListTypeType groups;
+  Boolean isTruncated;
+  String marker;
+  public ListGroupsResultType() {  }
+}
+public class GetGroupPolicyType extends EuareMessage {
   String groupName;
   String policyName;
-  public GetGroupPolicy() {  }
+  public GetGroupPolicyType() {  }
 }
-public class SigningCertificate extends EuareMessage {
+public class EnableMFADeviceType extends EuareMessage {
+  String userName;
+  String serialNumber;
+  String authenticationCode1;
+  String authenticationCode2;
+  public EnableMFADeviceType() {  }
+}
+public class DeleteLoginProfileType extends EuareMessage {
+  String userName;
+  public DeleteLoginProfileType() {  }
+}
+public class SigningCertificateType extends EuareMessage {
   String userName;
   String certificateId;
   String certificateBody;
   String status;
   Date uploadDate;
-  public SigningCertificate() {  }
+  public SigningCertificateType() {  }
 }
-public class CreateUserResult extends EucalyptusData {
-  User user;
-  public CreateUserResult() {  }
+public class ListMFADevicesResponseType extends EuareMessage {
+  ListMFADevicesResultType listMFADevicesResult;
+  ResponseMetadataType responseMetadata;
+  public ListMFADevicesResponseType() {  }
 }
-public class RemoveUserFromGroupResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public RemoveUserFromGroupResponse() {  }
-}
-public class UploadSigningCertificateResponse extends EuareMessage {
-  UploadSigningCertificateResult uploadSigningCertificateResult;
-  ResponseMetadata responseMetadata;
-  public UploadSigningCertificateResponse() {  }
-}
-public class AccessKeyMetadata extends EucalyptusData {
-  String userName;
-  String accessKeyId;
-  String status;
-  Date createDate;
-  public AccessKeyMetadata() {  }
-}
-public class CreateLoginProfileResult extends EucalyptusData {
-  LoginProfile loginProfile;
-  public CreateLoginProfileResult() {  }
-}
-public class DeactivateMFADevice extends EuareMessage {
-  String userName;
-  String serialNumber;
-  public DeactivateMFADevice() {  }
-}
-public class UpdateGroup extends EuareMessage {
-  String groupName;
-  String newPath;
-  String newGroupName;
-  public UpdateGroup() {  }
-}
-public class DeleteServerCertificateResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public DeleteServerCertificateResponse() {  }
-}
-public class GetUserPolicyResult extends EucalyptusData {
-  String userName;
-  String policyName;
-  String policyDocument;
-  public GetUserPolicyResult() {  }
-}
-public class GetGroupResponse extends EuareMessage {
-  GetGroupResult getGroupResult;
-  ResponseMetadata responseMetadata;
-  public GetGroupResponse() {  }
-}
-public class UpdateLoginProfileResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public UpdateLoginProfileResponse() {  }
-}
-public class PutUserPolicy extends EuareMessage {
-  String userName;
-  String policyName;
-  String policyDocument;
-  public PutUserPolicy() {  }
-}
-public class DeactivateMFADeviceResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public DeactivateMFADeviceResponse() {  }
-}
-public class DeleteGroupPolicyResponse extends EuareMessage {
-  ResponseMetadata responseMetadata;
-  public DeleteGroupPolicyResponse() {  }
-}
-public class ListSigningCertificates extends EuareMessage {
-  String userName;
-  String marker;
-  BigInteger maxItems;
-  public ListSigningCertificates() {  }
-}
-public class ListMFADevicesResult extends EucalyptusData {
-  MfaDeviceListType mfaDevices;
+public class ListGroupPoliciesResultType extends EucalyptusData {
+  PolicyNameListTypeType policyNames;
   Boolean isTruncated;
   String marker;
-  public ListMFADevicesResult() {  }
+  public ListGroupPoliciesResultType() {  }
 }
-public class UploadSigningCertificateResult extends EucalyptusData {
-  SigningCertificate certificate;
-  public UploadSigningCertificateResult() {  }
+public class ListUsersResultType extends EucalyptusData {
+  UserListTypeType users;
+  Boolean isTruncated;
+  String marker;
+  public ListUsersResultType() {  }
 }
-public class ListAccessKeys extends EuareMessage {
+public class DeleteSigningCertificateResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public DeleteSigningCertificateResponseType() {  }
+}
+public class ListAccessKeysType extends EuareMessage {
   String userName;
   String marker;
   BigInteger maxItems;
-  public ListAccessKeys() {  }
+  public ListAccessKeysType() {  }
 }
-public class UploadServerCertificateResponse extends EuareMessage {
-  UploadServerCertificateResult uploadServerCertificateResult;
-  ResponseMetadata responseMetadata;
-  public UploadServerCertificateResponse() {  }
+public class DeleteUserType extends EuareMessage {
+  String userName;
+  public DeleteUserType() {  }
 }
-public class DeleteServerCertificate extends EuareMessage {
+public class CreateLoginProfileType extends EuareMessage {
+  String userName;
+  String password;
+  public CreateLoginProfileType() {  }
+}
+public class RemoveUserFromGroupResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public RemoveUserFromGroupResponseType() {  }
+}
+public class GetServerCertificateResultType extends EucalyptusData {
+  ServerCertificateType serverCertificate;
+  public GetServerCertificateResultType() {  }
+}
+public class GetServerCertificateResponseType extends EuareMessage {
+  GetServerCertificateResultType getServerCertificateResult;
+  ResponseMetadataType responseMetadata;
+  public GetServerCertificateResponseType() {  }
+}
+public class ListUserPoliciesResultType extends EucalyptusData {
+  PolicyNameListTypeType policyNames;
+  Boolean isTruncated;
+  String marker;
+  public ListUserPoliciesResultType() {  }
+}
+public class GroupListTypeType extends EucalyptusData {
+  public GroupListTypeType() {  }
+  ArrayList<GroupType> memberList = new ArrayList<GroupType>();
+}
+public class CreateGroupResultType extends EucalyptusData {
+  GroupType group;
+  public CreateGroupResultType() {  }
+}
+public class GetServerCertificateType extends EuareMessage {
   String serverCertificateName;
-  public DeleteServerCertificate() {  }
+  public GetServerCertificateType() {  }
 }
-public class ListGroupsForUserResponse extends EuareMessage {
-  ListGroupsForUserResult listGroupsForUserResult;
-  ResponseMetadata responseMetadata;
-  public ListGroupsForUserResponse() {  }
+public class UpdateSigningCertificateResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public UpdateSigningCertificateResponseType() {  }
 }
-public class User extends EuareMessage {
+public class GetLoginProfileResultType extends EucalyptusData {
+  LoginProfileType loginProfile;
+  public GetLoginProfileResultType() {  }
+}
+public class PolicyNameListTypeType extends EucalyptusData {
+  public PolicyNameListTypeType() {  }
+  ArrayList<String> memberList = new ArrayList<String>();
+}
+public class GetUserType extends EuareMessage {
+  String userName;
+  public GetUserType() {  }
+}
+public class ServerCertificateMetadataType extends EucalyptusData {
+  String path;
+  String serverCertificateName;
+  String serverCertificateId;
+  String arn;
+  Date uploadDate;
+  public ServerCertificateMetadataType() {  }
+}
+public class ListMFADevicesType extends EuareMessage {
+  String userName;
+  String marker;
+  BigInteger maxItems;
+  public ListMFADevicesType() {  }
+}
+public class ListServerCertificatesType extends EuareMessage {
+  String pathPrefix;
+  String marker;
+  BigInteger maxItems;
+  public ListServerCertificatesType() {  }
+}
+public class ErrorResponseType extends EucalyptusData {
+  String requestId;
+  public ErrorResponseType() {  }
+  ArrayList<ErrorType> errorList = new ArrayList<ErrorType>();
+}
+public class GetGroupResponseType extends EuareMessage {
+  GetGroupResultType getGroupResult;
+  ResponseMetadataType responseMetadata;
+  public GetGroupResponseType() {  }
+}
+public class ListSigningCertificatesResultType extends EucalyptusData {
+  CertificateListTypeType certificates;
+  Boolean isTruncated;
+  String marker;
+  public ListSigningCertificatesResultType() {  }
+}
+public class MFADeviceType extends EuareMessage {
+  String userName;
+  String serialNumber;
+  public MFADeviceType() {  }
+}
+public class CreateUserType extends EuareMessage {
   String path;
   String userName;
-  String userId;
-  String arn;
-  public User() {  }
+  public CreateUserType() {  }
+}
+public class DeleteUserPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata;
+  public DeleteUserPolicyResponseType() {  }
+}
+public class DeleteGroupType extends EuareMessage {
+  String groupName;
+  public DeleteGroupType() {  }
+}
+public class UpdateSigningCertificateType extends EuareMessage {
+  String userName;
+  String certificateId;
+  String status;
+  public UpdateSigningCertificateType() {  }
+}
+public class CreateAccessKeyResultType extends EucalyptusData {
+  AccessKeyType accessKey;
+  public CreateAccessKeyResultType() {  }
+}
+public class ListGroupsForUserResponseType extends EuareMessage {
+  ListGroupsForUserResultType listGroupsForUserResult;
+  ResponseMetadataType responseMetadata;
+  public ListGroupsForUserResponseType() {  }
+}
+public class CreateLoginProfileResultType extends EucalyptusData {
+  LoginProfileType loginProfile;
+  public CreateLoginProfileResultType() {  }
+}
+public class ListUsersType extends EuareMessage {
+  String pathPrefix;
+  String marker;
+  BigInteger maxItems;
+  public ListUsersType() {  }
 }

@@ -2,306 +2,306 @@
 <binding>
   <mapping class="com.eucalyptus.auth.euare.EuareMessage" abstract="true">
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.ResponseMetadata" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.ResponseMetadataType" abstract="true">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping name="Error" class="com.eucalyptus.auth.euare.Error">
+  <mapping name="Error" class="com.eucalyptus.auth.euare.ErrorType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <value name="Type" field="type" usage="required"/>
     <value name="Code" field="code" usage="required"/>
     <value name="Message" field="message" usage="required"/>
-    <structure field="detail" usage="required" map-as="com.eucalyptus.auth.euare.ErrorDetail"/>
+    <structure field="detail" usage="required" map-as="com.eucalyptus.auth.euare.ErrorDetailType"/>
   </mapping>
-  <mapping name="Detail" class="com.eucalyptus.auth.euare.ErrorDetail">
+  <mapping name="Detail" class="com.eucalyptus.auth.euare.ErrorDetailType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
   </mapping>
-  <mapping name="ErrorResponse" class="com.eucalyptus.auth.euare.ErrorResponse">
+  <mapping name="ErrorResponse" class="com.eucalyptus.auth.euare.ErrorResponseType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <collection field="errorList">
-      <structure map-as="com.eucalyptus.auth.euare.Error"/>
+      <structure map-as="com.eucalyptus.auth.euare.ErrorType"/>
     </collection>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping name="ListGroups" class="com.eucalyptus.auth.euare.ListGroups" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListGroups" class="com.eucalyptus.auth.euare.ListGroupsType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="PathPrefix" field="pathPrefix" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="ListGroupsResponse" class="com.eucalyptus.auth.euare.ListGroupsResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListGroupsResponse" class="com.eucalyptus.auth.euare.ListGroupsResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listGroupsResult" usage="required" map-as="com.eucalyptus.auth.euare.ListGroupsResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="listGroupsResult" usage="required" map-as="com.eucalyptus.auth.euare.ListGroupsResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListGroupsResult" class="com.eucalyptus.auth.euare.ListGroupsResult">
+  <mapping name="ListGroupsResult" class="com.eucalyptus.auth.euare.ListGroupsResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="Groups" field="groups" usage="required" type="com.eucalyptus.auth.euare.GroupListType"/>
+    <structure name="Groups" field="groups" usage="required" type="com.eucalyptus.auth.euare.GroupListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="DeleteAccessKey" class="com.eucalyptus.auth.euare.DeleteAccessKey" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteAccessKey" class="com.eucalyptus.auth.euare.DeleteAccessKeyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="AccessKeyId" field="accessKeyId" usage="required"/>
   </mapping>
-  <mapping name="DeleteAccessKeyResponse" class="com.eucalyptus.auth.euare.DeleteAccessKeyResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteAccessKeyResponse" class="com.eucalyptus.auth.euare.DeleteAccessKeyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListSigningCertificates" class="com.eucalyptus.auth.euare.ListSigningCertificates" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListSigningCertificates" class="com.eucalyptus.auth.euare.ListSigningCertificatesType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="ListSigningCertificatesResponse" class="com.eucalyptus.auth.euare.ListSigningCertificatesResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListSigningCertificatesResponse" class="com.eucalyptus.auth.euare.ListSigningCertificatesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listSigningCertificatesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListSigningCertificatesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="listSigningCertificatesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListSigningCertificatesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListSigningCertificatesResult" class="com.eucalyptus.auth.euare.ListSigningCertificatesResult">
+  <mapping name="ListSigningCertificatesResult" class="com.eucalyptus.auth.euare.ListSigningCertificatesResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure field="certificates" usage="required" map-as="com.eucalyptus.auth.euare.CertificateListType"/>
+    <structure field="certificates" usage="required" map-as="com.eucalyptus.auth.euare.CertificateListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="UploadSigningCertificate" class="com.eucalyptus.auth.euare.UploadSigningCertificate" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UploadSigningCertificate" class="com.eucalyptus.auth.euare.UploadSigningCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="CertificateBody" field="certificateBody" usage="required"/>
   </mapping>
-  <mapping name="UploadSigningCertificateResponse" class="com.eucalyptus.auth.euare.UploadSigningCertificateResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UploadSigningCertificateResponse" class="com.eucalyptus.auth.euare.UploadSigningCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="uploadSigningCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.UploadSigningCertificateResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="uploadSigningCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.UploadSigningCertificateResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="UploadSigningCertificateResult" class="com.eucalyptus.auth.euare.UploadSigningCertificateResult">
+  <mapping name="UploadSigningCertificateResult" class="com.eucalyptus.auth.euare.UploadSigningCertificateResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="Certificate" field="certificate" usage="required" type="com.eucalyptus.auth.euare.SigningCertificate"/>
+    <structure name="Certificate" field="certificate" usage="required" type="com.eucalyptus.auth.euare.SigningCertificateType"/>
   </mapping>
-  <mapping name="DeleteUserPolicy" class="com.eucalyptus.auth.euare.DeleteUserPolicy" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteUserPolicy" class="com.eucalyptus.auth.euare.DeleteUserPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
   </mapping>
-  <mapping name="DeleteUserPolicyResponse" class="com.eucalyptus.auth.euare.DeleteUserPolicyResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteUserPolicyResponse" class="com.eucalyptus.auth.euare.DeleteUserPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="PutUserPolicy" class="com.eucalyptus.auth.euare.PutUserPolicy" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="PutUserPolicy" class="com.eucalyptus.auth.euare.PutUserPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
     <value name="PolicyDocument" field="policyDocument" usage="required"/>
   </mapping>
-  <mapping name="PutUserPolicyResponse" class="com.eucalyptus.auth.euare.PutUserPolicyResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="PutUserPolicyResponse" class="com.eucalyptus.auth.euare.PutUserPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListServerCertificates" class="com.eucalyptus.auth.euare.ListServerCertificates" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListServerCertificates" class="com.eucalyptus.auth.euare.ListServerCertificatesType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="PathPrefix" field="pathPrefix" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="ListServerCertificatesResponse" class="com.eucalyptus.auth.euare.ListServerCertificatesResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListServerCertificatesResponse" class="com.eucalyptus.auth.euare.ListServerCertificatesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listServerCertificatesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListServerCertificatesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="listServerCertificatesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListServerCertificatesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListServerCertificatesResult" class="com.eucalyptus.auth.euare.ListServerCertificatesResult">
+  <mapping name="ListServerCertificatesResult" class="com.eucalyptus.auth.euare.ListServerCertificatesResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure field="serverCertificateMetadataList" usage="required" map-as="com.eucalyptus.auth.euare.ServerCertificateMetadataListType"/>
+    <structure field="serverCertificateMetadataList" usage="required" map-as="com.eucalyptus.auth.euare.ServerCertificateMetadataListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="GetUserPolicy" class="com.eucalyptus.auth.euare.GetUserPolicy" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetUserPolicy" class="com.eucalyptus.auth.euare.GetUserPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
   </mapping>
-  <mapping name="GetUserPolicyResponse" class="com.eucalyptus.auth.euare.GetUserPolicyResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetUserPolicyResponse" class="com.eucalyptus.auth.euare.GetUserPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="getUserPolicyResult" usage="required" map-as="com.eucalyptus.auth.euare.GetUserPolicyResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="getUserPolicyResult" usage="required" map-as="com.eucalyptus.auth.euare.GetUserPolicyResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="GetUserPolicyResult" class="com.eucalyptus.auth.euare.GetUserPolicyResult">
+  <mapping name="GetUserPolicyResult" class="com.eucalyptus.auth.euare.GetUserPolicyResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
     <value name="PolicyDocument" field="policyDocument" usage="required"/>
   </mapping>
-  <mapping name="UpdateLoginProfile" class="com.eucalyptus.auth.euare.UpdateLoginProfile" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateLoginProfile" class="com.eucalyptus.auth.euare.UpdateLoginProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="Password" field="password" usage="optional"/>
   </mapping>
-  <mapping name="UpdateLoginProfileResponse" class="com.eucalyptus.auth.euare.UpdateLoginProfileResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateLoginProfileResponse" class="com.eucalyptus.auth.euare.UpdateLoginProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="UpdateServerCertificate" class="com.eucalyptus.auth.euare.UpdateServerCertificate" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateServerCertificate" class="com.eucalyptus.auth.euare.UpdateServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="ServerCertificateName" field="serverCertificateName" usage="required"/>
     <value name="NewPath" field="newPath" usage="optional"/>
     <value name="NewServerCertificateName" field="newServerCertificateName" usage="optional"/>
   </mapping>
-  <mapping name="UpdateServerCertificateResponse" class="com.eucalyptus.auth.euare.UpdateServerCertificateResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateServerCertificateResponse" class="com.eucalyptus.auth.euare.UpdateServerCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="UpdateUser" class="com.eucalyptus.auth.euare.UpdateUser" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateUser" class="com.eucalyptus.auth.euare.UpdateUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="NewPath" field="newPath" usage="optional"/>
     <value name="NewUserName" field="newUserName" usage="optional"/>
   </mapping>
-  <mapping name="UpdateUserResponse" class="com.eucalyptus.auth.euare.UpdateUserResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateUserResponse" class="com.eucalyptus.auth.euare.UpdateUserResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="DeleteLoginProfile" class="com.eucalyptus.auth.euare.DeleteLoginProfile" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteLoginProfile" class="com.eucalyptus.auth.euare.DeleteLoginProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
-  <mapping name="DeleteLoginProfileResponse" class="com.eucalyptus.auth.euare.DeleteLoginProfileResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteLoginProfileResponse" class="com.eucalyptus.auth.euare.DeleteLoginProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="UpdateSigningCertificate" class="com.eucalyptus.auth.euare.UpdateSigningCertificate" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateSigningCertificate" class="com.eucalyptus.auth.euare.UpdateSigningCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="CertificateId" field="certificateId" usage="required"/>
     <value name="Status" field="status" usage="required"/>
   </mapping>
-  <mapping name="UpdateSigningCertificateResponse" class="com.eucalyptus.auth.euare.UpdateSigningCertificateResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateSigningCertificateResponse" class="com.eucalyptus.auth.euare.UpdateSigningCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="DeleteGroupPolicy" class="com.eucalyptus.auth.euare.DeleteGroupPolicy" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteGroupPolicy" class="com.eucalyptus.auth.euare.DeleteGroupPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
   </mapping>
-  <mapping name="DeleteGroupPolicyResponse" class="com.eucalyptus.auth.euare.DeleteGroupPolicyResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteGroupPolicyResponse" class="com.eucalyptus.auth.euare.DeleteGroupPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListUsers" class="com.eucalyptus.auth.euare.ListUsers" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListUsers" class="com.eucalyptus.auth.euare.ListUsersType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="PathPrefix" field="pathPrefix" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="ListUsersResponse" class="com.eucalyptus.auth.euare.ListUsersResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListUsersResponse" class="com.eucalyptus.auth.euare.ListUsersResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listUsersResult" usage="required" map-as="com.eucalyptus.auth.euare.ListUsersResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="listUsersResult" usage="required" map-as="com.eucalyptus.auth.euare.ListUsersResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListUsersResult" class="com.eucalyptus.auth.euare.ListUsersResult">
+  <mapping name="ListUsersResult" class="com.eucalyptus.auth.euare.ListUsersResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="Users" field="users" usage="required" type="com.eucalyptus.auth.euare.UserListType"/>
+    <structure name="Users" field="users" usage="required" type="com.eucalyptus.auth.euare.UserListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="UpdateGroup" class="com.eucalyptus.auth.euare.UpdateGroup" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateGroup" class="com.eucalyptus.auth.euare.UpdateGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="NewPath" field="newPath" usage="optional"/>
     <value name="NewGroupName" field="newGroupName" usage="optional"/>
   </mapping>
-  <mapping name="UpdateGroupResponse" class="com.eucalyptus.auth.euare.UpdateGroupResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateGroupResponse" class="com.eucalyptus.auth.euare.UpdateGroupResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="GetServerCertificate" class="com.eucalyptus.auth.euare.GetServerCertificate" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetServerCertificate" class="com.eucalyptus.auth.euare.GetServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="ServerCertificateName" field="serverCertificateName" usage="required"/>
   </mapping>
-  <mapping name="GetServerCertificateResponse" class="com.eucalyptus.auth.euare.GetServerCertificateResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetServerCertificateResponse" class="com.eucalyptus.auth.euare.GetServerCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="getServerCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.GetServerCertificateResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="getServerCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.GetServerCertificateResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="GetServerCertificateResult" class="com.eucalyptus.auth.euare.GetServerCertificateResult">
+  <mapping name="GetServerCertificateResult" class="com.eucalyptus.auth.euare.GetServerCertificateResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure field="serverCertificate" usage="required" map-as="com.eucalyptus.auth.euare.ServerCertificate"/>
+    <structure field="serverCertificate" usage="required" map-as="com.eucalyptus.auth.euare.ServerCertificateType"/>
   </mapping>
-  <mapping name="PutGroupPolicy" class="com.eucalyptus.auth.euare.PutGroupPolicy" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="PutGroupPolicy" class="com.eucalyptus.auth.euare.PutGroupPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
     <value name="PolicyDocument" field="policyDocument" usage="required"/>
   </mapping>
-  <mapping name="PutGroupPolicyResponse" class="com.eucalyptus.auth.euare.PutGroupPolicyResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="PutGroupPolicyResponse" class="com.eucalyptus.auth.euare.PutGroupPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="CreateUser" class="com.eucalyptus.auth.euare.CreateUser" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateUser" class="com.eucalyptus.auth.euare.CreateUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="Path" field="path" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
-  <mapping name="CreateUserResponse" class="com.eucalyptus.auth.euare.CreateUserResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateUserResponse" class="com.eucalyptus.auth.euare.CreateUserResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="createUserResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateUserResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="createUserResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateUserResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="CreateUserResult" class="com.eucalyptus.auth.euare.CreateUserResult">
+  <mapping name="CreateUserResult" class="com.eucalyptus.auth.euare.CreateUserResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="User" field="user" usage="optional" type="com.eucalyptus.auth.euare.User"/>
+    <structure name="User" field="user" usage="optional" type="com.eucalyptus.auth.euare.UserType"/>
   </mapping>
-  <mapping name="DeleteSigningCertificate" class="com.eucalyptus.auth.euare.DeleteSigningCertificate" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteSigningCertificate" class="com.eucalyptus.auth.euare.DeleteSigningCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="CertificateId" field="certificateId" usage="required"/>
   </mapping>
-  <mapping name="DeleteSigningCertificateResponse" class="com.eucalyptus.auth.euare.DeleteSigningCertificateResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteSigningCertificateResponse" class="com.eucalyptus.auth.euare.DeleteSigningCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="EnableMFADevice" class="com.eucalyptus.auth.euare.EnableMFADevice" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="EnableMFADevice" class="com.eucalyptus.auth.euare.EnableMFADeviceType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
@@ -309,100 +309,100 @@
     <value name="AuthenticationCode1" field="authenticationCode1" usage="required"/>
     <value name="AuthenticationCode2" field="authenticationCode2" usage="required"/>
   </mapping>
-  <mapping name="EnableMFADeviceResponse" class="com.eucalyptus.auth.euare.EnableMFADeviceResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="EnableMFADeviceResponse" class="com.eucalyptus.auth.euare.EnableMFADeviceResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListUserPolicies" class="com.eucalyptus.auth.euare.ListUserPolicies" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListUserPolicies" class="com.eucalyptus.auth.euare.ListUserPoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="ListUserPoliciesResponse" class="com.eucalyptus.auth.euare.ListUserPoliciesResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListUserPoliciesResponse" class="com.eucalyptus.auth.euare.ListUserPoliciesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listUserPoliciesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListUserPoliciesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="listUserPoliciesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListUserPoliciesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListUserPoliciesResult" class="com.eucalyptus.auth.euare.ListUserPoliciesResult">
+  <mapping name="ListUserPoliciesResult" class="com.eucalyptus.auth.euare.ListUserPoliciesResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="PolicyNames" field="policyNames" usage="required" type="com.eucalyptus.auth.euare.PolicyNameListType"/>
+    <structure name="PolicyNames" field="policyNames" usage="required" type="com.eucalyptus.auth.euare.PolicyNameListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="ListAccessKeys" class="com.eucalyptus.auth.euare.ListAccessKeys" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListAccessKeys" class="com.eucalyptus.auth.euare.ListAccessKeysType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="ListAccessKeysResponse" class="com.eucalyptus.auth.euare.ListAccessKeysResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListAccessKeysResponse" class="com.eucalyptus.auth.euare.ListAccessKeysResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listAccessKeysResult" usage="required" map-as="com.eucalyptus.auth.euare.ListAccessKeysResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="listAccessKeysResult" usage="required" map-as="com.eucalyptus.auth.euare.ListAccessKeysResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListAccessKeysResult" class="com.eucalyptus.auth.euare.ListAccessKeysResult">
+  <mapping name="ListAccessKeysResult" class="com.eucalyptus.auth.euare.ListAccessKeysResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure field="accessKeyMetadata" usage="required" map-as="com.eucalyptus.auth.euare.AccessKeyMetadataListType"/>
+    <structure field="accessKeyMetadata" usage="required" map-as="com.eucalyptus.auth.euare.AccessKeyMetadataListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="GetLoginProfile" class="com.eucalyptus.auth.euare.GetLoginProfile" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetLoginProfile" class="com.eucalyptus.auth.euare.GetLoginProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
-  <mapping name="GetLoginProfileResponse" class="com.eucalyptus.auth.euare.GetLoginProfileResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetLoginProfileResponse" class="com.eucalyptus.auth.euare.GetLoginProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="getLoginProfileResult" usage="required" map-as="com.eucalyptus.auth.euare.GetLoginProfileResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="getLoginProfileResult" usage="required" map-as="com.eucalyptus.auth.euare.GetLoginProfileResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="GetLoginProfileResult" class="com.eucalyptus.auth.euare.GetLoginProfileResult">
+  <mapping name="GetLoginProfileResult" class="com.eucalyptus.auth.euare.GetLoginProfileResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="LoginProfile" field="loginProfile" usage="required" type="com.eucalyptus.auth.euare.LoginProfile"/>
+    <structure name="LoginProfile" field="loginProfile" usage="required" type="com.eucalyptus.auth.euare.LoginProfileType"/>
   </mapping>
-  <mapping name="ListGroupsForUser" class="com.eucalyptus.auth.euare.ListGroupsForUser" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListGroupsForUser" class="com.eucalyptus.auth.euare.ListGroupsForUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="ListGroupsForUserResponse" class="com.eucalyptus.auth.euare.ListGroupsForUserResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListGroupsForUserResponse" class="com.eucalyptus.auth.euare.ListGroupsForUserResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listGroupsForUserResult" usage="required" map-as="com.eucalyptus.auth.euare.ListGroupsForUserResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="listGroupsForUserResult" usage="required" map-as="com.eucalyptus.auth.euare.ListGroupsForUserResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListGroupsForUserResult" class="com.eucalyptus.auth.euare.ListGroupsForUserResult">
+  <mapping name="ListGroupsForUserResult" class="com.eucalyptus.auth.euare.ListGroupsForUserResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="Groups" field="groups" usage="required" type="com.eucalyptus.auth.euare.GroupListType"/>
+    <structure name="Groups" field="groups" usage="required" type="com.eucalyptus.auth.euare.GroupListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="CreateGroup" class="com.eucalyptus.auth.euare.CreateGroup" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateGroup" class="com.eucalyptus.auth.euare.CreateGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="Path" field="path" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
   </mapping>
-  <mapping name="CreateGroupResponse" class="com.eucalyptus.auth.euare.CreateGroupResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateGroupResponse" class="com.eucalyptus.auth.euare.CreateGroupResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="createGroupResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateGroupResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="createGroupResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateGroupResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="CreateGroupResult" class="com.eucalyptus.auth.euare.CreateGroupResult">
+  <mapping name="CreateGroupResult" class="com.eucalyptus.auth.euare.CreateGroupResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="Group" field="group" usage="required" type="com.eucalyptus.auth.euare.Group"/>
+    <structure name="Group" field="group" usage="required" type="com.eucalyptus.auth.euare.GroupType"/>
   </mapping>
-  <mapping name="UploadServerCertificate" class="com.eucalyptus.auth.euare.UploadServerCertificate" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UploadServerCertificate" class="com.eucalyptus.auth.euare.UploadServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="Path" field="path" usage="optional"/>
@@ -411,142 +411,142 @@
     <value name="PrivateKey" field="privateKey" usage="required"/>
     <value name="CertificateChain" field="certificateChain" usage="optional"/>
   </mapping>
-  <mapping name="UploadServerCertificateResponse" class="com.eucalyptus.auth.euare.UploadServerCertificateResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UploadServerCertificateResponse" class="com.eucalyptus.auth.euare.UploadServerCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="uploadServerCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.UploadServerCertificateResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="uploadServerCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.UploadServerCertificateResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="UploadServerCertificateResult" class="com.eucalyptus.auth.euare.UploadServerCertificateResult">
+  <mapping name="UploadServerCertificateResult" class="com.eucalyptus.auth.euare.UploadServerCertificateResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="ServerCertificateMetadata" field="serverCertificateMetadata" usage="optional" type="com.eucalyptus.auth.euare.ServerCertificateMetadata"/>
+    <structure name="ServerCertificateMetadata" field="serverCertificateMetadata" usage="optional" type="com.eucalyptus.auth.euare.ServerCertificateMetadataType"/>
   </mapping>
-  <mapping name="GetGroupPolicy" class="com.eucalyptus.auth.euare.GetGroupPolicy" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetGroupPolicy" class="com.eucalyptus.auth.euare.GetGroupPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
   </mapping>
-  <mapping name="GetGroupPolicyResponse" class="com.eucalyptus.auth.euare.GetGroupPolicyResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetGroupPolicyResponse" class="com.eucalyptus.auth.euare.GetGroupPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="getGroupPolicyResult" usage="required" map-as="com.eucalyptus.auth.euare.GetGroupPolicyResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="getGroupPolicyResult" usage="required" map-as="com.eucalyptus.auth.euare.GetGroupPolicyResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="GetGroupPolicyResult" class="com.eucalyptus.auth.euare.GetGroupPolicyResult">
+  <mapping name="GetGroupPolicyResult" class="com.eucalyptus.auth.euare.GetGroupPolicyResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
     <value name="PolicyDocument" field="policyDocument" usage="required"/>
   </mapping>
-  <mapping name="DeleteUser" class="com.eucalyptus.auth.euare.DeleteUser" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteUser" class="com.eucalyptus.auth.euare.DeleteUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
-  <mapping name="DeleteUserResponse" class="com.eucalyptus.auth.euare.DeleteUserResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteUserResponse" class="com.eucalyptus.auth.euare.DeleteUserResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="DeactivateMFADevice" class="com.eucalyptus.auth.euare.DeactivateMFADevice" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeactivateMFADevice" class="com.eucalyptus.auth.euare.DeactivateMFADeviceType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="SerialNumber" field="serialNumber" usage="required"/>
   </mapping>
-  <mapping name="DeactivateMFADeviceResponse" class="com.eucalyptus.auth.euare.DeactivateMFADeviceResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeactivateMFADeviceResponse" class="com.eucalyptus.auth.euare.DeactivateMFADeviceResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="RemoveUserFromGroup" class="com.eucalyptus.auth.euare.RemoveUserFromGroup" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="RemoveUserFromGroup" class="com.eucalyptus.auth.euare.RemoveUserFromGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
-  <mapping name="RemoveUserFromGroupResponse" class="com.eucalyptus.auth.euare.RemoveUserFromGroupResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="RemoveUserFromGroupResponse" class="com.eucalyptus.auth.euare.RemoveUserFromGroupResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="DeleteServerCertificate" class="com.eucalyptus.auth.euare.DeleteServerCertificate" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteServerCertificate" class="com.eucalyptus.auth.euare.DeleteServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="ServerCertificateName" field="serverCertificateName" usage="required"/>
   </mapping>
-  <mapping name="DeleteServerCertificateResponse" class="com.eucalyptus.auth.euare.DeleteServerCertificateResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteServerCertificateResponse" class="com.eucalyptus.auth.euare.DeleteServerCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListGroupPolicies" class="com.eucalyptus.auth.euare.ListGroupPolicies" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListGroupPolicies" class="com.eucalyptus.auth.euare.ListGroupPoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="ListGroupPoliciesResponse" class="com.eucalyptus.auth.euare.ListGroupPoliciesResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListGroupPoliciesResponse" class="com.eucalyptus.auth.euare.ListGroupPoliciesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listGroupPoliciesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListGroupPoliciesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="listGroupPoliciesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListGroupPoliciesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListGroupPoliciesResult" class="com.eucalyptus.auth.euare.ListGroupPoliciesResult">
+  <mapping name="ListGroupPoliciesResult" class="com.eucalyptus.auth.euare.ListGroupPoliciesResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="PolicyNames" field="policyNames" usage="required" type="com.eucalyptus.auth.euare.PolicyNameListType"/>
+    <structure name="PolicyNames" field="policyNames" usage="required" type="com.eucalyptus.auth.euare.PolicyNameListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="CreateLoginProfile" class="com.eucalyptus.auth.euare.CreateLoginProfile" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateLoginProfile" class="com.eucalyptus.auth.euare.CreateLoginProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="Password" field="password" usage="required"/>
   </mapping>
-  <mapping name="CreateLoginProfileResponse" class="com.eucalyptus.auth.euare.CreateLoginProfileResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateLoginProfileResponse" class="com.eucalyptus.auth.euare.CreateLoginProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="createLoginProfileResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateLoginProfileResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="createLoginProfileResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateLoginProfileResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="CreateLoginProfileResult" class="com.eucalyptus.auth.euare.CreateLoginProfileResult">
+  <mapping name="CreateLoginProfileResult" class="com.eucalyptus.auth.euare.CreateLoginProfileResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="LoginProfile" field="loginProfile" usage="required" type="com.eucalyptus.auth.euare.LoginProfile"/>
+    <structure name="LoginProfile" field="loginProfile" usage="required" type="com.eucalyptus.auth.euare.LoginProfileType"/>
   </mapping>
-  <mapping name="CreateAccessKey" class="com.eucalyptus.auth.euare.CreateAccessKey" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <value name="UserName" field="userName" usage="optional"/>
-  </mapping>
-  <mapping name="CreateAccessKeyResponse" class="com.eucalyptus.auth.euare.CreateAccessKeyResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="createAccessKeyResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateAccessKeyResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
-  </mapping>
-  <mapping name="CreateAccessKeyResult" class="com.eucalyptus.auth.euare.CreateAccessKeyResult">
-    <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure field="accessKey" usage="required" map-as="com.eucalyptus.auth.euare.AccessKey"/>
-  </mapping>
-  <mapping name="GetUser" class="com.eucalyptus.auth.euare.GetUser" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateAccessKey" class="com.eucalyptus.auth.euare.CreateAccessKeyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="optional"/>
   </mapping>
-  <mapping name="GetUserResponse" class="com.eucalyptus.auth.euare.GetUserResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateAccessKeyResponse" class="com.eucalyptus.auth.euare.CreateAccessKeyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="getUserResult" usage="required" map-as="com.eucalyptus.auth.euare.GetUserResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="createAccessKeyResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateAccessKeyResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="GetUserResult" class="com.eucalyptus.auth.euare.GetUserResult">
+  <mapping name="CreateAccessKeyResult" class="com.eucalyptus.auth.euare.CreateAccessKeyResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="User" field="user" usage="required" type="com.eucalyptus.auth.euare.User"/>
+    <structure field="accessKey" usage="required" map-as="com.eucalyptus.auth.euare.AccessKeyType"/>
   </mapping>
-  <mapping name="ResyncMFADevice" class="com.eucalyptus.auth.euare.ResyncMFADevice" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetUser" class="com.eucalyptus.auth.euare.GetUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="UserName" field="userName" usage="optional"/>
+  </mapping>
+  <mapping name="GetUserResponse" class="com.eucalyptus.auth.euare.GetUserResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="getUserResult" usage="required" map-as="com.eucalyptus.auth.euare.GetUserResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetUserResult" class="com.eucalyptus.auth.euare.GetUserResultType">
+    <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
+    <structure name="User" field="user" usage="required" type="com.eucalyptus.auth.euare.UserType"/>
+  </mapping>
+  <mapping name="ResyncMFADevice" class="com.eucalyptus.auth.euare.ResyncMFADeviceType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
@@ -554,103 +554,103 @@
     <value name="AuthenticationCode1" field="authenticationCode1" usage="required"/>
     <value name="AuthenticationCode2" field="authenticationCode2" usage="required"/>
   </mapping>
-  <mapping name="ResyncMFADeviceResponse" class="com.eucalyptus.auth.euare.ResyncMFADeviceResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ResyncMFADeviceResponse" class="com.eucalyptus.auth.euare.ResyncMFADeviceResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListMFADevices" class="com.eucalyptus.auth.euare.ListMFADevices" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListMFADevices" class="com.eucalyptus.auth.euare.ListMFADevicesType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="ListMFADevicesResponse" class="com.eucalyptus.auth.euare.ListMFADevicesResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ListMFADevicesResponse" class="com.eucalyptus.auth.euare.ListMFADevicesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listMFADevicesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListMFADevicesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="listMFADevicesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListMFADevicesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListMFADevicesResult" class="com.eucalyptus.auth.euare.ListMFADevicesResult">
+  <mapping name="ListMFADevicesResult" class="com.eucalyptus.auth.euare.ListMFADevicesResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure field="mfaDevices" usage="required" map-as="com.eucalyptus.auth.euare.MfaDeviceListType"/>
+    <structure field="mfaDevices" usage="required" map-as="com.eucalyptus.auth.euare.MfaDeviceListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="UpdateAccessKey" class="com.eucalyptus.auth.euare.UpdateAccessKey" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateAccessKey" class="com.eucalyptus.auth.euare.UpdateAccessKeyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="AccessKeyId" field="accessKeyId" usage="required"/>
     <value name="Status" field="status" usage="required"/>
   </mapping>
-  <mapping name="UpdateAccessKeyResponse" class="com.eucalyptus.auth.euare.UpdateAccessKeyResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="UpdateAccessKeyResponse" class="com.eucalyptus.auth.euare.UpdateAccessKeyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="AddUserToGroup" class="com.eucalyptus.auth.euare.AddUserToGroup" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="AddUserToGroup" class="com.eucalyptus.auth.euare.AddUserToGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
-  <mapping name="AddUserToGroupResponse" class="com.eucalyptus.auth.euare.AddUserToGroupResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="AddUserToGroupResponse" class="com.eucalyptus.auth.euare.AddUserToGroupResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="GetGroup" class="com.eucalyptus.auth.euare.GetGroup" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetGroup" class="com.eucalyptus.auth.euare.GetGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
   </mapping>
-  <mapping name="GetGroupResponse" class="com.eucalyptus.auth.euare.GetGroupResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="GetGroupResponse" class="com.eucalyptus.auth.euare.GetGroupResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="getGroupResult" usage="required" map-as="com.eucalyptus.auth.euare.GetGroupResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure field="getGroupResult" usage="required" map-as="com.eucalyptus.auth.euare.GetGroupResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="GetGroupResult" class="com.eucalyptus.auth.euare.GetGroupResult">
+  <mapping name="GetGroupResult" class="com.eucalyptus.auth.euare.GetGroupResultType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
-    <structure name="Group" field="group" usage="required" type="com.eucalyptus.auth.euare.Group"/>
-    <structure name="Users" field="users" usage="required" type="com.eucalyptus.auth.euare.UserListType"/>
+    <structure name="Group" field="group" usage="required" type="com.eucalyptus.auth.euare.GroupType"/>
+    <structure name="Users" field="users" usage="required" type="com.eucalyptus.auth.euare.UserListTypeType"/>
     <value name="IsTruncated" field="isTruncated" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
   </mapping>
-  <mapping name="DeleteGroup" class="com.eucalyptus.auth.euare.DeleteGroup" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteGroup" class="com.eucalyptus.auth.euare.DeleteGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="GroupName" field="groupName" usage="required"/>
   </mapping>
-  <mapping name="DeleteGroupResponse" class="com.eucalyptus.auth.euare.DeleteGroupResponse" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="DeleteGroupResponse" class="com.eucalyptus.auth.euare.DeleteGroupResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadata"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ServerCertificateMetadataList" class="com.eucalyptus.auth.euare.ServerCertificateMetadataListType">
+  <mapping name="ServerCertificateMetadataList" class="com.eucalyptus.auth.euare.ServerCertificateMetadataListTypeType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <collection field="memberList">
-      <structure name="member" type="com.eucalyptus.auth.euare.ServerCertificateMetadata"/>
+      <structure name="member" type="com.eucalyptus.auth.euare.ServerCertificateMetadataType"/>
     </collection>
   </mapping>
-  <mapping name="ServerCertificate" class="com.eucalyptus.auth.euare.ServerCertificate" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="ServerCertificate" class="com.eucalyptus.auth.euare.ServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure name="ServerCertificateMetadata" field="serverCertificateMetadata" usage="required" type="com.eucalyptus.auth.euare.ServerCertificateMetadata"/>
+    <structure name="ServerCertificateMetadata" field="serverCertificateMetadata" usage="required" type="com.eucalyptus.auth.euare.ServerCertificateMetadataType"/>
     <value name="CertificateBody" field="certificateBody" usage="required"/>
     <value name="CertificateChain" field="certificateChain" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.GroupListType" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.GroupListTypeType" abstract="true">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <collection field="memberList">
-      <structure name="member" type="com.eucalyptus.auth.euare.Group"/>
+      <structure name="member" type="com.eucalyptus.auth.euare.GroupType"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.ServerCertificateMetadata" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.ServerCertificateMetadataType" abstract="true">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <value name="Path" field="path" usage="required"/>
     <value name="ServerCertificateName" field="serverCertificateName" usage="required"/>
@@ -658,7 +658,7 @@
     <value name="Arn" field="arn" usage="required"/>
     <value name="UploadDate" field="uploadDate" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.User" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping class="com.eucalyptus.auth.euare.UserType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="Path" field="path" usage="required"/>
@@ -666,7 +666,7 @@
     <value name="UserId" field="userId" usage="required"/>
     <value name="Arn" field="arn" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.SigningCertificate" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping class="com.eucalyptus.auth.euare.SigningCertificateType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
@@ -675,13 +675,13 @@
     <value name="Status" field="status" usage="required"/>
     <value name="UploadDate" field="uploadDate" usage="optional"/>
   </mapping>
-  <mapping name="MFADevices" class="com.eucalyptus.auth.euare.MfaDeviceListType">
+  <mapping name="MFADevices" class="com.eucalyptus.auth.euare.MfaDeviceListTypeType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <collection field="memberList">
-      <structure name="member" map-as="com.eucalyptus.auth.euare.MFADevice"/>
+      <structure map-as="com.eucalyptus.auth.euare.MFADeviceType"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.Group" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping class="com.eucalyptus.auth.euare.GroupType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="Path" field="path" usage="required"/>
@@ -689,44 +689,44 @@
     <value name="GroupId" field="groupId" usage="required"/>
     <value name="Arn" field="arn" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.UserListType" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.UserListTypeType" abstract="true">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <collection field="memberList">
-      <structure name="member" type="com.eucalyptus.auth.euare.User"/>
+      <structure name="member" type="com.eucalyptus.auth.euare.UserType"/>
     </collection>
   </mapping>
-  <mapping name="member" class="com.eucalyptus.auth.euare.AccessKeyMetadata">
+  <mapping name="member" class="com.eucalyptus.auth.euare.AccessKeyMetadataType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="AccessKeyId" field="accessKeyId" usage="optional"/>
     <value name="Status" field="status" usage="optional"/>
     <value name="CreateDate" field="createDate" usage="optional"/>
   </mapping>
-  <mapping name="Certificates" class="com.eucalyptus.auth.euare.CertificateListType">
+  <mapping name="Certificates" class="com.eucalyptus.auth.euare.CertificateListTypeType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <collection field="memberList">
-      <structure name="member" type="com.eucalyptus.auth.euare.SigningCertificate"/>
+      <structure name="member" type="com.eucalyptus.auth.euare.SigningCertificateType"/>
     </collection>
   </mapping>
-  <mapping name="AccessKeyMetadata" class="com.eucalyptus.auth.euare.AccessKeyMetadataListType">
+  <mapping name="AccessKeyMetadata" class="com.eucalyptus.auth.euare.AccessKeyMetadataListTypeType">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <collection field="memberList">
-      <structure map-as="com.eucalyptus.auth.euare.AccessKeyMetadata"/>
+      <structure map-as="com.eucalyptus.auth.euare.AccessKeyMetadataType"/>
     </collection>
   </mapping>
-  <mapping abstract="true" class="com.eucalyptus.auth.euare.MFADevice" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping class="com.eucalyptus.auth.euare.MFADeviceType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="SerialNumber" field="serialNumber" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.PolicyNameListType" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.PolicyNameListTypeType" abstract="true">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <collection field="memberList">
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping name="AccessKey" class="com.eucalyptus.auth.euare.AccessKey" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="AccessKey" class="com.eucalyptus.auth.euare.AccessKeyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
@@ -735,7 +735,7 @@
     <value name="SecretAccessKey" field="secretAccessKey" usage="required"/>
     <value name="CreateDate" field="createDate" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.LoginProfile" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping class="com.eucalyptus.auth.euare.LoginProfileType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
     <namespace uri="https://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
