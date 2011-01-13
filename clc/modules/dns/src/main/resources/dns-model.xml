@@ -71,6 +71,10 @@
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
 
+    <spring:beans>
+        <spring:import resource="classpath:dns-services.xml"/>
+    </spring:beans>
+
     <model name="dns">
 
         <default-service-exception-strategy>

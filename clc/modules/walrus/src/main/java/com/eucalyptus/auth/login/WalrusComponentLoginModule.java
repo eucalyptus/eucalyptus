@@ -73,7 +73,7 @@ import org.apache.xml.security.utils.Base64;
 
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;

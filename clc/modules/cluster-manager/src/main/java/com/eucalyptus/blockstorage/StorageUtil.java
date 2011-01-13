@@ -71,6 +71,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
@@ -95,13 +96,13 @@ public class StorageUtil {
   
   public static <TYPE> TYPE send( String clusterName, EucalyptusMessage message ) throws EucalyptusCloudException {
     StorageControllerConfiguration scConfig = Configuration.lookupSc( clusterName );
-    Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
+    Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
     TYPE reply = (TYPE) sc.send( message );
     return reply;
   }
   
   public static void dispatchAll( EucalyptusMessage message ) throws EucalyptusCloudException {
-    for( Dispatcher sc : ServiceDispatcher.lookupMany( Component.storage ) ) {
+    for( Dispatcher sc : ServiceDispatcher.lookupMany( Components.lookup("storage") ) ) {
       sc.dispatch( message );
     }
   }
@@ -122,7 +123,7 @@ public class StorageUtil {
         }
       } );
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
-      Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
+      Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
       DescribeStorageVolumesResponseType volState = sc.send( descVols );    
       for ( StorageVolume vol : volState.getVolumeSet( ) ) {
         idStorageVolumeMap.put( vol.getVolumeId( ), vol );

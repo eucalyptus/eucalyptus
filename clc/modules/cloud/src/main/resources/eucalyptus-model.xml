@@ -63,45 +63,101 @@
   -->
 
 <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xmlns:spring="http://www.springframework.org/schema/beans"
-      xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
-      xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
-      xsi:schemaLocation="
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:spring="http://www.springframework.org/schema/beans"
+  xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0" xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
+  xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
 
-    <euca:connector name="eucaws"/>
-
-    <!--===========  This enables eucalyptus ===========-->
     <spring:beans>
         <spring:import resource="classpath:eucalyptus-services.xml"/>
-        <spring:import resource="classpath:eucalyptus-interface.xml"/>
         <spring:import resource="classpath:eucalyptus-userdata.xml"/>
         <spring:import resource="classpath:eucalyptus-verification.xml"/>
         <spring:import resource="classpath:eucalyptus-runtime.xml"/>
         <spring:import resource="classpath:eucalyptus-storage.xml"/>
     </spring:beans>
 
-    <!--===========  This enables walrus ===========-->
-    <spring:beans>
-        <spring:import resource="classpath:walrus-services.xml"/>
-        <spring:import resource="classpath:walrus-model.xml"/>
-    </spring:beans>
+    <model name="eucalyptus">
+    <default-service-exception-strategy>
+      <outbound-endpoint ref="ReplyQueueEndpoint" />
+    </default-service-exception-strategy>
+    <service name="EucalyptusRequestQueue">
+      <inbound>
+        <inbound-endpoint ref="EucalyptusRequestQueueEndpoint"/>
+      </inbound>
+      <bridge-component/>
+      <outbound>
+        <filtering-router>
+          <outbound-endpoint ref="ShortBusWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.DescribeRegionsType" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="StartVerifyWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.RunInstancesType" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="VmControlWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmControlMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="VmControlWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmBundleMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="ClusterEndpointWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ClusterMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="KeyPairWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="ImageWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImageMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="VolumeWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockVolumeMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="SnapshotWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockSnapshotMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="AddressWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmAddressMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="GroupsWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage" />
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="ShortBusWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+        </filtering-router>
+      </outbound>
+    </service>
 
-    <!--===========  This enables block storage ===========-->
-    <spring:beans>
-        <spring:import resource="classpath:storage-services.xml"/>
-        <spring:import resource="classpath:storage-model.xml"/>
-    </spring:beans>
+    <service name="ShortBus">
+      <inbound>
+        <inbound-endpoint ref="ShortBusWS" />
+      </inbound>
+      <component class="edu.ucsb.eucalyptus.ic.Eucalyptus" />
+      <outbound>
+        <outbound-pass-through-router>
+          <outbound-endpoint ref="ReplyQueueEndpoint" />
+        </outbound-pass-through-router>
+      </outbound>
+    </service>
 
-    <!--===========  This enables DNS ===========-->
-    <spring:beans>
-        <spring:import resource="classpath:dns-services.xml"/>
-        <spring:import resource="classpath:dns-model.xml"/>
-    </spring:beans>
+    <service name="Eucalyptus">
+      <inbound>
+        <inbound-endpoint ref="EucalyptusWS" />
+      </inbound>
+      <component class="edu.ucsb.eucalyptus.ic.Eucalyptus" />
+    </service>
 
+  </model>
 </mule>
-

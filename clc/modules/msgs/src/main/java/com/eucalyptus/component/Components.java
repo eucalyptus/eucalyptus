@@ -94,6 +94,7 @@ public class Components {
                                                                           {
                                                                             put( Service.class, new ConcurrentHashMap<String, Service>( ) );
                                                                             put( Component.class, new ConcurrentHashMap<String, Component>( ) );
+                                                                            put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
                                                                           }
                                                                         };
   public static com.eucalyptus.bootstrap.Component delegate             = com.eucalyptus.bootstrap.Component.eucalyptus;
@@ -101,6 +102,10 @@ public class Components {
   @SuppressWarnings( "unchecked" )
   public static List<Component> list( ) {
     return new ArrayList( Components.lookup( Component.class ).values( ) );
+  }
+  @SuppressWarnings( "unchecked" )
+  public static List<ComponentId> listIds( ) {
+    return new ArrayList( Components.lookup( ComponentId.class ).values( ) );
   }
   
   private static <T extends ComponentInformation> Class getRealType( Class<T> maybeSubclass ) {
@@ -115,7 +120,7 @@ public class Components {
     throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Missing entry for component info type: " + maybeSubclass.getSimpleName( ) );
   }
   
-  private static <T> Map<String, T> lookup( Class type ) {
+  static <T> Map<String, T> lookup( Class type ) {
     return ( Map<String, T> ) componentInformation.get( getRealType( type ) );
   }
   
@@ -170,7 +175,8 @@ public class Components {
   public static <T extends ComponentInformation> T lookup( Class<T> type, String name ) throws NoSuchElementException {
     if ( !contains( type, name ) ) {
       try {
-        Components.create( name, null );
+        ComponentId compId = ComponentIds.lookup( name );
+        Components.create( compId );
         return Components.lookup( type, name );
       } catch ( ServiceRegistrationException ex ) {
         throw new NoSuchElementException( "Missing entry for component '" + name + "' info type: " + type.getSimpleName( ) + " ("
@@ -185,6 +191,10 @@ public class Components {
     return Components.lookup( Component.class, componentName );
   }
   
+  public static Component lookup( ComponentId componentId ) throws NoSuchElementException {
+    return Components.lookup( Component.class, componentId.getName( ) );
+  }
+
   public static Component lookup( com.eucalyptus.bootstrap.Component component ) throws NoSuchElementException {
     return Components.lookup( Component.class, component.name( ) );
   }
@@ -206,8 +216,8 @@ public class Components {
     return Components.contains( Component.class, component.name( ) );
   }
   
-  public static Component create( String name, URI uri ) throws ServiceRegistrationException {
-    Component c = new Component( name, uri );
+  public static Component create( ComponentId id ) throws ServiceRegistrationException {
+    Component c = new Component( id );
     register( c );
     return c;
   }
@@ -233,10 +243,6 @@ public class Components {
                         + System.getProperty( "euca." + comp.getPeer( ).name( ) + ".disable" )
                         + "/"
                         + System.getProperty( "euca." + comp.getPeer( ).name( ) + ".remote" ) ).append( "\n" );
-            buf.append( "-> Configuration:      "
-                        + ( comp.getConfiguration( ).getResource( ) != null
-                          ? comp.getConfiguration( ).getResource( ).getOrigin( )
-                          : "null" ) ).append( "\n" );
             for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
@@ -357,10 +363,6 @@ public class Components {
                                        System.getProperty( String.format( "euca.%s.remote", comp.getPeer( ).name( ) ) ) ) ).append( "\n" );
             buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
                                        comp.getName( ), comp.isAvailableLocally( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> configuration:        %s",
-                                       comp.getName( ), ( comp.getConfiguration( ).getResource( ) != null
-                                         ? comp.getConfiguration( ).getResource( ).getOrigin( )
-                                         : "null" ) ) ).append( "\n" );
             buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),
                                        Iterables.transform( comp.getBootstrapper( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
             return buf.toString( );

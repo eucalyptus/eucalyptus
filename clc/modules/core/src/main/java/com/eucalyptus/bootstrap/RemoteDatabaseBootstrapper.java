@@ -89,7 +89,6 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
 
   @Override
   public void hup( ) {
-    //TODO: remote hup.
   }
 
   

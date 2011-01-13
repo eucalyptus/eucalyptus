@@ -65,7 +65,8 @@ package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.component.auth.EucaKeyStore;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
@@ -93,7 +94,7 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
     }
     for ( Component c : Component.values( ) ) {
       LOG.info( "Initializing system credentials for " + c.name( ) );
-      SystemCredentialProvider.init( c );
+      SystemCredentialProvider.init( c.name( ) );
     }
     return true;
   }

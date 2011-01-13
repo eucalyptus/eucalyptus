@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.auth.util;
+package com.eucalyptus.component.auth;
 
 import java.io.File;
 import java.io.IOException;

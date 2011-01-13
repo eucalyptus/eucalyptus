@@ -76,6 +76,7 @@ import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -248,7 +249,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
         StorageControllerConfiguration sc = Configuration.lookupSc( vm.getPlacement( ) );
         for ( AttachedVolume volume : vm.getVolumes( ) ) {
           try {
-            ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) ).send( new DetachStorageVolumeType(
+	      ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) ).send( new DetachStorageVolumeType(
                                                                                                                 cluster.getNode( vm.getServiceTag( ) ).getIqn( ),
                                                                                                                 volume.getVolumeId( ) ) );
             vm.getVolumes( ).remove( volume );

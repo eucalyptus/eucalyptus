@@ -1,7 +1,7 @@
 package com.eucalyptus.component;
 
 import java.net.URI;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 

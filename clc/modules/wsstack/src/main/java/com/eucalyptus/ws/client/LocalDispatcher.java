@@ -4,9 +4,8 @@ import java.net.URI;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
-import org.mule.api.MuleMessage;
 import org.mule.module.client.MuleClient;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -23,7 +22,7 @@ public class LocalDispatcher extends ServiceDispatcher {
   public void dispatch( BaseMessage msg ) {
     MuleEvent context = RequestContext.getEvent( );
     try {
-      ServiceContext.dispatch( this.getComponent( ).getLocalAddress( ), msg );
+      ServiceContext.dispatch( this.getComponent( ).getLocalEndpointName( ), msg );
     } catch ( Exception e ) {
       LOG.error( e );
     } finally {
@@ -33,7 +32,7 @@ public class LocalDispatcher extends ServiceDispatcher {
 
   @Override
   public BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException {
-    return ServiceContext.send( this.getComponent( ).getLocalAddress( ), msg );
+    return ServiceContext.send( this.getComponent( ).getLocalEndpointName( ), msg );
   }
 
 }
