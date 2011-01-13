@@ -73,17 +73,17 @@ public class Database extends ComponentId {
 
   @Override
   public Integer getPort( ) {
-    return 9001;
+    return 8777;
   }
 
   @Override
   public String getLocalEndpointName( ) {
-    return "hsqls://127.0.0.1:9001/eucalyptus";
+    return "mysql://127.0.0.1:8777/eucalyptus";
   }
 
   @Override
   public String getUriPattern( ) {
-    return "hsqls://%s:%d/eucalyptus";
+    return "mysql://%s:%d/eucalyptus";
   }
   
   @Override
