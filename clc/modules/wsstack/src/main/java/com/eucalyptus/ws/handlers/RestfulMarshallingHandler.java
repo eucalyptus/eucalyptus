@@ -73,6 +73,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.auth.euare.EuareMessage;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
@@ -88,15 +89,17 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( RestfulMarshallingHandler.class );
   protected String      namespace;
+  protected String      bindingVersion;
   
   @Override
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-      String bindingVersion = httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
-      if ( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
-        this.namespace = "http://ec2.amazonaws.com/doc/" + bindingVersion + "/";
+      this.bindingVersion = httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
+      if ( this.bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
+        this.namespace = "http://ec2.amazonaws.com/doc/" + this.bindingVersion + "/";
       } else {
+        this.bindingVersion = "";
         this.namespace = "http://msgs.eucalyptus.com";
       }
       String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getUserId( );
@@ -131,7 +134,11 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
         } else {
           try {
-            OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
+            String ns = this.namespace;
+            if ( httpResponse.getMessage( ) instanceof EuareMessage ) {
+              ns = "http://iam.amazonaws.com/doc/" + this.bindingVersion + "/";
+            }
+            OMElement omMsg = binding.toOM( httpResponse.getMessage( ), ns );
             omMsg.serialize( byteOut );
           } catch ( Throwable e ) {
             LOG.debug( e );
