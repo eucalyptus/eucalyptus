@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.persistence.Embeddable;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
@@ -46,7 +47,7 @@ public class PersistenceContexts {
   
   private static boolean isDuplicate( Class entity ) {
     PersistenceContext ctx = Ats.from( entity ).get( PersistenceContext.class );
-    if( Ats.from( entity ).has( MappedSuperclass.class ) ) {
+    if( Ats.from( entity ).has( MappedSuperclass.class ) || Ats.from( entity ).has( Embeddable.class ) ) {
       return false;
     } else if ( ctx == null || ctx.name( ) == null ) {
       RuntimeException ex = new RuntimeException( "Failed to register broken entity class: " + entity.getCanonicalName( ) + ".  Ensure that the class has a well-formed @PersistenceContext annotation.");

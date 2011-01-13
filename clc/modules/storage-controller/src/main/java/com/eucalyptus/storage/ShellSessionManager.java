@@ -183,5 +183,12 @@ public class ShellSessionManager implements SessionManager {
 			connect();
 		}
 	}
+	
+	public void stop() throws EucalyptusCloudException {
+		if(channel != null) {
+			channel.disconnect();
+		}
+		pool.shutdownNow();
+	}
 }
 

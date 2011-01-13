@@ -69,6 +69,7 @@ permission notice:
 #define DEFAULT_WALRUS_HOSTPORT "localhost:8773"
 #define DEFAULT_NC_HOSTPORT "localhost:8775"
 #define DEFAULT_MAC_ADDR "aa:bb:cc:dd:ee:ff"
+#define DEFAULT_PUBLIC_IP "10.1.2.3"
 #define BUFSIZE 1024
 char debug = 0;
 
@@ -121,7 +122,9 @@ int main (int argc, char **argv)
     char * ramdisk_id = NULL;
     char * ramdisk_manifest = NULL;
     char * reservation_id = NULL;
+    char * uu_id = NULL;
     char * mac_addr = strdup (DEFAULT_MAC_ADDR);
+    char * public_ip = strdup (DEFAULT_PUBLIC_IP);
     char * volume_id = NULL;
     char * remote_dev = NULL;
     char * local_dev = NULL;
@@ -134,7 +137,7 @@ int main (int argc, char **argv)
     int count = 1;
 	int ch;
     
-	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:V:R:L:FU:I:G:")) != -1) {
+	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:")) != -1) {
 		switch (ch) {
         case 'c':
             count = atoi (optarg);
@@ -150,6 +153,9 @@ int main (int argc, char **argv)
             break;
         case 'i':
             instance_id = optarg; 
+            break;
+        case 'p':
+            public_ip = optarg; 
             break;
         case 'm':
             image_id = strtok (optarg, ":");
@@ -177,6 +183,9 @@ int main (int argc, char **argv)
             break;
         case 'e':
             reservation_id = optarg;
+            break;
+        case 'u':
+            uu_id = optarg;
             break;
         case 'a':
             mac_addr = optarg;
@@ -238,10 +247,7 @@ int main (int argc, char **argv)
     }
     
     ncMetadata meta = { "correlate-me-please", "eucalyptus" };
-    virtualMachine params = { 64, 64, 1, "m1.small", 
-			      { { "sda1", "root", 100, "none" }, 
-				{ "sda2", "ephemeral1", 1000, "ext3" },
-				{ "sda3", "swap", 50, "swap" } } };
+    virtualMachine params = { 64, 64, 1, "m1.small" };
     ncStub * stub;
     char configFile[1024], policyFile[1024];
     char *euca_home;
@@ -324,7 +330,7 @@ int main (int argc, char **argv)
 #define C rand()%26 + 97
 
         while (count--) {
-            char * iid, * rid;
+	    char * iid, * rid, *uuid;
 
             char ibuf [8];
             if (instance_id==NULL || count>1) {
@@ -341,6 +347,14 @@ int main (int argc, char **argv)
             } else {
                 rid = reservation_id;
             }
+
+            char ubuf [48];
+            if (uu_id==NULL || count>1) {
+	        snprintf (ubuf, 48, "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c", C, C, C, C, C, C, C, C,C, C, C, C,C, C, C, C,C, C, C, C,C, C, C, C,C, C, C, C,C, C, C, C);
+                uuid = ubuf;
+            } else {
+                uuid = uu_id;
+            }
             
 	    netConfig netparams;
             ncInstance * outInst;
@@ -349,7 +363,7 @@ int main (int argc, char **argv)
 	    snprintf(netparams.privateMac, 24, "%s", privMac);
 
             int rc = ncRunInstanceStub(stub, &meta, 
-                                       iid, rid,
+                                       uuid, iid, rid,
                                        &params, 
                                        image_id, image_url, 
                                        kernel_id, kernel_url, 
@@ -365,8 +379,8 @@ int main (int argc, char **argv)
             }
 	    // count device mappings
 	    int i, count=0;
-	    for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
-	      if (strlen(outInst->params.deviceMapping[i].deviceName)>0) count++;
+	    for (i=0; i<EUCA_MAX_VBRS; i++) {
+	      if (strlen(outInst->params.virtualBootRecord[i].typeName)>0) count++;
 	    }
             printf("instanceId=%s stateCode=%d stateName=%s deviceMappings=%d\n", outInst->instanceId, outInst->stateCode, outInst->stateName, count);
             free_instance(&outInst);
@@ -399,6 +413,8 @@ int main (int argc, char **argv)
       for (i=0; i<outBundleTasksLen; i++) {
 	printf("BUNDLE %d: %s %s\n", i, outBundleTasks[i]->instanceId, outBundleTasks[i]->state);
       }
+    } else if (!strcmp(command, "assignAddress")) {
+      int rc = ncAssignAddressStub(stub, &meta, instance_id, public_ip);
     } else if (!strcmp(command, "terminateInstance")) {
         CHECK_PARAM(instance_id, "instance ID");
         

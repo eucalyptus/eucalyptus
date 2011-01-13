@@ -144,100 +144,6 @@ static int doInitialize (struct nc_state_t *nc)
 	return OK;
 }
 
-static int
-doRunInstance(		struct nc_state_t *nc,
-			ncMetadata *meta,
-			char *instanceId,
-			char *reservationId,
-			virtualMachine *params, 
-			char *imageId, char *imageURL, 
-			char *kernelId, char *kernelURL, 
-			char *ramdiskId, char *ramdiskURL, 
-			char *keyName, 
-			//			char *privMac, char *privIp, int vlan, 
-			netConfig *netparams,
-            char *userData, char *launchIndex, char *platform,
-			char **groupNames, int groupNamesSize,
-			ncInstance **outInst)
-{
-    ncInstance * instance = NULL;
-    * outInst = NULL;
-    pid_t pid;
-    netConfig ncnet;
-    int error;
-
-    memcpy(&ncnet, netparams, sizeof(netConfig));
-
-    /* check as much as possible before forking off and returning */
-    sem_p (inst_sem);
-    instance = find_instance (&global_instances, instanceId);
-    sem_v (inst_sem);
-    if (instance) {
-        logprintfl (EUCAFATAL, "Error: instance %s already running\n", instanceId);
-        return 1; /* TODO: return meaningful error codes? */
-    }
-    if (!(instance = allocate_instance (instanceId, 
-                                        reservationId,
-                                        params, 
-                                        imageId, imageURL,
-                                        kernelId, kernelURL,
-                                        ramdiskId, ramdiskURL,
-                                        instance_state_names[PENDING], 
-                                        PENDING, 
-                                        meta->userId, 
-                                        &ncnet, keyName,
-                                        userData, launchIndex, platform, groupNames, groupNamesSize))) {
-        logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
-        return 2;
-    }
-    change_state(instance, STAGING);
-
-    sem_p (inst_sem); 
-    error = add_instance (&global_instances, instance);
-    sem_v (inst_sem);
-    if ( error ) {
-        free_instance (&instance);
-        logprintfl (EUCAFATAL, "Error: could not save instance struct\n");
-        return error;
-    }
-
-    instance->launchTime = time (NULL);
-    /*
-      instance->params.mem = params->mem;
-      instance->params.cores = params->cores;
-      instance->params.disk = params->disk;
-      strcpy (instance->ncnet.privateIp, "0.0.0.0");
-      strcpy (instance->ncnet.publicIp, "0.0.0.0");
-    */
-
-    /* do the potentially long tasks in a thread */
-    pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
-    if (!attr) { 
-        free_instance (&instance);
-        logprintfl (EUCAFATAL, "Warning: out of memory\n");
-        return 1;
-    }
-    pthread_attr_init(attr);
-    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
-    
-    if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
-        pthread_attr_destroy(attr);
-        logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
-        sem_p (inst_sem);
-        remove_instance (&global_instances, instance);
-        sem_v (inst_sem);
-        free_instance (&instance);
-	if (attr) free(attr);
-        return 1;
-    }
-    pthread_attr_destroy(attr);
-    if (attr) free(attr);
-
-    * outInst = instance;
-    return 0;
-
-}
-
 static int doRebootInstance(	struct nc_state_t *nc,
 				ncMetadata *meta,
 				char *instanceId) 
@@ -283,8 +189,8 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			char *instanceId,
 			char **consoleOutput) {
 
-  char *console_output=NULL, *console_append=NULL, *console_main=NULL;
-  char console_file[MAX_PATH];
+  char *console_output=NULL, *console_append=NULL, *console_main=NULL, *tmp=NULL;
+  char console_file[MAX_PATH], dest_file[MAX_PATH], cmd[MAX_PATH];
   int rc, fd, ret;
   struct stat statbuf;
 
@@ -307,15 +213,6 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   }
 
 
-  if (getuid() != 0) {
-    console_main = strdup("NOT SUPPORTED");
-    if (!console_main) {
-      fprintf(stderr, "strdup failed (out of memory?)\n");
-      if (console_append) free(console_append);
-      return 1;
-    }
-  } else {
-
   bufsize = sizeof(char) * 1024 * 64;
   console_main = malloc(bufsize);
   if (!console_main) {
@@ -325,57 +222,82 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   }
   bzero(console_main, bufsize);
 
-  snprintf(console_file, MAX_PATH, "/tmp/consoleOutput.%s", instanceId);
-  
-  pid = fork();
-  if (pid == 0) {
-    int fd;
-    fd = open(console_file, O_WRONLY | O_TRUNC | O_CREAT, 0644);
-    if (fd < 0) {
-      // error
-    } else {
-      dup2(fd, 2);
-      dup2(2, 1);
-      close(0);
-      // TODO: test virsh console:
-      // rc = execl(rootwrap_command_path, rootwrap_command_path, "virsh", "console", instanceId, NULL);
-      rc = execl("/usr/sbin/xm", "/usr/sbin/xm", "console", instanceId, NULL);
-      fprintf(stderr, "execl() failed\n");
-      close(fd);
-    }
-    exit(0);
-  } else {
-    int count;
-    fd_set rfds;
-    struct timeval tv;
-    struct stat statbuf;
-    
-    count=0;
-    while(count < 10000 && stat(console_file, &statbuf) < 0) {count++;}
-    fd = open(console_file, O_RDONLY);
-    if (fd < 0) {
-      logprintfl (EUCAERROR, "ERROR: could not open consoleOutput file %s for reading\n", console_file);
-    } else {
-      FD_ZERO(&rfds);
-      FD_SET(fd, &rfds);
-      tv.tv_sec = 0;
-      tv.tv_usec = 500000;
-      rc = select(1, &rfds, NULL, NULL, &tv);
-      bzero(console_main, bufsize);
-      
-      count = 0;
-      rc = 1;
-      while(rc && count < 1000) {
-	rc = read(fd, console_main, bufsize-1);
-	count++;
+  if (getuid() != 0) {
+    snprintf(console_file, MAX_PATH, "/var/log/xen/console/guest-%s.log", instanceId);
+    snprintf(dest_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
+    snprintf(cmd, MAX_PATH, "%s cp %s %s", nc->rootwrap_cmd_path, console_file, dest_file);
+    rc = system(cmd);
+    if (!rc) {
+      // was able to copy xen guest console file, read it
+      snprintf(cmd, MAX_PATH, "%s chown %s:%s %s", nc->rootwrap_cmd_path, nc->admin_user_id, nc->admin_user_id, dest_file);
+      rc = system(cmd);
+      if (!rc) {
+	tmp = file2str_seek(dest_file, bufsize, 1);
+	if (tmp) {
+	  snprintf(console_main, bufsize, "%s", tmp);
+	  free(tmp);
+	} else {
+	  snprintf(console_main, bufsize, "NOT SUPPORTED");
+	}
+      } else {
+	snprintf(console_main, bufsize, "NOT SUPPORTED");
       }
-      close(fd);
+    } else {
+      snprintf(console_main, bufsize, "NOT SUPPORTED");
     }
-    kill(pid, 9);
-    wait(&status);
-  }
-  
-  unlink(console_file);
+  } else {
+
+    snprintf(console_file, MAX_PATH, "/tmp/consoleOutput.%s", instanceId);
+    
+    pid = fork();
+    if (pid == 0) {
+      int fd;
+      fd = open(console_file, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+      if (fd < 0) {
+	// error
+      } else {
+	dup2(fd, 2);
+	dup2(2, 1);
+	close(0);
+	// TODO: test virsh console:
+	// rc = execl(rootwrap_command_path, rootwrap_command_path, "virsh", "console", instanceId, NULL);
+	rc = execl("/usr/sbin/xm", "/usr/sbin/xm", "console", instanceId, NULL);
+	fprintf(stderr, "execl() failed\n");
+	close(fd);
+      }
+      exit(0);
+    } else {
+      int count;
+      fd_set rfds;
+      struct timeval tv;
+      struct stat statbuf;
+      
+      count=0;
+      while(count < 10000 && stat(console_file, &statbuf) < 0) {count++;}
+      fd = open(console_file, O_RDONLY);
+      if (fd < 0) {
+	logprintfl (EUCAERROR, "ERROR: could not open consoleOutput file %s for reading\n", console_file);
+      } else {
+	FD_ZERO(&rfds);
+	FD_SET(fd, &rfds);
+	tv.tv_sec = 0;
+	tv.tv_usec = 500000;
+	rc = select(1, &rfds, NULL, NULL, &tv);
+	bzero(console_main, bufsize);
+	
+	count = 0;
+	rc = 1;
+	while(rc && count < 1000) {
+	  rc = read(fd, console_main, bufsize-1);
+	  count++;
+	}
+	close(fd);
+      }
+      kill(pid, 9);
+      wait(&status);
+    }
+    
+    unlink(console_file);
   }
   
   ret = 1;
@@ -391,11 +313,11 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
     ret = 0;
   }
-
+  
   if (console_append) free(console_append);
   if (console_main) free(console_main);
   if (console_output) free(console_output);
-
+  
   return(ret);
 }
 
@@ -425,6 +347,8 @@ doAttachVolume (	struct nc_state_t *nc,
         return NOT_FOUND;
 
     /* try attaching to the Xen domain */
+    int is_iscsi_target = 0;
+    char *local_iscsi_dev;
     conn = check_hypervisor_conn();
     if (conn) {
         sem_p(hyp_sem);
@@ -434,15 +358,13 @@ doAttachVolume (	struct nc_state_t *nc,
 
             int err = 0;
             char xml [1024];
-            int is_iscsi_target = 0;
-            char *local_iscsi_dev;
             rc = 0;
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*login to target*/
-                local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev);
+                local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, nc->home, remoteDev);
 		if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
 		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
 		  rc = 1;
@@ -476,9 +398,6 @@ doAttachVolume (	struct nc_state_t *nc,
 	    sem_p(hyp_sem);
             virDomainFree(dom);
 	    sem_v(hyp_sem);
-            if(is_iscsi_target) {
-	      if (local_iscsi_dev) free(local_iscsi_dev);
-            }
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {
                 logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot attach device\n", instanceId);
@@ -496,6 +415,9 @@ doAttachVolume (	struct nc_state_t *nc,
         volume = add_volume (instance, volumeId, remoteDev, localDevReal, localDevReal, "attached");
 	scSaveInstanceInfo(instance); /* to enable NC recovery */
         sem_v (inst_sem);
+        if (is_iscsi_target) {
+	    if (local_iscsi_dev) free(local_iscsi_dev);
+        }
         if ( volume == NULL ) {
             logprintfl (EUCAFATAL, "ERROR: Failed to save the volume record, aborting volume attachment\n");
             return ERROR;
@@ -514,6 +436,7 @@ doDetachVolume (	struct nc_state_t *nc,
 			char *localDev,
 			int force,
                         int grab_inst_sem)
+
 {
     int ret = OK;
     ncInstance * instance;
@@ -534,6 +457,8 @@ doDetachVolume (	struct nc_state_t *nc,
         return NOT_FOUND;
 
     /* try attaching to the Xen domain */
+    int is_iscsi_target = 0;
+    char *local_iscsi_dev;
     conn = check_hypervisor_conn(); 
     if (conn) {
         sem_p(hyp_sem);
@@ -543,14 +468,12 @@ doDetachVolume (	struct nc_state_t *nc,
 	    int err = 0, fd, rc, pid, status;
             char xml [1024], tmpfile[32], cmd[MAX_PATH];
 	    FILE *FH;
-	            int is_iscsi_target = 0;
-            char *local_iscsi_dev;
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*logout from target*/
-                if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, remoteDev)) == NULL)
+                if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, nc->home, remoteDev)) == NULL)
                     return ERROR;
                 snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
             } else {
@@ -624,11 +547,10 @@ doDetachVolume (	struct nc_state_t *nc,
             virDomainFree(dom);
 	    sem_v(hyp_sem);
             if(is_iscsi_target) {
-                if(disconnect_iscsi_target(nc->disconnect_storage_cmd_path, remoteDev) != 0) {
+                if(disconnect_iscsi_target(nc->disconnect_storage_cmd_path, nc->home, remoteDev) != 0) {
                     logprintfl (EUCAERROR, "disconnect_iscsi_target failed for %s\n", remoteDev);
                     ret = ERROR;
                 }
-                free(local_iscsi_dev);
             }
 	} else {
             if (instance->state != BOOTING && instance->state != STAGING) {
@@ -648,6 +570,9 @@ doDetachVolume (	struct nc_state_t *nc,
         volume = free_volume (instance, volumeId, remoteDev, localDevReal);
         if (grab_inst_sem)
             sem_v (inst_sem);
+	if (is_iscsi_target) {
+            if (local_iscsi_dev) free(local_iscsi_dev);
+	}
         if ( volume == NULL ) {
             logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");
             return ERROR;
@@ -661,12 +586,13 @@ struct handlers xen_libvirt_handlers = {
     .name = "xen",
     .doInitialize        = doInitialize,
     .doDescribeInstances = NULL,
-    .doRunInstance       = doRunInstance,
+    .doRunInstance       = NULL,
     .doTerminateInstance = NULL,
     .doRebootInstance    = doRebootInstance,
     .doGetConsoleOutput  = doGetConsoleOutput,
     .doDescribeResource  = NULL,
     .doStartNetwork      = NULL,
+    .doAssignAddress     = NULL,
     .doPowerDown         = NULL,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume

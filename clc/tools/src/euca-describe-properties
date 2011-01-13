@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import getopt, sys, os, boto
-from boto.ec2.regioninfo import RegionInfo
+import sys
 from euca_admin.properties import Property
 
 def main():

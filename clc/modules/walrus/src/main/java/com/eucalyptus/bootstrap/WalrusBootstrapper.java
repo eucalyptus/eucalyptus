@@ -101,6 +101,7 @@ public class WalrusBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean enable( ) throws Exception {
+		WalrusControl.enable();
 		return true;
 	}
 
@@ -109,6 +110,7 @@ public class WalrusBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean stop( ) throws Exception {
+		WalrusControl.stop();
 		return true;
 	}
 
@@ -123,6 +125,7 @@ public class WalrusBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean disable( ) throws Exception {
+		WalrusControl.disable();
 		return true;
 	}
 
@@ -132,6 +135,7 @@ public class WalrusBootstrapper extends Bootstrapper {
 	@Override
 	public boolean check( ) throws Exception {
 		//check local storage
+		WalrusControl.check();
 		return true;
 	}
 }

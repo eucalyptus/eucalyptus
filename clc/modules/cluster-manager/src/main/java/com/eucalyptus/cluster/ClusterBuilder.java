@@ -21,6 +21,7 @@ import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
@@ -28,7 +29,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.Handles;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventRecord;
@@ -38,18 +38,19 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
+import edu.ucsb.eucalyptus.msgs.ModifyClusterAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 @DiscoverableServiceBuilder( com.eucalyptus.bootstrap.Component.cluster )
-@Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class } )
+@Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   private static Logger LOG = Logger.getLogger( ClusterBuilder.class );
   @Override
-  public Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     if ( !testClusterCredentialsDirectory( name ) ) {
       throw new ServiceRegistrationException( "Cluster registration failed because the key directory cannot be created." );
     } else {
-      return super.checkAdd( name, host, port );
+      return super.checkAdd( partition, name, host, port );
     }
   }
   
@@ -97,8 +98,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public ClusterConfiguration newInstance( String name, String host, Integer port ) {
-    return new ClusterConfiguration( name, host, port );
+  public ClusterConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new ClusterConfiguration( partition, name, host, port );
   }
   
   @Override
@@ -109,8 +110,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   private static String         NODE_KEY_FSTRING    = "nc-%s";
   
   @Override
-  public ClusterConfiguration add( String name, String host, Integer port ) throws ServiceRegistrationException {
-    ClusterConfiguration config = super.add( name, host, port );
+  public ClusterConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+    ClusterConfiguration config = super.add( partition, name, host, port );
     try {
       /** generate the Component keys **/
       String ccAlias = String.format( CLUSTER_KEY_FSTRING, config.getName( ) );
@@ -180,7 +181,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public Boolean checkRemove( String name ) throws ServiceRegistrationException {
+  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     try {
       Configuration.getStorageControllerConfiguration( name );
       throw new ServiceRegistrationException( "Cannot deregister a cluster controller when there is a storage controller registered." );
@@ -193,6 +194,19 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Tearing down cluster: " + config );
     Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
+    for( Group g : Groups.listAllGroups( ) ) {
+      for( Authorization auth : g.getAuthorizations( ) ) {
+        if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {
+          g.removeAuthorization( auth );
+        }
+      }
+    }
+    try {
+      EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
+      Clusters.stop( cluster.getName( ) );
+    } catch ( Throwable ex1 ) {
+      LOG.error( ex1 , ex1 );
+    }
     EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
     try {
       List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
@@ -204,30 +218,25 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       LOG.error( e, e );
       credDb.rollback( );
     }
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
-    Clusters.stop( cluster.getName( ) );
-    for( Group g : Groups.listAllGroups( ) ) {
-      for( Authorization auth : g.getAuthorizations( ) ) {
-        if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {
-          g.removeAuthorization( auth );
+    try {
+      String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
+      File keyDir = new File( directory );
+      if ( keyDir.exists( ) ) {
+        for( File f : keyDir.listFiles( ) ) {
+          if( f.delete( ) ) {
+            LOG.info( "Removing cluster key file: " + f.getAbsolutePath( ) );
+          } else {
+            LOG.info( "Failed to remove cluster key file: " + f.getAbsolutePath( ) );
+          }        
+        }
+        if( keyDir.delete( ) ) {
+          LOG.info( "Removing cluster key directory: " + keyDir.getAbsolutePath( ) );
+        } else {
+          LOG.info( "Failed to remove cluster key directory: " + keyDir.getAbsolutePath( ) );
         }
       }
-    }
-    String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
-    File keyDir = new File( directory );
-    if ( keyDir.exists( ) ) {
-      for( File f : keyDir.listFiles( ) ) {
-        if( f.delete( ) ) {
-          LOG.info( "Removing cluster key file: " + f.getAbsolutePath( ) );
-        } else {
-          LOG.info( "Failed to remove cluster key file: " + f.getAbsolutePath( ) );
-        }        
-      }
-      if( keyDir.delete( ) ) {
-        LOG.info( "Removing cluster key directory: " + keyDir.getAbsolutePath( ) );
-      } else {
-        LOG.info( "Failed to remove cluster key directory: " + keyDir.getAbsolutePath( ) );
-      }
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
     }    
     super.fireStop( config );
   }
@@ -240,7 +249,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
    */
   @Override
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    return new RemoteConfiguration( this.getComponent( ).getPeer( ), uri );
+    return new RemoteConfiguration( null, this.getComponent( ).getPeer( ), uri );
   }
   
 }

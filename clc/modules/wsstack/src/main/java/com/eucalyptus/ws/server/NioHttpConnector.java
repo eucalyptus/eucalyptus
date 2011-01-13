@@ -71,25 +71,19 @@ import org.mule.api.lifecycle.InitialisationException;
 import org.mule.transport.AbstractConnector;
 
 public class NioHttpConnector extends AbstractConnector implements Initialisable {
-  
-  private static Logger                     LOG      = Logger.getLogger( NioHttpConnector.class );
-  
-  public static String                      PROTOCOL = "euca";
-  private static AtomicReference<NioServer> server   = new AtomicReference<NioServer>( null );
-  
+
+  private static Logger LOG      = Logger.getLogger( NioHttpConnector.class );
+
+  public static String  PROTOCOL = "euca";
+  private static AtomicReference<NioServer>     server = new AtomicReference<NioServer>( null );
+
   public NioHttpConnector( ) {
     super.registerSupportedProtocol( "http" );
     super.registerSupportedProtocol( "https" );
   }
   
   public void doConnect( ) throws MuleException {
-    try {
-      if ( server.get( ) == null ) {
-        server.compareAndSet( null, new NioServer( ) );
-      }
-    } catch ( Throwable e ) {
-      LOG.error( e, e );
-    }
+    this.server.compareAndSet( null, new NioServer( ) );
   }
   
   public String getProtocol( ) {
@@ -101,19 +95,13 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
   
   @Override
   public void doStart( ) throws MuleException {
-    try {
-      if ( server.get( ) == null ) {
-        this.doConnect( );
-      }
-      server.get( ).start( );
-    } catch ( Throwable e ) {
-      LOG.error( e, e );
-    }
+    this.doConnect( );
+    this.server.get( ).start( );
   }
   
   @Override
   public void doStop( ) throws MuleException {
-    server.get( ).stop( );
+//  server.get( ).stop( );
   }
   
   @Override

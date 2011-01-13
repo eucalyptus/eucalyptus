@@ -184,5 +184,12 @@ public class NetappSessionManager implements SessionManager {
 			}
 		});
 	}
+
+	public void stop() throws EucalyptusCloudException {
+		if(connection != null) {
+			connection.close();
+		}
+		pool.shutdownNow();
+	}
 }
 

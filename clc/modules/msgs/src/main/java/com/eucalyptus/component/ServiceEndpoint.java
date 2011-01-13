@@ -73,6 +73,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -87,6 +88,8 @@ import com.eucalyptus.util.async.Request;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
 
 public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<Service> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );
@@ -138,7 +141,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
           if( LogLevels.TRACE ) {
-            Exceptions.eat( event.getRequest( ).getRequest( ).toSimpleString( ) );
+            Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
           }
         } catch ( final InterruptedException e ) {
           LOG.debug( e, e );
@@ -158,6 +161,11 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
           if ( ( event = ServiceEndpoint.this.msgQueue.poll( ServiceEndpoint.this.pollInterval, TimeUnit.MILLISECONDS ) ) != null ) {
             EventRecord.here( ServiceEndpointWorker.class, EventType.DEQUEUE, event.getCallback( ).getClass( ).getSimpleName( ), event.getRequest( ).getRequest( ).toSimpleString( ) ).debug( );
             final long start = System.nanoTime( );
+            {//ASAP: FIXME: GRZE: clean up this implementation
+              Components.dumpState( );
+              ServiceInfoType activeWalrus = Components.lookup( Component.walrus ).getUnorderedIterator( ).next( );
+              event.getRequest( ).getRequest( ).getServices( ).add( activeWalrus );
+            }
             event.getRequest( ).sendSync( ServiceEndpoint.this );
             EventRecord.here( ServiceEndpointWorker.class, EventType.QUEUE, ServiceEndpoint.this.getParent( ).getName( ) )//
             .append( event.getCallback( ).getClass( ).getSimpleName( ) )//

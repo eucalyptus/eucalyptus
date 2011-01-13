@@ -95,7 +95,7 @@ To interact with Eucalyptus, you need to install EC2-compatible command-line too
 
 2. Download Eucalyptus and supplied dependencies
 ================================================
-In what follows substitute the desired version (e.g., 2.0.0) for $VERSION either manually or by setting a shell variable.
+In what follows substitute the desired version (e.g., 2.0.1) for $VERSION either manually or by setting a shell variable.
 
 Download either
 

@@ -114,7 +114,6 @@ public class DASManager implements LogicalStorageManager {
 	public static final String EUCA_VAR_RUN_PATH = "/var/run/eucalyptus";
 	private static Logger LOG = Logger.getLogger(DASManager.class);
 	public static String eucaHome = System.getProperty("euca.home");
-	private static final long LVM_HEADER_LENGTH = 4 * StorageProperties.MB;
 	public static StorageExportManager exportManager;
 	private static String volumeGroup;
 
@@ -157,28 +156,38 @@ public class DASManager implements LogicalStorageManager {
 			String dasDevice = DASInfo.getStorageInfo().getDASDevice();
 			if(dasDevice != null) {
 				try {
-					String returnValue = getPhysicalVolume(dasDevice);
-					if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
-						returnValue = createPhysicalVolume(dasDevice);
-						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create physical volume on device: " + dasDevice);
-						}
-					}
-					//PV is initialized at this point.
-					returnValue = getPhysicalVolumeVerbose(dasDevice);
-					if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
-						volumeGroup = "vg-" + Hashes.getRandom(10);
-						returnValue = createVolumeGroup(dasDevice, volumeGroup);
-						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);
-						}
-					} else {
+					String returnValue = getVolumeGroup(dasDevice);
+					if(returnValue.length() > 0) {
 						Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
 						Matcher m = volumeGroupPattern.matcher(returnValue);
 						if(m.find()) 
 							volumeGroup = m.group(1).trim();
 						else
-							throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + dasDevice);
+							throw new EucalyptusCloudException("Not a volume group: " + dasDevice);
+					} else {
+						returnValue = getPhysicalVolume(dasDevice);
+						if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+							returnValue = createPhysicalVolume(dasDevice);
+							if(returnValue.length() == 0) {
+								throw new EucalyptusCloudException("Unable to create physical volume on device: " + dasDevice);
+							}
+						}
+						//PV is initialized at this point.
+						returnValue = getPhysicalVolumeVerbose(dasDevice);
+						if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+							volumeGroup = "vg-" + Hashes.getRandom(10);
+							returnValue = createVolumeGroup(dasDevice, volumeGroup);
+							if(returnValue.length() == 0) {
+								throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);
+							}
+						} else {
+							Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
+							Matcher m = volumeGroupPattern.matcher(returnValue);
+							if(m.find()) 
+								volumeGroup = m.group(1).trim();
+							else
+								throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + dasDevice);
+						}
 					}
 				} catch (ExecutionException e) {
 					LOG.error(e);
@@ -200,6 +209,10 @@ public class DASManager implements LogicalStorageManager {
 
 	private String getPhysicalVolume(String partition) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvdisplay", partition});
+	}
+
+	private String getVolumeGroup(String volumeGroup) throws ExecutionException {
+		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgdisplay", volumeGroup});
 	}
 
 	private String createVolumeGroup(String pvName, String vgName) throws ExecutionException {
@@ -1052,5 +1065,29 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public void detachVolume(String volumeId, String nodeIqn)
 	throws EucalyptusCloudException {
+	}
+
+	@Override
+	public void checkReady() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void disable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void enable() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
 	}
 }

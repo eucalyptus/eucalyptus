@@ -134,12 +134,12 @@ pid_t timewait(pid_t pid, int *status, int timeout) {
 
   *status = 1;
   rc = waitpid(pid, status, WNOHANG);
-  while(rc <= 0 && timer < (timeout * 1000000)) {
-    usleep(50000);
-    timer += 50000;
+  while(rc == 0 && timer < (timeout * 1000000)) {
+    usleep(10000);
+    timer += 10000;
     rc = waitpid(pid, status, WNOHANG);
   }
-  if (rc < 0) {
+  if (rc == 0) {
     logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
   }
   return(rc);
@@ -1194,6 +1194,56 @@ char * file2str (const char * path)
 
     * p = '\0';
     return content;
+}
+
+char *file2str_seek(char *file, size_t size, int mode) {
+  int rc, fd;
+  struct stat statbuf;
+  char *ret=NULL;
+
+  if (!file || size <= 0) {
+    logprintfl(EUCAERROR, "file2str_seek(): bad input parameters\n");
+    return(NULL);
+  }
+
+  ret = malloc(size);
+  if (!ret) {
+    logprintfl(EUCAERROR, "file2str_seek(): out of memory!\n");
+    return(NULL);
+  }
+
+  rc = stat(file, &statbuf);
+  if (rc >= 0) {
+    fd = open(file, O_RDONLY);
+    if (fd >= 0) {
+
+      if (mode == 1) {
+	rc = lseek(fd, (off_t)(-1 * size), SEEK_END);
+	if (rc < 0) {
+	  rc = lseek(fd, (off_t)0, SEEK_SET);
+	  if (rc < 0) {
+	    logprintfl(EUCAERROR, "file2str_seek(): cannot seek\n");
+	    if (ret) free(ret);
+	    return(NULL);
+	  }
+	}
+      }
+
+      bzero(ret, size);
+      rc = read(fd, ret, (size)-1);
+      close(fd);
+    } else {
+      logprintfl(EUCAERROR, "file2str_seek(): cannot open '%s' read-only\n", file);
+      if (ret) free(ret);
+      return(NULL);
+    }
+  } else {
+    logprintfl(EUCAERROR, "file2str_seek(): cannot stat console_output file '%s'\n", file);
+    if (ret) free(ret);
+    return(NULL);
+  }
+  
+  return(ret);
 }
 
 // extract string from str bound by 'begin' and 'end'

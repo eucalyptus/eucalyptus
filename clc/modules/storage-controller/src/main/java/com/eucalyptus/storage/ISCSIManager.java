@@ -124,6 +124,7 @@ public class ISCSIManager implements StorageExportManager {
 	}
 
 	public void exportTarget(int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
+		checkAndAddUser();
 		try
 		{
 			Runtime rt = Runtime.getRuntime();
@@ -223,6 +224,10 @@ public class ISCSIManager implements StorageExportManager {
 			db.rollback();
 			LOG.error(e);
 		}
+		checkAndAddUser();
+	}
+
+	private void checkAndAddUser() {
 		EntityWrapper<CHAPUserInfo> dbUser = StorageProperties.getEntityWrapper();
 		try {
 			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
@@ -236,7 +241,9 @@ public class ISCSIManager implements StorageExportManager {
 				}
 			}
 		} catch(EucalyptusCloudException ex) {
-			String password = Hashes.getRandom(20);
+			// Windows iscsi initiator requires the password length to be 12-16 bytes
+			String password = Hashes.getRandom(16);
+			password = password.substring(0,16);
 			try {
 				addUser("eucalyptus", password);
 			} catch (ExecutionException e1) {

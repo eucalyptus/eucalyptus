@@ -1,5 +1,21 @@
+*Wed Oct 20 2010 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 2.0.1
+    * Bug fix minor release.
+    * Fixes launchpad bugs: 
+      
+      #661565 #644482 #658023 #658022 #595421 #637659 #632263 
+      #622818 #628328 #664002 #639639
+      
+      which include fixes to the following sub-systems:
+
+        o External dashboard registration
+        o Meta-data service access
+        o S3 Versioning
+        o Walrus image decryption
+        o Component registration
+
 *Tue Aug 24 2010 Eucalyptus Systems (support@eucalyptus.com)
-    * Version 2.0
+    * Version 2.0.0
     * Stability/Performance point-release.
     * Back-end (CC/NC) scale improvements.
     * CLC fixes including backend database pooling and persistence improvements, SSL support.

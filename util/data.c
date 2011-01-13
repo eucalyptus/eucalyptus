@@ -72,8 +72,15 @@ int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in)
     snprintf(out->name, 64, "%s", in->name);
 
     int i;
-    for (i=0; i<EUCA_MAX_DEVMAPS; i++) {
-      out->deviceMapping[i].size = in->deviceMapping[i].size;
+    for (i=0; i<EUCA_MAX_VBRS && i<in->virtualBootRecordLen; i++) { // TODO: dan ask dmitrii
+            virtualBootRecord * out_r = out->virtualBootRecord + i;
+            const virtualBootRecord * in_r = in->virtualBootRecord + i;
+            strncpy (out_r->resourceLocation, in_r->resourceLocation, sizeof (out_r->resourceLocation));
+            strncpy (out_r->guestDeviceName, in_r->guestDeviceName, sizeof (out_r->guestDeviceName));
+            strncpy (out_r->id, in_r->id, sizeof (out_r->id));
+            strncpy (out_r->typeName, in_r->typeName, sizeof (out_r->typeName));
+            out_r->size = in_r->size;
+            strncpy (out_r->formatName, in_r->formatName, sizeof (out_r->formatName));
     }
   }
   return(0);
@@ -111,11 +118,9 @@ void free_metadata (ncMetadata ** metap)
 }
 
 /* instances are present in instance-related requests */
-ncInstance * allocate_instance (char *instanceId, char *reservationId, 
+ncInstance * allocate_instance (char *uuid,
+				char *instanceId, char *reservationId, 
                                 virtualMachine *params, 
-                                char *imageId, char *imageURL, 
-                                char *kernelId, char *kernelURL, 
-                                char *ramdiskId, char *ramdiskURL,
                                 char *stateName, int stateCode, char *userId, 
                                 netConfig *ncnet, char *keyName,
                                 char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize)
@@ -151,6 +156,10 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
     if (ncnet != NULL) {
       memcpy(&(inst->ncnet), ncnet, sizeof(netConfig));
     }
+    
+    if (uuid) {
+      strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
+    }
 
     if (instanceId) {
       strncpy(inst->instanceId, instanceId, CHAR_BUFFER_SIZE);
@@ -164,25 +173,6 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
       strncpy(inst->reservationId, reservationId, CHAR_BUFFER_SIZE);
     }
 
-    if (imageId) {
-      strncpy(inst->imageId, imageId, CHAR_BUFFER_SIZE);
-    }
-    if (imageURL) {
-      strncpy(inst->imageURL, imageURL, CHAR_BUFFER_SIZE);
-    }
-    if (kernelId) {
-      strncpy(inst->kernelId, kernelId, CHAR_BUFFER_SIZE);
-    }
-    if (kernelURL) {
-      strncpy(inst->kernelURL, kernelURL, CHAR_BUFFER_SIZE);
-    }
-    if (ramdiskId) {
-      strncpy(inst->ramdiskId, ramdiskId, CHAR_BUFFER_SIZE);
-    }
-    if (ramdiskURL) {
-      strncpy(inst->ramdiskURL, ramdiskURL, CHAR_BUFFER_SIZE);
-    }
-
     if (stateName) {
       strncpy(inst->stateName, stateName, CHAR_BUFFER_SIZE);
     }
@@ -191,11 +181,6 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
     }
     if (params) {
       memcpy(&(inst->params), params, sizeof(virtualMachine));
-      /*
-        inst->params.mem = params->mem;
-        inst->params.disk = params->disk;
-        inst->params.cores = params->cores;
-      */
     }
     inst->stateCode = stateCode;
     strncpy (inst->bundleTaskStateName, bundling_progress_names [NOT_BUNDLING], CHAR_BUFFER_SIZE);
@@ -216,6 +201,7 @@ void free_instance (ncInstance ** instp)
 
 /* resource is used to return information about resources */
 ncResource * allocate_resource (char *nodeStatus,
+				char *iqn,
                                 int memorySizeMax, int memorySizeAvailable, 
                                 int diskSizeMax, int diskSizeAvailable,
                                 int numberOfCoresMax, int numberOfCoresAvailable,
@@ -225,7 +211,11 @@ ncResource * allocate_resource (char *nodeStatus,
     
     if (!nodeStatus) return NULL;
     if (!(res = malloc(sizeof(ncResource)))) return NULL;
+    bzero(res, sizeof(ncResource));
     strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
+    if (iqn) {
+      strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
+    }
     if (publicSubnets) {
       strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
     }

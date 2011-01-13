@@ -98,20 +98,17 @@ public class NetappProvider implements SANProvider {
 	private static Logger LOG = Logger.getLogger(NetappProvider.class);
 	private static final String ISCSI_INITIATOR_NAME_CONF = "/etc/iscsi/initiatorname.iscsi";
 	private final String TARGET_USERNAME = "eucalyptus"; 
-	private boolean enabled;
 	public static int API_MAJOR_VERSION = 1;
 	public static int API_MINOR_VERSION = 3;
 	private NetappSessionManager sessionManager;
 	private String targetIqn;
 	private final long TASK_TIMEOUT = 5 * 60 * 1000;
-	private final double META_OVERHEAD = 0.005;
 	private final long CLONE_STATUS_SLEEP = 1 * 5000L;
 
 	private final String CLONE_OKAY_MESSAGE = "The volume is not a clone";
 
 	public NetappProvider() {
 		sessionManager = new NetappSessionManager();
-		//get SC's IQN
 		StorageProperties.IQN = getSCIqn();
 	}
 
@@ -151,14 +148,7 @@ public class NetappProvider implements SANProvider {
 	}
 
 	@Override
-	//TODO: This is common stuff. Refactor.
 	public void checkPreconditions() throws EucalyptusCloudException {
-		if(!new File(BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl").exists()) {
-			throw new EucalyptusCloudException("connect_iscitarget_sc.pl not found");
-		}
-		if(!new File(BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl").exists()) {
-			throw new EucalyptusCloudException("disconnect_iscitarget_sc.pl not found");
-		}
 	}
 
 	@Override
@@ -177,9 +167,12 @@ public class NetappProvider implements SANProvider {
 	}
 
 	private String getTargetIqn() throws EucalyptusCloudException {
-		NaElement request = makeRequest("iscsi-node-get-name");		
-		NaElement reply = execCommand(request);
-		return reply.getChildContent("node-name");
+		if(targetIqn == null) {
+			NaElement request = makeRequest("iscsi-node-get-name");		
+			NaElement reply = execCommand(request);
+			targetIqn = reply.getChildContent("node-name");
+		}
+		return targetIqn;
 	}
 
 	@Override
@@ -200,7 +193,7 @@ public class NetappProvider implements SANProvider {
 				} else {
 					throw new EucalyptusCloudException("Invalid remote device string.");
 				}
-				String deviceName = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
+				String deviceName = SystemUtil.run(new String[]{StorageProperties.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl", 
 						deviceString});
 				if(deviceName.length() == 0) {
 					throw new EucalyptusCloudException("Unable to get device name. Connect failed.");
@@ -294,7 +287,7 @@ public class NetappProvider implements SANProvider {
 			NaElement request = makeRequest("lun-online", "path", lunPath);
 			NaElement reply = execCommand(request);
 			int lun = mapLun(lunPath, igroupName);
-			String iqn = targetIqn + "," + lun;
+			String iqn = getTargetIqn() + "," + lun;
 			//add incoming security rule (if one does not exist).
 			checkAddInitiatorAuth(StorageProperties.IQN);
 			return iqn;
@@ -359,7 +352,10 @@ public class NetappProvider implements SANProvider {
 				createCloneAndWaitForCompletion(snapshotId, volumeId);
 				if(sizeDiff > 0) {
 					//resize it
-					NaElement request = makeRequest("volume-size", "volume", volumeId, "new-size", size + "g");
+					long vol_size = size * StorageProperties.GB;
+					vol_size += (vol_size * (NetappInfo.getStorageInfo().getSnapReserve()/100)) + (vol_size * (StorageProperties.NETAPP_META_OVERHEAD / 1000));
+					int sizeInMB = (int) (vol_size / StorageProperties.MB);
+					NaElement request = makeRequest("volume-size", "volume", volumeId, "new-size", sizeInMB + "m");
 					NaElement reply = execCommand(request);
 				}
 			} catch (EucalyptusCloudException e) {
@@ -371,16 +367,24 @@ public class NetappProvider implements SANProvider {
 				throw e;
 			}
 			try {
-				//change snapshot reserve to 0
+				String snapPercent = String.valueOf((int)(NetappInfo.getStorageInfo().getSnapReserve()));
 				NaElement request = makeRequest("snapshot-set-reserve",
-						"percentage", "0",
+						"percentage", snapPercent,
 						"volume", volumeId);
 				NaElement reply = execCommand(request);
-				//figure out how to calculate space correctly for the lun (might traverse aggr info).
-				long lun_size = (long) ((size * StorageProperties.GB) - (size * StorageProperties.GB * META_OVERHEAD)); 
+				request = makeRequest("volume-list-info", "volume", volumeId);
+				reply = execCommand(request);
+				String sizeTotal = null;
+				List volStatus = reply.getChildByName("volumes").getChildren();
+				for(Iterator i = volStatus.iterator(); i.hasNext();) {
+					NaElement volumeInfo = (NaElement) i.next();
+					sizeTotal = volumeInfo.getChildContent("size-total");
+				}
+				long volSizeTotal = Long.parseLong(sizeTotal);
+				long lunSize = (long) ((volSizeTotal) - (volSizeTotal * (StorageProperties.NETAPP_META_OVERHEAD / 1000))); 
 				//resize if necessary
 				if(sizeDiff > 0) {
-					request = makeRequest("lun-resize", "path", "/vol/" + volumeId + "/lun1", "size", String.valueOf(lun_size));
+					request = makeRequest("lun-resize", "path", "/vol/" + volumeId + "/lun1", "size", String.valueOf(lunSize));
 					reply = execCommand(request);
 				}
 				//set lun online
@@ -388,7 +392,7 @@ public class NetappProvider implements SANProvider {
 						"path", "/vol/" + volumeId + "/lun1");
 				reply = execCommand(request);
 				//target IQN is the same for all volumes
-				return targetIqn;
+				return getTargetIqn();
 			} catch (EucalyptusCloudException e) {
 				LOG.error("Unable to create lun for volume: " + volumeId);
 				NaElement request = makeRequest("volume-offline", "name", volumeId);
@@ -409,31 +413,43 @@ public class NetappProvider implements SANProvider {
 			throw new EucalyptusCloudException("Volume already exists: " + volumeId);
 		}
 		//create flexvol
+		int sizeInMB;
 		try {
+			long vol_size = size * StorageProperties.GB;
+			vol_size += (vol_size * (NetappInfo.getStorageInfo().getSnapReserve() / 100)) + (vol_size * (StorageProperties.NETAPP_META_OVERHEAD / 1000));
+			sizeInMB = (int) (vol_size / StorageProperties.MB);
 			NaElement request = makeRequest("volume-create", 
 					"containing-aggr-name", NetappInfo.getStorageInfo().getAggregate(), 
 					"volume", volumeId,
-					"size", size + "g");
+					"size", sizeInMB + "m");
 			NaElement reply = execCommand(request);
 		} catch (EucalyptusCloudException e) {
 			throw new EucalyptusCloudException("Unable to create volume: " + volumeId + " " + e);
 		}		
 		try {
-			//change snapshot reserve to 0
+			String snapPercent = String.valueOf(NetappInfo.getStorageInfo().getSnapReserve());
 			NaElement request = makeRequest("snapshot-set-reserve",
-					"percentage", "0",
+					"percentage", snapPercent,
 					"volume", volumeId);
 			NaElement reply = execCommand(request);
-			//figure out how to calculate space correctly for the lun (might traverse aggr info).
-			long lun_size = (long) ((size * StorageProperties.GB) - (size * StorageProperties.GB * META_OVERHEAD)); 
+			request = makeRequest("volume-list-info", "volume", volumeId);
+			reply = execCommand(request);
+			String sizeAvailable = null;
+			List volStatus = reply.getChildByName("volumes").getChildren();
+			for(Iterator i = volStatus.iterator(); i.hasNext();) {
+				NaElement volumeInfo = (NaElement) i.next();
+				sizeAvailable = volumeInfo.getChildContent("size-available");
+			}
+			long volSizeAvailable = Long.parseLong(sizeAvailable);
+			long lunSize = (long) ((volSizeAvailable) - (volSizeAvailable * (StorageProperties.NETAPP_META_OVERHEAD / 1000))); 
 			//create lun
 			request = makeRequest("lun-create-by-size", 
 					"ostype", "linux",
 					"path", "/vol/" + volumeId + "/lun1",
-					"size", String.valueOf(lun_size));
+					"size", String.valueOf(lunSize));
 			reply = execCommand(request);
 			//target IQN is the same for all volumes
-			return targetIqn;
+			return getTargetIqn();
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Unable to create lun for volume: " + volumeId);
 			NaElement request = makeRequest("volume-offline", "name", volumeId);
@@ -607,7 +623,7 @@ public class NetappProvider implements SANProvider {
 					} else {
 						throw new EucalyptusCloudException("Invalid remote device string.");
 					}
-					String returnValue = SystemUtil.run(new String[]{"sudo", BaseDirectory.LIB.toString() + File.separator + 
+					String returnValue = SystemUtil.run(new String[]{StorageProperties.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, BaseDirectory.LIB.toString() + File.separator + 
 							"disconnect_iscsitarget_sc.pl", deviceString});
 					if(returnValue.length() == 0) {
 						throw new EucalyptusCloudException("Unable to disconnect target");
@@ -886,6 +902,10 @@ public class NetappProvider implements SANProvider {
 	@Override
 	public void setStorageProps(ArrayList<ComponentProperty> storageProps) {
 		this.configure();
+	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
 	}
 }
 

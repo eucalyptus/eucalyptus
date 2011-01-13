@@ -52,13 +52,21 @@ static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMa
   params->cores = adb_virtualMachineType_get_cores(vm_type, env);
   params->disk = adb_virtualMachineType_get_disk(vm_type, env);
   strncpy(params->name, adb_virtualMachineType_get_name(vm_type, env), sizeof(params->name));
-  int deviceMappingSize = adb_virtualMachineType_sizeof_deviceMapping(vm_type, env);
-  for (i = 0; i<EUCA_MAX_DEVMAPS && i<deviceMappingSize; i++) {
-    adb_deviceMappingType_t * dm_type = adb_virtualMachineType_get_deviceMapping_at (vm_type, env, i);
-    strncpy (params->deviceMapping[i].deviceName, adb_deviceMappingType_get_deviceName(dm_type, env), sizeof(params->deviceMapping[i].deviceName));
-    strncpy (params->deviceMapping[i].virtualName, adb_deviceMappingType_get_virtualName(dm_type, env), sizeof(params->deviceMapping[i].virtualName));
-    params->deviceMapping[i].size = adb_deviceMappingType_get_size(dm_type, env);
-    strncpy (params->deviceMapping[i].format, adb_deviceMappingType_get_format(dm_type, env), sizeof(params->deviceMapping[i].format));
+  params->virtualBootRecordLen = adb_virtualMachineType_sizeof_virtualBootRecord(vm_type, env);
+  for (i = 0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
+    adb_virtualBootRecordType_t * vbr_type = adb_virtualMachineType_get_virtualBootRecord_at (vm_type, env, i);
+    strncpy (params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env), CHAR_BUFFER_SIZE);
+    logprintfl (EUCADEBUG, "resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
+    strncpy (params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+    logprintfl (EUCADEBUG, "   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
+    params->virtualBootRecord[i].size = adb_virtualBootRecordType_get_size(vbr_type, env);
+    logprintfl (EUCADEBUG, "             size: %d\n", params->virtualBootRecord[i].size);
+    strncpy (params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+    logprintfl (EUCADEBUG, "           format: %s\n", params->virtualBootRecord[i].formatName);
+    strncpy (params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+    logprintfl (EUCADEBUG, "               id: %s\n", params->virtualBootRecord[i].id);
+    strncpy (params->virtualBootRecord[i].typeName, adb_virtualBootRecordType_get_type(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+    logprintfl (EUCADEBUG, "             type: %s\n", params->virtualBootRecord[i].typeName);
   }
 }
 
@@ -71,19 +79,73 @@ static inline adb_virtualMachineType_t * copy_vm_type_to_adb (const axutil_env_t
   adb_virtualMachineType_set_cores(vm_type, env, params->cores);
   adb_virtualMachineType_set_disk(vm_type, env, params->disk);
   adb_virtualMachineType_set_name(vm_type, env, params->name);
-  for (i=0; i<sizeof(params->deviceMapping)/sizeof(deviceMapping); i++) {
-    deviceMapping * dm = & params->deviceMapping [i];
-    if (strlen(dm->deviceName)>0) {
-      adb_deviceMappingType_t * dm_type = adb_deviceMappingType_create(env);
-      adb_deviceMappingType_set_deviceName(dm_type, env, dm->deviceName);
-      adb_deviceMappingType_set_virtualName(dm_type, env, dm->virtualName);
-      adb_deviceMappingType_set_size(dm_type, env, dm->size);
-      adb_deviceMappingType_set_format(dm_type, env, dm->format);
-      adb_virtualMachineType_add_deviceMapping(vm_type, env, dm_type);
+  //  for (i=0; i<sizeof(params->virtualBootRecord)/sizeof(virtualBootRecord); i++) { // TODO: dan ask dmitrii
+  for (i=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
+    virtualBootRecord * vbr = & params->virtualBootRecord [i];
+    if (strlen(vbr->resourceLocation)>0) {
+      adb_virtualBootRecordType_t * vbr_type = adb_virtualBootRecordType_create(env);
+      adb_virtualBootRecordType_set_resourceLocation(vbr_type, env, vbr->resourceLocation);
+      adb_virtualBootRecordType_set_guestDeviceName(vbr_type, env, vbr->guestDeviceName);
+      adb_virtualBootRecordType_set_size(vbr_type, env, vbr->size);
+      adb_virtualBootRecordType_set_format(vbr_type, env, vbr->formatName);
+      adb_virtualBootRecordType_set_id(vbr_type, env, vbr->id);
+      adb_virtualBootRecordType_set_type(vbr_type, env, vbr->typeName);
+      adb_virtualMachineType_add_virtualBootRecord(vm_type, env, vbr_type);
     }
   }
 
   return vm_type;
 }
 
+static inline adb_serviceInfoType_t * copy_service_info_type_to_adb(const axutil_env_t *env, serviceInfoType * input) {
+  int i;
+  adb_serviceInfoType_t *sit = adb_serviceInfoType_create(env);
+
+  adb_serviceInfoType_set_type(sit, env, input->type);
+  adb_serviceInfoType_set_name(sit, env, input->name);
+  for (i=0; i<input->urisLen; i++) {
+    adb_serviceInfoType_add_uris(sit, env, input->uris[i]);
+  }
+  
+  return (sit);
+}
+
+static inline void copy_service_info_type_from_adb(serviceInfoType * input, adb_serviceInfoType_t * sit, const axutil_env_t *env) {
+  int i;
+
+  snprintf(input->type, 32, "%s", adb_serviceInfoType_get_type(sit, env));
+  snprintf(input->name, 32, "%s", adb_serviceInfoType_get_name(sit, env));
+  input->urisLen = adb_serviceInfoType_sizeof_uris(sit, env);
+  for (i=0; i<input->urisLen && i<8; i++) {
+    snprintf(input->uris[i], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, i));
+  }
+}
+
+/*
+static inline adb_serviceStatusType_t * copy_service_status_type_to_adb(const axutil_env_t *env, serviceStatusType * input) {
+  adb_serviceStatusType_t *sst = adb_serviceStatusType_create(env);
+  adb_serviceInfoType_t *sit=NULL;
+
+  adb_serviceStatusType_set_localState(sst, env, input->localState);
+  adb_serviceStatusType_set_localEpoch(sst, env, input->localEpoch);
+  adb_serviceStatusType_add_details(sst, env, input->details);
+  
+  sit = copy_service_info_type_to_adb(env, &(input->serviceId));
+  adb_serviceStatusType_set_serviceId(sst, env, sit);
+
+  return (sst);
+}
+
+static inline void copy_service_status_type_from_adb(serviceStatusType *input, adb_serviceStatusType_t *sst, const axutil_env_t *env) {
+  adb_serviceInfoType_t *sit=NULL;
+
+  snprintf(input->localState, 32, "%s", adb_serviceStatusType_get_localState(sst, env));
+  input->localEpoch = adb_serviceStatusType_get_localEpoch(sst, env);
+  snprintf(input->details, 1024, "%s", adb_serviceStatusType_get_details_at(sst, env, 0));
+	   
+  sit = adb_serviceStatusType_get_serviceId(sst, env);
+  copy_service_info_type_from_adb(&(input->serviceId), sit, env);
+
+}
+*/
 #endif // _ADB_HELPERS_H

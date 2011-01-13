@@ -128,98 +128,6 @@ static int doInitialize (struct nc_state_t *nc)
 	return OK;
 }
 
-static int
-doRunInstance (	struct nc_state_t *nc,
-		ncMetadata *meta,
-		char *instanceId,
-		char *reservationId, virtualMachine *params, 
-		char *imageId, char *imageURL, 
-		char *kernelId, char *kernelURL, 
-		char *ramdiskId, char *ramdiskURL, 
-		char *keyName, 
-		//		char *privMac, char *privIp, int vlan, 
-		netConfig *netparams,
-                char *userData, char *launchIndex, char *platform, char **groupNames,
-		int groupNamesSize, ncInstance **outInst)
-{
-    ncInstance * instance = NULL;
-    * outInst = NULL;
-    int error;
-    pid_t pid;
-    netConfig ncnet;
-
-    memcpy(&ncnet, netparams, sizeof(netConfig));
-
-    /* check as much as possible before forking off and returning */
-    sem_p (inst_sem);
-    instance = find_instance (&global_instances, instanceId);
-    sem_v (inst_sem);
-    if (instance) {
-        logprintfl (EUCAFATAL, "Error: instance %s already running\n", instanceId);
-        return 1; /* TODO: return meaningful error codes? */
-    }
-    if (!(instance = allocate_instance (instanceId, 
-                                        reservationId,
-                                        params, 
-                                        imageId, imageURL,
-                                        kernelId, kernelURL,
-                                        ramdiskId, ramdiskURL,
-                                        instance_state_names[PENDING], 
-                                        PENDING, 
-                                        meta->userId, 
-                                        &ncnet, keyName,
-                                        userData, launchIndex, platform, groupNames, groupNamesSize))) {
-        logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
-        return 2;
-    }
-    change_state(instance, STAGING);
-
-    sem_p (inst_sem); 
-    error = add_instance (&global_instances, instance);
-    sem_v (inst_sem);
-    if ( error ) {
-        free_instance (&instance);
-        logprintfl (EUCAFATAL, "Error: could not save instance struct\n");
-        return error;
-    }
-
-    instance->launchTime = time (NULL);
-    /*
-    instance->params.mem = params->mem;
-    instance->params.cores = params->cores;
-    instance->params.disk = params->disk;
-    strcpy (instance->ncnet.privateIp, "0.0.0.0");
-    strcpy (instance->ncnet.publicIp, "0.0.0.0");
-    */
-
-    /* do the potentially long tasks in a thread */
-    pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
-    if (!attr) {
-        free_instance (&instance);
-        logprintfl (EUCAFATAL, "Error: out of memory\n");
-        return 1;
-    }
-    pthread_attr_init(attr);
-    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
-
-    if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
-        pthread_attr_destroy(attr);
-        logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
-        sem_p (inst_sem);
-        remove_instance (&global_instances, instance);
-        sem_v (inst_sem);
-        free_instance (&instance);
-	free(attr);
-        return 1;
-    }
-    pthread_attr_destroy(attr);
-    if (attr) free(attr);
-
-    * outInst = instance;
-    return 0;
-
-}
-
 /* thread that does the actual reboot */
 static void * rebooting_thread (void *arg) 
 {
@@ -441,7 +349,7 @@ doAttachVolume (	struct nc_state_t *nc,
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*login to target*/
-		local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, remoteDev);
+		local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, nc->home, remoteDev);
 		if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
 		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
 		  rc = 1;
@@ -561,7 +469,7 @@ doDetachVolume (	struct nc_state_t *nc,
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*logout from target*/
-                if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, remoteDev)) == NULL)
+                if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, nc->home, remoteDev)) == NULL)
                     return ERROR;
                 if (nc->config_use_virtio_disk && virtio_dev) {
                     snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", local_iscsi_dev, localDevReal);
@@ -587,7 +495,7 @@ doDetachVolume (	struct nc_state_t *nc,
             }
             virDomainFree(dom);
             if(is_iscsi_target) {
-                if(disconnect_iscsi_target(nc->disconnect_storage_cmd_path, remoteDev) != 0) {
+                if(disconnect_iscsi_target(nc->disconnect_storage_cmd_path, nc->home, remoteDev) != 0) {
                     logprintfl (EUCAERROR, "disconnect_iscsi_target failed for %s\n", remoteDev);
                     ret = ERROR;
                 }
@@ -622,12 +530,13 @@ struct handlers kvm_libvirt_handlers = {
     .name = "kvm",
     .doInitialize        = doInitialize,
     .doDescribeInstances = NULL,
-    .doRunInstance       = doRunInstance,
+    .doRunInstance       = NULL,
     .doTerminateInstance = NULL,
     .doRebootInstance    = doRebootInstance,
     .doGetConsoleOutput  = doGetConsoleOutput,
     .doDescribeResource  = NULL,
     .doStartNetwork      = NULL,
+    .doAssignAddress     = NULL,
     .doPowerDown         = NULL,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume

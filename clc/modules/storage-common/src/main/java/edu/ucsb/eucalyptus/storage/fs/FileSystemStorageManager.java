@@ -65,22 +65,14 @@
 
 package edu.ucsb.eucalyptus.storage.fs;
 
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.ExecutionException;
-import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.ws.util.ChannelUtil;
-import com.eucalyptus.ws.util.WalrusBucketLogger;
-
-import edu.ucsb.eucalyptus.cloud.BucketLogData;
-import edu.ucsb.eucalyptus.cloud.ws.CompressedChunkedFile;
-import edu.ucsb.eucalyptus.cloud.ws.ChunkedDataFile;
-import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
-import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.util.StreamConsumer;
-import edu.ucsb.eucalyptus.util.SystemUtil;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -90,10 +82,19 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
-import java.io.*;
-import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.List;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ExecutionException;
+import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.ws.util.WalrusBucketLogger;
+
+import edu.ucsb.eucalyptus.cloud.BucketLogData;
+import edu.ucsb.eucalyptus.cloud.ws.ChunkedDataFile;
+import edu.ucsb.eucalyptus.cloud.ws.CompressedChunkedFile;
+import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
+import edu.ucsb.eucalyptus.storage.StorageManager;
+import edu.ucsb.eucalyptus.util.StreamConsumer;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class FileSystemStorageManager implements StorageManager {
 
@@ -106,6 +107,10 @@ public class FileSystemStorageManager implements StorageManager {
 	private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
 	private String rootDirectory;
+	
+	public FileSystemStorageManager() {
+	}
+	
 	public FileSystemStorageManager(String rootDirectory) {
 		this.rootDirectory = rootDirectory;
 	}
@@ -462,4 +467,27 @@ public class FileSystemStorageManager implements StorageManager {
 		}
 		return loDevName;
 	}
+
+	@Override
+	public void enable() throws EucalyptusCloudException {
+		//Nothing to do yet.
+	}
+
+	@Override
+	public void disable() throws EucalyptusCloudException {
+		//Nothing to do yet.
+	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	@Override
+	public void check() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

@@ -177,10 +177,7 @@ int main(int argc, char **argv) {
       if (argv[10]) ramdiskId = argv[10];
       if (argv[11]) ramdiskURL = argv[11];
 
-      virtualMachine params = { 64, 1, 64, "m1.small", 
-				{ { "sda1", "root", 100, "none" }, 
-				  { "sda2", "ephemeral1", 1000, "ext3" },
-				  { "sda3", "swap", 50, "swap" } } };
+      virtualMachine params = { 64, 1, 64, "m1.small" };
 
       rc = cc_runInstances(amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, atoi(argv[7]), atoi(argv[8]), argv[9], &params, env, stub);
       if (rc != 0) {
@@ -191,6 +188,36 @@ int main(int argc, char **argv) {
       rc = cc_describeInstances(NULL, 0, env, stub);
       if (rc != 0) {
 	printf("cc_describeInstances() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "describeServices")) {
+      rc = cc_describeServices(env, stub);
+      if (rc != 0) {
+	printf("cc_describeServices() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "startService")) {
+      rc = cc_startService(env, stub);
+      if (rc != 0) {
+	printf("cc_startService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "stopService")) {
+      rc = cc_stopService(env, stub);
+      if (rc != 0) {
+	printf("cc_stopService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "enableService")) {
+      rc = cc_enableService(env, stub);
+      if (rc != 0) {
+	printf("cc_enableService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "disableService")) {
+      rc = cc_disableService(env, stub);
+      if (rc != 0) {
+	printf("cc_disableService() failed\n");
 	exit(1);
       }
     } else if (!strcmp(argv[2], "describeBundleTasks")) {

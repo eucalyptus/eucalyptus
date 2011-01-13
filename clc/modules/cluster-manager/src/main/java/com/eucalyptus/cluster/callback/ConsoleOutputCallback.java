@@ -69,6 +69,7 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
@@ -97,8 +98,12 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
     reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
     reply.setTimestamp( new Date( ) );
-    reply.setOutput( new String( Base64.encode( vm.getConsoleOutput( ).toString( ).getBytes( ) ) ) );
-    ServiceContext.dispatch( "ReplyQueue", reply );
+    reply.setOutput( vm.getConsoleOutputString( ) );
+    try {
+      ServiceContext.dispatch( "ReplyQueue", reply );
+    } catch ( EucalyptusCloudException ex ) {
+      LOG.error( ex , ex );
+    }
   }
 
 

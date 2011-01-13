@@ -171,15 +171,16 @@ public class WalrusControl {
 	public static void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
 		// TODO Auto-generated method stub
 		String returnValue;
-		returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "help"});
+		returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("drbdadm not found: Is drbd installed?");
 		}
-	}
+	}	
 
 	public static void configure() {
 		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
-		storageManager = new FileSystemStorageManager(walrusInfo.getStorageDir());
+		storageManager = BackendStorageManagerFactory.getStorageManager();
+		storageManager.setRootDirectory(walrusInfo.getStorageDir());
 		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
 		walrusManager = new WalrusManager(storageManager, walrusImageManager);
 		WalrusManager.configure();
@@ -204,6 +205,29 @@ public class WalrusControl {
 
 	public static <T> EntityWrapper<T> getEntityWrapper( ) {
 		return new EntityWrapper<T>( WalrusProperties.DB_NAME );
+	}
+
+	public static void enable() throws EucalyptusCloudException {
+		storageManager.enable();
+	}
+
+	public static void disable() throws EucalyptusCloudException {
+		storageManager.disable();
+	}
+
+	public static void check() throws EucalyptusCloudException {
+		storageManager.check();
+	}
+
+	public static void stop() throws EucalyptusCloudException {
+		storageManager.stop();
+		Tracker.die();
+		storageManager = null;
+		walrusBlockStorageManager =null;
+		walrusManager = null;
+		walrusImageManager = null;
+		WalrusProperties.shouldEnforceUsageLimits = true;
+		WalrusProperties.enableVirtualHosting = true;
 	}
 
 	public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {
@@ -367,7 +391,7 @@ public class WalrusControl {
 	public ValidateImageResponseType ValidateImage(ValidateImageType request) throws EucalyptusCloudException {
 		return walrusImageManager.validateImage(request);
 	}
-	
+
 	public StoreSnapshotResponseType StoreSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
 		return walrusBlockStorageManager.storeSnapshot(request);
 	}

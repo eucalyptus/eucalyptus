@@ -149,15 +149,7 @@ public class ClusterEndpoint implements Startable {
       return reply;
     }
     List<String> args = request.getAvailabilityZoneSet( );
-    if ( args.isEmpty( ) ) {
-      for ( Group g : Contexts.lookup( ).getGroups( ) ) {
-        reply.getAvailabilityZoneInfo( ).addAll( this.addZoneInfo( g, false ) );
-      }
-    } else if ( args.remove( "verbose" ) ) {
-      for ( Group g : Contexts.lookup( ).getGroups( ) ) {
-        reply.getAvailabilityZoneInfo( ).addAll( this.addZoneInfo( g, true ) );
-      }
-    } else if ( args.contains( "certs" ) || args.contains( "logs" ) || args.contains( "keys" ) ) {
+    if ( args.isEmpty( ) || args.contains( "verbose" ) || args.contains( "certs" ) || args.contains( "logs" ) || args.contains( "keys" ) ) {
       for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
         this.getDescriptionEntry( reply, c, request );
       }
@@ -186,7 +178,9 @@ public class ClusterEndpoint implements Startable {
       tagList = c.getNodeTags( );
     else tagList.retainAll( c.getNodeTags( ) );
     if ( admin ) {
-      if ( args.contains( "certs" ) ) {
+      if ( args.contains( "verbose" ) ) {
+        reply.getAvailabilityZoneInfo( ).addAll( this.addSystemInfo( c ) );
+      } else if ( args.contains( "certs" ) ) {
         for ( String tag : tagList ) {
           reply.getAvailabilityZoneInfo( ).addAll( this.addCertInfo( tag, c ) );
         }
@@ -300,55 +294,8 @@ public class ClusterEndpoint implements Startable {
     return helpInfo;
   }
   
-  private List<ClusterInfoType> addZoneInfo( final Group g, boolean verbose ) {
-    List<ClusterInfoType> info = new ArrayList<ClusterInfoType>( );
-    Iterable<String> clusterNames = Iterables.transform( g.getAuthorizations( ), new Function<Authorization, String>( ) {
-      
-      @Override
-      public String apply( Authorization arg0 ) {
-        return arg0.getValue( );
-      }
-    } );
-    info.add( new ClusterInfoType( g.getName( ), clusterNames.toString( ) ) );
-    if ( verbose ) {
-      Map<String, Integer> avail = Maps.newHashMap( );
-      Map<String, Integer> max = Maps.newHashMap( );
-      for ( Cluster cluster : Iterables.transform( clusterNames, new Function<String, Cluster>( ) {
-        public Cluster apply( String arg0 ) {
-          return Clusters.getInstance( ).lookup( arg0 );
-        }
-      } ) ) {
-        try {
-          info.add( s( cluster.getName( ), cluster.getHostName( ) ) );
-          info.add( new ClusterInfoType( String.format( INFO_FSTRING, "vm types" ), HEADER_STRING ) );
-          for ( VmType v : VmTypes.list( ) ) {
-            VmTypeAvailability va = cluster.getNodeState( ).getAvailability( v.getName( ) );
-            avail.put( v.getName( ), !avail.containsKey( v.getName( ) )
-              ? va.getAvailable( )
-              : va.getAvailable( ) + avail.get( v.getName( ) ) );
-            max.put( v.getName( ), !max.containsKey( v.getName( ) )
-                       ? va.getMax( )
-                       : va.getMax( ) + max.get( v.getName( ) ) );
-            info.add( s( v.getName( ), String.format( STATE_FSTRING, va.getAvailable( ), va.getMax( ), v.getCpu( ), v.getMemory( ), v.getDisk( ) ) ) );
-          }
-        } catch ( Exception e ) {
-          LOG.error( e, e );
-        }
-      }
-      info.add( s( g.getName( ), "totals" ) );
-      info.add( new ClusterInfoType( String.format( INFO_FSTRING, "vm types" ), HEADER_STRING ) );
-      for ( VmType v : VmTypes.list( ) ) {
-        info.add( s( v.getName( ), String.format( STATE_FSTRING, avail.get( v.getName( ) ), max.get( v.getName( ) ), v.getCpu( ), v.getMemory( ), v.getDisk( ) ) ) );
-      }
-      
-    }
-    
-    return info;
-  }
-  
   private List<ClusterInfoType> addSystemInfo( final Cluster cluster ) {
     List<ClusterInfoType> info = new ArrayList<ClusterInfoType>( );
-    info.add( new ClusterInfoType( cluster.getConfiguration( ).getName( ), cluster.getConfiguration( ).getHostName( ) ) );
     try {
       info.add( new ClusterInfoType( String.format( INFO_FSTRING, "vm types" ), HEADER_STRING ) );
       for ( VmType v : VmTypes.list( ) ) {
@@ -390,11 +337,13 @@ public class ClusterEndpoint implements Startable {
   
   public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
+    SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
+    reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
     try {
-      SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
-      reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
-      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", SystemConfiguration.getWalrusUrl( ) ) );
-    } catch ( EucalyptusCloudException e ) {}
+      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupServiceByName( "walrus" ).getUri( ).toASCIIString( ) ) );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+    }
     return reply;
   }
 }

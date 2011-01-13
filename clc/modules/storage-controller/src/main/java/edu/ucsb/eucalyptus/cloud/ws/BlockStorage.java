@@ -88,7 +88,6 @@ import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.ws.util.Messaging;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
@@ -141,7 +140,7 @@ public class BlockStorage {
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 
-	public static void configure() {
+	public static void configure() throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
 		StorageProperties.updateStorageHost();
@@ -151,14 +150,6 @@ public class BlockStorage {
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
-		blockManager.configure();
-		blockManager.initialize();
-		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
-		try {
-			startupChecks();
-		} catch(EucalyptusCloudException ex) {
-			LOG.error("Startup checks failed ", ex);
-		}
 	}
 
 	public BlockStorage() {}
@@ -178,6 +169,37 @@ public class BlockStorage {
 				LOG.error("unable to transfer pending snapshots", ex);
 			}
 		}
+	}
+
+	public static void check() throws EucalyptusCloudException {
+		blockManager.checkReady();
+	}
+
+	public static void stop() throws EucalyptusCloudException {
+		blockManager.stop();
+		//clean all state.
+		blockManager = null;
+		checker = null;
+		blockStorageStatistics = null;
+		volumeService.shutdown();
+		snapshotService.shutdown();
+		StorageProperties.enableSnapshots = StorageProperties.enableStorage = false;
+	}
+
+	public static void enable() throws EucalyptusCloudException {
+		blockManager.configure();
+		blockManager.initialize();
+		try {
+			startupChecks();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error("Startup checks failed ", ex);
+		}
+		blockManager.enable();
+		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
+	}
+	
+	public static void disable() throws EucalyptusCloudException {
+		blockManager.disable();
 	}
 
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
@@ -991,4 +1013,5 @@ public class BlockStorage {
 			}
 		}
 	}
+
 }

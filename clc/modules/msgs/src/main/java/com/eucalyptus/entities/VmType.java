@@ -64,6 +64,7 @@
 package com.eucalyptus.entities;
 
 import java.io.Serializable;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -173,7 +174,9 @@ public class VmType extends AbstractPersistent implements Serializable, Comparab
   }
   
   public VmTypeInfo getAsVmTypeInfo( ) {
-    return new VmTypeInfo( this.getName( ), this.getMemory( ), this.getDisk( ), this.getCpu( ) );
+    return new VmTypeInfo( this.getName( ), this.getMemory( ), this.getDisk( ), this.getCpu( ), "sda1" ) {{
+      this.setSwap( "sda2",  524288l );
+    }};
   }
   
   @Override

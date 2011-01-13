@@ -68,6 +68,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
@@ -96,7 +97,6 @@ import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.VmImageInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
@@ -219,7 +219,6 @@ public class ClusterAllocator extends Thread {
     final List<String> addresses = Lists.newArrayList( token.getAddresses( ) );
     RunInstancesType request = this.vmAllocInfo.getRequest( );
     String rsvId = this.vmAllocInfo.getReservationId( );
-    VmImageInfo imgInfo = this.vmAllocInfo.getImageInfo( );
     VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo( );
     VmTypeInfo vmInfo = this.vmAllocInfo.getVmTypeInfo( );
     String userData = this.vmAllocInfo.getRequest( ).getUserData( );
@@ -227,7 +226,7 @@ public class ClusterAllocator extends Thread {
     int index = 0;
     try {
       for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        cb = makeRunRequest( request, childToken, rsvId, imgInfo, keyInfo, vmInfo, vlan, networkNames, userData );
+        cb = makeRunRequest( request, childToken, rsvId, keyInfo, vmInfo, this.vmAllocInfo.getPlatform( ) , vlan, networkNames, userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
         index++;
       }
@@ -237,7 +236,7 @@ public class ClusterAllocator extends Thread {
   }
   
   private Request makeRunRequest( RunInstancesType request, final ResourceToken childToken, String rsvId, 
-                                  VmImageInfo imgInfo, VmKeyInfo keyInfo, VmTypeInfo vmInfo, Integer vlan, List<String> networkNames, String userData ) {
+                                  VmKeyInfo keyInfo, VmTypeInfo vmInfo, String platform, Integer vlan, List<String> networkNames, String userData ) {
     List<String> macs = Lists.transform( childToken.getInstanceIds( ), new Function<String, String>( ) {
       @Override
       public String apply( String instanceId ) {
@@ -246,9 +245,9 @@ public class ClusterAllocator extends Thread {
     } );
     List<String> networkIndexes = ( childToken.getPrimaryNetwork( ) == null ) ? new ArrayList<String>( ) : Lists.newArrayList( Iterables.transform( childToken.getPrimaryNetwork( ).getIndexes( ), Functions.TO_STRING ) );
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), 
-                                   imgInfo, vmInfo, keyInfo, 
+                                   vmInfo, keyInfo, platform != null ? platform : "linux",/**ASAP:FIXME:GRZE**/
                                    childToken.getInstanceIds( ), macs, 
-                                   vlan, networkNames, networkIndexes ).regardingUserRequest( request );
+                                   vlan, networkNames, networkIndexes, Lists.newArrayList( UUID.randomUUID( ).toString( ) ) ).regardingUserRequest( request );
     Request<VmRunType, VmRunResponseType> req = Callbacks.newClusterRequest( new VmRunCallback( run, childToken ) );
     if ( !childToken.getAddresses( ).isEmpty( ) ) {
       req.then( new Callback.Success<VmRunResponseType>( ) {

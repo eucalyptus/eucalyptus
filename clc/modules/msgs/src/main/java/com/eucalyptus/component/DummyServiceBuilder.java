@@ -21,7 +21,7 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   }
   
   @Override
-  public Boolean checkRemove( String name ) throws ServiceRegistrationException {
+  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     return this.services.containsKey( name );
   }
 
@@ -36,7 +36,7 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   }
   
   @Override
-  public ServiceConfiguration add( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public ServiceConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     throw new RuntimeException( "Not implemented yet." );
   }
 
@@ -44,17 +44,17 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
     try {
       if( uri.getScheme( ).matches( ".*vm.*" ) || ( uri.getHost( ) != null && NetworkUtil.testLocal( uri.getHost( ) ) ) ) {
-        return new LocalConfiguration( this.component.getPeer( ), uri );      
+        return new LocalConfiguration( null, this.component.getPeer( ), uri );      
       } else {
-        return new RemoteConfiguration( this.component.getPeer( ), uri );      
+        return new RemoteConfiguration( null, this.component.getPeer( ), uri );      
       }
     } catch ( Throwable t ) {
-      return new LocalConfiguration( this.component.getPeer( ), uri );      
+      return new LocalConfiguration( null, this.component.getPeer( ), uri );      
     }
   }
 
   @Override
-  public Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     return !this.services.containsKey( name );
   }
   
@@ -71,6 +71,11 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   @Override
   public ServiceConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException {
     return this.services.remove( config.getName( ) );
+  }
+
+  @Override
+  public ServiceConfiguration lookup( String partition, String name ) throws ServiceRegistrationException {
+    return this.services.get( name );
   }
     
 }

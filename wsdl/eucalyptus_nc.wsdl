@@ -10,16 +10,18 @@
 	<xs:element minOccurs="0" name="memory" type="xs:int"/>
 	<xs:element minOccurs="0" name="cores" type="xs:int"/>
 	<xs:element minOccurs="0" name="disk" type="xs:int"/>
-	  <xs:element minOccurs="0" maxOccurs="unbounded" name="deviceMapping" type="tns:deviceMappingType"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="virtualBootRecord" type="tns:virtualBootRecordType"/>
       </xs:sequence>
     </xs:complexType>
 
-      <xs:complexType name="deviceMappingType">
+      <xs:complexType name="virtualBootRecordType">
 	<xs:sequence>
-	  <xs:element minOccurs="0" name="deviceName" type="xs:string"/>
-	  <xs:element minOccurs="0" name="virtualName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="resourceLocation" type="xs:string"/>
+	  <xs:element minOccurs="0" name="guestDeviceName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="size" type="xs:int"/>
 	  <xs:element minOccurs="0" name="format" type="xs:string"/>
+	  <xs:element minOccurs="0" name="id" type="xs:string"/>
+	  <xs:element minOccurs="0" name="type" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
     
@@ -29,6 +31,15 @@
           <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="name" type="xs:string"/>
           <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="uris" type="xs:string"/>
         </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="serviceStatusType">
+	<xs:sequence>
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="serviceId" type="tns:serviceInfoType" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localState" type="xs:string" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localEpoch" type="xs:int" />
+	  <xs:element maxOccurs="unbounded" minOccurs="0" name="details" type="xs:string" />
+	</xs:sequence>
       </xs:complexType>
 
     <xs:complexType abstract="true" name="eucalyptusMessage">
@@ -258,6 +269,7 @@
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
 	    <xs:element name="nodeStatus" type="xs:string"/>
+	    <xs:element name="iqn" type="xs:string"/>
 	    <xs:element name="memorySizeMax" type="xs:int"/>
 	    <xs:element name="memorySizeAvailable" type="xs:int"/>
 	    <xs:element name="diskSizeMax" type="xs:int"/>
@@ -274,14 +286,15 @@
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
-	    <xs:element name="imageId" type="xs:string"/>
-	    <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
-	    <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
-	    <xs:element name="imageURL" type="xs:string"/>
-	    <xs:element minOccurs="0" name="kernelURL" type="xs:string"/>
-	    <xs:element minOccurs="0" name="ramdiskURL" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="imageId" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="kernelId" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="ramdiskId" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="imageURL" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="kernelURL" type="xs:string"/>
+	    <xs:element nillable="true" minOccurs="0" name="ramdiskURL" type="xs:string"/>
 	    <xs:element name="reservationId" type="xs:string"/>
 	    <xs:element name="instanceId" type="xs:string"/>
+	    <xs:element name="uuid" type="xs:string"/>
 	    <xs:element name="instanceType" type="tns:virtualMachineType"/>
 	    <xs:element name="keyName" type="xs:string"/>
 	    <xs:element name="netParams" type="tns:netConfigType"/>
@@ -312,6 +325,7 @@
     <xs:complexType name="instanceType">
       <xs:sequence>
         <!-- passed into RunInstances -->
+	    <xs:element minOccurs="1" name="uuid" type="xs:string"/>
 	    <xs:element minOccurs="1" name="reservationId" type="xs:string"/>
 	    <xs:element minOccurs="1" name="instanceId" type="xs:string"/>
 	    <xs:element minOccurs="1" name="imageId" type="xs:string"/>
@@ -326,6 +340,8 @@
 	    <xs:element minOccurs="1" name="stateName" type="xs:string"/>
 	    <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string" />
 	    <xs:element minOccurs="0" name="launchTime" type="xs:dateTime" />
+	    <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
+	    <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
 
         <!-- passed into RunInstances for safekeeping by NC -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
@@ -367,6 +383,7 @@
 	    <xs:element minOccurs="0" maxOccurs="unbounded" name="remoteHosts" type="xs:string"/>
 	    <xs:element minOccurs="0" maxOccurs="1" name="remoteHostPort" type="xs:int"/>
 	    <xs:element minOccurs="0" maxOccurs="1" name="vlan" type="xs:int"/>
+	    <xs:element minOccurs="0" maxOccurs="1" name="uuid" type="xs:string"/>
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>
@@ -399,9 +416,32 @@
 	</xs:extension>
       </xs:complexContent>
     </xs:complexType>
+
+    <xs:complexType name="ncAssignAddressType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+	    <xs:element minOccurs="1" maxOccurs="1" name="instanceId" type="xs:string"/>
+	    <xs:element minOccurs="1" maxOccurs="1" name="publicIp" type="xs:string"/>
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncAssignAddressResponseType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
     
     <xs:element name="ncPowerDown" nillable="true" type="tns:ncPowerDownType"/>
     <xs:element name="ncPowerDownResponse" nillable="true" type="tns:ncPowerDownResponseType"/>
+
+    <xs:element name="ncAssignAddress" nillable="true" type="tns:ncAssignAddressType"/>
+    <xs:element name="ncAssignAddressResponse" nillable="true" type="tns:ncAssignAddressResponseType"/>
     
     <xs:element name="ncStartNetwork" nillable="true" type="tns:ncStartNetworkType"/>
     <xs:element name="ncStartNetworkResponse" nillable="true" type="tns:ncStartNetworkResponseType"/>
@@ -441,6 +481,11 @@
     
   </xs:schema>
 </wsdl:types>
+
+<wsdl:message name="ncAssignAddressResponse">
+  <wsdl:part element="tns:ncAssignAddressResponse" name="ncAssignAddressResponse">
+  </wsdl:part>
+</wsdl:message>
 
 <wsdl:message name="ncPowerDownResponse">
   <wsdl:part element="tns:ncPowerDownResponse" name="ncPowerDownResponse">
@@ -512,6 +557,11 @@
   </wsdl:part>
 </wsdl:message>
 
+<wsdl:message name="ncAssignAddress">
+  <wsdl:part element="tns:ncAssignAddress" name="ncAssignAddress">
+  </wsdl:part>
+</wsdl:message>
+
 <wsdl:message name="ncPowerDown">
   <wsdl:part element="tns:ncPowerDown" name="ncPowerDown">
   </wsdl:part>
@@ -574,6 +624,13 @@
 
 <wsdl:portType name="EucalyptusNC">
   
+  <wsdl:operation name="ncAssignAddress">
+    <wsdl:input message="tns:ncAssignAddress" name="ncAssignAddress">
+    </wsdl:input>
+    <wsdl:output message="tns:ncAssignAddressResponse" name="ncAssignAddressResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
   <wsdl:operation name="ncPowerDown">
     <wsdl:input message="tns:ncPowerDown" name="ncPowerDown">
     </wsdl:input>
@@ -670,6 +727,16 @@
 <wsdl:binding name="EucalyptusNCSoapBinding" type="tns:EucalyptusNC">
   <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
   
+  <wsdl:operation name="ncAssignAddress">
+    <soap:operation soapAction="EucalyptusNC#ncAssignAddress" style="document"/>
+    <wsdl:input name="ncAssignAddress">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncAssignAddressResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
   <wsdl:operation name="ncPowerDown">
     <soap:operation soapAction="EucalyptusNC#ncPowerDown" style="document"/>
     <wsdl:input name="ncPowerDown">

@@ -84,14 +84,17 @@ int ncStubDestroy (ncStub * st)
 
 /************************** stubs **************************/
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
-  return doRunInstance (meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInstPtr);
+  return doRunInstance (meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInstPtr);
 }
 
 int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
 {
     return doTerminateInstance (meta, instanceId, shutdownState, previousState);
+}
+int ncAssignAddressStub (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp){
+  return(0);
 }
 int ncPowerDownStub (ncStub *st, ncMetadata *meta){
   return(0);
@@ -125,5 +128,5 @@ int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *
 
 int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
-    return doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force);
+    return doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force, 1);
 }
