@@ -49,9 +49,10 @@ Group:         Applications/System
 
 BuildRequires: ant
 BuildRequires: ant-nodeps
-BuildRequires: euca-axis2c >= 1.6.0
-BuildRequires: euca-rampartc >= 1.3.0
+BuildRequires: axis2
+BuildRequires: axis2c-devel >= 1.6.0
 BuildRequires: libvirt-devel >= 0.6
+BuildRequires: rampartc-devel >= 1.3.0
 BuildRequires: swig
 %if %{is_suse}
 BuildRequires: xen-tools
@@ -243,7 +244,7 @@ VMware installation.
 export DESTDIR=$RPM_BUILD_ROOT
 # Oracle JDK links to Java without using alternatives
 export JAVA_HOME=/usr/java/latest
-./configure --with-axis2=/opt/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
+./configure --with-axis2=%{_datadir}/axis2-* --with-axis2c=%{_prefix} --with-axis2c-services=%{_libdir}/axis2c/services --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
 cd clc
 make deps
 cd ..
