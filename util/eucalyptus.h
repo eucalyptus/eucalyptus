@@ -177,8 +177,10 @@ static char * instance_state_names[] = {
     "Booting",
     "Canceled",
 
-	"Bundling-Shutdown",
+    "Bundling-Shutdown",
     "Bundling-Shutoff",
+    "CreateImage-Shutdown",
+    "CreateImage-Shutoff",
 
     "Pending",
     "Extant",
