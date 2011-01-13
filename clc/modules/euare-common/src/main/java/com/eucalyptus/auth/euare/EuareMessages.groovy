@@ -2,10 +2,7 @@ package com.eucalyptus.auth.euare;
 import java.util.Date;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import java.math.BigInteger;
 import java.util.ArrayList;
-
-
 
 public class EuareMessage extends BaseMessage {
 }
@@ -16,12 +13,12 @@ public class PutGroupPolicyType extends EuareMessage {
   public PutGroupPolicyType() {  }
 }
 public class UploadSigningCertificateResultType extends EucalyptusData {
-  SigningCertificateType certificate;
+  SigningCertificateType certificate = new SigningCertificateType( );
   public UploadSigningCertificateResultType() {  }
 }
 public class ListAccessKeysResponseType extends EuareMessage {
-  ListAccessKeysResultType listAccessKeysResult;
-  ResponseMetadataType responseMetadata;
+  ListAccessKeysResultType listAccessKeysResult = new ListAccessKeysResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListAccessKeysResponseType() {  }
 }
 public class AccessKeyMetadataListTypeType extends EucalyptusData {
@@ -35,16 +32,16 @@ public class ListGroupPoliciesType extends EuareMessage {
   public ListGroupPoliciesType() {  }
 }
 public class ListUserPoliciesResponseType extends EuareMessage {
-  ListUserPoliciesResultType listUserPoliciesResult;
-  ResponseMetadataType responseMetadata;
+  ListUserPoliciesResultType listUserPoliciesResult = new ListUserPoliciesResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListUserPoliciesResponseType() {  }
 }
 public class ResyncMFADeviceResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ResyncMFADeviceResponseType() {  }
 }
 public class ListMFADevicesResultType extends EucalyptusData {
-  MfaDeviceListTypeType mfaDevices;
+  MfaDeviceListTypeType mfaDevices = new MfaDeviceListTypeType( );
   Boolean isTruncated;
   String marker;
   public ListMFADevicesResultType() {  }
@@ -55,8 +52,8 @@ public class UpdateLoginProfileType extends EuareMessage {
   public UpdateLoginProfileType() {  }
 }
 public class GetLoginProfileResponseType extends EuareMessage {
-  GetLoginProfileResultType getLoginProfileResult;
-  ResponseMetadataType responseMetadata;
+  GetLoginProfileResultType getLoginProfileResult = new GetLoginProfileResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public GetLoginProfileResponseType() {  }
 }
 public class GetGroupType extends EuareMessage {
@@ -81,8 +78,8 @@ public class MfaDeviceListTypeType extends EucalyptusData {
   ArrayList<MFADeviceType> memberList = new ArrayList<MFADeviceType>();
 }
 public class UploadServerCertificateResponseType extends EuareMessage {
-  UploadServerCertificateResultType uploadServerCertificateResult;
-  ResponseMetadataType responseMetadata;
+  UploadServerCertificateResultType uploadServerCertificateResult = new UploadServerCertificateResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UploadServerCertificateResponseType() {  }
 }
 public class DeleteGroupPolicyType extends EuareMessage {
@@ -91,7 +88,7 @@ public class DeleteGroupPolicyType extends EuareMessage {
   public DeleteGroupPolicyType() {  }
 }
 public class DeleteAccessKeyResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteAccessKeyResponseType() {  }
 }
 public class AccessKeyType extends EuareMessage {
@@ -103,7 +100,7 @@ public class AccessKeyType extends EuareMessage {
   public AccessKeyType() {  }
 }
 public class AddUserToGroupResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public AddUserToGroupResponseType() {  }
 }
 public class DeleteServerCertificateType extends EuareMessage {
@@ -111,7 +108,7 @@ public class DeleteServerCertificateType extends EuareMessage {
   public DeleteServerCertificateType() {  }
 }
 public class UpdateAccessKeyResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UpdateAccessKeyResponseType() {  }
 }
 public class UploadServerCertificateType extends EuareMessage {
@@ -134,17 +131,17 @@ public class AddUserToGroupType extends EuareMessage {
   public AddUserToGroupType() {  }
 }
 public class PutGroupPolicyResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public PutGroupPolicyResponseType() {  }
 }
 public class ListSigningCertificatesResponseType extends EuareMessage {
-  ListSigningCertificatesResultType listSigningCertificatesResult;
-  ResponseMetadataType responseMetadata;
+  ListSigningCertificatesResultType listSigningCertificatesResult = new ListSigningCertificatesResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListSigningCertificatesResponseType() {  }
 }
 public class GetUserResponseType extends EuareMessage {
-  GetUserResultType getUserResult;
-  ResponseMetadataType responseMetadata;
+  GetUserResultType getUserResult = new GetUserResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public GetUserResponseType() {  }
 }
 public class AccessKeyMetadataType extends EucalyptusData {
@@ -155,8 +152,8 @@ public class AccessKeyMetadataType extends EucalyptusData {
   public AccessKeyMetadataType() {  }
 }
 public class GetGroupPolicyResponseType extends EuareMessage {
-  GetGroupPolicyResultType getGroupPolicyResult;
-  ResponseMetadataType responseMetadata;
+  GetGroupPolicyResultType getGroupPolicyResult = new GetGroupPolicyResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public GetGroupPolicyResponseType() {  }
 }
 public class RemoveUserFromGroupType extends EuareMessage {
@@ -171,30 +168,30 @@ public class ListSigningCertificatesType extends EuareMessage {
   public ListSigningCertificatesType() {  }
 }
 public class ListServerCertificatesResponseType extends EuareMessage {
-  ListServerCertificatesResultType listServerCertificatesResult;
-  ResponseMetadataType responseMetadata;
+  ListServerCertificatesResultType listServerCertificatesResult = new ListServerCertificatesResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListServerCertificatesResponseType() {  }
 }
 public class DeleteGroupResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteGroupResponseType() {  }
 }
 public class UpdateGroupResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UpdateGroupResponseType() {  }
 }
 public class CreateAccessKeyResponseType extends EuareMessage {
-  CreateAccessKeyResultType createAccessKeyResult;
-  ResponseMetadataType responseMetadata;
+  CreateAccessKeyResultType createAccessKeyResult = new CreateAccessKeyResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public CreateAccessKeyResponseType() {  }
 }
 public class ListGroupsResponseType extends EuareMessage {
-  ListGroupsResultType listGroupsResult;
-  ResponseMetadataType responseMetadata;
+  ListGroupsResultType listGroupsResult = new ListGroupsResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListGroupsResponseType() {  }
 }
 public class ServerCertificateType extends EuareMessage {
-  ServerCertificateMetadataType serverCertificateMetadata;
+  ServerCertificateMetadataType serverCertificateMetadata = new ServerCertificateMetadataType( );
   String certificateBody;
   String certificateChain;
   public ServerCertificateType() {  }
@@ -204,27 +201,27 @@ public class CreateAccessKeyType extends EuareMessage {
   public CreateAccessKeyType() {  }
 }
 public class EnableMFADeviceResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public EnableMFADeviceResponseType() {  }
 }
 public class GetGroupResultType extends EucalyptusData {
-  GroupType group;
-  UserListTypeType users;
+  GroupType group = new GroupType( );
+  UserListTypeType users = new UserListTypeType( );
   Boolean isTruncated;
   String marker;
   public GetGroupResultType() {  }
 }
 public class UpdateUserResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UpdateUserResponseType() {  }
 }
 public class ListGroupPoliciesResponseType extends EuareMessage {
-  ListGroupPoliciesResultType listGroupPoliciesResult;
-  ResponseMetadataType responseMetadata;
+  ListGroupPoliciesResultType listGroupPoliciesResult = new ListGroupPoliciesResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListGroupPoliciesResponseType() {  }
 }
 public class ListServerCertificatesResultType extends EucalyptusData {
-  ServerCertificateMetadataListTypeType serverCertificateMetadataList;
+  ServerCertificateMetadataListTypeType serverCertificateMetadataList = new ServerCertificateMetadataListTypeType( );
   Boolean isTruncated;
   String marker;
   public ListServerCertificatesResultType() {  }
@@ -236,7 +233,7 @@ public class GetUserPolicyResultType extends EucalyptusData {
   public GetUserPolicyResultType() {  }
 }
 public class DeactivateMFADeviceResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeactivateMFADeviceResponseType() {  }
 }
 public class UserListTypeType extends EucalyptusData {
@@ -258,12 +255,12 @@ public class ResponseMetadataType extends EucalyptusData {
   public ResponseMetadataType() {  }
 }
 public class PutUserPolicyResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public PutUserPolicyResponseType() {  }
 }
 public class CreateGroupResponseType extends EuareMessage {
-  CreateGroupResultType createGroupResult;
-  ResponseMetadataType responseMetadata;
+  CreateGroupResultType createGroupResult = new CreateGroupResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public CreateGroupResponseType() {  }
 }
 public class CertificateListTypeType extends EucalyptusData {
@@ -271,8 +268,8 @@ public class CertificateListTypeType extends EucalyptusData {
   ArrayList<SigningCertificateType> memberList = new ArrayList<SigningCertificateType>();
 }
 public class CreateUserResponseType extends EuareMessage {
-  CreateUserResultType createUserResult;
-  ResponseMetadataType responseMetadata;
+  CreateUserResultType createUserResult = new CreateUserResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public CreateUserResponseType() {  }
 }
 public class GetGroupPolicyResultType extends EucalyptusData {
@@ -291,24 +288,24 @@ public class UpdateAccessKeyType extends EuareMessage {
   public UpdateAccessKeyType() {  }
 }
 public class DeleteServerCertificateResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteServerCertificateResponseType() {  }
 }
 public class UploadSigningCertificateResponseType extends EuareMessage {
-  UploadSigningCertificateResultType uploadSigningCertificateResult;
-  ResponseMetadataType responseMetadata;
+  UploadSigningCertificateResultType uploadSigningCertificateResult = new UploadSigningCertificateResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UploadSigningCertificateResponseType() {  }
 }
 public class GetUserPolicyResponseType extends EuareMessage {
-  GetUserPolicyResultType getUserPolicyResult;
-  ResponseMetadataType responseMetadata;
+  GetUserPolicyResultType getUserPolicyResult = new GetUserPolicyResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public GetUserPolicyResponseType() {  }
 }
 public class ErrorType extends EucalyptusData {
   String type;
   String code;
   String message;
-  ErrorDetailType detail;
+  ErrorDetailType detail = new ErrorDetailType( );
   public ErrorType() {  }
 }
 public class UpdateUserType extends EuareMessage {
@@ -324,15 +321,15 @@ public class PutUserPolicyType extends EuareMessage {
   public PutUserPolicyType() {  }
 }
 public class DeleteUserResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteUserResponseType() {  }
 }
 public class CreateUserResultType extends EucalyptusData {
-  UserType user;
+  UserType user= new UserType( );
   public CreateUserResultType() {  }
 }
 public class UploadServerCertificateResultType extends EucalyptusData {
-  ServerCertificateMetadataType serverCertificateMetadata;
+  ServerCertificateMetadataType serverCertificateMetadata = new ServerCertificateMetadataType( );
   public UploadServerCertificateResultType() {  }
 }
 public class DeactivateMFADeviceType extends EuareMessage {
@@ -365,28 +362,28 @@ public class DeleteUserPolicyType extends EuareMessage {
   public DeleteUserPolicyType() {  }
 }
 public class CreateLoginProfileResponseType extends EuareMessage {
-  CreateLoginProfileResultType createLoginProfileResult;
-  ResponseMetadataType responseMetadata;
+  CreateLoginProfileResultType createLoginProfileResult = new CreateLoginProfileResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public CreateLoginProfileResponseType() {  }
 }
 public class DeleteLoginProfileResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteLoginProfileResponseType() {  }
 }
 public class ListAccessKeysResultType extends EucalyptusData {
-  AccessKeyMetadataListTypeType accessKeyMetadata;
+  AccessKeyMetadataListTypeType accessKeyMetadata = new AccessKeyMetadataListTypeType( );
   Boolean isTruncated;
   String marker;
   public ListAccessKeysResultType() {  }
 }
 public class ListGroupsForUserResultType extends EucalyptusData {
-  GroupListTypeType groups;
+  GroupListTypeType groups = new GroupListTypeType( );
   Boolean isTruncated;
   String marker;
   public ListGroupsForUserResultType() {  }
 }
 public class GetUserResultType extends EucalyptusData {
-  UserType user;
+  UserType user = new UserType( );
   public GetUserResultType() {  }
 }
 public class DeleteSigningCertificateType extends EuareMessage {
@@ -399,7 +396,7 @@ public class LoginProfileType extends EuareMessage {
   public LoginProfileType() {  }
 }
 public class UpdateServerCertificateResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UpdateServerCertificateResponseType() {  }
 }
 public class ListUsersResponseType extends EuareMessage {
@@ -412,7 +409,7 @@ public class ServerCertificateMetadataListTypeType extends EucalyptusData {
   ArrayList<ServerCertificateMetadataType> memberList = new ArrayList<ServerCertificateMetadataType>();
 }
 public class DeleteGroupPolicyResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteGroupPolicyResponseType() {  }
 }
 public class DeleteAccessKeyType extends EuareMessage {
@@ -445,11 +442,11 @@ public class UploadSigningCertificateType extends EuareMessage {
   public UploadSigningCertificateType() {  }
 }
 public class UpdateLoginProfileResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UpdateLoginProfileResponseType() {  }
 }
 public class ListGroupsResultType extends EucalyptusData {
-  GroupListTypeType groups;
+  GroupListTypeType groups = new GroupListTypeType( );
   Boolean isTruncated;
   String marker;
   public ListGroupsResultType() {  }
@@ -479,12 +476,12 @@ public class SigningCertificateType extends EuareMessage {
   public SigningCertificateType() {  }
 }
 public class ListMFADevicesResponseType extends EuareMessage {
-  ListMFADevicesResultType listMFADevicesResult;
-  ResponseMetadataType responseMetadata;
+  ListMFADevicesResultType listMFADevicesResult = new ListMFADevicesResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListMFADevicesResponseType() {  }
 }
 public class ListGroupPoliciesResultType extends EucalyptusData {
-  PolicyNameListTypeType policyNames;
+  PolicyNameListTypeType policyNames = new PolicyNameListTypeType( );
   Boolean isTruncated;
   String marker;
   public ListGroupPoliciesResultType() {  }
@@ -496,7 +493,7 @@ public class ListUsersResultType extends EucalyptusData {
   public ListUsersResultType() {  }
 }
 public class DeleteSigningCertificateResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteSigningCertificateResponseType() {  }
 }
 public class ListAccessKeysType extends EuareMessage {
@@ -515,20 +512,20 @@ public class CreateLoginProfileType extends EuareMessage {
   public CreateLoginProfileType() {  }
 }
 public class RemoveUserFromGroupResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public RemoveUserFromGroupResponseType() {  }
 }
 public class GetServerCertificateResultType extends EucalyptusData {
-  ServerCertificateType serverCertificate;
+  ServerCertificateType serverCertificate = new ServerCertificateType( );
   public GetServerCertificateResultType() {  }
 }
 public class GetServerCertificateResponseType extends EuareMessage {
-  GetServerCertificateResultType getServerCertificateResult;
-  ResponseMetadataType responseMetadata;
+  GetServerCertificateResultType getServerCertificateResult = new GetServerCertificateResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public GetServerCertificateResponseType() {  }
 }
 public class ListUserPoliciesResultType extends EucalyptusData {
-  PolicyNameListTypeType policyNames;
+  PolicyNameListTypeType policyNames = new PolicyNameListTypeType( );
   Boolean isTruncated;
   String marker;
   public ListUserPoliciesResultType() {  }
@@ -538,7 +535,7 @@ public class GroupListTypeType extends EucalyptusData {
   ArrayList<GroupType> memberList = new ArrayList<GroupType>();
 }
 public class CreateGroupResultType extends EucalyptusData {
-  GroupType group;
+  GroupType group = new GroupType( );
   public CreateGroupResultType() {  }
 }
 public class GetServerCertificateType extends EuareMessage {
@@ -546,11 +543,11 @@ public class GetServerCertificateType extends EuareMessage {
   public GetServerCertificateType() {  }
 }
 public class UpdateSigningCertificateResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UpdateSigningCertificateResponseType() {  }
 }
 public class GetLoginProfileResultType extends EucalyptusData {
-  LoginProfileType loginProfile;
+  LoginProfileType loginProfile = new LoginProfileType( );
   public GetLoginProfileResultType() {  }
 }
 public class PolicyNameListTypeType extends EucalyptusData {
@@ -587,12 +584,12 @@ public class ErrorResponseType extends EucalyptusData {
   ArrayList<ErrorType> errorList = new ArrayList<ErrorType>();
 }
 public class GetGroupResponseType extends EuareMessage {
-  GetGroupResultType getGroupResult;
-  ResponseMetadataType responseMetadata;
+  GetGroupResultType getGroupResult = new GetGroupResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public GetGroupResponseType() {  }
 }
 public class ListSigningCertificatesResultType extends EucalyptusData {
-  CertificateListTypeType certificates;
+  CertificateListTypeType certificates = new CertificateListTypeType( );
   Boolean isTruncated;
   String marker;
   public ListSigningCertificatesResultType() {  }
@@ -608,7 +605,7 @@ public class CreateUserType extends EuareMessage {
   public CreateUserType() {  }
 }
 public class DeleteUserPolicyResponseType extends EuareMessage {
-  ResponseMetadataType responseMetadata;
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteUserPolicyResponseType() {  }
 }
 public class DeleteGroupType extends EuareMessage {
@@ -622,16 +619,16 @@ public class UpdateSigningCertificateType extends EuareMessage {
   public UpdateSigningCertificateType() {  }
 }
 public class CreateAccessKeyResultType extends EucalyptusData {
-  AccessKeyType accessKey;
+  AccessKeyType accessKey = new AccessKeyType( );
   public CreateAccessKeyResultType() {  }
 }
 public class ListGroupsForUserResponseType extends EuareMessage {
-  ListGroupsForUserResultType listGroupsForUserResult;
-  ResponseMetadataType responseMetadata;
+  ListGroupsForUserResultType listGroupsForUserResult = new ListGroupsForUserResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListGroupsForUserResponseType() {  }
 }
 public class CreateLoginProfileResultType extends EucalyptusData {
-  LoginProfileType loginProfile;
+  LoginProfileType loginProfile = new LoginProfileType( );
   public CreateLoginProfileResultType() {  }
 }
 public class ListUsersType extends EuareMessage {

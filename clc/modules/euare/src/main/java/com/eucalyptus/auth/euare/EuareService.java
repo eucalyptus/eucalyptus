@@ -165,10 +165,6 @@ public class EuareService {
   public ListUsersResponseType listUsers(ListUsersType request) {
     LOG.debug( "YE:" + "processing ListUsers" );
     ListUsersResponseType response = request.getReply( );
-    UserListTypeType userList = new UserListTypeType( );
-    ListUsersResultType result = new ListUsersResultType( );
-    result.setUsers( userList );
-    response.setListUsersResult( result );
     ArrayList<UserType> users = response.getListUsersResult( ).getUsers( ).getMemberList( );
     UserType user = new UserType( );
     user.setArn( "arn:aws:iam::123456789012:user/division_abc/subdivision_xyz/engineering/Andrew" );
