@@ -177,6 +177,7 @@ public class EuareService {
     user.setUserName( "Andrew" );
     users.add( user );
     response.getListUsersResult( ).setIsTruncated( false );
+    response.getResponseMetadata( ).setRequestId( "12345" );
     return response;
   }
 
