@@ -105,7 +105,7 @@ public class ConfigurationMessage extends BaseMessage {
   }
 }
 public class ServiceTransitionType extends EmpyreanMessage  {
-  ArrayList<ServiceId> serviceId = new ArrayList<ServiceId>();
+  ArrayList<ServiceId> serviceIds = new ArrayList<ServiceId>();
 }
 public class StartServiceType extends ServiceTransitionType {}
 public class StartServiceResponseType extends ServiceTransitionType {}
@@ -128,11 +128,11 @@ public class ServiceStatusType extends EucalyptusData {
   Integer localEpoch;
   ArrayList<String> details = new ArrayList<String>( );
 }
-public class DescribeServicesType extends EucalyptusMessage {
-  List<String> uris;
+public class DescribeServicesType extends EmpyreanMessage {
+  ArrayList<String> uris = new ArrayList<String>( );
 }
-public class DescribeServicesResponseType extends EucalyptusMessage {
-  List<ServiceStatusType> services;
+public class DescribeServicesResponseType extends EmpyreanMessage {
+  ArrayList<ServiceStatusType> serviceStatus = new ArrayList<ServiceStatusType>( );
 }
 public class RegisterComponentType extends ConfigurationMessage {
   String partition;

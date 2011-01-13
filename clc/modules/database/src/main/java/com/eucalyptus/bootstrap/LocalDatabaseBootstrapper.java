@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import org.hsqldb.Server;
 import org.hsqldb.persist.HsqlProperties;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -210,7 +211,7 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
 
   @Override
   public void fireEvent( Event event ) {
-    if( event instanceof ClockTick && Component.eucalyptus.isLocal( ) ) {
+    if( event instanceof ClockTick && Components.lookup( "eucalyptus" ).isLocal( ) ) {
       try {
         LOG.trace( "-> Ping database." );
         this.isRunning( );

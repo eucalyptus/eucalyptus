@@ -89,7 +89,7 @@ public enum Component {
   private static Logger LOG = Logger.getLogger( Component.class );
 
   /**
-   * @note is a sub-service of {@link Component.eucalyptus}
+   * @note is a sub-service of {@link ComponentService.eucalyptus}
    */
   private final Boolean cloudLocal;
   /**
@@ -107,24 +107,12 @@ public enum Component {
     this.cloudLocal = cloudLocal;
   }
   
-  public Boolean isEnabled( ) {
-    try {
-      return Components.lookup( this ).isAvailableLocally( );
-    } catch ( NoSuchElementException ex ) {
-      return false;
-    }
-  }
-  
   public Boolean isLocal( ) {
     try {
       return Components.lookup( this ).isLocal( );
     } catch ( NoSuchElementException ex ) {
       return false;
     }
-  }
-  
-  public String getLocalAddress( ) {
-    return this.getLocalUri( ).toASCIIString( );
   }
   
   public URI getUri( ) {
@@ -147,7 +135,7 @@ public enum Component {
   }
 
   public URI getLocalUri( ) {
-    return Components.lookup( this ).getConfiguration( ).getLocalUri( );
+    return Components.lookup( this ).getIdentity( ).getLocalEndpointUri( );
   }
   
   public Boolean isCloudLocal( ) {
@@ -166,12 +154,5 @@ public enum Component {
     return Arrays.asList( Component.values( ) );
   }
 
-  public String getRegistryKey( String hostName ) {
-    if( NetworkUtil.testLocal( hostName ) ) {
-      return this.name( ) + "@localhost";
-    } else {
-      return this.name( ) + "@" + hostName;
-    }
-  }
   
 }

@@ -63,34 +63,23 @@
 
 package com.eucalyptus.component;
 
-import java.lang.reflect.Modifier;
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.id.Any;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
-public class ComponentDiscovery extends ServiceJarDiscovery {
-  private static Logger LOG = Logger.getLogger( ComponentDiscovery.class );
+public class ComponentIds {
   
-  @Override
-  public boolean processClass( Class candidate ) throws Throwable {
-    if ( ComponentId.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
-         && !Modifier.isInterface( candidate.getModifiers( ) ) && !Any.class.equals( candidate ) ) {
-      try {
-        ComponentId id = ( ComponentId ) candidate.newInstance( );
-        ComponentIds.register( id );
-        Components.create( id );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-      }
-      return true;
+  public static ComponentId lookup( String name ) {
+    Map<String,ComponentId> map = Components.lookup( ComponentId.class );
+    if( !map.containsKey( name ) ) {
+      throw new NoSuchElementException( "No ComponentId with name: " + name );
     } else {
-      return false;
+      return map.get( name );
     }
   }
-  
-  @Override
-  public Double getPriority( ) {
-    return 0.0d;
+
+  public static void register( ComponentId componentId ) {
+    Map<String,ComponentId> map = Components.lookup( ComponentId.class );
+    map.put( componentId.getName( ), componentId );
   }
-  
+
 }

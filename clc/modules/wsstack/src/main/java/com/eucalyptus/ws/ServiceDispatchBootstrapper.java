@@ -66,12 +66,12 @@ package com.eucalyptus.ws;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -91,7 +91,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
      * TODO: ultimately remove this: it is legacy and enforces a one-to-one
      * relationship between component impls
      **/
-    for ( com.eucalyptus.bootstrap.Component c : com.eucalyptus.bootstrap.Component.values( ) ) {
+    for ( ComponentId c : Components.listIds( ) ) {
       if ( c.hasDispatcher( ) && c.isAlwaysLocal( ) ) {
         try {
           Component comp = Components.lookup( c );
@@ -112,7 +112,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     for ( Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
-        if ( euca.isLocal( ) && euca.getPeer( ).hasDispatcher( ) ) {
+        if ( euca.isLocal( ) && euca.getIdentity( ).hasDispatcher( ) ) {
           try {
             comp.loadService( s );
           } catch ( ServiceRegistrationException ex ) {
@@ -138,7 +138,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     for ( Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
-        if ( euca.isLocal( ) && euca.getPeer( ).hasDispatcher( ) ) {
+        if ( euca.isLocal( ) && euca.getIdentity( ).hasDispatcher( ) ) {
           try {
             comp.startService( s );
           } catch ( ServiceRegistrationException ex ) {

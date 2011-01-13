@@ -175,28 +175,28 @@ public class BaseMessage {
   /**
    * @return the epoch
    */
-  public Integer getEpoch( ) {
+  public Integer getBaseEpoch( ) {
     return this.epoch;
   }
 
   /**
    * @param epoch the epoch to set
    */
-  public void setEpoch( Integer epoch ) {
+  public void setBaseEpoch( Integer epoch ) {
     this.epoch = epoch;
   }
 
   /**
    * @return the services
    */
-  public ArrayList<ServiceInfoType> getServices( ) {
+  public ArrayList<ServiceInfoType> getBaseServices( ) {
     return this.services;
   }
 
   /**
    * @param services the services to set
    */
-  public void setServices( ArrayList<ServiceInfoType> services ) {
+  public void setBaseServices( ArrayList<ServiceInfoType> services ) {
     this.services = services;
   }
 }

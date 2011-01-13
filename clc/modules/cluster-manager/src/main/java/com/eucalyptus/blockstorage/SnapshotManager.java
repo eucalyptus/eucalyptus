@@ -68,6 +68,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
@@ -126,7 +127,7 @@ public class SnapshotManager {
       //temporary workaround to update the volume state.
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
-        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) )
+        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) )
                                                                        .send( descVols );
         if ( !volState.getVolumeSet( ).isEmpty( ) ) {
           vol.setMappedState( volState.getVolumeSet( ).get( 0 ).getStatus( ) );
