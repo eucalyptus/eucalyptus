@@ -3,16 +3,12 @@ package com.eucalyptus.ws.client;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
-import org.mule.module.client.MuleClient;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Dispatcher;
-import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
@@ -35,7 +31,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
   public static List<Dispatcher> lookupMany( Component c ) {
     List<Dispatcher> dispatcherList = Lists.newArrayList( );
     for( String key : proxies.keySet( ) ) {
-      if( key.startsWith( c.name() )) {
+      if( key.startsWith( c.getName() )) {
         dispatcherList.add( proxies.get( key ) );
       }
     }

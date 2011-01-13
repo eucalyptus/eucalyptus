@@ -93,7 +93,7 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
     }
     for ( Component c : Component.values( ) ) {
       LOG.info( "Initializing system credentials for " + c.name( ) );
-      SystemCredentialProvider.init( c );
+      SystemCredentialProvider.init( c.name( ) );
     }
     return true;
   }

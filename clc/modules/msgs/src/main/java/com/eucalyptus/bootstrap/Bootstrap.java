@@ -73,6 +73,8 @@ import java.util.List;
 import java.util.Properties;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -102,18 +104,18 @@ import com.google.common.collect.Lists;
  * executed by specifying the {@link RunDuring} annotation.
  * 
  * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the
- * {@link Bootstrap.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped after
- * {@link Bootstrap.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers would no
+ * {@link Empyrean.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped after
+ * {@link Empyrean.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers would no
  * longer have the indicated privileges.
  * 
  * After a call to {@link #transition()} the current stage can be obtained from
  * {@link #getCurrentStage()}.
  * 
- * Once {@link Bootstrap.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
- * {@link #getCurrentStage()} is reset to be {@link Bootstrap.Stage.SystemInit} and
+ * Once {@link Empyrean.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
+ * {@link #getCurrentStage()} is reset to be {@link Empyrean.Stage.SystemInit} and
  * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
- * the state forever remains {@link Bootstrap.Stage.Final}.
- * return {@link Bootstrap.Stage.Final}.
+ * the state forever remains {@link Empyrean.Stage.Final}.
+ * return {@link Empyrean.Stage.Final}.
  * 
  * @see Bootstrap.Stage
  * @see PrivilegedConfiguration#start()
@@ -136,15 +138,15 @@ public class Bootstrap {
    * associated bootstrappers accordingly.
    * 
    * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the
-   * {@link Bootstrap.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped after
-   * {@link Bootstrap.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers would no
+   * {@link Empyrean.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped after
+   * {@link Empyrean.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers would no
    * longer have the indicated privileges.
    * 
-   * Once {@link Bootstrap.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
-   * {@link #getCurrentStage()} is reset to be {@link Bootstrap.Stage.SystemInit} and
+   * Once {@link Empyrean.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
+   * {@link #getCurrentStage()} is reset to be {@link Empyrean.Stage.SystemInit} and
    * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
-   * the state forever remains {@link Bootstrap.Stage.Final}.
-   * return {@link Bootstrap.Stage.Final}.
+   * the state forever remains {@link Empyrean.Stage.Final}.
+   * return {@link Empyrean.Stage.Final}.
    * 
    * @see PrivilegedConfiguration#start()
    * @see SystemBootstrapper#init()
@@ -327,15 +329,6 @@ public class Bootstrap {
    */
   @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
-    for( com.eucalyptus.bootstrap.Component comp : com.eucalyptus.bootstrap.Component.values( ) ) {
-      if( !Components.contains( comp ) && !comp.any.equals( comp ) ) {
-        try {
-          Components.create( comp.name( ), null );
-        } catch ( ServiceRegistrationException ex ) {
-          LOG.error( ex , ex );
-        }
-      }
-    }
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
       com.eucalyptus.bootstrap.Component comp;
       String bc = bootstrap.getClass( ).getCanonicalName( );
@@ -344,35 +337,23 @@ public class Bootstrap {
       if ( Components.delegate.any.equals( comp ) ) {
         for( Component c : Components.list( ) ) {
           if ( !bootstrap.checkLocal( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
-                              "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", bootstrap.getDependsLocal( ).toString( ) ).info( );
           } else if ( !bootstrap.checkRemote( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
-                              "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", bootstrap.getDependsRemote( ).toString( ) ).info( );
           } else {
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
             c.getBootstrapper( ).addBootstrapper( bootstrap );
           }
         }
       } else if ( Components.delegate.bootstrap.equals( comp ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + comp.name( ) ).info( );
         if ( !bootstrap.checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
-                            "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", bootstrap.getDependsLocal( ).toString( ) ).info( );
         } else if ( !bootstrap.checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
-                            "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", bootstrap.getDependsRemote( ).toString( ) ).info( );
         } else {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + comp.name( ) ).info( );
           stage.addBootstrapper( bootstrap );
         }
-//      } else if ( !comp.isCloudLocal( ) && !comp.isEnabled( ) && Components.contains( comp ) ) { //report skipping a bootstrapper for an enabled component
-//        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "Provides", comp.name( ),
-//                          "Component." + comp.name( ) + ".isEnabled", comp.isEnabled( ).toString( ) ).info( );
-//      } else if ( !bootstrap.checkLocal( ) ) {
-//        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", comp.name( ),
-//                          "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
-//      } else if ( !bootstrap.checkRemote( ) ) {
-//        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", comp.name( ),
-//                          "Component." + comp.name( ) + ".isLocal", comp.isLocal( ).toString( ) ).info( );
       } else {
         Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
       } 
@@ -386,11 +367,11 @@ public class Bootstrap {
    * After a call to {@link #transition()} the current stage can be obtained from
    * {@link #getCurrentStage()}.
    * 
-   * Once {@link Bootstrap.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
-   * {@link #getCurrentStage()} is reset to be {@link Bootstrap.Stage.SystemInit} and
+   * Once {@link Empyrean.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
+   * {@link #getCurrentStage()} is reset to be {@link Empyrean.Stage.SystemInit} and
    * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
-   * the state forever remains {@link Bootstrap.Stage.Final}.
-   * return {@link Bootstrap.Stage.Final}.
+   * the state forever remains {@link Empyrean.Stage.Final}.
+   * return {@link Empyrean.Stage.Final}.
    * 
    * @return currentStage either the same as before, or the next {@link Bootstrap.Stage}.
    */
@@ -441,7 +422,7 @@ public class Bootstrap {
    * locally -- this determines what components it is possible to 'bootstrap' on the current host.
    * Subsequently, component configuration is prepared and bootstrapper dependency contraints are
    * evaluated. The bootstrappers which conform to the state of the local system are associated with
-   * their respective {@link Bootstrap.State}.
+   * their respective {@link Empyrean.State}.
    * 
    * The following steps are performed in order.
    * 
@@ -480,7 +461,6 @@ public class Bootstrap {
     Bootstrap.doDiscovery( );
 
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    Iterables.all( Stage.list( ), loadConfigs );
     for( Component c : Components.list( ) ) {
       Component.Transition.INITIALIZING.transit( c );
     }
@@ -493,10 +473,11 @@ public class Bootstrap {
      * and satisfy any forward references from bootstrappers.
      */
     LOG.info( LogUtil.header( "Building core local services." ) );
+    final Component eucalyptusComp = Components.lookup( "eucalyptus" );
     Iterables.all( Components.list( ), new Callback.Success<Component>( ) {
       @Override
       public void fire( Component comp ) {
-        if( ( comp.getPeer( ).isEnabled( ) && comp.getPeer( ).isAlwaysLocal( ) ) || ( Components.delegate.eucalyptus.isLocal( ) && comp.getPeer( ).isCloudLocal( ) ) ){
+        if( ( comp.isAvailableLocally( ) && comp.getIdentity( ).isAlwaysLocal( ) ) || ( eucalyptusComp.isLocal( ) && comp.getIdentity( ).isCloudLocal( ) ) ){
           try {
             comp.initService( );
           } catch ( ServiceRegistrationException ex ) {
@@ -511,48 +492,5 @@ public class Bootstrap {
 
     LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
   }
-  
-  private static Callback.Success<Bootstrap.Stage> loadConfigs = new Callback.Success<Bootstrap.Stage>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public void fire( Bootstrap.Stage stage ) {
-                                                                   Enumeration<URL> p1;
-                                                                   URI u = null;
-                                                                   try {
-                                                                     p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( String.format( "com.eucalyptus.%sProvider",
-                                                                                                                                                        stage.name( ).replaceAll( "Init\\Z",
-                                                                                                                                                                                  "" ) ) );
-                                                                     if ( !p1.hasMoreElements( ) ) return;
-                                                                     while ( p1.hasMoreElements( ) ) {
-                                                                       u = p1.nextElement( ).toURI( );
-                                                                       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_RESOURCES, stage.name( ),
-                                                                                         u.toString( ) ).trace( );
-                                                                       Properties props = new Properties( );
-                                                                       props.load( u.toURL( ).openStream( ) );
-                                                                       String name = props.getProperty( "name" );
-                                                                       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_CONFIGURATION, name ).trace( );
-                                                                       if ( Components.contains( name ) ) {
-                                                                         Components.deregister( Components.lookup( name ) );
-                                                                       }
-                                                                       try {
-                                                                         Components.create( name, u );
-                                                                         LOG.debug( "Loaded " + name + " from " + u );
-                                                                       } catch ( ServiceRegistrationException e ) {
-                                                                         LOG.debug( e, e );
-                                                                         throw BootstrapException.throwFatal( "Error in component bootstrap: "
-                                                                                                                  + e.getMessage( ), e );
-                                                                       }
-                                                                       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAP_INIT_COMPONENT, name ).info( );
-                                                                     }
-                                                                   } catch ( IOException e ) {
-                                                                     LOG.error( e, e );
-                                                                     throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-                                                                   } catch ( URISyntaxException e ) {
-                                                                     LOG.error( e, e );
-                                                                     throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-                                                                   }
-                                                                 }
-                                                                 
-                                                               };
   
 }

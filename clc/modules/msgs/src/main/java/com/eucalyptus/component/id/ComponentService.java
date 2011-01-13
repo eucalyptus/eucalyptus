@@ -61,36 +61,34 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.component.id;
 
-import java.lang.reflect.Modifier;
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.id.Any;
+import com.eucalyptus.component.ComponentId;
 
-public class ComponentDiscovery extends ServiceJarDiscovery {
-  private static Logger LOG = Logger.getLogger( ComponentDiscovery.class );
+
+public class ComponentService extends ComponentId {
   
+  public ComponentService( ) {
+    super( "component" );
+  }
+
   @Override
-  public boolean processClass( Class candidate ) throws Throwable {
-    if ( ComponentId.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
-         && !Modifier.isInterface( candidate.getModifiers( ) ) && !Any.class.equals( candidate ) ) {
-      try {
-        ComponentId id = ( ComponentId ) candidate.newInstance( );
-        ComponentIds.register( id );
-        Components.create( id );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-      }
-      return true;
-    } else {
-      return false;
-    }
+  public String getLocalEndpointName( ) {
+    return "vm://ComponentInternal";
   }
   
   @Override
-  public Double getPriority( ) {
-    return 0.0d;
+  public Boolean hasDispatcher( ) {
+    return false;
   }
-  
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return false;
+  }
 }

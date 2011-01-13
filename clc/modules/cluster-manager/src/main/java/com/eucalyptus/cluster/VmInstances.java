@@ -75,6 +75,7 @@ import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
@@ -239,7 +240,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
         public boolean apply( AttachedVolume arg0 ) {
           try {
             vm.removeVolumeAttachment( arg0.getVolumeId( ) );
-            Dispatcher scDispatcher = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) );
+            Dispatcher scDispatcher = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) );
             scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
             return true;
           } catch ( Throwable e ) {

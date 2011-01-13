@@ -3,7 +3,7 @@ import org.hibernate.ejb.*
 import com.eucalyptus.util.*
 import edu.ucsb.eucalyptus.cloud.ws.*;
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
 import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.system.SubDirectory;
@@ -14,7 +14,7 @@ Logger LOG = Logger.getLogger( "after_database" );
 //Base config for hibernate and proxool
 String dbDriver = 'org.hsqldb.jdbcDriver';
 String db_pass = Hmacs.generateSystemSignature( );
-String db_url = "jdbc:hsqldb:" + Component.db.uri.toASCIIString( );
+String db_url = "jdbc:hsqldb:" + Components.lookup("db").getUri( ).toASCIIString( );
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
 default_hiber_config = [
   'hibernate.archive.autodetection': 'jar, class, hbm',

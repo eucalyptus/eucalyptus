@@ -292,7 +292,7 @@ public class SystemBootstrapper {
         for( Component c : Components.list( ) ) {
           if( c.isAvailableLocally( ) ) {
             banner += prefix + c.getName( ) + SEP + c.getBuilder( ).toString( );
-            banner += prefix + c.getName( ) + SEP + c.getConfiguration( ).toString( );
+            banner += prefix + c.getName( ) + SEP + c.getIdentity( ).toString( );
             banner += prefix + c.getName( ) + SEP + c.getState( ).toString( );
             for( Service s : c.getServices( ) ) {
               if( s.isLocal( ) ) {
