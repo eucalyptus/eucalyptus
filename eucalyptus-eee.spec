@@ -35,6 +35,8 @@
 %global euca_java    java-devel >= 1:1.6.0
 %global euca_iscsi_client iscsi-initiator-utils
 %global euca_iscsi_server scsi-target-utils
+%global euca_fuse fuse-libs
+%global euca_which which
 %endif
 
 Summary:       Elastic Utility Computing Architecture
@@ -56,6 +58,8 @@ BuildRequires: xen-tools
 %endif
 # The bytecode encryption we use for EEE doesn't work with OpenJDK
 BuildRequires: jdk
+# The VMware code requires FUSE libs to link correstly
+BuildRequires: %{euca_fuse}
 BuildRequires: %{euca_iscsi_client}
 BuildRequires: %{euca_libcurl}
 Requires:      %{euca_build_req}
