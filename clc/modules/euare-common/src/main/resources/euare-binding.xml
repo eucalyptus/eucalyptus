@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<binding>
+<binding force-classes="true" add-constructors="true" xmlns:tns="http://iam.amazonaws.com/doc/2010-05-08/" name="iam_amazonaws_com_doc_2010_05_08">
   <namespace uri="http://iam.amazonaws.com/doc/2010-05-08/" default="elements"/>
   <mapping class="com.eucalyptus.auth.euare.EuareMessage" abstract="true">
   </mapping>
