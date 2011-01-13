@@ -127,9 +127,8 @@ AC_PATH_PROG(RM, rm)
 
 # let's search for WSDL2C.sh
 AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
-AC_CHECK_FILE($WSDL2C,[HAVE_WSDL2C=yes])
 # check if we found WSDL2C.sh
-if test -z "$HAVE_WSDL2C" ; then
+if test -z "$WSDL2C" ; then
     AC_MSG_ERROR([Cannot find WSDL2C.sh!])
 fi
 

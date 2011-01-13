@@ -4457,29 +4457,8 @@ $as_echo "no" >&6; }
 fi
 
 
-as_ac_File=`$as_echo "ac_cv_file_$WSDL2C" | $as_tr_sh`
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $WSDL2C" >&5
-$as_echo_n "checking for $WSDL2C... " >&6; }
-if eval "test \"\${$as_ac_File+set}\"" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "$WSDL2C"; then
-  eval "$as_ac_File=yes"
-else
-  eval "$as_ac_File=no"
-fi
-fi
-eval ac_res=\$$as_ac_File
-	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
-  HAVE_WSDL2C=yes
-fi
-
 # check if we found WSDL2C.sh
-if test -z "$HAVE_WSDL2C" ; then
+if test -z "$WSDL2C" ; then
     as_fn_error $? "Cannot find WSDL2C.sh!" "$LINENO" 5
 fi
 
