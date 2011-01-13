@@ -73,6 +73,7 @@ import java.util.Map;
 
 import org.apache.axiom.om.OMElement;
 
+import com.eucalyptus.auth.euare.EuareMessage;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
@@ -84,10 +85,9 @@ import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import groovy.lang.GroovyObject;
 
-public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
+public class EuareQueryBinding extends EuareRestfulMarshallingHandler {
 
   @Override
   public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws BindingException {
@@ -103,7 +103,7 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
     Map<String, String> fieldMap = null;
     Class targetType = null;
     try {
-      targetType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs.".concat( operationName ).concat( "Type" ) );
+      targetType = ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.euare.".concat( operationName ).concat( "Type" ) );
       fieldMap = this.buildFieldMap( targetType );
       eucaMsg = ( BaseMessage ) targetType.newInstance( );
     } catch ( Exception e ) {
@@ -244,7 +244,7 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
 
   private Map<String, String> buildFieldMap( Class targetType ) {
     Map<String, String> fieldMap = new HashMap<String, String>( );
-    while ( !BaseMessage.class.equals( targetType ) && !EucalyptusMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType ) ) {
+    while ( !BaseMessage.class.equals( targetType ) && !EuareMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType ) ) {
       Field[] fields = targetType.getDeclaredFields( );
       for ( Field f : fields ) {
         if ( Modifier.isStatic( f.getModifiers( ) ) ) continue;

@@ -71,10 +71,13 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.handlers.EuareQueryBinding;
+import com.eucalyptus.ws.handlers.EucalyptusQueryBinding;
 import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.QueryBindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
@@ -86,7 +89,17 @@ public class EuareQueryPipeline extends FilteredPipeline {
   @Override
   protected void addStages( List<UnrollableStage> stages ) {
     stages.add( new HmacUserAuthenticationStage( ) );
-    stages.add( new QueryBindingStage( ) );
+    stages.add( new UnrollableStage( ){
+
+      @Override
+      public void unrollStage( ChannelPipeline pipeline ) {
+        pipeline.addLast( "restful-binding", new EuareQueryBinding( ) );
+      }
+
+      @Override
+      public String getStageName( ) {
+        return "euare-query-binding";
+      } } );
   }
 
   @Override

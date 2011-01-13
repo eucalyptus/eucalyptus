@@ -85,8 +85,8 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
 @ChannelPipelineCoverage( "one" )
-public abstract class RestfulMarshallingHandler extends MessageStackHandler {
-  private static Logger LOG = Logger.getLogger( RestfulMarshallingHandler.class );
+public abstract class EuareRestfulMarshallingHandler extends MessageStackHandler {
+  private static Logger LOG = Logger.getLogger( EuareRestfulMarshallingHandler.class );
   protected String      namespace;
   
   @Override
@@ -95,7 +95,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       String bindingVersion = httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
       if ( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
-        this.namespace = "http://ec2.amazonaws.com/doc/" + bindingVersion + "/";
+        this.namespace = "http://iam.amazonaws.com/doc/" + bindingVersion + "/";
       } else {
         this.namespace = "http://msgs.eucalyptus.com";
       }
@@ -136,7 +136,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           } catch ( Throwable e ) {
             LOG.debug( e );
             LOG.error( e, e );
-            binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://ec2.amazonaws.com/doc/2009-04-04/" ) );
+            binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://iam.amazonaws.com/doc/2010-05-08/" ) );
             OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
             omMsg.serialize( byteOut );
           }
