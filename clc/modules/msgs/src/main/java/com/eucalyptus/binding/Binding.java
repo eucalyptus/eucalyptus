@@ -158,7 +158,12 @@ public class Binding {
     final OMFactory factory = HoldMe.getOMFactory( );
     final IMarshallable mrshable = ( IMarshallable ) param;
     final int index = mrshable.JiBX_getIndex( );
-    if( this.bindingFactory == null || this.bindingFactory.getElementNamespaces( ) == null ) {
+    if( this.bindingFactory == null ) {
+      LOG.error( "Binding factory is empty" );
+      throw new BindingException( "Failed to prepare binding factory for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + altNs );
+    }
+    if ( this.bindingFactory.getElementNamespaces( ) == null ) {
+      LOG.error( "Binding factory's element namespace is empty" );
       throw new BindingException( "Failed to prepare binding factory for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + altNs );
     }
     final String origNs = this.bindingFactory.getElementNamespaces( )[index];
