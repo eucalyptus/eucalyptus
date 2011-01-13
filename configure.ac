@@ -126,21 +126,12 @@ AC_PROG_MAKE_SET
 AC_PATH_PROG(RM, rm)
 
 # let's search for WSDL2C.sh
-# we cannot use AC_PROG_PATH because WSDL2C.sh is not executable
-#AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
-WSDL2C=$AXIS2C_HOME/bin/tools/wsdl2c/WSDL2C.sh
-ALT_WSDL2C=$AXIS2C_HOME/WSDL2C.sh
+AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
 AC_CHECK_FILE($WSDL2C,[HAVE_WSDL2C=yes])
-AC_CHECK_FILE($ALT_WSDL2C,[HAVE_ALT_WSDL2C=yes])
-# check if we found either of the possible WSDL2Cs
-if test -z "$HAVE_WSDL2C$HAVE_ALT_WSDL2C" ; then
+# check if we found WSDL2C.sh
+if test -z "$HAVE_WSDL2C" ; then
     AC_MSG_ERROR([Cannot find WSDL2C.sh!])
 fi
-# made it here: we found one! -- set WSDL2C if the default location is wrong
-if test -n "$HAVE_ALT_WSDL2C" ; then
-    WSDL2C=$ALT_WSDL2C
-fi
-
 
 # we need JAVA_HOME
 if test -z "$JAVA_HOME" ; then

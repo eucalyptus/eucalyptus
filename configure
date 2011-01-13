@@ -607,12 +607,12 @@ AXIS2_HOME
 AXIS2C_SERVICES
 AXIS2C_HOME
 JAVA_HOME
-WSDL2C
 TOP
 EUCA_VERSION
 LIBOBJS
 JAVA
 ANT
+WSDL2C
 RM
 SET_MAKE
 INSTALL_DATA
@@ -4416,10 +4416,47 @@ fi
 
 
 # let's search for WSDL2C.sh
-# we cannot use AC_PROG_PATH because WSDL2C.sh is not executable
-#AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
-WSDL2C=$AXIS2C_HOME/bin/tools/wsdl2c/WSDL2C.sh
-ALT_WSDL2C=$AXIS2C_HOME/WSDL2C.sh
+# Extract the first word of "WSDL2C.sh", so it can be a program name with args.
+set dummy WSDL2C.sh; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_path_WSDL2C+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $WSDL2C in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_WSDL2C="$WSDL2C" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$AXIS2C_HOME/bin/tools/wsdl2c:$PATH"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_WSDL2C="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+WSDL2C=$ac_cv_path_WSDL2C
+if test -n "$WSDL2C"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $WSDL2C" >&5
+$as_echo "$WSDL2C" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
 as_ac_File=`$as_echo "ac_cv_file_$WSDL2C" | $as_tr_sh`
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $WSDL2C" >&5
 $as_echo_n "checking for $WSDL2C... " >&6; }
@@ -4441,36 +4478,10 @@ if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
   HAVE_WSDL2C=yes
 fi
 
-as_ac_File=`$as_echo "ac_cv_file_$ALT_WSDL2C" | $as_tr_sh`
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ALT_WSDL2C" >&5
-$as_echo_n "checking for $ALT_WSDL2C... " >&6; }
-if eval "test \"\${$as_ac_File+set}\"" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "$ALT_WSDL2C"; then
-  eval "$as_ac_File=yes"
-else
-  eval "$as_ac_File=no"
-fi
-fi
-eval ac_res=\$$as_ac_File
-	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
-  HAVE_ALT_WSDL2C=yes
-fi
-
-# check if we found either of the possible WSDL2Cs
-if test -z "$HAVE_WSDL2C$HAVE_ALT_WSDL2C" ; then
+# check if we found WSDL2C.sh
+if test -z "$HAVE_WSDL2C" ; then
     as_fn_error $? "Cannot find WSDL2C.sh!" "$LINENO" 5
 fi
-# made it here: we found one! -- set WSDL2C if the default location is wrong
-if test -n "$HAVE_ALT_WSDL2C" ; then
-    WSDL2C=$ALT_WSDL2C
-fi
-
 
 # we need JAVA_HOME
 if test -z "$JAVA_HOME" ; then
