@@ -72,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.axiom.om.OMElement;
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
@@ -88,6 +89,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import groovy.lang.GroovyObject;
 
 public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
+  
+  private static final Logger LOG = Logger.getLogger( EucalyptusQueryBinding.class );
 
   @Override
   public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws BindingException {
@@ -107,7 +110,8 @@ public class EucalyptusQueryBinding extends RestfulMarshallingHandler {
       fieldMap = this.buildFieldMap( targetType );
       eucaMsg = ( BaseMessage ) targetType.newInstance( );
     } catch ( Exception e ) {
-      throw new BindingException( "Failed to construct message of type " + operationName );
+      LOG.error( e, e );
+      throw new BindingException( "Failed to construct message of type " + operationName, e );
     }
 
     List<String> failedMappings = populateObject( ( GroovyObject ) eucaMsg, fieldMap, params );
