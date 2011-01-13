@@ -403,8 +403,8 @@ public class UpdateServerCertificateResponseType extends EuareMessage {
   public UpdateServerCertificateResponseType() {  }
 }
 public class ListUsersResponseType extends EuareMessage {
-  ListUsersResultType listUsersResult;
-  ResponseMetadataType responseMetadata;
+  ListUsersResultType listUsersResult = new ListUsersResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListUsersResponseType() {  }
 }
 public class ServerCertificateMetadataListTypeType extends EucalyptusData {
@@ -490,7 +490,7 @@ public class ListGroupPoliciesResultType extends EucalyptusData {
   public ListGroupPoliciesResultType() {  }
 }
 public class ListUsersResultType extends EucalyptusData {
-  UserListTypeType users;
+  UserListTypeType users = new UserListTypeType( );
   Boolean isTruncated;
   String marker;
   public ListUsersResultType() {  }
