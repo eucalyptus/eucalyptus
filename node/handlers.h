@@ -149,6 +149,7 @@ struct handlers {
 				char *userData,
 				char *launchIndex,
 				char *platform,
+				int expiryTime,
 				char **groupNames,
 				int groupNamesSize,
 				ncInstance **outInst);
@@ -189,7 +190,11 @@ struct handlers {
 				char *localDev,
 				int force,
                                 int grab_inst_sem);
-
+    int (*doCreateImage)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char *volumeId,
+				char *remoteDev);
     int (*doBundleInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
 				char *instanceId,
@@ -214,7 +219,7 @@ struct handlers {
 int doAssignAddress		(ncMetadata *meta, char *instanceId, char *publicIp);
 int doPowerDown			(ncMetadata *meta);
 int doDescribeInstances		(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-int doRunInstance		(ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst);
+int doRunInstance		(ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInst);
 int doTerminateInstance		(ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
 int doRebootInstance		(ncMetadata *meta, char *instanceId);
 int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutput);
@@ -225,6 +230,9 @@ int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *r
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
+
+int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
+
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);

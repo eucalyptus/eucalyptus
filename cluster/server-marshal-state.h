@@ -52,50 +52,20 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTSâ€™ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS¡¯ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
-#ifndef SERVER_MARSHAL_H
-#define SERVER_MARSHAL_H
+#ifndef SERVER_MARSHAL_STATE_H
+#define SERVER_MARSHAL_STATE_H
 
 #include "axis2_skel_EucalyptusCC.h"
-#include <server-marshal-state.h>
-#include <handlers.h>
-
-adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances, const axutil_env_t *env);
-adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_t *describeInstances, const axutil_env_t *env);
-adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_t *describeResources, const axutil_env_t *env);
-adb_GetConsoleOutputResponse_t* GetConsoleOutputMarshal (adb_GetConsoleOutput_t* getConsoleOutput, const axutil_env_t *env);
-adb_RebootInstancesResponse_t* RebootInstancesMarshal (adb_RebootInstances_t* rebootInstances, const axutil_env_t *env);
-adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstances_t *terminateInstances, const axutil_env_t *env);
-//adb_RegisterImageResponse_t *RegisterImageMarshal(adb_RegisterImage_t *registerImage, const axutil_env_t *env);
-
-adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork, const axutil_env_t *env);
-adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, const axutil_env_t *env);
-
-adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t *assignAddress, const axutil_env_t *env);
-adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t *unassignAddress, const axutil_env_t *env);
-adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t *describePublicAddresses, const axutil_env_t *env);
-adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *describeNetworks, const axutil_env_t *env);
-adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *configureNetwork, const axutil_env_t *env);
-
-adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume, const axutil_env_t *env);
-adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume, const axutil_env_t *env);
-adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundleInstance, const axutil_env_t *env);
-adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *cancelBundleInstance, const axutil_env_t *env);
-adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundleTasks_t *describeBundleTasks, const axutil_env_t *env);
 
 adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *describeServices, const axutil_env_t *env);
 adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t *startService, const axutil_env_t *env);
 adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t *stopService, const axutil_env_t *env);
 adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t *enableService, const axutil_env_t *env);
 adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t *disableService, const axutil_env_t *env);
-
-adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t *createImage, const axutil_env_t *env);
-
-void print_adb_ccInstanceType(adb_ccInstanceType_t *in);
-int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil_env_t *env);
 
 #endif

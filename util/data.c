@@ -123,7 +123,7 @@ ncInstance * allocate_instance (char *uuid,
                                 virtualMachine *params, 
                                 char *stateName, int stateCode, char *userId, 
                                 netConfig *ncnet, char *keyName,
-                                char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize)
+                                char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize)
 {
     ncInstance * inst;
 
@@ -184,6 +184,7 @@ ncInstance * allocate_instance (char *uuid,
     }
     inst->stateCode = stateCode;
     strncpy (inst->bundleTaskStateName, bundling_progress_names [NOT_BUNDLING], CHAR_BUFFER_SIZE);
+    inst->expiryTime = expiryTime;
     return inst;
 }
 

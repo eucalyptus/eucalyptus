@@ -139,6 +139,27 @@
 	  </xs:complexContent>
     </xs:complexType>
 
+    <xs:complexType name="ncCreateImageType">
+      <xs:complexContent>
+        <xs:extension base="tns:eucalyptusMessage">
+          <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+            <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+            <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+          </xs:sequence>
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncCreateImageResponseType">
+      <xs:complexContent>
+        <xs:extension base="tns:eucalyptusMessage">
+          <xs:sequence>
+          </xs:sequence>
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
     <xs:complexType name="ncBundleInstanceType">
 	  <xs:complexContent>
 	    <xs:extension base="tns:eucalyptusMessage">
@@ -306,6 +327,7 @@
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
+	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	  </xs:sequence>
 	</xs:extension>
@@ -340,6 +362,7 @@
 	    <xs:element minOccurs="1" name="stateName" type="xs:string"/>
 	    <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string" />
 	    <xs:element minOccurs="0" name="launchTime" type="xs:dateTime" />
+	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime" />
 	    <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	    <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
 
@@ -461,6 +484,9 @@
     <xs:element name="ncDetachVolume" nillable="true" type="tns:ncDetachVolumeType"/>
     <xs:element name="ncDetachVolumeResponse" nillable="true" type="tns:ncDetachVolumeResponseType"/>
 
+    <xs:element name="ncCreateImage" nillable="true" type="tns:ncCreateImageType"/>
+    <xs:element name="ncCreateImageResponse" nillable="true" type="tns:ncCreateImageResponseType"/>
+
     <xs:element name="ncBundleInstance" nillable="true" type="tns:ncBundleInstanceType"/>
     <xs:element name="ncBundleInstanceResponse" nillable="true" type="tns:ncBundleInstanceResponseType"/>
 
@@ -524,6 +550,11 @@
 
 <wsdl:message name="ncDetachVolumeResponse">
   <wsdl:part element="tns:ncDetachVolumeResponse" name="ncDetachVolumeResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncCreateImageResponse">
+  <wsdl:part element="tns:ncCreateImageResponse" name="ncCreateImageResponse">
   </wsdl:part>
 </wsdl:message>
 
@@ -594,6 +625,11 @@
 
 <wsdl:message name="ncDetachVolume">
   <wsdl:part element="tns:ncDetachVolume" name="ncDetachVolume">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncCreateImage">
+  <wsdl:part element="tns:ncCreateImage" name="ncCreateImage">
   </wsdl:part>
 </wsdl:message>
 
@@ -684,6 +720,13 @@
     <wsdl:input message="tns:ncDetachVolume" name="ncDetachVolume">
     </wsdl:input>
     <wsdl:output message="tns:ncDetachVolumeResponse" name="ncDetachVolumeResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncCreateImage">
+    <wsdl:input message="tns:ncCreateImage" name="ncCreateImage">
+    </wsdl:input>
+    <wsdl:output message="tns:ncCreateImageResponse" name="ncCreateImageResponse">
     </wsdl:output>
   </wsdl:operation>
 
@@ -817,6 +860,16 @@
     </wsdl:output>
   </wsdl:operation>
 
+  <wsdl:operation name="ncCreateImage">
+    <soap:operation soapAction="EucalyptusNC#ncCreateImage" style="document"/>
+    <wsdl:input name="ncCreateImage">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncCreateImageResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
   <wsdl:operation name="ncBundleInstance">
     <soap:operation soapAction="EucalyptusNC#ncBundleInstance" style="document"/>
     <wsdl:input name="ncBundleInstance">
@@ -846,7 +899,7 @@
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>
-  
+
   <wsdl:operation name="ncGetConsoleOutput">
     <soap:operation soapAction="EucalyptusNC#ncGetConsoleOutput" style="document"/>
     <wsdl:input name="ncGetConsoleOutput">
