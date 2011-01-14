@@ -64,6 +64,9 @@ AC_ARG_WITH(axis2,
 AC_ARG_WITH(libvirt,
         [  --with-libvirt=<dir>                 where libvirt is installed],
         [LIBVIRT_HOME="${withval}"])
+AC_ARG_WITH(wsdl2c-sh,
+        [  --with-wsdl2c-sh                     where WSDL2C.sh is installed],
+        [WSDL2C="${withval}"])
 AC_ARG_WITH(vddk,
         [  --with-vddk=<dir>                    where VMware's VDDK is installed],
         [VDDK_HOME="${withval}"])

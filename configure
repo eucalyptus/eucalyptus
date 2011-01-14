@@ -678,6 +678,7 @@ with_axis2c
 with_axis2c_services
 with_axis2
 with_libvirt
+with_wsdl2c_sh
 with_vddk
 with_interface_theme
 enable_appliance_store
@@ -1315,6 +1316,7 @@ Optional Packages:
   --with-axis2c-services=<dir>         where axis2c services are installed
   --with-axis2=<dir>                   where axis2 is installed
   --with-libvirt=<dir>                 where libvirt is installed
+  --with-wsdl2c-sh                     where WSDL2C.sh is installed
   --with-vddk=<dir>                    where VMware's VDDK is installed
   --with-interface-theme=<name>        the theme to be used
 
@@ -3598,6 +3600,12 @@ fi
 # Check whether --with-libvirt was given.
 if test "${with_libvirt+set}" = set; then :
   withval=$with_libvirt; LIBVIRT_HOME="${withval}"
+fi
+
+
+# Check whether --with-wsdl2c-sh was given.
+if test "${with_wsdl2c_sh+set}" = set; then :
+  withval=$with_wsdl2c_sh; WSDL2C="${withval}"
 fi
 
 

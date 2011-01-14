@@ -244,10 +244,9 @@ VMware installation.
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
-export WSDL2C=%{S:1}
 # Oracle JDK links to Java without using alternatives
 export JAVA_HOME=/usr/java/latest
-./configure --with-axis2=%{_datadir}/axis2-* --with-axis2c=%{_libdir}/axis2c --with-axis2c-services=%{_libdir}/axis2c/services --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
+./configure --with-axis2=%{_datadir}/axis2-* --with-axis2c=%{_libdir}/axis2c --with-wsdl2c-sh=${S:1} --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
 cd clc
 make deps
 cd ..
