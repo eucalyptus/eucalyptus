@@ -92,7 +92,6 @@
 	<property name="rsrc.dir" value="${basedir}/src/main/resources" />
 	<property name="target.dir" value="${project.basedir}/target" />
 	<property name="jar.file" value="${target.dir}/${ant.project.name}-${euca.version}.jar" />
-	<property name="javadir.dir" value="/usr/share/java" />
 	<property name="lib.dir" value="${project.basedir}/lib" />
 	<property name="modules.dir" value="${project.basedir}/modules" />
 	<!--================================== classpaths ==================================-->
@@ -104,9 +103,6 @@
 		<fileset dir="${lib.dir}">
 			<include name="**/*.jar" />
 			<exclude name="**/openjdk-crypto.jar" />
-		</fileset>
-		<fileset dir="${javadir.dir}">
-			<include name="*.jar" />
 		</fileset>
 	</path>
 	<!-- XXX DEBUG XXX -->
