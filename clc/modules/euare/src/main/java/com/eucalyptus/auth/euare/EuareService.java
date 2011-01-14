@@ -173,7 +173,7 @@ public class EuareService {
     users.add( user );
     response.getListUsersResult( ).setIsTruncated( false );
     response.getResponseMetadata( ).setRequestId( "12345" );
-    if ( true ) {
+    if ( false ) {
       throw new EuareException( "409", EuareException.ENTITY_ALREADY_EXISTS, "User already exists" );
     }
     return response;
