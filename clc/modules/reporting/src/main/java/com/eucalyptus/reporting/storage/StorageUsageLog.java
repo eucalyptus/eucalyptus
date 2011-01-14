@@ -10,6 +10,11 @@ import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.instance.InstanceAttributes;
 
+/**
+ * <p>StorageUsageLog
+ * 
+ * @author twerges
+ */
 public class StorageUsageLog
 {
 	private static Logger log = Logger.getLogger( StorageUsageLog.class );
@@ -30,7 +35,8 @@ public class StorageUsageLog
 
 	public Iterator<StorageUsageSnapshot> scanLog(Period period)
 	{
-		EntityWrapper<InstanceAttributes> entityWrapper = EntityWrapper.get(InstanceAttributes.class);
+		EntityWrapper<InstanceAttributes> entityWrapper =
+			EntityWrapper.get( InstanceAttributes.class );
 		Session sess = null;
 		try {
 			sess = entityWrapper.getSession();
@@ -39,7 +45,7 @@ public class StorageUsageLog
 				"from StorageUsageSnapshot as sus"
 				+ " where sus.timestampMs > ?"
 				+ " and sus.timestampMs < ?"
-				+ " order by sus.timestamp")
+				+ " order by sus.timestampMs")
 				.setLong(0, period.getBeginningMs())
 				.setLong(1, period.getEndingMs())
 				.iterate();
@@ -47,15 +53,13 @@ public class StorageUsageLog
 			return new StorageUsageSnapshotIterator(iter);
 		} catch (Exception ex) {
 			log.error(ex);
-			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}
 
 	}
 	
 	private class StorageUsageSnapshotIterator
-			implements
-				Iterator<StorageUsageSnapshot>
+			implements Iterator<StorageUsageSnapshot>
 	{
 		private final Iterator resultSetIter;
 
@@ -86,43 +90,96 @@ public class StorageUsageLog
 	}
 
 	private static String getAttributeValue(GroupByCriterion criterion,
-			StorageUsageSnapshot snapshot)
+			SnapshotKey key)
 	{
 		switch (criterion) {
 			case ACCOUNT:
-				return snapshot.getAccountId();
+				return key.getAccountId();
 			case USER:
-				return snapshot.getOwnerId();
+				return key.getOwnerId();
 			case CLUSTER:
-				return snapshot.getClusterName();
+				return key.getClusterName();
 			case AVAILABILITY_ZONE:
-				return snapshot.getAvailabilityZone();
+				return key.getAvailabilityZone();
 			default:
-				return snapshot.getOwnerId();
+				return key.getOwnerId();
 		}
 	}
 
+	private class SummaryInfo
+	{
+		private long lastTimestamp;
+		private StorageUsageSummary summary;
+		private StorageUsageData lastData;
+		
+		SummaryInfo(long lastTimestamp, StorageUsageSummary summary,
+				StorageUsageData lastData)
+		{
+			this.lastTimestamp = lastTimestamp;
+			this.summary = summary;
+			this.lastData = lastData;
+		}
+
+		long getLastTimestamp()
+		{
+			return lastTimestamp;
+		}
+
+		void setLastTimestamp(long lastTimestamp)
+		{
+			this.lastTimestamp = lastTimestamp;
+		}
+
+		StorageUsageSummary getSummary()
+		{
+			return summary;
+		}
+
+		StorageUsageData getLastData()
+		{
+			return lastData;
+		}
+
+		void setLastData(StorageUsageData lastData)
+		{
+			this.lastData = lastData;
+		}
+
+	}
 
 	public Map<String, StorageUsageSummary> scanSummarize(Period period,
 			GroupByCriterion criterion)
 	{
-		final Map<String, StorageUsageSummary> results =
-			new HashMap<String, StorageUsageSummary>();
-
+		final Map<String, SummaryInfo> infoMap =
+			new HashMap<String, SummaryInfo>();
+		
 		Iterator<StorageUsageSnapshot> iter = scanLog(period);
 		while (iter.hasNext()) {
 			StorageUsageSnapshot snapshot = iter.next();
-			String critVal = getAttributeValue(criterion, snapshot);
-			StorageUsageSummary summary = null;
-			if (results.containsKey(critVal)) {
-				summary = results.get(critVal);
+			long timestampMs = snapshot.getSnapshotKey().getTimestampMs().longValue();
+			String critVal = getAttributeValue(criterion, snapshot.getSnapshotKey());
+			SummaryInfo info = null;
+			if (infoMap.containsKey(critVal)) {
+				info = infoMap.get(critVal);
+				long durationMs = timestampMs - info.getLastTimestamp();
+				info.getSummary().addUsage(info.getLastData(), durationMs);
+				info.setLastTimestamp(timestampMs);
+				info.setLastData(snapshot.getUsageData());
 			} else {
-				summary = new StorageUsageSummary();
-				results.put(critVal, summary);
+				info = new SummaryInfo(timestampMs, new StorageUsageSummary(),
+						snapshot.getUsageData());
+				infoMap.put(critVal, info);
 			}
-			summary.sumFrom(snapshot);
 		}
-		return results;
+
+		/* Convert summary to result type
+		 */
+		final Map<String, StorageUsageSummary> resultMap =
+			new HashMap<String, StorageUsageSummary>();
+		for (String key: infoMap.keySet()) {
+			resultMap.put(key, infoMap.get(key).getSummary());
+		}
+		return resultMap;
 	}
 
 	public Map<String, Map<String, StorageUsageSummary>> scanSummarize(
@@ -135,26 +192,54 @@ public class StorageUsageLog
 		Iterator<StorageUsageSnapshot> iter = scanLog(period);
 		while (iter.hasNext()) {
 			StorageUsageSnapshot snapshot = iter.next();
-			String outerCritVal = getAttributeValue(outerCriterion, snapshot);
-			Map<String, StorageUsageSummary> innerMap = null;
+			String outerCritVal = getAttributeValue(outerCriterion,
+					snapshot.getSnapshotKey());
+			Map<String, StorageUsageData> innerMap = null;
 			if (results.containsKey(outerCritVal)) {
-				innerMap = results.get(outerCritVal);
+				//innerMap = results.get(outerCritVal);
 			} else {
-				innerMap = new HashMap<String, StorageUsageSummary>();
-				results.put(outerCritVal, innerMap);
+				innerMap = new HashMap<String, StorageUsageData>();
+				//results.put(outerCritVal, innerMap);
 			}
-			String innerCritVal = getAttributeValue(innerCriterion, snapshot);
-			StorageUsageSummary summary = null;
+			String innerCritVal = getAttributeValue(innerCriterion,
+					snapshot.getSnapshotKey());
+			StorageUsageData data = null;
 			if (innerMap.containsKey(innerCritVal)) {
-				summary = innerMap.get(innerCritVal);
+				data = innerMap.get(innerCritVal);
 			} else {
-				summary = new StorageUsageSummary();
-				innerMap.put(innerCritVal, summary);
+				data = new StorageUsageData();
+				innerMap.put(innerCritVal, data);
 			}
-			summary.sumFrom(snapshot);
+			data.sumFrom(snapshot.getUsageData());
 		}
 
 		return results;
+	}
+	
+	public void purgeLog(long earlierThanMs)
+	{
+		log.info(String.format("purge earlierThan:%d ", earlierThanMs));
+
+		EntityWrapper<StorageUsageSnapshot> entityWrapper =
+			EntityWrapper.get(StorageUsageSnapshot.class);
+		Session sess = null;
+		try {
+			
+			/* Delete older instance snapshots
+			 */
+			sess = entityWrapper.getSession();
+			sess.createSQLQuery("DELETE FROM storage_usage_snapshot "
+				+ "WHERE timestamp_ms < ?")
+				.setLong(0, new Long(earlierThanMs))
+				.executeUpdate();
+
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			log.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}
+	
 	}
 
 }
