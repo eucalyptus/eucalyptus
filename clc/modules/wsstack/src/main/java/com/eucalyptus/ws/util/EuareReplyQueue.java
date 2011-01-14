@@ -134,6 +134,8 @@ public class EuareReplyQueue {
       Object payload = ( ( MessagingException ) exception ).getUmoMessage( ).getPayload( );
       if ( payload instanceof BaseMessage ) {
         errorResp.setCorrelationId( ( ( BaseMessage ) payload ).getCorrelationId( ) );
+      } else {
+        errorResp.setCorrelationId( "1" );
       }
       ErrorType error = new ErrorType( );
       error.setType( "Receiver" );
