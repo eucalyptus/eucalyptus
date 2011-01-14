@@ -39,7 +39,7 @@ $(SERVICE_SO): generated/stubs gl-client-marshal-adb.o server-marshal.o handlers
 
 client: $(CLIENT)
 
-$(CLIENT): generated/stubs $(CLIENT).c gl-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
+$(CLIENT): generated/stubs $(CLIENT).c gl-client-marshal-adb.c handlers.o
 	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c gl-client-marshal-adb.c -DMODE=1
 
 deploy:
