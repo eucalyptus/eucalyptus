@@ -106,7 +106,7 @@
 			<exclude name="**/openjdk-crypto.jar" />
 		</fileset>
 		<fileset dir="${javadir.dir}">
-			<include name="groovy15-all.jar" />
+			<include name="*.jar" />
 		</fileset>
 	</path>
 	<!-- XXX DEBUG XXX -->
