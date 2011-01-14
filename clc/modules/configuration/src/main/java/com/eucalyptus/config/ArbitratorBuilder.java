@@ -19,7 +19,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeArbitratorsType;
 import edu.ucsb.eucalyptus.msgs.ModifyArbitratorAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterArbitratorType;
 
-@DiscoverableServiceBuilder( Bootstrap.class )
+@DiscoverableServiceBuilder( Empyrean.class )
 @Handles( { RegisterArbitratorType.class, DeregisterArbitratorType.class, DescribeArbitratorsType.class, ArbitratorConfiguration.class, ModifyArbitratorAttributeType.class } )
 public class ArbitratorBuilder extends DatabaseServiceBuilder<ArbitratorConfiguration> {
   private static Logger LOG = Logger.getLogger( ArbitratorBuilder.class );
