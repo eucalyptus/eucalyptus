@@ -130,6 +130,7 @@ public class EuareReplyQueue {
     LOG.debug( "EUARE exception: " + exMsg.getPayload( ) + ", " + exMsg.getException( ) + ", " + exMsg.getException( ).getCause( ) );
     Throwable exception = exMsg.getException( );
     if ( exception instanceof MessagingException && exception.getCause( ) instanceof EuareException ) {
+      LOG.debug( "BEFORE create ErrorResponseType " );
       EuareException euareException = ( EuareException ) exception.getCause( );
       ErrorResponseType errorResp = new ErrorResponseType( );
       Object payload = ( ( MessagingException ) exception ).getUmoMessage( ).getPayload( );
