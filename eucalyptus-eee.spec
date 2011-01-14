@@ -72,8 +72,10 @@ Requires:      sudo
 BuildRoot:     %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 Source0:       %{name}-%{version}.tar.gz
+# A version of WSDL2C.sh that respects standard classpaths
+Source1:       euca-WSDL2C.sh
 # The VMware VDDK may be non-redistributable.  We don't include it just in case.
-Source1:       vmware-vix-disklib-distrib.tgz
+Source2:       vmware-vix-disklib-distrib.tgz
 
 %description
 EUCALYPTUS is a service overlay that implements elastic computing
@@ -238,10 +240,11 @@ VMware installation.
 
 %prep
 %setup -q
-%setup -q -T -D -b 1
+%setup -q -T -D -b 2
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
+export WSDL2C=%{S:1}
 # Oracle JDK links to Java without using alternatives
 export JAVA_HOME=/usr/java/latest
 ./configure --with-axis2=%{_datadir}/axis2-* --with-axis2c=%{_libdir}/axis2c --with-axis2c-services=%{_libdir}/axis2c/services --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
