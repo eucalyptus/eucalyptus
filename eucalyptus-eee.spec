@@ -57,8 +57,6 @@ BuildRequires: swig
 %if %{is_suse}
 BuildRequires: xen-tools
 %endif
-# We need groovy >= 1.6 to build, but jpackage only has 1.5
-BuildRequires: groovy >= 1.6
 # The bytecode encryption we use for EEE doesn't work with OpenJDK
 BuildRequires: jdk
 # The VMware code requires FUSE libs to link correstly
@@ -254,13 +252,6 @@ export JAVA_HOME=/usr/java/latest
 pushd clc
 # The CLC's build XML file looks for jar files in clc/lib, so symlink the
 # system's copies of important jar files to that location.
-mkdir lib
-if [ -d %{_datadir}/groovy ]; then
-    # HACK: supply our own, somewhat strange groovy 1.6 package
-    ln -s %{_datadir}/groovy/embeddable/groovy-all*.jar lib/
-else
-    ln -s %{_javadir}/groovy*.jar lib/
-fi
 make deps
 popd
 
