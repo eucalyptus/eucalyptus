@@ -553,15 +553,14 @@ int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char
   output = axis2_stub_op_EucalyptusCC_BundleInstance(stub, env, input);
   if (!output) {
     printf("ERROR: bundleInstance returned NULL\n");
-    printf("ERROR: createImage returned NULL\n");
     return(1);
   }
 
   snrt = adb_BundleInstanceResponse_get_BundleInstanceResponse(output, env);
   printf("bundleInstance returned status %d\n", adb_bundleInstanceResponseType_get_return(snrt, env));
 
-  snrt = adb_CreateImageResponse_get_CreateImageResponse(output, env);
-  printf("createImage returned status %d\n", adb_createImageResponseType_get_return(snrt, env));
+  snrt = adb_BundleInstanceResponse_get_BundleInstanceResponse(output, env);
+  printf("bundleInstance returned status %d\n", adb_bundleInstanceResponseType_get_return(snrt, env));
 
   return(0);
 }
