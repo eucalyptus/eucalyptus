@@ -127,11 +127,13 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PATH_PROG(RM, rm)
 
-# let's search for WSDL2C.sh
-AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
+if test -z "$WSDL2C"; then
+        # let's search for WSDL2C.sh
+        AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
+fi
 # check if we found WSDL2C.sh
 if test -z "$WSDL2C" ; then
-    AC_MSG_ERROR([Cannot find WSDL2C.sh!])
+        AC_MSG_ERROR([Cannot find WSDL2C.sh!])
 fi
 
 # we need JAVA_HOME

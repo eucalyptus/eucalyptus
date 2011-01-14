@@ -4417,8 +4417,9 @@ fi
 
 
 
-# let's search for WSDL2C.sh
-# Extract the first word of "WSDL2C.sh", so it can be a program name with args.
+if test -z "$WSDL2C"; then
+        # let's search for WSDL2C.sh
+        # Extract the first word of "WSDL2C.sh", so it can be a program name with args.
 set dummy WSDL2C.sh; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
@@ -4459,9 +4460,10 @@ $as_echo "no" >&6; }
 fi
 
 
+fi
 # check if we found WSDL2C.sh
 if test -z "$WSDL2C" ; then
-    as_fn_error $? "Cannot find WSDL2C.sh!" "$LINENO" 5
+        as_fn_error $? "Cannot find WSDL2C.sh!" "$LINENO" 5
 fi
 
 # we need JAVA_HOME
