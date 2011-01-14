@@ -104,6 +104,9 @@
 			<include name="**/*.jar" />
 			<exclude name="**/openjdk-crypto.jar" />
 		</fileset>
+		<fileset dir="${localenv.CLASSPATH}" >
+		        <include name="*.jar" />
+		</fileset>
 	</path>
 	<path id="runtimeclasspath">
 		<pathelement path="${euca.conf.dir}" />
