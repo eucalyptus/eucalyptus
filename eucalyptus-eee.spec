@@ -162,8 +162,8 @@ Summary:      Elastic Utility Computing Architecture - cluster controller
 Requires:     %{name}    = %{version}-%{release}
 Requires:     %{name}-gl = %{version}-%{release}
 Requires:     bridge-utils
-Requires:     euca-axis2c >= 1.6.0
-Requires:     euca-rampartc >= 1.3.0
+##Requires:     euca-axis2c >= 1.6.0
+##Requires:     euca-rampartc >= 1.3.0
 Requires:     iptables
 Requires:     %{euca_dhcp}
 Requires:     %{euca_httpd}
@@ -184,8 +184,8 @@ Summary:      Elastic Utility Computing Architecture - node controller
 Requires:     %{name}    = %{version}-%{release}
 Requires:     %{name}-gl = %{version}-%{release}
 Requires:     euca2ools-eee
-Requires:     euca-axis2c >= 1.6.0
-Requires:     euca-rampartc >= 1.3.0
+##Requires:     euca-axis2c >= 1.6.0
+##Requires:     euca-rampartc >= 1.3.0
 Requires:     bridge-utils
 Requires:     %{euca_curl}
 Requires:     %{euca_httpd}
@@ -205,8 +205,8 @@ components that handles the instances.
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
 Requires:     %{name} = %{version}
-Requires:     euca-axis2c >= 1.6.0
-Requires:     euca-rampartc >= 1.3.0
+##Requires:     euca-axis2c >= 1.6.0
+##Requires:     euca-rampartc >= 1.3.0
 Requires:     %{euca_httpd}
 Group:        Applications/System
 
@@ -244,7 +244,7 @@ VMware installation.
 export DESTDIR=$RPM_BUILD_ROOT
 # Oracle JDK links to Java without using alternatives
 export JAVA_HOME=/usr/java/latest
-./configure --with-axis2=%{_datadir}/axis2-* --with-axis2c=%{_libdir}/axis2c --with-axis2c-services=%{_libdir}/axis2c/services --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
+./configure --with-axis2=%{_datadir}/axis2-* --with-axis2c=%{_libdir}/axis2c/lib --with-axis2c-services=%{_libdir}/axis2c/services --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
 cd clc
 make deps
 cd ..
