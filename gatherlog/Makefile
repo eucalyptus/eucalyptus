@@ -34,8 +34,8 @@ generated/stubs: $(GLWSDL)
 
 server: $(SERVICE_SO)
 
-$(SERVICE_SO): generated/stubs gl-client-marshal-adb.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so 
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) -L$(AXIS2C_HOME)/lib $(LIBS) ../util/misc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs gl-client-marshal-adb.o server-marshal.o handlers.o
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) $(LIBS) ../util/misc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO)
 
 client: $(CLIENT)
 
