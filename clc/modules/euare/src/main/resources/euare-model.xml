@@ -93,7 +93,7 @@
 			<inbound>
 				<inbound-endpoint ref="EuareReplyQueueWS" />
 			</inbound>
-			<component class="com.eucalyptus.ws.util.ReplyQueue" />
+			<component class="com.eucalyptus.ws.util.EuareReplyQueue" />
 		</service>
 
 	</model>

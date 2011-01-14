@@ -162,8 +162,7 @@ public class EuareService {
     return reply;
   }
 
-  public ListUsersResponseType listUsers(ListUsersType request) {
-    LOG.debug( "YE:" + "processing ListUsers" );
+  public ListUsersResponseType listUsers(ListUsersType request) throws EuareException {
     ListUsersResponseType response = request.getReply( );
     ArrayList<UserType> users = response.getListUsersResult( ).getUsers( ).getMemberList( );
     UserType user = new UserType( );
@@ -174,6 +173,9 @@ public class EuareService {
     users.add( user );
     response.getListUsersResult( ).setIsTruncated( false );
     response.getResponseMetadata( ).setRequestId( "12345" );
+    if ( true ) {
+      throw new EuareException( "409", EuareException.ENTITY_ALREADY_EXISTS, "User already exists" );
+    }
     return response;
   }
 

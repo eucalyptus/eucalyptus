@@ -14,7 +14,8 @@
   </mapping>
   <mapping name="Detail" class="com.eucalyptus.auth.euare.ErrorDetailType">
   </mapping>
-  <mapping name="ErrorResponse" class="com.eucalyptus.auth.euare.ErrorResponseType">
+  <mapping name="ErrorResponse" class="com.eucalyptus.auth.euare.ErrorResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <collection field="errorList">
       <structure map-as="com.eucalyptus.auth.euare.ErrorType"/>
     </collection>

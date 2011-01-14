@@ -279,6 +279,7 @@ public class GetGroupPolicyResultType extends EucalyptusData {
   public GetGroupPolicyResultType() {  }
 }
 public class ErrorDetailType extends EucalyptusData {
+  String content;
   public ErrorDetailType() {  }
 }
 public class UpdateAccessKeyType extends EuareMessage {
@@ -578,7 +579,7 @@ public class ListServerCertificatesType extends EuareMessage {
   BigInteger maxItems;
   public ListServerCertificatesType() {  }
 }
-public class ErrorResponseType extends EucalyptusData {
+public class ErrorResponseType extends EuareMessage {
   String requestId;
   public ErrorResponseType() {  }
   ArrayList<ErrorType> errorList = new ArrayList<ErrorType>();
