@@ -94,7 +94,6 @@
 	<property name="jar.file" value="${target.dir}/${ant.project.name}-${euca.version}.jar" />
 	<property name="lib.dir" value="${project.basedir}/lib" />
 	<property name="modules.dir" value="${project.basedir}/modules" />
-	<property name="javadir.dir" value="/usr/share/java" />
 	<!--================================== classpaths ==================================-->
 	<path id="classpath">
 		<pathelement path="${conf.dir}" />
@@ -105,10 +104,16 @@
 			<include name="**/*.jar" />
 			<exclude name="**/openjdk-crypto.jar" />
 		</fileset>
-		<fileset dir="${javadir.dir}">
-			<include name="**/*.jar" />
-		</fileset>
 	</path>
+	<!-- XXX DEBUG XXX -->
+	<pathconvert pathsep="${line.separator}|   |-- "
+		property="echo.path.compile"
+		refid="classpath">
+	</pathconvert>
+	<echo message="|-- compile classpath"/>
+	<echo message="|   |"/>
+	<echo message="|   |-- ${echo.path.compile}"/>
+
 	<path id="runtimeclasspath">
 		<pathelement path="${euca.conf.dir}" />
 		<fileset dir="${euca.lib.dir}">
