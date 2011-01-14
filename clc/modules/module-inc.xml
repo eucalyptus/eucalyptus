@@ -104,8 +104,8 @@
 			<include name="**/*.jar" />
 			<exclude name="**/openjdk-crypto.jar" />
 		</fileset>
-		<fileset dir="${localenv.CLASSPATH}" >
-		        <include name="*.jar" />
+		<fileset dir="/usr/share/java">
+			<include name="*.jar" />
 		</fileset>
 	</path>
 	<path id="runtimeclasspath">
