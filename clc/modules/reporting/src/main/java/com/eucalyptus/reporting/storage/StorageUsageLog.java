@@ -158,22 +158,28 @@ public class StorageUsageLog
 			StorageUsageSnapshot snapshot = iter.next();
 			long timestampMs = snapshot.getSnapshotKey().getTimestampMs().longValue();
 			String critVal = getAttributeValue(criterion, snapshot.getSnapshotKey());
-			SummaryInfo info = null;
 			if (infoMap.containsKey(critVal)) {
-				info = infoMap.get(critVal);
+				SummaryInfo info = infoMap.get(critVal);
 				long durationMs = timestampMs - info.getLastTimestamp();
 				info.getSummary().addUsage(info.getLastData(), durationMs);
 				info.setLastTimestamp(timestampMs);
 				info.setLastData(snapshot.getUsageData());
 			} else {
-				info = new SummaryInfo(timestampMs, new StorageUsageSummary(),
-						snapshot.getUsageData());
+				SummaryInfo info = new SummaryInfo(timestampMs,
+						new StorageUsageSummary(), snapshot.getUsageData());
 				infoMap.put(critVal, info);
 			}
 		}
 
-		/* Convert summary to result type
-		 */
+		return convertOneCriterion(infoMap);
+	}
+
+	/**
+	 * <p>Convert Map<String,SummaryInfo> to Map<String, StorageUsageSummary>. 
+	 */
+	private static Map<String, StorageUsageSummary> convertOneCriterion(
+			Map<String, SummaryInfo> infoMap)
+	{
 		final Map<String, StorageUsageSummary> resultMap =
 			new HashMap<String, StorageUsageSummary>();
 		for (String key: infoMap.keySet()) {
@@ -182,40 +188,59 @@ public class StorageUsageLog
 		return resultMap;
 	}
 
+	/**
+	 * <p>Convert Map<String, Map<String, SummaryInfo>> to
+	 *  Map<String, Map<String, StorageUsageSummary>>.
+	 */
+	private static Map<String, Map<String, StorageUsageSummary>> convertTwoCriteria(
+			Map<String, Map<String, SummaryInfo>> infoMap)
+	{
+		final Map<String, Map<String, StorageUsageSummary>> results =
+			new HashMap<String, Map<String, StorageUsageSummary>>();
+		for (String key: infoMap.keySet()) {
+			results.put(key, convertOneCriterion(infoMap.get(key)));
+		}
+		return results;
+	}
+	
 	public Map<String, Map<String, StorageUsageSummary>> scanSummarize(
 			Period period, GroupByCriterion outerCriterion,
 			GroupByCriterion innerCriterion)
 	{
-		final Map<String, Map<String, StorageUsageSummary>> results =
-			new HashMap<String, Map<String, StorageUsageSummary>>();
+		final Map<String, Map<String, SummaryInfo>> infoMap =
+			new HashMap<String, Map<String, SummaryInfo>>();
 
 		Iterator<StorageUsageSnapshot> iter = scanLog(period);
 		while (iter.hasNext()) {
 			StorageUsageSnapshot snapshot = iter.next();
+			long timestampMs = snapshot.getSnapshotKey().getTimestampMs().longValue();
 			String outerCritVal = getAttributeValue(outerCriterion,
 					snapshot.getSnapshotKey());
-			Map<String, StorageUsageData> innerMap = null;
-			if (results.containsKey(outerCritVal)) {
-				//innerMap = results.get(outerCritVal);
+			Map<String, SummaryInfo> innerMap = null;
+			if (infoMap.containsKey(outerCritVal)) {
+				innerMap = infoMap.get(outerCritVal);
 			} else {
-				innerMap = new HashMap<String, StorageUsageData>();
-				//results.put(outerCritVal, innerMap);
+				innerMap = new HashMap<String, SummaryInfo>();
+				infoMap.put(outerCritVal, innerMap);
 			}
-			String innerCritVal = getAttributeValue(innerCriterion,
-					snapshot.getSnapshotKey());
-			StorageUsageData data = null;
+			String innerCritVal = getAttributeValue(innerCriterion, snapshot.getSnapshotKey());
 			if (innerMap.containsKey(innerCritVal)) {
-				data = innerMap.get(innerCritVal);
+				SummaryInfo info = innerMap.get(innerCritVal);
+				long durationMs = timestampMs - info.getLastTimestamp();
+				info.getSummary().addUsage(info.getLastData(), durationMs);
+				info.setLastTimestamp(timestampMs);
+				info.setLastData(snapshot.getUsageData());
 			} else {
-				data = new StorageUsageData();
-				innerMap.put(innerCritVal, data);
+				SummaryInfo info = new SummaryInfo(timestampMs,
+						new StorageUsageSummary(), snapshot.getUsageData());
+				innerMap.put(innerCritVal, info);
 			}
-			data.sumFrom(snapshot.getUsageData());
 		}
 
-		return results;
+		return convertTwoCriteria(infoMap);
 	}
-	
+
+
 	public void purgeLog(long earlierThanMs)
 	{
 		log.info(String.format("purge earlierThan:%d ", earlierThanMs));
