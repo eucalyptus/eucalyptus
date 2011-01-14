@@ -1316,7 +1316,7 @@ Optional Packages:
   --with-axis2c-services=<dir>         where axis2c services are installed
   --with-axis2=<dir>                   where axis2 is installed
   --with-libvirt=<dir>                 where libvirt is installed
-  --with-wsdl2c-sh                     where WSDL2C.sh is installed
+  --with-wsdl2c-sh=<file>              where WSDL2C.sh is installed
   --with-vddk=<dir>                    where VMware's VDDK is installed
   --with-interface-theme=<name>        the theme to be used
 
