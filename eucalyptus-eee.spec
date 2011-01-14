@@ -243,7 +243,7 @@ VMware installation.
 %setup -q -T -D -b 2
 
 %build
-export CLASSPATH=%{_javadir}
+export CLASSPATH=%{_javadir}/*
 export DESTDIR=$RPM_BUILD_ROOT
 # Oracle JDK links to Java without using alternatives
 export JAVA_HOME=/usr/java/latest
