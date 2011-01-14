@@ -127,6 +127,7 @@ public class EuareReplyQueue {
     EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ).debug( );
     LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
     LOG.debug( "EUARE exception: " + exMsg.getPayload( ).getClass( ).getCanonicalName( ) + ", " + exMsg.getException( ).getClass( ).getCanonicalName( ) + ", " + exMsg.getException( ).getCause( ).getClass( ).getCanonicalName( ) );
+    LOG.debug( "EUARE exception: " + exMsg.getPayload( ) + ", " + exMsg.getException( ) + ", " + exMsg.getException( ).getCause( ) );
     Throwable exception = exMsg.getException( );
     if ( exception instanceof MessagingException && exception.getCause( ) instanceof EuareException ) {
       EuareException euareException = ( EuareException ) exception.getCause( );
