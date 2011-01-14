@@ -104,6 +104,9 @@
 			<include name="**/*.jar" />
 			<exclude name="**/openjdk-crypto.jar" />
 		</fileset>
+		<fileset dir="/usr/share/java">
+			<include name="**/*.jar" />
+		</fileset>
 	</path>
 	<!-- XXX DEBUG XXX -->
 	<pathconvert pathsep="${line.separator}|   |-- "
