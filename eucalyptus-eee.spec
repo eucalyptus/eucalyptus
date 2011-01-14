@@ -243,13 +243,20 @@ VMware installation.
 %setup -q -T -D -b 2
 
 %build
+export CLASSPATH=%{_javadir}/*
 export DESTDIR=$RPM_BUILD_ROOT
 # Oracle JDK links to Java without using alternatives
 export JAVA_HOME=/usr/java/latest
 ./configure --with-axis2=%{_datadir}/axis2-* --with-axis2c=%{_libdir}/axis2c --with-wsdl2c-sh=%{S:1} --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
-cd clc
+
+pushd clc
+# The CLC's build XML file looks for jar files in clc/lib, so symlink the
+# system's copies of important jar files to that location.
+mkdir lib
+ln -s %{_javadir}/groovy*.jar lib/
 make deps
-cd ..
+popd
+
 # Write builds logs to files so we can triage build failures.
 # mock logs stdout and stderr, so this hackery will eventually go away.
 (make 2>&1 1>&3 | tee err.log) 3>&1 1>&2 | tee out.log
