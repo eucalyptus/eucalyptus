@@ -262,6 +262,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/sbin/euca-describe-clusters
 /usr/sbin/euca-describe-components
 /usr/sbin/euca-describe-properties
+/usr/sbin/euca-describe-services
 /usr/sbin/euca-describe-storage-controllers
 /usr/sbin/euca-describe-user-groups
 /usr/sbin/euca-describe-users
