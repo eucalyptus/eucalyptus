@@ -136,6 +136,7 @@ public class EuareReplyQueue {
         errorResp.setCorrelationId( ( ( BaseMessage ) payload ).getCorrelationId( ) );
       }
       ErrorType error = new ErrorType( );
+      error.setType( "Receiver" );
       error.setCode( euareException.getCode( ) );
       error.setMessage( euareException.getError( ) );
       error.getDetail( ).setContent( euareException.getMessage( ) );
