@@ -3,32 +3,32 @@ package com.eucalyptus.reporting.storage;
 public class StorageUsageSummary
 {
 	private Long volumesNum;
+	private Long volumnsGbSecs;
 	private Long snapshotsNum;
-	private Long volumesGbHours;
-	private Long snapshotsGbHours;
+	private Long snapshotsGbSecs;
 	private Long objectsNum;
-	private Long objectsGbHours;
+	private Long objectsGbSecs;
 
 	public StorageUsageSummary()
 	{
-		this.volumesNum       = new Long(0);
-		this.snapshotsNum     = new Long(0);
-		this.volumesGbHours   = new Long(0);
-		this.snapshotsGbHours = new Long(0);
-		this.objectsNum       = new Long(0);
-		this.objectsGbHours   = new Long(0);
+		this.volumesNum      = new Long(0);
+		this.volumnsGbSecs   = new Long(0);
+		this.snapshotsNum    = new Long(0);
+		this.snapshotsGbSecs = new Long(0);
+		this.objectsNum      = new Long(0);
+		this.objectsGbSecs   = new Long(0);
 	}
 
-	public StorageUsageSummary(Long volumesNum, Long snapshotsNum,
-			Long volumesGbHours, Long snapshotsGbHours, Long objectsNum,
-			Long objectsGbHours)
+	public StorageUsageSummary(Long volumesNum, Long volumnsGbSecs,
+			Long snapshotsNum, Long snapshotsGbSecs, Long objectsNum,
+			Long objectsGbSecs)
 	{
-		this.volumesNum       = volumesNum;
-		this.snapshotsNum     = snapshotsNum;
-		this.volumesGbHours   = volumesGbHours;
-		this.snapshotsGbHours = snapshotsGbHours;
-		this.objectsNum       = objectsNum;
-		this.objectsGbHours   = objectsGbHours;
+		this.volumesNum      = volumesNum;
+		this.volumnsGbSecs   = volumnsGbSecs;
+		this.snapshotsNum    = snapshotsNum;
+		this.snapshotsGbSecs = snapshotsGbSecs;
+		this.objectsNum      = objectsNum;
+		this.objectsGbSecs   = objectsGbSecs;
 	}
 
 	public Long getVolumesNum()
@@ -36,19 +36,39 @@ public class StorageUsageSummary
 		return volumesNum;
 	}
 
+	public void setVolumesNum(Long volumesNum)
+	{
+		this.volumesNum = volumesNum;
+	}
+
+	public Long getVolumnsGbSecs()
+	{
+		return volumnsGbSecs;
+	}
+
+	public void setVolumnsGbSecs(Long volumnsGbSecs)
+	{
+		this.volumnsGbSecs = volumnsGbSecs;
+	}
+
 	public Long getSnapshotsNum()
 	{
 		return snapshotsNum;
 	}
 
-	public Long getVolumesGbHours()
+	public void setSnapshotsNum(Long snapshotsNum)
 	{
-		return volumesGbHours;
+		this.snapshotsNum = snapshotsNum;
 	}
 
-	public Long getSnapshotsGbHours()
+	public Long getSnapshotsGbSecs()
 	{
-		return snapshotsGbHours;
+		return snapshotsGbSecs;
+	}
+
+	public void setSnapshotsGbSecs(Long snapshotsGbSecs)
+	{
+		this.snapshotsGbSecs = snapshotsGbSecs;
 	}
 
 	public Long getObjectsNum()
@@ -56,9 +76,24 @@ public class StorageUsageSummary
 		return objectsNum;
 	}
 
-	public Long getObjectsGbHours()
+	public void setObjectsNum(Long objectsNum)
 	{
-		return objectsGbHours;
+		this.objectsNum = objectsNum;
+	}
+
+	public Long getObjectsGbSecs()
+	{
+		return objectsGbSecs;
+	}
+
+	public void setObjectsGbSecs(Long objectsGbSecs)
+	{
+		this.objectsGbSecs = objectsGbSecs;
+	}
+	
+	void addUsage(StorageUsageData usageData, long durationMs)
+	{
+		
 	}
 
 }
