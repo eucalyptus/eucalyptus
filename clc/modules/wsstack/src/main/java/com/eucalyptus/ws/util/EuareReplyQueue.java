@@ -71,6 +71,9 @@ import org.jboss.netty.channel.Channels;
 import org.mule.api.MessagingException;
 import org.mule.api.MuleMessage;
 import org.mule.message.ExceptionMessage;
+import com.eucalyptus.auth.euare.ErrorResponseType;
+import com.eucalyptus.auth.euare.ErrorType;
+import com.eucalyptus.auth.euare.EuareException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -86,7 +89,6 @@ public class EuareReplyQueue {
   private static Logger                                 LOG                   = Logger.getLogger( EuareReplyQueue.class );
   
   public static void handle( String service, MuleMessage responseMessage, BaseMessage request ) {
-    LOG.debug( "YE ---> handle 1: " + responseMessage );
     BaseMessage reply = null;
     if ( responseMessage.getExceptionPayload( ) == null ) {
       reply = ( BaseMessage ) responseMessage.getPayload( );
@@ -107,9 +109,7 @@ public class EuareReplyQueue {
     }
   }
   
-  @SuppressWarnings( "unchecked" )
   public void handle( BaseMessage responseMessage ) {
-    LOG.debug( "YE ---> handle 2: " + responseMessage );
     EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
     String corrId = responseMessage.getCorrelationId( );
     try {
@@ -124,61 +124,23 @@ public class EuareReplyQueue {
   }
 
   public void handle( ExceptionMessage exMsg ) {
-    LOG.debug( "YE ---> handle 3: " + exMsg );
     EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ).debug( );
     LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
+    LOG.debug( "EUARE exception: " + exMsg.getPayload( ).getClass( ).getCanonicalName( ) + ", " + exMsg.getException( ).getClass( ).getCanonicalName( ) + ", " + exMsg.getException( ).getCause( ).getClass( ).getCanonicalName( ) );
     Throwable exception = exMsg.getException( );
-    Object payload = null;
-    BaseMessage msg = null;
-    if ( exception instanceof MessagingException ) {
-      MessagingException ex = ( MessagingException ) exception;
-      MuleMessage muleMsg = ex.getUmoMessage( );
-
-      if ( payload instanceof VmAllocationInfo ) {
-        msg = ( ( VmAllocationInfo ) payload ).getRequest( );
-      } else {
-        try {
-          msg = parsePayload( muleMsg.getPayload( ) );
-        } catch ( Exception e ) {
-          LOG.error( "Bailing out of error handling: don't have the correlationId for the caller!" );
-          LOG.error( e, e );
-          return;
-        }
+    if ( exception instanceof MessagingException && exception.getCause( ) instanceof EuareException ) {
+      EuareException euareException = ( EuareException ) exception.getCause( );
+      ErrorResponseType errorResp = new ErrorResponseType( );
+      Object payload = ( ( MessagingException ) exception ).getUmoMessage( ).getPayload( );
+      if ( payload instanceof BaseMessage ) {
+        errorResp.setCorrelationId( ( ( BaseMessage ) payload ).getCorrelationId( ) );
       }
-      EucalyptusErrorMessageType errMsg = getErrorMessageType( exMsg.getComponentName( ), exMsg.getException( ), msg );
-      errMsg.setException( exception.getCause( ) );
-      this.handle( errMsg );
-    }
-  }
-
-  private EucalyptusErrorMessageType getErrorMessageType( final String componentName, Throwable exception, final BaseMessage msg ) {
-    EucalyptusErrorMessageType errMsg = null;
-    if ( exception != null ) {
-      String desc = "";
-      LOG.error( exception, exception );
-      exception = exception.getCause( ) != null ? exception.getCause( ) : exception;
-      for( Throwable e = exception; e != null; e = e.getCause( ) ) {
-        desc += "\n" + e.getMessage( );
-      }
-      errMsg = new EucalyptusErrorMessageType( componentName, msg, desc );
-    } else {
-      ByteArrayOutputStream exStream = new ByteArrayOutputStream( );
-      if(exception != null)
-          exception.printStackTrace( new PrintStream( exStream ) );
-      errMsg = new EucalyptusErrorMessageType( componentName, msg, "Internal Error: " + exStream.toString( ) );
-    }
-    return errMsg;
-  }
-
-  private BaseMessage parsePayload( Object payload ) throws Exception {
-    if ( payload instanceof BaseMessage ) {
-      return ( BaseMessage ) payload;
-    } else if ( payload instanceof VmAllocationInfo ) {
-      return ( ( VmAllocationInfo ) payload ).getRequest( );
-    } else if ( !( payload instanceof String ) ) {
-      return new EucalyptusErrorMessageType( "ReplyQueue", LogUtil.dumpObject( payload ) );
-    } else {
-      return ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
+      ErrorType error = new ErrorType( );
+      error.setCode( euareException.getCode( ) );
+      error.setMessage( euareException.getError( ) );
+      error.getDetail( ).setContent( euareException.getMessage( ) );
+      errorResp.getErrorList( ).add( error );
+      this.handle( errorResp );
     }
   }
 
