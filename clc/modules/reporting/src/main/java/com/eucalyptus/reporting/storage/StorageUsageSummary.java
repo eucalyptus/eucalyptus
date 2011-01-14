@@ -1,99 +1,84 @@
 package com.eucalyptus.reporting.storage;
 
+/**
+ * <p>StorageUsageSummary is a summary of storage usage for some entity over
+ * time. It contains statistics of aggregate usage like GB-seconds and maximum
+ * usage.
+ * 
+ * <p>StorageUsageSummary is not a bean. StorageUsageSummary <i>accumulates</i>
+ * data through the <pre>update</pre> method and then returns results of
+ * statistics using the various <pre>get</pre> methods.
+ * 
+ * @author tom.werges
+ */
 public class StorageUsageSummary
 {
-	private Long volumesNum;
-	private Long volumnsGbSecs;
-	private Long snapshotsNum;
-	private Long snapshotsGbSecs;
-	private Long objectsNum;
-	private Long objectsGbSecs;
+	private long volumesGbMax;
+	private long volumesGbSecs;
+	private long snapshotsGbMax;
+	private long snapshotsGbSecs;
+	private long objectsGbMax;
+	private long objectsGbSecs;
 
 	public StorageUsageSummary()
 	{
-		this.volumesNum      = new Long(0);
-		this.volumnsGbSecs   = new Long(0);
-		this.snapshotsNum    = new Long(0);
-		this.snapshotsGbSecs = new Long(0);
-		this.objectsNum      = new Long(0);
-		this.objectsGbSecs   = new Long(0);
+		this.volumesGbMax    = 0l;
+		this.volumesGbSecs   = 0l;
+		this.snapshotsGbMax  = 0l;
+		this.snapshotsGbSecs = 0l;
+		this.objectsGbMax    = 0l;
+		this.objectsGbSecs   = 0l;
 	}
 
-	public StorageUsageSummary(Long volumesNum, Long volumnsGbSecs,
-			Long snapshotsNum, Long snapshotsGbSecs, Long objectsNum,
-			Long objectsGbSecs)
+	public long getVolumesGbMax()
 	{
-		this.volumesNum      = volumesNum;
-		this.volumnsGbSecs   = volumnsGbSecs;
-		this.snapshotsNum    = snapshotsNum;
-		this.snapshotsGbSecs = snapshotsGbSecs;
-		this.objectsNum      = objectsNum;
-		this.objectsGbSecs   = objectsGbSecs;
+		return volumesGbMax;
 	}
 
-	public Long getVolumesNum()
+	public long getVolumesGbSecs()
 	{
-		return volumesNum;
+		return volumesGbSecs;
 	}
 
-	public void setVolumesNum(Long volumesNum)
+	public long getSnapshotsGbMax()
 	{
-		this.volumesNum = volumesNum;
+		return snapshotsGbMax;
 	}
 
-	public Long getVolumnsGbSecs()
-	{
-		return volumnsGbSecs;
-	}
-
-	public void setVolumnsGbSecs(Long volumnsGbSecs)
-	{
-		this.volumnsGbSecs = volumnsGbSecs;
-	}
-
-	public Long getSnapshotsNum()
-	{
-		return snapshotsNum;
-	}
-
-	public void setSnapshotsNum(Long snapshotsNum)
-	{
-		this.snapshotsNum = snapshotsNum;
-	}
-
-	public Long getSnapshotsGbSecs()
+	public long getSnapshotsGbSecs()
 	{
 		return snapshotsGbSecs;
 	}
 
-	public void setSnapshotsGbSecs(Long snapshotsGbSecs)
+	public long getObjectsGbMax()
 	{
-		this.snapshotsGbSecs = snapshotsGbSecs;
+		return objectsGbMax;
 	}
 
-	public Long getObjectsNum()
-	{
-		return objectsNum;
-	}
-
-	public void setObjectsNum(Long objectsNum)
-	{
-		this.objectsNum = objectsNum;
-	}
-
-	public Long getObjectsGbSecs()
+	public long getObjectsGbSecs()
 	{
 		return objectsGbSecs;
 	}
 
-	public void setObjectsGbSecs(Long objectsGbSecs)
+	public void updateValues(long volumesGb, long snapshotsGb, long objectsGb,
+			long durationSecs)
 	{
-		this.objectsGbSecs = objectsGbSecs;
+		this.volumesGbMax   = Math.max(this.volumesGbMax, volumesGb);
+		this.snapshotsGbMax = Math.max(this.snapshotsGbMax, snapshotsGb);
+		this.objectsGbMax   = Math.max(this.objectsGbMax, objectsGb);
+		
+		this.volumesGbSecs   += volumesGb * durationSecs;
+		this.snapshotsGbSecs += snapshotsGb * durationSecs;
+		this.objectsGbSecs   += objectsGb * durationSecs;
 	}
 	
-	void addUsage(StorageUsageData usageData, long durationMs)
+	@Override
+	public String toString()
 	{
-		
+		return String.format("[volsGbSecs:%d,volsGbMax:%d,snapsGbSecs:%d,"
+				+ "snapsGbMax:%d,objsGbSecs:%d,objsGbMax:%d]",
+				volumesGbSecs, volumesGbMax, snapshotsGbSecs,
+				snapshotsGbMax, objectsGbSecs, objectsGbMax);
 	}
 
 }
