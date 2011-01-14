@@ -111,6 +111,7 @@ public class EuareReplyQueue {
   
   public void handle( BaseMessage responseMessage ) {
     EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
+    LOG.debug( "HERE: " + responseMessage );
     String corrId = responseMessage.getCorrelationId( );
     try {
       Context context = Contexts.lookup( corrId );
