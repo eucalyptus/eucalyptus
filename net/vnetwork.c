@@ -201,7 +201,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	//rc = vnetSetMetadataRedirect(vnetconfig);
+	rc = vnetSetMetadataRedirect(vnetconfig);
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;

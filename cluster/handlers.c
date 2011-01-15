@@ -3070,7 +3070,10 @@ int init_config(void) {
 int maintainNetworkState() {
   int rc, i, ret=0;
   time_t startTime, startTimeA;
+  uint32_t cloudIp;
 
+  // find current CLC IP
+  cloudIp = vnetconfig->cloudIp;
   for (i=0; i<16; i++) {
     int j;
     logprintfl(EUCADEBUG, "MEH: type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
@@ -3084,13 +3087,16 @@ int maintainNetworkState() {
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
     sem_mywait(VNET);
     
-    rc = vnetSetMetadataRedirect(vnetconfig);
-    if (rc) {
-      logprintfl(EUCAWARN, "maintainNetworkState(): failed to set metadata redirect\n");
+    // check to see if cloudIp has changed
+    if (cloudIp && (cloudIp != vnetconfig->cloudIp)) {
+      vnetconfig->cloudIp = cloudIp;
+      rc = vnetSetMetadataRedirect(vnetconfig);
+      if (rc) {
+	logprintfl(EUCAWARN, "maintainNetworkState(): failed to set metadata redirect\n");
+      }
     }
 
     rc = vnetSetupTunnels(vnetconfig);
-
     if (rc) {
       logprintfl(EUCAERROR, "maintainNetworkState(): failed to setup tunnels during maintainNetworkState()\n");
       ret = 1;
@@ -3182,6 +3188,124 @@ int restoreNetworkState() {
   logprintfl(EUCADEBUG, "restoreNetworkState(): done restoring network state\n");
 
   return(ret);
+}
+
+int reconfigureNetworkFromCLC() {
+  FILE *FH;
+  char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL;
+
+  char **suser, **sgroup, **snet, *protocol=NULL;
+  char snettok[1024], range[1024];
+  int minport=0, maxport=0, slashnet=0, snetset=0;
+
+  snettok[0] = '\0';
+  range[0] = '\0';
+
+  // TODO add http_get from CLC
+  FH = fopen("network-topology", "r");
+
+  while(fgets(buf, 1024, FH)) {
+    start = buf;
+    printf("LINE: %s\n", buf);
+    tok = strchr(buf, '\n');
+    if (tok) {
+      *tok='\0';
+      tok=NULL;
+    }
+
+    snetset = minport = maxport = 0;
+    suser = sgroup = snet = NULL;
+    protocol = NULL;
+    
+    type = strtok_r(start, " ", &save);
+    if (type && !strcmp(type, "RULE")) {
+      dgroup = strtok_r(NULL, " ", &save);
+      if (dgroup) {
+	while((tok = strtok_r(NULL, " ", &save))) {
+	  printf("\tTOK: %s\n", tok);
+	  if (tok && !strcmp(tok, "-P")) {
+	    tok = strtok_r(NULL, " ", &save);
+	    if (tok) {
+	      printf("PROTOCOL: %s\n", tok);
+	      protocol = strdup(tok);
+	    }
+	  } else if (tok && !strcmp(tok, "-p")) {
+	    tok = strtok_r(NULL, " ", &save);
+	    if (tok) {
+	      printf("PORTRANGE: %s\n", tok);
+	      snprintf(range, 1024, "%s", tok);
+	    }
+	  } else if (tok && !strcmp(tok, "-t")) {
+	    tok = strtok_r(NULL, " ", &save);
+	    if (tok) {
+	      printf("TYPERANGE: %s\n", tok);
+	      snprintf(range, 1024, "%s", tok);
+	    }
+	  } else if (tok && !strcmp(tok, "-o")) {
+	    tok = strtok_r(NULL, " ", &save);
+	    if (tok) {
+	      printf("DGROUP: %s\n", tok);
+	      sgroup = malloc(sizeof(char *));
+	      sgroup[0] = strdup(tok);
+	    }
+	  } else if (tok && !strcmp(tok, "-u")) {
+	    tok = strtok_r(NULL, " ", &save);
+	    if (tok) {
+	      printf("DUSER: %s\n", tok);
+	      suser = malloc(sizeof(char *));
+	      suser[0] = strdup(tok);
+	    }
+	  } else if (tok && !strcmp(tok, "-s")) {
+	    tok = strtok_r(NULL, " ", &save);
+	    if (tok) {
+	      printf("DNET: %s\n", tok);
+	      snprintf(snettok, 1024, "%s", tok);
+	      snetset=1;
+	    }
+	  }
+	  start = NULL;
+	}
+
+	if (!strcmp(protocol, "tcp") || !strcmp(protocol, "udp")) {
+	  sscanf(range, "%d-%d", &minport, &maxport);
+	} else if (!strcmp(protocol, "icmp")) {
+	  sscanf(range, "%d:%d", &minport, &maxport);
+	}
+
+
+	if (snetset) {
+	  int a, b, c, d;
+	  sscanf(snettok, "%d.%d.%d.%d/%d", &a, &b, &c, &d, &slashnet);
+	  snet = malloc(sizeof(char *));
+	  snet[0] = malloc(sizeof(char) * 16);
+	  snprintf(snet[0], 16, "%d.%d.%d.%d", a, b, c, d);
+	  printf("protocol=%s minport=%d maxport=%d snet=%s slashnet=%d\n", protocol, minport, maxport, snet[0], slashnet);
+	} else {
+	  printf("protocol=%s minport=%d maxport=%d suser=%s sgroup=%s\n", protocol, minport, maxport, suser[0], sgroup[0]);
+	}
+	
+	// call doConfigureNetwork here
+	
+	if (protocol) free(protocol);
+	if (suser) {
+	  if (suser[0]) free(suser[0]);
+	  free(suser);
+	}
+	if (sgroup) {
+	  if (sgroup[0]) free(sgroup[0]);
+	  free(sgroup);
+	}
+	if (snet) {
+	  if (snet[0]) free(snet[0]);
+	  free(snet);
+	}
+
+      }
+    }
+  }
+  
+  fclose(FH);
+  return(0);
 }
 
 int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
