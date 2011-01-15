@@ -74,6 +74,7 @@ import org.mule.message.ExceptionMessage;
 import com.eucalyptus.auth.euare.ErrorResponseType;
 import com.eucalyptus.auth.euare.ErrorType;
 import com.eucalyptus.auth.euare.EuareException;
+import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -127,18 +128,21 @@ public class EuareReplyQueue {
   public void handle( ExceptionMessage exMsg ) {
     EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ).debug( );
     LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
-    LOG.debug( "EUARE exception: " + exMsg.getPayload( ).getClass( ).getCanonicalName( ) + ", " + exMsg.getException( ).getClass( ).getCanonicalName( ) + ", " + exMsg.getException( ).getCause( ).getClass( ).getCanonicalName( ) );
-    LOG.debug( "EUARE exception: " + exMsg.getPayload( ) + ", " + exMsg.getException( ) + ", " + exMsg.getException( ).getCause( ) );
     Throwable exception = exMsg.getException( );
     if ( exception instanceof MessagingException && exception.getCause( ) instanceof EuareException ) {
       LOG.debug( "BEFORE create ErrorResponseType " );
       EuareException euareException = ( EuareException ) exception.getCause( );
       ErrorResponseType errorResp = new ErrorResponseType( );
-      Object payload = ( ( MessagingException ) exception ).getUmoMessage( ).getPayload( );
-      if ( payload instanceof BaseMessage ) {
-        errorResp.setCorrelationId( ( ( BaseMessage ) payload ).getCorrelationId( ) );
+      BaseMessage payload = null;
+      try {
+        payload = parsePayload( ( ( MessagingException ) exception ).getUmoMessage( ).getPayload( ) );
+      } catch ( Exception e ) {
+        LOG.error( "Failed to parse payload ", e );
+      }
+      if ( payload != null ) {
+        errorResp.setRequestId( payload.getCorrelationId( ) );
       } else {
-        errorResp.setCorrelationId( "1" );
+        errorResp.setRequestId( "" );
       }
       ErrorType error = new ErrorType( );
       error.setType( "Receiver" );
@@ -150,4 +154,14 @@ public class EuareReplyQueue {
     }
   }
 
+  private BaseMessage parsePayload( Object payload ) throws Exception {
+    if ( payload instanceof BaseMessage ) {
+      return ( BaseMessage ) payload;
+    } else if ( payload instanceof String ) {
+      return ( BaseMessage ) BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://iam.amazonaws.com/doc/2010-05-08/" ) ).fromOM( ( String ) payload );
+    }
+    LOG.error( "Can not recognize payload type: " + payload.getClass( ).getCanonicalName( ) );
+    return null;
+  }
+    
 }
