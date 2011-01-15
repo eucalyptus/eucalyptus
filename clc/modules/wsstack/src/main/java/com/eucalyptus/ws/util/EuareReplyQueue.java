@@ -140,17 +140,16 @@ public class EuareReplyQueue {
         LOG.error( "Failed to parse payload ", e );
       }
       if ( payload != null ) {
+        errorResp.setCorrelationId( payload.getCorrelationId( ) );
         errorResp.setRequestId( payload.getCorrelationId( ) );
-      } else {
-        errorResp.setRequestId( "" );
+        ErrorType error = new ErrorType( );
+        error.setType( "Receiver" );
+        error.setCode( euareException.getCode( ) );
+        error.setMessage( euareException.getError( ) );
+        error.getDetail( ).setContent( euareException.getMessage( ) );
+        errorResp.getErrorList( ).add( error );
+        this.handle( errorResp );
       }
-      ErrorType error = new ErrorType( );
-      error.setType( "Receiver" );
-      error.setCode( euareException.getCode( ) );
-      error.setMessage( euareException.getError( ) );
-      error.getDetail( ).setContent( euareException.getMessage( ) );
-      errorResp.getErrorList( ).add( error );
-      this.handle( errorResp );
     }
   }
 
@@ -160,8 +159,7 @@ public class EuareReplyQueue {
     } else if ( payload instanceof String ) {
       return ( BaseMessage ) BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://iam.amazonaws.com/doc/2010-05-08/" ) ).fromOM( ( String ) payload );
     }
-    LOG.error( "Can not recognize payload type: " + payload.getClass( ).getCanonicalName( ) );
-    return null;
+    return new EucalyptusErrorMessageType( "ReplyQueue", LogUtil.dumpObject( payload ) );
   }
     
 }
