@@ -165,6 +165,7 @@ typedef struct ccConfig_t {
   int threads[3];
   int ccState, ccLastState, kick_network;
   serviceStatusType ccStatus;
+  serviceInfoType services[16];
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
@@ -221,7 +222,7 @@ int find_resourceCacheHostname(char *host, ccResource **out);
 void print_resourceCache(void);
 void invalidate_resourceCache(void);
 
-int initialize(void);
+int initialize(ncMetadata *ccMeta);
 int init_thread(void);
 int init_localstate(void);
 int init_config(void);
