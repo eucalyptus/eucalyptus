@@ -47,8 +47,9 @@ License:       Eucalyptus EEE Software License
 URL:           http://www.eucalyptus.com
 Group:         Applications/System
 
-BuildRequires: ant
-BuildRequires: ant-nodeps
+# EEE fails to build with el5's gcj-based ant 1.6
+BuildRequires: ant >= 1.7
+BuildRequires: ant-nodeps >= 1.7
 BuildRequires: axis2
 BuildRequires: axis2c-devel >= 1.6.0
 BuildRequires: libvirt-devel >= 0.6

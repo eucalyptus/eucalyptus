@@ -105,15 +105,6 @@
 			<exclude name="**/openjdk-crypto.jar" />
 		</fileset>
 	</path>
-	<!-- XXX DEBUG XXX -->
-	<pathconvert pathsep="${line.separator}|   |-- "
-		property="echo.path.compile"
-		refid="classpath">
-	</pathconvert>
-	<echo message="|-- compile classpath"/>
-	<echo message="|   |"/>
-	<echo message="|   |-- ${echo.path.compile}"/>
-
 	<path id="runtimeclasspath">
 		<pathelement path="${euca.conf.dir}" />
 		<fileset dir="${euca.lib.dir}">
