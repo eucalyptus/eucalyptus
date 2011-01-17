@@ -70,6 +70,14 @@ Requires:      perl(Crypt::OpenSSL::RSA)
 Requires:      perl(Crypt::OpenSSL::Random)
 Requires:      sudo
 
+%if %{is_centos}
+Requires:      python26
+Requires:      python26-boto
+%else
+Requires:      python
+Requires:      python-boto >= 1.9b
+%endif
+
 BuildRoot:     %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 Source0:       %{name}-%{version}.tar.gz
@@ -263,7 +271,7 @@ popd
 
 %if %is_centos
 for x in `/bin/ls clc/tools/src/euca-*`; do
-    sed --in-place 's:#!/usr/bin/env python:#!/usr/bin/env python2.5:' $x
+    sed --in-place 's:#!/usr/bin/env python:#!%{_bindir}/python2.6:' $x
 done
 %endif
 
@@ -290,10 +298,13 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/sbin/euca-convert-volumes
 /usr/sbin/euca-delete-user
 /usr/sbin/euca-delete-user-group
+/usr/sbin/euca-deregister-arbitrator
 /usr/sbin/euca-deregister-cluster
 /usr/sbin/euca-deregister-storage-controller
 /usr/sbin/euca-deregister-walrus
+/usr/sbin/euca-describe-arbitrators
 /usr/sbin/euca-describe-clusters
+/usr/sbin/euca-describe-components
 /usr/sbin/euca-describe-nodes
 /usr/sbin/euca-describe-properties
 /usr/sbin/euca-describe-storage-controllers
@@ -303,9 +314,11 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/sbin/euca-get-credentials
 /usr/sbin/euca-grant-zone-permission
 /usr/sbin/euca_killall
+/usr/sbin/euca-modify-cluster
 /usr/sbin/euca-modify-property
 /usr/sbin/euca-modify-storage-controller
 /usr/sbin/euca-modify-walrus
+/usr/sbin/euca-register-arbitrator
 /usr/sbin/euca-register-cluster
 /usr/sbin/euca-register-storage-controller
 /usr/sbin/euca-register-walrus
@@ -354,14 +367,17 @@ make install DESTDIR=$RPM_BUILD_ROOT
 %{_libdir}/axis2c/services/EucalyptusCC
 /etc/init.d/eucalyptus-cc
 /etc/eucalyptus/vtunall.conf.template
+/usr/share/eucalyptus/dynserv.pl
 
 %files nc
-/usr/share/eucalyptus/gen_libvirt_xml
-/usr/share/eucalyptus/gen_kvm_libvirt_xml
-/usr/share/eucalyptus/partition2disk
-/usr/share/eucalyptus/get_xen_info
-/usr/share/eucalyptus/get_sys_info
 /usr/share/eucalyptus/detach.pl
+/usr/share/eucalyptus/gen_kvm_libvirt_xml
+/usr/share/eucalyptus/gen_libvirt_xml
+/usr/share/eucalyptus/getstats.pl
+/usr/share/eucalyptus/get_sys_info
+/usr/share/eucalyptus/get_xen_info
+/usr/share/eucalyptus/partition2disk
+/usr/sbin/eucanetd
 /usr/sbin/euca_test_nc
 %{_libdir}/axis2c/services/EucalyptusNC
 /etc/init.d/eucalyptus-nc
