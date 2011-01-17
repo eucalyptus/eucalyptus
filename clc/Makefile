@@ -49,7 +49,8 @@ build: deps extras
 #	@if test ! -e deps/cloud-lib.tar.gz; then \
 #		echo "Cannot find java deps, please run 'make deps' in the 'clc/' subdirectory."; exit 1; fi
 	@ANT_OPTS="-Xmx512m" $(ANT) build
-	@echo ">>> JAVA_HOME=${JAVA_HOME}"
+	@echo '>>> ${JAVA_HOME}='"${JAVA_HOME}"
+	@echo '>>> $(JAVA_HOME)='"$(JAVA_HOME)"
 	@make -C modules/storage-controller/native
 	@make -C modules/bootstrap
 
