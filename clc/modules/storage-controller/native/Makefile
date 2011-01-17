@@ -12,6 +12,7 @@ all: $(LIBDIR)/$(LVM2_SO)
 	gcc -c $(WARN) $(CFLAGS) $<
 
 $(LIBDIR)/$(LVM2_SO): 
+	echo '>>> JAVA_HOME=$(JAVA_HOME)'
 	mkdir -p $(LIBDIR)
 	gcc -shared $(CFLAGS) -o $(LIBDIR)/$(LVM2_SO) *.c
 
