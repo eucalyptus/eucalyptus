@@ -42,7 +42,7 @@ install: build
 	@$(INSTALL) -m 755 euca_upgrade $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 populate_arp.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(DESTDIR)$(sbindir)
-	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)/etc/bash_completion.d/euca_conf
+	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 euca_vmware $(DESTDIR)$(datarootdir)/eucalyptus
