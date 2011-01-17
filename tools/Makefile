@@ -75,6 +75,6 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/euca_upgrade
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/populate_arp.pl
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca_conf
-	@$(RM) -f $(DESTDIR)/etc/bash_completion.d/euca_conf
+	@$(RM) -f $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca_sync_key
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/euca_vmware
