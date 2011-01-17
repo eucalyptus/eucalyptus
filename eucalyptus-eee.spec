@@ -351,7 +351,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 
 %files cc
-/opt/euca-axis2c/services/EucalyptusCC
+%{_libdir}/axis2c/services/EucalyptusCC
 /etc/init.d/eucalyptus-cc
 /etc/eucalyptus/vtunall.conf.template
 
@@ -363,11 +363,11 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/share/eucalyptus/get_sys_info
 /usr/share/eucalyptus/detach.pl
 /usr/sbin/euca_test_nc
-/opt/euca-axis2c/services/EucalyptusNC
+%{_libdir}/axis2c/services/EucalyptusNC
 /etc/init.d/eucalyptus-nc
 
 %files gl
-/opt/euca-axis2c/services/EucalyptusGL
+%{_libdir}/axis2c/services/EucalyptusGL
 
 %files broker
 /usr/share/eucalyptus/euca_vmware
@@ -450,7 +450,7 @@ EOF
 chmod +x /etc/udev/scripts/iscsidev.sh
 
 # set java home to location of SunJDK for EEE
-sed -i "s/.*CLOUD_OPTS=.*/CLOUD_OPTS=\"--java-home=\/opt\/packages\/jdk\"/" /etc/eucalyptus/eucalyptus.conf
+sed -i 's#.*CLOUD_OPTS=.*#CLOUD_OPTS="--java-home=/usr/java/latest"#' /etc/eucalyptus/eucalyptus.conf
 
 # we need a eucalyptus user
 if ! getent passwd eucalyptus > /dev/null ; then
