@@ -178,8 +178,6 @@ Summary:      Elastic Utility Computing Architecture - cluster controller
 Requires:     %{name}    = %{version}-%{release}
 Requires:     %{name}-gl = %{version}-%{release}
 Requires:     bridge-utils
-##Requires:     euca-axis2c >= 1.6.0
-##Requires:     euca-rampartc >= 1.3.0
 Requires:     iptables
 Requires:     %{euca_dhcp}
 Requires:     %{euca_httpd}
@@ -200,8 +198,6 @@ Summary:      Elastic Utility Computing Architecture - node controller
 Requires:     %{name}    = %{version}-%{release}
 Requires:     %{name}-gl = %{version}-%{release}
 Requires:     euca2ools-eee
-##Requires:     euca-axis2c >= 1.6.0
-##Requires:     euca-rampartc >= 1.3.0
 Requires:     bridge-utils
 Requires:     %{euca_curl}
 Requires:     %{euca_httpd}
@@ -221,8 +217,6 @@ components that handles the instances.
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
 Requires:     %{name} = %{version}
-##Requires:     euca-axis2c >= 1.6.0
-##Requires:     euca-rampartc >= 1.3.0
 Requires:     %{euca_httpd}
 Group:        Applications/System
 
@@ -239,7 +233,8 @@ Summary:      Elastic Utility Computing Architecture - vmware broker
 Requires:     %{name}-common-java = %{version}-%{release}
 Requires:     %{name}-cc
 Requires:     %{euca_httpd}
-## XXX Where are the Requires and Provides for the VMware broker?
+# The VMware broker links against the VMware disk library.
+# Are we allowed to redistribute it?
 AutoReq:      no
 Group:        Applications/System
 
