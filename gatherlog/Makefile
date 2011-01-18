@@ -34,12 +34,12 @@ generated/stubs: $(GLWSDL)
 
 server: $(SERVICE_SO)
 
-$(SERVICE_SO): generated/stubs gl-client-marshal-adb.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so 
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) -L$(AXIS2C_HOME)/lib $(LIBS) ../util/misc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs gl-client-marshal-adb.o server-marshal.o handlers.o
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) $(LIBS) ../util/misc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO)
 
 client: $(CLIENT)
 
-$(CLIENT): generated/stubs $(CLIENT).c gl-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
+$(CLIENT): generated/stubs $(CLIENT).c gl-client-marshal-adb.c handlers.o
 	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c gl-client-marshal-adb.c -DMODE=1
 
 deploy:

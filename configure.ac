@@ -18,6 +18,7 @@ AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
 AC_USE_SYSTEM_EXTENSIONS
+AC_CANONICAL_BUILD
 EUCA_VERSION="`cat VERSION`"
 
 # let's figure out where is the source tree
@@ -63,6 +64,9 @@ AC_ARG_WITH(axis2,
 AC_ARG_WITH(libvirt,
         [  --with-libvirt=<dir>                 where libvirt is installed],
         [LIBVIRT_HOME="${withval}"])
+AC_ARG_WITH(wsdl2c-sh,
+        [  --with-wsdl2c-sh=<file>              where WSDL2C.sh is installed],
+        [WSDL2C="${withval}"])
 AC_ARG_WITH(vddk,
         [  --with-vddk=<dir>                    where VMware's VDDK is installed],
         [VDDK_HOME="${withval}"])
@@ -84,32 +88,38 @@ AC_ARG_ENABLE(debug,
 
 # If we didn't specify the services directory, let's use the default
 if test -z "$AXIS2C_SERVICES" ; then
-	AXIS2C_SERVICES="${AXIS2C_HOME}/services"
+        AXIS2C_SERVICES="${AXIS2C_HOME}/services"
 fi
 
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then
-	if test -d "${AXIS2C_HOME}"/include ; then
-		for x in `ls ${AXIS2C_HOME}/include`; do
-			INCLUDES="${INCLUDES} -I${AXIS2C_HOME}/include/$x"
-		done
-		LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
-	fi
-	if test -d ${AXIS2C_HOME}/modules/rampart ; then
-		LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
-	fi
+        if test -d "${AXIS2C_HOME}"/include ; then
+                for x in `ls ${AXIS2C_HOME}/include`; do
+                        INCLUDES="${INCLUDES} -I${AXIS2C_HOME}/include/$x"
+                done
+        fi
+        if test -d "${AXIS2C_HOME}"/lib ; then
+                LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
+        fi
+        if test -d ${AXIS2C_HOME}/modules/rampart ; then
+                LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
+        fi
 fi
 if test -n "${LIBVIRT_HOME}" ; then
-	if test -d "${LIBVIRT_HOME}"/include ; then
-		INCLUDES="${INCLUDES} -I${LIBVIRT_HOME}/include"
-		LIBS="-L${LIBVIRT_HOME}/lib ${LIBS}"
-	fi
+        if test -d "${LIBVIRT_HOME}"/include ; then
+                INCLUDES="${INCLUDES} -I${LIBVIRT_HOME}/include"
+                LIBS="-L${LIBVIRT_HOME}/lib ${LIBS}"
+        fi
 fi
 if test -n "${VDDK_HOME}" ; then
-	if test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
-		INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
-		LIBS="-L${VDDK_HOME}/lib ${LIBS}"
-	fi
+        AS_IF([test "x$build_cpu" = "xx86_64"], [LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"],
+              [LIBS="-L${VDDK_HOME}/lib32 ${LIBS}"])
+
+        if test -d "${VDDK_HOME}"/include/ ; then
+                INCLUDES="${INCLUDES} -I${VDDK_HOME}/include/"
+        elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
+                INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
+        fi
 fi
 
 
@@ -120,22 +130,14 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PATH_PROG(RM, rm)
 
-# let's search for WSDL2C.sh
-# we cannot use AC_PROG_PATH because WSDL2C.sh is not executable
-#AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
-WSDL2C=$AXIS2C_HOME/bin/tools/wsdl2c/WSDL2C.sh
-ALT_WSDL2C=$AXIS2C_HOME/WSDL2C.sh
-AC_CHECK_FILE($WSDL2C,[HAVE_WSDL2C=yes])
-AC_CHECK_FILE($ALT_WSDL2C,[HAVE_ALT_WSDL2C=yes])
-# check if we found either of the possible WSDL2Cs
-if test -z "$HAVE_WSDL2C$HAVE_ALT_WSDL2C" ; then
-    AC_MSG_ERROR([Cannot find WSDL2C.sh!])
+if test -z "$WSDL2C"; then
+        # let's search for WSDL2C.sh
+        AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
 fi
-# made it here: we found one! -- set WSDL2C if the default location is wrong
-if test -n "$HAVE_ALT_WSDL2C" ; then
-    WSDL2C=$ALT_WSDL2C
+# check if we found WSDL2C.sh
+if test -z "$WSDL2C" ; then
+        AC_MSG_ERROR([Cannot find WSDL2C.sh!])
 fi
-
 
 # we need JAVA_HOME
 if test -z "$JAVA_HOME" ; then
