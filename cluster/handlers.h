@@ -245,6 +245,7 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts);
 
 int restoreNetworkState();
 int maintainNetworkState();
+int reconfigureNetworkFromCLC();
 
 int powerDown(ncMetadata *ccMeta, ccResource *node);
 int powerUp(ccResource *node);

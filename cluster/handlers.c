@@ -78,12 +78,15 @@ permission notice:
 #include <vnetwork.h>
 #include <misc.h>
 #include <ipc.h>
+#include <walrus.h>
 
 #include <euca_axis.h>
 #include "data.h"
 #include "client-marshal.h"
 
 #include <euca_auth.h>
+
+#include <handlers-state.h>
 
 #define SUPERUSER "eucalyptus"
 
@@ -657,14 +660,20 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *type, int namedLen, char **sour
   }
   
   logprintfl(EUCAINFO, "ConfigureNetwork(): called\n");
-  logprintfl(EUCADEBUG, "ConfigureNetwork(): params: userId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n", SP(ccMeta->userId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
+  logprintfl(EUCADEBUG, "ConfigureNetwork(): params: userId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n", ccMeta ? SP(ccMeta->userId) : "UNSET", SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
   
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
     fail = 0;
   } else {
     
-    if (destUserName == NULL) {
-      destUserName = ccMeta->userId;
+    if ( destUserName == NULL ) {
+      if ( (ccMeta && ccMeta->userId) ) {
+	destUserName = ccMeta->userId;
+      } else {
+	// destUserName is not set, return fail
+	logprintfl(EUCAERROR, "ConfigureNetwork(): cannot set destUserName from ccMeta or input\n");
+	return(1);
+      }
     }
     
     sem_mywait(VNET);
@@ -2419,6 +2428,7 @@ int ccCheckState() {
 void *monitor_thread(void *in) {
   int rc;
   ncMetadata ccMeta;
+  char pidfile[MAX_PATH], *pidstr=NULL;
 
   bzero(&ccMeta, sizeof(ncMetadata));
   ccMeta.correlationId = strdup("monitor");
@@ -2450,7 +2460,30 @@ void *monitor_thread(void *in) {
     }
     
     sem_mywait(CONFIG);
-    if (config->kick_dhcp) {
+
+    if (config->kick_network) {
+      logprintfl(EUCADEBUG, "monitor_thread(): refreshing network cache\n");
+      rc = map_instanceCache(validCmp, NULL, instNetParamsSet, NULL);
+      if (rc) {
+	logprintfl(EUCAERROR, "monitor_thread(): man_instanceCache() failed to reset networkparams from instanceCache\n");
+      } else {
+	rc = restoreNetworkState();
+	if (rc) {
+	  // failed to restore network state, continue 
+	  logprintfl(EUCAWARN, "monitor_thread(): restoreNetworkState returned false (may be already restored)\n");
+	} else {
+	  config->kick_network = 0;
+	}
+      }
+    }
+    
+    snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", config->eucahome);
+    if (!check_file(pidfile)) {
+      pidstr = file2str(pidfile);
+    } else {
+      pidstr = NULL;
+    }
+    if (config->kick_dhcp || !pidstr || check_process(atoi(pidstr), "euca-dhcp.pid")) {
       rc = vnetKickDHCP(vnetconfig);
       if (rc) {
 	logprintfl(EUCAERROR, "monitor_thread(): cannot start DHCP daemon\n");
@@ -2458,8 +2491,9 @@ void *monitor_thread(void *in) {
 	config->kick_dhcp = 0;
       }
     }
-    sem_mypost(CONFIG);
 
+    sem_mypost(CONFIG);
+    
     rc = maintainNetworkState();
     if (rc) {
       logprintfl(EUCAERROR, "monitor_thread(): network state maintainance failed\n");
@@ -2490,7 +2524,8 @@ int init_pthreads() {
       sigemptyset(&newsigact.sa_mask);
       sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
       sigaction(SIGTERM, &newsigact, NULL);
-
+      config->kick_dhcp = 1;
+      config->kick_network = 1;
       monitor_thread(NULL);
       exit(0);
     } else {
@@ -3072,14 +3107,20 @@ int maintainNetworkState() {
   time_t startTime, startTimeA;
   uint32_t cloudIp;
 
+
+  rc = reconfigureNetworkFromCLC();
+  if (rc) {
+    logprintfl(EUCAWARN, "maintainNetworkState(): cannot get network ground truth from CLC\n");
+  }
+
   // find current CLC IP
   cloudIp = vnetconfig->cloudIp;
   for (i=0; i<16; i++) {
     int j;
-    logprintfl(EUCADEBUG, "MEH: type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
+    logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
     for (j=0; j<8; j++) {
       if (strlen(config->services[i].uris[j])) {
-	logprintfl(EUCADEBUG, "MEH:   uri[%d]:%s\n", j, config->services[i].uris[j]);
+	logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
       }
     }
   }
@@ -3184,7 +3225,14 @@ int restoreNetworkState() {
     logprintfl(EUCAERROR, "restoreNetworkState(): cannot start DHCP daemon, please check your network settings\n");
     ret = 1;
   }
+
   sem_mypost(VNET);
+
+  //  rc = reconfigureNetworkFromCLC();
+  //  if (rc) {
+  //    logprintfl(EUCAWARN, "restoreNetworkState(): cannot get network ground truth from CLC\n");
+  //  }
+
   logprintfl(EUCADEBUG, "restoreNetworkState(): done restoring network state\n");
 
   return(ret);
@@ -3192,29 +3240,39 @@ int restoreNetworkState() {
 
 int reconfigureNetworkFromCLC() {
   FILE *FH;
-  char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL;
-
+  char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL, *linetok=NULL, *linesave=NULL, *dname=NULL, *duser=NULL;
   char **suser, **sgroup, **snet, *protocol=NULL;
   char snettok[1024], range[1024];
-  int minport=0, maxport=0, slashnet=0, snetset=0;
+  int minport=0, maxport=0, slashnet=0, snetset=0, rc, snetLen=0, susergroupLen=0;
 
   snettok[0] = '\0';
   range[0] = '\0';
 
-  // TODO add http_get from CLC
-  FH = fopen("network-topology", "r");
+  // TODO: grab CLC ip from serviceInfo / ccConfig
+  rc = http_get("http://localhost:8773/latest/network-topology", "/tmp/mehfoo");
+  if (rc) {
+    logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot get latest network topology from cloud controller\n");
+    return(1);
+  }
+
+  FH = fopen("/tmp/mehfoo", "r");
+  if (!FH) {
+    logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot open tmpfile /tmp/mehfoo\n");
+    return(1);
+  }
 
   while(fgets(buf, 1024, FH)) {
     start = buf;
-    printf("LINE: %s\n", buf);
+    logprintfl(EUCADEBUG, "LINE: %s\n", buf);
     tok = strchr(buf, '\n');
     if (tok) {
       *tok='\0';
       tok=NULL;
     }
 
-    snetset = minport = maxport = 0;
+    snetset = minport = maxport = snetLen = susergroupLen = 0;
     suser = sgroup = snet = NULL;
+    dname = duser = NULL;
     protocol = NULL;
     
     type = strtok_r(start, " ", &save);
@@ -3222,43 +3280,43 @@ int reconfigureNetworkFromCLC() {
       dgroup = strtok_r(NULL, " ", &save);
       if (dgroup) {
 	while((tok = strtok_r(NULL, " ", &save))) {
-	  printf("\tTOK: %s\n", tok);
+	  logprintfl(EUCADEBUG, "\tTOK: %s\n", tok);
 	  if (tok && !strcmp(tok, "-P")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      printf("PROTOCOL: %s\n", tok);
+	      logprintfl(EUCADEBUG, "PROTOCOL: %s\n", tok);
 	      protocol = strdup(tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-p")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      printf("PORTRANGE: %s\n", tok);
+	      logprintfl(EUCADEBUG, "PORTRANGE: %s\n", tok);
 	      snprintf(range, 1024, "%s", tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-t")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      printf("TYPERANGE: %s\n", tok);
+	      logprintfl(EUCADEBUG, "TYPERANGE: %s\n", tok);
 	      snprintf(range, 1024, "%s", tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-o")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      printf("DGROUP: %s\n", tok);
+	      logprintfl(EUCADEBUG, "DGROUP: %s\n", tok);
 	      sgroup = malloc(sizeof(char *));
 	      sgroup[0] = strdup(tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-u")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      printf("DUSER: %s\n", tok);
+	      logprintfl(EUCADEBUG, "DUSER: %s\n", tok);
 	      suser = malloc(sizeof(char *));
 	      suser[0] = strdup(tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-s")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      printf("DNET: %s\n", tok);
+	      logprintfl(EUCADEBUG, "DNET: %s\n", tok);
 	      snprintf(snettok, 1024, "%s", tok);
 	      snetset=1;
 	    }
@@ -3279,12 +3337,19 @@ int reconfigureNetworkFromCLC() {
 	  snet = malloc(sizeof(char *));
 	  snet[0] = malloc(sizeof(char) * 16);
 	  snprintf(snet[0], 16, "%d.%d.%d.%d", a, b, c, d);
-	  printf("protocol=%s minport=%d maxport=%d snet=%s slashnet=%d\n", protocol, minport, maxport, snet[0], slashnet);
+	  logprintfl(EUCADEBUG, "protocol=%s minport=%d maxport=%d snet=%s slashnet=%d\n", protocol, minport, maxport, snet[0], slashnet);
+	  snetLen = 1;
 	} else {
-	  printf("protocol=%s minport=%d maxport=%d suser=%s sgroup=%s\n", protocol, minport, maxport, suser[0], sgroup[0]);
+	  logprintfl(EUCADEBUG, "protocol=%s minport=%d maxport=%d suser=%s sgroup=%s\n", protocol, minport, maxport, suser[0], sgroup[0]);
+	  susergroupLen = 1;
 	}
 	
 	// call doConfigureNetwork here
+	dname = dgroup;
+	duser = strchr(dgroup, '-');
+	*duser = '\0';
+	duser++;
+	rc = doConfigureNetwork(NULL, "firewall-open", susergroupLen, sgroup, suser, snetLen, snet, duser, dname, protocol, minport, maxport);
 	
 	if (protocol) free(protocol);
 	if (suser) {
@@ -3303,8 +3368,8 @@ int reconfigureNetworkFromCLC() {
       }
     }
   }
-  
   fclose(FH);
+  
   return(0);
 }
 
