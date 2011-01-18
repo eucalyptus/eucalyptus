@@ -42,7 +42,7 @@
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus-eee
 Version:       2.1.0
-Release:       0
+Release:       0%{?dist}
 License:       Eucalyptus EEE Software License
 URL:           http://www.eucalyptus.com
 Group:         Applications/System
