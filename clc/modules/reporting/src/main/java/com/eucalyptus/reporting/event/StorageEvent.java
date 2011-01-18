@@ -2,7 +2,7 @@ package com.eucalyptus.reporting.event;
 
 @SuppressWarnings("serial")
 public class StorageEvent
-	implements java.io.Serializable
+	implements Event
 {
 	public enum EventType { S3Object, EbsVolume, EbsSnapshot };
 	
@@ -70,6 +70,12 @@ public class StorageEvent
 	public long getTimestampMs()
 	{
 		return timestampMs;
+	}
+
+	@Override
+	public boolean requiresReliableTransmission()
+	{
+		return true;
 	}
 	
 }
