@@ -1511,6 +1511,8 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   strncpy(dst->ramdiskId, src->ramdiskId, 16);
   strncpy(dst->keyName, src->keyName, 1024);
   strncpy(dst->launchIndex, src->launchIndex, 64);
+  strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
+  strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
   strncpy(dst->userData, src->userData, 4096);
   strncpy(dst->state, src->stateName, 16);
   dst->ts = src->launchTime;

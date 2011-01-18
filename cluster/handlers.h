@@ -106,6 +106,10 @@ typedef struct instance_t {
 
   char userData[4096];
   char launchIndex[64];
+
+  char bundleTaskStateName[64];
+  char createImageTaskStateName[64];
+
   int expiryTime;
   char groupNames[64][32];
 
