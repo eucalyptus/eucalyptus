@@ -253,7 +253,6 @@ VMware installation.
 
 %build
 # Export the classpath here so WSDL2C can find its stuff
-export CLASSPATH="%{_javadir}/*"
 export DESTDIR=$RPM_BUILD_ROOT
 # Oracle JDK links to Java without using alternatives
 export JAVA_HOME=/usr/java/latest
