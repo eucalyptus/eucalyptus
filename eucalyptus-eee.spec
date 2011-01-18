@@ -58,6 +58,11 @@ BuildRequires: swig
 %if %{is_suse}
 BuildRequires: xen-tools
 %endif
+%if %{is_suse}
+BuildRequires: libopenssl-devel
+%else
+BuildRequires: openssl-devel
+%endif
 # The bytecode encryption we use for EEE doesn't work with OpenJDK
 BuildRequires: jdk
 # The VMware code requires FUSE libs to link correstly
