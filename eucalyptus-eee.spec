@@ -231,7 +231,7 @@ This package contains the internal log service of eucalyptus.
 %package broker
 Summary:      Elastic Utility Computing Architecture - vmware broker
 Requires:     %{name}-common-java = %{version}-%{release}
-Requires:     %{name}-cc
+Requires:     %{name}-cc          = %{version}-%{release}
 Requires:     %{euca_httpd}
 # The VMware broker links against the VMware disk library.
 # Are we allowed to redistribute it?
