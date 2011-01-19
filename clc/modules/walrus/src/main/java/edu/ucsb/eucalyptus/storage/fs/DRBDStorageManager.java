@@ -88,6 +88,9 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	private static final String CSTATE_WFCONNECTION = "WFConnection";
 	private static final String CSTATE_CONNECTED = "Connected";
 
+	public DRBDStorageManager() {
+	}
+	
 	public DRBDStorageManager(String rootDirectory) {
 		super(rootDirectory);
 		LOG.info("Initializing DRBD Info: " + DRBDInfo.getDRBDInfo().getName());
