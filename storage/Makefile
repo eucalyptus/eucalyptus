@@ -4,7 +4,7 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = -lcurl -lssl
+STORAGE_LIBS = -lcurl -lssl -lcrypto
 IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_bundle.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o helpers.o
 VDDK_FLAGS = $(LIBS) -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
 IMAGER_WRAPPER=euca_imager
@@ -29,7 +29,7 @@ test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
 
-.c.o: 
+.c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) $(VDDK_FLAGS) $<
 
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h
