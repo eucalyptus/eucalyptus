@@ -302,6 +302,8 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     
     // reported by NC
     adb_instanceType_set_stateName(instance, env, outInst->stateName);
+    adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
+    adb_instanceType_set_createImageStateName(instance, env, outInst->createImageTaskStateName);
     axutil_date_time_t * dt = axutil_date_time_create_with_offset(env, outInst->launchTime - time(NULL));
     adb_instanceType_set_launchTime(instance, env, dt);
     adb_instanceType_set_blkbytes(instance, env, outInst->blkbytes);
