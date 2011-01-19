@@ -103,8 +103,8 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
     } else {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
-        LOG.debug( "Volumes marked as attached " + vm.getVolumes( ) + " to " + vm.getInstanceId( ) );
-        vm.updateVolumeState( this.getRequest( ).getVolumeId( ), "attached" );
+        vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
+//        LOG.debug( "Volumes marked as attached " + vm.collectVolumeAttachments( Predicates.alwaysTrue( ) ) + " to " + vm.getInstanceId( ) );
       } catch ( NoSuchElementException e1 ) {
       }
     }
@@ -117,9 +117,8 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
     try {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
       AttachedVolume failVol = new AttachedVolume( this.getRequest().getVolumeId( ) );
-      NavigableSet<AttachedVolume> volList = vm.getVolumes( ).subSet( failVol, true, failVol, true );
-      if( !volList.isEmpty( ) ) {
-        AttachedVolume volume = volList.first( );
+      try {
+        AttachedVolume volume = vm.removeVolumeAttachment( this.getRequest( ).getVolumeId( ) );
         LOG.debug( "Found volume attachment info in async error path: " + volume );
         try {
           Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
@@ -131,12 +130,11 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
         } catch ( EucalyptusCloudException ex ) {
           LOG.error( ex , ex );
         }
-        vm.getVolumes( ).remove( failVol );
-      } else {
+      } catch ( Exception ex1 ) {
         LOG.error( "Failed to find volume attachment information for volume: " + failVol );
       }
       LOG.debug( "Removed failed attachment: " + failVol.getVolumeId( ) + " -> " + vm.getInstanceId( ) );
-      LOG.debug( "Final volume attachments for " + vm.getInstanceId( ) + " " + vm.getVolumes( ) );
+//      LOG.debug( "Final volume attachments for " + vm.getInstanceId( ) + " " + vm.getVolumes( ) );
     } catch ( NoSuchElementException e1 ) {
     }
   }

@@ -91,7 +91,10 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
   public void fire( DetachVolumeResponseType reply ) {
     if ( reply.get_return( ) ) {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
-      vm.getVolumes( ).remove( new AttachedVolume( this.getRequest( ).getVolumeId( ) ) );
+      vm.removeVolumeAttachment( this.getRequest( ).getVolumeId( ) );
+    } else {
+      VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+      vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
     }
   }
 

@@ -87,6 +87,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.Callbacks;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
@@ -207,11 +208,12 @@ public class VolumeManager {
     try {
       Volume vol = db.getUnique( Volume.named( userName, request.getVolumeId( ) ) );
       for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-        for ( AttachedVolume attachedVol : vm.getVolumes( ) ) {
-          if ( request.getVolumeId( ).equals( attachedVol.getVolumeId( ) ) ) {
-            db.rollback( );
-            return reply;
-          }
+        try {
+          vm.lookupVolumeAttachment( request.getVolumeId( ) );
+          db.rollback( );
+          return reply;
+        } catch ( NoSuchElementException ex ) {
+          /** no such volume attached, move along... **/
         }
       }
       if ( State.FAIL.equals( vol.getState( ) ) ) {
@@ -248,11 +250,13 @@ public class VolumeManager {
     try {
       String userName = request.isAdministrator( ) ? null : request.getUserId( );
       
-      Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>( );
+      final Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>( );
       for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-        for ( AttachedVolume av : vm.getVolumes( ) ) {
-          attachedVolumes.put( av.getVolumeId( ), av );
-        }
+        vm.eachVolumeAttachment( new Predicate<AttachedVolume>() {
+          @Override
+          public boolean apply( AttachedVolume arg0 ) {
+            return attachedVolumes.put( arg0.getVolumeId( ), arg0 ) == null;
+          }} );
       }
       
       List<Volume> volumes = db.query( Volume.ownedBy( userName ) );
@@ -294,11 +298,6 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ) );
     }
-    for ( AttachedVolume attachedVol : vm.getVolumes( ) ) {
-      if ( attachedVol.getDevice( ).replaceAll( "unknown,requested:", "" ).equals( request.getDevice( ) ) ) {
-        throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice( ) );
-      }
-    }
     Cluster cluster = null;
     try {
       cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
@@ -306,12 +305,24 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPlacement( ) );
     }
-    
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      for ( AttachedVolume vol : v.getVolumes( ) ) {
-        if ( vol.getVolumeId( ).equals( request.getVolumeId( ) ) ) {
-          throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId( ) );
-        }
+    final String deviceName = request.getDevice( );
+    final String volumeId = request.getVolumeId( );
+    try {
+      vm.lookupVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        @Override
+        public boolean apply( AttachedVolume arg0 ) {
+          return arg0.getDevice( ).replaceAll( "unknown,requested:", "" ).equals( deviceName );
+        }} );
+      throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice( ) );
+    } catch ( NoSuchElementException ex1 ) {
+      /** no attachment **/
+    }
+    for ( VmInstance iter : VmInstances.getInstance( ).listValues( ) ) {
+      try {
+        iter.lookupVolumeAttachment( volumeId );
+        throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId( ) );
+      } catch ( NoSuchElementException ex ) {
+        /** no attachment **/
       }
     }
     
@@ -366,7 +377,7 @@ public class VolumeManager {
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
     attachVol.setStatus( "attaching" );
-    vm.getVolumes( ).add( attachVol );
+    vm.addVolumeAttachment( attachVol );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getUserName( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
                .withDetails( "cluster", vm.getPlacement( ) ).info( );
@@ -391,12 +402,12 @@ public class VolumeManager {
     
     VmInstance vm = null;
     AttachedVolume volume = null;
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      for ( AttachedVolume vol : v.getVolumes( ) ) {
-        if ( vol.getVolumeId( ).equals( request.getVolumeId( ) ) ) {
-          volume = vol;
-          vm = v;
-        }
+    for ( VmInstance iter : VmInstances.getInstance( ).listValues( ) ) {
+      try {
+        volume = iter.lookupVolumeAttachment( request.getVolumeId( ) );
+        vm = iter;
+      } catch ( NoSuchElementException ex ) {
+        /** no such attachment **/
       }
     }
     if ( volume == null ) {

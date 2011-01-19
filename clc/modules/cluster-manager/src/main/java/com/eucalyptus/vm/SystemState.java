@@ -211,7 +211,7 @@ public class SystemState {
       }
       vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
       vm.updateNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
-      vm.setVolumes( runVm.getVolumes( ) );
+      vm.updateVolumeAttachments( runVm.getVolumes( ) );
       try {
         Network network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
         network.extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );

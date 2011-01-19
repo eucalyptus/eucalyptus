@@ -77,6 +77,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -93,6 +94,7 @@ import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.eucalyptus.records.EventRecord;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -242,32 +244,28 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     }
   }
 
+
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
-    Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-    if ( !vm.getVolumes( ).isEmpty( ) ) {
-      try {
-        StorageControllerConfiguration sc = Configuration.lookupSc( vm.getPlacement( ) );
-        for ( AttachedVolume volume : vm.getVolumes( ) ) {
+    try {
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+      final StorageControllerConfiguration sc = Configuration.lookupSc( vm.getPlacement( ) );
+      vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        @Override
+        public boolean apply( AttachedVolume arg0 ) {
           try {
-	      ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) ).send( new DetachStorageVolumeType(
-                                                                                                                cluster.getNode( vm.getServiceTag( ) ).getIqn( ),
-                                                                                                                volume.getVolumeId( ) ) );
-            vm.getVolumes( ).remove( volume );
+            vm.removeVolumeAttachment( arg0.getVolumeId( ) );
+            Dispatcher scDispatcher = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) );
+            scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+            return true;
           } catch ( Throwable e ) {
-            LOG.error( "Failed sending Detach Storage Volume for: " + volume.getVolumeId( )
+            LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
                        + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
+            return false;
           }
         }
-      } catch ( Exception ex ) {
-        LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPlacement( ) + ").  " +
-                   "The the following volumes are attached: " + Iterables.transform( vm.getVolumes( ), new Function<AttachedVolume, String>( ) {
-                     
-                     @Override
-                     public String apply( AttachedVolume arg0 ) {
-                       return arg0.getVolumeId( );
-                     }
-                   } ) );
-      }
+      } );
+    } catch ( Exception ex ) {
+      LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPlacement( ) + ").  " );
     }
   }
 
