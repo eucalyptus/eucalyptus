@@ -42,7 +42,7 @@ install: build
 	@$(INSTALL) -m 755 euca_upgrade $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 populate_arp.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_conf $(DESTDIR)$(sbindir)
-	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)/etc/bash_completion.d/euca_conf
+	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
 	@$(INSTALL) -m 755 euca_sync_key $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 connect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 disconnect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
@@ -67,6 +67,6 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/euca_upgrade
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/populate_arp.pl
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca_conf
-	@$(RM) -f $(DESTDIR)/etc/bash_completion.d/euca_conf
+	@$(RM) -f $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca_sync_key
 
