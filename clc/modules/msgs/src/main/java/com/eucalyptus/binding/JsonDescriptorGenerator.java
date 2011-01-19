@@ -77,19 +77,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.binding.JsonDescriptorGenerator.BooleanTypeBinding;
-import com.eucalyptus.binding.JsonDescriptorGenerator.CollectionTypeBinding;
-import com.eucalyptus.binding.JsonDescriptorGenerator.Elem;
-import com.eucalyptus.binding.JsonDescriptorGenerator.ElemItem;
-import com.eucalyptus.binding.JsonDescriptorGenerator.IntegerTypeBinding;
-import com.eucalyptus.binding.JsonDescriptorGenerator.LongTypeBinding;
-import com.eucalyptus.binding.JsonDescriptorGenerator.NoopTypeBinding;
-import com.eucalyptus.binding.JsonDescriptorGenerator.ObjectTypeBinding;
-import com.eucalyptus.binding.JsonDescriptorGenerator.RootObjectTypeBinding;
-import com.eucalyptus.binding.JsonDescriptorGenerator.StringTypeBinding;
-import com.eucalyptus.binding.JsonDescriptorGenerator.TypeBinding;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class JsonDescriptorGenerator extends BindingGenerator {
   private static Logger            LOG          = Logger.getLogger( JsonDescriptorGenerator.class );
@@ -97,7 +89,6 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   private static String            INDENT       = "";
   private final File               outFile;
   private PrintWriter              out;
-  private String                   bindingName;
   private int                      indent       = 0;
   private Map<String, TypeBinding> typeBindings = new HashMap<String, TypeBinding>( ) {
                                                   {
@@ -131,7 +122,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
                                                 };
   
   public JsonDescriptorGenerator( ) {
-    this.outFile = new File( "modules/msgs/src/main/resources/msgs-binding.xml" );
+    this.outFile = new File( "modules/msgs/src/main/resources/msgs-binding.json" );
     if ( outFile.exists( ) ) {
       outFile.delete( );
     }
@@ -141,37 +132,164 @@ public class JsonDescriptorGenerator extends BindingGenerator {
       e.printStackTrace( System.err );
       System.exit( -1 );
     }
-    this.bindingName = this.ns.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
-    this.out.write( "<binding xmlns:euca=\"" + ns + "\" name=\"" + bindingName + "\">\n" );
-    this.out.write( "  <namespace uri=\"" + ns + "\" default=\"elements\" prefix=\"euca\"/>\n" );
-    this.out.flush( );
-  }
-  
-  public ElemItem peek( ) {
-    return this.elemStack.peek( );
   }
   
   @Override
   public void processClass( Class klass ) {
-    if ( BindingGenerator.DATA_TYPE.isAssignableFrom( klass ) || BindingGenerator.MSG_TYPE.isAssignableFrom( klass ) ) {
-      String mapping = new RootObjectTypeBinding( klass ).process( );
-      out.write( mapping );
-      out.flush( );
+    if ( BindingGenerator.MSG_TYPE.isAssignableFrom( klass ) ) {
+      System.out.println( "JSONifying " + klass.getCanonicalName( ) );
+      RequestInfo.get( klass );
     }
   }
   
   @Override
   public void close( ) {
-    this.out.write( "</binding>" );
+    this.out.write( RequestInfo.getRequestInfoList( ).toString( ) );
     this.out.flush( );
     this.out.close( );
-//    try {
-//      XMLSerializer xmlSerializer = new XMLSerializer();  
-//      JSON json = xmlSerializer.readFromFile( this.outFile );  
-//      System.out.println( json.toString(2) );
-//    } catch ( Throwable ex ) {
-//      LOG.error( ex , ex );
-//    }    
+    RequestInfo.flush( );
+  }
+  
+  public static class RequestInfo {
+    private String                                name;
+    private Class                                 request;
+    private Class                                 response;
+    private Class                                 parent;
+    private static final Map<String, RequestInfo> requestMap = new HashMap<String, RequestInfo>( );
+    
+    public static List<RequestInfo> getRequestInfoList( ) {
+      return new ArrayList<RequestInfo>( requestMap.values( ) );
+    }
+    
+    public static void flush( ) {
+      requestMap.clear( );
+      System.gc( );
+    }
+    
+    public static RequestInfo get( final Class type ) {
+      if ( !MSG_TYPE.isAssignableFrom( type ) || type.getSimpleName( ) == null ) {
+        LOG.info( "IGNORING NON-REQUEST TYPE: " + type );
+        return null;
+      } else if ( type.getName( ).endsWith( "ResponseType" ) ) {
+        final String typeKey = type.getSimpleName( ).replaceAll( "ResponseType\\Z", "" );
+        if ( !requestMap.containsKey( typeKey ) ) {
+          RequestInfo newRequest = new RequestInfo( ) {
+            {
+              setName( typeKey );
+              setResponse( type );
+            }
+          };
+          requestMap.put( typeKey, newRequest );
+          return newRequest;
+        } else {
+          RequestInfo existing = requestMap.get( typeKey );
+          existing.setResponse( type );
+          return existing;
+        }
+      } else if ( type.getName( ).endsWith( "Type" ) ) {
+        final String typeKey = type.getSimpleName( ).replaceAll( "Type\\Z", "" );
+        if ( !requestMap.containsKey( typeKey ) ) {
+          RequestInfo newRequest = new RequestInfo( ) {
+            {
+              setName( typeKey );
+              setRequest( type );
+              
+            }
+          };
+          requestMap.put( typeKey, newRequest );
+          return newRequest;
+        } else {
+          RequestInfo existing = requestMap.get( typeKey );
+          existing.setRequest( type );
+          return existing;
+        }
+      } else {
+        LOG.info( "IGNORING NON-REQUEST TYPE: " + type );
+        return null;
+      }
+    }
+    
+    @Override
+    public int hashCode( ) {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ( ( this.name == null )
+        ? 0
+        : this.name.hashCode( ) );
+      return result;
+    }
+    
+    @Override
+    public boolean equals( Object obj ) {
+      if ( this == obj ) return true;
+      if ( obj == null ) return false;
+      if ( getClass( ) != obj.getClass( ) ) return false;
+      RequestInfo other = ( RequestInfo ) obj;
+      if ( this.name == null ) {
+        if ( other.name != null ) return false;
+      } else if ( !this.name.equals( other.name ) ) return false;
+      return true;
+    }
+    
+    public void setParent( Class c ) {
+      if ( this.parent != null ) {
+        return;
+      } else {
+        Class targetType = c;
+        do {
+          this.parent = targetType;
+        } while ( ( targetType = targetType.getSuperclass( ) ) != null && !BaseMessage.class.equals( targetType.getSuperclass( ) ) && !java.lang.Object.class.equals( targetType.getSuperclass( ) ) );
+      }
+    }
+    
+    public String getName( ) {
+      return this.name;
+    }
+    
+    public void setName( String name ) {
+      this.name = name;
+    }
+    
+    public Class getRequest( ) {
+      return this.request;
+    }
+    
+    public void setRequest( Class request ) {
+      this.request = request;
+    }
+    
+    public Class getResponse( ) {
+      return this.response;
+    }
+    
+    public void setResponse( Class response ) {
+      this.response = response;
+    }
+    
+    @Override
+    public String toString( ) {
+      if ( this.parent == null ) {
+        if( this.request != null ) {
+          this.setParent( this.request );
+        } else if( this.response != null ) {
+          this.setParent( this.response );
+        }
+      }
+      return String.format( "RequestInfo:name=%s:request=%s:response=%s:parent=%s", this.name, 
+                            ( this.request != null ? this.request.getCanonicalName( ) : "" ),
+                            ( this.response != null ? this.response.getCanonicalName( ) : "" ), 
+                            ( this.parent != null
+                              ? this.parent.getCanonicalName( )
+                              : ( this.request != null
+                                ? this.request.getSuperclass( )
+                                : ( this.response != null
+                                  ? this.response.getSuperclass( )
+                                  : "FAILED-REQUEST-PAIRING" ) ) ) );
+    }
+  }
+  
+  public ElemItem peek( ) {
+    return this.elemStack.peek( );
   }
   
   public TypeBinding getTypeBinding( Field field ) {
@@ -181,15 +299,18 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     } else if ( List.class.isAssignableFrom( itsType ) ) {
       Class listType = getTypeArgument( field );
       if ( listType == null ) {
-        System.err.printf( "IGNORE: %-70s [type=%s] NO GENERIC TYPE FOR LIST\n", field.getDeclaringClass( ).getCanonicalName( ) + "."+ field.getName( ), listType );
-        return new NoopTypeBinding( field );        
+        System.err.printf( "IGNORE: %-70s [type=%s] NO GENERIC TYPE FOR LIST\n", field.getDeclaringClass( ).getCanonicalName( ) + "." + field.getName( ),
+                           listType );
+        return new NoopTypeBinding( field );
       } else if ( typeBindings.containsKey( listType.getCanonicalName( ) ) ) {
         return new CollectionTypeBinding( field.getName( ), typeBindings.get( listType.getCanonicalName( ) ) );
       } else if ( BindingGenerator.DATA_TYPE.isAssignableFrom( listType ) ) {
         return new CollectionTypeBinding( field.getName( ), new ObjectTypeBinding( field.getName( ), listType ) );
       } else {
-        System.err.printf( "IGNORE: %-70s [type=%s] LIST'S GENERIC TYPE DOES NOT CONFORM TO EucalyptusData\n", field.getDeclaringClass( ).getCanonicalName( ) + "."+ field.getName( ), listType.getCanonicalName( ) );
-        return new NoopTypeBinding( field );        
+        System.err.printf( "IGNORE: %-70s [type=%s] LIST'S GENERIC TYPE DOES NOT CONFORM TO EucalyptusData\n", field.getDeclaringClass( ).getCanonicalName( )
+                                                                                                               + "." + field.getName( ),
+                           listType.getCanonicalName( ) );
+        return new NoopTypeBinding( field );
       }
     } else if ( typeBindings.containsKey( itsType.getCanonicalName( ) ) ) {
       TypeBinding t = typeBindings.get( itsType.getCanonicalName( ) );
@@ -200,7 +321,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     } else if ( BindingGenerator.DATA_TYPE.isAssignableFrom( field.getType( ) ) ) {
       return new ObjectTypeBinding( field );
     } else {
-      System.err.printf( "IGNORE: %-70s [type=%s] TYPE DOES NOT CONFORM TO EucalyptusData\n", field.getDeclaringClass( ).getCanonicalName( ) + "."+ field.getName( ), field.getType( ).getCanonicalName( ) );
+      System.err.printf( "IGNORE: %-70s [type=%s] TYPE DOES NOT CONFORM TO EucalyptusData\n",
+                         field.getDeclaringClass( ).getCanonicalName( ) + "." + field.getName( ), field.getType( ).getCanonicalName( ) );
       return new NoopTypeBinding( field );
     }
   }
@@ -227,7 +349,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
     
     public String process( ) {
-      if( this.type.getCanonicalName( ) == null ) {
+      if ( this.type.getCanonicalName( ) == null ) {
         new RuntimeException( "Ignoring anonymous class: " + this.type ).printStackTrace( );
       } else {
         this.elem( Elem.mapping );
@@ -237,13 +359,15 @@ public class JsonDescriptorGenerator extends BindingGenerator {
           this.attr( "name", this.type.getSimpleName( ) ).attr( "extends", this.type.getSuperclass( ).getCanonicalName( ) );
         }
         this.attr( "class", this.type.getCanonicalName( ) );
-        if( BindingGenerator.MSG_TYPE.isAssignableFrom( this.type.getSuperclass( ) ) || BindingGenerator.DATA_TYPE.isAssignableFrom( this.type.getSuperclass( ) ) ) {
-          this.elem( Elem.structure ).attr( "map-as", this.type.getSuperclass().getCanonicalName( ) ).end( );
+        if ( BindingGenerator.MSG_TYPE.isAssignableFrom( this.type.getSuperclass( ) )
+             || BindingGenerator.DATA_TYPE.isAssignableFrom( this.type.getSuperclass( ) ) ) {
+          this.elem( Elem.structure ).attr( "map-as", this.type.getSuperclass( ).getCanonicalName( ) ).end( );
         }
         for ( Field f : type.getDeclaredFields( ) ) {
           TypeBinding tb = getTypeBinding( f );
           if ( !( tb instanceof NoopTypeBinding ) ) {
-            System.out.printf( "BOUND:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) +"."+ f.getName( ), tb.getTypeName( ), f.getType( ).getCanonicalName( ) );          
+            System.out.printf( "BOUND:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
+                               f.getType( ).getCanonicalName( ) );
             this.append( tb.toString( ) );
           }
         }
@@ -290,7 +414,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
     
     protected TypeBinding append( Object o ) {
-      this.buf.append( ""+o );
+      this.buf.append( "" + o );
       return this;
     }
     
@@ -427,12 +551,14 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   enum Elem {
     structure, collection, value, mapping, binding
   }
+  
   class IgnoredTypeBinding extends NoopTypeBinding {
-
+    
     public IgnoredTypeBinding( Field field ) {
       super( field );
     }
-  }  
+  }
+  
   class NoopTypeBinding extends TypeBinding {
     private String name;
     private Class  type;
@@ -542,5 +668,4 @@ public class JsonDescriptorGenerator extends BindingGenerator {
       return Boolean.class.getCanonicalName( );
     }
   }
-  
 }

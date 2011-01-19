@@ -147,7 +147,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     
     public String process( ) {
       if( this.type.getCanonicalName( ) == null ) {
-        new RuntimeException( "Ignoring anonymous class: " + this.type ).printStackTrace( );
+//        new RuntimeException( "Ignoring anonymous class: " + this.type ).printStackTrace( );
       } else {
         this.elem( Elem.mapping );
         if ( this.abs ) {
