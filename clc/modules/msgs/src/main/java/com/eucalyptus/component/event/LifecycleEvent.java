@@ -3,7 +3,7 @@ package com.eucalyptus.component.event;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.event.Event;
 
-public class LifecycleEvent extends Event {
+public class LifecycleEvent implements Event {
   private ServiceConfiguration configuration;
   private String                 name;
   private boolean                local;
@@ -27,8 +27,7 @@ public class LifecycleEvent extends Event {
   
   @Override
   public String toString( ) {
-    return String.format( "LifecycleEvent [name=%s, configuration=%s, local=%s, getCause()=%s, getFail()=%s, isVetoed()=%s]", name, configuration, local,
-                          getCause( ), getFail( ), isVetoed( ) );
+    return String.format( "LifecycleEvent [name=%s, configuration=%s, local=%s]", name, configuration, local );
   }
 
 }

@@ -194,7 +194,7 @@ public class SystemState {
     }
     long splitTime = vm.getSplitTime( );
     VmState oldState = vm.getState( );
-    
+    vm.setUuid( runVm.getUuid( ) );
     vm.setServiceTag( runVm.getServiceTag( ) );
     
     if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {

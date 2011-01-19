@@ -6,6 +6,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Record;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -65,7 +66,7 @@ public class ReentrantListenerRegistry<T> {
     }
   }
   
-  public void fireEvent( T type, Event e ) throws EventVetoedException {
+  public void fireEvent( T type, Event e ) throws EventFailedException {
     List<EventListener> listeners;
     this.modificationLock.lock( );
     try {
@@ -76,15 +77,8 @@ public class ReentrantListenerRegistry<T> {
     this.fireEvent( e, listeners );
   }
   
-  private void fireEvent( Event e, List<EventListener> listeners ) throws EventVetoedException {
-    for ( EventListener ce : listeners ) {
-      ce.advertiseEvent( e );
-      if ( e.isVetoed( ) ) {
-        String cause = e.getCause( ) != null ? e.getCause( ) : "no cause given";
-        EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_VETOD, ce.getClass( ).getSimpleName( ), e.toString( ), cause ).info( );
-        throw new EventVetoedException( String.format( "Event %s was vetoed by listener %s: %s", LogUtil.dumpObject( e ), LogUtil.dumpObject( ce ), cause ) );
-      }
-    }
+  private void fireEvent( Event e, List<EventListener> listeners ) throws EventFailedException {
+    List<Throwable> errors = Lists.newArrayList( );
     for ( EventListener ce : listeners ) {
       Record record = EventRecord.here( ReentrantListenerRegistry.class, EventType.LISTENER_EVENT_FIRED, ce.getClass( ).getSimpleName( ), e.toString( ));
       if ( e instanceof ClockTick || e instanceof Hertz ) {
@@ -92,12 +86,15 @@ public class ReentrantListenerRegistry<T> {
       } else {
         record.debug( );
       }
-      ce.fireEvent( e );
-      if ( e.getFail( ) != null ) {
-        LOG.info( e.getFail( ) );
-        LOG.debug( e.getFail( ), e.getFail( ) );
-        throw new EventVetoedException( e.getFail( ) );
+      try {
+        ce.fireEvent( e );
+      } catch ( Throwable ex ) {
+        ex = new EventFailedException( "Failed to fire event: listener=" + ce.getClass( ).getCanonicalName( ) + " event=" + e.toString( ) + " because of: " + ex.getMessage( ), Exceptions.filterStackTrace( ex ) );
+        errors.add( ex );
       }
+    }
+    for( Throwable ex : errors ) {
+      LOG.error( ex.getMessage( ), ex );
     }
   }
   

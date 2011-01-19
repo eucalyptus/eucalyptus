@@ -510,9 +510,6 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   @Override
-  public void advertiseEvent( Event event ) {}
-  
-  @Override
   public void fireEvent( Event event ) {
     if( !Bootstrap.isFinished( ) ) {
       LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" ); 

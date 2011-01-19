@@ -207,9 +207,6 @@ public class LocalDatabaseBootstrapper extends Bootstrapper implements EventList
   }
 
   @Override
-  public void advertiseEvent( Event event ) {}
-
-  @Override
   public void fireEvent( Event event ) {
     if( event instanceof ClockTick && Components.lookup( "eucalyptus" ).isLocal( ) ) {
       try {

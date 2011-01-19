@@ -235,8 +235,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
   }
   
-  @Override public void advertiseEvent( Event event ) {}
-
   @Override public void fireEvent( Event event ) {
     if( event instanceof SystemConfigurationEvent ) {
       Addresses.systemAddressManager = Addresses.getProvider( );
