@@ -131,7 +131,11 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     Map<String, String> fieldMap = null;
     Class targetType = null;
     try {
-      targetType = this.getBinding( ).getElementClass( operationName );
+      try {
+        targetType = this.getBinding( ).getElementClass( operationName + "Type" );
+      } catch ( BindingException ex ) {
+        targetType = this.getBinding( ).getElementClass( operationName );
+      }
       fieldMap = this.buildFieldMap( targetType );
       eucaMsg = ( BaseMessage ) targetType.newInstance( );
     } catch ( BindingException e ) {
