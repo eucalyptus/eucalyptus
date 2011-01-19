@@ -88,6 +88,9 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	private static final String CSTATE_WFCONNECTION = "WFConnection";
 	private static final String CSTATE_CONNECTED = "Connected";
 
+	public DRBDStorageManager() {
+	}
+	
 	public DRBDStorageManager(String rootDirectory) {
 		super(rootDirectory);
 		LOG.info("Initializing DRBD Info: " + DRBDInfo.getDRBDInfo().getName());
@@ -276,6 +279,12 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 	//check status
 
+	public void secondaryDrasticRecovery() throws ExecutionException, EucalyptusCloudException {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "--", "--discard-my-data", "connect", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
+			throw new EucalyptusCloudException("Unable to recover from split brain for resource: " + DRBDInfo.getDRBDInfo().getResource());
+		}
+	}
+	
 	@Override
 	public void enable() throws EucalyptusCloudException {
 		try {
