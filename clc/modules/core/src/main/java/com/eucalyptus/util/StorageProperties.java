@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -131,22 +131,22 @@ public class StorageProperties {
 	static { GroovyUtil.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
-    try {
-      StorageProperties.NAME = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getName( );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
-      LOG.error( "Failed to configure Storage Controller NAME." );
-      throw ex;
-    }
+		try {
+			StorageProperties.NAME = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getName( );
+		} catch ( NoSuchElementException ex ) {
+			LOG.error( ex , ex );
+			LOG.error( "Failed to configure Storage Controller NAME." );
+			throw ex;
+		}
 	}
 
 	public static void updateStorageHost() {
-    try {
-      STORAGE_HOST = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getHostName( );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
-      LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
-    }
+		try {
+			STORAGE_HOST = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getHostName( );
+		} catch ( NoSuchElementException ex ) {
+			LOG.error( ex , ex );
+			LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
+		}
 	}
 
 	public static void updateStorageHost(String hostName) {

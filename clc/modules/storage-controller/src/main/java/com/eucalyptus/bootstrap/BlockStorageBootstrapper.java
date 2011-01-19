@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -74,7 +74,7 @@ import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 @DependsLocal(Component.storage)
 public class BlockStorageBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
-	
+
 	private static BlockStorageBootstrapper singleton;
 
 	public static Bootstrapper getInstance( ) {
@@ -100,7 +100,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean start( ) throws Exception {
-    BlockStorage.configure();
+		BlockStorage.configure();
 		return true;
 	}
 
