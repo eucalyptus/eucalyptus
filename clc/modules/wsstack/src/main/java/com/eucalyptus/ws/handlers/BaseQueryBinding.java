@@ -103,6 +103,19 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     this.possibleParams = Arrays.asList( operationParam.getDeclaringClass( ).getEnumConstants( ) );
   }
 
+  /**
+   * @param namespacePattern - the format string to be used when constructing the namespace.  this can be a fully formed namespace.
+   * @param defaultVersion - default version to use if binding problems are encountered (e.g., unknown request namespace).
+   * @param operationParam - this argument is used to determine the list of possible operation parameters
+   * @param alternativeOperationParam - these arguments are treated as alternatives to <tt>operationParam</tt> (e.g., <tt>Action</tt> is an alternative to <tt>Operation</tt>).
+   */
+  public BaseQueryBinding( String namespacePattern, String defaultVersion, T operationParam, T... alternativeOperationParam ) {
+    super( namespacePattern, defaultVersion );
+    this.operationParam = operationParam;
+    this.altOperationParams = Arrays.asList( alternativeOperationParam );
+    this.possibleParams = Arrays.asList( operationParam.getDeclaringClass( ).getEnumConstants( ) );
+  }
+
   private final String extractOperationName( final MappingHttpRequest httpRequest ) {
     if( httpRequest.getParameters( ).containsKey( operationParam.toString( ) ) ) {
       return httpRequest.getParameters( ).get( operationParam.toString( ) );

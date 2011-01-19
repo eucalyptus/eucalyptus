@@ -118,15 +118,13 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     try {
       long sign = (long) (Math.pow(-1f,(float)(++phase%2)));
       ListenerRegistry.getInstance( ).fireEvent( new ClockTick().setMessage( sign * System.currentTimeMillis( ) ) );
-    } catch ( EventVetoedException e ) {
+    } catch ( EventFailedException e ) {
     } catch ( Throwable t ) {
       LOG.error( t, t );
     }    
   }
 
   public static class Dummy implements EventListener{
-    @Override
-    public void advertiseEvent( Event event ) {}
     @Override
     public void fireEvent( Event event ) {}
   }
@@ -190,7 +188,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
       Thread.currentThread().setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
       try {
         ListenerRegistry.getInstance( ).fireEvent( new Hertz() );
-      } catch ( EventVetoedException e ) {
+      } catch ( EventFailedException e ) {
       } catch ( Throwable t ) {
         LOG.error( t, t );
       }    

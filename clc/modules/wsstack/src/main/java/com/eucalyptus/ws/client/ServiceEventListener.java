@@ -27,9 +27,6 @@ public class ServiceEventListener implements EventListener {
     }
   }
 
-  @Override
-  public void advertiseEvent( Event event ) {
-  }
 
   @Override
   public void fireEvent( Event event ) {

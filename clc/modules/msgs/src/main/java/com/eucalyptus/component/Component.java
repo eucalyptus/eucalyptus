@@ -613,8 +613,6 @@ public class Component implements ComponentInformation, HasName<Component> {
         } );
       }
     }
-    
-    public void advertiseEvent( Event event ) {}
   }
 
   /**

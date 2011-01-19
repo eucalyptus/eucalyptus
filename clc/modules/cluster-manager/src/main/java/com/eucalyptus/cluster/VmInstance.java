@@ -81,9 +81,14 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
@@ -106,11 +111,13 @@ public class VmInstance implements HasName<VmInstance> {
   public static String                                DEFAULT_IP    = "0.0.0.0";
   public static String                                DEFAULT_TYPE  = "m1.small";
   
+  private String                                      uuid;
   private final String                                reservationId;
   private final int                                   launchIndex;
   private final String                                instanceId;
   private final String                                ownerId;
   private final String                                placement;
+  private final String                                partition;
   private final byte[]                                userData;
   private final List<Network>                         networks      = Lists.newArrayList( );
   private final NetworkConfigType                     networkConfig = new NetworkConfigType( );
@@ -118,7 +125,7 @@ public class VmInstance implements HasName<VmInstance> {
   private VmTypeInfo                                  vmTypeInfo;
   
   private final AtomicMarkableReference<VmState>      state         = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
-  private final ConcurrentMap<String,AttachedVolume>  volumes       = new ConcurrentSkipListMap<String,AttachedVolume>( );
+  private final ConcurrentMap<String, AttachedVolume> volumes       = new ConcurrentSkipListMap<String, AttachedVolume>( );
   private final StopWatch                             stopWatch     = new StopWatch( );
   private final StopWatch                             updateWatch   = new StopWatch( );
   
@@ -140,6 +147,15 @@ public class VmInstance implements HasName<VmInstance> {
     this.instanceId = instanceId;
     this.ownerId = ownerId;
     this.placement = placement;
+    String p = null;
+    try {
+      p = Configuration.getClusterConfiguration( this.placement ).getPartition( );
+    } catch ( EucalyptusCloudException ex ) {
+      p = placement;
+      /** ASAP:GRZE: review **/
+      LOG.debug( "Failed to find cluster configuration named: " + this.placement + " using that as the partition name." );
+    }
+    this.partition = p;
     this.userData = userData;
     this.keyInfo = keyInfo;
     this.vmTypeInfo = vmTypeInfo;
@@ -295,11 +311,17 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   private void store( ) {
-    EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE )
-               .withDetails( this.getOwnerId( ), this.getInstanceId( ), "type", this.getVmTypeInfo( ).getName( ) )
-               .withDetails( "state", this.state.getReference( ).name( ) ).withDetails( "cluster", this.placement )
-               /** ASAP: FIXME: GRZE .withDetails( "image", this.imageInfo.getImageId( ) ) **/
-               .withDetails( "started", this.launchTime.getTime( ) + "" ).info( );
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.uuid, this.instanceId, this.vmTypeInfo.getName( ), this.ownerId, this.placement,
+                                                                    this.partition, this.networkBytes, this.blockBytes ) );
+    } catch ( EventFailedException ex ) {
+      LOG.error( ex, ex );
+    }
+//    EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE )
+//               .withDetails( this.getOwnerId( ), this.getInstanceId( ), "type", this.getVmTypeInfo( ).getName( ) )
+//               .withDetails( "state", this.state.getReference( ).name( ) ).withDetails( "cluster", this.placement )
+//               /** ASAP: FIXME: GRZE .withDetails( "image", this.imageInfo.getImageId( ) ) **/
+//               .withDetails( "started", this.launchTime.getTime( ) + "" ).info( );
   }
   
   public String getByKey( String path ) {
@@ -559,7 +581,7 @@ public class VmInstance implements HasName<VmInstance> {
   
   private AttachedVolume resolveVolumeId( String volumeId ) throws NoSuchElementException {
     AttachedVolume v = this.volumes.get( volumeId );
-    if( v == null ) {
+    if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
     } else {
       return v;
@@ -568,9 +590,9 @@ public class VmInstance implements HasName<VmInstance> {
   
   public AttachedVolume removeVolumeAttachment( String volumeId ) throws NoSuchElementException {
     AttachedVolume v = this.volumes.remove( volumeId );
-    if( v == null ) {
+    if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
-    } else { 
+    } else {
       return v;
     }
   }
@@ -584,11 +606,12 @@ public class VmInstance implements HasName<VmInstance> {
   public AttachedVolume lookupVolumeAttachment( String volumeId ) throws NoSuchElementException {
     return this.resolveVolumeId( volumeId );
   }
-
+  
   public AttachedVolume lookupVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
     AttachedVolume v = Iterables.find( this.volumes.values( ), pred );
-    if( v == null ) {
-      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " using predicate " + pred.getClass( ).getCanonicalName( ) );
+    if ( v == null ) {
+      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " using predicate "
+                                        + pred.getClass( ).getCanonicalName( ) );
     } else {
       return v;
     }
@@ -597,13 +620,13 @@ public class VmInstance implements HasName<VmInstance> {
   public boolean eachVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
     return Iterables.all( this.volumes.values( ), pred );
   }
-
+  
   public void addVolumeAttachment( AttachedVolume volume ) {
     String volumeId = volume.getVolumeId( );
     volume.setStatus( "attaching" );
     volume.setInstanceId( this.getInstanceId( ) );
     AttachedVolume v = this.volumes.put( volumeId, volume );
-    if( v != null ) {
+    if ( v != null ) {
       this.volumes.replace( volumeId, v );
     }
   }
@@ -629,12 +652,12 @@ public class VmInstance implements HasName<VmInstance> {
         return true;
       }
     } );
-    for( AttachedVolume v : volMap.values( ) ) {
+    for ( AttachedVolume v : volMap.values( ) ) {
       LOG.warn( "Restoring volume attachment state for " + this.getInstanceId( ) + " with " + v.toString( ) );
       this.addVolumeAttachment( v );
     }
   }
-    
+  
   public String getPasswordData( ) {
     return this.passwordData;
   }
@@ -672,6 +695,20 @@ public class VmInstance implements HasName<VmInstance> {
   
   public int getNetworkIndex( ) {
     return this.getNetworkConfig( ).getNetworkIndex( );
+  }
+  
+  /**
+   * @return the uuid
+   */
+  public String getUuid( ) {
+    return this.uuid;
+  }
+  
+  /**
+   * @param uuid the uuid to set
+   */
+  public void setUuid( String uuid ) {
+    this.uuid = uuid;
   }
   
 }

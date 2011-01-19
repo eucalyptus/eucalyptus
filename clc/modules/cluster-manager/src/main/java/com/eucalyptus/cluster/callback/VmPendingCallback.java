@@ -53,6 +53,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
       try {
         final VmInstance vm = VmInstances.getInstance( ).lookup( runVm.getInstanceId( ) );
         vm.setServiceTag( runVm.getServiceTag( ) );
+        vm.setUuid( runVm.getUuid( ) );
         if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {

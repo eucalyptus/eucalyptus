@@ -1,9 +1,73 @@
+/*******************************************************************************
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+
 package com.eucalyptus.binding;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -13,12 +77,22 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import java.lang.reflect.Modifier;
+import com.eucalyptus.binding.JsonDescriptorGenerator.BooleanTypeBinding;
+import com.eucalyptus.binding.JsonDescriptorGenerator.CollectionTypeBinding;
+import com.eucalyptus.binding.JsonDescriptorGenerator.Elem;
+import com.eucalyptus.binding.JsonDescriptorGenerator.ElemItem;
+import com.eucalyptus.binding.JsonDescriptorGenerator.IntegerTypeBinding;
+import com.eucalyptus.binding.JsonDescriptorGenerator.LongTypeBinding;
+import com.eucalyptus.binding.JsonDescriptorGenerator.NoopTypeBinding;
+import com.eucalyptus.binding.JsonDescriptorGenerator.ObjectTypeBinding;
+import com.eucalyptus.binding.JsonDescriptorGenerator.RootObjectTypeBinding;
+import com.eucalyptus.binding.JsonDescriptorGenerator.StringTypeBinding;
+import com.eucalyptus.binding.JsonDescriptorGenerator.TypeBinding;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
-public class InternalSoapBindingGenerator extends BindingGenerator {
-  private static Logger            LOG          = Logger.getLogger( InternalSoapBindingGenerator.class );
+public class JsonDescriptorGenerator extends BindingGenerator {
+  private static Logger            LOG          = Logger.getLogger( JsonDescriptorGenerator.class );
   private final String             ns           = "http://msgs.eucalyptus.com";
   private static String            INDENT       = "";
   private final File               outFile;
@@ -56,7 +130,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
                                                   }
                                                 };
   
-  public InternalSoapBindingGenerator( ) {
+  public JsonDescriptorGenerator( ) {
     this.outFile = new File( "modules/msgs/src/main/resources/msgs-binding.xml" );
     if ( outFile.exists( ) ) {
       outFile.delete( );
@@ -91,6 +165,13 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     this.out.write( "</binding>" );
     this.out.flush( );
     this.out.close( );
+//    try {
+//      XMLSerializer xmlSerializer = new XMLSerializer();  
+//      JSON json = xmlSerializer.readFromFile( this.outFile );  
+//      System.out.println( json.toString(2) );
+//    } catch ( Throwable ex ) {
+//      LOG.error( ex , ex );
+//    }    
   }
   
   public TypeBinding getTypeBinding( Field field ) {
@@ -129,7 +210,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     private boolean abs;
     
     public RootObjectTypeBinding( Class type ) {
-      InternalSoapBindingGenerator.this.indent = 2;
+      JsonDescriptorGenerator.this.indent = 2;
       this.type = type;
       if ( Object.class.equals( type.getSuperclass( ) ) ) {
         this.abs = true;
@@ -190,7 +271,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     public abstract String getTypeName( );
     
     private TypeBinding reindent( int delta ) {
-      InternalSoapBindingGenerator.this.indent += delta;
+      JsonDescriptorGenerator.this.indent += delta;
       INDENT = "";
       for ( int i = 0; i < indent; i++ ) {
         INDENT += "  ";
@@ -234,7 +315,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     }
     
     private TypeBinding begin( ) {
-      ElemItem top = InternalSoapBindingGenerator.this.elemStack.peek( );
+      ElemItem top = JsonDescriptorGenerator.this.elemStack.peek( );
       if ( top != null && top.children ) {
         this.eol( );
       } else if ( top != null && !top.children ) {
@@ -248,12 +329,12 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     
     protected TypeBinding elem( Elem name ) {
       this.begin( ).append( "<" ).append( name.toString( ) ).append( " " );
-      InternalSoapBindingGenerator.this.elemStack.push( new ElemItem( name, InternalSoapBindingGenerator.this.indent, false ) );
+      JsonDescriptorGenerator.this.elemStack.push( new ElemItem( name, JsonDescriptorGenerator.this.indent, false ) );
       return this;
     }
     
     protected TypeBinding end( ) {
-      ElemItem top = InternalSoapBindingGenerator.this.elemStack.pop( );
+      ElemItem top = JsonDescriptorGenerator.this.elemStack.pop( );
       if ( top != null && top.children ) {
         this.eolOut( ).append( "</" ).append( top.name.toString( ) ).append( ">" );
       } else if ( top != null && !top.children ) {

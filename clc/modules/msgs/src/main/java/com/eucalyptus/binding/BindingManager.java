@@ -74,7 +74,8 @@ public class BindingManager {
   
   private static Logger               LOG        = Logger.getLogger( BindingManager.class );
   private static Map<String, Binding> bindingMap = new HashMap<String, Binding>( );
-  public static final String DEFAULT_BINDING_NAME =  BindingManager.sanitizeNamespace( "http://msgs.eucalyptus.com" );
+  public static final String DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com";
+  public static final String DEFAULT_BINDING_NAME =  BindingManager.sanitizeNamespace( DEFAULT_BINDING_NAMESPACE );
   private static Binding DEFAULT = null;
   public static Binding getDefaultBinding( ) {
     if( DEFAULT != null ) {

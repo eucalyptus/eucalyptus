@@ -88,16 +88,28 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
 @ChannelPipelineCoverage( "one" )
 public abstract class RestfulMarshallingHandler extends MessageStackHandler {
-  private static Logger LOG = Logger.getLogger( RestfulMarshallingHandler.class );
+  private static Logger LOG            = Logger.getLogger( RestfulMarshallingHandler.class );
   private String        namespace;
   private final String  namespacePattern;
+  private String        defaultBindingNamespace = BindingManager.DEFAULT_BINDING_NAMESPACE;
+  private Binding       defaultBinding = BindingManager.getDefaultBinding( );
   private Binding       binding;
   
   public RestfulMarshallingHandler( String namespacePattern ) {
     this.namespacePattern = namespacePattern;
     try {
-      this.namespace = String.format( namespacePattern );
+      this.setNamespace( String.format( namespacePattern ) );
     } catch ( MissingFormatArgumentException ex ) {}
+  }
+  
+  public RestfulMarshallingHandler( String namespacePattern, String defaultVersion ) {
+    this( namespacePattern );
+    this.defaultBindingNamespace = String.format( namespacePattern, defaultVersion );
+    try {
+      this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
+    } catch ( BindingException ex ) {
+      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + defaultBindingNamespace + " because of: " + ex.getMessage( ), ex );
+    }
   }
   
   @Override
@@ -149,7 +161,6 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-      Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
       HoldMe.canHas.lock( );
       try {
@@ -161,13 +172,12 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
         } else {
           try {
-            OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
+            OMElement omMsg = this.binding.toOM( httpResponse.getMessage( ), this.namespace );/**<--- wtf is this second arg doing here? should be the fast path. TODO **/
             omMsg.serialize( byteOut );
           } catch ( Throwable e ) {
             LOG.debug( e );
             LOG.error( e, e );
-            binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://ec2.amazonaws.com/doc/2009-04-04/" ) );
-            OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
+            OMElement omMsg = this.defaultBinding.toOM( httpResponse.getMessage( ), this.namespace );
             omMsg.serialize( byteOut );
           }
         }
