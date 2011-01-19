@@ -50,9 +50,6 @@ public class StateUpdateHandler implements EventListener {
   }
   
   @Override
-  public void advertiseEvent( Event event ) {}
-
-  @Override
   public void fireEvent( Event event ) {
     if( this.timedTrigger( event ) ) {
       Iterables.all( callbackMap.keySet( ), new Predicate<Class>() {

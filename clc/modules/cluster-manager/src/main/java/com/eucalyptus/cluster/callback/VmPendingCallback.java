@@ -1,31 +1,20 @@
 package com.eucalyptus.cluster.callback;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.CancellationException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.cluster.VmTypes;
-import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
   private static Logger LOG = Logger.getLogger( VmPendingCallback.class );
@@ -64,6 +53,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
       try {
         final VmInstance vm = VmInstances.getInstance( ).lookup( runVm.getInstanceId( ) );
         vm.setServiceTag( runVm.getServiceTag( ) );
+        vm.setUuid( runVm.getUuid( ) );
         if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {

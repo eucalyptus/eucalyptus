@@ -86,6 +86,7 @@ import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
@@ -336,6 +337,31 @@ public class Component implements ComponentInformation, HasName<Component> {
     }
   }
   
+  public final List<ServiceInfoType> getServiceSnapshot( ) {
+    List<ServiceInfoType> serviceSnapshot = Lists.newArrayList( );
+    for( final Service s : this.services.values( ) ) {
+      if( State.ENABLED.equals( s.getState( ) ) ) {
+        serviceSnapshot.add( 0, new ServiceInfoType( ) {
+          {
+            setPartition( s.getServiceConfiguration( ).getPartition( ) );
+            setName( s.getServiceConfiguration( ).getName( ) );
+            setType( Component.this.getName( ) );
+            getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
+          }
+        } );
+      } else {
+        serviceSnapshot.add( new ServiceInfoType( ) {
+          {
+            setPartition( s.getServiceConfiguration( ).getPartition( ) );
+            setName( s.getServiceConfiguration( ).getName( ) );
+            setType( Component.this.getName( ) );
+            getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
+          }
+        } );
+      }
+    }
+    return serviceSnapshot;
+  }
   public final Iterator<ServiceInfoType> getUnorderedIterator( ) {
     return Iterables.transform( this.services.values( ), new Function<Service, ServiceInfoType>( ) {
       
@@ -587,8 +613,6 @@ public class Component implements ComponentInformation, HasName<Component> {
         } );
       }
     }
-    
-    public void advertiseEvent( Event event ) {}
   }
 
   /**

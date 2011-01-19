@@ -158,7 +158,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static final int PUT_ENTRY_TIMEOUT = 500;
 	private static final int PUT_RETRY_COUNT = 30;
 
-	@Override
+	public WalrusRESTBinding( ) {
+    super( "http://s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION );
+  }
+
+  @Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
 		LOG.trace( LogUtil.dumpObject( channelEvent ) );
 		if ( channelEvent instanceof MessageEvent ) {
@@ -184,7 +188,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-			namespace = "http://s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION;
 			// TODO: get real user data here too
 			BaseMessage msg = (BaseMessage) this.bind( "admin", true, httpRequest );
 			httpRequest.setMessage( msg );
@@ -218,7 +221,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			Binding binding;
 
 			if(!(msg instanceof EucalyptusErrorMessageType)) {
-				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
+				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( super.getNamespace( ) ) );
 				if(putQueue != null) {
 					putQueue = null;
 				}

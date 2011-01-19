@@ -19,6 +19,6 @@ public abstract class BindingGenerator {
   public abstract void processClass( Class klass );
   public abstract void close( );
   public static List<BindingGenerator> getGenerators( ) {
-    return Lists.newArrayList( (BindingGenerator) new InternalSoapBindingGenerator( ) );
+    return Lists.newArrayList( new JsonDescriptorGenerator(), new InternalSoapBindingGenerator( ) );
   }
 }

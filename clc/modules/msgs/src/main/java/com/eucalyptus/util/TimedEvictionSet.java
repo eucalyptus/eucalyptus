@@ -94,7 +94,6 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
         TimestampedElement elem = null;        
         while( !this.timestamps.isEmpty( ) && this.timestamps.first( ).isExpired( ) && ( elem = this.timestamps.pollFirst( ) )!= null ) {
           this.entries.remove( elem.get( ) );
-          LOG.trace( "Evicting previous entry: " + elem.get( ) + " " + elem.getTimestamp( ) );
         }
       } finally {
         this.busy.lazySet( false );
