@@ -81,6 +81,7 @@ import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -89,11 +90,14 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( RestfulMarshallingHandler.class );
   private String        namespace;
-  private String        namespacePattern;
+  private final String  namespacePattern;
   private Binding       binding;
   
   public RestfulMarshallingHandler( String namespacePattern ) {
     this.namespacePattern = namespacePattern;
+    try {
+      this.namespace = String.format( namespacePattern );
+    } catch ( MissingFormatArgumentException ex ) {}
   }
   
   @Override
@@ -106,7 +110,6 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       } else {
         this.setNamespace( BindingManager.DEFAULT_BINDING_NAME );
       }
-      this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
       String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getName( );
       try {
         BaseMessage msg = ( BaseMessage ) this.bind( userName, true, httpRequest );
@@ -123,16 +126,23 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   
   protected void setNamespace( String namespace ) {
     this.namespace = namespace;
-  }
-
-  private void setNamespaceVersion( String bindingVersion ) {
     try {
-      this.namespace = String.format( this.namespacePattern );
-    } catch ( MissingFormatArgumentException e ) {
-      this.namespace = String.format( this.namespacePattern, bindingVersion );
+      this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
+    } catch ( BindingException ex ) {
+      LOG.error( "Failed to find binding for namespace: " + namespace, Exceptions.filterStackTrace( ex ) );
     }
   }
-
+  
+  private void setNamespaceVersion( String bindingVersion ) {
+    String newNs = null;
+    try {
+      newNs = String.format( this.namespacePattern );
+    } catch ( MissingFormatArgumentException e ) {
+      newNs = String.format( this.namespacePattern, bindingVersion );
+    }
+    this.setNamespace( newNs );
+  }
+  
   public abstract Object bind( String user, boolean admin, MappingHttpRequest httpRequest ) throws Exception;
   
   @Override
