@@ -9,6 +9,7 @@
 %if %is_suse
 %global euca_dhcp    dhcp-server
 %global euca_httpd   apache2
+%global euca_libvirt xen-tools, libvirt
 %global euca_hypervisor xen
 %global euca_curl    libcurl4
 %global euca_libcurl libcurl-devel
@@ -21,6 +22,7 @@
 %global euca_which util-linux
 %endif
 %if %is_centos
+%global euca_libvirt libvirt >= 0.6
 %global euca_hypervisor xen
 %global euca_bridge  xenbr0
 %global euca_java    java-sdk >= 1.6.0
@@ -30,66 +32,25 @@
 %global euca_which which
 %endif
 %if %is_fedora
+%global euca_libvirt libvirt
 %global euca_hypervisor kvm
 %global euca_bridge  br0
 %global euca_java    java-devel >= 1:1.6.0
-%global euca_iscsi_client iscsi-initiator-utils
-%global euca_iscsi_server scsi-target-utils
-%global euca_fuse fuse-libs
-%global euca_which which
 %endif
 
+%if %is_centos
+BuildRoot:     %{_tmppath}/%{name}-%{version}-root
+%endif
 Summary:       Elastic Utility Computing Architecture
-Name:          eucalyptus-eee
-Version:       2.1.0
-Release:       0%{?dist}
+Name:          eucalyptus
+Version:       2.0.1eee
+Release:       2.REVNO
 License:       Eucalyptus EEE Software License
-URL:           http://www.eucalyptus.com
 Group:         Applications/System
-
-# EEE fails to build with el5's gcj-based ant 1.6
-BuildRequires: ant >= 1.7
-BuildRequires: ant-nodeps >= 1.7
-BuildRequires: axis2
-BuildRequires: axis2c-devel >= 1.6.0
-BuildRequires: libvirt-devel >= 0.6
-BuildRequires: rampartc-devel >= 1.3.0
-BuildRequires: swig
-%if %{is_suse}
-BuildRequires: xen-tools
-%endif
-%if %{is_suse}
-BuildRequires: libopenssl-devel
-%else
-BuildRequires: openssl-devel
-%endif
-# The bytecode encryption we use for EEE doesn't work with OpenJDK
-BuildRequires: jdk
-# The VMware code requires FUSE libs to link correstly
-BuildRequires: %{euca_fuse}
-BuildRequires: %{euca_iscsi_client}
-BuildRequires: %{euca_libcurl}
-Requires:      %{euca_build_req}
-Requires:      %{euca_which}
-Requires:      perl(Crypt::OpenSSL::RSA)
-Requires:      perl(Crypt::OpenSSL::Random)
-Requires:      sudo
-
-%if %{is_centos}
-Requires:      python26
-Requires:      python26-boto
-%else
-Requires:      python
-Requires:      python-boto >= 1.9b
-%endif
-
-BuildRoot:     %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-
-Source0:       %{name}-%{version}.tar.gz
-# A version of WSDL2C.sh that respects standard classpaths
-Source1:       euca-WSDL2C.sh
-# The VMware VDDK may be non-redistributable.  We don't include it just in case.
-Source2:       vmware-vix-disklib-distrib.tgz
+BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
+Requires:      %{euca_build_req}, perl-Crypt-OpenSSL-RSA, perl-Crypt-OpenSSL-Random, %{euca_which}, sudo
+Source:        %{name}-%{version}.tar.gz
+URL:           http://www.eucalyptus.com
 
 %description
 EUCALYPTUS is a service overlay that implements elastic computing
@@ -103,10 +64,8 @@ eucalyptus-vmware-broker, eucalyptus-cc or eucalyptus-nc (or all of
 them).
 
 %package common-java
-Summary:      Elastic Utility Computing Architecture - ws java stack
-Requires:     %{name} = %{version}-%{release}
-Requires:     lvm2
-Requires:     jre
+Summary:      Elastic Utility Computing Architecture - ws java stack 
+Requires:     %{name} = %{version}, lvm2, %{euca_fuse}
 Group:        Applications/System
 
 %description common-java
@@ -119,8 +78,7 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     %{name}-common-java = %{version}-%{release}
-Requires:     lvm2
+Requires:     %{name}-common-java = %{version}, lvm2
 Group:        Applications/System
 
 %description walrus
@@ -135,10 +93,11 @@ cloud controller.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     %{name}-common-java = %{version}-%{release}
-Requires:     lvm2
-Requires:     vblade
-Requires:     %{euca_iscsi_server}
+%if %is_centos
+Requires:     %{name}-common-java = %{version}, lvm2, vblade, %{euca_iscsi_server}
+%else
+Requires:     %{name}-common-java = %{version}, lvm2, vblade, %{euca_iscsi_server}
+%endif
 Group:        Applications/System
 
 %description sc
@@ -153,14 +112,8 @@ alongside the cluster-controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     %{name}-common-java = %{version}-%{release}
-Requires:     euca2ools-eee
-Requires:     lvm2
-%if %{is_centos}
-Requires:     python26-boto
-%else
+Requires:     %{name}-common-java = %{version}, euca2ools-eee, lvm2
 Requires:     python-boto >= 1.9b
-%endif
 Group:        Applications/System
 
 %description cloud
@@ -175,13 +128,7 @@ the cloud clients.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     %{name}    = %{version}-%{release}
-Requires:     %{name}-gl = %{version}-%{release}
-Requires:     bridge-utils
-Requires:     iptables
-Requires:     %{euca_dhcp}
-Requires:     %{euca_httpd}
-Requires:     vtun
+Requires:     %{name} = %{version}, %{name}-gl = %{version}, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
 Group:        Applications/System
 
 %description cc
@@ -195,14 +142,7 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     %{name}    = %{version}-%{release}
-Requires:     %{name}-gl = %{version}-%{release}
-Requires:     euca2ools-eee
-Requires:     bridge-utils
-Requires:     %{euca_curl}
-Requires:     %{euca_httpd}
-Requires:     %{euca_hypervisor}
-Requires:     %{euca_iscsi_client}
+Requires:     %{name} = %{version}, %{name}-gl = %{version}, euca2ools-eee, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}, %{euca_iscsi_client}
 Group:        Applications/System
 
 %description nc
@@ -216,8 +156,7 @@ components that handles the instances.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     %{name} = %{version}
-Requires:     %{euca_httpd}
+Requires:     %{name} = %{version}, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
 Group:        Applications/System
 
 %description gl
@@ -230,12 +169,8 @@ This package contains the internal log service of eucalyptus.
 
 %package broker
 Summary:      Elastic Utility Computing Architecture - vmware broker
-Requires:     %{name}-common-java = %{version}-%{release}
-Requires:     %{name}-cc          = %{version}-%{release}
-Requires:     %{euca_httpd}
-# The VMware broker links against the VMware disk library.
-# Are we allowed to redistribute it?
-AutoReq:      no
+Requires:     %{name}-common-java = %{version}, %{name}-cc
+AutoReqProv:  no
 Group:        Applications/System
 
 %description broker
@@ -244,66 +179,72 @@ computing using existing resources. The goal of EUCALYPTUS is to allow
 sites with existing clusters and server infrastructure to co-host an
 elastic computing service that is interface-compatible with Amazon's EC2.
 
-This package contains the broker needed to let EUCALYPTUS control a
-VMware installation.
+This package contains broker needed to let EUCALYPTUS control a vmware
+installation.
 
 %prep
-%setup -q
-%setup -q -T -D -b 2
+%setup -n %{name}-%{version}
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
-# Oracle JDK links to Java without using alternatives
-export JAVA_HOME=/usr/java/latest
-./configure --with-axis2=%{_datadir}/axis2-* --with-axis2c=%{_libdir}/axis2c --with-wsdl2c-sh=%{S:1} --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
-
-pushd clc
-# The CLC's build XML file looks for jar files in clc/lib, so symlink the
-# system's copies of important jar files to that location.
+./configure --with-axis2=/opt/packages/axis2-1.4 --with-axis2c=/opt/euca-axis2c --enable-debug --prefix=/ --with-vddk=/opt/packages/vddk/
+cd clc
 make deps
-popd
-
-# Write builds logs to files so we can triage build failures.
-# mock logs stdout and stderr, so this hackery will eventually go away.
-(make 2>&1 1>&3 | tee err.log) 3>&1 1>&2 | tee out.log
-
+cd ..
+make 2> err.log > out.log
 %if %is_centos
 for x in `/bin/ls clc/tools/src/euca-*`; do
-    sed --in-place 's:#!/usr/bin/env python:#!%{_bindir}/python2.6:' $x
+	sed --in-place 's:#!/usr/bin/env python:#!/usr/bin/env python2.5:' $x
 done
 %endif
 
 %install
-[ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
-make install DESTDIR=$RPM_BUILD_ROOT
+export DESTDIR=$RPM_BUILD_ROOT
+make install
 
 %clean
+export DESTDIR=$RPM_BUILD_ROOT
+make uninstall
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
+rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
-/etc/bash_completion.d/euca_conf
 /etc/eucalyptus/eucalyptus.conf
-/etc/eucalyptus/eucalyptus-version
-/etc/eucalyptus/httpd.conf
-/usr/lib/eucalyptus/euca_mountwrap
+/var/lib/eucalyptus/keys
+/var/log/eucalyptus
+/var/run/eucalyptus
+/usr/share/eucalyptus/add_key.pl
+/usr/share/eucalyptus/euca_ipt
+/usr/share/eucalyptus/populate_arp.pl
+/usr/share/eucalyptus/euca_upgrade
 /usr/lib/eucalyptus/euca_rootwrap
+/usr/lib/eucalyptus/euca_mountwrap
+/etc/bash_completion.d/euca_conf
+/usr/sbin/euca_conf
+/usr/sbin/euca_sync_key
+/usr/sbin/euca_killall
+/etc/eucalyptus/httpd.conf
+/etc/eucalyptus/eucalyptus-version
+/usr/share/eucalyptus/connect_iscsitarget.pl
+/usr/share/eucalyptus/disconnect_iscsitarget.pl
+/usr/share/eucalyptus/get_iscsitarget.pl
+/usr/share/eucalyptus/floppy
+/usr/share/eucalyptus/udev/55-openiscsi.rules
+/usr/share/eucalyptus/udev/README
+/usr/share/eucalyptus/udev/iscsidev-centos.sh
+/usr/share/eucalyptus/udev/iscsidev-opensuse.sh
+/usr/share/eucalyptus/udev/iscsidev-ubuntu.sh
 /usr/sbin/euca-add-group-membership
 /usr/sbin/euca-add-user
 /usr/sbin/euca-add-user-group
-/usr/sbin/euca_admin
-/usr/sbin/euca_conf
 /usr/sbin/euca-convert-volumes
 /usr/sbin/euca-delete-user
 /usr/sbin/euca-delete-user-group
-/usr/sbin/euca-deregister-arbitrator
 /usr/sbin/euca-deregister-cluster
 /usr/sbin/euca-deregister-storage-controller
 /usr/sbin/euca-deregister-walrus
-/usr/sbin/euca-describe-arbitrators
 /usr/sbin/euca-describe-clusters
-/usr/sbin/euca-describe-components
-/usr/sbin/euca-describe-nodes
 /usr/sbin/euca-describe-properties
 /usr/sbin/euca-describe-storage-controllers
 /usr/sbin/euca-describe-user-groups
@@ -311,35 +252,17 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/sbin/euca-describe-walruses
 /usr/sbin/euca-get-credentials
 /usr/sbin/euca-grant-zone-permission
-/usr/sbin/euca_killall
-/usr/sbin/euca-modify-cluster
 /usr/sbin/euca-modify-property
 /usr/sbin/euca-modify-storage-controller
 /usr/sbin/euca-modify-walrus
-/usr/sbin/euca-register-arbitrator
 /usr/sbin/euca-register-cluster
 /usr/sbin/euca-register-storage-controller
 /usr/sbin/euca-register-walrus
 /usr/sbin/euca-remove-group-membership
 /usr/sbin/euca-revoke-zone-permission
-/usr/sbin/euca_sync_key
-/usr/share/eucalyptus/add_key.pl
-/usr/share/eucalyptus/connect_iscsitarget.pl
-/usr/share/eucalyptus/disconnect_iscsitarget.pl
+/usr/sbin/euca-describe-nodes
+/usr/sbin/euca_admin
 /usr/share/eucalyptus/doc
-/usr/share/eucalyptus/euca_ipt
-/usr/share/eucalyptus/euca_upgrade
-/usr/share/eucalyptus/floppy
-/usr/share/eucalyptus/get_iscsitarget.pl
-/usr/share/eucalyptus/populate_arp.pl
-/usr/share/eucalyptus/udev/55-openiscsi.rules
-/usr/share/eucalyptus/udev/iscsidev-centos.sh
-/usr/share/eucalyptus/udev/iscsidev-opensuse.sh
-/usr/share/eucalyptus/udev/iscsidev-ubuntu.sh
-/usr/share/eucalyptus/udev/README
-/var/lib/eucalyptus/keys
-/var/log/eucalyptus
-/var/run/eucalyptus
 
 
 %files common-java
@@ -362,26 +285,23 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 
 %files cc
-%{_libdir}/axis2c/services/EucalyptusCC
+/opt/euca-axis2c/services/EucalyptusCC
 /etc/init.d/eucalyptus-cc
 /etc/eucalyptus/vtunall.conf.template
-/usr/share/eucalyptus/dynserv.pl
 
 %files nc
-/usr/share/eucalyptus/detach.pl
-/usr/share/eucalyptus/gen_kvm_libvirt_xml
 /usr/share/eucalyptus/gen_libvirt_xml
-/usr/share/eucalyptus/getstats.pl
-/usr/share/eucalyptus/get_sys_info
-/usr/share/eucalyptus/get_xen_info
+/usr/share/eucalyptus/gen_kvm_libvirt_xml
 /usr/share/eucalyptus/partition2disk
-/usr/sbin/eucanetd
+/usr/share/eucalyptus/get_xen_info
+/usr/share/eucalyptus/get_sys_info
+/usr/share/eucalyptus/detach.pl
 /usr/sbin/euca_test_nc
-%{_libdir}/axis2c/services/EucalyptusNC
+/opt/euca-axis2c/services/EucalyptusNC
 /etc/init.d/eucalyptus-nc
 
 %files gl
-%{_libdir}/axis2c/services/EucalyptusGL
+/opt/euca-axis2c/services/EucalyptusGL
 
 %files broker
 /usr/share/eucalyptus/euca_vmware
@@ -389,53 +309,51 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/lib/eucalyptus/_euca_imager
 
 %pre
-if [ "$1" = "2" ];
+if [ "$1" = "2" ]; 
 then
-    # let's see where we installed
-    EUCADIRS="/"
-    for i in $EUCADIRS
-    do
-        if [ -e $i/etc/eucalyptus/eucalyptus-version ]; then
-        EUCADIR=$i
-        break
-        fi
-    done
-    cd $EUCADIR
+	# let's see where we installed
+	EUCADIRS="/"
+	for i in $EUCADIRS
+	do
+	    if [ -e $i/etc/eucalyptus/eucalyptus-version ]; then
+		EUCADIR=$i
+		break
+	    fi
+	done
+	cd $EUCADIR
 
-    # stop all old services
-    if [ -x etc/init.d/eucalyptus-cloud ];
-    then
-         etc/init.d/eucalyptus-cloud stop
-    fi
-    if [ -x etc/init.d/eucalyptus-cc ];
-    then
-         etc/init.d/eucalyptus-cc cleanstop
-    fi
-    if [ -x etc/init.d/eucalyptus-nc ];
-    then
-         etc/init.d/eucalyptus-nc stop
-    fi
+	# stop all old services
+	if [ -x etc/init.d/eucalyptus-cloud ];
+	then
+		 etc/init.d/eucalyptus-cloud stop
+	fi
+	if [ -x etc/init.d/eucalyptus-cc ]; 
+	then
+		 etc/init.d/eucalyptus-cc cleanstop
+	fi
+	if [ -x etc/init.d/eucalyptus-nc ]; 
+	then
+		 etc/init.d/eucalyptus-nc stop
+	fi
 
-    # save a backup of important data
-    DATESTR=`date +%s`
-    echo /root/eucalyptus.backup.$DATESTR > /tmp/eucaback.dir
-    mkdir -p /root/eucalyptus.backup.$DATESTR
-    cd /root/eucalyptus.backup.$DATESTR
-    EUCABACKUPS=""
-    for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version $EUCADIR/usr/share/eucalyptus/
-    do
-        if [ -e $i ]; then
-        EUCABACKUPS="$EUCABACKUPS $i"
-        fi
-    done
-
-    if [ -e etc/eucalyptus/eucalyptus.conf ]; then
-        sed -i "s/DISABLE_EBS=.*/#DISABLE_EBS=\"N\"/" etc/eucalyptus/eucalyptus.conf
-    fi
-    sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
-
-    tar cf -  $EUCABACKUPS 2>/dev/null | tar xf - 2>/dev/null
-    cd $EUCADIR
+	# save a backup of important data
+	DATESTR=`date +%s`
+	echo /root/eucalyptus.backup.$DATESTR > /tmp/eucaback.dir
+	mkdir -p /root/eucalyptus.backup.$DATESTR
+	cd /root/eucalyptus.backup.$DATESTR
+	EUCABACKUPS=""
+	for i in $EUCADIR/var/lib/eucalyptus/keys/ $EUCADIR/var/lib/eucalyptus/db/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version $EUCADIR/usr/share/eucalyptus/
+	do
+	    if [ -e $i ]; then
+		EUCABACKUPS="$EUCABACKUPS $i"
+	    fi
+	done
+	if [ -e etc/eucalyptus/eucalyptus.conf ]; then
+	    sed -i "s/DISABLE_EBS=.*/#DISABLE_EBS=\"N\"/" etc/eucalyptus/eucalyptus.conf
+	fi
+	sed -i "s/Defaults.*requiretty/#Defaults requiretty/" /etc/sudoers
+	tar cf -  $EUCABACKUPS 2>/dev/null | tar xf - 2>/dev/null
+	cd $EUCADIR
 fi
 
 %post
@@ -445,7 +363,7 @@ cp /usr/share/eucalyptus/udev/55-openiscsi.rules /etc/udev/rules.d/
 mkdir -p /etc/udev/scripts/
 %if %is_suse
         cp /usr/share/eucalyptus/udev/iscsidev-opensuse.sh /etc/udev/scripts/iscsidev.sh
-    udevadm control --reload-rules
+	udevadm control --reload-rules
 %endif
 %if %is_centos
         cp /usr/share/eucalyptus/udev/iscsidev-centos.sh /etc/udev/scripts/iscsidev.sh
@@ -464,38 +382,38 @@ EOF
 chmod +x /etc/udev/scripts/iscsidev.sh
 
 # set java home to location of SunJDK for EEE
-sed -i 's#.*CLOUD_OPTS=.*#CLOUD_OPTS="--java-home=/usr/java/latest"#' /etc/eucalyptus/eucalyptus.conf
+sed -i "s/.*CLOUD_OPTS=.*/CLOUD_OPTS=\"--java-home=\/opt\/packages\/jdk\"/" /etc/eucalyptus/eucalyptus.conf
 
 # we need a eucalyptus user
 if ! getent passwd eucalyptus > /dev/null ; then
 %if %is_suse
-    groupadd eucalyptus
-    useradd -M eucalyptus -g eucalyptus
+	groupadd eucalyptus
+	useradd -M eucalyptus -g eucalyptus
 %endif
 %if %is_centos
-    adduser -M eucalyptus
+	adduser -M eucalyptus
 %endif
 %if %is_fedora
-    adduser -U --system eucalyptus
+	adduser -U --system eucalyptus 
 %endif
 fi
 
-if [ "$1" = "1" ];
+if [ "$1" = "1" ]; 
 then
-    # let's configure eucalyptus
-    /usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor %{euca_hypervisor} -bridge %{euca_bridge}
+	# let's configure eucalyptus
+	/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor %{euca_hypervisor} -bridge %{euca_bridge}
 fi
 if [ "$1" = "2" ];
 then
-    /usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor %{euca_hypervisor} -bridge %{euca_bridge}
-    if [ -f /tmp/eucaback.dir ]; then
-        BACKDIR=`cat /tmp/eucaback.dir`
-        if [ -d "$BACKDIR" ]; then
-#        /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
-        echo "**NOTICE** If you are upgrading to EEE, you will need to perform the upgrade process manually.  Your previous Eucalyptus data is backed up in $BACKDIR."
-        /usr/sbin/euca_conf -setup
-        fi
-    fi
+	/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor %{euca_hypervisor} -bridge %{euca_bridge}
+	if [ -f /tmp/eucaback.dir ]; then
+	    BACKDIR=`cat /tmp/eucaback.dir`
+	    if [ -d "$BACKDIR" ]; then
+#		/usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --conf --keys
+		echo "**NOTICE** If you are upgrading to EEE, you will need to perform the upgrade process manually.  Your previous Eucalyptus data is backed up in $BACKDIR."
+		/usr/sbin/euca_conf -setup
+	    fi
+	fi
 fi
 
 # final setup and set the new user
@@ -505,13 +423,13 @@ fi
 if [ "$1" = "2" ];
 then
     if [ -f /tmp/eucaback.dir ]; then
-    BACKDIR=`cat /tmp/eucaback.dir`
-    if [ -d "$BACKDIR" ]; then
-        /usr/sbin/euca_conf -setup
-#        /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
-        echo "**NOTICE** If you are upgrading to EEE, you will need to perform the upgrade process manually.  Your previous Eucalyptus data is backed up in $BACKDIR."
-        /usr/sbin/euca_conf -setup
-    fi
+	BACKDIR=`cat /tmp/eucaback.dir`
+	if [ -d "$BACKDIR" ]; then
+	    /usr/sbin/euca_conf -setup
+#	    /usr/share/eucalyptus/euca_upgrade --old $BACKDIR --new / --db
+	    echo "**NOTICE** If you are upgrading to EEE, you will need to perform the upgrade process manually.  Your previous Eucalyptus data is backed up in $BACKDIR."
+	    /usr/sbin/euca_conf -setup
+	fi
     fi
 fi
 chkconfig --add eucalyptus-cloud
@@ -522,11 +440,11 @@ chkconfig --add eucalyptus-cloud
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
-    if ! grep 8773:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ;
-    then
-        echo "--port=8773:tcp" >> /etc/sysconfig/system-config-securitylevel
-        echo "--port=8443:tcp" >> /etc/sysconfig/system-config-securitylevel
-    fi
+	if ! grep 8773:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8773:tcp" >> /etc/sysconfig/system-config-securitylevel
+		echo "--port=8443:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
 fi
 %endif
 
@@ -546,10 +464,10 @@ chkconfig --add eucalyptus-cc
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
-    if ! grep 8774:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ;
-    then
-        echo "--port=8774:tcp" >> /etc/sysconfig/system-config-securitylevel
-    fi
+	if ! grep 8774:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8774:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
 fi
 %endif
 
@@ -568,19 +486,19 @@ usermod -G kvm eucalyptus
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
-    if ! grep 8775:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ;
-    then
-        echo "--port=8775:tcp" >> /etc/sysconfig/system-config-securitylevel
-    fi
+	if ! grep 8775:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	then
+		echo "--port=8775:tcp" >> /etc/sysconfig/system-config-securitylevel
+	fi
 fi
 %endif
 %if %is_suse
-if [ -e /etc/PolicyKit/PolicyKit.conf ];
+if [ -e /etc/PolicyKit/PolicyKit.conf ]; 
 then
-    if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
-    then
-        sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalyptus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
-    fi
+	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
+	then
+		sed -i '/<config version/ a <match action="org.libvirt.unix.manage">\n   <match user="eucalyptus">\n      <return result="yes"/>\n   </match>\n</match>' /etc/PolicyKit/PolicyKit.conf
+	fi
 fi
 %endif
 
@@ -597,68 +515,68 @@ fi
 # in case of removal let's try to clean up the best we can
 if [ "$1" = "0" ];
 then
-    rm -rf /var/log/eucalyptus
-    rm -rf /etc/eucalyptus/http-*
+	rm -rf /var/log/eucalyptus
+	rm -rf /etc/eucalyptus/http-*
 fi
 
 %preun cloud
 if [ "$1" = "0" ];
 then
 %if %is_centos
-    if [ -e /etc/sysconfig/system-config-securitylevel ];
-    then
-        sed -i '/^--port=8773/ d' /etc/sysconfig/system-config-securitylevel
-        sed -i '/^--port=8443/ d' /etc/sysconfig/system-config-securitylevel
-    fi
+	if [ -e /etc/sysconfig/system-config-securitylevel ];
+	then
+		sed -i '/^--port=8773/ d' /etc/sysconfig/system-config-securitylevel
+		sed -i '/^--port=8443/ d' /etc/sysconfig/system-config-securitylevel
+	fi
 %endif
-    [ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
-    if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
-    then
-        /etc/init.d/eucalyptus-cloud restart || true
-    fi
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
+	if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
+	then 
+		/etc/init.d/eucalyptus-cloud restart || true
+	fi
 fi
 
 
 %preun walrus
 if [ "$1" = "0" ];
 then
-    [ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable walrus
-    if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
-    then
-        /etc/init.d/eucalyptus-cloud restart || true
-    fi
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable walrus
+	if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
+	then 
+		/etc/init.d/eucalyptus-cloud restart || true
+	fi
 fi
 
 %preun sc
 if [ "$1" = "0" ];
 then
-    [ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
-    if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
-    then
-        /etc/init.d/eucalyptus-cloud restart || true
-    fi
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
+	if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
+	then 
+		/etc/init.d/eucalyptus-cloud restart || true
+	fi
 fi
 
 %preun broker
 if [ "$1" = "0" ];
 then
-    [ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable vmwarebroker
-    if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
-    then
-        /etc/init.d/eucalyptus-cloud restart || true
-    fi
-    if [ -e /etc/init.d/eucalyptus-cc -a -e /etc/eucalyptus/eucalyptus.conf ]; then
-        sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/axis2\/services\/EucalyptusNC\"/" /etc/eucalyptus/eucalyptus.conf
-        sed -i "s/NC_PORT=.*/NC_PORT=\"8775\"/" /etc/eucalyptus/eucalyptus.conf
-        /etc/init.d/eucalyptus-cc cleanrestart
-    fi
+	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable vmwarebroker
+	if [ -e /etc/init.d/eucalyptus-cloud -a -e /etc/eucalyptus/eucalyptus.conf ];
+	then 
+	    /etc/init.d/eucalyptus-cloud restart || true
+	fi
+	if [ -e /etc/init.d/eucalyptus-cc -a -e /etc/eucalyptus/eucalyptus.conf ]; then
+	    sed -i "s/NC_SERVICE=.*/NC_SERVICE=\"\/axis2\/services\/EucalyptusNC\"/" /etc/eucalyptus/eucalyptus.conf
+	    sed -i "s/NC_PORT=.*/NC_PORT=\"8775\"/" /etc/eucalyptus/eucalyptus.conf
+	    /etc/init.d/eucalyptus-cc cleanrestart
+	fi
 fi
 
 %preun common-java
 if [ "$1" = "0" ];
 then
     if [ -f /etc/eucalyptus/eucalyptus.conf ]; then
-    /etc/init.d/eucalyptus-cloud stop
+	/etc/init.d/eucalyptus-cloud stop
     fi
     chkconfig --del eucalyptus-cloud
     rm -f /var/lib/eucalyptus/services
@@ -668,14 +586,14 @@ fi
 if [ "$1" = "0" ];
 then
     if [ -f /etc/eucalyptus/eucalyptus.conf ]; then
-    /etc/init.d/eucalyptus-cc cleanstop
+	/etc/init.d/eucalyptus-cc cleanstop
     fi
     chkconfig --del eucalyptus-cc
 %if %is_centos
-    if [ -e /etc/sysconfig/system-config-securitylevel ];
-    then
-        sed -i '/^--port=8774/ d' /etc/sysconfig/system-config-securitylevel
-    fi
+	if [ -e /etc/sysconfig/system-config-securitylevel ];
+	then
+		sed -i '/^--port=8774/ d' /etc/sysconfig/system-config-securitylevel
+	fi
 %endif
 fi
 
@@ -683,24 +601,21 @@ fi
 if [ "$1" = "0" ];
 then
     if [ -f /etc/eucalyptus/eucalyptus.conf ]; then
-    /etc/init.d/eucalyptus-nc stop
+	/etc/init.d/eucalyptus-nc stop
     fi
     chkconfig --del eucalyptus-nc
 %if %is_centos
     if [ -e /etc/sysconfig/system-config-securitylevel ];
     then
-    sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
+	sed -i '/^--port=8775/ d' /etc/sysconfig/system-config-securitylevel
     fi
 %endif
 fi
 
 %changelog
-* Wed Jan 12 2011 Eucalyptus Release Engineering <support@eucalyptus.com> - 2.1.0-1
-- Version 2.1 of Eucalyptus Enterprise Cloud
-
-* Tue Jun  1 2010 Eucalyptus Release Engineering <support@eucalyptus.com> - 2.0.0-1
+* Tue Jun 1 2010 Eucalyptus Systems (support@eucalyptus.com)
 - Version 2.0 of Eucalyptus Enterprise Cloud
   - Windows VM Support
-  - User/Group Management
+  - User/Group Management 
   - SAN Integration
   - VMWare Hypervisor Support
