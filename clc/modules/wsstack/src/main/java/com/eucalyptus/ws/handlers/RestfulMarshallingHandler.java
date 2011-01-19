@@ -64,6 +64,7 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
+import java.util.MissingFormatArgumentException;
 import org.apache.axiom.om.OMElement;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -87,7 +88,13 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 @ChannelPipelineCoverage( "one" )
 public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( RestfulMarshallingHandler.class );
-  protected String      namespace;
+  private String        namespace;
+  private String        namespacePattern;
+  private Binding       binding;
+  
+  public RestfulMarshallingHandler( String namespacePattern ) {
+    this.namespacePattern = namespacePattern;
+  }
   
   @Override
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
@@ -95,10 +102,11 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       String bindingVersion = httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
       if ( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
-        this.namespace = "http://ec2.amazonaws.com/doc/" + bindingVersion + "/";
+        this.setNamespaceVersion( bindingVersion );
       } else {
-        this.namespace = "http://msgs.eucalyptus.com";
+        this.setNamespace( BindingManager.DEFAULT_BINDING_NAME );
       }
+      this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
       String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getName( );
       try {
         BaseMessage msg = ( BaseMessage ) this.bind( userName, true, httpRequest );
@@ -113,6 +121,18 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     }
   }
   
+  protected void setNamespace( String namespace ) {
+    this.namespace = namespace;
+  }
+
+  private void setNamespaceVersion( String bindingVersion ) {
+    try {
+      this.namespace = String.format( this.namespacePattern );
+    } catch ( MissingFormatArgumentException e ) {
+      this.namespace = String.format( this.namespacePattern, bindingVersion );
+    }
+  }
+
   public abstract Object bind( String user, boolean admin, MappingHttpRequest httpRequest ) throws Exception;
   
   @Override
@@ -123,7 +143,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
       HoldMe.canHas.lock( );
       try {
-        if( httpResponse.getMessage( ) == null ) {
+        if ( httpResponse.getMessage( ) == null ) {
           //TODO: do nothing here? really?
         } else if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
           EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpResponse.getMessage( );
@@ -150,6 +170,20 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml; charset=UTF-8" );
       httpResponse.setContent( buffer );
     }
+  }
+  
+  /**
+   * @return the namespace
+   */
+  public String getNamespace( ) {
+    return this.namespace;
+  }
+  
+  /**
+   * @return the binding
+   */
+  public Binding getBinding( ) {
+    return this.binding;
   }
   
 }
