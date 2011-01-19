@@ -2,6 +2,8 @@ package com.eucalyptus.auth.euare;
 
 import java.util.ArrayList;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.euare.AddUserToGroupResponseType;
 import com.eucalyptus.auth.euare.AddUserToGroupType;
 import com.eucalyptus.auth.euare.CreateAccessKeyResponseType;
@@ -86,6 +88,8 @@ import com.eucalyptus.auth.euare.UploadServerCertificateResponseType;
 import com.eucalyptus.auth.euare.UploadServerCertificateType;
 import com.eucalyptus.auth.euare.UploadSigningCertificateResponseType;
 import com.eucalyptus.auth.euare.UploadSigningCertificateType;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 
 
 public class EuareService {
@@ -174,7 +178,7 @@ public class EuareService {
     response.getListUsersResult( ).setIsTruncated( false );
     response.getResponseMetadata( ).setRequestId( "12345" );
     if ( true ) {
-      throw new EuareException( "409", EuareException.ENTITY_ALREADY_EXISTS, "User already exists" );
+      throw new EuareException( 409, EuareException.ENTITY_ALREADY_EXISTS, "User already exists" );
     }
     return response;
   }
@@ -194,8 +198,14 @@ public class EuareService {
     return reply;
   }
 
-  public CreateUserResponseType createUser(CreateUserType request) {
+  public CreateUserResponseType createUser(CreateUserType request) throws EuareException {
     CreateUserResponseType reply = request.getReply( );
+    try {
+      User requestUser = Users.lookupUserById( request.getUserId( ) );
+      Account account = requestUser.getAccount( );
+      User newUser = Users.addUser( request.getUserName( ), request.getPath( ), true, true, null, false, false, account.getName( ) );
+    } catch ( AuthException e ) {
+    }
     return reply;
   }
 

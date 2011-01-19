@@ -1,15 +1,12 @@
 package com.eucalyptus.network;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Authorizations;
-import com.eucalyptus.auth.Users;
-import com.eucalyptus.component.ResourceLookup;
-import com.eucalyptus.component.ResourceLookupException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ResourceOwnerLookup;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.EntityWrapper;
@@ -32,57 +29,32 @@ import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 
 public class NetworkGroupManager {
   
-  private static class NetworkGroupOwnerLookup implements ResourceOwnerLookup<NetworkRulesGroup> {
-
-    @Override
-    public String getOwningAccountId( NetworkRulesGroup resource ) {
-      return resource.getUserName( );
-    }
-    
-  }
-  
   private static Logger LOG = Logger.getLogger( NetworkGroupManager.class );
   
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    NetworkGroupUtil.makeDefault( vmAllocInfo.getRequest( ).getUserId( ) );//ensure the default group exists to cover some old broken installs
-    ArrayList<String> networkNames = new ArrayList<String>( vmAllocInfo.getRequest( ).getGroupSet( ) );
+    RunInstancesType request = vmAllocInfo.getRequest( );
+    String action = PolicySpec.requestToAction( request );
+    User requestUser = Permissions.getUserById( request.getUserId( ) );
+    Account account = Permissions.getAccountByUserId( request.getUserId( ) );
+    
+    //ensure the default group exists to cover some old broken installs
+    NetworkGroupUtil.makeDefault( account.getAccountId( ) );
+    
+    ArrayList<String> networkNames = new ArrayList<String>( request.getGroupSet( ) );
     if ( networkNames.size( ) < 1 ) {
       networkNames.add( "default" );
     }
-    Map<String, NetworkRulesGroup> networkRuleGroups = new HashMap<String, NetworkRulesGroup>( );
-    try {
-      final String accountId = Users.lookupUserById( vmAllocInfo.getRequest( ).getUserId( ) ).getAccount( ).getAccountId( );
-      for ( String groupName : networkNames ) {
-        NetworkRulesGroup group = null;
-        group = Authorizations.lookupPrivileged( NetworkRulesGroup.class, groupName, new NetworkGroupOwnerLookup( ), new ResourceLookup<NetworkRulesGroup>( ) {
-
-          @Override
-          public NetworkRulesGroup resolve( String name ) throws ResourceLookupException {
-            try {
-              return NetworkGroupUtil.getUserNetworkRulesGroup( accountId, name );
-            } catch ( EucalyptusCloudException e ) {
-              throw new ResourceLookupException( "Failed to find network group " + name, e );
-            }
-          }
-          
-        });
-        
-        networkRuleGroups.put( groupName, group );
-        vmAllocInfo.getNetworks( ).add( group.getVmNetwork( ) );
+    for ( String networkName : networkNames ) {
+      NetworkRulesGroup networkGroup = NetworkGroupUtil.getUserNetworkRulesGroup( account.getAccountId( ), networkName );
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, networkName, account, action, requestUser ) ) {
+        throw new EucalyptusCloudException( "Not authorized to use network group " + networkName + " for " + requestUser.getName( ) );
       }
-    } catch ( ResourceLookupException e ) {
-      throw new EucalyptusCloudException( e );
-    } catch ( AuthException e ) {
-      throw new EucalyptusCloudException( "Access to network groups " + networkNames + " is denied.", e );
-    }
-    ArrayList<String> userNetworks = new ArrayList<String>( networkRuleGroups.keySet( ) );
-    if ( !userNetworks.containsAll( networkNames ) ) {
-      networkNames.removeAll( userNetworks );
-      throw new EucalyptusCloudException( "Failed to find " + networkNames );
+      vmAllocInfo.getNetworks( ).add( networkGroup.getVmNetwork( ) );
     }
     return vmAllocInfo;
   }

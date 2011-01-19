@@ -8,34 +8,34 @@ public class EuareException extends Exception {
   public static final String LIMIT_EXCEEDED = "LimitExceeded";
   public static final String NO_SUCH_ENTITY = "NoSuchEntity";
   
-  private String code;
+  private int code;
   private String error;
   
-  public EuareException( String code, String error ) {
+  public EuareException( int code, String error ) {
     super( );
     this.code = code;
     this.error = error;
   }
   
-  public EuareException( String code, String error, String message, Throwable cause ) {
+  public EuareException( int code, String error, String message, Throwable cause ) {
     super( message, cause );
     this.code = code;
     this.error = error;
   }
   
-  public EuareException( String code, String error, String message ) {
+  public EuareException( int code, String error, String message ) {
     super( message );
     this.code = code;
     this.error = error;
   }
   
-  public EuareException( String code, String error, Throwable cause ) {
+  public EuareException( int code, String error, Throwable cause ) {
     super( cause );
     this.code = code;
     this.error = error;
   }
   
-  public String getCode( ) {
+  public int getCode( ) {
     return this.code;
   }
   

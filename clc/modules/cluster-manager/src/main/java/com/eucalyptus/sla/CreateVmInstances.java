@@ -63,57 +63,52 @@
  */
 package com.eucalyptus.sla;
 
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Authorizations;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.component.ResourceAllocate;
-import com.eucalyptus.component.ResourceAllocationException;
-import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class CreateVmInstances {
   
   public VmAllocationInfo allocate( final VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    try {
-      int quantity = getVmAllocationNumber( vmAllocInfo );
-      // Allocate VmType instances
-      Authorizations.allocatePrivileged( VmType.class, vmAllocInfo.getVmTypeInfo( ).getName( ), quantity, null /* allocator. Abstract allocation. */ );
-      // Allocate vm instances
-      Authorizations.allocatePrivileged( VmInstance.class, "", quantity, new ResourceAllocate<VmInstance>( ) {
-
-        @Override
-        public void allocate( ) throws ResourceAllocationException {
-          String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
-          int vmIndex = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
-          for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
-            if( Clusters.getInstance( ).hasNetworking( ) ) {
-              for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
-                VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, networkIndex );
-                VmInstances.getInstance( ).register( vmInst );
-                token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
-              }
-            } else {
-              for ( int i = 0; i < token.getAmount( ); i++ ) {
-                VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, -1 );
-                VmInstances.getInstance( ).register( vmInst );
-                token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
-              }
-            }
-          }
-          vmAllocInfo.setReservationId( reservationId );
-        }
-        
-      });
-      return vmAllocInfo;
-    } catch ( AuthException e ) {
-      throw new EucalyptusCloudException( "Resource allocation is denied due to quota", e );
-    } catch ( ResourceAllocationException e ) {
-      throw new EucalyptusCloudException( e );
+    int quantity = getVmAllocationNumber( vmAllocInfo );
+    RunInstancesType request = vmAllocInfo.getRequest( );
+    User requestUser = Permissions.getUserById( request.getUserId( ) );
+    String action = PolicySpec.requestToAction( request );
+    String vmType = vmAllocInfo.getVmTypeInfo( ).getName( );
+    // Allocate VmType instances
+    if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1 ) ) {
+      throw new EucalyptusCloudException( "Quota exceeded in allocating vm type " + vmType + " for " + requestUser.getName( ) );
     }
+    // Allocate vm instances
+    if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
+      throw new EucalyptusCloudException( "Quota exceeded in allocating " + quantity + " vm instances for " + requestUser.getName( ) );
+    }
+    String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
+    int vmIndex = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
+    for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
+      if( Clusters.getInstance( ).hasNetworking( ) ) {
+        for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
+          VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, networkIndex );
+          VmInstances.getInstance( ).register( vmInst );
+          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
+        }
+      } else {
+        for ( int i = 0; i < token.getAmount( ); i++ ) {
+          VmInstance vmInst = getVmInstance( vmAllocInfo, reservationId, token, vmIndex++, -1 );
+          VmInstances.getInstance( ).register( vmInst );
+          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
+        }
+      }
+    }
+    vmAllocInfo.setReservationId( reservationId );
+    return vmAllocInfo;
   }
 
   private int getVmAllocationNumber( VmAllocationInfo vmAllocInfo ) {

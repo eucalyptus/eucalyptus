@@ -18,14 +18,13 @@ import com.eucalyptus.auth.policy.key.ContractKeyEvaluator;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
-import com.eucalyptus.context.IllegalContextAccessException;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
  * The implementation of policy engine, which evaluates a request against specified policies.
@@ -46,6 +45,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   public PolicyEngineImpl( ) {
   }
   
+
   /*
    * The authorization evaluation algorithm is a combination of AWS IAM policy evaluation logic and
    * AWS inter-account permission checking logic (including EC2 image and snapshot permission, and
@@ -67,63 +67,69 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @see com.eucalyptus.auth.api.PolicyEngine#evaluateAuthorization(java.lang.Class, java.lang.String, java.lang.String)
    */
   @Override
-  public <T> Map<String, Contract> evaluateAuthorization( Class<T> resourceClass, String resourceName, String resourceAccountId, BaseMessage request, User requestUser ) throws AuthException {
+  public Map<String, Contract> evaluateAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) throws AuthException {
     try {
-      // Check input validity
-      if ( resourceClass == null ) {
-        throw new AuthException( "Empty resource class" );
-      }
-      if ( request == null ) {
-        throw new AuthException( "Empty request" );
-      }
-      if ( requestUser == null ) {
-        throw new AuthException( "Empty request user" );
-      }
-      
       ContractKeyEvaluator contractEval = new ContractKeyEvaluator( );
       CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
 
       // System admin can do everything
-      if ( requestUser.isSystemAdmin( ) ) {
-        return contractEval.getContracts( );
-      }
-      
-      String userId = requestUser.getUserId( );
-      String accountId = requestUser.getAccount( ).getAccountId( );
-      String resourceType = getResourceType( resourceClass );
-      String action = getAction( request.getClass( ) );
-      
-      // Check global (inter-account) authorizations first
-      Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, accountId ), action, resourceName, keyEval, contractEval );
-      if ( ( decision == Decision.DENY )
-          || ( decision == Decision.DEFAULT && resourceAccountId != null && !resourceAccountId.equals( accountId ) ) ) {
-        LOG.debug( request + " is rejected by global authorization check, due to decision " + decision );
-        throw new AuthException( AuthException.ACCESS_DENIED ); 
-      }
-      // Account admin can do everything within the account
-      if ( requestUser.isAccountAdmin( ) ) {
-        return contractEval.getContracts( );
-      }
-      // If not denied by global authorizations, check local (intra-account) authorizations.
-      decision = processAuthorizations( lookupLocalAuthorizations( resourceType, userId ), action, resourceName, keyEval, contractEval );
-      // Denied by explicit or default deny
-      if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
-        LOG.debug( request + " is rejected by local authorization check, due to decision " + decision );
-        throw new AuthException( AuthException.ACCESS_DENIED );
+      if ( !requestUser.isSystemAdmin( ) ) {
+        String userId = requestUser.getUserId( );
+        String accountId = requestUser.getAccount( ).getAccountId( );
+        
+        // Check global (inter-account) authorizations first
+        Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, accountId ), action, resourceName, keyEval, contractEval );
+        if ( ( decision == Decision.DENY )
+            || ( decision == Decision.DEFAULT && resourceAccount.getAccountId( ) != null && !resourceAccount.getAccountId( ).equals( accountId ) ) ) {
+          LOG.debug( "Request is rejected by global authorization check, due to decision " + decision );
+          throw new AuthException( AuthException.ACCESS_DENIED ); 
+        }
+        // Account admin can do everything within the account
+        if ( !requestUser.isAccountAdmin( ) ) {
+          // If not denied by global authorizations, check local (intra-account) authorizations.
+          decision = processAuthorizations( lookupLocalAuthorizations( resourceType, userId ), action, resourceName, keyEval, contractEval );
+          // Denied by explicit or default deny
+          if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
+            LOG.debug( "Request is rejected by local authorization check, due to decision " + decision );
+            throw new AuthException( AuthException.ACCESS_DENIED );
+          }
+        }
       }
       // Allowed
       return contractEval.getContracts( );
     } catch ( AuthException e ) {
       //throw by the policy engine implementation 
       throw e;
-    } catch ( IllegalContextAccessException e ) {
-      //this would happen if Contexts.lookup() is invoked outside of mule.
-      throw new AuthException( "Cannot invoke without a corresponding service context available.", e );
     } catch ( Throwable e ) {
       throw new AuthException( "An error occurred while trying to evaluate policy for resource access", e );
+    }    
+  }
+
+  /*
+   * Quota evaluation algorithm is very simple: going through all quotas that can be applied to the request (by user
+   * and resource), at all levels (account, group and user), if any of the quota is exceeded, reject the request.
+   * 
+   * (non-Javadoc)
+   * @see com.eucalyptus.auth.api.PolicyEngine#evaluateQuota(java.lang.Integer, java.lang.Class, java.lang.String)
+   */
+  @Override
+  public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Integer quantity) throws AuthException {
+    try {
+      // System admins are not restricted by quota limits.
+      if ( !requestUser.isSystemAdmin( ) ) {
+        String userId = requestUser.getUserId( );
+        String accountId = requestUser.getAccount( ).getAccountId( );
+        List<Authorization> quotas = lookupQuotas( resourceType, userId, accountId, requestUser.isAccountAdmin( ) );
+        processQuotas( quotas, action, resourceType, resourceName, quantity );
+      }
+    } catch ( AuthException e ) {
+      //throw by the policy engine implementation 
+      throw e;
+    } catch ( Throwable e ) {
+      throw new AuthException( "An error occurred while trying to evaluate policy for resource allocation.", e );
     }
   }
-  
+
   /**
    * Process a list of authorizations against the current request. Collecting contracts from matching authorizations.
    * 
@@ -246,63 +252,6 @@ public class PolicyEngineImpl implements PolicyEngine {
     return results;
   }
   
-  private String getAction( Class<? extends BaseMessage> messageClass ) throws AuthException {
-    String action = PolicySpec.MESSAGE_CLASS_TO_ACTION.get( messageClass );
-    if ( action == null ) {
-      throw new AuthException( "The message class does not map to a supported action: " + messageClass.getName( ) );
-    }
-    return action;
-  }
-  
-  private <T> String getResourceType( Class<T> resourceClass ) throws AuthException {
-    String resource = PolicySpec.RESOURCE_CLASS_TO_STRING.get( resourceClass );
-    if ( resource == null ) {
-      throw new AuthException( "Can not translate resource type: " + resourceClass.getName( ) );
-    }
-    return resource;
-  }
-
-  /*
-   * Quota evaluation algorithm is very simple: going through all quotas that can be applied to the request (by user
-   * and resource), at all levels (account, group and user), if any of the quota is exceeded, reject the request.
-   * 
-   * (non-Javadoc)
-   * @see com.eucalyptus.auth.api.PolicyEngine#evaluateQuota(java.lang.Integer, java.lang.Class, java.lang.String)
-   */
-  @Override
-  public <T> void evaluateQuota( Class<T> resourceClass, String resourceName, Integer quantity, BaseMessage request, User requestUser ) throws AuthException {
-    try {
-      // Check input validity
-      if ( resourceClass == null ) {
-        throw new AuthException( "Empty resource class" );
-      }
-      if ( request == null ) {
-        throw new AuthException( "Empty request" );
-      }
-      if ( requestUser == null ) {
-        throw new AuthException( "Empty request user" );
-      }
-      
-      if ( requestUser.isSystemAdmin( ) ) {
-        return;
-      }
-      String userId = requestUser.getUserId( );
-      String accountId = requestUser.getAccount( ).getAccountId( );
-      String resourceType = getResourceType( resourceClass );
-      String action = getAction( request.getClass( ) );
-      List<Authorization> quotas = lookupQuotas( resourceType, userId, accountId, requestUser.isAccountAdmin( ) );
-      processQuotas( quotas, action, resourceType, resourceName, quantity );
-    } catch ( AuthException e ) {
-      //throw by the policy engine implementation 
-      throw e;
-    } catch ( IllegalContextAccessException e ) {
-      //this would happen if Contexts.lookup() is invoked outside of mule.
-      throw new AuthException( "Cannot invoke without a corresponding service context available.", e );
-    } catch ( Throwable e ) {
-      throw new AuthException( "An error occurred while trying to evaluate policy for resource allocation.", e );
-    }
-  }
-
   /**
    * Find all quotas that can be applied for the request, by resource type, user and account.
    * 

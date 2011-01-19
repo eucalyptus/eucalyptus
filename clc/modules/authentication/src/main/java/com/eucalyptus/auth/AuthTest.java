@@ -8,6 +8,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.TestQuota;
 import com.eucalyptus.auth.principal.Account;
@@ -183,8 +184,8 @@ public class AuthTest {
     final User user = Users.lookupUserByName( "tom", "test" );
     
     PolicyEngine engine = new PolicyEngineImpl( );
-    engine.evaluateAuthorization( Image.class, "emi-12345678", user.getAccount( ).getAccountId( ), new RunInstancesType( ), user );
-    engine.evaluateQuota( Image.class, "", 1, new RunInstancesType( ), user );
+    engine.evaluateAuthorization( PolicySpec.EC2_RESOURCE_IMAGE, "emi-12345678", user.getAccount( ), PolicySpec.EC2_RUNINSTANCES, user );
+    engine.evaluateQuota( PolicySpec.EC2_RESOURCE_IMAGE, "", PolicySpec.EC2_RUNINSTANCES, user, 1 );
   }
   
   private static void printAuths( List<? extends Authorization> auths ) throws AuthException {

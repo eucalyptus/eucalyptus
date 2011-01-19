@@ -1,6 +1,5 @@
 {
   "ldap-service":{
-    "context-factory":"com.sun.jndi.ldap.LdapCtxFactory",
     "server-url":"ldap://ldapserver.foo.com:7733",
     "auth-method":"simple",
     "auth-principal":"cn=ldapadmin,dc=foo,dc=com",

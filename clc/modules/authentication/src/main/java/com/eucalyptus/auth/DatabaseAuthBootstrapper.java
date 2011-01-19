@@ -26,7 +26,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   	Groups.setGroupProvider( dbAuth );
   	Accounts.setAccountProvider( dbAuth );
   	Policies.setPolicyProvider( dbAuth );
-  	Authorizations.setPolicyEngine( new PolicyEngineImpl( ) );
+  	Permissions.setPolicyEngine( new PolicyEngineImpl( ) );
     return true;
   }
   

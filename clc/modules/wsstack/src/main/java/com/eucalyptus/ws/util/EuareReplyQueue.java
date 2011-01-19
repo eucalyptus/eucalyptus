@@ -143,10 +143,9 @@ public class EuareReplyQueue {
         errorResp.setCorrelationId( payload.getCorrelationId( ) );
         errorResp.setRequestId( payload.getCorrelationId( ) );
         ErrorType error = new ErrorType( );
-        error.setType( "Receiver" );
-        error.setCode( euareException.getCode( ) );
-        error.setMessage( euareException.getError( ) );
-        error.getDetail( ).setContent( euareException.getMessage( ) );
+        error.setType( "Sender" );
+        error.setCode( euareException.getError( ) );
+        error.setMessage( euareException.getMessage( ) );
         errorResp.getErrorList( ).add( error );
         this.handle( errorResp );
       }

@@ -1,18 +1,14 @@
 package com.eucalyptus.sla;
 
 import java.util.List;
-import java.util.NavigableMap;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Authorizations;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmTypeAvailability;
-import com.eucalyptus.component.ResourceLookup;
-import com.eucalyptus.component.ResourceLookupException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
@@ -20,11 +16,11 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class NodeResourceAllocator implements ResourceAllocator {
   private static Logger LOG       = Logger.getLogger( NodeResourceAllocator.class );
@@ -32,9 +28,10 @@ public class NodeResourceAllocator implements ResourceAllocator {
   
   @Override
   public void allocate( VmAllocationInfo vmInfo ) throws Exception {
-    String clusterName = vmInfo.getRequest( ).getAvailabilityZone( );
-    String vmTypeName = vmInfo.getRequest( ).getInstanceType( );
-    final int amount = vmInfo.getRequest( ).getMinCount( );
+    RunInstancesType request = vmInfo.getRequest( );
+    String clusterName = request.getAvailabilityZone( );
+    String vmTypeName = request.getInstanceType( );
+    final int amount = request.getMinCount( );
     Context ctx = Contexts.lookup( );
     //if ( ctx.getGroups( ).isEmpty( ) ) {
     if ( false ) {
@@ -43,7 +40,9 @@ public class NodeResourceAllocator implements ResourceAllocator {
       String zoneName = ( clusterName != null )
         ? clusterName
         : "default";
-      List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
+      String action = PolicySpec.requestToAction( request );
+      User requestUser = Permissions.getUserById( request.getUserId( ) );
+      List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName, action, requestUser );
       int remaining = amount;
       int available = 0;
       LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, new Function<Cluster, String>( ) {
@@ -96,24 +95,14 @@ public class NodeResourceAllocator implements ResourceAllocator {
     return available;
   }
   
-  private List<Cluster> doPrivilegedLookup( String clusterName, String vmTypeName ) throws NotEnoughResourcesAvailable {
+  private List<Cluster> doPrivilegedLookup( String clusterName, String vmTypeName, final String action, final User requestUser ) throws NotEnoughResourcesAvailable {
     if ( "default".equals( clusterName ) ) {
       Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
         @Override
         public boolean apply( final Cluster c ) {
           try {
-            Authorizations.lookupPrivileged( Cluster.class, c.getName( ), null, new ResourceLookup<Cluster>( ) {
-
-              @Override
-              public Cluster resolve( String name ) throws ResourceLookupException {
-                return c;
-              }
-              
-            });
-            return true;
-          } catch ( Exception e ) {
-            LOG.debug( e, e );
-          }
+            return Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, c.getName( ), null, action, requestUser );
+          } catch ( Exception e ) {}
           return false;
         }
       } );
@@ -127,24 +116,12 @@ public class NodeResourceAllocator implements ResourceAllocator {
         return Lists.newArrayList( sorted.values( ) );
       }
     } else {
-      Cluster cluster = null;
-      try {
-        cluster = Authorizations.lookupPrivileged( Cluster.class, clusterName, null, new ResourceLookup<Cluster>( ) {
-
-          @Override
-          public Cluster resolve( String name ) throws ResourceLookupException {
-            return Clusters.getInstance( ).lookup( name );
-          }
-          
-        });
-        
-        if ( cluster == null ) {
-          throw new ResourceLookupException( "Can't find cluster " + clusterName );
-        }
-      } catch ( AuthException e ) {
-        throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName, e );
-      } catch ( ResourceLookupException e ) {
-        throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName, e );
+      Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+      if ( cluster == null ) {
+        throw new NotEnoughResourcesAvailable( "Can't find cluster " + clusterName );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, clusterName, null, action, requestUser ) ) {
+        throw new NotEnoughResourcesAvailable( "Not authorized to use cluster " + clusterName + " for " + requestUser.getName( ) );
       }
       return Lists.newArrayList( cluster );
     }

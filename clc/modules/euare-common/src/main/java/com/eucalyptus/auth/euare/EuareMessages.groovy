@@ -279,7 +279,6 @@ public class GetGroupPolicyResultType extends EucalyptusData {
   public GetGroupPolicyResultType() {  }
 }
 public class ErrorDetailType extends EucalyptusData {
-  String content;
   public ErrorDetailType() {  }
 }
 public class UpdateAccessKeyType extends EuareMessage {

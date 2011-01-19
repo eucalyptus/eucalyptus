@@ -76,8 +76,10 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Authorizations;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.ImageUserGroup;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.WalrusUtil;
@@ -117,24 +119,7 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ImageManager {
-  
-  private static class ImageOwnerLookup implements ResourceOwnerLookup<ImageInfo> {
     
-    public static Logger LOG = Logger.getLogger( ImageOwnerLookup.class );
-    
-    @Override
-    public String getOwningAccountId( ImageInfo resource ) {
-      try {
-        if ( resource != null && resource.getImageOwnerId( ) != null ) {
-          return Users.lookupUserById( resource.getImageOwnerId( ) ).getAccount( ).getAccountId( );
-        }
-      } catch ( AuthException e ) {
-        LOG.error( e, e );
-      }
-      return null;
-    }
-  }
-  
   public static Logger LOG                    = Logger.getLogger( ImageManager.class );
   public static String IMAGE_MACHINE          = "machine";
   public static String IMAGE_KERNEL           = "kernel";
@@ -148,39 +133,36 @@ public class ImageManager {
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     RunInstancesType msg = vmAllocInfo.getRequest( );
     VmTypeInfo vmType = vmAllocInfo.getVmTypeInfo( );
+    
+    // First the root image itself
     String imageId = msg.getImageId( );
-    ImageInfo diskInfo = null;
+    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    ImageInfo diskInfo = null;          
     try {
-      diskInfo = Authorizations.lookupPrivileged( ImageInfo.class, imageId, new ImageOwnerLookup( ), new ResourceLookup<ImageInfo>( ) {
-  
-        @Override
-        public ImageInfo resolve( String name ) throws ResourceLookupException {
-          ImageInfo searchDiskInfo = new ImageInfo( name );
-          EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-          ImageInfo image = null;          
-          try {
-            image = db.getUnique( searchDiskInfo );
-          } catch ( EucalyptusCloudException e ) {
-            db.rollback( );
-            throw new ResourceLookupException( "Failed to find disk image: " + name );
-          }
-          if ( "deregistered".equals( image.getImageState( ) ) ) {
-            db.delete( image );
-            db.rollback( );
-            throw new ResourceLookupException( "The requested image is deregistered." );
-          }
-          db.commit( );
-          return image;
-        }
-        
-      });
-    } catch ( ResourceLookupException e ) {
-      throw new EucalyptusCloudException( e );
-    } catch ( AuthException e ) {
-      throw new EucalyptusCloudException( "Access to disk image " + imageId + " is denied.", e );
+      diskInfo = db.getUnique( new ImageInfo( imageId ) );
+      db.commit( );
+    } catch ( EucalyptusCloudException e ) {
+      db.rollback( );
+      throw new EucalyptusCloudException( "Failed to find disk image: " + imageId );
+    }
+    // Permission check
+    String action = PolicySpec.requestToAction( msg );
+    User requestUser = Permissions.getUserById( msg.getUserId( ) );
+    Account resourceAccount = Permissions.getAccountByUserId( diskInfo.getImageOwnerId( ) );
+    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_IMAGE, imageId, resourceAccount, action, requestUser ) ) {
+      throw new EucalyptusCloudException( "Not authorized to use disk " + imageId + " by " + requestUser.getName( ) );
+    }
+    if ( "deregistered".equals( diskInfo.getImageState( ) ) ) {
+      db = new EntityWrapper<ImageInfo>( );
+      try {
+        db.delete( diskInfo );
+        db.commit( );
+      } catch ( Exception e ) {}
+      throw new EucalyptusCloudException( "The requested image " + imageId + " is deregistered." );
     }
     vmAllocInfo.setPlatform( diskInfo.getPlatform( ) );
     
+    // Now check kernel image and ramdisk image
     ImageInfo kernelInfo = null;
     ImageInfo ramdiskInfo = null;
     String defaultKernelId = null;
@@ -195,76 +177,52 @@ public class ImageManager {
       // Check kernel image
       final String kernelId = ImageUtil.getImageInfobyId( msg.getKernelId( ), diskInfo.getKernelId( ), defaultKernelId );
       if ( kernelId == null ) {
-        throw new EucalyptusCloudException( "Unable to determine required kernel image." );
+        throw new EucalyptusCloudException( "Unable to determine required kernel image for " + imageId );
       }
+      db = new EntityWrapper<ImageInfo>( );
       try {
-        kernelInfo = Authorizations.lookupPrivileged( ImageInfo.class, kernelId, new ImageOwnerLookup( ), new ResourceLookup<ImageInfo>( ) {
-  
-          @Override
-          public ImageInfo resolve( String name ) throws ResourceLookupException {
-            EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-            ImageInfo image = null;
-            try {
-              image = db.getUnique( new ImageInfo( kernelId ) );
-            } catch ( EucalyptusCloudException e ) {
-              db.rollback( );
-              throw new ResourceLookupException( "Failed to find kernel image: " + kernelId );
-            }
-            if ( !"kernel".equals( image.getImageType( ) ) ) {
-              db.rollback( );
-              throw new ResourceLookupException( "Image specified is not a kernel: " + image.toString( ) );
-            }
-            db.commit( );
-            return image;
-          }
-          
-        });
-      } catch ( ResourceLookupException e ) {
-        throw new EucalyptusCloudException( e );
-      } catch ( AuthException e ) {
-        throw new EucalyptusCloudException( "Access to kernel image " + kernelId + " is denied.", e );
+        kernelInfo = db.getUnique( new ImageInfo( kernelId ) );
+        db.commit( );
+      } catch ( EucalyptusCloudException e ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "Failed to find kernel image: " + kernelId );
+      }
+      if ( !"kernel".equals( kernelInfo.getImageType( ) ) ) {
+        throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelInfo.toString( ) );
+      }
+      // Check kernel image permission
+      resourceAccount = Permissions.getAccountByUserId( kernelInfo.getImageOwnerId( ) );
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_IMAGE, kernelId, resourceAccount, action, requestUser ) ) {
+        throw new EucalyptusCloudException( "Not authorized to use kernel " + kernelId + " by " + requestUser.getName( ) );
       }
       // Check ramdisk image
       boolean nord = ( ImageUtil.isSet( msg.getKernelId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) )
           || ( !ImageUtil.isSet( msg.getKernelId( ) ) && ImageUtil.isSet( diskInfo.getKernelId( ) )
               && !ImageUtil.isSet( diskInfo.getRamdiskId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) );
       final String ramdiskId = nord ? null : ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
-      if ( ramdiskId != null ) {
-        try {
-          ramdiskInfo = Authorizations.lookupPrivileged( ImageInfo.class, ramdiskId, new ImageOwnerLookup( ), new ResourceLookup<ImageInfo>( ) {
-  
-            @Override
-            public ImageInfo resolve( String name ) throws ResourceLookupException {
-              EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-              ImageInfo image = null;
-              try {
-                image = db.getUnique( new ImageInfo( ramdiskId ) );
-              } catch ( EucalyptusCloudException e ) {
-                db.rollback( );
-                throw new ResourceLookupException( "Failed to find ramdisk image: " + ramdiskId );
-              }
-              db.commit( );
-              if ( ( image != null ) && !"ramdisk".equals( image.getImageType( ) ) ) {
-                throw new ResourceLookupException( "Image specified is not a ramdisk: " + image.toString( ) );
-              }
-              return image;
-            }
-            
-          });
-        } catch ( ResourceLookupException e ) {
-          throw new EucalyptusCloudException( e );
-        } catch ( AuthException e ) {
-          throw new EucalyptusCloudException( "Access to ramdisk image " + ramdiskId + " is denied.", e );
-        }
+      db = new EntityWrapper<ImageInfo>( );
+      try {
+        ramdiskInfo = db.getUnique( new ImageInfo( ramdiskId ) );
+        db.commit( );
+      } catch ( EucalyptusCloudException e ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "Failed to find ramdisk image: " + ramdiskId );
       }
-      ImageUtil.checkStoredImage( ramdiskInfo );
+      // Check ramdisk permission
+      resourceAccount = Permissions.getAccountByUserId( ramdiskInfo.getImageOwnerId( ) );
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_IMAGE, ramdiskId, resourceAccount, action, requestUser ) ) {
+        throw new EucalyptusCloudException( "Not authorized to use kernel " + ramdiskId + " by " + requestUser.getName( ) );
+      }
+      if ( !"ramdisk".equals( ramdiskInfo.getImageType( ) ) ) {
+        throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskInfo.toString( ) );
+      }
     }
-    ArrayList<String> ancestorIds = ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
     Long imgSize = ImageUtil.getSize( msg.getUserId( ), diskInfo.getImageLocation( ) );
     if ( imgSize > 1024l * 1024l * 1024l * vmType.getDisk( ) ) {
       throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                           + vmType.getDisk( ) * 1024l + "MB]" );
     }
+    ImageUtil.checkStoredImage( ramdiskInfo );
     ImageUtil.checkStoredImage( kernelInfo );
     ImageUtil.checkStoredImage( diskInfo );
     vmType.setRoot( diskInfo.getImageId( ), diskInfo.getImageLocation( ), imgSize*1024 );
