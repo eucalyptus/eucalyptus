@@ -8,6 +8,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.DeregisterVMwareBrokerType;
@@ -15,7 +16,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeVMwareBrokersType;
 import edu.ucsb.eucalyptus.msgs.ModifyVMwareBrokerAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterVMwareBrokerType;
 
-@DiscoverableServiceBuilder(com.eucalyptus.bootstrap.Component.vmwarebroker)
+@DiscoverableServiceBuilder( VMwareBroker.class )
 @Handles( { RegisterVMwareBrokerType.class, DeregisterVMwareBrokerType.class, DescribeVMwareBrokersType.class, ModifyVMwareBrokerAttributeType.class } )
 public class VMwareBrokerBuilder extends DatabaseServiceBuilder<VMwareBrokerConfiguration> {
   

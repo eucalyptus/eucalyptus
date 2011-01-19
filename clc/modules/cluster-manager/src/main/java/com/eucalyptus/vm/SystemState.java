@@ -94,6 +94,7 @@ import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.images.Image;
@@ -210,7 +211,7 @@ public class SystemState {
       }
       vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
       vm.updateNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
-      vm.setVolumes( runVm.getVolumes( ) );
+      vm.updateVolumeAttachments( runVm.getVolumes( ) );
       try {
         Network network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
         network.extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
@@ -228,7 +229,7 @@ public class SystemState {
         GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
         msg.setUserId( userId );
 
-        reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Component.walrus ).send( msg );
+        reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
       }
       catch ( Exception e ) {
         throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );

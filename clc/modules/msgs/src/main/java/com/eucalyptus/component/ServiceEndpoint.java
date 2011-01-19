@@ -164,7 +164,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
             {//ASAP: FIXME: GRZE: clean up this implementation
               Components.dumpState( );
               ServiceInfoType activeWalrus = Components.lookup( Component.walrus ).getUnorderedIterator( ).next( );
-              event.getRequest( ).getRequest( ).getServices( ).add( activeWalrus );
+              event.getRequest( ).getRequest( ).getBaseServices( ).add( activeWalrus );
             }
             event.getRequest( ).sendSync( ServiceEndpoint.this );
             EventRecord.here( ServiceEndpointWorker.class, EventType.QUEUE, ServiceEndpoint.this.getParent( ).getName( ) )//

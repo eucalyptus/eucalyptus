@@ -37,6 +37,7 @@ package com.eucalyptus.cloud.ws;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;
@@ -55,7 +56,7 @@ public class ComponentService {
 		String host = request.getHost();
 		
 		LOG.info("Component: " + component + "@" + host);
-	    Dispatcher sc = ServiceDispatcher.lookup( Component.valueOf(component), host );
+	    Dispatcher sc = ServiceDispatcher.lookup( Components.lookup(component), host );
 		if(sc.isLocal()) {
 			return request;
  		} else {

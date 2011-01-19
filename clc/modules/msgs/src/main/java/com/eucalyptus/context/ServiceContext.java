@@ -1,6 +1,5 @@
 package com.eucalyptus.context;
 
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -21,7 +20,6 @@ import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.endpoint.OutboundEndpoint;
 import org.mule.api.registry.Registry;
 import org.mule.api.service.Service;
-import org.mule.api.transport.DispatchException;
 import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
@@ -29,7 +27,7 @@ import org.mule.module.client.MuleClient;
 import org.mule.transport.AbstractConnector;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
 import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -39,7 +37,6 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
@@ -202,25 +199,20 @@ public class ServiceContext {
   
   static boolean loadContext( ) {
     Set<ConfigResource> configs = Sets.newHashSet( );
-    configs.addAll( Components.lookup( Component.bootstrap ).getConfiguration( ).getResource( ).getConfigurations( ) );
-    if ( Components.lookup( Component.eucalyptus ).isAvailableLocally( ) ) {
-//      configs.addAll( Components.lookup( Component.eucalyptus ).getConfiguration( ).getResource( ).getConfigurations( ) );
-      for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
-        if ( comp.getPeer( ).isCloudLocal( ) ) {
-          Resource rsc = comp.getConfiguration( ).getResource( );
-          if ( rsc != null ) {
-            LOG.info( "-> Preparing cloud-local cfg: " + rsc );
-            configs.addAll( rsc.getConfigurations( ) );
-          }
+    configs.add( Components.lookup( "bootstrap" ).getIdentity( ).getModel( ) );
+    if ( Components.lookup( "eucalyptus" ).isAvailableLocally( ) ) {
+      for ( Component comp : Components.list( ) ) {
+        if ( comp.getIdentity( ).isCloudLocal( ) ) {
+          LOG.info( "-> Preparing cloud-local cfg: " + comp.getIdentity( ).getModelConfiguration( ) );
+          configs.add( comp.getIdentity( ).getModel( ) );
         }
       }
     }
-    for ( com.eucalyptus.component.Component comp : Components.list( ) ) {
+    for ( Component comp : Components.list( ) ) {
       if ( comp.isRunningLocally( ) ) {
-        Resource rsc = comp.getConfiguration( ).getResource( );
-        if ( rsc != null ) {
-          LOG.info( "-> Preparing component cfg: " + rsc );
-          configs.addAll( rsc.getConfigurations( ) );
+        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
+          LOG.info( "-> Preparing component cfg: " + comp.getIdentity( ).getModelConfiguration( ) );
+          configs.add( comp.getIdentity( ).getModel( ) );
         }
       }
     }

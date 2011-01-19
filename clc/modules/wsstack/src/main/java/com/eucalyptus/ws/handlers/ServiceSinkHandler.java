@@ -113,6 +113,8 @@ import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
+import edu.ucsb.eucalyptus.msgs.DisableServiceResponseType;
+import edu.ucsb.eucalyptus.msgs.EnableServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
@@ -152,7 +154,11 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
         BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
-        if( ( RegisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || DeregisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) || ServiceTransitionType.class.isAssignableFrom( reply.getClass( ) ) ) && reply.get_return( ) ) {
+        if( ( RegisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) 
+            || DeregisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) 
+            || EnableServiceResponseType.class.isAssignableFrom( reply.getClass( ) ) 
+            || DisableServiceResponseType.class.isAssignableFrom( reply.getClass( ) ) 
+            ) && reply.get_return( ) ) {
           try {
             ServiceContext.shutdown( );
             ServiceContext.startup( );

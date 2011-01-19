@@ -78,7 +78,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Element;
 import com.eucalyptus.auth.DatabaseWrappedUser;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.UserEntity;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.login.SecurityContext;

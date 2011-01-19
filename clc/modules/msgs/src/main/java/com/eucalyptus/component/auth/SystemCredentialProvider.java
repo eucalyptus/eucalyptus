@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,7 +61,7 @@
 /*
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.auth;
+package com.eucalyptus.component.auth;
 
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -70,7 +70,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Certs;
-import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -88,18 +87,22 @@ import com.eucalyptus.system.SubDirectory;
 @DependsLocal( Component.eucalyptus )
 public class SystemCredentialProvider extends Bootstrapper {
   private static Logger                                    LOG      = Logger.getLogger( SystemCredentialProvider.class );
-  private static ConcurrentMap<Component, X509Certificate> certs    = new ConcurrentHashMap<Component, X509Certificate>( );
-  private static ConcurrentMap<Component, KeyPair>         keypairs = new ConcurrentHashMap<Component, KeyPair>( );
-  private Component                                        name;
+  private static ConcurrentMap<String, X509Certificate> certs    = new ConcurrentHashMap<String, X509Certificate>( );
+  private static ConcurrentMap<String, KeyPair>         keypairs = new ConcurrentHashMap<String, KeyPair>( );
+  private String                                        name;
 
   public SystemCredentialProvider( ) {
   }
 
-  private SystemCredentialProvider( Component name ) {
+  private SystemCredentialProvider( String name ) {
     this.name = name;
   }
 
   public static SystemCredentialProvider getCredentialProvider( Component name ) {
+    return new SystemCredentialProvider( name.name( ) );
+  }
+
+  public static SystemCredentialProvider getCredentialProvider( String name ) {
     return new SystemCredentialProvider( name );
   }
 
@@ -115,15 +118,15 @@ public class SystemCredentialProvider extends Bootstrapper {
     return SystemCredentialProvider.keypairs.get( this.name );
   }
 
-  static void init( Component name ) throws Exception {
+  public static void init( String name ) throws Exception {
     new SystemCredentialProvider( name ).init( );
   }
 
   private void init( ) throws Exception {
-    if ( EucaKeyStore.getInstance( ).containsEntry( this.name.name( ) ) ) {
+    if ( EucaKeyStore.getInstance( ).containsEntry( this.name ) ) {
       try {
-        SystemCredentialProvider.certs.put( this.name, EucaKeyStore.getInstance( ).getCertificate( this.name.name( ) ) );
-        SystemCredentialProvider.keypairs.put( this.name, EucaKeyStore.getInstance( ).getKeyPair( this.name.name( ), this.name.name( ) ) );
+        SystemCredentialProvider.certs.put( this.name, EucaKeyStore.getInstance( ).getCertificate( this.name ) );
+        SystemCredentialProvider.keypairs.put( this.name, EucaKeyStore.getInstance( ).getKeyPair( this.name, this.name ) );
         return;
       } catch ( Exception e ) {
         SystemCredentialProvider.certs.remove( this );
@@ -132,7 +135,7 @@ public class SystemCredentialProvider extends Bootstrapper {
         LOG.fatal( e, e );
         throw e;
       }
-    } else if ( Component.eucalyptus.isLocal( ) ) {
+    } else if ( Components.lookup( "eucalyptus" ).isLocal( ) ) {
       this.createSystemCredentialProviderKey( this.name );
       return;
     }
@@ -156,18 +159,17 @@ public class SystemCredentialProvider extends Bootstrapper {
   }
 
   private void loadSystemCredentialProviderKey( String name ) throws Exception {
-    Component alias = Component.valueOf( name );
-    if ( this.certs.containsKey( alias ) ) {
+    if ( this.certs.containsKey( name ) ) {
       return;
     } else {
-      createSystemCredentialProviderKey( alias );
+      createSystemCredentialProviderKey( name );
     }
   }
 
-  private void createSystemCredentialProviderKey( Component name ) throws Exception {
+  private void createSystemCredentialProviderKey( String name ) throws Exception {
     try {
       KeyPair sysKp = Certs.generateKeyPair( );
-      X509Certificate sysX509 = Certs.generateServiceCertificate( sysKp, name.name( ) );
+      X509Certificate sysX509 = Certs.generateServiceCertificate( sysKp, name );
       if( Component.eucalyptus.equals( name ) ) {
         PEMFiles.write( SubDirectory.KEYS.toString( ) + "/cloud-cert.pem", sysX509 );
         PEMFiles.write( SubDirectory.KEYS.toString( ) + "/cloud-pk.pem", sysKp.getPrivate( ) );
@@ -175,7 +177,7 @@ public class SystemCredentialProvider extends Bootstrapper {
       SystemCredentialProvider.certs.put( name, sysX509 );
       SystemCredentialProvider.keypairs.put( name, sysKp );
       // TODO: might need separate keystore for euca/hsqldb/ssl/jetty/etc.
-      EucaKeyStore.getInstance( ).addKeyPair( name.name( ), sysX509, sysKp.getPrivate( ), name.name( ) );
+      EucaKeyStore.getInstance( ).addKeyPair( name, sysX509, sysKp.getPrivate( ), name );
       EucaKeyStore.getInstance( ).store( );
     } catch ( Exception e ) {
       SystemCredentialProvider.certs.remove( name );
@@ -189,12 +191,12 @@ public class SystemCredentialProvider extends Bootstrapper {
   public boolean load( ) throws Exception {
     try {
       if ( !SystemCredentialProvider.check( Component.eucalyptus ) ) {
-        SystemCredentialProvider.init( Component.eucalyptus );
+        SystemCredentialProvider.init( Component.eucalyptus.name( ) );
       }
       for ( Component c : Component.values( ) ) {
         try {
           if ( !SystemCredentialProvider.check( c ) ) {
-            SystemCredentialProvider.init( c );
+            SystemCredentialProvider.init( c.name( ) );
           }
         } catch ( Exception e ) {
           LOG.error( e, e );

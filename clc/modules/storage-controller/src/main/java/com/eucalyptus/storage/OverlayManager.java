@@ -82,7 +82,7 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.config.StorageControllerBuilder;
