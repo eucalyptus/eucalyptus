@@ -120,7 +120,7 @@ usage () {
 	echo "   --deregister-cluster <clustername>     		remove cluster from EUCALYPTUS"
 	echo "   --configure-vmware                			add new vmware to EUCALYPTUS"
 	echo "   --register-walrus <host>         			add walrus to EUCALYPTUS"
-	echo "   --deregister-walrus <host>       			remove walrus from EUCALYPTUS"
+	echo "   --deregister-walrus		       			remove walrus from EUCALYPTUS"
         echo "   --register-sc <clustername> <host>      		add storage controller"
         echo "   --deregister-sc <clustername>           		remove storage controller from EUCALYPTUS"
 	echo "   --register-vmwarebroker <clustername> <host>		add vmware broker to EUCALYPTUS"
