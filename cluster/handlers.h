@@ -109,6 +109,7 @@ typedef struct instance_t {
 
   char platform[64];
   char bundleTaskStateName[64];
+  char createImageTaskStateName[64];
 
   int expiryTime;
 
@@ -176,6 +177,7 @@ typedef struct ccConfig_t {
   int ncFanout;
   int ccState, ccLastState, kick_network;
   serviceStatusType ccStatus;
+  serviceInfoType services[16];
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
@@ -236,7 +238,7 @@ int find_resourceCacheHostname(char *host, ccResource **out);
 void print_resourceCache(void);
 void invalidate_resourceCache(void);
 
-int initialize(void);
+int initialize(ncMetadata *ccMeta);
 int init_thread(void);
 int init_localstate(void);
 int init_config(void);
@@ -259,6 +261,7 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts);
 
 int restoreNetworkState();
 int maintainNetworkState();
+int reconfigureNetworkFromCLC();
 
 int powerDown(ncMetadata *ccMeta, ccResource *node);
 int powerUp(ccResource *node);

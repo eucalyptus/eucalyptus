@@ -84,10 +84,16 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.config.Configuration;
+import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.vm.SystemState;
@@ -122,11 +128,13 @@ public class VmInstance implements HasName<VmInstance> {
       return this.mappedState;
     }
   }
+  private String                                      uuid;
   private final String                                reservationId;
   private final int                                   launchIndex;
   private final String                                instanceId;
   private final String                                ownerId;
   private final String                                placement;
+  private final String                                partition;
   private final byte[]                                userData;
   private final List<Network>                         networks      = Lists.newArrayList( );
   private final NetworkConfigType                     networkConfig = new NetworkConfigType( );
@@ -136,7 +144,7 @@ public class VmInstance implements HasName<VmInstance> {
   
   private final AtomicMarkableReference<VmState>      state         = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   private final AtomicMarkableReference<BundleTask>   bundleTask    = new AtomicMarkableReference<BundleTask>( null, false );
-  private final ConcurrentMap<String,AttachedVolume>  volumes       = new ConcurrentSkipListMap<String,AttachedVolume>( );
+  private final ConcurrentMap<String, AttachedVolume> volumes       = new ConcurrentSkipListMap<String, AttachedVolume>( );
   private final StopWatch                             stopWatch     = new StopWatch( );
   private final StopWatch                             updateWatch     = new StopWatch( );
   
@@ -156,6 +164,15 @@ public class VmInstance implements HasName<VmInstance> {
     this.instanceId = instanceId;
     this.ownerId = ownerId;
     this.placement = placement;
+    String p = null;
+    try {
+      p = Configuration.getClusterConfiguration( this.placement ).getPartition( );
+    } catch ( EucalyptusCloudException ex ) {
+      p = placement;
+      /** ASAP:GRZE: review **/
+      LOG.debug( "Failed to find cluster configuration named: " + this.placement + " using that as the partition name." );
+    }
+    this.partition = p;
     this.userData = userData;
     this.platform = platform;
     this.keyInfo = keyInfo;
@@ -303,10 +320,16 @@ public class VmInstance implements HasName<VmInstance> {
   }
 
   private void store( ) {
-    EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE )
-               .withDetails( this.getOwnerId( ), this.getInstanceId( ), "type", this.getVmTypeInfo( ).getName( ) )
-               .withDetails( "state", this.state.getReference( ).name( ) ).withDetails( "cluster", this.placement )
-               /** ASAP: FIXME: GRZE .withDetails( "image", this.imageInfo.getImageId( ) )**/.withDetails( "started", this.launchTime.getTime( ) + "" ).info( );
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.uuid, this.instanceId, this.vmTypeInfo.getName( ), this.ownerId, this.placement,
+                                                                    this.partition, this.networkBytes, this.blockBytes ) );
+    } catch ( EventFailedException ex ) {
+      LOG.error( ex, ex );
+    }
+//    EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE )
+//               .withDetails( this.getOwnerId( ), this.getInstanceId( ), "type", this.getVmTypeInfo( ).getName( ) )
+//               .withDetails( "state", this.state.getReference( ).name( ) ).withDetails( "cluster", this.placement )
+//               /** ASAP: FIXME: GRZE .withDetails( "image", this.imageInfo.getImageId( ) ) **/
   }
   
   public String getByKey( String path ) {
@@ -318,6 +341,7 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   private Map<String, String> getMetadataMap( ) {
+    boolean dns = Components.lookup( "dns" ).isLocal( );
     Map<String, String> m = new HashMap<String, String>( );
     //ASAP: FIXME: GRZE:
 //    m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
@@ -329,13 +353,13 @@ public class VmInstance implements HasName<VmInstance> {
     m.put( "hostname", this.getPublicAddress( ) );
     m.put( "instance-id", this.getInstanceId( ) );
     m.put( "instance-type", this.getVmTypeInfo( ).getName( ) );
-    if ( Component.dns.isLocal( ) ) {
+    if ( dns ) {
       m.put( "local-hostname", this.getNetworkConfig( ).getPrivateDnsName( ) );
     } else {
       m.put( "local-hostname", this.getNetworkConfig( ).getIpAddress( ) );
     }
     m.put( "local-ipv4", this.getNetworkConfig( ).getIpAddress( ) );
-    if ( Component.dns.isLocal( ) ) {
+    if ( dns ) {
       m.put( "public-hostname", this.getNetworkConfig( ).getPublicDnsName( ) );
     } else {
       m.put( "public-hostname", this.getPublicAddress( ) );
@@ -680,7 +704,7 @@ public class VmInstance implements HasName<VmInstance> {
   
   private AttachedVolume resolveVolumeId( String volumeId ) throws NoSuchElementException {
     AttachedVolume v = this.volumes.get( volumeId );
-    if( v == null ) {
+    if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
     } else {
       return v;
@@ -689,9 +713,9 @@ public class VmInstance implements HasName<VmInstance> {
   
   public AttachedVolume removeVolumeAttachment( String volumeId ) throws NoSuchElementException {
     AttachedVolume v = this.volumes.remove( volumeId );
-    if( v == null ) {
+    if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
-    } else { 
+    } else {
       return v;
     }
   }
@@ -705,11 +729,11 @@ public class VmInstance implements HasName<VmInstance> {
   public AttachedVolume lookupVolumeAttachment( String volumeId ) throws NoSuchElementException {
     return this.resolveVolumeId( volumeId );
   }
-
   public AttachedVolume lookupVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
     AttachedVolume v = Iterables.find( this.volumes.values( ), pred );
-    if( v == null ) {
-      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " using predicate " + pred.getClass( ).getCanonicalName( ) );
+    if ( v == null ) {
+      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " using predicate "
+                                        + pred.getClass( ).getCanonicalName( ) );
     } else {
       return v;
     }
@@ -718,13 +742,12 @@ public class VmInstance implements HasName<VmInstance> {
   public boolean eachVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
     return Iterables.all( this.volumes.values( ), pred );
   }
-
   public void addVolumeAttachment( AttachedVolume volume ) {
     String volumeId = volume.getVolumeId( );
     volume.setStatus( "attaching" );
     volume.setInstanceId( this.getInstanceId( ) );
     AttachedVolume v = this.volumes.put( volumeId, volume );
-    if( v != null ) {
+    if ( v != null ) {
       this.volumes.replace( volumeId, v );
     }
   }
@@ -814,6 +837,20 @@ public class VmInstance implements HasName<VmInstance> {
    */
   public BundleTask getBundleTask( ) {
     return this.bundleTask.getReference();
+  }
+  
+  /**
+   * @return the uuid
+   */
+  public String getUuid( ) {
+    return this.uuid;
+  }
+  
+  /**
+   * @param uuid the uuid to set
+   */
+  public void setUuid( String uuid ) {
+    this.uuid = uuid;
   }
   
 }

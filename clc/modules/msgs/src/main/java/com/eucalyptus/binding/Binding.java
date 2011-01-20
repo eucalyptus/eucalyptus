@@ -102,7 +102,6 @@ public class Binding {
   private final String       name;
   private IBindingFactory    bindingFactory;
   private Map<String, Class> elementToClassMap = Maps.newHashMap( );
-  
   protected Binding( final String name ) throws BindingException {
     this.name = name;
   }
@@ -123,7 +122,6 @@ public class Binding {
         if ( bindingFactory.getElementNames( )[i] != null ) {
           try {
             elementToClassMap.put( bindingFactory.getElementNames( )[i], ClassLoader.getSystemClassLoader().loadClass( mappedClasses[i] ) );
-//            LOG.trace( "Caching binding for " + this.name + " on element " + bindingFactory.getElementNames( )[i] + " to class " + mappedClasses[i] );
           } catch ( ClassNotFoundException e ) {
             LOG.trace( e, e );
           }

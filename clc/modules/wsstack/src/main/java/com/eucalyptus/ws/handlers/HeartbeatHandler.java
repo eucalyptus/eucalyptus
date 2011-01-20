@@ -106,7 +106,7 @@ import com.eucalyptus.config.BogoConfig;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -386,12 +386,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     }
     return c;
   }
-
-  private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventVetoedException {
+  
+  private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventFailedException {
     ListenerRegistry.getInstance( ).fireEvent( StopComponentEvent.getLocal( remoteConfiguration ) );
   }
   
-  private void fireStartComponent( ComponentConfiguration config ) throws EventVetoedException {
+  private void fireStartComponent( ComponentConfiguration config ) throws EventFailedException {
     ListenerRegistry.getInstance( ).fireEvent( StartComponentEvent.getLocal( config ) );
   }
   

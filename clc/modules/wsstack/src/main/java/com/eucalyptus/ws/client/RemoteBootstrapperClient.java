@@ -237,9 +237,6 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   }
 
   @Override
-  public void advertiseEvent( Event event ) {}
-
-  @Override
   public void fireEvent( Event event ) {
     if ( event instanceof LifecycleEvent ) {
       LifecycleEvent e = ( LifecycleEvent ) event;

@@ -336,6 +336,31 @@ public class Component implements ComponentInformation, HasName<Component> {
     }
   }
   
+  public final List<ServiceInfoType> getServiceSnapshot( ) {
+    List<ServiceInfoType> serviceSnapshot = Lists.newArrayList( );
+    for( final Service s : this.services.values( ) ) {
+      if( State.ENABLED.equals( s.getState( ) ) ) {
+        serviceSnapshot.add( 0, new ServiceInfoType( ) {
+          {
+            setPartition( s.getServiceConfiguration( ).getPartition( ) );
+            setName( s.getServiceConfiguration( ).getName( ) );
+            setType( Component.this.getName( ) );
+            getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
+          }
+        } );
+      } else {
+        serviceSnapshot.add( new ServiceInfoType( ) {
+          {
+            setPartition( s.getServiceConfiguration( ).getPartition( ) );
+            setName( s.getServiceConfiguration( ).getName( ) );
+            setType( Component.this.getName( ) );
+            getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
+          }
+        } );
+      }
+    }
+    return serviceSnapshot;
+  }
   public final Iterator<ServiceInfoType> getUnorderedIterator( ) {
     return Iterables.transform( this.services.values( ), new Function<Service, ServiceInfoType>( ) {
       
@@ -587,8 +612,39 @@ public class Component implements ComponentInformation, HasName<Component> {
         } );
       }
     }
-    
-    public void advertiseEvent( Event event ) {}
+  }
+
+  /**
+   * @return the identity
+   */
+  public ComponentId getIdentity( ) {
+    return this.identity;
+  }
+
+  /**
+   * @return
+   * @see com.eucalyptus.component.ComponentId#name()
+   */
+  public String name( ) {
+    return this.identity.name( );
+  }
+
+  /**
+   * @param hostName
+   * @param port
+   * @return
+   * @see com.eucalyptus.component.ComponentId#makeRemoteUri(java.lang.String, java.lang.Integer)
+   */
+  public URI makeRemoteUri( String hostName, Integer port ) {
+    return this.identity.makeRemoteUri( hostName, port );
+  }
+
+  /**
+   * @return
+   * @see com.eucalyptus.component.ComponentId#getLocalEndpointName()
+   */
+  public String getLocalEndpointName( ) {
+    return this.identity.getLocalEndpointName( );
   }
 
   /**

@@ -198,6 +198,7 @@ public class SystemState {
     VmState oldState = vm.getState( );
     
     vm.setServiceTag( runVm.getServiceTag( ) );
+    vm.setUuid( runVm.getUuid( ) );
     vm.setPlatform( runVm.getPlatform( ) );
     vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     

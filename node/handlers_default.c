@@ -698,6 +698,84 @@ doDetachVolume(	struct nc_state_t *nc,
 	return ERROR_FATAL;
 }
 
+// helper for changing bundling task state and stateName together                                                              
+static void change_createImage_state (ncInstance * instance, createImage_progress state)
+{
+  instance->createImageTaskState = state;
+  strncpy (instance->createImageTaskStateName, createImage_progress_names [state], CHAR_BUFFER_SIZE);
+}
+
+// helper for cleaning up 
+static int cleanup_createImage_task (ncInstance * instance, struct createImage_params_t * params, instance_states state, createImage_progress result)
+{
+        char cmd[MAX_PATH];
+	char buf[MAX_PATH];
+	int rc;
+	logprintfl (EUCAINFO, "cleanup_createImage_task: instance %s createImage task result=%s\n", instance->instanceId, createImage_progress_names [result]);
+	sem_p (inst_sem);
+	change_createImage_state (instance, result);
+	if (state!=NO_STATE) // do not touch instance state (these are early failures, before we destroyed the domain)
+		change_state (instance, state);
+	sem_v (inst_sem);
+
+	if (params) {
+	        // if the result was failed or cancelled, clean up walrus state
+	        if (result == CREATEIMAGE_FAILED || result == CREATEIMAGE_CANCELLED) {
+		}
+		if (params->workPath) {
+			free_work_path (instance->instanceId, instance->userId, params->sizeMb);
+			free (params->workPath);
+		}
+		if (params->volumeId) free (params->volumeId);
+		if (params->remoteDev) free (params->remoteDev);
+		if (params->diskPath) free (params->diskPath);
+		if (params->eucalyptusHomePath) free (params->eucalyptusHomePath);
+		free (params);
+	}
+
+	return (result==CREATEIMAGE_SUCCESS)?OK:ERROR;
+}
+
+static void * createImage_thread (void *arg) 
+{
+	struct createImage_params_t * params = (struct createImage_params_t *)arg;
+	ncInstance * instance = params->instance;
+	char cmd[MAX_PATH];
+	char buf[MAX_PATH];
+	int rc;
+
+	logprintfl (EUCAINFO, "createImage_thread: waiting for instance %s to shut down\n", instance->instanceId);
+	// wait until monitor thread changes the state of the instance instance 
+	if (wait_state_transition (instance, CREATEIMAGE_SHUTDOWN, CREATEIMAGE_SHUTOFF)) { 
+	  if (instance->createImageCanceled) { // cancel request came in while the instance was shutting down
+	    logprintfl (EUCAINFO, "createImage_thread: cancelled while createImage instance %s\n", instance->instanceId);
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
+	  } else {
+	    logprintfl (EUCAINFO, "createImage_thread: failed while createImage instance %s\n", instance->instanceId);
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
+	  }
+	  return NULL;
+	}
+
+	logprintfl (EUCAINFO, "createImage_thread: started createImage instance %s\n", instance->instanceId);
+	{
+	  rc = 0;
+	  if (rc==0) {
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_SUCCESS);
+	    logprintfl (EUCAINFO, "createImage_thread: finished createImage instance %s\n", instance->instanceId);
+	  } else if (rc == -1) {
+	    // bundler child was cancelled (killed)
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
+	    logprintfl (EUCAINFO, "createImage_thread: cancelled while createImage instance %s (rc=%d)\n", instance->instanceId, rc);
+	  } else {
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
+	    logprintfl (EUCAINFO, "createImage_thread: failed while createImage instance %s (rc=%d)\n", instance->instanceId, rc);
+	  }
+	}
+	
+	return NULL;
+}
+
 static int
 doCreateImage(	struct nc_state_t *nc,
 		ncMetadata *meta,
@@ -706,8 +784,66 @@ doCreateImage(	struct nc_state_t *nc,
 		char *remoteDev)
 {
 	logprintfl (EUCAINFO, "CreateImage(): invoked\n");
+
+	// sanity checking
+	if (instanceId==NULL
+	    || remoteDev==NULL) {
+	  logprintfl (EUCAERROR, "CreateImage: called with invalid parameters\n");
+	  return ERROR;
+	}
+
+	// find the instance
+	ncInstance * instance = find_instance(&global_instances, instanceId);
+	if (instance==NULL) {
+		logprintfl (EUCAERROR, "CreateImage: instance %s not found\n", instanceId);
+		return ERROR;
+	}
+
+	// "marshall" thread parameters
+	struct createImage_params_t * params = malloc (sizeof (struct createImage_params_t));
+	if (params==NULL) 
+		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
+
+	bzero (params, sizeof (struct createImage_params_t));
+	params->instance = instance;
+	params->volumeId = strdup (volumeId);
+	params->remoteDev = strdup (remoteDev);
+
+	params->sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
+	if (params->sizeMb<1)
+		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
+	params->workPath = alloc_work_path (instanceId, instance->userId, params->sizeMb); // reserve work disk space for bundling
+	if (params->workPath==NULL)
+		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
+	params->diskPath = get_disk_path (instanceId, instance->userId); // path of the disk to bundle
+	if (params->diskPath==NULL)
+		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
+
+	// terminate the instance
+	sem_p (inst_sem);
+	instance->createImageTime = time (NULL);
+	change_state (instance, CREATEIMAGE_SHUTDOWN);
+	change_createImage_state (instance, CREATEIMAGE_IN_PROGRESS);
 	
-	return 0;
+	int err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
+	if (err!=OK) {
+	  sem_v (inst_sem);
+	  if (params) free(params);
+	  return err;
+	}
+	sem_v (inst_sem);
+	
+	// do the rest in a thread
+	pthread_attr_t tattr;
+	pthread_t tid;
+	pthread_attr_init (&tattr);
+	pthread_attr_setdetachstate (&tattr, PTHREAD_CREATE_DETACHED);
+	if (pthread_create (&tid, &tattr, createImage_thread, (void *)params)!=0) {
+		logprintfl (EUCAERROR, "CreateImage: failed to start VM createImage thread\n");
+		return cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
+	}
+
+	return OK;
 }
 
 // helper for changing bundling task state and stateName together

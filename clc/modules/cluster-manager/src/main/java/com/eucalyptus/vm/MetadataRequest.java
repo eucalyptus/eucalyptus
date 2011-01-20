@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,91 +61,87 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.context;
+package com.eucalyptus.vm;
 
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.event.DisableComponentEvent;
-import com.eucalyptus.component.event.EnableComponentEvent;
-import com.eucalyptus.component.event.StartComponentEvent;
-import com.eucalyptus.component.event.StopComponentEvent;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 
-@Provides( Component.bootstrap )
-@RunDuring( Bootstrap.Stage.CloudServiceInit )
-public class ServiceBootstrapper extends Bootstrapper implements EventListener {
-  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
+public class MetadataRequest {
+  private static Logger LOG = Logger.getLogger( MetadataRequest.class );
+  private final String     requestIp;
+  private final String     metadataName;
+  private final String     localPath;
+  private final VmInstance vm;
   
-  public ServiceBootstrapper( ) {}
-  
-  @Override
-  public boolean load( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    return ServiceContext.startup( );
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    ServiceContext.shutdown( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public void fireEvent( Event event ) {
-    if ( ( event instanceof StartComponentEvent ) || ( event instanceof StopComponentEvent ) ) {
-      LOG.info( "Reloading service context." );
-      ServiceContext.shutdown( );
-      ServiceContext.startup( );
+  public MetadataRequest( String requestIp, String requestUrl ) {
+    super( );
+    try {
+      this.requestIp = requestIp;
+      String[] path = requestUrl.replaceFirst( "/", "?" ).split( "\\?" );
+      if ( path.length > 0 ) {
+        this.metadataName = path[0];
+        if ( path.length > 1 ) {
+          this.localPath = path[1].replaceFirst( "^[/]*", "" ).replaceAll( "[/]+", "/" );
+        } else {
+          this.localPath = "";
+        }
+      } else {
+        this.metadataName = "";
+        this.localPath = "";
+      }
+      VmInstance findVm = null;
+      try {
+        findVm = VmInstances.getInstance( ).lookupByPublicIp( requestIp );
+      } catch ( NoSuchElementException ex ) {
+        try {
+          findVm = VmInstances.getInstance( ).lookupByInstanceIp( requestIp );
+        } catch ( NoSuchElementException ex1 ) {
+        }
+      }
+      this.vm = findVm;
+    } finally {
+      LOG.debug( ( this.vm != null
+        ? "Instance"
+        : "External" )
+                 + " Metadata: requestIp=" + this.requestIp
+                 + " metadataName=" + this.metadataName
+                 + " metadataPath=" + this.localPath
+                 + " requestUrl=" + requestUrl );
     }
   }
   
-  public static void register( ) {
-    ListenerRegistry.getInstance( ).register( StartComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( StopComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( DisableComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( EnableComponentEvent.class, new ServiceBootstrapper( ) );
+  public boolean isInstance( ) {
+    return vm != null;
+  }
+  
+  /**
+   * @return the requestIp
+   */
+  public String getRequestIp( ) {
+    return this.requestIp;
+  }
+  
+  /**
+   * @return the metadataName
+   */
+  public String getMetadataName( ) {
+    return this.metadataName;
+  }
+  
+  /**
+   * @return the localPath
+   */
+  public String getLocalPath( ) {
+    return this.localPath;
+  }
+  
+  public VmInstance getVmInstance( ) {
+    return this.vm;
+  }
+  
+  public boolean isSystem( ) {
+    return true;
   }
 }

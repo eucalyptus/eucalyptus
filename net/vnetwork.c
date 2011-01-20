@@ -288,7 +288,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	rc = vnetSetMetadataRedirect(vnetconfig, network, slashnet);
+	rc = vnetSetMetadataRedirect(vnetconfig);
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
@@ -359,14 +359,17 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
   return(0);
 }
 
-int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet) {
-  char cmd[256];
-  int rc;
+int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
+  char cmd[256], *network=NULL;
+  int rc, slashnet;
 
-  if (!vnetconfig || !network) {
+  if (!vnetconfig) {
     logprintfl(EUCAERROR, "vnetSetMetadataRedirect(): bad input params\n");
     return(1);
   }
+
+  network = hex2dot(vnetconfig->nw);
+  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1); 
 
   snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
   rc = system(cmd);
@@ -380,6 +383,8 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet)
     snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
   }
   rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+  
+  if (network) free(network);
 
   return(0);
 }
