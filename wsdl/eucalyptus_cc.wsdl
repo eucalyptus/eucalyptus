@@ -385,7 +385,8 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="useVlans" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="addrsPerNet" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="vlanMin" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="vlanMax" type="xs:int"/>

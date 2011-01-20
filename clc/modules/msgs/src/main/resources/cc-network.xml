@@ -37,12 +37,17 @@
     </collection>
   </mapping>
   <mapping name="DescribeNetworksResponse" class="edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="mode" field="mode" usage="required" />
-    <value name="addrsPerNet" field="addrsPerNetwork" usage="required" />
+    <value name="useVlans" field="useVlans" usage="required" />
+    <value name="addrsPerNet" field="addrsPerNet" usage="optional" />
+    <value name="vlanMin" field="vlanMin" usage="optional" />
+    <value name="vlanMax" field="vlanMax" usage="optional" />
+    <value name="vnetSubnet" field="vnetSubnet" usage="optional" />
+    <value name="vnetNetmask" field="vnetNetmask" usage="optional" />
     <structure usage="optional">
-      <collection field="activeNetworks" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <collection field="activeNetworks" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
         <structure name="activeNetworks" map-as="edu.ucsb.eucalyptus.msgs.NetworkInfoType" />
       </collection>
     </structure>
