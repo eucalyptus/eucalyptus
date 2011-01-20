@@ -40,9 +40,9 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   @Override
   public void fire( DescribeNetworksResponseType reply ) {
     for ( Network net : Networks.getInstance( ).listValues( ) ) {
-      net.trim( reply.getAddrsPerNetwork( ) );
+      net.trim( reply.getAddrsPerNet( ) );
     }
-    this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNetwork( ) );
+    this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNet( ) );
     this.getSubject( ).getState( ).setMode( reply.getUseVlans( ) );
     List<String> active = Lists.newArrayList( );
     for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
@@ -60,7 +60,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
     }
     
     for ( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {
-      net.trim( reply.getAddrsPerNetwork( ) );
+      net.trim( reply.getAddrsPerNet( ) );
 //TODO: update the network index/token state here.  ultimately needed for failure modes.
     }
     List<Cluster> ccList = Clusters.getInstance( ).listValues( );
