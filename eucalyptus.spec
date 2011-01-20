@@ -130,7 +130,11 @@ alongside the cluster-controller.
 Summary:      Elastic Utility Computing Architecture - cloud controller
 Requires:     %{name}-common-java = %{version}-%{release}
 Requires:     lvm2
+%if %{is_centos}
+Requires:     python26-boto
+%else
 Requires:     python-boto >= 1.9b
+%endif
 Requires:     %{euca_java}
 Group:        Applications/System
 
