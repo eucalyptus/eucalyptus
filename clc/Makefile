@@ -2,7 +2,6 @@
 #
 #
 include ../Makedefs
-export JAVA_HOME
 
 theme_dir	= ${TOP}/clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes
 web_prop_dir	= ${TOP}/clc/modules/www/conf
