@@ -43,7 +43,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       net.trim( reply.getAddrsPerNetwork( ) );
     }
     this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNetwork( ) );
-    this.getSubject( ).getState( ).setMode( reply.getMode( ) );
+    this.getSubject( ).getState( ).setMode( reply.getUseVlans( ) );
     List<String> active = Lists.newArrayList( );
     for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
       Network net = null;

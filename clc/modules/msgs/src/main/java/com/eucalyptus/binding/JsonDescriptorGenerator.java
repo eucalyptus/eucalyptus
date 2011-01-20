@@ -96,10 +96,14 @@ public class JsonDescriptorGenerator extends BindingGenerator {
                                                     put( Boolean.class.getCanonicalName( ), new BooleanTypeBinding( ) );
                                                     put( String.class.getCanonicalName( ), new StringTypeBinding( ) );
                                                     put( Long.class.getCanonicalName( ), new LongTypeBinding( ) );
+                                                    put( Double.class.getCanonicalName( ), new DoubleTypeBinding( ) );
+                                                    put( Float.class.getCanonicalName( ), new FloatTypeBinding( ) );
+                                                    put( java.util.Date.class.getCanonicalName( ), new DateTimeTypeBinding( ) );
                                                     put( "boolean", new BooleanTypeBinding( ) );
                                                     put( "int", new IntegerTypeBinding( ) );
                                                     put( "long", new LongTypeBinding( ) );
-                                                    put( java.util.Date.class.getCanonicalName( ), new StringTypeBinding( ) );
+                                                    put( "float", new FloatTypeBinding( ) );
+                                                    put( "double", new DoubleTypeBinding( ) );
                                                   }
                                                 };
   
@@ -238,7 +242,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
         Class targetType = c;
         do {
           this.parent = targetType;
-        } while ( ( targetType = targetType.getSuperclass( ) ) != null && !BaseMessage.class.equals( targetType.getSuperclass( ) ) && !java.lang.Object.class.equals( targetType.getSuperclass( ) ) );
+        } while ( ( targetType = targetType.getSuperclass( ) ) != null && !BaseMessage.class.equals( targetType.getSuperclass( ) )
+                  && !java.lang.Object.class.equals( targetType.getSuperclass( ) ) );
       }
     }
     
@@ -269,22 +274,57 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     @Override
     public String toString( ) {
       if ( this.parent == null ) {
-        if( this.request != null ) {
+        if ( this.request != null ) {
           this.setParent( this.request );
-        } else if( this.response != null ) {
+        } else if ( this.response != null ) {
           this.setParent( this.response );
         }
       }
-      return String.format( "RequestInfo:name=%s:request=%s:response=%s:parent=%s", this.name, 
-                            ( this.request != null ? this.request.getCanonicalName( ) : "" ),
-                            ( this.response != null ? this.response.getCanonicalName( ) : "" ), 
+      String out = "{\n" +
+                   "    \"name\": [\"" + this.name + "\"],\n" +
+                   "    \"params\": [\n" +
+                   /** do request fields here **/
+                   "    {\n" +
+                   "        \"optional\": true,\n" +
+                   "        \"type\": \"array\",\n" +
+                   "        \"member-type\": \"string\",\n" +
+                   "        \"name\": [\"GroupName\"],\n" +
+                   "    }\n" +
+                   "    ],\n" +
+                   /** do response here **/
+                   "    \"response-properties\": [\n" +
+                   "    {\n" +
+                   "        \"type\": \"string\",\n" +
+                   "        \"name\": [\"requestId\"],\n" +
+                   "    }\n" +
+                   "    ]\n" +
+                   "}\n";
+      /**
+       * {
+       * "params": [//<--- request.getFields()
+       * {
+       * "optional": true,
+       * "member-type": "string",
+       * "type": "array",
+       * "name": "GroupName",// <--- remember to caps for query args
+       * }
+       * ],
+       * "name": "DescribeSecurityGroups",
+       */
+      return String.format( "RequestInfo:name=%s:request=%s:response=%s:parent=%s", this.name,
+                            ( this.request != null
+                              ? this.request.getCanonicalName( )
+                              : "" ),
+                            ( this.response != null
+                              ? this.response.getCanonicalName( )
+                              : "" ),
                             ( this.parent != null
                               ? this.parent.getCanonicalName( )
                               : ( this.request != null
                                 ? this.request.getSuperclass( )
                                 : ( this.response != null
                                   ? this.response.getSuperclass( )
-                                  : "FAILED-REQUEST-PAIRING" ) ) ) );
+                                  : "FAILED-REQUEST-PAIRING" ) ) ) ) + "\n" + out;
     }
   }
   
@@ -332,6 +372,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     private boolean abs;
     
     public RootObjectTypeBinding( Class type ) {
+      super( "object" );
       JsonDescriptorGenerator.this.indent = 2;
       this.type = type;
       if ( Object.class.equals( type.getSuperclass( ) ) ) {
@@ -391,8 +432,19 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   
   abstract class TypeBinding {
     private StringBuilder buf = new StringBuilder( );
+    private final String  typeName;
     
-    public abstract String getTypeName( );
+    public TypeBinding( ) {
+      this.typeName = "UNSETOMG";
+    }
+    
+    public TypeBinding( String typeName ) {
+      this.typeName = typeName;
+    }
+    
+    public String getTypeName( ) {
+      return this.typeName;
+    }
     
     private TypeBinding reindent( int delta ) {
       JsonDescriptorGenerator.this.indent += delta;
@@ -564,6 +616,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     private Class  type;
     
     public NoopTypeBinding( Field field ) {
+      super( "object" );
       this.name = field.getName( );
       this.type = field.getType( );
     }
@@ -642,30 +695,44 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   }
   
   class IntegerTypeBinding extends TypeBinding {
-    @Override
-    public String getTypeName( ) {
-      return Integer.class.getCanonicalName( );
+    public IntegerTypeBinding( ) {
+      super( "integer" );
     }
   }
   
   class LongTypeBinding extends TypeBinding {
-    @Override
-    public String getTypeName( ) {
-      return Long.class.getCanonicalName( );
+    public LongTypeBinding( ) {
+      super( "long" );
+    }
+  }
+  
+  class DoubleTypeBinding extends TypeBinding {
+    public DoubleTypeBinding( ) {
+      super( "double" );
+    }
+  }
+  
+  class FloatTypeBinding extends TypeBinding {
+    public FloatTypeBinding( ) {
+      super( "float" );
     }
   }
   
   class StringTypeBinding extends TypeBinding {
-    @Override
-    public String getTypeName( ) {
-      return String.class.getCanonicalName( );
+    public StringTypeBinding( ) {
+      super( "string" );
     }
   }
   
   class BooleanTypeBinding extends TypeBinding {
-    @Override
-    public String getTypeName( ) {
-      return Boolean.class.getCanonicalName( );
+    public BooleanTypeBinding( ) {
+      super( "boolean" );
+    }
+  }
+  
+  class DateTimeTypeBinding extends TypeBinding {
+    public DateTimeTypeBinding( ) {
+      super( "datetime" );
     }
   }
 }

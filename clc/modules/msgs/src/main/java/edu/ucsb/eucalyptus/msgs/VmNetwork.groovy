@@ -117,12 +117,17 @@ public class DescribeNetworksType extends EucalyptusMessage {
 }
 
 public class DescribeNetworksResponseType extends EucalyptusMessage {
-  Integer mode;
-  Integer addrsPerNetwork;
+  Integer useVlans;
+  String mode;
+  Integer vlanMin;
+  Integer vlanMax;
+  String vnetSubnet;
+  String vnetSubmask;
+  Integer addrsPerNet;
   ArrayList<NetworkInfoType> activeNetworks = new ArrayList<NetworkInfoType>();
   
   public String toString() {
-    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNetwork} " \
+    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNet} " \
       + "\n${this.getClass().getSimpleName()} " + this.activeNetworks*.toString().join( "\n${this.getClass().getSimpleName()} " ); 
   }
 }
