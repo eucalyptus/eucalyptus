@@ -122,7 +122,7 @@ public class DescribeNetworksResponseType extends EucalyptusMessage {
   Integer vlanMin;
   Integer vlanMax;
   String vnetSubnet;
-  String vnetSubmask;
+  String vnetNetmask;
   Integer addrsPerNet;
   ArrayList<NetworkInfoType> activeNetworks = new ArrayList<NetworkInfoType>();
   
