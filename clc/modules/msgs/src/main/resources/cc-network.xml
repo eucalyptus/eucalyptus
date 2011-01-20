@@ -47,7 +47,7 @@
     <value name="vnetSubnet" field="vnetSubnet" usage="optional" />
     <value name="vnetNetmask" field="vnetNetmask" usage="optional" />
     <structure usage="optional">
-      <collection field="activeNetworks" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <collection field="activeNetworks" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
         <structure name="activeNetworks" map-as="edu.ucsb.eucalyptus.msgs.NetworkInfoType" />
       </collection>
     </structure>
