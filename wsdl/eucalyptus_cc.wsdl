@@ -26,6 +26,7 @@
 	  <xs:element minOccurs="0" name="instanceType" type="tns:virtualMachineType"/>
 	  <xs:element minOccurs="0" name="keyName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchTime" type="xs:dateTime"/>
+	  <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
 	  <xs:element minOccurs="0" name="stateName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="netParams" type="tns:netConfigType"/>
 	  <xs:element minOccurs="0" name="ownerId" type="xs:string"/>
@@ -33,6 +34,8 @@
 	  <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
 	  <xs:element minOccurs="0" name="userData" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	  <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="createImageStateName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	  <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
 	  
@@ -93,6 +96,15 @@
           <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="name" type="xs:string"/>
           <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="uris" type="xs:string"/>
         </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="serviceStatusType">
+	<xs:sequence>
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="serviceId" type="tns:serviceInfoType" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localState" type="xs:string" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localEpoch" type="xs:int" />
+	  <xs:element maxOccurs="unbounded" minOccurs="0" name="details" type="xs:string" />
+	</xs:sequence>
       </xs:complexType>
 
       <xs:complexType abstract="true" name="eucalyptusMessage">
@@ -211,6 +223,27 @@
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="createImageType">
+        <xs:complexContent>
+          <xs:extension base="tns:eucalyptusMessage">
+            <xs:sequence>
+              <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="createImageResponseType">
+        <xs:complexContent>
+          <xs:extension base="tns:eucalyptusMessage">
+            <xs:sequence>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
       </xs:complexType>
 
       <xs:complexType name="getConsoleOutputType">
@@ -459,6 +492,7 @@
 	      <xs:element name="vlan" type="xs:int"/>
 	      <xs:element name="userData" type="xs:string"/>
 	      <xs:element name="launchIndex" type="xs:string"/>
+	      <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -484,11 +518,123 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="describeServicesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="serviceIds" type="tns:serviceInfoType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="describeServicesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="serviceStatuses" type="tns:serviceStatusType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType abstract="true" name="serviceTransitionType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="serviceIds" type="tns:serviceInfoType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="startServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="stopServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="enableServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="disableServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="startServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="stopServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="enableServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="disableServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:element name="DescribeServices" nillable="true" type="tns:describeServicesType"/>
+      <xs:element name="DescribeServicesResponse" nillable="true" type="tns:describeServicesResponseType"/>
+      
+      <xs:element name="StartService" nillable="true" type="tns:startServiceType"/>
+      <xs:element name="StartServiceResponse" nillable="true" type="tns:startServiceResponseType"/>
+      
+      <xs:element name="StopService" nillable="true" type="tns:stopServiceType"/>
+      <xs:element name="StopServiceResponse" nillable="true" type="tns:stopServiceResponseType"/>
+      
+      <xs:element name="EnableService" nillable="true" type="tns:enableServiceType"/>
+      <xs:element name="EnableServiceResponse" nillable="true" type="tns:enableServiceResponseType"/>
+      
+      <xs:element name="DisableService" nillable="true" type="tns:disableServiceType"/>
+      <xs:element name="DisableServiceResponse" nillable="true" type="tns:disableServiceResponseType"/>
+      
       <xs:element name="AttachVolume" nillable="true" type="tns:attachVolumeType"/>
       <xs:element name="AttachVolumeResponse" nillable="true" type="tns:attachVolumeResponseType"/>
 
       <xs:element name="DetachVolume" nillable="true" type="tns:detachVolumeType"/>
       <xs:element name="DetachVolumeResponse" nillable="true" type="tns:detachVolumeResponseType"/>
+
+      <xs:element name="CreateImage" nillable="true" type="tns:createImageType"/>
+      <xs:element name="CreateImageResponse" nillable="true" type="tns:createImageResponseType"/>
 
       <xs:element name="GetConsoleOutput" nillable="true" type="tns:getConsoleOutputType"/>
       <xs:element name="GetConsoleOutputResponse" nillable="true" type="tns:getConsoleOutputResponseType"/>
@@ -531,6 +677,31 @@
       
     </xs:schema>
   </wsdl:types>
+
+  <wsdl:message name="DescribeServicesResponse">
+    <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StartServiceResponse">
+    <wsdl:part element="tns:StartServiceResponse" name="StartServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StopServiceResponse">
+    <wsdl:part element="tns:StopServiceResponse" name="StopServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="EnableServiceResponse">
+    <wsdl:part element="tns:EnableServiceResponse" name="EnableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DisableServiceResponse">
+    <wsdl:part element="tns:DisableServiceResponse" name="DisableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
   
   <wsdl:message name="AttachVolumeResponse">
     <wsdl:part element="tns:AttachVolumeResponse" name="AttachVolumeResponse">
@@ -539,6 +710,11 @@
 
   <wsdl:message name="DetachVolumeResponse">
     <wsdl:part element="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CreateImageResponse">
+    <wsdl:part element="tns:CreateImageResponse" name="CreateImageResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -607,6 +783,31 @@
     </wsdl:part>
   </wsdl:message>
 
+  <wsdl:message name="DescribeServices">
+    <wsdl:part element="tns:DescribeServices" name="DescribeServices">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StartService">
+    <wsdl:part element="tns:StartService" name="StartService">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StopService">
+    <wsdl:part element="tns:StopService" name="StopService">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="EnableService">
+    <wsdl:part element="tns:EnableService" name="EnableService">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DisableService">
+    <wsdl:part element="tns:DisableService" name="DisableService">
+    </wsdl:part>
+  </wsdl:message>
+
   <wsdl:message name="AttachVolume">
     <wsdl:part element="tns:AttachVolume" name="AttachVolume">
     </wsdl:part>
@@ -614,6 +815,11 @@
 
   <wsdl:message name="DetachVolume">
     <wsdl:part element="tns:DetachVolume" name="DetachVolume">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CreateImage">
+    <wsdl:part element="tns:CreateImage" name="CreateImage">
     </wsdl:part>
   </wsdl:message>
 
@@ -691,6 +897,41 @@
 
   <wsdl:portType name="EucalyptusCC">
 
+    <wsdl:operation name="DescribeServices">
+      <wsdl:input message="tns:DescribeServices" name="DescribeServices">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="StartService">
+      <wsdl:input message="tns:StartService" name="StartService">
+      </wsdl:input>
+      <wsdl:output message="tns:StartServiceResponse" name="StartServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="StopService">
+      <wsdl:input message="tns:StopService" name="StopService">
+      </wsdl:input>
+      <wsdl:output message="tns:StopServiceResponse" name="StopServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="EnableService">
+      <wsdl:input message="tns:EnableService" name="EnableService">
+      </wsdl:input>
+      <wsdl:output message="tns:EnableServiceResponse" name="EnableServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="DisableService">
+      <wsdl:input message="tns:DisableService" name="DisableService">
+      </wsdl:input>
+      <wsdl:output message="tns:DisableServiceResponse" name="DisableServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
     <wsdl:operation name="AttachVolume">
       <wsdl:input message="tns:AttachVolume" name="AttachVolume">
       </wsdl:input>
@@ -702,6 +943,13 @@
       <wsdl:input message="tns:DetachVolume" name="DetachVolume">
       </wsdl:input>
       <wsdl:output message="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CreateImage">
+      <wsdl:input message="tns:CreateImage" name="CreateImage">
+      </wsdl:input>
+      <wsdl:output message="tns:CreateImageResponse" name="CreateImageResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -809,6 +1057,56 @@
   <wsdl:binding name="EucalyptusCCSoapBinding" type="tns:EucalyptusCC">
     <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
 
+    <wsdl:operation name="DescribeServices">
+      <soap:operation soapAction="EucalyptusCC#DescribeServices" style="document"/>
+      <wsdl:input name="DescribeServices">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeServicesResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StartService">
+      <soap:operation soapAction="EucalyptusCC#StartService" style="document"/>
+      <wsdl:input name="StartService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="StartServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StopService">
+      <soap:operation soapAction="EucalyptusCC#StopService" style="document"/>
+      <wsdl:input name="StopService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="StopServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="EnableService">
+      <soap:operation soapAction="EucalyptusCC#EnableService" style="document"/>
+      <wsdl:input name="EnableService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="EnableServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DisableService">
+      <soap:operation soapAction="EucalyptusCC#DisableService" style="document"/>
+      <wsdl:input name="DisableService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DisableServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
     <wsdl:operation name="AttachVolume">
       <soap:operation soapAction="EucalyptusCC#AttachVolume" style="document"/>
       <wsdl:input name="AttachVolume">
@@ -826,6 +1124,16 @@
       </wsdl:input>
       <wsdl:output name="DetachVolumeResponse">
         <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CreateImage">
+      <soap:operation soapAction="EucalyptusCC#CreateImage" style="document"/>
+      <wsdl:input name="CreateImage">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="CreateImageResponse">
+	<soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
 

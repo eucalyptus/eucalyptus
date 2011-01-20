@@ -80,6 +80,13 @@ typedef struct serviceInfoType_t {
   int urisLen;
 } serviceInfoType;
 
+typedef struct serviceStatusType_t {
+  char localState[32];
+  int localEpoch;
+  char details[1024];
+  serviceInfoType serviceId;
+} serviceStatusType;
+
 typedef struct ncMetadata_t {
     char *correlationId;
     char *userId;
@@ -180,7 +187,7 @@ typedef struct virtualMachine_t {
     virtualBootRecord * swap;
     virtualBootRecord * ephemeral0;
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS];
-    int virtualBootRecordLen; // TODO: dan ask dmitrii
+    int virtualBootRecordLen;
 } virtualMachine;
 
 int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in);
@@ -211,16 +218,27 @@ typedef struct ncInstance_t {
     
     // state as reported to CC & CLC
     char stateName[CHAR_BUFFER_SIZE];  // as string
+    char bundleTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
+    char createImageTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
+
     int stateCode; // as int
 
     // state as NC thinks of it
     instance_states state;
+    bundling_progress bundleTaskState;
+    int bundlePid, bundleBucketExists, bundleCanceled;
+  
+    createImage_progress createImageTaskState;
+    int createImagePid, createImageCanceled;
 
     char keyName[CHAR_BUFFER_SIZE*4];
     char privateDnsName[CHAR_BUFFER_SIZE];
     char dnsName[CHAR_BUFFER_SIZE];
     int launchTime; // timestamp of RunInstances request arrival
+    int expiryTime;
     int bootTime; // timestamp of STAGING->BOOTING transition
+    int bundlingTime; // timestamp of ->BUNDLING transition
+    int createImageTime; // timestamp of ->CREATEIMAGE transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
     virtualMachine params;
@@ -279,7 +297,7 @@ ncInstance * allocate_instance(char *uuid,
                                virtualMachine *params, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,
-                               char *userData, char *launchIndex, char **groupNames, int groupNamesSize);
+                               char *userData, char *launchIndex, int expiryTime, char **groupNames, int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 

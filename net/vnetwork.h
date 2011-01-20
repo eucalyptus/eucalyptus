@@ -185,6 +185,7 @@ int vnetSetPublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip, i
 int vnetGetPublicIP(vnetConfig *vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
 
 int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst);
+int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst);
 int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst);
 
 int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
@@ -198,7 +199,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 int vnetSaveIPTables(vnetConfig *vnetconfig);
 int vnetLoadIPTables(vnetConfig *vnetconfig);
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
-int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet);
+int vnetSetMetadataRedirect(vnetConfig *vnetconfig);
 
 char *host2ip(char *host);
 char *hex2dot(uint32_t in);

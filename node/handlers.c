@@ -86,6 +86,7 @@ permission notice:
 #include <handlers.h>
 #include <storage.h>
 #include <eucalyptus.h>
+#include <euca_auth.h>
 
 #define MONITORING_PERIOD (5)
 
@@ -103,6 +104,8 @@ extern struct handlers default_libvirt_handlers;
 
 const int staging_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any STAGING domains will be cleaned up */
 const int booting_cleanup_threshold = 60; /* after this many seconds any BOOTING domains will be cleaned up */
+const int bundling_cleanup_threshold = 60 * 60; /* after this many seconds any BUNDLING domains will be cleaned up */
+const int createImage_cleanup_threshold = 60 * 60; /* after this many seconds any CREATEIMAGE domains will be cleaned up */
 const int teardown_state_duration = 180; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
 
 // a NULL-terminated array of available handlers
@@ -214,6 +217,10 @@ void change_state(	ncInstance *instance,
     case SHUTDOWN:
     case SHUTOFF:
     case CRASHED:
+    case BUNDLING_SHUTDOWN:
+    case BUNDLING_SHUTOFF:
+    case CREATEIMAGE_SHUTDOWN:
+    case CREATEIMAGE_SHUTOFF:
         instance->stateCode = EXTANT;
 	instance->retries = LIBVIRT_QUERY_RETRIES;
         break;
@@ -264,14 +271,20 @@ refresh_instance_info(	struct nc_state_t *nc,
 	    return;
 
     /* no need to bug for domains without state on Hypervisor */
-    if (now==TEARDOWN || now==STAGING)
+    if (now==TEARDOWN || now==STAGING || now==BUNDLING_SHUTOFF || now==CREATEIMAGE_SHUTOFF)
         return;
     
     sem_p(hyp_sem);
     virDomainPtr dom = virDomainLookupByName (nc_state.conn, instance->instanceId);
     sem_v(hyp_sem);
     if (dom == NULL) { /* hypervisor doesn't know about it */
-      if (now==RUNNING ||
+      if (now==BUNDLING_SHUTDOWN) {
+	logprintfl (EUCAINFO, "detected disappearance of bundled domain %s\n", instance->instanceId);
+        change_state (instance, BUNDLING_SHUTOFF);
+      } else if (now==CREATEIMAGE_SHUTDOWN) {
+	logprintfl (EUCAINFO, "detected disappearance of createImage domain %s\n", instance->instanceId);
+        change_state (instance, CREATEIMAGE_SHUTOFF);
+      } else if (now==RUNNING ||
             now==BLOCKED ||
             now==PAUSED ||
             now==SHUTDOWN) {
@@ -331,6 +344,10 @@ refresh_instance_info(	struct nc_state_t *nc,
             change_state (instance, xen);
         }
         break;
+    case BUNDLING_SHUTDOWN:
+    case CREATEIMAGE_SHUTDOWN:
+      logprintfl (EUCADEBUG, "hypervisor state for bundle/createImage domain %s is %s\n", instance->instanceId, instance_state_names [xen]);
+      break;
     default:
         logprintfl (EUCAERROR, "error: refresh...(): unexpected state (%d) for instance %s\n", now, instance->instanceId);
         return;
@@ -454,6 +471,10 @@ monitoring_thread (void *arg)
             if (instance->state!=STAGING && instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
                 instance->state!=SHUTDOWN &&
+                instance->state!=BUNDLING_SHUTDOWN &&
+                instance->state!=BUNDLING_SHUTOFF &&
+                instance->state!=CREATEIMAGE_SHUTDOWN &&
+                instance->state!=CREATEIMAGE_SHUTOFF &&
                 instance->state!=TEARDOWN) continue;
 
             if (instance->state==TEARDOWN) {
@@ -472,7 +493,11 @@ monitoring_thread (void *arg)
 		&& (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
             if (instance->state==BOOTING  
 		&& (now - instance->bootTime)     < booting_cleanup_threshold) continue;
-            
+	    if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF)
+                && (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
+            if ((instance->state==CREATEIMAGE_SHUTDOWN || instance->state==CREATEIMAGE_SHUTOFF)
+                && (now - instance->createImageTime) < createImage_cleanup_threshold) continue;
+
             /* ok, it's been condemned => destroy the files */
             if (!nc_state.save_instance_files) {
 				logprintfl (EUCAINFO, "cleaning up state for instance %s\n", instance->instanceId);
@@ -1059,7 +1084,7 @@ int doPowerDown(ncMetadata *meta) {
 	return ret;
 }
 
-int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char **groupNames, int groupNamesSize, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
     int ret;
     
@@ -1171,9 +1196,9 @@ int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reserva
     }
    
     if (nc_state.H->doRunInstance)
-        ret = nc_state.H->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+        ret = nc_state.H->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, expiryTime, groupNames, groupNamesSize, outInst);
     else
-        ret = nc_state.D->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, groupNames, groupNamesSize, outInst);
+        ret = nc_state.D->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, expiryTime, groupNames, groupNamesSize, outInst);
     
     return ret;
 }
@@ -1299,6 +1324,23 @@ int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
 	else 
 		ret = nc_state.D->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
+
+	return ret;
+}
+
+int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev)
+{
+	int ret;
+
+	if (init())
+		return 1;
+
+	logprintfl (EUCAINFO, "doCreateImage() invoked (id=%s vol=%s remote=%s)\n", instanceId, volumeId, remoteDev);
+
+	if (nc_state.H->doCreateImage)
+		ret = nc_state.H->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
+	else 
+		ret = nc_state.D->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
 
 	return ret;
 }

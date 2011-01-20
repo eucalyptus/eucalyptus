@@ -41,12 +41,26 @@ BuildRoot:     %{_tmppath}/%{name}-%{version}-root
 %endif
 Summary:       Elastic Utility Computing Architecture
 Name:          eucalyptus
-Version:       2.0.1
-Release:       1
+Version:       2.1.0
+Release:       0
 License:       GPLv3
 Group:         Applications/System
-BuildRequires: gcc, make, %{euca_libvirt}-devel, %{euca_libvirt}, %{euca_libcurl}, ant, ant-nodeps, %{euca_java}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, %{euca_iscsi_client}
-Requires:      %{euca_build_req}, perl-Crypt-OpenSSL-RSA, perl-Crypt-OpenSSL-Random
+# FIXME:  gcc and make are probably unnecessary
+BuildRequires: gcc
+BuildRequires: make
+BuildRequires: ant
+BuildRequires: ant-nodeps
+BuildRequires: euca-axis2c >= 1.6.0
+BuildRequires: euca-rampartc >= 1.3.0
+BuildRequires: swig
+BuildRequires: %{euca_iscsi_client}
+BuildRequires: %{euca_libvirt}-devel
+BuildRequires: %{euca_libvirt}
+BuildRequires: %{euca_libcurl}
+BuildRequires: %{euca_java}
+Requires:      %{euca_build_req}
+Requires:      perl-Crypt-OpenSSL-RSA
+Requires:      perl-Crypt-OpenSSL-Random
 
 Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-%{version}.tar.gz
 URL:           http://open.eucalyptus.com
@@ -62,8 +76,10 @@ eucalyptus-cloud, eucalyptus-cc or
 eucalyptus-nc (or all of them).
 
 %package common-java
-Summary:      Elastic Utility Computing Architecture - ws java stack 
-Requires:     eucalyptus = 2.0.1, %{euca_java}, lvm2
+Summary:      Elastic Utility Computing Architecture - ws java stack
+Requires:     %{name} = %{version}-%{release}
+Requires:     lvm2
+Requires:     %{euca_java}
 Group:        Applications/System
 
 %description common-java
@@ -76,7 +92,9 @@ This package contains the java WS stack.
 
 %package walrus
 Summary:      Elastic Utility Computing Architecture - walrus
-Requires:     eucalyptus-common-java = 2.0.1, %{euca_java}, lvm2
+Requires:     %{name}-common-java = %{version}-%{release}
+Requires:     lvm2
+Requires:     %{euca_java}
 Group:        Applications/System
 
 %description walrus
@@ -91,7 +109,11 @@ cloud controller.
 
 %package sc
 Summary:      Elastic Utility Computing Architecture - storage controller
-Requires:     eucalyptus-common-java = 2.0.1, %{euca_java}, lvm2, vblade, %{euca_iscsi_server}
+Requires:     %{name}-common-java = %{version}-%{release}
+Requires:     lvm2
+Requires:     vblade
+Requires:     %{euca_iscsi_server}
+Requires:     %{euca_java}
 Group:        Applications/System
 
 %description sc
@@ -106,8 +128,10 @@ alongside the cluster-controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
-Requires:     eucalyptus-common-java = 2.0.1, %{euca_java}, lvm2
+Requires:     %{name}-common-java = %{version}-%{release}
+Requires:     lvm2
 Requires:     python-boto >= 1.9b
+Requires:     %{euca_java}
 Group:        Applications/System
 
 %description cloud
@@ -122,7 +146,15 @@ the cloud clients.
 
 %package cc
 Summary:      Elastic Utility Computing Architecture - cluster controller
-Requires:     eucalyptus = 2.0.1, eucalyptus-gl = 2.0.1, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, iptables, bridge-utils, %{euca_dhcp}, vtun
+Requires:     %{name}    = %{version}-%{release}
+Requires:     %{name}-gl = %{version}-%{release}
+Requires:     bridge-utils
+Requires:     euca-axis2c >= 1.6.0
+Requires:     euca-rampartc >= 1.3.0
+Requires:     iptables
+Requires:     %{euca_dhcp}
+Requires:     %{euca_httpd}
+Requires:     vtun
 Group:        Applications/System
 
 %description cc
@@ -136,7 +168,16 @@ handles multiple node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
-Requires:     eucalyptus = 2.0.1, eucalyptus-gl = 2.0.1, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0, bridge-utils, %{euca_libvirt}, %{euca_curl}, %{euca_hypervisor}, %{euca_iscsi_client}
+Requires:     %{name}    = %{version}-%{release}
+Requires:     %{name}-gl = %{version}-%{release}
+Requires:     euca-axis2c >= 1.6.0
+Requires:     euca-rampartc >= 1.3.0
+Requires:     bridge-utils
+Requires:     %{euca_curl}
+Requires:     %{euca_httpd}
+Requires:     %{euca_hypervisor}
+Requires:     %{euca_libvirt}
+Requires:     %{euca_iscsi_client}
 Group:        Applications/System
 
 %description nc
@@ -150,7 +191,10 @@ components that handles the instances.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     eucalyptus = 2.0.1, %{euca_httpd}, euca-axis2c >= 1.6.0, euca-rampartc >= 1.3.0
+Requires:     %{name} = %{version}-%{release}
+Requires:     euca-axis2c >= 1.6.0
+Requires:     euca-rampartc >= 1.3.0
+Requires:     %{euca_httpd}
 Group:        Applications/System
 
 %description gl
@@ -162,7 +206,7 @@ elastic computing service that is interface-compatible with Amazon's EC2.
 This package contains the internal log service of eucalyptus.
 
 %prep
-%setup -n eucalyptus-%{version}
+%setup -q
 
 %build
 export DESTDIR=$RPM_BUILD_ROOT
@@ -170,21 +214,21 @@ export DESTDIR=$RPM_BUILD_ROOT
 cd clc
 make deps
 cd ..
-make 2> err.log > out.log
+# Write builds logs to files so we can triage build failures.
+# mock logs stdout and stderr, so this hackery will eventually go away.
+(make 2>&1 1>&3 | tee err.log) 3>&1 1>&2 | tee out.log
+
 
 %install
-export DESTDIR=$RPM_BUILD_ROOT
-make install
+[ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
+make install DESTDIR=$RPM_BUILD_ROOT
 #CWD=`pwd`
 #cd $RPM_BUILD_ROOT
 #ls usr/share/eucalyptus/*jar | sed "s/^/\//" > $CWD/jar_list
 #cd $CWD
 
 %clean
-export DESTDIR=$RPM_BUILD_ROOT
-make uninstall
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
-rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 
 %files
 %doc LICENSE INSTALL README CHANGELOG
@@ -218,6 +262,7 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /usr/sbin/euca-describe-clusters
 /usr/sbin/euca-describe-components
 /usr/sbin/euca-describe-properties
+/usr/sbin/euca-describe-services
 /usr/sbin/euca-describe-storage-controllers
 /usr/sbin/euca-describe-user-groups
 /usr/sbin/euca-describe-users
@@ -278,7 +323,7 @@ rm -rf $RPM_BUILD_DIR/eucalyptus-%{version}
 /opt/euca-axis2c/services/EucalyptusGL
 
 %pre
-if [ "$1" = "2" ]; 
+if [ "$1" = "2" ];
 then
 	# let's see where we installed
 	EUCADIRS="/ /opt/eucalyptus/"
@@ -296,11 +341,11 @@ then
 	then
 		 etc/init.d/eucalyptus-cloud stop
 	fi
-	if [ -x etc/init.d/eucalyptus-cc ]; 
+	if [ -x etc/init.d/eucalyptus-cc ];
 	then
 		 etc/init.d/eucalyptus-cc stop
 	fi
-	if [ -x etc/init.d/eucalyptus-nc ]; 
+	if [ -x etc/init.d/eucalyptus-nc ];
 	then
 		 etc/init.d/eucalyptus-nc stop
 	fi
@@ -332,11 +377,11 @@ if ! getent passwd eucalyptus > /dev/null ; then
 	adduser -M eucalyptus
 %endif
 %if %is_fedora
-	adduser -U eucalyptus 
+	adduser -U eucalyptus
 %endif
 fi
 
-if [ "$1" = "1" ]; 
+if [ "$1" = "1" ];
 then
 	# let's configure eucalyptus
 	/usr/sbin/euca_conf -d / --instances /usr/local/eucalyptus/ -hypervisor %{euca_hypervisor} -bridge %{euca_bridge}
@@ -385,7 +430,7 @@ chkconfig --add eucalyptus-cloud
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
-	if ! grep 8773:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	if ! grep 8773:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ;
 	then
 		echo "--port=8773:tcp" >> /etc/sysconfig/system-config-securitylevel
 		echo "--port=8443:tcp" >> /etc/sysconfig/system-config-securitylevel
@@ -429,7 +474,7 @@ chkconfig --add eucalyptus-cc
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
-	if ! grep 8774:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	if ! grep 8774:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ;
 	then
 		echo "--port=8774:tcp" >> /etc/sysconfig/system-config-securitylevel
 	fi
@@ -453,14 +498,14 @@ chkconfig --add eucalyptus-nc
 %if %is_centos
 if [ -e /etc/sysconfig/system-config-securitylevel ];
 then
-	if ! grep 8775:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ; 
+	if ! grep 8775:tcp /etc/sysconfig/system-config-securitylevel > /dev/null ;
 	then
 		echo "--port=8775:tcp" >> /etc/sysconfig/system-config-securitylevel
 	fi
 fi
 %endif
 #%if %is_suse
-#if [ -e /etc/PolicyKit/PolicyKit.conf ]; 
+#if [ -e /etc/PolicyKit/PolicyKit.conf ];
 #then
 #	if ! grep eucalyptus /etc/PolicyKit/PolicyKit.conf > /dev/null ;
 #	then
@@ -499,7 +544,7 @@ then
 %endif
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable cloud
 	if [ -e /etc/init.d/eucalyptus-cloud -a /etc/eucalyptus/eucalyptus.conf ];
-	then 
+	then
 		/etc/init.d/eucalyptus-cloud restart || true
 	fi
 fi
@@ -510,7 +555,7 @@ if [ "$1" = "0" ];
 then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable walrus
 	if [ -e /etc/init.d/eucalyptus-cloud ];
-	then 
+	then
 		/etc/init.d/eucalyptus-cloud restart || true
 	fi
 fi
@@ -520,7 +565,7 @@ if [ "$1" = "0" ];
 then
 	[ -x /usr/sbin/euca_conf ] && /usr/sbin/euca_conf --disable sc
 	if [ -e /etc/init.d/eucalyptus-cloud -a /etc/eucalyptus/eucalyptus.conf ];
-	then 
+	then
 		/etc/init.d/eucalyptus-cloud restart || true
 	fi
 fi

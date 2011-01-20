@@ -52,40 +52,29 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS  DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
-#ifndef INCLUDE_CC_CLIENT_MARSHAL_H
-#define INCLUDE_CC_CLIENT_MARSHAL_H
+#ifndef INCLUDE_HANDLERS_STATE_H
+#define INCLUDE_HANDLERS_STATE_H
 
-#include <stdio.h>
-#include <time.h>
-#include <misc.h>
+#include <eucalyptus.h>
+#include <semaphore.h>
 #include <data.h>
-#include "axis2_stub_EucalyptusCC.h"
+#include <client-marshal.h>
+#include <vnetwork.h>
+#include <linux/limits.h>
 
-int cc_registerImage(char *imageloc, axutil_env_t *, axis2_stub_t *);
-int cc_describeResources(axutil_env_t *, axis2_stub_t *);
-int cc_startNetwork(int, char *netName, char **ccs, int ccsLen, axutil_env_t *, axis2_stub_t *);
-int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *, axis2_stub_t *);
-int cc_stopNetwork(int, char *netName, axutil_env_t *, axis2_stub_t *);
-int cc_assignAddress(char *src, char *dst, axutil_env_t *, axis2_stub_t *);
-int cc_unassignAddress(char *src, char *dst, axutil_env_t *, axis2_stub_t *);
+int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen);
+int doStartService(ncMetadata *ccMeta);
+int doStopService(ncMetadata *ccMeta);
+int doEnableService(ncMetadata *ccMeta);
+int doDisableService(ncMetadata *ccMeta);
 
-int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, axutil_env_t *env, axis2_stub_t *stub);
-int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t *env, axis2_stub_t *stub);
-
-int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env_t *env, axis2_stub_t *stub);
-
-int cc_describePublicAddresses(axutil_env_t *, axis2_stub_t *);
-int cc_configureNetwork(char *, char *, char *, int, int, char *, axutil_env_t *, axis2_stub_t *);
-int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, int num, int vlan, char *netName, virtualMachine *vm_type, axutil_env_t *, axis2_stub_t *);
-int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
-int cc_getConsoleOutput(char *instId, axutil_env_t *, axis2_stub_t *);
-int cc_rebootInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
-int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
-int cc_killallInstances(axutil_env_t *, axis2_stub_t *);
+int validCmp(ccInstance *inst, void *in);
+int instNetParamsSet(ccInstance *inst, void *in);
+int clean_network_state(void);
 
 #endif

@@ -201,7 +201,7 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
 
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	rc = vnetSetMetadataRedirect(vnetconfig, network, slashnet);
+	rc = vnetSetMetadataRedirect(vnetconfig);
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
@@ -240,14 +240,17 @@ void vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, in
   }
 }
 
-int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet) {
-  char cmd[256];
-  int rc;
+int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
+  char cmd[256], *network=NULL;
+  int rc, slashnet;
 
-  if (!vnetconfig || !network) {
+  if (!vnetconfig) {
     logprintfl(EUCAERROR, "vnetSetMetadataRedirect(): bad input params\n");
     return(1);
   }
+
+  network = hex2dot(vnetconfig->nw);
+  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1); 
 
   snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
   rc = system(cmd);
@@ -261,6 +264,8 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet)
     snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
   }
   rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+  
+  if (network) free(network);
 
   return(0);
 }
@@ -1914,24 +1919,45 @@ int vnetAddPublicIP(vnetConfig *vnetconfig, char *inip) {
 }
 
 int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
-  int rc=0, slashnet;
-  char cmd[256], *network;
+  int rc=0, slashnet, ret=0;
+  char cmd[MAX_PATH], *network;
 
   if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
 
-    snprintf(cmd, 255, "-A PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", vnetconfig->eucahome, src, vnetconfig->pubInterface);
+    logprintfl(EUCADEBUG,"vnetAssignAddress(): running cmd %s\n", cmd);
+    rc = system(cmd);
+    rc = rc>>8;
+    if (rc && (rc != 2)) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to assign IP address '%s'\n", cmd);
+      ret = 1;
+    }
+
+    snprintf(cmd, MAX_PATH, "-A PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
-    snprintf(cmd, 255, "-A OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply DNAT rule '%s'\n", cmd);
+      ret = 1;
+    }
+    snprintf(cmd, MAX_PATH, "-A OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply DNAT rule '%s'\n", cmd);
+      ret = 1;
+    }
 
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
     network = hex2dot(vnetconfig->nw);
     //    snprintf(cmd, 255, "-I POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
-    snprintf(cmd, 255, "-I POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
+    snprintf(cmd, MAX_PATH, "-I POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
     if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply SNAT rule '%s'\n", cmd);
+      ret = 1;
+    }
   }
-  return(rc);
+  return(ret);
 }
 
 int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip) {
@@ -1975,32 +2001,105 @@ int vnetSetPublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip, i
 
 }
 
+int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst) {
+  int done, i, isallocated, pubidx, rc;
+  char *currdst=NULL, cmd[MAX_PATH];
+  
+  // assign address if unassigned, unassign/reassign if assigned
+  if (!uuid || !src) {
+    logprintfl(EUCAERROR, "vnetReassignAddress(): bad input params uuid=%s, src=%s, dst=%s\n", SP(uuid), SP(src), SP(dst));
+    return(1);
+  }
+
+  // get the publicIP of interest
+  isallocated = 0;
+  pubidx = 0;
+  currdst = NULL;
+  done=0;
+  for (i=1; i<NUMBER_OF_PUBLIC_IPS && !done; i++) {
+    if (vnetconfig->publicips[i].ip == dot2hex(src)) {
+      currdst = hex2dot(vnetconfig->publicips[i].dstip);
+      isallocated = vnetconfig->publicips[i].allocated;
+      pubidx = i;
+      done++;
+    }
+  }
+  
+  if (!done) {
+    logprintfl(EUCAERROR, "vnetReassignAddress(): could not find ip %s in list of allocateable publicips\n", src);
+    return(1);
+  }
+
+  // determine if reassign must happen
+  if (isallocated) {
+    rc = vnetUnassignAddress(vnetconfig, src, currdst);
+    if (currdst) free(currdst);
+    if (rc) {
+      return(1);
+    }
+  }
+
+  // do the (re)assign
+  if (!dst || !strcmp(dst, "0.0.0.0")) {
+    vnetconfig->publicips[pubidx].dstip = 0;
+    vnetconfig->publicips[pubidx].allocated = 0;
+  } else {
+    rc = vnetAssignAddress(vnetconfig, src, dst);
+    if (rc) {
+      return(1);
+    }
+    vnetconfig->publicips[pubidx].dstip = dot2hex(dst);
+    vnetconfig->publicips[pubidx].allocated = 1;
+  }
+  snprintf(vnetconfig->publicips[pubidx].uuid, 48, "%s", uuid);
+  logprintfl(EUCADEBUG, "vnetReassignAddress(): successfully set src=%s to dst=%s with uuid=%s, allocated=%d\n", SP(src), SP(dst), SP(uuid), vnetconfig->publicips[pubidx].allocated);
+
+  return(0);
+}
+
 int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
-  int rc=0, count, slashnet;
-  char cmd[256], *network;
+  int rc=0, count, slashnet, ret=0;
+  char cmd[MAX_PATH], *network;
   
   if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
 
-    snprintf(cmd, 255, "-D PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", vnetconfig->eucahome, src, vnetconfig->pubInterface);
+    logprintfl(EUCADEBUG,"vnetUnassignAddress(): running cmd %s\n", cmd);
+    rc = system(cmd);
+    rc = rc>>8;
+    if (rc && (rc != 2)) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to assign IP address '%s'\n", cmd);
+      ret = 1;
+    }
+    
+    snprintf(cmd, MAX_PATH, "-D PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     count=0;
     while(rc != 0 && count < 10) {
       rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
       count++;
     }
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove DNAT rule '%s'\n", cmd);
+      ret = 1;      
+    }
 
-    snprintf(cmd, 255, "-D OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
+    snprintf(cmd, MAX_PATH, "-D OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     count=0;
     while(rc != 0 && count < 10) {
       rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
       count++;
+    }
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove DNAT rule '%s'\n", cmd);
+      ret = 1;      
     }
 
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
     network = hex2dot(vnetconfig->nw);
     //    snprintf(cmd, 255, "-D POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
-    snprintf(cmd, 255, "-D POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
+    snprintf(cmd, MAX_PATH, "-D POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
     if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     count=0;
@@ -2008,8 +2107,13 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
       rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
       count++;
     }
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove SNAT rule '%s'\n", cmd);
+      ret = 1;
+    }
+
   }
-  return(rc);
+  return(ret);
 }
 
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName) {

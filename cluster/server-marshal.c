@@ -378,7 +378,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
 	adb_publicAddressType_set_destAddress(addr, env, ipstr);
 	if (ipstr) free(ipstr);
       } else {
-	adb_publicAddressType_set_destAddress(addr, env, "");
+	adb_publicAddressType_set_destAddress(addr, env, "0.0.0.0");
       }
 
       adb_describePublicAddressesResponseType_add_addresses(dpart, env, addr);
@@ -962,7 +962,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   adb_virtualMachineType_t *vm=NULL;
 
   ccInstance *outInsts=NULL, *myInstance=NULL;
-  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList=NULL, networkIndexListLen, uuidsLen;
+  int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList=NULL, networkIndexListLen, uuidsLen, expiryTime;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
@@ -970,6 +970,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
+
+  axutil_date_time_t *dt=NULL;
   
   rit = adb_RunInstances_get_RunInstances(runInstances, env);
   //  ccMeta.correlationId = adb_runInstancesType_get_correlationId(rit, env);
@@ -998,6 +1000,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   }
 
   launchIndex = adb_runInstancesType_get_launchIndex(rit, env);
+  dt = adb_runInstancesType_get_expiryTime(rit, env);
+  expiryTime = datetime_to_unix(dt, env);
   
   vm = adb_runInstancesType_get_instanceType(rit, env);
   copy_vm_type_from_adb (&ccvm, vm, env);
@@ -1043,7 +1047,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   rc=1;
   if (!DONOTHING) {
-    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, NULL, &outInsts, &outInstsLen);
+    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, expiryTime, NULL, &outInsts, &outInstsLen);
   }
   
   if (rc) {
@@ -1196,6 +1200,55 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
   
   ret = adb_TerminateInstancesResponse_create(env);
   adb_TerminateInstancesResponse_set_TerminateInstancesResponse(ret, env, tirt);
+  
+  return(ret);
+}
+
+adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t *createImage, const axutil_env_t *env) {
+  int rc;
+  adb_CreateImageResponse_t *ret=NULL;
+  adb_createImageResponseType_t *cirt=NULL;
+
+  // input vars
+  adb_createImageType_t *cit=NULL;
+  
+  // working vars
+  char *instanceId=NULL, *volumeId=NULL, *remoteDev=NULL;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  ncMetadata ccMeta;
+
+  cit = adb_CreateImage_get_CreateImage(createImage, env);
+
+  EUCA_MESSAGE_UNMARSHAL(createImageType, cit, (&ccMeta));
+  
+  instanceId = adb_createImageType_get_instanceId(cit, env);
+  volumeId = adb_createImageType_get_volumeId(cit, env);
+  remoteDev = adb_createImageType_get_remoteDev(cit, env);
+  
+  if (!DONOTHING) {
+    rc = doCreateImage(&ccMeta, instanceId, volumeId, remoteDev);
+  }
+  
+  cirt = adb_createImageResponseType_create(env);
+  if (rc) {
+    logprintf("ERROR: doCreateImage() failed %d\n", rc);
+    status=AXIS2_FALSE;
+    snprintf(statusMessage, 255, "ERROR");
+  } else {
+    status=AXIS2_TRUE;
+  }
+
+  adb_createImageResponseType_set_correlationId(cirt, env, ccMeta.correlationId);
+  adb_createImageResponseType_set_userId(cirt, env, ccMeta.userId);
+
+  adb_createImageResponseType_set_return(cirt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_createImageResponseType_set_statusMessage(cirt, env, statusMessage);
+  }
+  
+  ret = adb_CreateImageResponse_create(env);
+  adb_CreateImageResponse_set_CreateImageResponse(ret, env, cirt);
   
   return(ret);
 }

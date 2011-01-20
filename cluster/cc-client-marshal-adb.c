@@ -492,6 +492,35 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
   return(0);
 }
 
+int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env_t *env, axis2_stub_t *stub) {
+  int i;
+  //  char meh[32];
+  adb_CreateImage_t *input;
+  adb_CreateImageResponse_t *output;
+  adb_createImageType_t *sn;
+  adb_createImageResponseType_t *snrt;
+
+  sn = adb_createImageType_create(env);
+  input = adb_CreateImage_create(env);
+  
+  EUCA_MESSAGE_MARSHAL(createImageType, sn, (&mymeta));
+
+  adb_createImageType_set_instanceId(sn, env, instanceId);
+  adb_createImageType_set_volumeId(sn, env, volumeId);
+  adb_createImageType_set_remoteDev(sn, env, remoteDev);
+  
+  adb_CreateImage_set_CreateImage(input, env, sn);
+
+  output = axis2_stub_op_EucalyptusCC_CreateImage(stub, env, input);
+  if (!output) {
+    printf("ERROR: createImage returned NULL\n");
+    return(1);
+  }
+  snrt = adb_CreateImageResponse_get_CreateImageResponse(output, env);
+  printf("createImage returned status %d\n", adb_createImageResponseType_get_return(snrt, env));
+  return(0);
+}
+
 int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   //  char meh[32];

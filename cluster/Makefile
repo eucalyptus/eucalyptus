@@ -14,7 +14,7 @@ CLIENT=CCclient
 CLIENTKILLALL=euca_killall
 #WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o
-SCLIBS=../storage/storage.o 
+SCLIBS=../storage/storage.o ../storage/walrus.o
 VNLIBS=../net/vnetwork.o ../util/misc.o
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 CC_LIBS 	= ${LIBS} -lcurl
@@ -44,8 +44,8 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 
 server: $(SERVICE_SO)
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so 
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o server-marshal-state.o handlers.o handlers-state.o $(AXIS2C_HOME)/lib/libaxutil.so 
+	$(CC) -shared generated/*.o server-marshal.o server-marshal-state.o handlers.o handlers-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
 client: $(CLIENT)_full $(CLIENTKILLALL)
 
