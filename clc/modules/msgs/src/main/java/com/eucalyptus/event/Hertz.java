@@ -63,6 +63,7 @@
 
 package com.eucalyptus.event;
 
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 
 public class Hertz extends GenericEvent<Long> {
@@ -78,8 +79,8 @@ public class Hertz extends GenericEvent<Long> {
     return Math.abs( super.getMessage( ) );
   }
 
-  public boolean isBackEdge() {
-    return super.getMessage( ) > 0;
+  public boolean isAsserted( int modulo ) {
+    return ( super.getMessage( ) % modulo ) == 0;
   }
   
   

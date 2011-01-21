@@ -249,6 +249,8 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   private int           stateCounter        = 0;
+  private Long networkBytes;
+  private Long blockBytes;
   private static String SEND_USER_TERMINATE = "SIGTERM";
   
   private void addReasonDetail( String... extra ) {
@@ -851,6 +853,34 @@ public class VmInstance implements HasName<VmInstance> {
    */
   public void setUuid( String uuid ) {
     this.uuid = uuid;
+  }
+
+  /**
+   * @return the networkBytes
+   */
+  public Long getNetworkBytes( ) {
+    return this.networkBytes;
+  }
+
+  /**
+   * @param networkBytes the networkBytes to set
+   */
+  public void setNetworkBytes( Long networkBytes ) {
+    this.networkBytes = networkBytes;
+  }
+
+  /**
+   * @return the blockBytes
+   */
+  public Long getBlockBytes( ) {
+    return this.blockBytes;
+  }
+
+  /**
+   * @param blockBytes the blockBytes to set
+   */
+  public void setBlockBytes( Long blockBytes ) {
+    this.blockBytes = blockBytes;
   }
   
 }

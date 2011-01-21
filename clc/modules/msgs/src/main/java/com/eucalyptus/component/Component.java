@@ -86,6 +86,7 @@ import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
@@ -647,36 +648,4 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.identity.getLocalEndpointName( );
   }
 
-  /**
-   * @return the identity
-   */
-  public ComponentId getIdentity( ) {
-    return this.identity;
-  }
-
-  /**
-   * @return
-   * @see com.eucalyptus.component.ComponentId#name()
-   */
-  public String name( ) {
-    return this.identity.name( );
-  }
-
-  /**
-   * @param hostName
-   * @param port
-   * @return
-   * @see com.eucalyptus.component.ComponentId#makeRemoteUri(java.lang.String, java.lang.Integer)
-   */
-  public URI makeRemoteUri( String hostName, Integer port ) {
-    return this.identity.makeRemoteUri( hostName, port );
-  }
-
-  /**
-   * @return
-   * @see com.eucalyptus.component.ComponentId#getLocalEndpointName()
-   */
-  public String getLocalEndpointName( ) {
-    return this.identity.getLocalEndpointName( );
-  }
 }
