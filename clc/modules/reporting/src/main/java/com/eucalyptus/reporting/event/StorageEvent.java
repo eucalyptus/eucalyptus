@@ -13,11 +13,10 @@ public class StorageEvent
 	private final String    accountId;
 	private final String    clusterName;
 	private final String    availabilityZone;
-	private final long      timestampMs;
 	
 	public StorageEvent(EventType eventType, boolean createOrDelete,
 			long sizeGB, String ownerId, String accountId, String clusterName,
-			String availabilityZone, long timestampMs)
+			String availabilityZone)
 	{
 		this.eventType        = eventType;
 		this.createOrDelete   = createOrDelete;
@@ -26,7 +25,6 @@ public class StorageEvent
 		this.accountId        = accountId;
 		this.clusterName      = clusterName;
 		this.availabilityZone = availabilityZone;
-		this.timestampMs      = timestampMs;
 	}
 
 	public EventType getEventType()
@@ -62,11 +60,6 @@ public class StorageEvent
 	public String getAvailabilityZone()
 	{
 		return availabilityZone;
-	}
-
-	public long getTimestampMs()
-	{
-		return timestampMs;
 	}
 
 	@Override
