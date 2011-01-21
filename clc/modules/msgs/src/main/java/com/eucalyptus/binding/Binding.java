@@ -109,7 +109,6 @@ public class Binding {
   public Class getElementClass( String elementName ) throws BindingException {
     if( !this.elementToClassMap.containsKey( elementName ) ) {
       BindingException ex = new BindingException( "Failed to find corresponding class mapping for element: " + elementName + " in namespace: " + this.name );
-      LOG.error( ex, ex );
       throw ex;
     }
     return this.elementToClassMap.get( elementName );
