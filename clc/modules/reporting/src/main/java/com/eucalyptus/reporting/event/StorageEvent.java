@@ -8,7 +8,7 @@ public class StorageEvent
 	
 	private final EventType eventType;
 	private final boolean   createOrDelete;
-	private final long      sizeGb;  //gigaBYTES; java caps
+	private final long      sizeGB;
 	private final String    ownerId;
 	private final String    accountId;
 	private final String    clusterName;
@@ -16,12 +16,12 @@ public class StorageEvent
 	private final long      timestampMs;
 	
 	public StorageEvent(EventType eventType, boolean createOrDelete,
-			long sizeGb, String ownerId, String accountId, String clusterName,
+			long sizeGB, String ownerId, String accountId, String clusterName,
 			String availabilityZone, long timestampMs)
 	{
 		this.eventType        = eventType;
 		this.createOrDelete   = createOrDelete;
-		this.sizeGb           = sizeGb;
+		this.sizeGB           = sizeGB;
 		this.ownerId          = ownerId;
 		this.accountId        = accountId;
 		this.clusterName      = clusterName;
@@ -39,12 +39,9 @@ public class StorageEvent
 		return createOrDelete;
 	}
 
-	/**
-	 * @return size in gigaBYTES; java caps
-	 */
-	public long getSizeGb()
+	public long getSizeGB()
 	{
-		return sizeGb;
+		return sizeGB;
 	}
 
 	public String getOwnerId()
