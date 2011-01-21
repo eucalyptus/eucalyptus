@@ -14,34 +14,51 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   private static Logger LOG = Logger.getLogger( AsyncRequest.class );
   private final Callback.TwiceChecked<Q, R> callback;
   private final CheckedListenableFuture<R>  response;
-  private Throwable                         callbackError = null;
   private final RequestHandler<Q, R>        handler;
   private final CallbackListenerSequence<R> callbackSequence;
   private Q                                 request;
   private final ChannelPipelineFactory      pipelineFactory;
-  private CheckedListenableFuture<R>        callbackResult;
   
-  protected AsyncRequest( TwiceChecked<Q, R> callback, ChannelPipelineFactory factory ) {
+  protected AsyncRequest( final TwiceChecked<Q, R> cb, ChannelPipelineFactory factory ) {
     super( );
     this.response = Futures.newAsyncMessageFuture( );
-    this.callbackResult = Futures.newAsyncMessageFuture( );
-    this.callback = callback;
     this.handler = new AsyncRequestHandler<Q, R>( this.response );
-    this.callbackSequence = new CallbackListenerSequence<R>( );
     this.pipelineFactory = factory;
-    Futures.addListenerHandler( response, this.callback );
-    Futures.addListenerHandler( response, new Callback.Success<R>( ) {
-      
+    this.callbackSequence = new CallbackListenerSequence<R>( );
+    this.callback = new TwiceChecked<Q, R>( ) {
+
+      @Override
+      public void fireException( Throwable t ) {
+        try {
+          cb.fireException( t );
+        } catch ( Throwable ex ) {
+          LOG.error( ex , ex );
+        }
+        try {
+          AsyncRequest.this.callbackSequence.fireException( t );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+
       @Override
       public void fire( R r ) {
         try {
-          AsyncRequest.this.callbackResult.set( AsyncRequest.this.response.get( ) );
-        } catch ( Throwable ex ) {
-          AsyncRequest.this.callbackResult.setException( ex.getCause( ) );
+          cb.fire( r );
+          try {
+            AsyncRequest.this.callbackSequence.fire( r );
+          } catch ( Throwable ex ) {
+            LOG.error( ex , ex );
+          }
+        } catch ( Exception ex ) {
+          AsyncRequest.this.callbackSequence.fireException( ex );
         }
       }
-    } );
-    Futures.addListenerHandler( this.callbackResult, this.callbackSequence );
+
+      @Override
+      public void initialize( Q request ) throws Exception {}
+    };
+    Futures.addListenerHandler( response, this.callback );
   }
   
   /**

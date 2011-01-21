@@ -60,7 +60,7 @@ public class Futures {
     }
     
     private final void doFail( Throwable failure ) {
-      if ( this.callback instanceof Callback.Checked ) {
+      if ( Callback.Checked.class.isAssignableFrom( this.callback.getClass( ) ) ) {
         try {
           if ( ( failure instanceof ExecutionException ) && failure.getCause( ) != null ) {
             failure = failure.getCause( );
