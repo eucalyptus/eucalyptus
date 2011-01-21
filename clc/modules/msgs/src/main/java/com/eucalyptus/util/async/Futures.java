@@ -45,7 +45,7 @@ public class Futures {
       }
       if ( reply != null ) {
         try {
-          EventRecord.caller( this.callback.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).trace( );
+          EventRecord.caller( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).trace( );
           this.callback.fire( reply );
         } catch ( Throwable t ) {
           LOG.error( t, t );

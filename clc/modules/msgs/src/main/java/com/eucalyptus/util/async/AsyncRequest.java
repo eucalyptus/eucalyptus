@@ -36,10 +36,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       public void fire( R r ) {
         try {
           AsyncRequest.this.callbackResult.set( AsyncRequest.this.response.get( ) );
-        } catch ( ExecutionException ex ) {
+        } catch ( Throwable ex ) {
           AsyncRequest.this.callbackResult.setException( ex.getCause( ) );
-        } catch ( InterruptedException ex ) {
-          LOG.error( ex , ex );
         }
       }
     } );
