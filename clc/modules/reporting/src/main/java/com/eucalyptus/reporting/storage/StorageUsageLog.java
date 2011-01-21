@@ -40,12 +40,16 @@ public class StorageUsageLog
 		Session sess = null;
 		try {
 			sess = entityWrapper.getSession();
+			/* TODO: Hibernate's iterate is stupid and doesn't do what you'd want.
+			 * It executes one query per row! Replace with something more
+			 * efficient.
+			 */
 			@SuppressWarnings("rawtypes")
 			Iterator iter = sess.createQuery(
 				"from StorageUsageSnapshot as sus"
-				+ " where sus.timestampMs > ?"
-				+ " and sus.timestampMs < ?"
-				+ " order by sus.timestampMs")
+				+ " where sus.key.timestampMs > ?"
+				+ " and sus.key.timestampMs < ?"
+				+ " order by sus.key.timestampMs")
 				.setLong(0, period.getBeginningMs())
 				.setLong(1, period.getEndingMs())
 				.iterate();
@@ -77,8 +81,7 @@ public class StorageUsageLog
 		@Override
 		public StorageUsageSnapshot next()
 		{
-			Object[] row = (Object[]) resultSetIter.next();
-			return (StorageUsageSnapshot) row[0];
+			return (StorageUsageSnapshot) resultSetIter.next();
 		}
 
 		@Override
@@ -160,8 +163,11 @@ public class StorageUsageLog
 			String critVal = getAttributeValue(criterion, snapshot.getSnapshotKey());
 			if (infoMap.containsKey(critVal)) {
 				SummaryInfo info = infoMap.get(critVal);
-				long durationMs = timestampMs - info.getLastTimestamp();
-				info.getSummary().addUsage(info.getLastData(), durationMs);
+				StorageUsageData lastData = info.getLastData();
+				long durationSecs = (timestampMs - info.getLastTimestamp()) / 1000;
+				info.getSummary().updateValues(lastData.getVolumesGB(),
+						lastData.getSnapshotsGB(), lastData.getObjectsGB(),
+						durationSecs);
 				info.setLastTimestamp(timestampMs);
 				info.setLastData(snapshot.getUsageData());
 			} else {
@@ -226,8 +232,11 @@ public class StorageUsageLog
 			String innerCritVal = getAttributeValue(innerCriterion, snapshot.getSnapshotKey());
 			if (innerMap.containsKey(innerCritVal)) {
 				SummaryInfo info = innerMap.get(innerCritVal);
-				long durationMs = timestampMs - info.getLastTimestamp();
-				info.getSummary().addUsage(info.getLastData(), durationMs);
+				StorageUsageData lastData = info.getLastData();
+				long durationSecs = (timestampMs - info.getLastTimestamp()) / 1000;
+				info.getSummary().updateValues(lastData.getVolumesGB(),
+						lastData.getSnapshotsGB(), lastData.getObjectsGB(),
+						durationSecs);
 				info.setLastTimestamp(timestampMs);
 				info.setLastData(snapshot.getUsageData());
 			} else {
@@ -239,7 +248,6 @@ public class StorageUsageLog
 
 		return convertTwoCriteria(infoMap);
 	}
-
 
 	public void purgeLog(long earlierThanMs)
 	{
@@ -264,7 +272,6 @@ public class StorageUsageLog
 			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}
-	
 	}
 
 }
