@@ -49,6 +49,7 @@ public class Futures {
           this.callback.fire( reply );
         } catch ( Throwable t ) {
           LOG.error( t, t );
+          failure = t;
         }
       } else if ( failure != null ) {
         this.doFail( failure );
