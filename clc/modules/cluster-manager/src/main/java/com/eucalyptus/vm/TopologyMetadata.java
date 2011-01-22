@@ -99,6 +99,7 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
           Multimap<String, String> networks = Multimaps.newArrayListMultimap( );
           Multimap<String, String> rules = Multimaps.newArrayListMultimap( );
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+            if( !VmState.RUNNING.equals( vm.getState( ) ) ) continue;
             Network network = vm.getNetworks( ).get( 0 );
             try {
               network = NetworkGroupUtil.getUserNetworkRulesGroup( network.getUserName( ), network.getNetworkName( ) ).getVmNetwork( );
