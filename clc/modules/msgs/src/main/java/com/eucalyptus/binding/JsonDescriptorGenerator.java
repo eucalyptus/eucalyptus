@@ -627,7 +627,11 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   public static String makeJSONName( String... names ) {
     String out = "[ ";
     for ( String s : names ) {
-      out += "\"" + s + "\" ";
+      if( JsonDescriptorGenerator.request ) {
+        out += "\"" + s.substring( 0, 1 ).toUpperCase( ) + s.substring( 1 ) + "\" ";
+      } else {
+        out += "\"" + s + "\" ";
+      }
     }
     return ( out + "]" ).replaceAll( "\"\\s*\"", "\", \"" );
   }
