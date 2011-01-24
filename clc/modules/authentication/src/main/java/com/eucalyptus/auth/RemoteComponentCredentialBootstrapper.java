@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,7 +65,8 @@ package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.component.auth.EucaKeyStore;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Component;
@@ -93,14 +94,14 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
     }
     for ( Component c : Component.values( ) ) {
       LOG.info( "Initializing system credentials for " + c.name( ) );
-      SystemCredentialProvider.init( c );
+      SystemCredentialProvider.init( c.name( ) );
     }
     return true;
   }
 
   private boolean checkAllKeys( ) {
     for ( com.eucalyptus.component.Component c : Components.list( ) ) {
-      if ( c.isEnabled( ) ) {
+      if ( c.isAvailableLocally( ) ) {
         try {
           if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.getName( ) ) ) {//ASAP: this is where the keys thing happens during bootstrap.
             return false;

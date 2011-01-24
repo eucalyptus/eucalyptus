@@ -21,14 +21,15 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ComponentDiscovery;
 import com.eucalyptus.component.DispatcherFactory;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.entities.PersistenceContextDiscovery;
@@ -192,36 +193,37 @@ public class StandalonePersistence {
   }
   
   private static void setupConfigurations( ) {
-    Enumeration<URL> p1;
-    URI u = null;
-    try {
-      p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( "com.eucalyptus.CloudServiceProvider" );
-      if ( !p1.hasMoreElements( ) ) return;
-      while ( p1.hasMoreElements( ) ) {
-        u = p1.nextElement( ).toURI( );
-        Properties props = new Properties( );
-        props.load( u.toURL( ).openStream( ) );
-        String name = props.getProperty( "name" );
-        if ( Components.contains( name ) /** make this not use a string? **/ ) {
-          throw BootstrapException.throwFatal( "Duplicate component definition in: " + u.toASCIIString( ) );
-        } else {
-          try {
-            LOG.debug( "Loaded " + name + " from " + u );
-            Components.create( name, u );
-          } catch ( ServiceRegistrationException e ) {
-            LOG.debug( e, e );
-            throw BootstrapException.throwFatal( "Error in component bootstrap: " + e.getMessage( ), e );
-          }
-        }
-      }
-    } catch ( IOException e ) {
-      LOG.error( e, e );
-      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-    } catch ( URISyntaxException e ) {
-      LOG.error( e, e );
-      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-    }
-    
+      ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ) );
+
+      //    Enumeration<URL> p1;
+      //    URI u = null;
+      //    try {
+      //      p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( "com.eucalyptus.CloudServiceProvider" );
+      //      if ( !p1.hasMoreElements( ) ) return;
+      //      while ( p1.hasMoreElements( ) ) {
+      //        u = p1.nextElement( ).toURI( );
+      //        Properties props = new Properties( );
+      //        props.load( u.toURL( ).openStream( ) );
+      //        String name = props.getProperty( "name" );
+      //        if ( Components.contains( name ) /** make this not use a string? **/ ) {
+      //          throw BootstrapException.throwFatal( "Duplicate component definition in: " + u.toASCIIString( ) );
+      //        } else {
+      //          try {
+      //            LOG.debug( "Loaded " + name + " from " + u );
+      //            Components.create( name, u );
+      //          } catch ( ServiceRegistrationException e ) {
+      //            LOG.debug( e, e );
+      //            throw BootstrapException.throwFatal( "Error in component bootstrap: " + e.getMessage( ), e );
+      //          }
+      //        }
+      //      }
+      //    } catch ( IOException e ) {
+      //      LOG.error( e, e );
+      //      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
+      //    } catch ( URISyntaxException e ) {
+      //      LOG.error( e, e );
+      //      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
+      //    }
   }
   
   private static File getAndCheckLibDirectory( String eucaHome ) {

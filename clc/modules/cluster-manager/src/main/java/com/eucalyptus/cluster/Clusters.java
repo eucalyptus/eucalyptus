@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -75,6 +75,7 @@ import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
@@ -110,9 +111,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       }
       Cluster newCluster = new Cluster( c, credentials );
       Clusters.getInstance( ).register( newCluster );
-      ListenerRegistry.getInstance( ).register( ClockTick.class, newCluster );
       newCluster.start( );
-      newCluster.transition( Cluster.Transition.START );
       return newCluster;
     }
   }
@@ -142,7 +141,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   
   public static void stop( String name ) {
     Cluster cluster = Clusters.getInstance( ).lookup( name );
-    ListenerRegistry.getInstance( ).deregister( Component.cluster, cluster );
     cluster.stop( );
     Clusters.getInstance( ).deregister( name );
   }

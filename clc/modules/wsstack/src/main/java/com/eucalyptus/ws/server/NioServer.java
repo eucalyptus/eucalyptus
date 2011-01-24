@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -72,10 +72,9 @@ import com.eucalyptus.ws.util.PipelineRegistry;
 
 public class NioServer {
   private static Logger                 LOG = Logger.getLogger( NioServer.class );
-  private Channel                       serverChannel;
+  private static Channel                       serverChannel;
 
-  public NioServer( ) {
-    //TODO: make this bootstrappable.
+  static {
     PipelineRegistry.getInstance( ).register( new HeartbeatPipeline( ) );
     PipelineRegistry.getInstance( ).register( new MetadataPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
@@ -87,15 +86,21 @@ public class NioServer {
     PipelineRegistry.getInstance( ).register( new VMwareSoapPipeline( ) );
     PipelineRegistry.getInstance( ).register( new EuareQueryPipeline( ) );
   }
+  
+  public NioServer( ) {}
 
-  public void start( ) {
-    if ( this.serverChannel == null ){
-      this.serverChannel = ChannelUtil.getServerChannel();
-    } else if( this.serverChannel != null && !this.serverChannel.isBound( ) ) {
-      this.serverChannel.bind( new InetSocketAddress( ChannelUtil.PORT ) );
+  public static void start( ) {
+    if( serverChannel != null ) {
+      return;
     } else {
-      LOG.info( "Ignoring second attempt to bind the same server port." );
-    } 
+      synchronized(NioServer.class) {
+        if( serverChannel != null ) {
+          return;
+        } else {
+          serverChannel = ChannelUtil.getServerChannel();
+        }
+      }
+    }
   }
 
   public void stop( ) {

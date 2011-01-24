@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -80,19 +80,15 @@ public class BlockStorageEventListener implements EventListener {
 	}
 
 	@Override
-	public void advertiseEvent(Event event) {
-	}
-
-	@Override
 	public void fireEvent(Event event) {
 		if(event instanceof StartComponentEvent) {			
 			//TODO: This needs to be moved to a Bootstrapper
-			if(((StartComponentEvent) event).isLocal())
-				try {
-					BlockStorage.configure();
-				} catch (EucalyptusCloudException e) {
-					LOG.error(e);
-				}
+//			if(((StartComponentEvent) event).isLocal())
+//				try {
+//					BlockStorage.configure();
+//				} catch (EucalyptusCloudException e) {
+//					LOG.error(e);
+//				}
 		} 
 	}
 }

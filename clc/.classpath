@@ -22,8 +22,10 @@
 	<classpathentry kind="src" path="modules/core/conf/upgrade"/>
 	<classpathentry kind="src" path="modules/core/conf/scripts"/>
 	<classpathentry kind="src" path="modules/www/conf/reports"/>
+	<classpathentry kind="src" path="modules/reporting/src/main/java"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
 	<classpathentry kind="lib" path="lib/antlr-3.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/antlrall.jar"/>
@@ -75,9 +77,12 @@
 	<classpathentry kind="lib" path="lib/geronimo-activation-1.1-spec-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-ejb-3.0-spec-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-j2ee-connector-1.5-spec-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-j2ee-management_1.1_spec-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-javamail_1.4_provider-1.6.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-javamail_1.4_spec-1.6.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-jms-1.1-spec-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-jpa_2.0_spec-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/geronimo-jta_1.1_spec-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/google-collect-20080808.jar"/>
 	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar"/>
@@ -86,11 +91,13 @@
 	<classpathentry kind="lib" path="lib/gwt-servlet-2.0.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.0.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-user-2.0.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldbutil-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/iText-2.1.7.jar"/>
 	<classpathentry kind="lib" path="lib/janino-2.5.15-1.jar"/>
 	<classpathentry kind="lib" path="lib/jasperreports-3.7.2.jar"/>
+	<classpathentry kind="lib" path="lib/javassist-3.9.0.GA.jar"/>
 	<classpathentry kind="lib" path="lib/jaxen-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/jaxp-1.3.jar"/>
 	<classpathentry kind="lib" path="lib/jboss-common-core.jar"/>
@@ -117,6 +124,7 @@
 	<classpathentry kind="lib" path="lib/jug-asl-2.0.0.jar"/>
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/junit-3.8.2.jar"/>
+	<classpathentry kind="lib" path="lib/kahadb-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/manageontap.jar"/>
 	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar"/>
@@ -125,6 +133,7 @@
 	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mysql-connector-java-commercial-5.1.11-bin.jar"/>
 	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry kind="lib" path="lib/proxool-0.9.1.jar"/>
@@ -132,12 +141,17 @@
 	<classpathentry kind="lib" path="lib/regexp-1.4.jar"/>
 	<classpathentry kind="lib" path="lib/serializer.jar"/>
 	<classpathentry kind="lib" path="lib/servlet-api-2.5.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-api-1.5.8.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.8.jar"/>
 	<classpathentry kind="lib" path="lib/spring-beans-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/spring-context-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/spring-context-support-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/spring-core-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/spring-web-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/stax2-api-3.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/vijava220090625.jar"/>
+	<classpathentry kind="lib" path="lib/vim.jar"/>
+	<classpathentry kind="lib" path="lib/vim25.jar"/>
 	<classpathentry kind="lib" path="lib/woodstox-core-asl-4.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
 	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>
@@ -146,16 +160,5 @@
 	<classpathentry kind="lib" path="lib/xml-security-1.4.2.jar"/>
 	<classpathentry kind="lib" path="lib/xom-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3-1.1.3.4.O.jar"/>
-	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
-	<classpathentry kind="lib" path="lib/geronimo-j2ee-management_1.1_spec-1.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/geronimo-jpa_2.0_spec-1.1.jar"/>
-	<classpathentry kind="lib" path="lib/geronimo-jta_1.1_spec-1.1.1.jar"/>
-	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
-	<classpathentry kind="lib" path="lib/javassist-3.9.0.GA.jar"/>
-	<classpathentry kind="lib" path="lib/kahadb-5.4.1.jar"/>
-	<classpathentry kind="lib" path="lib/mysql-connector-java-commercial-5.1.11-bin.jar"/>
-	<classpathentry kind="lib" path="lib/slf4j-api-1.5.8.jar"/>
-	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.8.jar"/>
-	<classpathentry kind="lib" path="lib/vijava220090625.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

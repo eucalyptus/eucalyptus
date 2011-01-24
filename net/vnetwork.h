@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -84,6 +84,7 @@ typedef struct netEntry_t {
 typedef struct userEntry_t {
   char netName[32];
   char userName[32];
+  char uuid[48];
 } userEntry;
 
 typedef struct networkEntry_t {
@@ -97,6 +98,7 @@ typedef struct publicip_t {
   uint32_t ip;
   uint32_t dstip;
   int allocated;
+  char uuid[48];
 } publicip;
 
 typedef struct tunnelData_t {
@@ -136,7 +138,7 @@ typedef struct vnetConfig_t {
 enum {NC, CC, CLC};
 int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp);
 
-int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
+int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
 int vnetStartInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
 int vnetStopInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
@@ -158,7 +160,7 @@ int vnetCountLocalIP(vnetConfig *vnetconfig);
 int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts);
 int vnetKickDHCP(vnetConfig *vnetconfig);
 
-int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *user, char *network);
+int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *network);
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
 
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen);
@@ -181,19 +183,20 @@ int vnetSaveTablesToMemory(vnetConfig *vnetconfig);
 
 int vnetAddPublicIP(vnetConfig *vnetconfig, char *ip);
 int vnetCheckPublicIP(vnetConfig *vnetconfig, char *ip);
-int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip);
-int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *ip, char *dstip);
-int vnetSetPublicIP(vnetConfig *vnetconfig, char *ip, char *dstip, int setval);
+int vnetAllocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip);
+int vnetDeallocatePublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip);
+int vnetSetPublicIP(vnetConfig *vnetconfig, char *uuid, char *ip, char *dstip, int setval);
 int vnetGetPublicIP(vnetConfig *vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
 
 int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst);
+int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst);
 int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst);
 
 int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
 int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
 
 // linux managed mode driver
-int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName, char **outbrname);
+int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
 
 // helper functions
@@ -201,7 +204,7 @@ int vnetSaveIPTables(vnetConfig *vnetconfig);
 int vnetLoadIPTables(vnetConfig *vnetconfig);
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
 int vnetApplySingleEBTableRule(vnetConfig *vnetconfig, char *table, char *rule);
-int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet);
+int vnetSetMetadataRedirect(vnetConfig *vnetconfig);
 
 char *host2ip(char *host);
 char *hex2dot(uint32_t in);

@@ -1,0 +1,134 @@
+package com.eucalyptus.component;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.MissingFormatArgumentException;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.util.NetworkUtil;
+import com.google.common.collect.Lists;
+
+public class ComponentConfiguration implements ComponentInformation {
+  private static Logger LOG = Logger.getLogger( ComponentConfiguration.class );
+  private final Component          parent;
+  private final Resource           resource;
+  private final String             propertyKey;
+  private URI                      uriLocal;
+  private String                   uriPattern;
+  private Integer                  port;
+
+  ComponentConfiguration( Component parent ) {
+    this.parent = parent;
+    this.propertyKey = "euca." + this.parent.getName( ) + ".host";
+    //    this.resource = new Resource( this, URI.create( "/dev/null" ) );
+    this.resource = null;
+    this.port = Integer.parseInt( System.getProperty("euca.ws.port") );
+    this.uriPattern = "http://%s:%d/internal/%s";
+    this.uriLocal = URI.create( "vm://"+parent.getName( ).substring( 0, 1 ).toUpperCase( ) + parent.getName( ).substring( 1 )+"RequestQueue" );
+  }
+  
+  ComponentConfiguration( Component parent, URI u ) {
+    this.parent = parent;
+    this.propertyKey = "euca." + this.parent.getName( ) + ".host";
+    this.resource = new Resource( this, u );
+    this.port = Integer.parseInt( this.resource.get( Resource.Keys.PORT ) );
+    this.uriPattern = this.resource.get( Resource.Keys.URL_PATTERN );
+    this.uriLocal = URI.create( this.resource.get( Resource.Keys.LOCAL_URL ) );
+  }
+  
+  @Override
+  public String getName( ) {
+    return this.parent.getName( );
+  }
+  
+  public Resource getResource( ) {
+    return this.resource;
+  }
+  
+  public String getPropertyKey( ) {
+    return this.propertyKey;
+  }
+  
+  public URI getLocalUri( ) {
+    try {
+      this.uriLocal.parseServerAuthority( );
+    } catch ( URISyntaxException e ) {
+      LOG.fatal( e, e );
+      System.exit( -1 );
+    }
+    return this.uriLocal;
+  }
+  
+  public String getUriPattern( ) {
+    return this.uriPattern;
+  }
+  
+  public Integer getDefaultPort( ) {
+    return this.port;
+  }
+  
+  public URI makeUri( String host, Integer port ) {
+    String uri;
+    try {
+      if ( NetworkUtil.testLocal( host ) ) {
+        return this.getLocalUri( );
+      } else {
+        return makeRemoteUri( host, port );
+      }
+    } catch ( Exception e ) {
+      return this.getLocalUri( );
+    }
+  }
+
+  public URI makeRemoteUri( String host, Integer port ) {
+    String uri;
+    try {
+      uri = String.format( this.getUriPattern( ), host, port );
+    } catch ( MissingFormatArgumentException e ) {
+      uri = String.format( this.getUriPattern( ), host, port , this.getLocalUri( ).getHost( ).replaceAll( "RequestQueue", "Internal" ) );
+    }
+    try {
+      URI u = new URI( uri );
+      u.parseServerAuthority( );
+      return u;
+    } catch ( URISyntaxException e ) {
+      LOG.error( e, e );
+      return URI.create( uri );
+    }
+  }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.resource.getOrigin( ) == null ) ? 0 : this.resource.getOrigin( ).hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) return true;
+    if ( obj == null ) return false;
+    if ( getClass( ) != obj.getClass( ) ) return false;
+    ComponentConfiguration other = ( ComponentConfiguration ) obj;
+    if ( this.resource.getOrigin( ) == null ) {
+      if ( this.resource.getOrigin( ) != null ) return false;
+    } else if ( !this.resource.getOrigin( ).equals( other.resource.getOrigin( ) ) ) return false;
+    return true;
+  }
+  
+  
+  /**
+   * @return the parent
+   */
+  protected final Component getParent( ) {
+    return this.parent;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentConfiguration:parent=%s:propertyKey=%s:resource=%s", this.parent.getName( ), this.propertyKey , this.resource);
+  }
+  
+}

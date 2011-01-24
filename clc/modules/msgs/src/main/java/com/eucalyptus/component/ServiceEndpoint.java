@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,6 +65,8 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -141,7 +143,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
           if( LogLevels.TRACE ) {
-            Exceptions.eat( event.getRequest( ).getRequest( ).toSimpleString( ) );
+            Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
           }
         } catch ( final InterruptedException e ) {
           LOG.debug( e, e );
@@ -149,6 +151,22 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
         }
       }
     }
+  }
+  
+  private List<ServiceInfoType> buildMessageServiceList( ) {
+    return new ArrayList<ServiceInfoType>() {{
+      addAll( Components.lookup( Component.walrus ).getServiceSnapshot( ) );
+      for( ServiceInfoType s : Components.lookup( Component.storage ).getServiceSnapshot( ) ) {
+        if( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+          add( s );
+        }
+      }
+      for( ServiceInfoType s : Components.lookup( Component.cluster ).getServiceSnapshot( ) ) {
+        if( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+          add( s );
+        }
+      }
+    }};
   }
   
   class ServiceEndpointWorker implements Runnable {
@@ -161,10 +179,8 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
           if ( ( event = ServiceEndpoint.this.msgQueue.poll( ServiceEndpoint.this.pollInterval, TimeUnit.MILLISECONDS ) ) != null ) {
             EventRecord.here( ServiceEndpointWorker.class, EventType.DEQUEUE, event.getCallback( ).getClass( ).getSimpleName( ), event.getRequest( ).getRequest( ).toSimpleString( ) ).debug( );
             final long start = System.nanoTime( );
-            {//ASAP: FIXME: GRZE: clean up this implementation
-              Components.dumpState( );
-              ServiceInfoType activeWalrus = Components.lookup( Component.walrus ).getUnorderedIterator( ).next( );
-              event.getRequest( ).getRequest( ).getServices( ).add( activeWalrus );
+            {//ASAP: FIXME: GRZE: clean up this implementation              
+              event.getRequest( ).getRequest( ).getBaseServices( ).addAll( ServiceEndpoint.this.buildMessageServiceList( ) );
             }
             event.getRequest( ).sendSync( ServiceEndpoint.this );
             EventRecord.here( ServiceEndpointWorker.class, EventType.QUEUE, ServiceEndpoint.this.getParent( ).getName( ) )//

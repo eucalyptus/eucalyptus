@@ -81,7 +81,6 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.entities.ClusterCredentials;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.X509CertHelper;

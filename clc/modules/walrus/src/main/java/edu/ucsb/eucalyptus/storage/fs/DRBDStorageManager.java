@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -88,8 +88,12 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	private static final String CSTATE_WFCONNECTION = "WFConnection";
 	private static final String CSTATE_CONNECTED = "Connected";
 
+	public DRBDStorageManager() {
+	}
+	
 	public DRBDStorageManager(String rootDirectory) {
 		super(rootDirectory);
+		LOG.info("Initializing DRBD Info: " + DRBDInfo.getDRBDInfo().getName());
 	}
 
 	private String getConnectionStatus() throws ExecutionException, EucalyptusCloudException {
@@ -219,6 +223,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			throw new EucalyptusCloudException("Unable to get resource dstate.");
 		}		
 	}
+
 	private void checkLocalDisk() throws EucalyptusCloudException {		
 		String blockDevice = DRBDInfo.getDRBDInfo().getBlockDevice();
 		File mount = new File(blockDevice);
@@ -248,6 +253,9 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			mountPrimary();
 		}
 		//verify state
+		if(!isPrimary()) {
+			throw new EucalyptusCloudException("Unable to make resource primary.");
+		}
 	}
 
 	public void becomeSlave() throws EucalyptusCloudException, ExecutionException {
@@ -265,9 +273,18 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		//make secondary
 		makeSecondary();
 		//verify state
+		if(!isSecondary()) {
+			throw new EucalyptusCloudException("Unable to make resource secondary.");
+		}
 	}
 	//check status
 
+	public void secondaryDrasticRecovery() throws ExecutionException, EucalyptusCloudException {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "--", "--discard-my-data", "connect", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
+			throw new EucalyptusCloudException("Unable to recover from split brain for resource: " + DRBDInfo.getDRBDInfo().getResource());
+		}
+	}
+	
 	@Override
 	public void enable() throws EucalyptusCloudException {
 		try {
@@ -289,8 +306,16 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 
 	@Override
 	public void check() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		try {
+			if(!isConnected()) {
+				throw new EucalyptusCloudException("Resource is not connected to peer.");			
+			}
+			if(!isUpToDate()) {
+				throw new EucalyptusCloudException("Resource is not up to date");
+			}
+		} catch(ExecutionException ex) {
+			throw new EucalyptusCloudException(ex);
+		}
 	}
 
 }

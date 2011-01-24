@@ -20,16 +20,13 @@ public class ServiceEventListener implements EventListener {
     for( Component c : Component.values() ) {
       ListenerRegistry.getInstance( ).register( c, me );        
     }
-    if( Component.eucalyptus.isLocal( ) ) {
+    if( Components.lookup( "eucalyptus" ).isLocal( ) ) {
       ListenerRegistry.getInstance( ).register( ClockTick.class, RemoteBootstrapperClient.getInstance( ) ); 
       ListenerRegistry.getInstance( ).register( Component.walrus, RemoteBootstrapperClient.getInstance( ) );
       ListenerRegistry.getInstance( ).register( Component.storage, RemoteBootstrapperClient.getInstance( ) );
     }
   }
 
-  @Override
-  public void advertiseEvent( Event event ) {
-  }
 
   @Override
   public void fireEvent( Event event ) {

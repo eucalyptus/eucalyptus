@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -113,7 +113,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
-@Provides(Component.eucalyptus)
+@Provides(Component.bootstrap)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
 @DependsLocal(Component.eucalyptus)
 public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPipelineFactory, EventListener {
@@ -235,9 +235,6 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   public boolean check( ) throws Exception {
     return true;
   }
-
-  @Override
-  public void advertiseEvent( Event event ) {}
 
   @Override
   public void fireEvent( Event event ) {

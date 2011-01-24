@@ -2,13 +2,12 @@ package com.eucalyptus.auth.principal;
 
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.domain.UserDomain;
 
 /**
  * @author decker
  *
  */
-public interface Group extends java.security.acl.Group, Cloneable, UserDomain {
+public interface Group extends java.security.acl.Group, Cloneable {
   
   public String getGroupId( );
 

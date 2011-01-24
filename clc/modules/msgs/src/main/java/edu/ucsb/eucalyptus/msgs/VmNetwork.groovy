@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,8 +63,10 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-public class StartNetworkType extends EucalyptusMessage {
+import java.util.List;
 
+public class StartNetworkType extends EucalyptusMessage {
+  String networkUuid;
   int vlan;
   String netName;
   String nameserver;
@@ -73,9 +75,10 @@ public class StartNetworkType extends EucalyptusMessage {
 
   def StartNetworkType(){}
 
-  def StartNetworkType(final String userId, final Integer vlan, final String netName)
+  def StartNetworkType(final String userId, final Integer vlan, final String netName, final String networkUuid)
   {
     super( userId );
+    this.networkUuid = networkUuid;
     this.vlan = vlan;
     this.netName = netName;
   }
@@ -114,17 +117,28 @@ public class DescribeNetworksType extends EucalyptusMessage {
 }
 
 public class DescribeNetworksResponseType extends EucalyptusMessage {
-  Integer mode;
-  Integer addrsPerNetwork;
+  Integer useVlans;
+  String mode;
+  Integer vlanMin;
+  Integer vlanMax;
+  String vnetSubnet;
+  String vnetNetmask;
+  Integer addrsPerNet;
   ArrayList<NetworkInfoType> activeNetworks = new ArrayList<NetworkInfoType>();
   
   public String toString() {
-    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNetwork} " \
+    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNet} " \
       + "\n${this.getClass().getSimpleName()} " + this.activeNetworks*.toString().join( "\n${this.getClass().getSimpleName()} " ); 
   }
 }
+public class AddressMappingInfoType extends EucalyptusData {
+  String uuid;
+  String source;
+  String destination;
+}
 
 public class NetworkInfoType extends EucalyptusData {
+  String uuid;
   Integer vlan;
   String networkName;
   String userName;
@@ -134,21 +148,70 @@ public class NetworkInfoType extends EucalyptusData {
   }
 }
 
+public class ClusterAddressInfo extends EucalyptusData implements Comparable<ClusterAddressInfo> {
+  String uuid;
+  String address;
+  String instanceIp;
+  
+  public ClusterAddressInfo( String address ) {
+    this.address = address;
+  }
+
+  public boolean hasMapping() {
+    return this.instanceIp != null &&  !"".equals( this.instanceIp );
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.address == null ) ? 0 : this.address.hashCode( ) );
+    return result;
+  }
+  
+  public int compareTo( ClusterAddressInfo that ) {
+    return ( this.address + this.instanceIp ).compareTo( that.address + that.instanceIp );
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( obj == null ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
+    ClusterAddressInfo other = ( ClusterAddressInfo ) obj;
+    if ( this.address == null ) {
+      if ( other.address != null ) return false;
+    } else if ( !this.address.equals( other.address ) ) return false;
+    if ( this.instanceIp == null ) {
+      if ( other.instanceIp != null ) return false;
+    } else if ( !this.instanceIp.equals( other.instanceIp ) ) return false;
+    return true;
+  }
+  
+  public String toString( ) {
+    return String.format( "ClusterAddressInfo %s %s orphanCount=%s", this.address, this.instanceIp, this.orphanCount );
+  }
+}
+
+
 
 public class AssignAddressType extends EucalyptusMessage {
+  String uuid;
   String instanceId;
   String source;
   String destination;
-  def AssignAddressType(final source, final destination, final instanceId )
+  def AssignAddressType(final String uuid, final String source, final String destination, final String instanceId )
   {
+    this.uuid = uuid;
     this.source = source;
     this.destination = destination;
     this.instanceId = instanceId;
   }
 
-  def AssignAddressType(final msg, final source, final destination, final instanceId)
+  def AssignAddressType(final BaseMessage msg, final String uuid, final String source, final String destination, final String instanceId)
   {
     super(msg);
+    this.uuid = uuid;
     this.source = source;
     this.destination = destination;
     this.instanceId = instanceId;
@@ -192,10 +255,9 @@ public class UnassignAddressResponseType extends EucalyptusMessage {
 public class DescribePublicAddressesType extends EucalyptusMessage {
 }
 public class DescribePublicAddressesResponseType extends EucalyptusMessage {
-  ArrayList<String> addresses = new ArrayList<String>();
-  ArrayList<String> mapping = new ArrayList<String>();
+  ArrayList<ClusterAddressInfo> addresses = new ArrayList<ClusterAddressInfo>();
   public String toString() {
-    return "${this.getClass().getSimpleName()} " + addresses.eachWithIndex{ it, i -> "${it} ${mapping[i]}" }.join("\n${this.getClass().getSimpleName()} ");
+    return "${this.getClass().getSimpleName()} " + addresses.each{ it -> "${it}" }.join("\n${this.getClass().getSimpleName()} ");
   }
 }
 

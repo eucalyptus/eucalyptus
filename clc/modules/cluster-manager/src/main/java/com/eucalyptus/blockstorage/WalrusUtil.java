@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -72,11 +72,13 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.ImageUtil;
@@ -99,11 +101,11 @@ public class WalrusUtil {
 
 	public static void checkValid( Image imgInfo ) {
 		String[] parts = imgInfo.getImageLocation().split( "/" );
-		CheckImageType check = new CheckImageType();
+		CheckImageType check = new CheckImageType( );
 		check.setUserId( imgInfo.getImageOwnerId( ) );
 		check.setBucket( parts[ 0 ] );
 		check.setKey( parts[ 1 ] );
-		RemoteDispatcher.lookupSingle( Component.walrus ).dispatch( check );
+		RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).dispatch( check );
 	}
 
 	public static void triggerCaching( Image imgInfo ) {
@@ -112,14 +114,14 @@ public class WalrusUtil {
 		cache.setUserId( imgInfo.getImageOwnerId( ) );
 		cache.setBucket( parts[ 0 ] );
 		cache.setKey( parts[ 1 ] );
-		RemoteDispatcher.lookupSingle( Component.walrus ).dispatch( cache );
+		RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).dispatch( cache );
 	}
 
 	public static void invalidate( Image imgInfo ) {
 		String[] parts = imgInfo.getImageLocation().split( "/" );
 		imgInfo.setImageState( "deregistered" );
 		try {
-			RemoteDispatcher.lookupSingle( Component.walrus ).dispatch( new FlushCachedImageType( parts[ 0 ], parts[ 1 ] ) );
+			RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).dispatch( new FlushCachedImageType( parts[ 0 ], parts[ 1 ] ) );
 		} catch ( Exception e ) {}
 	}
 
@@ -129,7 +131,7 @@ public class WalrusUtil {
 			GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
 			msg.setUserId( userId );
 
-			reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Component.walrus ).send( msg );
+			reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
 		}
 		catch ( Exception e ) {
 			throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
@@ -150,7 +152,7 @@ public class WalrusUtil {
 		GetBucketAccessControlPolicyType getBukkitInfo = new GetBucketAccessControlPolicyType( ).regarding( request );
 		if(getBukkitInfo != null) {
 			getBukkitInfo.setBucket( imagePathParts[ 0 ] );
-			GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) RemoteDispatcher.lookupSingle( Component.walrus ).send( getBukkitInfo );		
+			GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).send( getBukkitInfo );		
 			return reply;
 		}
 		return null;
@@ -163,7 +165,7 @@ public class WalrusUtil {
 		msg.setUserId( Component.eucalyptus.name() );
 		msg.setEffectiveUserId( Component.eucalyptus.name() );
 		try {
-			reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Component.walrus ).send( msg );
+			reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
 		} catch ( EucalyptusCloudException e ) {
 			ImageManager.LOG.error( e );
 			ImageManager.LOG.debug( e, e );

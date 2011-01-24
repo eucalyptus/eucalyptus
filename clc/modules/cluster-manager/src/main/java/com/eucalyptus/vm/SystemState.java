@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -94,6 +94,7 @@ import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.images.Image;
@@ -197,6 +198,9 @@ public class SystemState {
     VmState oldState = vm.getState( );
     
     vm.setServiceTag( runVm.getServiceTag( ) );
+    vm.setUuid( runVm.getUuid( ) );
+    vm.setPlatform( runVm.getPlatform( ) );
+    vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
     if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
@@ -208,7 +212,7 @@ public class SystemState {
       }
       vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
       vm.updateNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
-      vm.setVolumes( runVm.getVolumes( ) );
+      vm.updateVolumeAttachments( runVm.getVolumes( ) );
       try {
         Network network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
         network.extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
@@ -226,7 +230,7 @@ public class SystemState {
         GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
         msg.setUserId( userId );
 
-        reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Component.walrus ).send( msg );
+        reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
       }
       catch ( Exception e ) {
         throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
@@ -310,7 +314,7 @@ public class SystemState {
           notwork = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + netName );
           networks.add( notwork );
           try {
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
+            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
           } catch ( NetworkAlreadyExistsException e ) {
@@ -326,7 +330,7 @@ public class SystemState {
               notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
             }
             networks.add( notwork );
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
+            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
             Networks.getInstance( ).registerIfAbsent( notwork, Networks.State.ACTIVE );

@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -65,6 +65,7 @@ package com.eucalyptus.ws.server;
 
 import static org.jboss.netty.channel.Channels.pipeline;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.security.GeneralSecurityException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -74,17 +75,22 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
+import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.DependsRemote;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.HeartbeatHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
@@ -94,9 +100,9 @@ import com.eucalyptus.ws.handlers.soap.SoapHandler;
 import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
-@Provides(Component.eucalyptus)
+@Provides(com.eucalyptus.bootstrap.Component.bootstrap)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
-@DependsRemote(Component.eucalyptus)
+@DependsRemote(com.eucalyptus.bootstrap.Component.eucalyptus)
 @ChannelPipelineCoverage( "all" )
 public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPipelineFactory {
   private static Logger                   LOG = Logger.getLogger( RemoteBootstrapperServer.class );
@@ -118,10 +124,43 @@ public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPi
   
   @Override
   public boolean load( ) throws Exception {
-    this.channel = this.bootstrap.bind( new InetSocketAddress( this.port ) );
-    LOG.info( "Waiting for system properties before continuing bootstrap." );
-    this.channel.getCloseFuture( ).awaitUninterruptibly( );
-    LOG.info( "Channel closed, proceeding with bootstrap." );
+    if( System.getProperty("euca.debug.addr") != null ) {
+      String host = System.getProperty("euca.debug.addr");
+      for( Component c : Components.list( ) ) {
+        if( c.getIdentity( ).isCloudLocal( ) ) {
+          URI uri = c.getUri( host, c.getIdentity( ).getPort( ) );
+          ServiceBuilder builder = c.getBuilder( );
+          ServiceConfiguration config = builder.toConfiguration( uri );
+          c.loadService( config );
+        }
+      }
+      for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+        stage.updateBootstrapDependencies( );
+      }
+      try {
+        GroovyUtil.evaluateScript( "after_database.groovy" );
+      } catch ( ScriptExecutionFailedException e1 ) {
+        LOG.error( "Failed with invalid DB address" );
+        LOG.debug( e1, e1 );
+        System.exit( 123 );
+      }
+      try {
+        if( NetworkUtil.testReachability( host ) ) {
+          LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
+        } else {
+          LOG.error( "Failed with invalid DB address" );
+          System.exit( -1 );
+        }
+      } catch ( Throwable e ) {
+        LOG.error( "Failed with invalid DB address" );
+      }
+
+    } else {
+      this.channel = this.bootstrap.bind( new InetSocketAddress( this.port ) );
+      LOG.info( "Waiting for system properties before continuing bootstrap." );
+      this.channel.getCloseFuture( ).awaitUninterruptibly( );
+      LOG.info( "Channel closed, proceeding with bootstrap." );
+    }
     return true;
   }
 
@@ -168,9 +207,9 @@ public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPi
   }
 
   
-  @Provides(Component.bootstrap)
+  @Provides(com.eucalyptus.bootstrap.Component.bootstrap)
   @RunDuring(Bootstrap.Stage.RemoteServicesInit)
-  @DependsRemote(Component.eucalyptus)
+  @DependsRemote(com.eucalyptus.bootstrap.Component.eucalyptus)
   public static class DeferedRemoteServiceBootstrapper extends Bootstrapper {
     @Override
     public boolean start( ) throws Exception {

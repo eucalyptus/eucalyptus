@@ -11,6 +11,7 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
@@ -31,14 +32,16 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
   
   public boolean start( ) throws Exception {
-    this.eusureSystemAdminExist( );
-    this.ensureCountersExist( );
-    this.ensureVmTypesExist( );
-    LdapSync.start( );
+    if(Components.lookup( "eucalyptus" ).isAvailableLocally( )) {
+      this.eusureSystemAdminExist( );
+      this.ensureCountersExist( );
+      this.ensureVmTypesExist( );
+      LdapSync.start( );
     
-    // Remove once done.
-    //AuthTest.test( );
+      // Remove once done.
+      //AuthTest.test( );
     
+    }
     return true;
   }
   

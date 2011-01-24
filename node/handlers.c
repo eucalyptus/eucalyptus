@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -86,6 +86,7 @@ permission notice:
 #include <handlers.h>
 #include <storage.h>
 #include <eucalyptus.h>
+#include <euca_auth.h>
 
 #include <windows-bundle.h>
 
@@ -106,6 +107,7 @@ extern struct handlers default_libvirt_handlers;
 const int staging_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any STAGING domains will be cleaned up */
 const int booting_cleanup_threshold = 60; /* after this many seconds any BOOTING domains will be cleaned up */
 const int bundling_cleanup_threshold = 60 * 60; /* after this many seconds any BUNDLING domains will be cleaned up */
+const int createImage_cleanup_threshold = 60 * 60; /* after this many seconds any CREATEIMAGE domains will be cleaned up */
 const int teardown_state_duration = 180; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
 
 // a NULL-terminated array of available handlers
@@ -218,6 +220,8 @@ void change_state(	ncInstance *instance,
     case CRASHED:
     case BUNDLING_SHUTDOWN:
     case BUNDLING_SHUTOFF:
+    case CREATEIMAGE_SHUTDOWN:
+    case CREATEIMAGE_SHUTOFF:
         instance->stateCode = EXTANT;
 	instance->retries = LIBVIRT_QUERY_RETRIES;
         break;
@@ -268,7 +272,7 @@ refresh_instance_info(	struct nc_state_t *nc,
 	    return;
 
     /* no need to bug for domains without state on Hypervisor */
-    if (now==TEARDOWN || now==STAGING || now==BUNDLING_SHUTOFF)
+    if (now==TEARDOWN || now==STAGING || now==BUNDLING_SHUTOFF || now==CREATEIMAGE_SHUTOFF)
         return;
     
     sem_p(hyp_sem);
@@ -277,7 +281,10 @@ refresh_instance_info(	struct nc_state_t *nc,
     if (dom == NULL) { /* hypervisor doesn't know about it */
       if (now==BUNDLING_SHUTDOWN) {
 	logprintfl (EUCAINFO, "detected disappearance of bundled domain %s\n", instance->instanceId);
-	change_state (instance, BUNDLING_SHUTOFF);
+        change_state (instance, BUNDLING_SHUTOFF);
+      } else if (now==CREATEIMAGE_SHUTDOWN) {
+	logprintfl (EUCAINFO, "detected disappearance of createImage domain %s\n", instance->instanceId);
+        change_state (instance, CREATEIMAGE_SHUTOFF);
       } else if (now==RUNNING ||
             now==BLOCKED ||
             now==PAUSED ||
@@ -293,6 +300,12 @@ refresh_instance_info(	struct nc_state_t *nc,
         }
         /* else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED */
         return;
+    }
+
+    int rc;
+    rc = get_instance_stats(dom, instance);
+    if (rc) {
+      logprintfl(EUCAWARN, "refresh_instances(): cannot get instance stats (block, network)\n");
     }
 
     virDomainInfo info;
@@ -333,7 +346,8 @@ refresh_instance_info(	struct nc_state_t *nc,
         }
         break;
     case BUNDLING_SHUTDOWN:
-      logprintfl (EUCADEBUG, "hypervisor state for bundling domain %s is %s\n", instance->instanceId, instance_state_names [xen]);
+    case CREATEIMAGE_SHUTDOWN:
+      logprintfl (EUCADEBUG, "hypervisor state for bundle/createImage domain %s is %s\n", instance->instanceId, instance_state_names [xen]);
       break;
     default:
         logprintfl (EUCAERROR, "error: refresh...(): unexpected state (%d) for instance %s\n", now, instance->instanceId);
@@ -481,6 +495,8 @@ monitoring_thread (void *arg)
                 instance->state!=SHUTDOWN &&
 		instance->state!=BUNDLING_SHUTDOWN &&
 		instance->state!=BUNDLING_SHUTOFF &&
+                instance->state!=CREATEIMAGE_SHUTDOWN &&
+                instance->state!=CREATEIMAGE_SHUTOFF &&
                 instance->state!=TEARDOWN) {
 	      
 	      if (FP && !strcmp(instance->stateName, "Extant")) {
@@ -506,9 +522,11 @@ monitoring_thread (void *arg)
 		&& (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
             if (instance->state==BOOTING  
 		&& (now - instance->bootTime)     < booting_cleanup_threshold) continue;
-            if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF) 
-		&& (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
-            
+	    if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF)
+                && (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
+            if ((instance->state==CREATEIMAGE_SHUTDOWN || instance->state==CREATEIMAGE_SHUTOFF)
+                && (now - instance->createImageTime) < createImage_cleanup_threshold) continue;
+
             /* ok, it's been condemned => destroy the files */
             if (!nc_state.save_instance_files) {
 				logprintfl (EUCAINFO, "cleaning up state for instance %s\n", instance->instanceId);
@@ -578,7 +596,7 @@ void *startup_thread (void * arg)
         return NULL;
     }
     
-    error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, &brname);
+    error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname);
     if ( error ) {
         logprintfl (EUCAFATAL, "start network failed for instance %s, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
@@ -794,10 +812,6 @@ static int init (void)
 
 	bzero (&nc_state, sizeof(struct nc_state_t)); // ensure that MAXes are zeroed out
 
-	/* from now on we have unrecoverable failure, so no point in
-	 * retrying to re-init */
-	initialized = -1;
-
 	/* read in configuration - this should be first! */
 	tmp = getenv(EUCALYPTUS_ENV_VAR_NAME);
 	if (!tmp) {
@@ -849,6 +863,15 @@ static int init (void)
 
 	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
 	strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
+
+	if (euca_init_cert ()) {
+	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
+	  return 1;
+	}
+
+	/* from now on we have unrecoverable failure, so no point in
+	 * retrying to re-init */
+	initialized = -1;
 
 	hyp_sem = sem_alloc (1, "mutex");
 	inst_sem = sem_alloc (1, "mutex");
@@ -1114,6 +1137,23 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	return ret;
 }
 
+int doAssignAddress(ncMetadata *meta, char *instanceId, char *publicIp) {
+  int ret=0;
+  
+  if (init()) {    
+    return(1);
+  }
+  
+  logprintfl(EUCADEBUG, "doAssignAddress() invoked\n");
+
+  if (nc_state.H->doAssignAddress) 
+    ret = nc_state.H->doAssignAddress(&nc_state, meta, instanceId, publicIp);
+  else 
+    ret = nc_state.D->doAssignAddress(&nc_state, meta, instanceId, publicIp);
+  
+  return ret;
+}
+
 int doPowerDown(ncMetadata *meta) {
 	int ret;
 
@@ -1130,7 +1170,7 @@ int doPowerDown(ncMetadata *meta) {
 	return ret;
 }
 
-int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
     int ret;
     
@@ -1242,10 +1282,10 @@ int doRunInstance (ncMetadata *meta, char *instanceId, char *reservationId, virt
     }
    
     if (nc_state.H->doRunInstance)
-      ret = nc_state.H->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
+      ret = nc_state.H->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
     else
-      ret = nc_state.D->doRunInstance (&nc_state, meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInst);
-    
+      ret = nc_state.D->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
+
     return ret;
 }
 
@@ -1319,6 +1359,7 @@ int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource **outRe
 
 int
 doStartNetwork (	ncMetadata *ccMeta,
+			char *uuid,
 			char **remoteHosts,
 			int remoteHostsLen,
 			int port,
@@ -1332,9 +1373,9 @@ doStartNetwork (	ncMetadata *ccMeta,
 	logprintfl(EUCADEBUG, "doStartNetwork() invoked\n");
 
 	if (nc_state.H->doStartNetwork) 
-		ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+	        ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	else 
-		ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, remoteHosts, remoteHostsLen, port, vlan);
+	        ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	
 	return ret;
 }
@@ -1424,6 +1465,23 @@ int doDescribeBundleTasks (ncMetadata *meta, char **instIds, int instIdsLen, bun
 	return ret;
 }
 
+int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev)
+{
+	int ret;
+
+	if (init())
+		return 1;
+
+	logprintfl (EUCAINFO, "doCreateImage() invoked (id=%s vol=%s remote=%s)\n", instanceId, volumeId, remoteDev);
+
+	if (nc_state.H->doCreateImage)
+		ret = nc_state.H->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
+	else 
+		ret = nc_state.D->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
+
+	return ret;
+}
+
 int check_iscsi(char* dev_string) {
     if(strchr(dev_string, ',') == NULL)
 	return 0;
@@ -1440,7 +1498,7 @@ void parse_target(char *dev_string) {
     }  
 }
 
-char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     char buf [MAX_PATH];
     char *retval;
     
@@ -1454,7 +1512,7 @@ char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     return retval;
 }
 
-int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if (vrun("%s %s", storage_cmd_path, dev_string) != 0) {
 	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
@@ -1463,7 +1521,7 @@ int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string) {
     return 0;
 }
 
-char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
+char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     char buf [MAX_PATH];
     char *retval;
     
@@ -1475,4 +1533,72 @@ char* get_iscsi_target(const char *storage_cmd_path, char *dev_string) {
 	logprintfl (EUCAINFO, "Device: %s\n", retval);
     } 
     return retval;
+}
+
+int get_instance_stats(virDomainPtr dom, ncInstance *instance)
+{
+  char *xml;
+  int ret=0, n;
+  long long b=0, i=0;
+  char bstr[512], istr[512];
+
+  // get the block device string from VBR
+  bzero(bstr, 512);
+  for (n=0; n<instance->params.virtualBootRecordLen; n++) {
+    if (strcmp(instance->params.virtualBootRecord[n].guestDeviceName, "none")) {
+      if (strlen(bstr) < (510 - strlen(instance->params.virtualBootRecord[n].guestDeviceName))) {
+	strcat(bstr, instance->params.virtualBootRecord[n].guestDeviceName);
+	strcat(bstr, ",");
+      }
+    }
+  }
+  
+  // get the name of the network interface from libvirt
+  sem_p(hyp_sem);
+  xml = virDomainGetXMLDesc(dom, 0);
+  sem_v(hyp_sem);
+
+  if (xml) {
+    char *el;
+    el = xpath_content(xml, "domain/devices/interface");
+    if (el) {
+      char *start, *end;
+      start = strstr(el, "target dev='");
+      if (start) {
+	start += strlen("target dev='");
+	end = strstr(start, "'");
+	if (end) {
+	  *end = '\0';
+	  snprintf(istr, 512, "%s", start);
+	}
+      }
+      free(el);
+    }
+    free(xml);
+  }
+
+  char cmd[MAX_PATH], *output;
+  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b '%s' -n '%s'", nc_state.home, nc_state.home, instance->instanceId, bstr, istr);
+  output = system_output(cmd);
+  if (output) {
+    sscanf(output, "OUTPUT %lld %lld", &b, &i);
+    free(output);
+  } else {
+    logprintfl(EUCAWARN, "get_instance_stat(): empty output from getstats command\n");
+    ret = 1;
+  }
+  
+  if (b > 0) {
+    instance->blkbytes = b;
+  } else {
+    instance->blkbytes = 0;
+  }
+  if (i > 0) {
+    instance->netbytes = i;
+  } else {
+    instance->netbytes = 0;
+  }
+  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, blkdevs=%s, blkbytes=%lld, netdevs=%s, netbytes=%lld\n", instance->instanceId, bstr, instance->blkbytes, istr, instance->netbytes);
+
+  return(ret);
 }

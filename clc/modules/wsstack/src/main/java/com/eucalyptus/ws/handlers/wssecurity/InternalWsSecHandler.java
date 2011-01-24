@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -77,12 +77,11 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Element;
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.WSSecurity;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -93,7 +92,7 @@ import com.google.common.collect.Lists;
 public class InternalWsSecHandler extends WsSecHandler {
 
   public InternalWsSecHandler( ) throws GeneralSecurityException {
-    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( ) ) );
+    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( "eucalyptus" ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( "eucalyptus" ).getPrivateKey( ) ) );
   }
 
   @Override

@@ -11,7 +11,6 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.entities.ClusterCredentials;
@@ -20,35 +19,36 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.Handles;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
 import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
+import edu.ucsb.eucalyptus.msgs.ModifyClusterAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
-@DiscoverableServiceBuilder( com.eucalyptus.bootstrap.Component.cluster )
-@Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class } )
+@DiscoverableServiceBuilder( com.eucalyptus.component.id.Cluster.class )
+@Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   private static Logger LOG = Logger.getLogger( ClusterBuilder.class );
   @Override
-  public Boolean checkAdd( String name, String host, Integer port ) throws ServiceRegistrationException {
+  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     if ( !testClusterCredentialsDirectory( name ) ) {
       throw new ServiceRegistrationException( "Cluster registration failed because the key directory cannot be created." );
     } else {
-      return super.checkAdd( name, host, port );
+      return super.checkAdd( partition, name, host, port );
     }
   }
   
@@ -179,7 +179,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public Boolean checkRemove( String name ) throws ServiceRegistrationException {
+  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     try {
       Configuration.getStorageControllerConfiguration( name );
       throw new ServiceRegistrationException( "Cannot deregister a cluster controller when there is a storage controller registered." );

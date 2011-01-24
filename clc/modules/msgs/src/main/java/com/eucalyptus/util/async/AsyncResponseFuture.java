@@ -4,6 +4,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.concurrent.AbstractListenableFuture;
 
 public class AsyncResponseFuture<R> extends AbstractListenableFuture<R> implements CheckedListenableFuture<R> {
@@ -20,6 +22,7 @@ public class AsyncResponseFuture<R> extends AbstractListenableFuture<R> implemen
    */
   @Override
   public boolean setException( Throwable exception ) {
+    EventRecord.caller( this.getClass( ), EventType.FUTURE, "setException(" + exception.getClass( ).getCanonicalName( ) + "): " + exception.getMessage( ) ).trace( );
     boolean r = false;
     if ( exception == null ) {
       exception = new IllegalArgumentException( "setException(Throwable) was called with a null argument" );
@@ -62,6 +65,7 @@ public class AsyncResponseFuture<R> extends AbstractListenableFuture<R> implemen
    */
   @Override
   public boolean set( R reply ) {
+    EventRecord.caller( this.getClass( ), EventType.FUTURE, "set(" + reply.getClass( ).getCanonicalName( ) + ")" ).trace( );
     boolean r = false;
     if( !( r = super.set( reply ) ) ) {
       LOG.error( "Duplicate response: " + reply );

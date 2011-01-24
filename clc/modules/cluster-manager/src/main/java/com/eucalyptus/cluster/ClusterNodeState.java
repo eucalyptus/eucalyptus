@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -148,7 +148,7 @@ public class ClusterNodeState {
         childToken.getInstanceIds( ).add( token.getInstanceIds( ).get( index ) );
       }
       if( primaryNet != null ) {
-        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getUserName( ), primaryNet.getNetworkName( ), primaryNet.getVlan( ) );
+        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getUserName( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
         childNet.getIndexes( ).add( primaryNet.getIndexes( ).pollFirst( ) );
         childToken.getNetworkTokens( ).add( childNet );
       }

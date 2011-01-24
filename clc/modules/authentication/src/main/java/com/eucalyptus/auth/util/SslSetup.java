@@ -24,8 +24,10 @@ import javax.net.ssl.X509ExtendedKeyManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.system.SubDirectory;
 import com.sun.net.ssl.internal.ssl.X509ExtendedTrustManager;
+
 
 public class SslSetup {
   private static Logger       LOG            = Logger.getLogger( SslSetup.class );

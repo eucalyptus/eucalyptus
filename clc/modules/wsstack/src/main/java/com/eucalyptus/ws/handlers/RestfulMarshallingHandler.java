@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -64,6 +64,7 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
+import java.util.MissingFormatArgumentException;
 import org.apache.axiom.om.OMElement;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -80,14 +81,36 @@ import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
 @ChannelPipelineCoverage( "one" )
 public abstract class RestfulMarshallingHandler extends MessageStackHandler {
-  private static Logger LOG = Logger.getLogger( RestfulMarshallingHandler.class );
-  protected String      namespace;
+  private static Logger LOG            = Logger.getLogger( RestfulMarshallingHandler.class );
+  private String        namespace;
+  private final String  namespacePattern;
+  private String        defaultBindingNamespace = BindingManager.DEFAULT_BINDING_NAMESPACE;
+  private Binding       defaultBinding = BindingManager.getDefaultBinding( );
+  private Binding       binding;
+  
+  public RestfulMarshallingHandler( String namespacePattern ) {
+    this.namespacePattern = namespacePattern;
+    try {
+      this.setNamespace( String.format( namespacePattern ) );
+    } catch ( MissingFormatArgumentException ex ) {}
+  }
+  
+  public RestfulMarshallingHandler( String namespacePattern, String defaultVersion ) {
+    this( namespacePattern );
+    this.defaultBindingNamespace = String.format( namespacePattern, defaultVersion );
+    try {
+      this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
+    } catch ( BindingException ex ) {
+      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + defaultBindingNamespace + " because of: " + ex.getMessage( ), ex );
+    }
+  }
   
   @Override
   public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
@@ -95,9 +118,9 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       String bindingVersion = httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
       if ( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
-        this.namespace = "http://ec2.amazonaws.com/doc/" + bindingVersion + "/";
+        this.setNamespaceVersion( bindingVersion );
       } else {
-        this.namespace = "http://msgs.eucalyptus.com";
+        this.setNamespace( BindingManager.DEFAULT_BINDING_NAME );
       }
       String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getUserId( );
       try {
@@ -113,17 +136,35 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     }
   }
   
+  protected void setNamespace( String namespace ) {
+    this.namespace = namespace;
+    try {
+      this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
+    } catch ( BindingException ex ) {
+      LOG.error( "Failed to find binding for namespace: " + namespace, Exceptions.filterStackTrace( ex ) );
+    }
+  }
+  
+  private void setNamespaceVersion( String bindingVersion ) {
+    String newNs = null;
+    try {
+      newNs = String.format( this.namespacePattern );
+    } catch ( MissingFormatArgumentException e ) {
+      newNs = String.format( this.namespacePattern, bindingVersion );
+    }
+    this.setNamespace( newNs );
+  }
+  
   public abstract Object bind( String user, boolean admin, MappingHttpRequest httpRequest ) throws Exception;
   
   @Override
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-      Binding binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
       HoldMe.canHas.lock( );
       try {
-        if( httpResponse.getMessage( ) == null ) {
+        if ( httpResponse.getMessage( ) == null ) {
           //TODO: do nothing here? really?
         } else if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
           EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpResponse.getMessage( );
@@ -131,13 +172,12 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
         } else {
           try {
-            OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
+            OMElement omMsg = this.binding.toOM( httpResponse.getMessage( ), this.namespace );/**<--- wtf is this second arg doing here? should be the fast path. TODO **/
             omMsg.serialize( byteOut );
           } catch ( Throwable e ) {
             LOG.debug( e );
             LOG.error( e, e );
-            binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( "http://ec2.amazonaws.com/doc/2009-04-04/" ) );
-            OMElement omMsg = binding.toOM( httpResponse.getMessage( ), this.namespace );
+            OMElement omMsg = this.defaultBinding.toOM( httpResponse.getMessage( ), this.namespace );
             omMsg.serialize( byteOut );
           }
         }
@@ -150,6 +190,20 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml; charset=UTF-8" );
       httpResponse.setContent( buffer );
     }
+  }
+  
+  /**
+   * @return the namespace
+   */
+  public String getNamespace( ) {
+    return this.namespace;
+  }
+  
+  /**
+   * @return the binding
+   */
+  public Binding getBinding( ) {
+    return this.binding;
   }
   
 }

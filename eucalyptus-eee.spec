@@ -113,6 +113,7 @@ alongside the cluster-controller.
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
 Requires:     %{name}-common-java = %{version}, euca2ools-eee, lvm2
+Requires:     python-boto >= 1.9b
 Group:        Applications/System
 
 %description cloud
@@ -252,6 +253,8 @@ rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 /usr/sbin/euca-get-credentials
 /usr/sbin/euca-grant-zone-permission
 /usr/sbin/euca-modify-property
+/usr/sbin/euca-modify-storage-controller
+/usr/sbin/euca-modify-walrus
 /usr/sbin/euca-register-cluster
 /usr/sbin/euca-register-storage-controller
 /usr/sbin/euca-register-walrus
