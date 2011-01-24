@@ -75,10 +75,12 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Empyrean;
+import com.eucalyptus.component.id.Eucalyptus;
 
-@Provides(Component.bootstrap)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.SystemCredentialsInit)
-@DependsRemote(Component.eucalyptus)
+@DependsRemote(Eucalyptus.class)
 public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteComponentCredentialBootstrapper.class );
 

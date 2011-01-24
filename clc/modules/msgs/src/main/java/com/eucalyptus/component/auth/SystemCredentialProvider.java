@@ -80,11 +80,13 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.id.Empyrean;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.system.SubDirectory;
 
-@Provides( Component.bootstrap )
+@Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.SystemCredentialsInit )
-@DependsLocal( Component.eucalyptus )
+@DependsLocal( Eucalyptus.class )
 public class SystemCredentialProvider extends Bootstrapper {
   private static Logger                                    LOG      = Logger.getLogger( SystemCredentialProvider.class );
   private static ConcurrentMap<String, X509Certificate> certs    = new ConcurrentHashMap<String, X509Certificate>( );

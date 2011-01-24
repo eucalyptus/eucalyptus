@@ -74,6 +74,7 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Any;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -84,7 +85,7 @@ import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import com.eucalyptus.records.EventRecord;
 
-@Provides( com.eucalyptus.bootstrap.Component.any )
+@Provides( Any.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class DeferredPropertiesBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );

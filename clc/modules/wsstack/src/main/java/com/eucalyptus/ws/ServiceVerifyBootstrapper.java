@@ -13,7 +13,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Iterables;
 
-@Provides( com.eucalyptus.bootstrap.Component.bootstrap )
+@Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.Final )
 public class ServiceVerifyBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceVerifyBootstrapper.class );

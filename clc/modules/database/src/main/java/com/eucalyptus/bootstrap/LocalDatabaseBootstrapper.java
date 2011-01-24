@@ -69,6 +69,8 @@ import org.hsqldb.Server;
 import org.hsqldb.persist.HsqlProperties;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Empyrean;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -78,9 +80,9 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.Threads;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
-@Provides(Component.bootstrap)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.DatabaseInit)
-@DependsLocal(Component.eucalyptus)
+@DependsLocal(Eucalyptus.class)
 public class LocalDatabaseBootstrapper extends Bootstrapper implements EventListener, Runnable, DatabaseBootstrapper {
   private static Logger             LOG = Logger.getLogger( LocalDatabaseBootstrapper.class );
   private static DatabaseBootstrapper singleton;

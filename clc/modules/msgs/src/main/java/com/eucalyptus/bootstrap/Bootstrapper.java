@@ -68,7 +68,9 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import java.util.NoSuchElementException;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Any;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Arrays;
@@ -230,13 +232,13 @@ public abstract class Bootstrapper {
    * 
    * @return Component
    */
-  public Component getProvides( ) {
+  public <T extends ComponentId> Class<T> getProvides( ) {
     if ( !From( this.getClass( ) ).has( Provides.class ) ) {
       Exceptions.eat( "Bootstrap class does not specify the component which it @Provides.  Fine.  For now we pretend you had put @Provides(Component.any) instead of System.exit(-1): "
                       + this.getClass( ) );
-      return Component.any;
+      return ( Class<T> ) Any.class;
     } else {
-      return From( this.getClass( ) ).get( Provides.class ).value( );
+      return ( Class<T> ) From( this.getClass( ) ).get( Provides.class ).value( );
     }
     
   }

@@ -123,7 +123,7 @@ public class StorageProperties {
       LOG.error( "Failed to configure Storage Controller NAME." );
       throw ex;
     }
-//		if(!Component.eucalyptus.isLocal()) {
+//		if(!Components.lookup("eucalyptus").isLocal()) {
 //			String scName = System.getProperty("euca.storage.name");
 //			if(scName != null) {
 //				StorageProperties.NAME = scName;

@@ -107,14 +107,6 @@ public enum Component {
     this.cloudLocal = cloudLocal;
   }
   
-  public Boolean isLocal( ) {
-    try {
-      return Components.lookup( this ).isLocal( );
-    } catch ( NoSuchElementException ex ) {
-      return false;
-    }
-  }
-  
   public URI getUri( ) {
     com.eucalyptus.component.Component c = Components.lookup( this );
     NavigableSet<Service> services = c.getServices( );

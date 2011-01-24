@@ -95,6 +95,8 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
+import com.eucalyptus.component.id.Empyrean;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.event.ClockTick;
@@ -113,9 +115,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
-@Provides(Component.bootstrap)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
-@DependsLocal(Component.eucalyptus)
+@DependsLocal(Eucalyptus.class)
 public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPipelineFactory, EventListener {
   private static Logger                            LOG    = Logger.getLogger( RemoteBootstrapperClient.class );
   private ConcurrentMap<String, HeartbeatClient>   heartbeatMap;

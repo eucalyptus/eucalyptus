@@ -78,6 +78,8 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.Any;
+import com.eucalyptus.component.id.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.BaseDirectory;
@@ -330,11 +332,11 @@ public class Bootstrap {
   @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
-      com.eucalyptus.bootstrap.Component comp;
+      Class<ComponentId> compType;
       String bc = bootstrap.getClass( ).getCanonicalName( );
       Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
-      comp = bootstrap.getProvides( );
-      if ( Components.delegate.any.equals( comp ) ) {
+      compType = bootstrap.getProvides( );
+      if ( Any.class.equals( compType ) ) {
         for( Component c : Components.list( ) ) {
           if ( !bootstrap.checkLocal( ) ) {
             EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", bootstrap.getDependsLocal( ).toString( ) ).info( );
@@ -345,17 +347,27 @@ public class Bootstrap {
             c.getBootstrapper( ).addBootstrapper( bootstrap );
           }
         }
-      } else if ( Components.delegate.bootstrap.equals( comp ) ) {
+      } else if ( Empyrean.class.equals( compType ) ) {
         if ( !bootstrap.checkLocal( ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", bootstrap.getDependsLocal( ).toString( ) ).info( );
         } else if ( !bootstrap.checkRemote( ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote", bootstrap.getDependsRemote( ).toString( ) ).info( );
         } else {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + comp.name( ) ).info( );
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
           stage.addBootstrapper( bootstrap );
         }
       } else {
-        Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
+        ComponentId comp;
+        try {
+          comp = compType.newInstance( );
+          Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
+        } catch ( InstantiationException ex ) {
+          LOG.error( ex , ex );
+          System.exit( 1 );
+        } catch ( IllegalAccessException ex ) {
+          LOG.error( ex , ex );
+          System.exit( 1 );
+        }
       } 
     }
   }

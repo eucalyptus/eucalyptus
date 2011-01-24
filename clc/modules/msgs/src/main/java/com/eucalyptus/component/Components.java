@@ -62,12 +62,11 @@
  */
 package com.eucalyptus.component;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -75,16 +74,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.DependsLocal;
-import com.eucalyptus.bootstrap.DependsRemote;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.system.Ats;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class Components {

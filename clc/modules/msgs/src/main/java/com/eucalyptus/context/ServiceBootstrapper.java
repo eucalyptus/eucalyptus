@@ -73,11 +73,12 @@ import com.eucalyptus.component.event.DisableComponentEvent;
 import com.eucalyptus.component.event.EnableComponentEvent;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
+import com.eucalyptus.component.id.Empyrean;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 
-@Provides( Component.bootstrap )
+@Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
 public class ServiceBootstrapper extends Bootstrapper implements EventListener {
   private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );

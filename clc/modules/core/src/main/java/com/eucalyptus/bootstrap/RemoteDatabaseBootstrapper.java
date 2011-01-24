@@ -64,10 +64,12 @@ package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.util.SslSetup;
+import com.eucalyptus.component.id.Database;
+import com.eucalyptus.component.id.Eucalyptus;
 
-@Provides(Component.db)
+@Provides(Database.class)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
-@DependsRemote(Component.eucalyptus)
+@DependsRemote(Eucalyptus.class)
 public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
   @Override
