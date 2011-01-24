@@ -67,6 +67,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
@@ -509,66 +510,79 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   @Override
-  public void advertiseEvent( Event event ) {}
-  
-  @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof Hertz && ( ( Hertz ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
-      try {
-        Callbacks.newClusterRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
-      } catch ( ExecutionException ex ) {
-        Exceptions.trace( ex );
-      } catch ( InterruptedException ex ) {
-        Exceptions.trace( ex );
+    if( !Bootstrap.isFinished( ) ) {
+      LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" ); 
+    } else if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) ) {
+      this.nextState( );
+    } else if ( event instanceof Hertz ) {
+      Hertz tick = ( Hertz ) event;
+      if( State.STARTING_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 5 ) ) {
+        this.updateVolatiles( );
+      } else if( State.RUNNING_ADDRS.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
+        this.nextState( );
       }
-    } 
-    if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) && Bootstrap.isFinished( ) ) {
-      try {
-        switch ( this.stateMachine.getState( ) ) {
-          case DOWN:
-            this.stateMachine.startTransition( Transition.START );
-            break;
-          case AUTHENTICATING:
-            this.stateMachine.startTransition( Transition.INIT_CERTS );
-            break;
-          case STARTING:
-            this.stateMachine.startTransition( Transition.INIT_RESOURCES );
-            break;
-          case STARTING_RESOURCES: 
-            this.stateMachine.startTransition( Transition.INIT_NET );
-            break;
-          case STARTING_NET: 
-            this.stateMachine.startTransition( Transition.INIT_VMS );
-            break;
-          case STARTING_VMS: 
-            this.stateMachine.startTransition( Transition.INIT_ADDRS );
-            break;
-          case STARTING_ADDRS: 
-            this.stateMachine.startTransition( Transition.INIT_VMS2 );
-            break;
-          case STARTING_VMS2: 
-            this.stateMachine.startTransition( Transition.INIT_ADDRS2 );
-            break;
-          case RUNNING_ADDRS:
-            this.stateMachine.startTransition( Transition.RUNNING_RSC );
-            break;
-          case RUNNING_RSC:
-            this.stateMachine.startTransition( Transition.RUNNING_NET );
-            break;
-          case RUNNING_NET:
-            this.stateMachine.startTransition( Transition.RUNNING_VMS );
-            break;
-          case RUNNING_VMS:
-            this.stateMachine.startTransition( Transition.RUNNING_ADDRS );
-            break;
-          default:
-            break;
-        }
-      } catch ( IllegalStateException ex ) {
-        Exceptions.trace( ex );
-      } catch ( ExistingTransitionException ex ) {
-        Exceptions.trace( ex );
+    }
+  }
+
+  private void updateVolatiles( ) {
+    try {
+      Callbacks.newClusterRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
+    } catch ( ExecutionException ex ) {
+      Exceptions.trace( ex );
+    } catch ( InterruptedException ex ) {
+      Exceptions.trace( ex );
+    } catch ( CancellationException ex ) {
+      /** operation self-cancelled **/
+    }
+  }
+
+  private void nextState( ) {
+    try {
+      switch ( this.stateMachine.getState( ) ) {
+        case DOWN:
+          this.stateMachine.startTransition( Transition.START );
+          break;
+        case AUTHENTICATING:
+          this.stateMachine.startTransition( Transition.INIT_CERTS );
+          break;
+        case STARTING:
+          this.stateMachine.startTransition( Transition.INIT_RESOURCES );
+          break;
+        case STARTING_RESOURCES: 
+          this.stateMachine.startTransition( Transition.INIT_NET );
+          break;
+        case STARTING_NET: 
+          this.stateMachine.startTransition( Transition.INIT_VMS );
+          break;
+        case STARTING_VMS: 
+          this.stateMachine.startTransition( Transition.INIT_ADDRS );
+          break;
+        case STARTING_ADDRS: 
+          this.stateMachine.startTransition( Transition.INIT_VMS2 );
+          break;
+        case STARTING_VMS2: 
+          this.stateMachine.startTransition( Transition.INIT_ADDRS2 );
+          break;
+        case RUNNING_ADDRS:
+          this.stateMachine.startTransition( Transition.RUNNING_RSC );
+          break;
+        case RUNNING_RSC:
+          this.stateMachine.startTransition( Transition.RUNNING_NET );
+          break;
+        case RUNNING_NET:
+          this.stateMachine.startTransition( Transition.RUNNING_VMS );
+          break;
+        case RUNNING_VMS:
+          this.stateMachine.startTransition( Transition.RUNNING_ADDRS );
+          break;
+        default:
+          break;
       }
+    } catch ( IllegalStateException ex ) {
+      Exceptions.trace( ex );
+    } catch ( ExistingTransitionException ex ) {
+      Exceptions.trace( ex );
     }
   }
   

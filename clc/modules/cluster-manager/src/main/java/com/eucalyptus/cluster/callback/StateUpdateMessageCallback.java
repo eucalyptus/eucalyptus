@@ -100,7 +100,9 @@ public abstract class StateUpdateMessageCallback<P, Q extends BaseMessage, R ext
    * @param t
    */
   @Override
-  public final void fireException( Throwable t ) {}
+  public final void fireException( Throwable t ) {
+    this.fireException( new FailedRequestException( t, getRequest() ) );
+  }
   
   /**
    * TODO: DOCUMENT StateUpdateMessageCallback.java

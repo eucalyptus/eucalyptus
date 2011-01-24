@@ -28,7 +28,7 @@ package com.eucalyptus.reporting.event;
  * @author tom.werges
  */
 public class InstanceEvent
-	implements Event
+	implements Event,com.eucalyptus.event.Event
 {
 	private String uuid;
 	private String instanceId;

@@ -63,38 +63,24 @@
 
 package com.eucalyptus.event;
 
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 
-public class Hertz extends GenericEvent<Long>{
-  private static Logger LOG = Logger.getLogger( ClockTick.class );
-  @Override
-  public Exception getFail( ) {
-    if( super.getFail( ) != null ) {
-      LOG.warn("An innfallible event has failed: " + this + " " + super.getFail( ) );      
-    }
-    return null;
-  }
-  
-  @Override
-  public void setFail( Exception fail ) {
-    LOG.debug(fail,fail);
+public class Hertz extends GenericEvent<Long> {
+  private static AtomicLong counter = new AtomicLong( System.currentTimeMillis( ) );
+  public Hertz( ) {
+    super( counter.incrementAndGet( ) );
   }
 
-  @Override
-  public boolean isVetoed( ) {
-    if( super.isVetoed( ) ) {
-      LOG.warn("An unvetoable event was vetoed: " + this + " " + super.getCause( )!=null?super.getCause( ):"");
-    }
-    return false;
-  }
+  private static Logger LOG = Logger.getLogger( ClockTick.class );
 
   @Override
   public Long getMessage( ) {
     return Math.abs( super.getMessage( ) );
   }
 
-  public boolean isBackEdge() {
-    return super.getMessage( ) > 0;
+  public boolean isAsserted( int modulo ) {
+    return ( super.getMessage( ) % modulo ) == 0;
   }
   
   

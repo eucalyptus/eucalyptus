@@ -11,7 +11,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
-import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.util.NetworkUtil;
 
@@ -53,7 +53,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     }
     try {
       ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
+    } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
@@ -69,7 +69,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     }
     try {
       ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
+    } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
@@ -104,7 +104,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     }
     try {
       ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
+    } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
@@ -125,7 +125,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     }
     try {
       ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
+    } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }

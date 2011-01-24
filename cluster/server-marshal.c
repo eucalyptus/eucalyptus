@@ -421,13 +421,13 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     } else {
       
       if (!strcmp(outvnetConfig->mode, "MANAGED") || !strcmp(outvnetConfig->mode, "MANAGED-NOVLAN")) {
-	adb_describeNetworksResponseType_set_mode(snrt, env, 1);
+	adb_describeNetworksResponseType_set_useVlans(snrt, env, 1);
       } else {
-	adb_describeNetworksResponseType_set_mode(snrt, env, 0);
+	adb_describeNetworksResponseType_set_useVlans(snrt, env, 0);
       }
+      adb_describeNetworksResponseType_set_mode(snrt, env, outvnetConfig->mode);	
       adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, outvnetConfig->numaddrs);
-
-      /*
+      
       vnetSubnet = hex2dot(outvnetConfig->nw);
       if (vnetSubnet) {
 	adb_describeNetworksResponseType_set_vnetSubnet(snrt, env, vnetSubnet);
@@ -441,8 +441,6 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 	}
       adb_describeNetworksResponseType_set_vlanMin(snrt, env, 2);
       adb_describeNetworksResponseType_set_vlanMax(snrt, env, outvnetConfig->max_vlan);
-      */
-
       
       for (i=2; i<NUMBER_OF_VLANS; i++) {
 	if (outvnetConfig->networks[i].active) {

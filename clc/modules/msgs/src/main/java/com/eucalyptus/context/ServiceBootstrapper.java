@@ -133,8 +133,7 @@ public class ServiceBootstrapper extends Bootstrapper implements EventListener {
     return true;
   }
   
-  public void advertiseEvent( Event event ) {}
-  
+  @Override
   public void fireEvent( Event event ) {
     if ( ( event instanceof StartComponentEvent ) || ( event instanceof StopComponentEvent ) ) {
       LOG.info( "Reloading service context." );
