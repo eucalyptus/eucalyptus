@@ -90,7 +90,7 @@
       <outbound>
         <filtering-router>
           <outbound-endpoint ref="NotificationsVM" />
-          <payload-type-filter expectedType="NotificationMessage" />
+          <payload-type-filter expectedType="com.eucalyptus.notifications.NotificationMessage" />
         </filtering-router>
       </outbound>
     </service>
