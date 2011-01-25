@@ -94,6 +94,7 @@ import edu.emory.mathcs.backport.java.util.Arrays;
  * @see SystemBootstrapper#start()
  */
 public abstract class Bootstrapper {
+  private static Logger LOG = Logger.getLogger( Bootstrapper.class );
   private List<ComponentId> dependsLocal  = getDependsLocal();
   private List<ComponentId> dependsRemote = getDependsRemote();
   
@@ -177,7 +178,19 @@ public abstract class Bootstrapper {
       if ( !From( this.getClass( ) ).has( DependsLocal.class ) ) {
         dependsLocal = Lists.newArrayListWithExpectedSize( 0 );
       } else {
-        dependsLocal = Arrays.asList( From( this.getClass( ) ).get( DependsLocal.class ).value( ) );
+        for( Class compIdClass : From( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
+          if( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
+            LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
+          } else {
+            try {
+              dependsLocal.add( ( ComponentId ) compIdClass.newInstance( ) );
+            } catch ( InstantiationException ex ) {
+              LOG.error( ex , ex );
+            } catch ( IllegalAccessException ex ) {
+              LOG.error( ex , ex );
+            }
+          }
+        }
       }
       return dependsLocal;
     }
@@ -201,7 +214,19 @@ public abstract class Bootstrapper {
       if ( !From( this.getClass( ) ).has( DependsRemote.class ) ) {
         dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
       } else {
-        dependsRemote = Arrays.asList( From( this.getClass( ) ).get( DependsRemote.class ).value( ) );
+        for( Class compIdClass : From( this.getClass( ) ).get( DependsRemote.class ).value( ) ) {
+          if( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
+            LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
+          } else {
+            try {
+              dependsRemote.add( ( ComponentId ) compIdClass.newInstance( ) );
+            } catch ( InstantiationException ex ) {
+              LOG.error( ex , ex );
+            } catch ( IllegalAccessException ex ) {
+              LOG.error( ex , ex );
+            }
+          }
+        }
         for ( ComponentId c : dependsRemote ) {
           if ( !c.isCloudLocal( ) ) {
             BootstrapException.throwFatal( "DependsRemote specifies a component which is not cloud-local: " + this.getClass( ).getSimpleName( ) );
