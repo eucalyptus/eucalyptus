@@ -165,8 +165,8 @@ public class StorageUsageLog
 				SummaryInfo info = infoMap.get(critVal);
 				StorageUsageData lastData = info.getLastData();
 				long durationSecs = (timestampMs - info.getLastTimestamp()) / 1000;
-				info.getSummary().updateValues(lastData.getVolumesGB(),
-						lastData.getSnapshotsGB(), lastData.getObjectsGB(),
+				info.getSummary().updateValues(lastData.getVolumesMegs(),
+						lastData.getSnapshotsMegs(), lastData.getObjectsMegs(),
 						durationSecs);
 				info.setLastTimestamp(timestampMs);
 				info.setLastData(snapshot.getUsageData());
@@ -234,8 +234,8 @@ public class StorageUsageLog
 				SummaryInfo info = innerMap.get(innerCritVal);
 				StorageUsageData lastData = info.getLastData();
 				long durationSecs = (timestampMs - info.getLastTimestamp()) / 1000;
-				info.getSummary().updateValues(lastData.getVolumesGB(),
-						lastData.getSnapshotsGB(), lastData.getObjectsGB(),
+				info.getSummary().updateValues(lastData.getVolumesMegs(),
+						lastData.getSnapshotsMegs(), lastData.getObjectsMegs(),
 						durationSecs);
 				info.setLastTimestamp(timestampMs);
 				info.setLastData(snapshot.getUsageData());

@@ -37,9 +37,9 @@ public class StorageReportLine
 	/**
 	 * @return A string with appropriate size and units; e.g. "4k"
 	 */
-	public String getVolumesMegsHrs()
+	public String getVolumesMegsSecs()
 	{
-		return UnitUtil.getAmountString(summary.getVolumesMegsHrs());
+		return UnitUtil.getAmountString(summary.getVolumesMegsSecs());
 	}
 
 	/**
@@ -53,9 +53,9 @@ public class StorageReportLine
 	/**
 	 * @return A string with appropriate size and units; e.g. "4k"
 	 */
-	public String getSnapshotsMegsHrs()
+	public String getSnapshotsMegsSecs()
 	{
-		return UnitUtil.getSizeString(summary.getSnapshotsMegsHrs());
+		return UnitUtil.getAmountString(summary.getSnapshotsMegsSecs());
 	}
 
 	/**
@@ -69,9 +69,9 @@ public class StorageReportLine
 	/**
 	 * @return A string with appropriate size and units; e.g. "4k"
 	 */
-	public String getObjectsMegsHrs()
+	public String getObjectsMegsSecs()
 	{
-		return UnitUtil.getSizeString(summary.getObjectsMegsHrs());
+		return UnitUtil.getAmountString(summary.getObjectsMegsSecs());
 	}
 
 }

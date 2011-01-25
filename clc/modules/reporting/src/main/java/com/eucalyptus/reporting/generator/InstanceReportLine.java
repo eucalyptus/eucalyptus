@@ -26,64 +26,64 @@ public class InstanceReportLine
 		return groupBy;
 	}
 
-	public Long getM1SmallNum()
+	public String getM1SmallNum()
 	{
-		return summary.getM1SmallNum();
+		return UnitUtil.getAmountString(summary.getM1SmallNum());
 	}
 
-	public Long getM1SmallTimeMs()
+	public String getM1SmallTimeSecs()
 	{
-		return summary.getM1SmallTimeMs();
+		return UnitUtil.getTimeString(summary.getM1SmallTimeSecs());
 	}
 
-	public Long getC1MediumNum()
+	public String getC1MediumNum()
 	{
-		return summary.getC1MediumNum();
+		return UnitUtil.getAmountString(summary.getC1MediumNum());
 	}
 
-	public Long getC1MediumTimeMs()
+	public String getC1MediumTimeSecs()
 	{
-		return summary.getC1MediumTimeMs();
+		return UnitUtil.getTimeString(summary.getC1MediumTimeSecs());
 	}
 
-	public Long getM1LargeNum()
+	public String getM1LargeNum()
 	{
-		return summary.getM1LargeNum();
+		return UnitUtil.getAmountString(summary.getM1LargeNum());
 	}
 
-	public Long getM1LargeTimeMs()
+	public String getM1LargeTimeSecs()
 	{
-		return summary.getM1LargeTimeMs();
+		return UnitUtil.getTimeString(summary.getM1LargeTimeSecs());
 	}
 
-	public Long getM1XLargeNum()
+	public String getM1XLargeNum()
 	{
-		return summary.getM1XLargeNum();
+		return UnitUtil.getAmountString(summary.getM1XLargeNum());
 	}
 
-	public Long getM1XLargeTimeMs()
+	public String getM1XLargeTimeSecs()
 	{
-		return summary.getM1XLargeTimeMs();
+		return UnitUtil.getTimeString(summary.getM1XLargeTimeSecs());
 	}
 
-	public Long getC1XLargeNum()
+	public String getC1XLargeNum()
 	{
-		return summary.getC1XLargeNum();
+		return UnitUtil.getAmountString(summary.getC1XLargeNum());
 	}
 
-	public Long getC1XLargeTimeMs()
+	public String getC1XLargeTimeSecs()
 	{
-		return summary.getC1XLargeTimeMs();
+		return UnitUtil.getTimeString(summary.getC1XLargeTimeSecs());
 	}
 
-	public Long getNetworkIoMegs()
+	public String getNetworkIoMegs()
 	{
-		return summary.getNetworkIoMegs();
+		return UnitUtil.getSizeString(summary.getNetworkIoMegs());
 	}
 
-	public Long getDiskIoMegs()
+	public String getDiskIoMegs()
 	{
-		return summary.getDiskIoMegs();
+		return UnitUtil.getSizeString(summary.getDiskIoMegs());
 	}
 	
 	
