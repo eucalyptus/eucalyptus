@@ -66,23 +66,18 @@ package com.eucalyptus.ws.util;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-
 import com.eucalyptus.bootstrap.ComponentPart;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.DiscoverableServiceBuilder;
-import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.server.DuplicatePipelineException;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.server.NoAcceptingPipelineException;
-
-import com.eucalyptus.records.EventRecord;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
