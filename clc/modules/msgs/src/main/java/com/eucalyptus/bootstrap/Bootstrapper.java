@@ -178,6 +178,7 @@ public abstract class Bootstrapper {
       if ( !From( this.getClass( ) ).has( DependsLocal.class ) ) {
         dependsLocal = Lists.newArrayListWithExpectedSize( 0 );
       } else {
+        dependsLocal = Lists.newArrayList( );
         for( Class compIdClass : From( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
           if( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
             LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
@@ -214,6 +215,7 @@ public abstract class Bootstrapper {
       if ( !From( this.getClass( ) ).has( DependsRemote.class ) ) {
         dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
       } else {
+        dependsRemote = Lists.newArrayList( );
         for( Class compIdClass : From( this.getClass( ) ).get( DependsRemote.class ).value( ) ) {
           if( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
             LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
