@@ -8,7 +8,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.event.SystemClock;
+import com.eucalyptus.component.id.Empyrean;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Iterables;

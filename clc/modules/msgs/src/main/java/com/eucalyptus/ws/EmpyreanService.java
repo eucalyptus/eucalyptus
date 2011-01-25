@@ -83,8 +83,8 @@ import edu.ucsb.eucalyptus.msgs.StartServiceType;
 import edu.ucsb.eucalyptus.msgs.StopServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.StopServiceType;
 
-public class Empyrean {
-  private static Logger LOG = Logger.getLogger( Empyrean.class );
+public class EmpyreanService {
+  private static Logger LOG = Logger.getLogger( EmpyreanService.class );
   public StartServiceResponseType startService( StartServiceType request ) {
     StartServiceResponseType reply = request.getReply( );
     return reply;
