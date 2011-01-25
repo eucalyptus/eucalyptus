@@ -51,6 +51,7 @@
   <endpoint name="EmpyreanRequestQueueEndpoint" address="vm://EmpyreanRequestQueue" synchronous="false" />
   <endpoint name="PropertiesRequestQueueEndpoint" address="vm://PropertiesRequestQueue" synchronous="false" />
   <endpoint name="ManagementRequestQueueEndpoint" address="vm://ManagementRequestQueue" synchronous="false" />
+  <endpoint name="NotificationsRequestQueueEndpoint" address="vm://NotificationsRequestQueue" synchronous="false" />
   <model name="eucalyptus-bootstrap">
     <default-service-exception-strategy>
       <outbound-endpoint ref="ReplyQueueEndpoint" />
