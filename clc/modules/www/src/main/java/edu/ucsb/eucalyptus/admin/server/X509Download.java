@@ -194,6 +194,7 @@ public class X509Download extends HttpServlet {
       } catch ( Exception e ) {
         sb.append( "\necho WARN:  Walrus URL is not configured." );
       }
+      sb.append( "\nexport AWS_SNS_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Notifications" ) );
       sb.append( "\nexport EC2_URL=" + SystemConfiguration.getCloudUrl( ) );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
