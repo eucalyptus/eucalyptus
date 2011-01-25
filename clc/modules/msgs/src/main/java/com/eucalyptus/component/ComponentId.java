@@ -118,12 +118,12 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   }
 
   @Override
-  public int compareTo( ComponentId that ) {
+  public final int compareTo( ComponentId that ) {
     return this.name.compareTo( that.name );
   }
 
   @Override
-  public int hashCode( ) {
+  public final int hashCode( ) {
     final int prime = 31;
     int result = 1;
     result = prime * result + ( ( this.name == null )
@@ -133,7 +133,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   }
 
   @Override
-  public boolean equals( Object obj ) {
+  public final boolean equals( Object obj ) {
     if ( this == obj ) return true;
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;

@@ -94,8 +94,8 @@ import edu.emory.mathcs.backport.java.util.Arrays;
  * @see SystemBootstrapper#start()
  */
 public abstract class Bootstrapper {
-  private List<Component> dependsLocal  = getDependsLocal();
-  private List<Component> dependsRemote = getDependsRemote();
+  private List<ComponentId> dependsLocal  = getDependsLocal();
+  private List<ComponentId> dependsRemote = getDependsRemote();
   
   /**
    * Perform the {@link SystemBootstrapper#load()} phase of bootstrap.
@@ -170,7 +170,7 @@ public abstract class Bootstrapper {
    * @return List<Component> which must present on the local system for this bootstrapper to
    *         execute.
    */
-  public List<Component> getDependsLocal( ) {
+  public List<ComponentId> getDependsLocal( ) {
     if ( dependsLocal != null ) {
       return dependsLocal;
     } else {
@@ -194,7 +194,7 @@ public abstract class Bootstrapper {
    * @return List<Component> which must <b>not</b> present on the local system for this bootstrapper
    *         to execute.
    */
-  public List<Component> getDependsRemote( ) {
+  public List<ComponentId> getDependsRemote( ) {
     if ( dependsRemote != null ) {
       return dependsRemote;
     } else {
@@ -202,7 +202,7 @@ public abstract class Bootstrapper {
         dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
       } else {
         dependsRemote = Arrays.asList( From( this.getClass( ) ).get( DependsRemote.class ).value( ) );
-        for ( Component c : dependsRemote ) {
+        for ( ComponentId c : dependsRemote ) {
           if ( !c.isCloudLocal( ) ) {
             BootstrapException.throwFatal( "DependsRemote specifies a component which is not cloud-local: " + this.getClass( ).getSimpleName( ) );
           }
