@@ -192,7 +192,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   @Override
   public String toString( ) {
     return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s uuid=%s hostName=%s port=%s servicePath=%s",
-                          this.getComponent( ), this.isLocal( ), this.partition, this.name, this.getId(), this.hostName, this.port, this.servicePath );
+                          this.getComponentId( ), this.isLocal( ), this.partition, this.name, this.getId(), this.hostName, this.port, this.servicePath );
   }
 }
 /**
