@@ -89,6 +89,10 @@
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ManagementMessage" />
         </filtering-router>
         <filtering-router>
+          <outbound-endpoint ref="NotificationsRequestQueueEndpoint" synchronous="false" />
+          <payload-type-filter expectedType="com.eucalyptus.notifications.NotificationMessage" />
+        </filtering-router>
+        <filtering-router>
           <outbound-endpoint ref="ConfigurationRequestQueueEndpoint" synchronous="false" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ConfigurationMessage" />
         </filtering-router>

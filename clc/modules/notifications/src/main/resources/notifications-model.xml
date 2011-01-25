@@ -112,7 +112,7 @@
       <inbound>
         <inbound-endpoint ref="NotificationsReplyQueueVM" />
       </inbound>
-      <component class="com.eucalyptus.notifications.ReplyQueue" />
+      <component class="com.eucalyptus.ws.util.ReplyQueue" />
     </service>
 
   </model>
