@@ -90,7 +90,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 
 	public DRBDStorageManager() {
 	}
-	
+
 	public DRBDStorageManager(String rootDirectory) {
 		super(rootDirectory);
 		LOG.info("Initializing DRBD Info: " + DRBDInfo.getDRBDInfo().getName());
@@ -203,7 +203,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 
 	private boolean isConnected() throws ExecutionException, EucalyptusCloudException {
 		String cstateString = getConnectionStatus();
-		if(CSTATE_CONNECTED.equals(cstateString)) {
+		if((cstateString != null) && cstateString.startsWith(CSTATE_CONNECTED)) {
 			return true;
 		} else {
 			return false;
@@ -240,14 +240,13 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	public void becomeMaster() throws EucalyptusCloudException, ExecutionException {		
 		checkLocalDisk();
 		//role, cstate, dstate
-		if(isPrimary()) {
-			return;
+		if(!isPrimary()) {
+			//make primary
+			makePrimary();
 		}
 		if(!isConnected()) {
 			throw new EucalyptusCloudException("Resource not connected to peer.");
 		}
-		//make primary
-		makePrimary();
 		//mount
 		if(!isMounted()) {
 			mountPrimary();
@@ -261,8 +260,9 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	public void becomeSlave() throws EucalyptusCloudException, ExecutionException {
 		checkLocalDisk();
 		//check mount point, block device, role, cstate, dstate
-		if(isSecondary()) {
-			return;
+		if(!isSecondary()) {
+			//make secondary
+			makeSecondary();
 		}
 		if(!isConnected()) {
 			throw new EucalyptusCloudException("Resource not connected to peer.");
@@ -270,8 +270,6 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		if(isMounted()) {
 			unmountPrimary();
 		}
-		//make secondary
-		makeSecondary();
 		//verify state
 		if(!isSecondary()) {
 			throw new EucalyptusCloudException("Unable to make resource secondary.");
@@ -284,7 +282,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			throw new EucalyptusCloudException("Unable to recover from split brain for resource: " + DRBDInfo.getDRBDInfo().getResource());
 		}
 	}
-	
+
 	@Override
 	public void enable() throws EucalyptusCloudException {
 		try {
