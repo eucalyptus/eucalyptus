@@ -26,34 +26,52 @@ public class StorageReportLine
 		return groupBy;
 	}
 
-	public long getVolumesGbMax()
+	/**
+	 * @return A string with appropriate size and units; e.g. "8 GB"
+	 */
+	public String getVolumesSizeMax()
 	{
-		return summary.getVolumesGbMax();
+		return UnitUtil.getSizeString(summary.getVolumesMegsMax());
 	}
 
-	public long getVolumesGbSecs()
+	/**
+	 * @return A string with appropriate size and units; e.g. "4k"
+	 */
+	public String getVolumesMegsHrs()
 	{
-		return summary.getVolumesGbSecs();
+		return UnitUtil.getAmountString(summary.getVolumesMegsHrs());
 	}
 
-	public long getSnapshotsGbMax()
+	/**
+	 * @return A string with appropriate size and units; e.g. "8 GB"
+	 */
+	public String getSnapshotsSizeMax()
 	{
-		return summary.getSnapshotsGbMax();
+		return UnitUtil.getSizeString(summary.getSnapshotsMegsMax());
 	}
 
-	public long getSnapshotsGbSecs()
+	/**
+	 * @return A string with appropriate size and units; e.g. "4k"
+	 */
+	public String getSnapshotsMegsHrs()
 	{
-		return summary.getSnapshotsGbSecs();
+		return UnitUtil.getSizeString(summary.getSnapshotsMegsHrs());
 	}
 
-	public long getObjectsGbMax()
+	/**
+	 * @return A string with appropriate size and units; e.g. "8 GB"
+	 */
+	public String getObjectsSizeMax()
 	{
-		return summary.getObjectsGbMax();
+		return UnitUtil.getSizeString(summary.getObjectsMegsMax());
 	}
 
-	public long getObjectsGbSecs()
+	/**
+	 * @return A string with appropriate size and units; e.g. "4k"
+	 */
+	public String getObjectsMegsHrs()
 	{
-		return summary.getObjectsGbSecs();
+		return UnitUtil.getSizeString(summary.getObjectsMegsHrs());
 	}
-	
+
 }
