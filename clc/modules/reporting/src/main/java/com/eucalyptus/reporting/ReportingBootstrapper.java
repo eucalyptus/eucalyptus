@@ -2,7 +2,6 @@ package com.eucalyptus.reporting;
 
 import org.apache.log4j.*;
 
-import com.eucalyptus.reporting.star_queue.*;
 import com.eucalyptus.reporting.instance.*;
 import com.eucalyptus.reporting.storage.*;
 
@@ -11,16 +10,16 @@ public class ReportingBootstrapper
 {
 	private static Logger log = Logger.getLogger( ReportingBootstrapper.class );
 
-	private final StorageEventListener storageListener;
-	private final InstanceEventListener instanceListener;
-	private StarReceiver starReceiver;
-	private final StarBroker starBroker;
+//	private final StorageEventPoller storageListener;
+//	private final InstanceEventListener instanceListener;
+//	private StarReceiver starReceiver;
+	//private final QueueBroker starBroker;
 
 	public ReportingBootstrapper()
 	{
-		this.storageListener = new StorageEventListener();
-		this.instanceListener = new InstanceEventListener();
-		this.starBroker = StarBroker.getInstance();
+//		this.storageListener = new StorageEventPoller();
+//		this.instanceListener = new InstanceEventListener();
+//		this.starBroker = QueueBroker.getInstance();
 	}
 
 	public boolean check()
@@ -51,10 +50,10 @@ public class ReportingBootstrapper
 	public boolean start()
 	{
 		try {
-			starBroker.startup();
-			this.starReceiver = StarReceiver.getInstance();
-			this.starReceiver.addEventListener(instanceListener);
-			this.starReceiver.addEventListener(storageListener);
+//			starBroker.startup();
+//			this.starReceiver = StarReceiver.getInstance();
+//			this.starReceiver.addEventListener(instanceListener);
+//			this.starReceiver.addEventListener(storageListener);
 			log.info("ReportingBootstrapper started");
 			return true;
 		} catch (Exception ex) {
@@ -66,10 +65,10 @@ public class ReportingBootstrapper
 	public boolean stop()
 	{
 		try {
-			starBroker.startup();
-			this.starReceiver = StarReceiver.getInstance();
-			this.starReceiver.removeEventListener(instanceListener);
-			this.starReceiver.removeEventListener(storageListener);
+//			starBroker.startup();
+//			this.starReceiver = StarReceiver.getInstance();
+//			this.starReceiver.removeEventListener(instanceListener);
+//			this.starReceiver.removeEventListener(storageListener);
 			log.info("ReportingBootstrapper stopped");
 			return false;
 		} catch (Exception ex) {

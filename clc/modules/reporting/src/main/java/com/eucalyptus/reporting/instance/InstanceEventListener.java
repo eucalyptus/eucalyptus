@@ -16,13 +16,13 @@ public class InstanceEventListener
 	private static long WRITE_INTERVAL_SECS = 60 * 20; //TODO: configurable
 
 	private final Set<String> recentlySeenUuids;
-	private final Set<InstanceUsageSnapshot> recentUsageSnapshots;
+	private final List<InstanceUsageSnapshot> recentUsageSnapshots;
 	private long lastWriteMs;
 
 	public InstanceEventListener()
 	{
 		this.recentlySeenUuids = new HashSet<String>();
-		this.recentUsageSnapshots = new HashSet<InstanceUsageSnapshot>();
+		this.recentUsageSnapshots = new ArrayList<InstanceUsageSnapshot>();
 		this.lastWriteMs = 0l;
 	}
 
@@ -42,20 +42,23 @@ public class InstanceEventListener
 
 				/* Convert InstanceEvents to internal types. Internal types are
 				 * not exposed because the reporting.instance package won't be
-				 * present in the open src version so nothing in it can be referenced
+				 * present in the open src version
 				 */
 				InstanceAttributes insAttrs = new InstanceAttributes(uuid,
 						event.getInstanceId(), event.getInstanceType(), event.getUserId(),
-						event.getClusterName(), event.getAvailabilityZone());
+						event.getAccountId(), event.getClusterName(),
+						event.getAvailabilityZone());
 				InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(uuid,
 						receivedEventMs, event.getCumulativeNetworkIoMegs(),
 						event.getCumulativeDiskIoMegs());
+				System.out.printf("--Snapshot %s %d %d %d\n", uuid, receivedEventMs,
+						event.getCumulativeNetworkIoMegs(), event.getCumulativeDiskIoMegs());
 
 				/* Only write the instance attributes if we don't have them
 				 * already.
 				 */
 				if (! recentlySeenUuids.contains(uuid)) {
-					if (null != sess.get(InstanceAttributes.class, uuid)) {
+					if (null == sess.get(InstanceAttributes.class, uuid)) {
 						sess.save(insAttrs);
 						log.debug("Wrote Reporting Instance:" + uuid);
 					}
@@ -70,9 +73,10 @@ public class InstanceEventListener
 				if (receivedEventMs > (lastWriteMs + WRITE_INTERVAL_SECS*1000)) {
 					for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
 						sess.save(ius);
-						log.debug("Wrote Instance Usage:" + uuid);
+						log.debug("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getId());
 					}
 					recentUsageSnapshots.clear();
+					lastWriteMs = receivedEventMs;
 				}
 
 				entityWrapper.commit();
@@ -83,6 +87,11 @@ public class InstanceEventListener
 		}
 	}
 
+	//TODO: shutdown hook
+	public void flush()
+	{
+		//TODO: implement
+	}
 
 	/**
 	 * Get the current time which will be used for recording when an event

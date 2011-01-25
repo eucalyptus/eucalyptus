@@ -8,8 +8,8 @@ import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.user.client.ui.*;
 
 /**
- * <P>CriteriaPickerPanel is a vertical panel that contains labels and
- * drop-downs for selecting a report criterion and a "group by" criterion.
+ * <P>CriteriaPickerPanel is a vertical panel that contains drop-downs for
+ * selecting a report criterion and a "group by" criterion.
  * 
  * @author twerges
  */
@@ -28,10 +28,14 @@ public class CriteriaPickerPanel
 	{
 		this.accountingControl = accountingControl;
 
-		//TODO: make this GroupCriteria objs with toString()
 		this.outerCriterionBox = new ListBox();
+		this.outerCriterionBox.setStyleName("acct-Button-Report");
 		this.outerCriterionBox.setVisibleItemCount(1);
 		this.outerCriterionBox.addItem("-(none)-");
+		/* It's obviously desirable for this to use InstanceUsageLog.GroupByCriterion
+		 * to generate these drop-down values, but that would be complicated because
+		 * this resides in the browser.
+		 */
 		this.outerCriterionBox.addItem("Availability Zone");
 		this.outerCriterionBox.addItem("Cluster");
 		this.outerCriterionBox.addItem("Account");
@@ -46,6 +50,7 @@ public class CriteriaPickerPanel
 		this.add(outerCriterionPanel);
 		
 		this.innerCriterionBox = new ListBox();
+		this.innerCriterionBox.setStyleName("acct-Button-Report");
 		this.innerCriterionBox.setVisibleItemCount(1);
 		this.innerCriterionBox.addItem("Cluster");
 		this.innerCriterionBox.addItem("Account");

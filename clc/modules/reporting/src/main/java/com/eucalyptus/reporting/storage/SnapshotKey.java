@@ -9,7 +9,7 @@ import javax.persistence.*;
  * it's necessary. That's how the data is. There is a separate snapshot for each
  * {owner,account,cluster,zone,timestamp} tuple.
  * 
- * @author twerges
+ * @author tom.werges
  */
 @Embeddable
 public class SnapshotKey

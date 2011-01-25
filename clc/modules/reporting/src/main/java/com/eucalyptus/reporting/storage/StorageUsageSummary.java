@@ -2,7 +2,7 @@ package com.eucalyptus.reporting.storage;
 
 /**
  * <p>StorageUsageSummary is a summary of storage usage for some entity over
- * time. It contains statistics of aggregate usage like GB-seconds and maximum
+ * time. It contains statistics of aggregate usage like Megs-seconds and maximum
  * usage.
  * 
  * <p>StorageUsageSummary is not a bean. StorageUsageSummary <i>accumulates</i>
@@ -13,72 +13,73 @@ package com.eucalyptus.reporting.storage;
  */
 public class StorageUsageSummary
 {
-	private long volumesGbMax;
-	private long volumesGbSecs;
-	private long snapshotsGbMax;
-	private long snapshotsGbSecs;
-	private long objectsGbMax;
-	private long objectsGbSecs;
+	private long volumesMegsMax;
+	private long volumesMegsHrs;
+	private long snapshotsMegsMax;
+	private long snapshotsMegsHrs;
+	private long objectsMegsMax;
+	private long objectsMegsHrs;
 
 	public StorageUsageSummary()
 	{
-		this.volumesGbMax    = 0l;
-		this.volumesGbSecs   = 0l;
-		this.snapshotsGbMax  = 0l;
-		this.snapshotsGbSecs = 0l;
-		this.objectsGbMax    = 0l;
-		this.objectsGbSecs   = 0l;
+		this.volumesMegsMax    = 0l;
+		this.volumesMegsHrs    = 0l;
+		this.snapshotsMegsMax  = 0l;
+		this.snapshotsMegsHrs  = 0l;
+		this.objectsMegsMax    = 0l;
+		this.objectsMegsHrs    = 0l;
 	}
 
-	public long getVolumesGbMax()
+	public long getVolumesMegsMax()
 	{
-		return volumesGbMax;
+		return volumesMegsMax;
 	}
 
-	public long getVolumesGbSecs()
+	public long getVolumesMegsHrs()
 	{
-		return volumesGbSecs;
+		return volumesMegsHrs;
 	}
 
-	public long getSnapshotsGbMax()
+	public long getSnapshotsMegsMax()
 	{
-		return snapshotsGbMax;
+		return snapshotsMegsMax;
 	}
 
-	public long getSnapshotsGbSecs()
+	public long getSnapshotsMegsHrs()
 	{
-		return snapshotsGbSecs;
+		return snapshotsMegsHrs;
 	}
 
-	public long getObjectsGbMax()
+	public long getObjectsMegsMax()
 	{
-		return objectsGbMax;
+		return objectsMegsMax;
 	}
 
-	public long getObjectsGbSecs()
+	public long getObjectsMegsHrs()
 	{
-		return objectsGbSecs;
+		return objectsMegsHrs;
 	}
 
-	public void updateValues(long volumesGb, long snapshotsGb, long objectsGb,
+	public void updateValues(long volumesMegs, long snapshotsMegs, long objectsMegs,
 			long durationSecs)
 	{
-		this.volumesGbMax   = Math.max(this.volumesGbMax, volumesGb);
-		this.snapshotsGbMax = Math.max(this.snapshotsGbMax, snapshotsGb);
-		this.objectsGbMax   = Math.max(this.objectsGbMax, objectsGb);
+		this.volumesMegsMax   = Math.max(this.volumesMegsMax, volumesMegs);
+		this.snapshotsMegsMax = Math.max(this.snapshotsMegsMax, snapshotsMegs);
+		this.objectsMegsMax   = Math.max(this.objectsMegsMax, objectsMegs);
 		
-		this.volumesGbSecs   += volumesGb * durationSecs;
-		this.snapshotsGbSecs += snapshotsGb * durationSecs;
-		this.objectsGbSecs   += objectsGb * durationSecs;
+		final long durationHrs = durationSecs / 60 / 60;
+		this.volumesMegsHrs   += volumesMegs   * durationHrs;
+		this.snapshotsMegsHrs += snapshotsMegs * durationHrs;
+		this.objectsMegsHrs   += objectsMegs   * durationHrs;
 	}
 	
 	@Override
 	public String toString()
 	{
-		return String.format("[volsGbSecs:%d,volsGbMax:%d,snapsGbSecs:%d,"
-				+ "snapsGbMax:%d,objsGbSecs:%d,objsGbMax:%d]",
-				volumesGbSecs, volumesGbMax, snapshotsGbSecs,
-				snapshotsGbMax, objectsGbSecs, objectsGbMax);
+		return String.format("[volsMegsHrs:%d,volsMegsMax:%d,snapsMegsHrs:%d,"
+				+ "snapsMegsMax:%d,objsMegsHrs:%d,objsMegsMax:%d]",
+				volumesMegsHrs, volumesMegsMax, snapshotsMegsHrs,
+				snapshotsMegsMax, objectsMegsHrs, objectsMegsMax);
 	}
 
 }

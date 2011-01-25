@@ -64,10 +64,7 @@ class InstanceUsageSnapshot
 	}
 	
 	/**
-	 * @return Cumulative network IO as of the instantiation of this object.
-	 *   Can return null, which indicates unknown usage and not zero usage.
-	 *   Null should be represented as "N/A" or something similar in any
-	 *   UI.
+	 * @return Can return null, which indicates unknown usage and not zero usage.
 	 */
 	Long getCumulativeNetworkIoMegs()
 	{
@@ -75,14 +72,15 @@ class InstanceUsageSnapshot
 	}
 	
 	/**
-	 * @return Cumulative network IO as of the instantiation of this object.
-	 *   Can return null, which indicates unknown usage and not zero usage.
-	 *   Null should be represented as "N/A" or something similar in any
-	 *   UI.
+	 * @return Can return null, which indicates unknown usage and not zero usage.
 	 */
 	Long getCumulativeDiskIoMegs()
 	{
 		return diskIoMegs;
 	}
 
+	Long getId()
+	{
+		return id;
+	}
 }

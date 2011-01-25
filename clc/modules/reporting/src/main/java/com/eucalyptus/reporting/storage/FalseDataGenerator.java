@@ -34,7 +34,7 @@ public class FalseDataGenerator
 				String userId = String.format("user-%d", j);
 				String accountId = String.format("instance-%d",
 						(j % NUM_ACCOUNTS));
-				String clusterId = String.format("user-%d", (j % NUM_CLUSTERS));
+				String clusterId = String.format("cluster-%d", (j % NUM_CLUSTERS));
 				String zoneId = String.format("account-%d", (j % NUM_ZONES));
 			
 				for (int k = 0; k < StorageEvent.EventType.values().length; k++) {
@@ -137,9 +137,12 @@ public class FalseDataGenerator
 
 	private static GroupByCriterion getCriterion(String name)
 	{
-		/* throws an IllegalArgument which we allow to percolate up
-		 */
-		return GroupByCriterion.valueOf(name.toUpperCase());
+		if (name.equalsIgnoreCase("zone"))
+			return GroupByCriterion.AVAILABILITY_ZONE;
+		else
+			/* throws an IllegalArgument which we allow to percolate up
+			 */
+			return GroupByCriterion.valueOf(name.toUpperCase());
 	}
 
 	/**

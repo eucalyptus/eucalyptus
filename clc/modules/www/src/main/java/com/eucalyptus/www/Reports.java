@@ -199,9 +199,20 @@ public class Reports extends HttpServlet {
       Type reportType = Type.valueOf( Param.type.get( ) );
       try {
         Boolean doFlush = this.doFlush( );
+        
+        /* Gets a JRExporter for PDF, html, etc, with the appropriate i/o streams
+         */
         final JRExporter exporter = reportType.setup( req, res, Param.name.get( req ) );
+        
+        /* Gets design, and compiles report from design
+         */
         ReportCache reportCache = getReportManager( Param.name.get( req ), doFlush );
+        
+        /* Calls prepareReport() which calls appropriate groovy script, generates data,
+         * and generates report.
+         */
         JasperPrint jasperPrint = reportCache.getJasperPrint( req );
+
         exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
         //        exporter.setParameter( JRExporterParameter.PAGE_INDEX, new Integer( Param.page.get( ) ) );
         exporter.exportReport( );
@@ -399,7 +410,10 @@ public class Reports extends HttpServlet {
         put( "EUCA_NOT_BEFORE_DATE", new Date( new Long( Param.start.get( req ) ) ) );
         put( "EUCA_NOT_AFTER_DATE", new Date( new Long( Param.end.get( req ) ) ) );
       }}, jdbcConnection );
+
     } else {
+      /* TODO: REPLACE THIS ENTIRE CODE BLOCK
+       */
       FileReader fileReader = null;
       try {
         final List results = new ArrayList( );
@@ -413,14 +427,20 @@ public class Reports extends HttpServlet {
             put( "notAfter", new Long( Param.end.get( req ) ) );
             put( "notBeforeDate", new Date( new Long( Param.start.get( req ) ) ) );
             put( "notAfterDate", new Date( new Long( Param.end.get( req ) ) ) );
+            //TODO: add two parameters throughout...
           }
         } );
         try {
+          /* Groovy script is called which adds results to "results"
+           */
           new GroovyScriptEngine( SubDirectory.REPORTS.toString( ), ClassLoader.getSystemClassLoader( ) ).run( reportCache.getName( ) + ".groovy", binding );
         } catch ( Exception e ) {
           LOG.error( e, e );
         }
         JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
+
+        /* TODO: Must select a report based upon drop-down criteria; 
+         */
         jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
           put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );
           put( "EUCA_NOT_AFTER", new Long( Param.end.get( req ) ) );

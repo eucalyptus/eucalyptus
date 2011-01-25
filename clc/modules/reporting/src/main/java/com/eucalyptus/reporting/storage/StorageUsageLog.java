@@ -13,7 +13,7 @@ import com.eucalyptus.reporting.instance.InstanceAttributes;
 /**
  * <p>StorageUsageLog
  * 
- * @author twerges
+ * @author tom.werges
  */
 public class StorageUsageLog
 {

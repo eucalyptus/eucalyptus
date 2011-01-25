@@ -2,21 +2,28 @@ package com.eucalyptus.reporting.instance;
 
 import java.util.*;
 
+import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.upgrade.TestDescription;
 
 /**
- * <p>FalseDataGenerator generates false data about instances,
- * including fake starting and ending times, imaginary resource
+ * <p>FalseDataGenerator generates false data about instances.
+ * It generates fake starting and ending times, imaginary resource
  * usage, fictitious clusters, and non-existent accounts and users.
  * 
- * <p>False data can be used for testing.
+ * <p>The main use of this class is to be called from the
+ * <pre>clc/tools/runTest.sh</pre> tool, specifying the class name and a
+ * method below.
+ * 
+ * <p>False data should be deleted afterward by calling the
+ * <pre>deleteFalseData</pre> method.
  * 
  * <p><i>"False data can come from many sources: academic, social,
  * professional... False data can cause one to make stupid mistakes..."</i>
  *   - L. Ron Hubbard
  */
-@TestDescription("Generates false instance reporting data")
+@TestDescription("Generates false reporting data")
 public class FalseDataGenerator
 {
 	private static final int NUM_USAGE = 32;
@@ -24,8 +31,9 @@ public class FalseDataGenerator
 	private static final int TIME_USAGE_APART = 100000; //ms
 	private static final long MAX_MS = ((NUM_USAGE+1) * TIME_USAGE_APART);
 
-	private static final int NUM_USER = 32;
-	private static final int NUM_CLUSTER = 4;
+	private static final int NUM_USER       = 32;
+	private static final int NUM_ACCOUNT    = 16;
+	private static final int NUM_CLUSTER    = 4;
 	private static final int NUM_AVAIL_ZONE = 2;
 
 	private enum FalseInstanceType
@@ -44,13 +52,15 @@ public class FalseDataGenerator
 			String uuid = new Long(i).toString();
 			String instanceId = String.format("instance-%d", (i % NUM_INSTANCE));
 			String userId = String.format("user-%d", (i % NUM_USER));
+			String accountId = String.format("account-%d", (i % NUM_ACCOUNT));
 			String clusterName = String.format("cluster-%d", (i % NUM_CLUSTER));
 			String availZone = String.format("zone-%d", (i % NUM_AVAIL_ZONE));
 			FalseInstanceType[] vals = FalseInstanceType.values();
 			String instanceType = vals[i % vals.length].toString();
 
 			InstanceAttributes insAttrs = new InstanceAttributes(uuid,
-					instanceId, instanceType, userId, clusterName, availZone);
+					instanceId, instanceType, userId, accountId, clusterName,
+					availZone);
 			fakeInstances.add(insAttrs);
 		}
 
@@ -63,14 +73,15 @@ public class FalseDataGenerator
 				long diskIo = instanceNum + i*2;
 				InstanceEvent event = new InstanceEvent(insAttrs.getUuid(),
 						insAttrs.getInstanceId(), insAttrs.getInstanceType(),
-						insAttrs.getUserId(), insAttrs.getClusterName(),
+						insAttrs.getUserId(), insAttrs.getAccountId(),
+						insAttrs.getClusterName(),
 						insAttrs.getAvailabilityZone(), new Long(netIo),
 						new Long(diskIo));
 				System.out.println("Generating:" + i);
 				listener.receiveEvent(event);
 			}
 		}
-		
+
 	}
 
 	public static void removeFalseData()
@@ -79,7 +90,7 @@ public class FalseDataGenerator
 
 		InstanceUsageLog.getInstanceUsageLog().purgeLog(MAX_MS);
 	}
-	
+
 	public static void printFalseData()
 	{
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
@@ -89,41 +100,39 @@ public class FalseDataGenerator
 			InstanceAttributes insAttrs = result.getInstanceAttributes();
 			Period period = result.getPeriod();
 			UsageData usageData = result.getUsageData();
-			
-			System.out.printf("instance:%s type:%s user:%s cluster:%s zone:%s period:%d-%d"
-					+ " netIo:%d diskIo:%d\n",
-					insAttrs.getInstanceId(), insAttrs.getInstanceType(), insAttrs.getUserId(),
+
+			System.out.printf("instance:%s type:%s user:%s account:%s cluster:%s"
+					+ " zone:%s period:%d-%d netIo:%d diskIo:%d\n",
+					insAttrs.getInstanceId(), insAttrs.getInstanceType(),
+					insAttrs.getUserId(), insAttrs.getAccountId(),
 					insAttrs.getClusterName(), insAttrs.getAvailabilityZone(),
-					period.getBeginningMs(), period.getEndingMs(), usageData.getNetworkIoMegs(),
-					usageData.getDiskIoMegs());
+					period.getBeginningMs(), period.getEndingMs(),
+					usageData.getNetworkIoMegs(), usageData.getDiskIoMegs());
 		}
 	}
 
-	private static InstanceUsageLog.GroupByCriterion getCriterion(String name)
+	private static GroupByCriterion getCriterion(String name)
 	{
-		/* throws an IllegalArgument if no such criterion exists, which is the
-		 * appropriate exception for our uses here, so we let it percolate up.
+		/* throws an IllegalArgument which we allow to percolate up
 		 */
-		return InstanceUsageLog.GroupByCriterion.valueOf(name.toUpperCase());
+		return GroupByCriterion.valueOf(name.toUpperCase());
 	}
 
 	/**
-	 * This method takes a String as a parameter rather than an
-	 * InstanceUsageLog.GroupByCriterion, because it's intended to be called
-	 * from the command-line test harness. It converts the String into a
-	 * GroupByCriterion. Possible values include "user","cluster",etc.
+	 * This method takes a String parameter rather than a GroupByCriterion,
+	 * because it's intended to be called from the command-line test harness.
 	 * 
 	 * @throws IllegalArgumentException if criterion does not match
-	 *   any InstanceUsageLog.GroupByCriterion
+	 *   any GroupByCriterion
 	 */
 	public static void summarizeFalseDataOneCriterion(
 			String criterion)
 	{
-		InstanceUsageLog.GroupByCriterion crit = getCriterion(criterion);
+		GroupByCriterion crit = getCriterion(criterion);
 		System.out.println(" ----> PRINTING FALSE DATA BY " + crit);
 
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
-		Map<String, UsageSummary> summaryMap = usageLog.scanSummarize(
+		Map<String, InstanceUsageSummary> summaryMap = usageLog.scanSummarize(
 				new Period(0L, MAX_MS), crit);
 		for (String critVal: summaryMap.keySet()) {
 			System.out.printf("%s:%s Summary:%s\n", crit, critVal,
@@ -132,29 +141,27 @@ public class FalseDataGenerator
 	}
 
 	/**
-	 * This method takes Strings as parameters rather than
-	 * InstanceUsageLog.GroupByCriterion's, because it's intended to be called
-	 * from the command-line test harness. It converts the Strings into 
-	 * GroupByCriterions. Possible values include "user","cluster",etc.
+	 * This method takes Strings as parameters rather than GroupByCriterion's,
+	 * because it's intended to be called from the command-line test harness.
 	 * 
-	 * @throws IllegalArgumentException if criterion does not match
-	 *   any InstanceUsageLog.GroupByCriterion
+	 * @throws IllegalArgumentException if either criterion does not match
+	 *   any GroupByCriterion
 	 */
 	public static void summarizeFalseDataTwoCriteria(
 			String outerCriterion,
 			String innerCriterion)
 	{
-		InstanceUsageLog.GroupByCriterion outerCrit = getCriterion(outerCriterion);
-		InstanceUsageLog.GroupByCriterion innerCrit = getCriterion(innerCriterion);
+		GroupByCriterion outerCrit = getCriterion(outerCriterion);
+		GroupByCriterion innerCrit = getCriterion(innerCriterion);
 		System.out.printf(" ----> PRINTING FALSE DATA BY %s,%s\n", outerCrit,
 				innerCrit);
 
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
-		Map<String, Map<String, UsageSummary>> summaryMap =
+		Map<String, Map<String, InstanceUsageSummary>> summaryMap =
 			usageLog.scanSummarize(new Period(0L, MAX_MS),
 					outerCrit, innerCrit);
 		for (String outerCritVal: summaryMap.keySet()) {
-			Map<String, UsageSummary> innerMap = summaryMap.get(outerCritVal);
+			Map<String, InstanceUsageSummary> innerMap = summaryMap.get(outerCritVal);
 			for (String innerCritVal: innerMap.keySet()) {
 				System.out.printf("%s:%s %s:%s Summary:%s\n", outerCrit,
 						outerCritVal, innerCrit, innerCritVal,
@@ -162,7 +169,7 @@ public class FalseDataGenerator
 			}
 		}
 	}
-	
+
 	/**
 	 * TestEventListener provides fake times which you can modify.
 	 * 
@@ -172,7 +179,7 @@ public class FalseDataGenerator
 		extends InstanceEventListener
 	{
 		private long fakeCurrentTimeMillis = 0l;
-		
+
 		void setCurrentTimeMillis(long currentTimeMillis)
 		{
 			this.fakeCurrentTimeMillis = currentTimeMillis;

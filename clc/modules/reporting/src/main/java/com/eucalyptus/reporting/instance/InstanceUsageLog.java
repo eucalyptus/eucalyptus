@@ -5,6 +5,8 @@ import org.apache.log4j.*;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.reporting.Period;
 
 import java.util.*;
 
@@ -15,7 +17,7 @@ import java.util.*;
  * <p>The data in the log is not indexed, in order to minimize write time.
  * As a result, you can't search through the log for specific instances or
  * specific data; you can only get a full dump between dates. However, there
- * exist groovy scripts to filter the data, or to insert the data into a
+ * exist groovy scripts to filter the data, or to transfer the data into a
  * data warehouse for subsequent searching.
  * 
  * <p>The usage data in logs is <i>sampled</i>, meaning data is collected
@@ -51,12 +53,6 @@ public class InstanceUsageLog
 		return singletonInstance;
 	}
 
-	public enum GroupByCriterion
-	{
-		USER, ACCOUNT, CLUSTER, AVAILABILITY_ZONE;
-	}
-
-
 	/**
 	 * <p>Scans through the usage log, then summarizes and groups the data it finds.
 	 * For example, if you provide the criterion of "user", in scans through the usage
@@ -67,21 +63,21 @@ public class InstanceUsageLog
 	 *   keyed by the criterion value. For example, a summary of all instance
 	 *   and usage data for each user, keyed by user. 
 	 */
-	public Map<String, UsageSummary> scanSummarize(Period period,
+	public Map<String, InstanceUsageSummary> scanSummarize(Period period,
 			GroupByCriterion criterion)
 	{
-		Map<String, UsageSummary> results = new HashMap<String, UsageSummary>();
+		Map<String, InstanceUsageSummary> results = new HashMap<String, InstanceUsageSummary>();
 
 		for (LogScanResult result: scanLog(period)) {
 			Period resPeriod = result.getPeriod();
 			UsageData usageData = result.getUsageData();
 			String attrValue = getAttributeValue(criterion,
 					result.getInstanceAttributes());
-			UsageSummary summary;
+			InstanceUsageSummary summary;
 			if (results.containsKey(attrValue)) {
 				summary = results.get(attrValue);
 			} else {
-				summary = new UsageSummary();
+				summary = new InstanceUsageSummary();
 				results.put(attrValue, summary);
 			}
 			String insType = result.getInstanceAttributes().getInstanceType();
@@ -99,34 +95,34 @@ public class InstanceUsageLog
 	 * for each user, within each Availability Zone, then returns the results
 	 * as <pre>AvailZone->UserId->UsageSummary</pre>. 
 	 *
-	 * @return A summary of all usage and instance data for a given criterion
+	 * @return A summary of all usage and instance data for given criteria
 	 *   keyed by the criterion values. 
 	 */
-	public Map<String, Map<String, UsageSummary>> scanSummarize(Period period,
+	public Map<String, Map<String, InstanceUsageSummary>> scanSummarize(Period period,
 			GroupByCriterion outerCriterion, GroupByCriterion innerCriterion)
 	{
-		Map<String, Map<String, UsageSummary>> results =
-			new HashMap<String, Map<String, UsageSummary>>();
+		Map<String, Map<String, InstanceUsageSummary>> results =
+			new HashMap<String, Map<String, InstanceUsageSummary>>();
 
 		for (LogScanResult result: scanLog(period)) {
 			Period resPeriod = result.getPeriod();
 			UsageData usageData = result.getUsageData();
 			String outerAttrValue = getAttributeValue(outerCriterion,
 					result.getInstanceAttributes());
-			Map<String, UsageSummary> innerMap;
+			Map<String, InstanceUsageSummary> innerMap;
 			if (results.containsKey(outerAttrValue)) {
 				innerMap = results.get(outerAttrValue);
 			} else {
-				innerMap = new HashMap<String, UsageSummary>();
+				innerMap = new HashMap<String, InstanceUsageSummary>();
 				results.put(outerAttrValue, innerMap);
 			}
 			String innerAttrValue = getAttributeValue(innerCriterion,
 					result.getInstanceAttributes());
-			UsageSummary summary;
+			InstanceUsageSummary summary;
 			if (innerMap.containsKey(innerAttrValue)) {
 				summary = innerMap.get(innerAttrValue);
 			} else {
-				summary = new UsageSummary();
+				summary = new InstanceUsageSummary();
 				innerMap.put(innerAttrValue, summary);
 			}
 			String insType = result.getInstanceAttributes().getInstanceType();
@@ -141,13 +137,13 @@ public class InstanceUsageLog
 	{
 		switch (criterion) {
 			case ACCOUNT:
-				return insAttrs.getUserId();
+				return insAttrs.getAccountId();
 			case USER:
 				return insAttrs.getUserId();
-			case AVAILABILITY_ZONE:
-				return insAttrs.getAvailabilityZone();
 			case CLUSTER:
 				return insAttrs.getClusterName();
+			case AVAILABILITY_ZONE:
+				return insAttrs.getAvailabilityZone();
 			default:
 				return insAttrs.getUserId();
 		}

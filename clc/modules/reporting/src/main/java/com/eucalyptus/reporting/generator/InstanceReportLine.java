@@ -11,7 +11,6 @@ public class InstanceReportLine
 	public InstanceReportLine(String label, String groupBy,
 			InstanceUsageSummary summary)
 	{
-		super();
 		this.label = label;
 		this.groupBy = groupBy;
 		this.summary = summary;

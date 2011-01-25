@@ -69,34 +69,34 @@ public class StorageEventPoller
 					usageData = new StorageUsageData();
 					usageDataMap.put(key, usageData);
 				}
-				long addAmountGB = (storageEvent.isCreateOrDelete())
-						? storageEvent.getSizeGB()
-						: -storageEvent.getSizeGB();
+				long addAmountMegs = (storageEvent.isCreateOrDelete())
+						? storageEvent.getSizeMegs()
+						: -storageEvent.getSizeMegs();
 				long addNum = (storageEvent.isCreateOrDelete()) ? 1 : -1;
 				switch(storageEvent.getEventType()) {
 					case S3Object:
 						Long newObjectsNum =
 							addLong(usageData.getObjectsNum(), addNum);
 						usageData.setObjectsNum(newObjectsNum);
-						Long newObjectsGb =
-							addLong(usageData.getObjectsGB(), addAmountGB);
-						usageData.setObjectsGB(newObjectsGb);
+						Long newObjectsMegs =
+							addLong(usageData.getObjectsMegs(), addAmountMegs);
+						usageData.setObjectsMegs(newObjectsMegs);
 						break;
 					case EbsSnapshot:
 						Long newSnapshotsNum =
 							addLong(usageData.getSnapshotsNum(), addNum);
 						usageData.setSnapshotsNum(newSnapshotsNum);
-						Long newSnapshotsGb =
-							addLong(usageData.getSnapshotsGB(), addAmountGB);
-						usageData.setSnapshotsGB(newSnapshotsGb);
+						Long newSnapshotsMegs =
+							addLong(usageData.getSnapshotsMegs(), addAmountMegs);
+						usageData.setSnapshotsMegs(newSnapshotsMegs);
 						break;
 					case EbsVolume:
 						Long newVolumesNum =
 							addLong(usageData.getVolumesNum(), addNum);
 						usageData.setVolumesNum(newVolumesNum);
-						Long newVolumesGb =
-							addLong(usageData.getVolumesGB(), addAmountGB);
-						usageData.setVolumesGB(newVolumesGb);						
+						Long newVolumesMegs =
+							addLong(usageData.getVolumesMegs(), addAmountMegs);
+						usageData.setVolumesMegs(newVolumesMegs);						
 						break;
 				}
 				changedSnapshots.add(key);

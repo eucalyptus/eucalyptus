@@ -17,6 +17,11 @@ class StorageUsageSnapshot
 	protected SnapshotKey key;
 	@Embedded
 	protected StorageUsageData usageData;
+
+	protected StorageUsageSnapshot()
+	{
+		
+	}
 	
 	public StorageUsageSnapshot(SnapshotKey key, StorageUsageData usageData)
 	{
@@ -28,7 +33,7 @@ class StorageUsageSnapshot
 	{
 		return key;
 	}
-	
+
 	public StorageUsageData getUsageData()
 	{
 		return usageData;
@@ -38,5 +43,4 @@ class StorageUsageSnapshot
 	{
 		return String.format("[key:%s,usageData:%s]", this.key, this.usageData);
 	}
-
 }

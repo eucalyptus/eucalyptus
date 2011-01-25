@@ -7,42 +7,42 @@ public class StorageUsageData
 {
 	@Column(name="volumes_num", nullable=false)
 	protected Long volumesNum;
-	@Column(name="volumes_gb", nullable=false)
-	protected Long volumesGB;
+	@Column(name="volumes_megs", nullable=false)
+	protected Long volumesMegs;
 	@Column(name="snapshot_num", nullable=false)
 	protected Long snapshotsNum;
-	@Column(name="snapshot_gb", nullable=false)
-	protected Long snapshotsGB;
+	@Column(name="snapshot_megs", nullable=false)
+	protected Long snapshotsMegs;
 	@Column(name="objects_num", nullable=false)
 	protected Long objectsNum;
-	@Column(name="objects_gb", nullable=false)
-	protected Long objectsGB;
+	@Column(name="objects_megs", nullable=false)
+	protected Long objectsMegs;
 	
 	public StorageUsageData()
 	{
-		this.volumesNum   = new Long(0);
-		this.volumesGB    = new Long(0);
-		this.snapshotsNum = new Long(0);
-		this.snapshotsGB  = new Long(0);
-		this.objectsNum   = new Long(0);
-		this.objectsGB    = new Long(0);
+		this.volumesNum     = new Long(0);
+		this.volumesMegs    = new Long(0);
+		this.snapshotsNum   = new Long(0);
+		this.snapshotsMegs  = new Long(0);
+		this.objectsNum     = new Long(0);
+		this.objectsMegs    = new Long(0);
 	}
 
-	public StorageUsageData(Long volumesNum, Long volumesGB, Long snapshotsNum,
-			Long snapshotsGB, Long objectsNum, Long objectsGB)
+	public StorageUsageData(Long volumesNum, Long volumesMegs, Long snapshotsNum,
+			Long snapshotsMegs, Long objectsNum, Long objectsMegs)
 	{
-		if (volumesNum == null || volumesGB == null || snapshotsNum == null
-				|| snapshotsGB == null || objectsNum == null
-				|| objectsGB == null)
+		if (volumesNum == null || volumesMegs == null || snapshotsNum == null
+				|| snapshotsMegs == null || objectsNum == null
+				|| objectsMegs == null)
 		{
 			throw new IllegalArgumentException("args can't be null");
 		}
-		this.volumesNum   = volumesNum;
-		this.volumesGB    = volumesGB;
-		this.snapshotsNum = snapshotsNum;
-		this.snapshotsGB  = snapshotsGB;
-		this.objectsNum   = objectsNum;
-		this.objectsGB    = objectsGB;
+		this.volumesNum     = volumesNum;
+		this.volumesMegs    = volumesMegs;
+		this.snapshotsNum   = snapshotsNum;
+		this.snapshotsMegs  = snapshotsMegs;
+		this.objectsNum     = objectsNum;
+		this.objectsMegs    = objectsMegs;
 	}
 
 	public Long getVolumesNum()
@@ -50,9 +50,9 @@ public class StorageUsageData
 		return volumesNum;
 	}
 	
-	public Long getVolumesGB()
+	public Long getVolumesMegs()
 	{
-		return volumesGB;
+		return volumesMegs;
 	}
 	
 	public Long getSnapshotsNum()
@@ -60,9 +60,9 @@ public class StorageUsageData
 		return snapshotsNum;
 	}
 	
-	public Long getSnapshotsGB()
+	public Long getSnapshotsMegs()
 	{
-		return snapshotsGB;
+		return snapshotsMegs;
 	}
 	
 	public Long getObjectsNum()
@@ -70,9 +70,9 @@ public class StorageUsageData
 		return objectsNum;
 	}
 	
-	public Long getObjectsGB()
+	public Long getObjectsMegs()
 	{
-		return objectsGB;
+		return objectsMegs;
 	}
 
 	public void setVolumesNum(Long volumesNum)
@@ -81,10 +81,10 @@ public class StorageUsageData
 		this.volumesNum = volumesNum;
 	}
 
-	public void setVolumesGB(Long volumesGB)
+	public void setVolumesMegs(Long volumesMegs)
 	{
-		if (volumesGB==null) throw new IllegalArgumentException("arg can't be null");
-		this.volumesGB = volumesGB;
+		if (volumesMegs==null) throw new IllegalArgumentException("arg can't be null");
+		this.volumesMegs = volumesMegs;
 	}
 
 	public void setSnapshotsNum(Long snapshotsNum)
@@ -93,10 +93,10 @@ public class StorageUsageData
 		this.snapshotsNum = snapshotsNum;
 	}
 
-	public void setSnapshotsGB(Long snapshotsGB)
+	public void setSnapshotsMegs(Long snapshotsMegs)
 	{
-		if (snapshotsGB==null) throw new IllegalArgumentException("arg can't be null");
-		this.snapshotsGB = snapshotsGB;
+		if (snapshotsMegs==null) throw new IllegalArgumentException("arg can't be null");
+		this.snapshotsMegs = snapshotsMegs;
 	}
 
 	public void setObjectsNum(Long objectsNum)
@@ -105,10 +105,10 @@ public class StorageUsageData
 		this.objectsNum = objectsNum;
 	}
 
-	public void setObjectsGB(Long objectsGB)
+	public void setObjectsMegs(Long objectsMegs)
 	{
-		if (objectsGB==null) throw new IllegalArgumentException("arg can't be null");
-		this.objectsGB = objectsGB;
+		if (objectsMegs==null) throw new IllegalArgumentException("arg can't be null");
+		this.objectsMegs = objectsMegs;
 	}
 
 	private static Long sumLongs(Long a, Long b)
@@ -121,19 +121,19 @@ public class StorageUsageData
 		if (other == null) return null;
 		return new StorageUsageData(
 				sumLongs(this.volumesNum, other.volumesNum),
-				sumLongs(this.volumesGB, other.volumesGB),
+				sumLongs(this.volumesMegs, other.volumesMegs),
 				sumLongs(this.snapshotsNum, other.snapshotsNum),
-				sumLongs(this.snapshotsGB, other.snapshotsGB),
+				sumLongs(this.snapshotsMegs, other.snapshotsMegs),
 				sumLongs(this.objectsNum, other.objectsNum),
-				sumLongs(this.objectsGB, other.objectsGB)
+				sumLongs(this.objectsMegs, other.objectsMegs)
 				);
 	}
 
 	public String toString()
 	{
-		return String.format("[vols:%d,volsGB:%d,snaps:%d,snapsGB:%d,objs:%d,"
-				+ "objsGB:%d]", volumesNum, volumesGB, snapshotsNum,
-				snapshotsGB, objectsNum, objectsGB);
+		return String.format("[vols:%d,volsMegs:%d,snaps:%d,snapsMegs:%d,objs:%d,"
+				+ "objsMegs:%d]", volumesNum, volumesMegs, snapshotsNum,
+				snapshotsMegs, objectsNum, objectsMegs);
 	}
 
 
