@@ -69,6 +69,8 @@ import java.io.File;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
@@ -310,6 +312,17 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			}
 			if(!isUpToDate()) {
 				throw new EucalyptusCloudException("Resource is not up to date");
+			}
+			if (Component.State.ENABLED.equals(Components.lookup("walrus").getState())) {
+				if(!isPrimary()) {
+					throw new EucalyptusCloudException("Oh nos. Is not primary but I r master. wtf?");
+				}
+			} else {
+				if (Component.State.DISABLED.equals(Components.lookup("walrus").getState())) {				
+					if(!isSecondary()) {
+						throw new EucalyptusCloudException("Oh nos. Is not secondary but I r slave. wtf?");
+					}
+				}
 			}
 		} catch(ExecutionException ex) {
 			throw new EucalyptusCloudException(ex);
