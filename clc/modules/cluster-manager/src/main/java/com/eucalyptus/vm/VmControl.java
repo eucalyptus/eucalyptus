@@ -94,14 +94,40 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
 import com.eucalyptus.records.EventRecord;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
+import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
+import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType;
+import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupType;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
 import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType;
+import edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
+import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.MonitorInstancesType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
+import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.StartInstancesType;
+import edu.ucsb.eucalyptus.msgs.StopInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.StopInstancesType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
+import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType;
 
 public class VmControl {
   
@@ -232,4 +258,64 @@ public class VmControl {
     DescribeBundleTasksResponseType  reply = request.getReply( );
     return reply;
   }
+  public UnmonitorInstancesResponseType unmonitorInstances(UnmonitorInstancesType request) {
+    UnmonitorInstancesResponseType reply = request.getReply( );
+    return reply;
+  }
+  public StartInstancesResponseType startInstances(StartInstancesType request) {
+    StartInstancesResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public StopInstancesResponseType stopInstances(StopInstancesType request) {
+    StopInstancesResponseType reply = request.getReply( );
+    return reply;
+  }
+  public ResetInstanceAttributeResponseType resetInstanceAttribute(ResetInstanceAttributeType request) {
+    ResetInstanceAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+  public MonitorInstancesResponseType monitorInstances(MonitorInstancesType request) {
+    MonitorInstancesResponseType reply = request.getReply( );
+    return reply;
+  }
+  public ModifyInstanceAttributeResponseType modifyInstanceAttribute(ModifyInstanceAttributeType request) {
+    ModifyInstanceAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+  public DescribeTagsResponseType describeTags(DescribeTagsType request) {
+    DescribeTagsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribePlacementGroupsResponseType describePlacementGroups(DescribePlacementGroupsType request) {
+    DescribePlacementGroupsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeInstanceAttributeResponseType describeInstanceAttribute(DescribeInstanceAttributeType request) {
+    DescribeInstanceAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DeleteTagsResponseType deleteTags(DeleteTagsType request) {
+    DeleteTagsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DeletePlacementGroupResponseType deletePlacementGroup(DeletePlacementGroupType request) {
+    DeletePlacementGroupResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public CreateTagsResponseType createTags(CreateTagsType request) {
+    CreateTagsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public CreatePlacementGroupResponseType createPlacementGroup(CreatePlacementGroupType request) {
+    CreatePlacementGroupResponseType reply = request.getReply( );
+    return reply;
+  }
+
 }

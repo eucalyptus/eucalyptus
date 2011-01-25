@@ -101,7 +101,7 @@ public abstract class Bootstrapper {
   /**
    * Perform the {@link SystemBootstrapper#load()} phase of bootstrap.
    * NOTE: The only code which can execute with uid=0 runs during the
-   * {@link Empyrean.Stage.PrivilegedConfiguration} stage of the {@link #load()} phase.
+   * {@link EmpyreanService.Stage.PrivilegedConfiguration} stage of the {@link #load()} phase.
    * 
    * @see SystemBootstrapper#load()
    * @return true on successful completion

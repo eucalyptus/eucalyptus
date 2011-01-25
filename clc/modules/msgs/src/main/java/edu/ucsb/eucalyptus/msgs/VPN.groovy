@@ -76,13 +76,6 @@ public class DhcpOptionsType extends EucalyptusData {
 public class DhcpValueType extends EucalyptusData {
   String value;
 }
-public class FilterType extends EucalyptusData {
-  String name;
-  ArrayList<ValueType> valueSet;
-}
-public class ValueType extends EucalyptusData {
-  String value;
-}
 public class CreateCustomerGatewayType extends VPNMessageType {
   String type;
   String ipAddress;

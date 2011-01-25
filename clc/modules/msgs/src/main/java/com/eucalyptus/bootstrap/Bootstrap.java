@@ -106,18 +106,18 @@ import com.google.common.collect.Lists;
  * executed by specifying the {@link RunDuring} annotation.
  * 
  * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the
- * {@link Empyrean.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped after
- * {@link Empyrean.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers would no
+ * {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped after
+ * {@link EmpyreanService.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers would no
  * longer have the indicated privileges.
  * 
  * After a call to {@link #transition()} the current stage can be obtained from
  * {@link #getCurrentStage()}.
  * 
- * Once {@link Empyrean.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
- * {@link #getCurrentStage()} is reset to be {@link Empyrean.Stage.SystemInit} and
+ * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
+ * {@link #getCurrentStage()} is reset to be {@link EmpyreanService.Stage.SystemInit} and
  * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
- * the state forever remains {@link Empyrean.Stage.Final}.
- * return {@link Empyrean.Stage.Final}.
+ * the state forever remains {@link EmpyreanService.Stage.Final}.
+ * return {@link EmpyreanService.Stage.Final}.
  * 
  * @see Bootstrap.Stage
  * @see PrivilegedConfiguration#start()
@@ -140,15 +140,15 @@ public class Bootstrap {
    * associated bootstrappers accordingly.
    * 
    * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the
-   * {@link Empyrean.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped after
-   * {@link Empyrean.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers would no
+   * {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped after
+   * {@link EmpyreanService.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers would no
    * longer have the indicated privileges.
    * 
-   * Once {@link Empyrean.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
-   * {@link #getCurrentStage()} is reset to be {@link Empyrean.Stage.SystemInit} and
+   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
+   * {@link #getCurrentStage()} is reset to be {@link EmpyreanService.Stage.SystemInit} and
    * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
-   * the state forever remains {@link Empyrean.Stage.Final}.
-   * return {@link Empyrean.Stage.Final}.
+   * the state forever remains {@link EmpyreanService.Stage.Final}.
+   * return {@link EmpyreanService.Stage.Final}.
    * 
    * @see PrivilegedConfiguration#start()
    * @see SystemBootstrapper#init()
@@ -379,11 +379,11 @@ public class Bootstrap {
    * After a call to {@link #transition()} the current stage can be obtained from
    * {@link #getCurrentStage()}.
    * 
-   * Once {@link Empyrean.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
-   * {@link #getCurrentStage()} is reset to be {@link Empyrean.Stage.SystemInit} and
+   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
+   * {@link #getCurrentStage()} is reset to be {@link EmpyreanService.Stage.SystemInit} and
    * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
-   * the state forever remains {@link Empyrean.Stage.Final}.
-   * return {@link Empyrean.Stage.Final}.
+   * the state forever remains {@link EmpyreanService.Stage.Final}.
+   * return {@link EmpyreanService.Stage.Final}.
    * 
    * @return currentStage either the same as before, or the next {@link Bootstrap.Stage}.
    */
@@ -434,7 +434,7 @@ public class Bootstrap {
    * locally -- this determines what components it is possible to 'bootstrap' on the current host.
    * Subsequently, component configuration is prepared and bootstrapper dependency contraints are
    * evaluated. The bootstrappers which conform to the state of the local system are associated with
-   * their respective {@link Empyrean.State}.
+   * their respective {@link EmpyreanService.State}.
    * 
    * The following steps are performed in order.
    * 

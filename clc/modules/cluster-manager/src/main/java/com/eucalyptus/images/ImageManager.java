@@ -98,6 +98,8 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
+import edu.ucsb.eucalyptus.msgs.CreateImageResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateImageType;
 import edu.ucsb.eucalyptus.msgs.DeregisterImageResponseType;
 import edu.ucsb.eucalyptus.msgs.DeregisterImageType;
 import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeResponseType;
@@ -529,4 +531,9 @@ public class ImageManager {
     }
     return reply;
   }
+  public CreateImageResponseType createImage(CreateImageType request) {
+    CreateImageResponseType reply = request.getReply( );
+    return reply;
+  }
+
 }
