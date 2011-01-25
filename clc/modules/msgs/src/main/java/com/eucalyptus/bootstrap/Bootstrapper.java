@@ -249,7 +249,7 @@ public abstract class Bootstrapper {
    * @return true if all local dependencies are satisfied.
    */
   public boolean checkLocal( ) {
-    for ( Component c : this.getDependsLocal( ) ) {
+    for ( ComponentId c : this.getDependsLocal( ) ) {
       try {
         if ( !Components.lookup( c ).isLocal( ) ) {
           return false;
@@ -267,7 +267,7 @@ public abstract class Bootstrapper {
    * @return true if all remote dependencies are satisfied.
    */
   public boolean checkRemote( ) {
-    for ( Component c : this.getDependsRemote( ) ) {
+    for ( ComponentId c : this.getDependsRemote( ) ) {
       try {
         if ( Components.lookup( c ).isLocal( ) ) {
           return false;
