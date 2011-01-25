@@ -13,7 +13,6 @@
 %global euca_curl    libcurl4
 %global euca_libcurl libcurl-devel
 %global euca_bridge  br0
-%global euca_java    java-sdk >= 1.6.0
 %global euca_iscsi_client open-iscsi
 %global euca_iscsi_server tgt
 %global euca_build_req vlan
@@ -23,7 +22,6 @@
 %if %is_centos
 %global euca_hypervisor xen
 %global euca_bridge  xenbr0
-%global euca_java    java-sdk >= 1.6.0
 %global euca_iscsi_client iscsi-initiator-utils
 %global euca_iscsi_server scsi-target-utils
 %global euca_fuse fuse-libs
@@ -32,7 +30,6 @@
 %if %is_fedora
 %global euca_hypervisor kvm
 %global euca_bridge  br0
-%global euca_java    java-devel >= 1:1.6.0
 %global euca_iscsi_client iscsi-initiator-utils
 %global euca_iscsi_server scsi-target-utils
 %global euca_fuse fuse-libs
@@ -53,6 +50,8 @@ BuildRequires: ant-nodeps >= 1.7
 BuildRequires: axis2
 BuildRequires: axis2c-devel >= 1.6.0
 BuildRequires: libvirt-devel >= 0.6
+BuildRequires: libxslt-devel
+BuildRequires: libxml-devel
 BuildRequires: rampartc-devel >= 1.3.0
 BuildRequires: swig
 %if %{is_suse}
@@ -63,10 +62,13 @@ BuildRequires: libopenssl-devel
 %else
 BuildRequires: openssl-devel
 %endif
+
 # The bytecode encryption we use for EEE doesn't work with OpenJDK
 BuildRequires: jdk
+
 # The VMware code requires FUSE libs to link correstly
 BuildRequires: %{euca_fuse}
+
 BuildRequires: %{euca_iscsi_client}
 BuildRequires: %{euca_libcurl}
 Requires:      %{euca_build_req}
@@ -95,12 +97,12 @@ Source2:       vmware-vix-disklib-distrib.tgz
 EUCALYPTUS is a service overlay that implements elastic computing
 using existing resources. The goal of EUCALYPTUS is to allow sites
 with existing clusters and server infrastructure to co-host an elastic
-computing service that is interface-compatible with Amazon's EC2.
+computing service that is interface-compatible with Amazon AWS.
 
-This package contains the common parts: you will need to install
-either eucalyptus-cloud, eucalyptus-walrus, eucalyptus-sc,
-eucalyptus-vmware-broker, eucalyptus-cc or eucalyptus-nc (or all of
-them).
+This package contains the common parts; you will need to install at
+least one of the cloud controller (cloud), cluster controller (cc),
+node controller (nc), storage controller (sc), walrus, or vmware broker
+(broker) packages as well.
 
 %package common-java
 Summary:      Elastic Utility Computing Architecture - ws java stack
@@ -109,11 +111,15 @@ Requires:     lvm2
 Requires:     jre
 Group:        Applications/System
 
+# Facilitate upgrades from Eucalyptus
+Obsoletes:    eucalyptus-common-java <= %{version}
+Provides:     eucalyptus-common-java = %{version}-%{release}
+
 %description common-java
-EUCALYPTUS is a service overlay that implements elastic
-computing using existing resources. The goal of EUCALYPTUS is to allow
-sites with existing clusters and server infrastructure to co-host an
-elastic computing service that is interface-compatible with Amazon's EC2.
+EUCALYPTUS is a service overlay that implements elastic computing
+using existing resources. The goal of EUCALYPTUS is to allow sites
+with existing clusters and server infrastructure to co-host an elastic
+computing service that is interface-compatible with Amazon AWS.
 
 This package contains the java WS stack.
 
@@ -123,14 +129,18 @@ Requires:     %{name}-common-java = %{version}-%{release}
 Requires:     lvm2
 Group:        Applications/System
 
+# Facilitate upgrades from Eucalyptus
+Obsoletes:    eucalyptus-walrus <= %{version}
+Provides:     eucalyptus-walrus = %{version}-%{release}
+
 %description walrus
-EUCALYPTUS is a service overlay that implements elastic
-computing using existing resources. The goal of EUCALYPTUS is to allow
-sites with existing clusters and server infrastructure to co-host an
-elastic computing service that is interface-compatible with Amazon's EC2.
+EUCALYPTUS is a service overlay that implements elastic computing
+using existing resources. The goal of EUCALYPTUS is to allow sites
+with existing clusters and server infrastructure to co-host an elastic
+computing service that is interface-compatible with Amazon AWS.
 
 This package contains storage component for your cloud: images and buckets
-are handled by walrus. Tipically this package is installed alongside the
+are handled by walrus. Typically this package is installed alongside the
 cloud controller.
 
 %package sc
@@ -141,15 +151,19 @@ Requires:     vblade
 Requires:     %{euca_iscsi_server}
 Group:        Applications/System
 
-%description sc
-EUCALYPTUS is a service overlay that implements elastic
-computing using existing resources. The goal of EUCALYPTUS is to allow
-sites with existing clusters and server infrastructure to co-host an
-elastic computing service that is interface-compatible with Amazon's EC2.
+# Facilitate upgrades from Eucalyptus
+Obsoletes:    eucalyptus-storage-controller <= %{version}
+Provides:     eucalyptus-storage-controller = %{version}-%{release}
 
-This package contains the storage controller part of eucalyptus which
-handles the elastic blocks for a given cluster. Tipically you install it
-alongside the cluster-controller.
+%description sc
+EUCALYPTUS is a service overlay that implements elastic computing
+using existing resources. The goal of EUCALYPTUS is to allow sites
+with existing clusters and server infrastructure to co-host an elastic
+computing service that is interface-compatible with Amazon AWS.
+
+This package contains the storage controller part of eucalyptus, which
+handles the elastic blocks for a given cluster. Typically you install it
+alongside the cluster controller.
 
 %package cloud
 Summary:      Elastic Utility Computing Architecture - cloud controller
@@ -163,13 +177,17 @@ Requires:     python-boto >= 1.9b
 %endif
 Group:        Applications/System
 
-%description cloud
-EUCALYPTUS is a service overlay that implements elastic
-computing using existing resources. The goal of EUCALYPTUS is to allow
-sites with existing clusters and server infrastructure to co-host an
-elastic computing service that is interface-compatible with Amazon's EC2.
+# Facilitate upgrades from Eucalyptus
+Obsoletes:    eucalyptus-cloud <= %{version}
+Provides:     eucalyptus-cloud = %{version}-%{release}
 
-This package contains the cloud controller part of eucalyptus: the cloud
+%description cloud
+EUCALYPTUS is a service overlay that implements elastic computing
+using existing resources. The goal of EUCALYPTUS is to allow sites
+with existing clusters and server infrastructure to co-host an elastic
+computing service that is interface-compatible with Amazon AWS.
+
+This package contains the cloud controller part of eucalyptus. The cloud
 controller needs to be reachable by both the cluster controller and from
 the cloud clients.
 
@@ -184,14 +202,18 @@ Requires:     %{euca_httpd}
 Requires:     vtun
 Group:        Applications/System
 
-%description cc
-EUCALYPTUS is a service overlay that implements elastic
-computing using existing resources. The goal of EUCALYPTUS is to allow
-sites with existing clusters and server infrastructure to co-host an
-elastic computing service that is interface-compatible with Amazon's EC2.
+# Facilitate upgrades from Eucalyptus
+Obsoletes:    eucalyptus-cc <= %{version}
+Provides:     eucalyptus-cc = %{version}-%{release}
 
-This package contains the cluster controller part of eucalyptus: it
-handles multiple node controllers.
+%description cc
+EUCALYPTUS is a service overlay that implements elastic computing
+using existing resources. The goal of EUCALYPTUS is to allow sites
+with existing clusters and server infrastructure to co-host an elastic
+computing service that is interface-compatible with Amazon AWS.
+
+This package contains the cluster controller part of eucalyptus. It
+handles a group of node controllers.
 
 %package nc
 Summary:      Elastic Utility Computing Architecture - node controller
@@ -205,26 +227,34 @@ Requires:     %{euca_hypervisor}
 Requires:     %{euca_iscsi_client}
 Group:        Applications/System
 
-%description nc
-EUCALYPTUS is a service overlay that implements elastic
-computing using existing resources. The goal of EUCALYPTUS is to allow
-sites with existing clusters and server infrastructure to co-host an
-elastic computing service that is interface-compatible with Amazon's EC2.
+# Facilitate upgrades from Eucalyptus
+Obsoletes:    eucalyptus-nc <= %{version}
+Provides:     eucalyptus-nc = %{version}-%{release}
 
-This package contains the node controller part of eucalyptus: this is the
-components that handles the instances.
+%description nc
+EUCALYPTUS is a service overlay that implements elastic computing
+using existing resources. The goal of EUCALYPTUS is to allow sites
+with existing clusters and server infrastructure to co-host an elastic
+computing service that is interface-compatible with Amazon AWS.
+
+This package contains the node controller part of eucalyptus. This
+components handles instances.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
-Requires:     %{name} = %{version}
+Requires:     %{name} = %{version}-%{release}
 Requires:     %{euca_httpd}
 Group:        Applications/System
 
+# Facilitate upgrades from Eucalyptus
+Obsoletes:    eucalyptus-gl <= %{version}
+Provides:     eucalyptus-gl = %{version}-%{release}
+
 %description gl
-EUCALYPTUS is a service overlay that implements elastic
-computing using existing resources. The goal of EUCALYPTUS is to allow
-sites with existing clusters and server infrastructure to co-host an
-elastic computing service that is interface-compatible with Amazon's EC2.
+EUCALYPTUS is a service overlay that implements elastic computing
+using existing resources. The goal of EUCALYPTUS is to allow sites
+with existing clusters and server infrastructure to co-host an elastic
+computing service that is interface-compatible with Amazon AWS.
 
 This package contains the internal log service of eucalyptus.
 
@@ -233,16 +263,20 @@ Summary:      Elastic Utility Computing Architecture - vmware broker
 Requires:     %{name}-common-java = %{version}-%{release}
 Requires:     %{name}-cc          = %{version}-%{release}
 Requires:     %{euca_httpd}
-# The VMware broker links against the VMware disk library.
+# Since we shut off automatic dependency generation we need to require there:
+Requires:     libxslt
+Requires:     libxml
+# The VMware broker links against the VMware disk library, so we have to
+# filter its DSOs from the package's Requires list.
 # Are we allowed to redistribute it?
 AutoReq:      no
 Group:        Applications/System
 
 %description broker
-EUCALYPTUS is a service overlay that implements elastic
-computing using existing resources. The goal of EUCALYPTUS is to allow
-sites with existing clusters and server infrastructure to co-host an
-elastic computing service that is interface-compatible with Amazon's EC2.
+EUCALYPTUS is a service overlay that implements elastic computing
+using existing resources. The goal of EUCALYPTUS is to allow sites
+with existing clusters and server infrastructure to co-host an elastic
+computing service that is interface-compatible with Amazon AWS.
 
 This package contains the broker needed to let EUCALYPTUS control a
 VMware installation.
@@ -258,17 +292,15 @@ export JAVA_HOME=/usr/java/latest
 ./configure --with-axis2=%{_datadir}/axis2-* --with-axis2c=%{_libdir}/axis2c --with-wsdl2c-sh=%{S:1} --enable-debug --prefix=/ --with-vddk=$RPM_BUILD_DIR/vmware-vix-disklib-distrib
 
 pushd clc
-# The CLC's build XML file looks for jar files in clc/lib, so symlink the
-# system's copies of important jar files to that location.
 make deps
 popd
 
-# Write builds logs to files so we can triage build failures.
+# Write build logs to files so we can triage build failures.
 # mock logs stdout and stderr, so this hackery will eventually go away.
 (make 2>&1 1>&3 | tee err.log) 3>&1 1>&2 | tee out.log
 
-%if %is_centos
-for x in `/bin/ls clc/tools/src/euca-*`; do
+%if %{is_centos}
+for x in clc/tools/src/euca-*; do
     sed --in-place 's:#!/usr/bin/env python:#!%{_bindir}/python2.6:' $x
 done
 %endif
@@ -281,6 +313,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 
 %files
+%defattr(-,root,root,-)
 %doc LICENSE INSTALL README CHANGELOG
 /etc/bash_completion.d/euca_conf
 /etc/eucalyptus/eucalyptus.conf
@@ -343,31 +376,41 @@ make install DESTDIR=$RPM_BUILD_ROOT
 
 
 %files common-java
-/etc/init.d/eucalyptus-cloud
+%defattr(-,root,root,-)
 /etc/eucalyptus/cloud.d
-/var/lib/eucalyptus/db
-/var/lib/eucalyptus/modules
-/var/lib/eucalyptus/webapps
+/etc/init.d/eucalyptus-cloud
 /usr/lib/eucalyptus/liblvm2control.so
 /usr/sbin/eucalyptus-cloud
 /usr/share/eucalyptus/*jar*
 /usr/share/eucalyptus/licenses
+/var/lib/eucalyptus/db
+/var/lib/eucalyptus/modules
+/var/lib/eucalyptus/webapps
 
 %files cloud
+%defattr(-,root,root,-)
 
 %files walrus
+%defattr(-,root,root,-)
 
 %files sc
+%defattr(-,root,root,-)
 /usr/share/eucalyptus/connect_iscsitarget_sc.pl
 /usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 
 %files cc
+%defattr(-,root,root,-)
 %{_libdir}/axis2c/services/EucalyptusCC
 /etc/init.d/eucalyptus-cc
 /etc/eucalyptus/vtunall.conf.template
 /usr/share/eucalyptus/dynserv.pl
 
 %files nc
+%defattr(-,root,root,-)
+/etc/init.d/eucalyptus-nc
+%{_libdir}/axis2c/services/EucalyptusNC
+/usr/sbin/eucanetd
+/usr/sbin/euca_test_nc
 /usr/share/eucalyptus/detach.pl
 /usr/share/eucalyptus/gen_kvm_libvirt_xml
 /usr/share/eucalyptus/gen_libvirt_xml
@@ -375,18 +418,16 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/share/eucalyptus/get_sys_info
 /usr/share/eucalyptus/get_xen_info
 /usr/share/eucalyptus/partition2disk
-/usr/sbin/eucanetd
-/usr/sbin/euca_test_nc
-%{_libdir}/axis2c/services/EucalyptusNC
-/etc/init.d/eucalyptus-nc
 
 %files gl
+%defattr(-,root,root,-)
 %{_libdir}/axis2c/services/EucalyptusGL
 
 %files broker
-/usr/share/eucalyptus/euca_vmware
+%defattr(-,root,root,-)
 /usr/lib/eucalyptus/euca_imager
 /usr/lib/eucalyptus/_euca_imager
+/usr/share/eucalyptus/euca_vmware
 
 %pre
 if [ "$1" = "2" ];
