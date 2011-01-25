@@ -79,10 +79,13 @@ import com.eucalyptus.ws.stages.WalrusOutboundStage;
 import com.eucalyptus.ws.stages.WalrusPOSTUserAuthenticationStage;
 import com.eucalyptus.ws.stages.WalrusRESTBindingStage;
 import com.eucalyptus.ws.stages.WalrusUserAuthenticationStage;
+import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.WalrusProperties;
 
 
+@ComponentPart( Walrus.class )
 public class WalrusRESTPostPipeline extends FilteredPipeline {
 	private static Logger LOG = Logger.getLogger( WalrusRESTPostPipeline.class );
 

@@ -74,12 +74,16 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.QueryBindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 
+@ComponentPart( Eucalyptus.class )
 public class EucalyptusQueryPipeline extends FilteredPipeline {
   private static Logger LOG = Logger.getLogger( EucalyptusQueryPipeline.class );
 

@@ -73,17 +73,17 @@ public class NioServer {
   private static Logger                 LOG = Logger.getLogger( NioServer.class );
   private static Channel                       serverChannel;
 
-  static {
-    PipelineRegistry.getInstance( ).register( new HeartbeatPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new MetadataPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new ElasticFoxPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new WalrusRESTPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new WalrusRESTPostPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new WalrusSoapPipeline( ) );
-  }
-  
+//  static {
+//    PipelineRegistry.getInstance( ).register( new HeartbeatPipeline( ) );
+//    PipelineRegistry.getInstance( ).register( new MetadataPipeline( ) );
+//    PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
+//    PipelineRegistry.getInstance( ).register( new ElasticFoxPipeline( ) );
+//    PipelineRegistry.getInstance( ).register( new WalrusRESTPipeline( ) );
+//    PipelineRegistry.getInstance( ).register( new WalrusRESTPostPipeline( ) );
+//    PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
+//    PipelineRegistry.getInstance( ).register( new WalrusSoapPipeline( ) );
+//  }
+//  
   public NioServer( ) {}
 
   public static void start( ) {

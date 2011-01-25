@@ -67,10 +67,13 @@ import java.util.List;
 
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.ElasticFoxMangleStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
+@ComponentPart( Eucalyptus.class )
 public class ElasticFoxPipeline extends EucalyptusQueryPipeline {
 
   @Override

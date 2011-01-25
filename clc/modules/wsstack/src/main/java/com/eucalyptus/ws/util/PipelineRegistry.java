@@ -63,24 +63,33 @@
  */
 package com.eucalyptus.ws.util;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.server.DuplicatePipelineException;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.server.NoAcceptingPipelineException;
 
 import com.eucalyptus.records.EventRecord;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 
 public class PipelineRegistry {
   private static PipelineRegistry registry;
   private static Logger           LOG = Logger.getLogger( PipelineRegistry.class );
-
+  private static Multimap<ComponentId,FilteredPipeline> componentPipelines = Multimaps.newArrayListMultimap( ); 
   public static PipelineRegistry getInstance( ) {
     synchronized ( PipelineRegistry.class ) {
       if ( PipelineRegistry.registry == null ) {
@@ -95,6 +104,11 @@ public class PipelineRegistry {
   public void register( final FilteredPipeline pipeline ) {
     LOG.info( "-> Registering pipeline: " + pipeline.getPipelineName( ) );
     this.pipelines.add( pipeline );
+  }
+
+  public void deregister( final FilteredPipeline pipeline ) {
+    LOG.info( "-> Deregistering pipeline: " + pipeline.getPipelineName( ) );
+    this.pipelines.remove( pipeline );
   }
 
   public FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
@@ -114,5 +128,36 @@ public class PipelineRegistry {
     return candidate;
   }
 
+  public void enable( ComponentId compId ) {
+    this.pipelines.addAll( this.componentPipelines.get( compId ) );
+  }
+  
+  public void disable( ComponentId compId ) {
+    this.pipelines.removeAll( this.componentPipelines.get( compId ) );
+  }
+  
+  public static class PipelineDiscovery extends ServiceJarDiscovery {
 
+    @Override
+    public boolean processClass( Class candidate ) throws Throwable {
+      if( FilteredPipeline.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( ComponentPart.class ) ) {
+        try {
+          ComponentId compId = ( ComponentId ) Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
+          PipelineRegistry.componentPipelines.put( compId, ( FilteredPipeline ) candidate.newInstance( ) );
+          return true;
+        } catch ( Exception ex ) {
+          LOG.trace( ex , ex );
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+
+    @Override
+    public Double getPriority( ) {
+      return 0.1d;
+    }
+    
+  }
 }

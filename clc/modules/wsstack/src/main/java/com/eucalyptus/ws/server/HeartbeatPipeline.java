@@ -62,9 +62,12 @@ package com.eucalyptus.ws.server;
 
 import java.util.List;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.id.Empyrean;
 import com.eucalyptus.ws.handlers.HeartbeatHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
+@ComponentPart(Empyrean.class)
 public class HeartbeatPipeline extends FilteredPipeline {
 
   @Override

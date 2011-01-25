@@ -70,11 +70,14 @@ import java.util.Set;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.BindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.stages.WalrusSoapUserAuthenticationStage;
 
+@ComponentPart( Walrus.class )
 public class WalrusSoapPipeline extends FilteredPipeline {
 
   @Override

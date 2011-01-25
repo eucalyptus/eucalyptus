@@ -65,10 +65,13 @@ package com.eucalyptus.ws.server;
 
 import java.util.List;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.ws.stages.BindingStage;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
+@ComponentPart( Eucalyptus.class )
 public class EucalyptusSoapPipeline extends FilteredPipeline {
 
   @Override

@@ -20,12 +20,15 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.transport.NullPayload;
 
+import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ChannelPipelineCoverage( "one" )
+@ComponentPart( Eucalyptus.class )
 public class MetadataPipeline extends FilteredPipeline implements UnrollableStage, ChannelUpstreamHandler {
   private static Logger LOG = Logger.getLogger( MetadataPipeline.class );
   @Override
