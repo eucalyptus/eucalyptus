@@ -94,6 +94,7 @@ import javax.persistence.Version;
 
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Cluster;
 import com.eucalyptus.component.id.Storage;
