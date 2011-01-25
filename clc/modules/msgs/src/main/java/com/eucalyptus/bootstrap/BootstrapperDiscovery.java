@@ -108,8 +108,12 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
           ret.add( ( Bootstrapper ) c.newInstance( ) );
         } catch ( Exception e ) {
           EventRecord.here( BootstrapperDiscovery.class, EventType.BOOTSTRAPPER_INIT,"getInstance()L", c.getCanonicalName( ) ).info( );
-          Method m = c.getDeclaredMethod( "getInstance", new Class[] {} );
-          ret.add( ( Bootstrapper ) m.invoke( null, new Object[] {} ) );
+          try {
+            Method m = c.getDeclaredMethod( "getInstance", new Class[] {} );
+            ret.add( ( Bootstrapper ) m.invoke( null, new Object[] {} ) );
+          } catch ( NoSuchMethodException ex ) {
+            throw BootstrapException.throwFatal( "Error in <init>()V in bootstrapper: " + c.getCanonicalName( ), e );
+          }
         }
       } catch ( Exception e ) {
         throw BootstrapException.throwFatal( "Error in <init>()V and getInstance()L; in bootstrapper: " + c.getCanonicalName( ), e );
