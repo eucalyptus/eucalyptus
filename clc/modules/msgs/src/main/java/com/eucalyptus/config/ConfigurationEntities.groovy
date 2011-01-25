@@ -224,7 +224,7 @@ public class EphemeralConfiguration extends ComponentConfiguration {
     this.uri = uri;
     this.c = c;
   }
-  public EphemeralConfiguration( String partition, Component c, URI uri ) {
+  public EphemeralConfiguration( String partition, ComponentId c, URI uri ) {
     super( partition, c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
@@ -232,7 +232,7 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   public ComponentId getComponentId() {
     return c;
   }
-  public com.eucalyptus.component.Component lookup() {
+  public Component lookup() {
     return Components.lookup(this.getComponentId( ));
   }
   public String getUri() {
