@@ -43,7 +43,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable {
     final Address addr = this.allocateSystemAddresses( vm.getPlacement( ), 1 ).get( 0 );
-    Callbacks.newClusterRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
+    Callbacks.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
       public void fire( BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
       }

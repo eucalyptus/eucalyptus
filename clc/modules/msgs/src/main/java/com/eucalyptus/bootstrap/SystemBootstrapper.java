@@ -185,9 +185,8 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    /** ASAP:FIXME:GRZE **/
     for( Component c : Components.list( ) ) {
-      if( ( Components.lookup( "eucalyptus" ).isLocal( ) && c.getPeer( ).isCloudLocal( ) || ( c.getPeer( ).isAlwaysLocal( ) ) ) ) {
+      if( ( Components.lookup( "eucalyptus" ).isLocal( ) && c.getIdentity( ).isCloudLocal( ) || ( c.getIdentity( ).isAlwaysLocal( ) ) ) ) {
         Component.Transition.STARTING.transit( c );
         Component.Transition.READY_CHECK.transit( c );
         Component.Transition.ENABLING.transit( c );

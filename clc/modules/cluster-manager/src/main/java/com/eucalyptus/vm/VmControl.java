@@ -199,7 +199,7 @@ public class VmControl {
           try {
             VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
             if ( admin || v.getOwnerId( ).equals( userId ) ) {
-              Callbacks.newClusterRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getPlacement( ) );
+              Callbacks.newRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getPlacement( ) );
               return true;
             } else {
               return false;
@@ -250,7 +250,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPlacement( ) + "' related to vm: " + request.getInstanceId( ) );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-      Callbacks.newClusterRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+      Callbacks.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     }
   }
   

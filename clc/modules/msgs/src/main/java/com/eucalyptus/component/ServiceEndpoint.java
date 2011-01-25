@@ -75,6 +75,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
@@ -315,5 +316,9 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       } );
     }
     return false;
+  }
+
+  public ChannelPipelineFactory getPipelineFactory( ) {
+    return this.getParent( ).getParent( ).getIdentity( ).getClientPipeline( );
   }
 }

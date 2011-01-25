@@ -190,9 +190,9 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   @Override
   public String toString( ) {
     return String.format( "Service %s name=%s endpoint=%s\nService %s name=%s serviceConfiguration=%s\nService %s name=%s keys=%s", 
-                          this.parent.getPeer( ), this.name, this.endpoint, 
-                          this.parent.getPeer( ), this.name, this.serviceConfiguration, 
-                          this.parent.getPeer( ), this.name, this.keys );
+                          this.parent.getIdentity( ), this.name, this.endpoint, 
+                          this.parent.getIdentity( ), this.name, this.serviceConfiguration, 
+                          this.parent.getIdentity( ), this.name, this.keys );
   }
 
   /**

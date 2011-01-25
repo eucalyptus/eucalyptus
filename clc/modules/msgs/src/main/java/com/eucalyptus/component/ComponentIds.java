@@ -63,13 +63,23 @@
 
 package com.eucalyptus.component;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
 
 public class ComponentIds {
-  
+  private static Logger LOG = Logger.getLogger( ComponentIds.class );
+  private static final Map<Class,ComponentId> compIdMap = new HashMap<Class,ComponentId>( );
+  public static ComponentId lookup( Class compIdClass ) {
+    if( !compIdMap.containsKey( compIdClass ) ) {
+      throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );
+    } else {
+      return compIdMap.get( compIdClass );
+    }
+  }
   public static ComponentId lookup( String name ) {
-    Map<String,ComponentId> map = Components.lookup( ComponentId.class );
+    Map<String,ComponentId> map = Components.lookupMap( ComponentId.class );
     if( !map.containsKey( name ) ) {
       throw new NoSuchElementException( "No ComponentId with name: " + name );
     } else {
@@ -78,8 +88,20 @@ public class ComponentIds {
   }
 
   public static void register( ComponentId componentId ) {
-    Map<String,ComponentId> map = Components.lookup( ComponentId.class );
+    Map<String,ComponentId> map = Components.lookupMap( ComponentId.class );
     map.put( componentId.getName( ), componentId );
+    compIdMap.put( componentId.getClass( ), componentId );
   }
 
+  public static Object checkDeprecated( Object inst ) {
+    if( com.eucalyptus.bootstrap.Component.class.equals( inst.getClass( ) ) ) {
+      LOG.error( "Deprecated usage of com.eucalyptus.bootstrap.Component for event dispatch.  Please use the corresponding ComponentId.class type." );
+      String old = ((com.eucalyptus.bootstrap.Component) inst ).name( );
+      ComponentId compId = ComponentIds.lookup( old );
+      LOG.error( "For " + old + " it is " + compId.getClass( ).getCanonicalName( ) ); 
+      return compId;
+    } else {
+      return inst;
+    }
+  }
 }

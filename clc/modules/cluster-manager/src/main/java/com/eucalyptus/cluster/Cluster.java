@@ -88,6 +88,7 @@ import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.Services;
@@ -391,7 +392,12 @@ public class Cluster implements HasName<Cluster>, EventListener {
     if ( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;
       try {
+        /** TODO:ASAP:GRZE: RESTORE 
+        Callbacks.newRequest( new LogDataCallback( this, null ) )
+        .execute( this.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+        .getResponse( ).get( );
         Callbacks.newLogRequest( new LogDataCallback( this, null ) ).dispatch( this.getServiceEndpoint( ) );
+        **/
       } catch ( Throwable t ) {
         LOG.error( t, t );
       } finally {
@@ -418,7 +424,12 @@ public class Cluster implements HasName<Cluster>, EventListener {
     if ( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;
       try {
-        Callbacks.newLogRequest( new LogDataCallback( this, nodeInfo ) ).dispatch( this.getServiceEndpoint( ) );
+        /** TODO:ASAP:GRZE: RESTORE 
+        Callbacks.newRequest( new LogDataCallback( this, null ) )
+        .execute( this.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+        .getResponse( ).get( );
+         **/
+//        Callbacks.newLogRequest( new LogDataCallback( this, nodeInfo ) ).dispatch( this.getServiceEndpoint( ) );
       } catch ( Throwable t ) {
         LOG.debug( t, t );
       } finally {
@@ -490,9 +501,11 @@ public class Cluster implements HasName<Cluster>, EventListener {
         //TODO: retry.
         try {
           if ( ClusterLogMessageCallback.class.isAssignableFrom( msgClass ) ) {
-            Callbacks.newLogRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
+            Callbacks.newRequest( factory.newInstance( ) ).then( cb )
+            .execute( parent.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+            .getResponse( ).get( );
           } else {
-            Callbacks.newClusterRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
+            Callbacks.newRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
           }
         } catch ( ExecutionException e ) {
           if ( e.getCause( ) instanceof FailedRequestException ) {
@@ -527,7 +540,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
 
   private void updateVolatiles( ) {
     try {
-      Callbacks.newClusterRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
+      Callbacks.newRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
     } catch ( ExecutionException ex ) {
       Exceptions.trace( ex );
     } catch ( InterruptedException ex ) {

@@ -559,16 +559,6 @@ public class Component implements ComponentInformation, HasName<Component> {
   /**
    * REMOVE: promptly. Don't even think about using this.
    * 
-   * @deprecated for sucking.
-   */
-  @Deprecated
-  public com.eucalyptus.bootstrap.Component getPeer( ) {
-    return this.component;
-  }
-  
-  /**
-   * REMOVE: promptly. Don't even think about using this.
-   * 
    * @deprecated for sucking, too.
    */
   @Deprecated

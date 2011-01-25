@@ -127,7 +127,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   public static PrintWriter getWriter( Class parentType ) {
     LOG.info( "Preparing JSON descriptor file: " + parentType.getCanonicalName( ) );
     if ( !outputMap.containsKey( parentType ) ) {
-      File outFile = new File( "modules/msgs/src/main/resources/json/" + parentType.getSimpleName( ) + ".json" );
+      File outFile = new File( "modules/msgs/src/main/resources/json/" + parentType.getSimpleName( ).replaceAll("Type\\Z","") + ".json" );
       if ( !outFile.getParentFile( ).exists( ) ) {
         outFile.getParentFile( ).mkdirs( );
       }
@@ -385,7 +385,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
         this.beginElem( );
         this.attr( "schema-version", "0.1" );
         this.attr( "service-version", "\"http://msgs.eucalyptus.com/\"" );
-        this.attr( "name", makeJSONName( this.requestInfo.getRequest( ).getSimpleName( ) ) );
+        this.attr( "name", makeJSONName( this.requestInfo.getRequest( ).getSimpleName( ).replaceAll("Type\\Z","") ) );
         this.beginList( "parameters" );
         for ( Field f : getRecursiveFields( this.requestInfo.getParent( ), this.requestInfo.getRequest( ) ) ) {
           TypeBinding tb = getTypeBinding( f );

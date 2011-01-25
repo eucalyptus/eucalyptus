@@ -63,6 +63,7 @@
 package com.eucalyptus.util.async;
 
 import java.util.concurrent.ExecutionException;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ServiceEndpoint;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -82,6 +83,7 @@ public interface Request<Q extends BaseMessage, R extends BaseMessage> {
    * @throws InterruptedException
    */
   public abstract R sendSync( ServiceEndpoint endpoint ) throws ExecutionException, InterruptedException;
+  public Request<Q, R> execute( ServiceEndpoint endpoint, ChannelPipelineFactory pipelineFactory );
   //ASAP: add time information
   /**
    * TODO: DOCUMENT Request.java

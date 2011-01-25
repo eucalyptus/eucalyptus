@@ -233,10 +233,10 @@ public class Configuration {
       for( Component c : Components.list( ) ) {
         for ( Service s : c.getServices( ) ) {
           ServiceConfiguration conf = s.getServiceConfiguration( );
-          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
                                                   conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), "" ) );
           for( String d : s.getDetails( ) ) {
-            listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+            listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
                                                     conf.getName( ), "detail", d, "" ) );
           }
         }        

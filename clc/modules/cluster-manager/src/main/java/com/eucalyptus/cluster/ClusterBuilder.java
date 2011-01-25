@@ -75,7 +75,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Starting up cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
     try {
       if( Components.lookup( Components.delegate.eucalyptus ).isLocal( ) ) {
         try {
@@ -204,7 +204,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       LOG.error( e, e );
       credDb.rollback( );
     }
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
     Clusters.stop( cluster.getName( ) );
     for( Group g : Groups.listAllGroups( ) ) {
       for( Authorization auth : g.getAuthorizations( ) ) {
@@ -240,7 +240,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
    */
   @Override
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    return new RemoteConfiguration( null, this.getComponent( ).getPeer( ), uri );
+    return new RemoteConfiguration( null, this.getComponent( ).getIdentity( ), uri );
   }
   
 }

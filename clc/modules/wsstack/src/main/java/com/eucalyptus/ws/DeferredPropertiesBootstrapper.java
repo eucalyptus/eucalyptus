@@ -94,7 +94,7 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
 		for ( Component comp : Components.list( ) ) {
 			for ( ServiceConfiguration s : comp.list( ) ) {
 				if(!s.isLocal()) {
-					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponent().name());
+					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponentId().name());
 					for ( ConfigurableProperty prop : props ) {
 						ConfigurableProperty addProp = null;
 						if (prop instanceof SingletonDatabasePropertyEntry) {

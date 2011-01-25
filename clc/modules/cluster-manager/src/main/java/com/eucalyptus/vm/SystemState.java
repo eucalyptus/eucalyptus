@@ -331,7 +331,7 @@ public class SystemState {
           } catch ( EucalyptusCloudException e ) {
             LOG.error( e );
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-            Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+            Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.trace( e );
           }
@@ -346,7 +346,7 @@ public class SystemState {
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+      Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     } catch ( Throwable t ) {
       LOG.error( t, t );
     }

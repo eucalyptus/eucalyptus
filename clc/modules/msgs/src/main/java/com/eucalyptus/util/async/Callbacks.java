@@ -43,20 +43,16 @@ public class Callbacks {
     }
   }
   
-  public static <A extends BaseMessage, B extends BaseMessage> Request<A, B> newRequest( final RemoteCallback<A, B> msgCallback, ChannelPipelineFactory factory ) {
-    return new AsyncRequest( msgCallback, factory ) {
+  public static <A extends BaseMessage, B extends BaseMessage> Request<A, B> newRequest( final RemoteCallback<A, B> msgCallback ) {
+    return new AsyncRequest( msgCallback ) {
       {
         setRequest( msgCallback.getRequest( ) );
       }
     };
   }
 
-  public static <A extends BaseMessage, B extends BaseMessage> Request<A, B> newLogRequest( final RemoteCallback<A, B> msgCallback ) {
-    return newRequest( msgCallback, Pipelines.getLogPipelineFactory( ) );
-  }
-  
   public static <A extends BaseMessage, B extends BaseMessage> Request<A, B> newClusterRequest( final RemoteCallback<A, B> msgCallback ) {
-    return newRequest( msgCallback, Pipelines.getClusterPipelineFactory( ) );
+    return newRequest( msgCallback );
   }
   
   public static <T> Callback<T> noop( ) {

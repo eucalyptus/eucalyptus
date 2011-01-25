@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.event.StartComponentEvent;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
@@ -76,7 +77,7 @@ public class BlockStorageEventListener implements EventListener {
 	private static Logger LOG  = Logger.getLogger( BlockStorageEventListener.class );
 
 	public static void register() {
-		ListenerRegistry.getInstance( ).register( Component.storage, new BlockStorageEventListener() );
+		ListenerRegistry.getInstance( ).register( Storage.class, new BlockStorageEventListener() );
 	}
 
 	@Override

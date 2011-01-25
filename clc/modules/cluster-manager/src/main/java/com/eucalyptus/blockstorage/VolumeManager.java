@@ -359,7 +359,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
-    Callbacks.newClusterRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+    Callbacks.newRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
     vm.addVolumeAttachment( attachVol );
@@ -430,7 +430,7 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice( ) );
     request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
     request.setInstanceId( vm.getInstanceId( ) );
-    Callbacks.newClusterRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+    Callbacks.newRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
                .withDetails( vm.getOwnerId( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster", vm.getPlacement( ) ).info( );
     reply.setDetachedVolume( volume );

@@ -128,7 +128,7 @@ public class ClusterEndpoint implements Startable {
       }
       ConfigureNetworkCallback configureNetwork = new ConfigureNetworkCallback( existingNet.getUserName( ), rules );
       for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-        Callbacks.newClusterRequest( configureNetwork.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
+        Callbacks.newRequest( configureNetwork.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
       }
     } catch ( NoSuchElementException e ) {
       LOG.error( "Changed network rules not applied to inactive network: " + net.getName( ) );

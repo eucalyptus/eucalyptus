@@ -8,6 +8,9 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.mule.config.ConfigResource;
 import com.eucalyptus.auth.principal.credential.HmacPrincipal;
 import com.eucalyptus.auth.principal.credential.X509Principal;
@@ -157,4 +160,34 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   @Override public final void setSecretKey( String secretKey ) { throw new RuntimeException( "setSecretKey is not implemented for component principals." ); }  
   @Override public final void setX509Certificate( X509Certificate cert ) { throw new RuntimeException( "setX509Certificate is not implemented for component principals." ); }
   @Override public final void revokeX509Certificate( ) { throw new RuntimeException( "revokeX509Certificate is not implemented for component principals." ); }
+
+  public ChannelPipelineFactory getClientPipeline( ) {
+    return new ChannelPipelineFactory( ) {
+      
+      @Override
+      public ChannelPipeline getPipeline( ) throws Exception {
+        return Channels.pipeline( );
+      }
+    };
+  }
+
+  protected static ChannelPipelineFactory helpGetClientPipeline( String fqName ) {
+    try {
+      return ( ChannelPipelineFactory ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ).newInstance( );
+    } catch ( InstantiationException ex ) {
+      LOG.error( ex, ex );
+    } catch ( IllegalAccessException ex ) {
+      LOG.error( ex, ex );
+    } catch ( ClassNotFoundException ex ) {
+      LOG.error( ex, ex );
+    }
+    return new ChannelPipelineFactory( ) {
+      
+      @Override
+      public ChannelPipeline getPipeline( ) throws Exception {
+        return Channels.pipeline( );
+      }
+    };
+  }
+
 }
