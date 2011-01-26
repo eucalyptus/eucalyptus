@@ -71,6 +71,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.bootstrap.ComponentPart;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -122,6 +123,9 @@ public class PipelineRegistry {
     if ( candidate == null ) {
       if ( LogLevels.DEBUG && request instanceof MappingHttpMessage ) {
         ((MappingHttpMessage)request).logMessage( );
+        for( FilteredPipeline p : this.pipelines ) {
+          LOG.debug( "PIPELINE: " + p );
+        }
       }
       throw new NoAcceptingPipelineException( ); 
     }
