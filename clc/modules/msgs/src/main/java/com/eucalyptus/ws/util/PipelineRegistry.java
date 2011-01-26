@@ -127,14 +127,14 @@ public class PipelineRegistry {
 
   public void enable( ComponentId compId ) {
     for( FilteredPipeline pipeline : this.componentPipelines.get( compId ) ) {
-      LOG.info( "-> Registering component pipeline: " + compId + " " + pipeline );
+      LOG.info( "-> Registering component pipeline: " + compId.getName( ) + " " + pipeline );
     }
     this.pipelines.addAll( this.componentPipelines.get( compId ) );
   }
   
   public void disable( ComponentId compId ) {
     for( FilteredPipeline pipeline : this.componentPipelines.get( compId ) ) {
-      LOG.info( "-> Deregistering pipeline: " + compId + " " + pipeline );
+      LOG.info( "-> Deregistering pipeline: " + compId.getName( ) + " " + pipeline );
     }
     this.pipelines.removeAll( this.componentPipelines.get( compId ) );
   }
