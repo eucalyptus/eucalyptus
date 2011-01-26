@@ -75,18 +75,18 @@ import com.eucalyptus.ws.util.PipelineRegistry;
 public class NioMessageReceiver extends AbstractMessageReceiver {
   
   private static Logger    LOG = Logger.getLogger( NioMessageReceiver.class );
-  private final FilteredPipeline soapPipeline;
-  private final FilteredPipeline queryPipeline;
+  private FilteredPipeline soapPipeline;
+  private FilteredPipeline queryPipeline;
   
   @SuppressWarnings( "unchecked" )
   public NioMessageReceiver( Connector connector, Service service, InboundEndpoint endpoint ) throws CreateException {
     super( connector, service, endpoint );
     Class serviceClass = ( ( JavaComponent ) this.getService( ).getComponent( ) ).getObjectType( );
-    soapPipeline = new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
-    queryPipeline = new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
   }
   
   public void doConnect( ) throws ConnectException {
+    soapPipeline = new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
+    queryPipeline = new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
     PipelineRegistry.getInstance( ).register( soapPipeline );
     PipelineRegistry.getInstance( ).register( queryPipeline );
   }
