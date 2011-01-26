@@ -64,6 +64,8 @@
 package com.eucalyptus.ws.util;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
@@ -96,7 +98,7 @@ public class PipelineRegistry {
     return PipelineRegistry.registry;
   }
 
-  private final Set<FilteredPipeline> pipelines = new ConcurrentSkipListSet<FilteredPipeline>( );
+  private final List<FilteredPipeline> pipelines = new ArrayList<FilteredPipeline>( );
 
   public void register( final FilteredPipeline pipeline ) {
     LOG.info( "-> Registering pipeline: " + pipeline );
