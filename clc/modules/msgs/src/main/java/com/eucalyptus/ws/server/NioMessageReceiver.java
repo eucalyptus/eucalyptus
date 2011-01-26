@@ -109,8 +109,12 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
   public void doDispose( ) {}
   
   public void doDisconnect( ) throws ConnectException {
-    PipelineRegistry.getInstance( ).deregister( soapPipeline );
-    PipelineRegistry.getInstance( ).deregister( queryPipeline );
+    if( soapPipeline != null ) {
+      PipelineRegistry.getInstance( ).deregister( soapPipeline );
+    }
+    if( queryPipeline != null ) {
+      PipelineRegistry.getInstance( ).deregister( queryPipeline );
+    }
   }
   
 }

@@ -130,8 +130,10 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
-      if ( LogLevels.TRACE ) {
+      if ( LogLevels.EXTREME ) {
+        LOG.trace( "============================================" );
         LOG.trace( request.getContent( ).toString( "UTF-8" ) );
+        LOG.trace( "============================================" );
       }
       final ChannelPipeline pipeline = ctx.getPipeline( );
       FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
