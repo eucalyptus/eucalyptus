@@ -65,12 +65,14 @@ package com.eucalyptus.http;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.DefaultHttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.principal.User;
 
 public abstract class MappingHttpMessage extends DefaultHttpMessage implements HttpMessage {
+  private static Logger LOG = Logger.getLogger( MappingHttpMessage.class );
   private String       correlationId;
   private String       messageString;
   private SOAPEnvelope soapEnvelope;
@@ -144,4 +146,14 @@ public abstract class MappingHttpMessage extends DefaultHttpMessage implements H
     this.correlationId = correlationId;
   }
   
+  public void logMessage( ) {
+    LOG.trace( "============================================" );
+    LOG.trace( "HTTP" + this.getProtocolVersion( ) );
+    for( String s : this.getHeaderNames( ) ) {
+      LOG.trace( s + ": " + this.getHeader( s ) ); 
+    }
+    LOG.trace( "============================================" );
+    LOG.trace( this.getContent( ).toString( "UTF-8" ) );
+    LOG.trace( "============================================" );
+  }
 }

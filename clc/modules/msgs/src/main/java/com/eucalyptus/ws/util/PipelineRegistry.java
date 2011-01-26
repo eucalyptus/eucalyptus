@@ -71,6 +71,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.bootstrap.ComponentPart;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
@@ -118,7 +119,12 @@ public class PipelineRegistry {
         }
       }
     }
-    if ( candidate == null ) { throw new NoAcceptingPipelineException( ); }
+    if ( candidate == null ) {
+      if ( LogLevels.DEBUG && request instanceof MappingHttpMessage ) {
+        ((MappingHttpMessage)request).logMessage( );
+      }
+      throw new NoAcceptingPipelineException( ); 
+    }
     if ( LogLevels.TRACE ) {
       EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, candidate.toString( ) ).debug( );
     }

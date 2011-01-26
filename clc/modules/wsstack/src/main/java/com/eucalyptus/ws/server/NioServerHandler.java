@@ -90,6 +90,7 @@ import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.ServiceNotReadyException;
@@ -130,15 +131,8 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
-      if ( LogLevels.EXTREME ) {
-        LOG.trace( "============================================" );
-        LOG.trace( "HTTP" + request.getProtocolVersion( ) + " " + request.getMethod( ) + " " + request.getUri( ) );
-        for( String s : request.getHeaderNames( ) ) {
-          LOG.trace( s + ": " + request.getHeader( s ) ); 
-        }
-        LOG.trace( "============================================" );
-        LOG.trace( request.getContent( ).toString( "UTF-8" ) );
-        LOG.trace( "============================================" );
+      if ( LogLevels.EXTREME && request instanceof MappingHttpMessage ) {
+        ((MappingHttpMessage)request).logMessage( );
       }
       final ChannelPipeline pipeline = ctx.getPipeline( );
       FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
