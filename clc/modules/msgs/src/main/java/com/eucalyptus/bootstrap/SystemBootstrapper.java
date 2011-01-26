@@ -115,9 +115,12 @@ public class SystemBootstrapper {
 
   public boolean init( ) throws Exception {
     try {
-      boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
+      boolean doExtreme = "EXTREME".equals( System.getProperty( "euca.log.level" ) );
+      boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) ) || doExtreme;
       boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-      boolean doExtreme = System.getProperty( "euca.log.extreme" ) != null;//ASAP:GRZE:DOC
+      if( doExtreme ) {
+        System.setProperty( "euca.log.level", "TRACE" );        
+      }
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
       Security.addProvider( new BouncyCastleProvider( ) );
       LogLevels.DEBUG = doDebug;

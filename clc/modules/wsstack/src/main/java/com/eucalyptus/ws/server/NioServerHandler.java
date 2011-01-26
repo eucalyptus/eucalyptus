@@ -132,6 +132,11 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
       if ( LogLevels.EXTREME ) {
         LOG.trace( "============================================" );
+        LOG.trace( "HTTP" + request.getProtocolVersion( ) + " " + request.getMethod( ) + " " + request.getUri( ) );
+        for( String s : request.getHeaderNames( ) ) {
+          LOG.trace( s + ": " + request.getHeader( s ) ); 
+        }
+        LOG.trace( "============================================" );
         LOG.trace( request.getContent( ).toString( "UTF-8" ) );
         LOG.trace( "============================================" );
       }
