@@ -99,6 +99,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.util.ReplyQueue;
@@ -134,7 +135,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   @SuppressWarnings( "unchecked" )
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
+    if( LogLevels.EXTREME ) LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
     if ( e instanceof MessageEvent ) {
       final MessageEvent msge = ( MessageEvent ) e;
       if ( msge.getMessage( ) instanceof NullPayload ) {
@@ -203,7 +204,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   
   @Override
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-    LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
+    if( LogLevels.EXTREME ) LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]: " + e );
     if ( e instanceof ExceptionEvent ) {
       this.exceptionCaught( ctx, ( ExceptionEvent ) e );
     } else if ( e instanceof MessageEvent ) {
