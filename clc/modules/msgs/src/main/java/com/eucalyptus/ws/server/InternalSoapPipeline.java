@@ -80,7 +80,7 @@ public class InternalSoapPipeline extends FilteredPipeline {
   
   public InternalSoapPipeline( NioMessageReceiver msgReceiver, String serviceName, String servicePath ) {
     super( msgReceiver );
-    this.servicePath = servicePath.replaceAll( "/services/", "/internal/" );
+    this.servicePath = servicePath;
     this.serviceName = serviceName;
   }
   
