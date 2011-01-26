@@ -61,38 +61,32 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.stages;
+package com.eucalyptus.ws.handlers;
 
-import java.security.GeneralSecurityException;
+import java.util.Collection;
+import org.apache.ws.security.WSEncryptionPart;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.ws.util.CredentialProxy;
+import com.google.common.collect.Lists;
 
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
+public class ClusterWsSecHandler extends WsSecHandler {
+  private static final String WSA_NAMESPACE = "http://www.w3.org/2005/08/addressing";
 
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.wssecurity.UserWsSecHandler;
-
-public class SoapInternalAuthenticationStage implements UnrollableStage {
-  private static Logger LOG = Logger.getLogger( SoapInternalAuthenticationStage.class );
-
-  @Override
-  public String getStageName( ) {
-    return "soap-internal-authentication";
+  public ClusterWsSecHandler( ) {
+    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getPrivateKey( ) ) );
   }
 
   @Override
-  public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
-    try {
-      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
-    } catch ( GeneralSecurityException e ) {
-      LOG.error(e,e);
-    }
-    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
-    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
+  public Collection<WSEncryptionPart> getSignatureParts() {
+    return Lists.newArrayList( new WSEncryptionPart( "To", WSA_NAMESPACE, "Content" ),new WSEncryptionPart( "MessageID", WSA_NAMESPACE, "Content" ), new WSEncryptionPart( "Action", WSA_NAMESPACE, "Content" ) );
+  }
+  
+  
+
+  @Override
+  public boolean shouldTimeStamp() {
+    return false;
   }
 
 }

@@ -83,6 +83,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class X509Download extends HttpServlet {
@@ -159,7 +160,7 @@ public class X509Download extends HttpServlet {
       keyPair = Certs.generateKeyPair( );
       x509 = Certs.generateCertificate( keyPair, userName );
       x509.checkValidity( );
-      cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
+      cloudCert = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
       u.revokeX509Certificate( );
       u.setX509Certificate( x509 );
       //      Transactions.one( new UserEntity( userName ), new Tx<UserEntity>() {

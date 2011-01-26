@@ -76,7 +76,7 @@ import com.eucalyptus.auth.login.HmacCredentials;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.server.EucalyptusQueryPipeline.RequiredQueryParams;
+import com.eucalyptus.ws.protocol.RequiredQueryParams;
 
 @ChannelPipelineCoverage( "one" )
 public class HmacHandler extends MessageStackHandler {

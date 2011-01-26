@@ -62,6 +62,9 @@
  */
 package com.eucalyptus.auth.principal;
 
+import java.math.BigInteger;
+import java.security.cert.X509Certificate;
+import java.util.List;
 import com.eucalyptus.auth.principal.credential.HmacPrincipal;
 import com.eucalyptus.auth.principal.credential.X509Principal;
 
@@ -79,4 +82,29 @@ public abstract interface User extends BasePrincipal, X509Principal, HmacPrincip
   public abstract User getDelegate( );
   public abstract String getPassword( );
   public abstract void setPassword( String password );
+  public static final User DUMMY_ADMIN = new User() {
+    @Override public String getName( ) {
+      return "admin";
+    }
+    @Override public X509Certificate getX509Certificate( ) { return null; }
+
+    @Override public List<X509Certificate> getAllX509Certificates( ) { return null; }
+    @Override public void setX509Certificate( X509Certificate cert ) {}    
+    @Override public void revokeX509Certificate( ) {}    
+    @Override public BigInteger getNumber( ) { return BigInteger.ZERO; }
+    @Override public void revokeSecretKey( ) {}
+    @Override public String getQueryId( ) { return null; }
+    @Override public String getSecretKey( ) { return null; }
+    @Override public void setQueryId( String queryId ) {}
+    @Override public void setSecretKey( String secretKey ) {}
+    @Override public Boolean isAdministrator( ) { return true; }
+    @Override public void setAdministrator( Boolean admin ) {}
+    @Override public Boolean isEnabled( ) { return true; }
+    @Override public void setEnabled( Boolean enabled ) {}
+    @Override public String getToken( ) { return null; }
+    @Override public boolean checkToken( String testToken ) { return true; }
+    @Override public User getDelegate( ) { return null; }
+    @Override public String getPassword( ) { return null; }
+    @Override public void setPassword( String password ) {}
+  };
 }

@@ -79,6 +79,7 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.ImageUtil;
@@ -198,7 +199,7 @@ public class WalrusUtil {
 		if ( !found ) throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature." );
 
 		try {
-			PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
+			PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getPrivateKey();
 			Cipher cipher = Cipher.getInstance( "RSA/ECB/PKCS1Padding" );
 			cipher.init( Cipher.DECRYPT_MODE, pk );
 			cipher.doFinal( Hashes.hexToBytes( encryptedKey ) );

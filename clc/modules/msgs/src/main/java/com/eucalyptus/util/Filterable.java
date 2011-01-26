@@ -61,34 +61,10 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.ws.client.pipeline;
+package com.eucalyptus.util;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
-import com.eucalyptus.ws.util.ChannelUtil;
-
-public final class GatherLogClientPipeline implements ChannelPipelineFactory {
-  @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-//    ChannelUtil.addPipelineMonitors( pipeline, 60 );
-    pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 5242880 ) );
-    pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
-    pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
-    pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusGL#" ) );
-    pipeline.addLast( "soap", new SoapHandler( ) );
-    pipeline.addLast( "binding",
-                      new BindingHandler( BindingManager.getBinding( "eucalyptus_ucsb_edu" ) ) );
-    return pipeline;
-  }
+public interface Filterable<T> {
+  
+  public abstract boolean checkAccepts( T candidate );
+  
 }

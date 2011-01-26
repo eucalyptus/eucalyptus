@@ -61,7 +61,7 @@
 /*
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.handlers;
+package com.eucalyptus.ws.server;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -80,20 +80,13 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
-import org.mule.DefaultMuleEvent;
 import org.mule.DefaultMuleMessage;
-import org.mule.DefaultMuleSession;
-import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
-import org.mule.api.MuleSession;
 import org.mule.api.endpoint.InboundEndpoint;
-import org.mule.api.endpoint.OutboundEndpoint;
 import org.mule.api.service.Service;
 import org.mule.api.transport.DispatchException;
-import org.mule.transport.AbstractConnector;
 import org.mule.transport.NullPayload;
-import org.mule.transport.vm.VMMessageDispatcherFactory;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.context.Context;
@@ -108,7 +101,6 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.client.NioMessageReceiver;
 import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -118,7 +110,6 @@ import edu.ucsb.eucalyptus.msgs.EnableServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
-import edu.ucsb.eucalyptus.msgs.ServiceTransitionType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )

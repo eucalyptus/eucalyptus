@@ -79,7 +79,7 @@ public class HmacUserAuthenticationStage implements UnrollableStage {
   }
 
   @Override
-  public String getStageName( ) {
+  public String getName( ) {
     return "hmac-user-authentication";
   }
 
@@ -89,9 +89,9 @@ public class HmacUserAuthenticationStage implements UnrollableStage {
     pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
   }
 
-  public static class Internal extends HmacUserAuthenticationStage {
-    public Internal(){
-      super(true);
-    }
+  @Override
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
   }
+
 }

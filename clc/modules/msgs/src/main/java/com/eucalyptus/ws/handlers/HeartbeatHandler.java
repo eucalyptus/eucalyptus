@@ -65,7 +65,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -77,7 +76,6 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -86,18 +84,14 @@ import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.util.SslSetup;
-import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.StartComponentEvent;
@@ -114,17 +108,13 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
-import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 
 @ChannelPipelineCoverage( "one" )
-public class HeartbeatHandler extends SimpleChannelHandler implements UnrollableStage {
+public class HeartbeatHandler extends SimpleChannelHandler {
   private static Logger        LOG                   = Logger.getLogger( HeartbeatHandler.class );
   private Channel              channel;
   private static AtomicBoolean initialized           = new AtomicBoolean( false );
@@ -220,66 +210,6 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       LOG.error( e, e );
       System.exit( 123 );
     }
-  }
-  
-  @Override
-  public String getStageName( ) {
-    return "heartbeat";
-  }
-  
-  @Override
-  public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "hb-get-handler", new SimpleHeartbeatHandler( ) );
-    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
-    try {
-      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
-    } catch ( GeneralSecurityException e ) {
-      LOG.error( e, e );
-    }
-    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
-    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    try {
-      pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
-    } catch ( BindingException e ) {
-      LOG.error( e, e );
-    }
-    pipeline.addLast( "heartbeat", new HeartbeatHandler( ) );
-  }
-  
-  @ChannelPipelineCoverage( "one" )
-  public static class SimpleHeartbeatHandler extends SimpleChannelHandler {
-    
-    @Override
-    public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-      if ( e.getMessage( ) instanceof MappingHttpRequest && HttpMethod.GET.equals( ( ( MappingHttpRequest ) e.getMessage( ) ).getMethod( ) ) ) {
-        MappingHttpRequest request = ( MappingHttpRequest ) e.getMessage( );
-        try {
-          HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
-          String resp = "";
-          for ( Component c : Components.list( ) ) {
-            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isLocal( ),
-                                   c.isRunningLocally( ) );
-          }
-          ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
-          response.setContent( buf );
-          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
-          response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-          ChannelFuture writeFuture = ctx.getChannel( ).write( response );
-          writeFuture.addListener( ChannelFutureListener.CLOSE );
-        } finally {
-          Contexts.clear( request.getCorrelationId( ) );
-        }
-      } else {
-        ctx.sendUpstream( e );
-      }
-    }
-    
-    @Override
-    public void exceptionCaught( ChannelHandlerContext ctx, ExceptionEvent e ) throws Exception {
-      e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-      super.exceptionCaught( ctx, e );
-    }
-    
   }
   
   @Override
@@ -399,5 +329,5 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   public void writeComplete( ChannelHandlerContext ctx, WriteCompletionEvent e ) throws Exception {
     super.writeComplete( ctx, e );
   }
-  
+
 }

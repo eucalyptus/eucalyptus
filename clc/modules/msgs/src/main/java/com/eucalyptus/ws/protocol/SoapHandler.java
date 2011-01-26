@@ -61,71 +61,88 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.handlers.wssecurity;
+package com.eucalyptus.ws.protocol;
 
-import java.security.GeneralSecurityException;
-import java.security.cert.X509Certificate;
-import java.util.Collection;
-import org.apache.axiom.soap.SOAP11Constants;
-import org.apache.axiom.soap.SOAPConstants;
+import java.util.Iterator;
+import java.util.List;
+import org.apache.axiom.om.OMElement;
 import org.apache.axiom.soap.SOAPEnvelope;
-import org.apache.ws.security.WSConstants;
-import org.apache.ws.security.WSEncryptionPart;
-import org.apache.ws.security.WSSecurityException;
-import org.apache.xml.security.signature.XMLSignature;
+import org.apache.axiom.soap.SOAPFault;
+import org.apache.axiom.soap.SOAPHeader;
+import org.apache.axiom.soap.SOAPHeaderBlock;
+import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import org.w3c.dom.Element;
-import com.eucalyptus.auth.DatabaseWrappedUser;
-import com.eucalyptus.auth.UserEntity;
-import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.WSSecurity;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.context.Contexts;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpMessage;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.util.CredentialProxy;
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
-@ChannelPipelineCoverage("one")
-public class InternalWsSecHandler extends WsSecHandler {
-
-  public InternalWsSecHandler( ) throws GeneralSecurityException {
-    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( ) ) );
-  }
+@ChannelPipelineCoverage( "all" )
+public class SoapHandler extends MessageStackHandler {
+  private static Logger     LOG                              = Logger.getLogger( SoapHandler.class );
 
   @Override
-  public Collection<WSEncryptionPart> getSignatureParts( ) {
-    return Lists.newArrayList( new WSEncryptionPart( WSConstants.TIMESTAMP_TOKEN_LN, WSConstants.WSU_NS, "Content" ), new WSEncryptionPart( SOAPConstants.BODY_LOCAL_NAME, SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI, "Content" ) );
-  }
-
-  @Override
-  public boolean shouldTimeStamp( ) {
-    return true;
-  }
-
-  @Override
-  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-    final Object o = event.getMessage( );
-    if ( o instanceof MappingHttpRequest ) {
-      final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
-      final SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
-      final Element secNode = WSSecurity.getSecurityElement( envelope );
-      final XMLSignature sig = WSSecurity.getXMLSignature( secNode );
-      SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
-      final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
-      if(cert != null) {
-        if( !cert.equals( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ) ) ) {
-          throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
+  public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
+    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
+      final MappingHttpMessage message = ( MappingHttpMessage ) event.getMessage( );
+      final SOAPEnvelope env = message.getSoapEnvelope( );
+      if ( !env.hasFault( ) ) {
+        message.setOmMessage( env.getBody( ).getFirstElement( ) );
+      } else {
+        final SOAPHeader header = env.getHeader( );
+        if(header != null) {
+        final List<SOAPHeaderBlock> headers = Lists.newArrayList( header.examineAllHeaderBlocks( ) );        
+        // :: try to get the fault info from the soap header -- hello there? :://
+        String action = "ProblemAction";
+        String relatesTo = "RelatesTo";
+        for ( final SOAPHeaderBlock headerBlock : headers ) {
+          if ( action.equals( headerBlock.getLocalName( ) ) ) {
+            action = headerBlock.getText( );
+          } else if ( relatesTo.equals( headerBlock.getLocalName( ) ) ) {
+            relatesTo = headerBlock.getText( );
+          }
+        }        
+        // :: process the real fault :://
+        final SOAPFault fault = env.getBody( ).getFault( );
+        if(fault != null) {
+        String faultReason = "";
+        final Iterator children = fault.getChildElements( );
+        while ( children.hasNext( ) ) {
+          final OMElement child = ( OMElement ) children.next( );
+          faultReason += child.getText( );
+        }
+        final String faultCode = fault.getCode( ).getText( );
+        faultReason = faultReason.replaceAll( faultCode, "" );        
+        throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason );
+        }
         }
       }
-      UserEntity user = new UserEntity( "admin", true );
-      user.setAdministrator( true );
-      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( user );
     }
   }
+
+  @Override
+  public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
+    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
+      final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
+      if( httpMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
+        EucalyptusErrorMessageType errMsg = (EucalyptusErrorMessageType) httpMessage.getMessage( );
+        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
+        if( httpMessage instanceof MappingHttpResponse ) {
+          ((MappingHttpResponse) httpMessage).setStatus( HttpResponseStatus.INTERNAL_SERVER_ERROR );
+        }
+      } else {
+        // :: assert sourceElem != null :://
+        httpMessage.setSoapEnvelope( HoldMe.getOMSOAP11Factory( ).getDefaultEnvelope( ) );
+        httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage( ) );
+      }
+    }
+  }
+
 }

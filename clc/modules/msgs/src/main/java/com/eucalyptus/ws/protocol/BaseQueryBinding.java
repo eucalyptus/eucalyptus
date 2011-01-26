@@ -61,13 +61,8 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.ws.handlers;
+package com.eucalyptus.ws.protocol;
 
-import edu.emory.mathcs.backport.java.util.Arrays;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import groovy.lang.GroovyObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -83,8 +78,13 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
+import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Arrays;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import groovy.lang.GroovyObject;
 
 public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandler {
   private static Logger LOG = Logger.getLogger( BaseQueryBinding.class );

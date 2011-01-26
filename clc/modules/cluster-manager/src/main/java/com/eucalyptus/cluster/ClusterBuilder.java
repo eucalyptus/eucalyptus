@@ -27,6 +27,7 @@ import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.RemoteConfiguration;
@@ -133,7 +134,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         PEMFiles.write( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
         PEMFiles.write( directory + File.separator + "node-cert.pem", nodeX509 );
         
-        X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
+        X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
         String hexSig = Hmacs.generateSystemToken( "vtunpass".getBytes( ) );
         PEMFiles.write( directory + File.separator + "cloud-cert.pem", systemX509 );
         out = new FileWriter( directory + File.separator + "vtunpass" );

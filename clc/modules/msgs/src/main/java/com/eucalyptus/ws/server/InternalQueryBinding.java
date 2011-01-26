@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -58,48 +58,19 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.client;
 
-import org.apache.log4j.Logger;
-import org.mule.api.component.JavaComponent;
-import org.mule.api.endpoint.InboundEndpoint;
-import org.mule.api.lifecycle.CreateException;
-import org.mule.api.service.Service;
-import org.mule.api.transport.Connector;
-import org.mule.transport.AbstractMessageReceiver;
-import org.mule.transport.ConnectException;
-import com.eucalyptus.ws.server.FilteredPipeline;
-import com.eucalyptus.ws.server.InternalQueryPipeline;
-import com.eucalyptus.ws.server.InternalSoapPipeline;
-import com.eucalyptus.ws.util.PipelineRegistry;
+package com.eucalyptus.ws.server;
 
-public class NioMessageReceiver extends AbstractMessageReceiver {
+import org.jboss.netty.channel.ChannelHandler;
+import com.eucalyptus.ws.protocol.BaseQueryBinding;
+import com.eucalyptus.ws.protocol.OperationParameter;
+
+public class InternalQueryBinding extends BaseQueryBinding<OperationParameter> implements ChannelHandler {
   
-  private static Logger    LOG = Logger.getLogger( NioMessageReceiver.class );
-  private FilteredPipeline soapPipeline;
-  private FilteredPipeline queryPipeline;
-  
-  @SuppressWarnings( "unchecked" )
-  public NioMessageReceiver( Connector connector, Service service, InboundEndpoint endpoint ) throws CreateException {
-    super( connector, service, endpoint );
-    Class serviceClass = ( ( JavaComponent ) this.getService( ).getComponent( ) ).getObjectType( );
+  public InternalQueryBinding( ) {
+    super( "http://ec2.amazonaws.com/doc/%s/", "2009-04-04", OperationParameter.Action, OperationParameter.Operation );
   }
-  
-  public void doConnect( ) throws ConnectException {
-    soapPipeline = new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
-    queryPipeline = new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
-    PipelineRegistry.getInstance( ).register( soapPipeline );
-    PipelineRegistry.getInstance( ).register( queryPipeline );
-  }
-  
-  public void doStart( ) {}
-  
-  public void doStop( ) {}
-  
-  public void doDispose( ) {}
-  
-  public void doDisconnect( ) throws ConnectException {}
   
 }

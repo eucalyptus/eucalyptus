@@ -70,8 +70,13 @@ import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler;
 
 public class WalrusUserAuthenticationStage implements UnrollableStage {
 
-	@Override
-	public String getStageName( ) {
+  @Override
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
+  }
+
+  @Override
+	public String getName( ) {
 		return "walrus-user-authentication";
 	}
 
@@ -79,4 +84,5 @@ public class WalrusUserAuthenticationStage implements UnrollableStage {
 	public void unrollStage( ChannelPipeline pipeline ) {
 		pipeline.addLast( "walrus-verify", new WalrusAuthenticationHandler( ) );
 	}
+
 }

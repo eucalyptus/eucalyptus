@@ -63,61 +63,40 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
-import com.eucalyptus.ws.client.NioMessageReceiver;
-import com.eucalyptus.ws.handlers.ServiceSinkHandler;
-import com.eucalyptus.ws.stages.UnrollableStage;
-import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.util.Filterable;
+import com.eucalyptus.util.HasName;
 
-public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
+public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
   private static Logger               LOG    = Logger.getLogger( FilteredPipeline.class );
-  private final List<UnrollableStage> stages = new ArrayList<UnrollableStage>( );
-  private NioMessageReceiver          msgReceiver;
+  private final NioMessageReceiver    msgReceiver;
   
   public FilteredPipeline( ) {
-    this.addStages( this.stages );
+    this.msgReceiver = null;
   }
   
   public FilteredPipeline( final NioMessageReceiver msgReceiver ) {
-    this.addStages( this.stages );
     this.msgReceiver = msgReceiver;
   }
   
-  public boolean accepts( final HttpRequest message ) {
-    final boolean result = this.checkAccepts( message );
-    if ( result && LogLevels.TRACE ) {
-      EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ).trace( );
-    }
-    return result;
-  }
-  
   @Override
-  public int compareTo( final FilteredPipeline o ) {
-    return ( this.getPipelineName( ) + this.getClass( ).getCanonicalName( ) ).compareTo( (this.getPipelineName( ) + o.getClass( ).getCanonicalName( ) ) );
+  public final int compareTo( final FilteredPipeline o ) {
+    return ( this.getName( ) + this.getClass( ).getCanonicalName( ) ).compareTo( ( this.getName( ) + o.getClass( ).getCanonicalName( ) ) );
   }
   
-  public abstract String getPipelineName( );
-  
-  public List<UnrollableStage> getStages( ) {
-    return this.stages;
-  }
+  public abstract String getName( );
   
   public void unroll( final ChannelPipeline pipeline ) {
     try {
-      for ( final UnrollableStage s : this.stages ) {
-        //        pipeline.addLast( "pre-" + s.getStageName( ), new UnrollableStage.StageBottomHandler( s ) );
-        s.unrollStage( pipeline );
-        //        pipeline.addLast( "post-" + s.getStageName( ), new UnrollableStage.StageTopHandler( s ) );
-      }
+      this.addHandlers( pipeline );
       if ( this.msgReceiver != null ) {
         pipeline.addLast( "service-sink", new ServiceSinkHandler( this.msgReceiver ) );
       } else {
@@ -129,15 +108,16 @@ public abstract class FilteredPipeline implements Comparable<FilteredPipeline> {
         }
       }
     } catch ( final Exception e ) {
-      LOG.error( "Error unrolling pipeline: " + this.getPipelineName( ) );
+      LOG.error( "Error unrolling pipeline: " + this.getName( ) );
       final ChannelFuture close = pipeline.getChannel( ).close( );
       close.awaitUninterruptibly( );
       LOG.error( "Forced pipeline to close due to exception: ", e );
     }
   }
   
-  protected abstract void addStages( List<UnrollableStage> stages );
+  public abstract ChannelPipeline addHandlers( ChannelPipeline pipeline );
   
-  protected abstract boolean checkAccepts( HttpRequest message );
+  @Override
+  public abstract boolean checkAccepts( HttpRequest message );
   
 }

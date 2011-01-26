@@ -61,42 +61,35 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.server;
+package com.eucalyptus.ws.handlers;
 
-import java.util.List;
+import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
+import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.auth.login.WsSecCredentials;
+import com.eucalyptus.http.MappingHttpMessage;
 
-import org.jboss.netty.handler.codec.http.HttpRequest;
+@ChannelPipelineCoverage( "one" )
+public class UserWsSecHandler extends MessageStackHandler implements ChannelHandler {
+  private static Logger             LOG = Logger.getLogger( UserWsSecHandler.class );
 
-import com.eucalyptus.ws.client.NioMessageReceiver;
-import com.eucalyptus.ws.stages.BindingStage;
-import com.eucalyptus.ws.stages.SoapInternalAuthenticationStage;
-import com.eucalyptus.ws.stages.UnrollableStage;
-
-public class InternalSoapPipeline extends FilteredPipeline {
-
-  private String servicePath;
-  private String serviceName;
-  
-  public InternalSoapPipeline( NioMessageReceiver msgReceiver, String serviceName, String servicePath ) {
-    super( msgReceiver );
-    this.servicePath = servicePath;
-    this.serviceName = serviceName;
+  @Override
+  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+    final Object o = event.getMessage( );
+    if ( o instanceof MappingHttpMessage ) {
+      final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
+      SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
+      SecurityContext.getLoginContext( new WsSecCredentials( httpRequest.getCorrelationId( ), envelope ) ).login( );
+    }
   }
 
   @Override
-  protected void addStages( List<UnrollableStage> stages ) {
-    stages.add( new SoapInternalAuthenticationStage( ) );
-    stages.add( new BindingStage( ) );
-  }
+  public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 
-  @Override
-  protected boolean checkAccepts( HttpRequest message ) {
-    return message.getUri( ).endsWith( servicePath ) && message.getHeaderNames().contains( "SOAPAction" );
-  }
-
-  @Override
-  public String getPipelineName( ) {
-    return "zeinternal-pipeline-" + this.serviceName;
   }
 
 }

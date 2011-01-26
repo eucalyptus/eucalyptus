@@ -108,12 +108,12 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   
   @Override
   public X509Certificate getX509Certificate( ) {
-    return SystemCredentialProvider.getCredentialProvider( this.getName( ) ).getCertificate( );
+    return SystemCredentialProvider.getCredentialProvider( this.getClass( ) ).getCertificate( );
   }
   
   @Override
   public List<X509Certificate> getAllX509Certificates( ) {
-    return Lists.newArrayList( SystemCredentialProvider.getCredentialProvider( this.getName( ) ).getCertificate( ) );
+    return Lists.newArrayList( SystemCredentialProvider.getCredentialProvider( this.getClass( ) ).getCertificate( ) );
   }
   
   public String getUriPattern( ) {

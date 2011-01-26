@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.handlers.wssecurity;
+package com.eucalyptus.ws.handlers;
 
 import java.util.Collection;
 import java.util.Vector;
@@ -85,7 +85,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpMessage;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.util.CredentialProxy;
 
 @ChannelPipelineCoverage( "all" )

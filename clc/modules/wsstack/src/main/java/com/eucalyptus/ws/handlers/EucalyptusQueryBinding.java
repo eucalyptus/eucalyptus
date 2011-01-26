@@ -62,12 +62,12 @@
  */
 package com.eucalyptus.ws.handlers;
 
-import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
-
+import com.eucalyptus.ws.protocol.BaseQueryBinding;
+import com.eucalyptus.ws.protocol.OperationParameter;
 
 public class EucalyptusQueryBinding extends BaseQueryBinding<OperationParameter> {
   public EucalyptusQueryBinding( ) {
     super( "http://ec2.amazonaws.com/doc/%s/", "2009-04-04", OperationParameter.Action, OperationParameter.Operation );
   }
-
+  
 }

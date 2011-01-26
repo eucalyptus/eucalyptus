@@ -61,32 +61,51 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.handlers.wssecurity;
+package com.eucalyptus.ws.server;
 
-import java.util.Collection;
-import org.apache.ws.security.WSEncryptionPart;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.ws.util.CredentialProxy;
-import com.google.common.collect.Lists;
+import java.security.GeneralSecurityException;
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.handlers.InternalWsSecHandler;
+import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.protocol.AddressingHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
 
-public class ClusterWsSecHandler extends WsSecHandler {
-  private static final String WSA_NAMESPACE = "http://www.w3.org/2005/08/addressing";
-
-  public ClusterWsSecHandler( ) {
-    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( ) ) );
+public class InternalSoapPipeline extends FilteredPipeline {
+  private static Logger LOG = Logger.getLogger( InternalSoapPipeline.class ); 
+  private String servicePath;
+  private String serviceName;
+  
+  public InternalSoapPipeline( NioMessageReceiver msgReceiver, String serviceName, String servicePath ) {
+    super( msgReceiver );
+    this.servicePath = servicePath;
+    this.serviceName = serviceName;
   }
 
   @Override
-  public Collection<WSEncryptionPart> getSignatureParts() {
-    return Lists.newArrayList( new WSEncryptionPart( "To", WSA_NAMESPACE, "Content" ),new WSEncryptionPart( "MessageID", WSA_NAMESPACE, "Content" ), new WSEncryptionPart( "Action", WSA_NAMESPACE, "Content" ) );
+  public boolean checkAccepts( HttpRequest message ) {
+    return message.getUri( ).endsWith( servicePath ) && message.getHeaderNames().contains( "SOAPAction" );
   }
-  
-  
 
   @Override
-  public boolean shouldTimeStamp() {
-    return false;
+  public String getName( ) {
+    return "ze-internal-pipeline-" + this.serviceName;
+  }
+
+  @Override
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
+    try {
+      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
+    } catch ( GeneralSecurityException e ) {
+      LOG.error(e,e);
+    }
+    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
+    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
+    pipeline.addLast( "binding", new BindingHandler( ) );
+    return pipeline;
   }
 
 }

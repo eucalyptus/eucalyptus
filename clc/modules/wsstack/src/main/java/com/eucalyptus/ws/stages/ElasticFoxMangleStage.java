@@ -71,7 +71,12 @@ import com.eucalyptus.ws.handlers.MessageStackHandler;
 public class ElasticFoxMangleStage implements UnrollableStage {
 
   @Override
-  public String getStageName( ) {
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
+  }
+
+  @Override
+  public String getName( ) {
     return "elasticfox-mangler";
   }
 

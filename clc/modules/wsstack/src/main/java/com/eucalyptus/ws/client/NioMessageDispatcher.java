@@ -76,8 +76,8 @@ import com.eucalyptus.ws.Client;
 import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
+import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class NioMessageDispatcher extends AbstractMessageDispatcher {

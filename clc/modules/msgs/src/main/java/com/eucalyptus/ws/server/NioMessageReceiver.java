@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -58,37 +58,48 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author chris grzegorczyk <grze@eucalyptus.com>
+ * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.ws.server;
 
-package com.eucalyptus.ws.client.pipeline;
+import org.apache.log4j.Logger;
+import org.mule.api.component.JavaComponent;
+import org.mule.api.endpoint.InboundEndpoint;
+import org.mule.api.lifecycle.CreateException;
+import org.mule.api.service.Service;
+import org.mule.api.transport.Connector;
+import org.mule.transport.AbstractMessageReceiver;
+import org.mule.transport.ConnectException;
+import com.eucalyptus.ws.util.PipelineRegistry;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
-import com.eucalyptus.ws.util.ChannelUtil;
-
-public final class GatherLogClientPipeline implements ChannelPipelineFactory {
-  @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-//    ChannelUtil.addPipelineMonitors( pipeline, 60 );
-    pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 5242880 ) );
-    pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
-    pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
-    pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusGL#" ) );
-    pipeline.addLast( "soap", new SoapHandler( ) );
-    pipeline.addLast( "binding",
-                      new BindingHandler( BindingManager.getBinding( "eucalyptus_ucsb_edu" ) ) );
-    return pipeline;
+public class NioMessageReceiver extends AbstractMessageReceiver {
+  
+  private static Logger    LOG = Logger.getLogger( NioMessageReceiver.class );
+  private final FilteredPipeline soapPipeline;
+  private final FilteredPipeline queryPipeline;
+  
+  @SuppressWarnings( "unchecked" )
+  public NioMessageReceiver( Connector connector, Service service, InboundEndpoint endpoint ) throws CreateException {
+    super( connector, service, endpoint );
+    Class serviceClass = ( ( JavaComponent ) this.getService( ).getComponent( ) ).getObjectType( );
+    soapPipeline = new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
+    queryPipeline = new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
   }
+  
+  public void doConnect( ) throws ConnectException {
+    PipelineRegistry.getInstance( ).register( soapPipeline );
+    PipelineRegistry.getInstance( ).register( queryPipeline );
+  }
+  
+  public void doStart( ) {}
+  
+  public void doStop( ) {}
+  
+  public void doDispose( ) {}
+  
+  public void doDisconnect( ) throws ConnectException {
+    PipelineRegistry.getInstance( ).deregister( soapPipeline );
+    PipelineRegistry.getInstance( ).deregister( queryPipeline );
+  }
+  
 }

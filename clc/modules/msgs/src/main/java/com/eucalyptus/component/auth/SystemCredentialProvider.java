@@ -78,6 +78,8 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.id.Empyrean;
@@ -100,12 +102,8 @@ public class SystemCredentialProvider extends Bootstrapper {
     this.name = name;
   }
 
-  public static SystemCredentialProvider getCredentialProvider( Component name ) {
-    return new SystemCredentialProvider( name.name( ) );
-  }
-
-  public static SystemCredentialProvider getCredentialProvider( String name ) {
-    return new SystemCredentialProvider( name );
+  public static <T extends ComponentId> SystemCredentialProvider getCredentialProvider( Class<T> compId ) {
+    return new SystemCredentialProvider( ComponentIds.lookup( compId ).name( ) );
   }
 
   public X509Certificate getCertificate( ) {

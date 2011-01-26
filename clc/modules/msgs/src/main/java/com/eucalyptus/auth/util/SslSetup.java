@@ -11,7 +11,6 @@ import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
@@ -20,9 +19,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactorySpi;
 import javax.net.ssl.X509ExtendedKeyManager;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.system.SubDirectory;

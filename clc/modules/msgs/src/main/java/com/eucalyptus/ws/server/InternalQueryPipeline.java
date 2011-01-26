@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,38 +57,58 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************
- * @author chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************/
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-
-package com.eucalyptus.ws.client.pipeline;
+package com.eucalyptus.ws.server;
 
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
-import com.eucalyptus.ws.util.ChannelUtil;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.handlers.HmacHandler;
+import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 
-public final class GatherLogClientPipeline implements ChannelPipelineFactory {
+public class InternalQueryPipeline extends FilteredPipeline {
+  public enum RequiredQueryParams {
+    SignatureVersion,
+    Version
+  }
+  
+  private String servicePath;
+  private String serviceName;
+  
+  public InternalQueryPipeline( NioMessageReceiver msgReceiver, String serviceName, String servicePath ) {
+    super( msgReceiver );
+    this.servicePath = servicePath;
+    this.serviceName = serviceName;
+  }
+    
   @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-//    ChannelUtil.addPipelineMonitors( pipeline, 60 );
-    pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 5242880 ) );
-    pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
-    pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
-    pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusGL#" ) );
-    pipeline.addLast( "soap", new SoapHandler( ) );
-    pipeline.addLast( "binding",
-                      new BindingHandler( BindingManager.getBinding( "eucalyptus_ucsb_edu" ) ) );
+  public boolean checkAccepts( HttpRequest message ) {
+    if ( message instanceof MappingHttpRequest ) {
+      MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
+      for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {
+        if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {
+          return false;
+        }
+      }
+      return true && message.getUri( ).startsWith( servicePath );
+    }
+    return false;
+  }
+  
+  @Override
+  public String getName( ) {
+    return "internal-query-pipeline-" + this.serviceName.toLowerCase( );
+  }
+
+  @Override
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    pipeline.addLast( "hmac-v2-verify", new HmacHandler( false ) );
+    pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
+    pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
     return pipeline;
   }
+  
 }

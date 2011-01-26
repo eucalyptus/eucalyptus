@@ -61,21 +61,66 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.stages;
+package com.eucalyptus.ws.handlers;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import com.eucalyptus.ws.handlers.BindingHandler;
+import java.security.GeneralSecurityException;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
+import org.apache.axiom.soap.SOAP11Constants;
+import org.apache.axiom.soap.SOAPConstants;
+import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.ws.security.WSConstants;
+import org.apache.ws.security.WSEncryptionPart;
+import org.apache.ws.security.WSSecurityException;
+import org.apache.xml.security.signature.XMLSignature;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
+import org.w3c.dom.Element;
+import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.WSSecurity;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.util.CredentialProxy;
+import com.google.common.collect.Lists;
 
-public class BindingStage implements UnrollableStage {
-  
-  @Override
-  public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "binding", new BindingHandler( ) );
+@ChannelPipelineCoverage("one")
+public class InternalWsSecHandler extends WsSecHandler {
+
+  public InternalWsSecHandler( ) throws GeneralSecurityException {
+    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getPrivateKey( ) ) );
   }
 
   @Override
-  public String getStageName( ) {
-    return "message-binding";
+  public Collection<WSEncryptionPart> getSignatureParts( ) {
+    return Lists.newArrayList( new WSEncryptionPart( WSConstants.TIMESTAMP_TOKEN_LN, WSConstants.WSU_NS, "Content" ), new WSEncryptionPart( SOAPConstants.BODY_LOCAL_NAME, SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI, "Content" ) );
   }
 
+  @Override
+  public boolean shouldTimeStamp( ) {
+    return true;
+  }
+
+  @Override
+  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+    final Object o = event.getMessage( );
+    if ( o instanceof MappingHttpRequest ) {
+      final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
+      final SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
+      final Element secNode = WSSecurity.getSecurityElement( envelope );
+      final XMLSignature sig = WSSecurity.getXMLSignature( secNode );
+      SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
+      final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
+      if(cert != null) {
+        if( !cert.equals( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ) ) ) {
+          throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
+        }
+      }
+      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( User.DUMMY_ADMIN );
+    }
+  }
 }

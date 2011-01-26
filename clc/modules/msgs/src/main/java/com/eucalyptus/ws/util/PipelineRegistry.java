@@ -97,29 +97,31 @@ public class PipelineRegistry {
   private final List<FilteredPipeline> pipelines = new ArrayList<FilteredPipeline>( );
 
   public void register( final FilteredPipeline pipeline ) {
-    LOG.info( "-> Registering pipeline: " + pipeline.getPipelineName( ) );
+    LOG.info( "-> Registering pipeline: " + pipeline.getName( ) );
     this.pipelines.add( pipeline );
   }
 
   public void deregister( final FilteredPipeline pipeline ) {
-    LOG.info( "-> Deregistering pipeline: " + pipeline.getPipelineName( ) );
+    LOG.info( "-> Deregistering pipeline: " + pipeline.getName( ) );
     this.pipelines.remove( pipeline );
   }
 
   public FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     FilteredPipeline candidate = null;
-    for ( FilteredPipeline f : this.pipelines) {
-      if ( f.accepts( request ) ) {
-        if( !LogLevels.DEBUG ) {
-          return f;
-        } else if ( candidate != null ) {
-          EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getPipelineName( ), f.getClass( ).getSimpleName( ) ).trace( );
+    for ( FilteredPipeline f : this.pipelines ) {
+      if ( f.checkAccepts( request ) ) {
+
+        if ( candidate != null ) {
+          EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getName( ), f.getClass( ).getSimpleName( ) ).trace( );
         } else {
           candidate = f;
         }
       }
     }
     if ( candidate == null ) { throw new NoAcceptingPipelineException( ); }
+    if ( LogLevels.TRACE ) {
+      EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ).trace( );
+    }
     return candidate;
   }
 
