@@ -82,7 +82,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
 
   @Override
   public void handleDownstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    if( LogLevels.TRACE) {
+    if( LogLevels.EXTREME ) {
       LOG.trace( LogUtil.dumpObject( channelEvent ) );
     }
     try {
@@ -119,7 +119,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
 
   @Override
   public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    if( LogLevels.TRACE) {
+    if( LogLevels.EXTREME ) {
       LOG.trace( LogUtil.dumpObject( channelEvent ) );
     }
     if ( channelEvent instanceof MessageEvent ) {
