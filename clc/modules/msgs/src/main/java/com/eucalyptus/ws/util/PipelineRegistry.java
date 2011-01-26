@@ -65,7 +65,10 @@ package com.eucalyptus.ws.util;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.bootstrap.ComponentPart;
@@ -94,15 +97,15 @@ public class PipelineRegistry {
     return PipelineRegistry.registry;
   }
 
-  private final List<FilteredPipeline> pipelines = new ArrayList<FilteredPipeline>( );
+  private final Set<FilteredPipeline> pipelines = new ConcurrentSkipListSet<FilteredPipeline>( );
 
   public void register( final FilteredPipeline pipeline ) {
-    LOG.info( "-> Registering pipeline: " + pipeline.getName( ) );
+    LOG.info( "-> Registering pipeline: " + pipeline.getName( ) + " " + pipeline.hashCode( ) );
     this.pipelines.add( pipeline );
   }
 
   public void deregister( final FilteredPipeline pipeline ) {
-    LOG.info( "-> Deregistering pipeline: " + pipeline.getName( ) );
+    LOG.info( "-> Deregistering pipeline: " + pipeline.getName( ) + " " + pipeline.hashCode( ) );
     this.pipelines.remove( pipeline );
   }
 
@@ -112,7 +115,7 @@ public class PipelineRegistry {
       if ( f.checkAccepts( request ) ) {
 
         if ( candidate != null ) {
-          EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getName( ), f.getClass( ).getSimpleName( ) ).trace( );
+          EventRecord.here( this.getClass(), EventType.PIPELINE_DUPLICATE, f.getName( ), ""+f.hashCode( ), f.getClass( ).getSimpleName( ) ).trace( );
         } else {
           candidate = f;
         }
@@ -120,16 +123,22 @@ public class PipelineRegistry {
     }
     if ( candidate == null ) { throw new NoAcceptingPipelineException( ); }
     if ( LogLevels.TRACE ) {
-      EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, this.getClass( ).getSimpleName( ) ).trace( );
+      EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, candidate.getName( ) + " " + candidate.hashCode( ) ).debug( );
     }
     return candidate;
   }
 
   public void enable( ComponentId compId ) {
+    for( FilteredPipeline pipeline : this.componentPipelines.get( compId ) ) {
+      LOG.info( "-> Registering pipeline: " + pipeline.getName( ) + " " + pipeline.hashCode( ) );
+    }
     this.pipelines.addAll( this.componentPipelines.get( compId ) );
   }
   
   public void disable( ComponentId compId ) {
+    for( FilteredPipeline pipeline : this.componentPipelines.get( compId ) ) {
+      LOG.info( "-> Deregistering pipeline: " + pipeline.getName( ) + " " + pipeline.hashCode( ) );
+    }
     this.pipelines.removeAll( this.componentPipelines.get( compId ) );
   }
   

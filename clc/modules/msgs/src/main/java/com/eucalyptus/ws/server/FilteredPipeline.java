@@ -119,5 +119,27 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   
   @Override
   public abstract boolean checkAccepts( HttpRequest message );
+
+  @Override
+  public final int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.getName( ) == null )
+      ? 0
+      : this.getName( ).hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public final boolean equals( Object obj ) {
+    if ( this == obj ) return true;
+    if ( obj == null ) return false;
+    if ( getClass( ) != obj.getClass( ) ) return false;
+    FilteredPipeline other = ( FilteredPipeline ) obj;
+    if ( this.getName( ) == null ) {
+      if ( other.getName( ) != null ) return false;
+    } else if ( !this.getName( ).equals( other.getName( ) ) ) return false;
+    return true;
+  }
   
 }

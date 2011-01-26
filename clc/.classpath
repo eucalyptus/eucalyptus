@@ -99,10 +99,10 @@
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/junit-3.8.2.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
-	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar" sourcepath="/Users/decker/mule-2.0.1.orig/core/src"/>
+	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar" sourcepath="/bzr/third-party/mule-2.0.1.orig"/>
 	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar" sourcepath="/bzr/third-party/mule-2.0.1.orig"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>

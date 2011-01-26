@@ -62,6 +62,7 @@
  */
 package com.eucalyptus.ws.server;
 
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.mule.api.component.JavaComponent;
 import org.mule.api.endpoint.InboundEndpoint;
@@ -70,6 +71,8 @@ import org.mule.api.service.Service;
 import org.mule.api.transport.Connector;
 import org.mule.transport.AbstractMessageReceiver;
 import org.mule.transport.ConnectException;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.ws.util.PipelineRegistry;
 
 public class NioMessageReceiver extends AbstractMessageReceiver {
@@ -85,10 +88,18 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
   }
   
   public void doConnect( ) throws ConnectException {
-    soapPipeline = new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
-    queryPipeline = new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
-    PipelineRegistry.getInstance( ).register( soapPipeline );
-    PipelineRegistry.getInstance( ).register( queryPipeline );
+    String path = this.getEndpointURI( ).getPath( );
+    String nameGuess = path.replaceAll( ".*/","" );
+    try {
+      ComponentId compId = ComponentIds.lookup( nameGuess );
+      soapPipeline = queryPipeline = null;
+      PipelineRegistry.getInstance( ).enable( compId );
+    } catch ( NoSuchElementException ex ) {
+      soapPipeline = new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
+      queryPipeline = new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
+      PipelineRegistry.getInstance( ).register( soapPipeline );
+      PipelineRegistry.getInstance( ).register( queryPipeline );
+    }
   }
   
   public void doStart( ) {}

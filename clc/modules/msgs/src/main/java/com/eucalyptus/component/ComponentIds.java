@@ -69,36 +69,47 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 
 public class ComponentIds {
-  private static Logger LOG = Logger.getLogger( ComponentIds.class );
-  private static final Map<Class,ComponentId> compIdMap = new HashMap<Class,ComponentId>( );
+  private static Logger                        LOG       = Logger.getLogger( ComponentIds.class );
+  private static final Map<Class, ComponentId> compIdMap = new HashMap<Class, ComponentId>( );
+  
   public static ComponentId lookup( Class compIdClass ) {
-    if( !compIdMap.containsKey( compIdClass ) ) {
+    if ( !compIdMap.containsKey( compIdClass ) ) {
       throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );
     } else {
       return compIdMap.get( compIdClass );
     }
   }
+  
+  /**
+   * Lookup the ComponentId with name <tt>name</tt>. Note that this method is case-insensitive in
+   * that the lower-case of <tt>name</tt> is compared to the l-case of ComponentId names.
+   * 
+   * @param name
+   * @throws NoSuchElementException
+   * @return
+   */
   public static ComponentId lookup( String name ) {
-    Map<String,ComponentId> map = Components.lookupMap( ComponentId.class );
-    if( !map.containsKey( name ) ) {
-      throw new NoSuchElementException( "No ComponentId with name: " + name );
+    String realName = name.toLowerCase( );
+    Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
+    if ( !map.containsKey( realName ) ) {
+      throw new NoSuchElementException( "No ComponentId with name: " + realName );
     } else {
-      return map.get( name );
+      return map.get( realName );
     }
   }
-
+  
   public static void register( ComponentId componentId ) {
-    Map<String,ComponentId> map = Components.lookupMap( ComponentId.class );
+    Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
     map.put( componentId.getName( ), componentId );
     compIdMap.put( componentId.getClass( ), componentId );
   }
-
+  
   public static Object checkDeprecated( Object inst ) {
-    if( com.eucalyptus.bootstrap.Component.class.equals( inst.getClass( ) ) ) {
+    if ( com.eucalyptus.bootstrap.Component.class.equals( inst.getClass( ) ) ) {
       LOG.error( "Deprecated usage of com.eucalyptus.bootstrap.Component for event dispatch.  Please use the corresponding ComponentId.class type." );
-      String old = ((com.eucalyptus.bootstrap.Component) inst ).name( );
+      String old = ( ( com.eucalyptus.bootstrap.Component ) inst ).name( );
       ComponentId compId = ComponentIds.lookup( old );
-      LOG.error( "For " + old + " it is " + compId.getClass( ).getCanonicalName( ) ); 
+      LOG.error( "For " + old + " it is " + compId.getClass( ).getCanonicalName( ) );
       return compId;
     } else {
       return inst;

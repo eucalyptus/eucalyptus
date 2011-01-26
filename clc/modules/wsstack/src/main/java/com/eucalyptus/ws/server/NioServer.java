@@ -65,9 +65,7 @@ package com.eucalyptus.ws.server;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
-
 import com.eucalyptus.ws.util.ChannelUtil;
-import com.eucalyptus.ws.util.PipelineRegistry;
 
 public class NioServer {
   private static Logger                 LOG = Logger.getLogger( NioServer.class );
