@@ -87,11 +87,6 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     this.msgReceiver = msgReceiver;
   }
   
-  @Override
-  public final int compareTo( final FilteredPipeline o ) {
-    return ( this.getName( ) + this.getClass( ).getCanonicalName( ) ).compareTo( ( this.getName( ) + o.getClass( ).getCanonicalName( ) ) );
-  }
-  
   public abstract String getName( );
   
   public void unroll( final ChannelPipeline pipeline ) {
@@ -121,6 +116,17 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   public abstract boolean checkAccepts( HttpRequest message );
 
   @Override
+  public final int compareTo( final FilteredPipeline o ) {
+    if( this.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !o.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
+      return 1;
+    } else if( o.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !this.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
+      return -1;
+    } else {
+      return ( this.getName( ) + this.getClass( ).getCanonicalName( ) ).compareTo( ( this.getName( ) + o.getClass( ).getCanonicalName( ) ) );
+    }
+  }
+  
+  @Override
   public final int hashCode( ) {
     final int prime = 31;
     int result = 1;
@@ -140,6 +146,11 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
       if ( other.getName( ) != null ) return false;
     } else if ( !this.getName( ).equals( other.getName( ) ) ) return false;
     return true;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "FilteredPipeline:name=%s:hashCode=%s:class=%s", this.getName( ), this.hashCode( ), this.getClass( ).getSimpleName( ) );
   }
   
 }

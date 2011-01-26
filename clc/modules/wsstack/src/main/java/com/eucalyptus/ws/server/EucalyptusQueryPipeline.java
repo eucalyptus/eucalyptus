@@ -64,7 +64,6 @@
 package com.eucalyptus.ws.server;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;

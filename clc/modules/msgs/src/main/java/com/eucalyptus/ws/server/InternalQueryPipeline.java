@@ -110,5 +110,10 @@ public class InternalQueryPipeline extends FilteredPipeline {
     pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
     return pipeline;
   }
+
+  @Override
+  public String toString( ) {
+    return String.format( "InternalQueryPipeline:servicePath=%s:serviceName=%s:toString()=%s", this.servicePath, this.serviceName, super.toString( ) );
+  }
   
 }
