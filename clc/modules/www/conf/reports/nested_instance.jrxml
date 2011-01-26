@@ -2,20 +2,24 @@
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="report8" language="groovy" pageWidth="595" pageHeight="842" columnWidth="535" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
 	<parameter name="criterion" class="java.lang.String"/>
 	<parameter name="groupByCriterion" class="java.lang.String"/>
+	<parameter name="sizeUnit" class="java.lang.String"/>
+	<parameter name="timeUnit" class="java.lang.String"/>
+	<parameter name="sizeTimeTimeUnit" class="java.lang.String"/>
+	<parameter name="sizeTimeSizeUnit" class="java.lang.String"/>
 	<field name="label" class="java.lang.String"/>
 	<field name="groupBy" class="java.lang.String"/>
 	<field name="m1SmallNum" class="java.lang.Long"/>
-	<field name="m1SmallTimeMs" class="java.lang.Long"/>
+	<field name="m1SmallTime" class="java.lang.Long"/>
 	<field name="c1MediumNum" class="java.lang.Long"/>
-	<field name="c1MediumTimeMs" class="java.lang.Long"/>
+	<field name="c1MediumTime" class="java.lang.Long"/>
 	<field name="m1LargeNum" class="java.lang.Long"/>
-	<field name="m1LargeTimeMs" class="java.lang.Long"/>
+	<field name="m1LargeTime" class="java.lang.Long"/>
 	<field name="m1XLargeNum" class="java.lang.Long"/>
-	<field name="m1XLargeTimeMs" class="java.lang.Long"/>
+	<field name="m1XLargeTime" class="java.lang.Long"/>
 	<field name="c1XLargeNum" class="java.lang.Long"/>
-	<field name="c1XLargeTimeMs" class="java.lang.Long"/>
-	<field name="networkIoMegs" class="java.lang.Long"/>
-	<field name="diskIoMegs" class="java.lang.Long"/>
+	<field name="c1XLargeTime" class="java.lang.Long"/>
+	<field name="networkIoSize" class="java.lang.Long"/>
+	<field name="diskIoSize" class="java.lang.Long"/>
 	<group name="groupBy">
 		<groupExpression><![CDATA[$F{groupBy}]]></groupExpression>
 		<groupHeader>
@@ -110,13 +114,13 @@
 				</textElement>
 				<text>C1 X-Large</text>
 			</staticText>
-			<staticText>
+			<textField>
 				<reportElement mode="Opaque" x="462" y="0" width="84" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
-				<text>Usage (Megs)</text>
-			</staticText>
+				<textFieldExpression>"Usage (" + $P{sizeUnit} + ")"</textFieldExpression>
+			</textField>
 
 			<textField>
 				<reportElement mode="Opaque" x="0" y="0" width="42" height="40" forecolor="#006699" backcolor="#E6E6E6"/>
@@ -132,13 +136,13 @@
 				</textElement>
 				<text><![CDATA[#]]></text>
 			</staticText>
-			<staticText>
+			<textField>
 				<reportElement mode="Opaque" x="84" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
-				<text><![CDATA[hrs]]></text>
-			</staticText>
+				<textFieldExpression><![CDATA[$P{timeUnit}]]></textFieldExpression>
+			</textField>
 			<staticText>
 				<reportElement mode="Opaque" x="126" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
@@ -146,13 +150,13 @@
 				</textElement>
 				<text><![CDATA[#]]></text>
 			</staticText>
-			<staticText>
+			<textField>
 				<reportElement mode="Opaque" x="168" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
-				<text><![CDATA[hrs]]></text>
-			</staticText>
+				<textFieldExpression><![CDATA[$P{timeUnit}]]></textFieldExpression>
+			</textField>
 			<staticText>
 				<reportElement mode="Opaque" x="210" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
@@ -160,13 +164,13 @@
 				</textElement>
 				<text><![CDATA[#]]></text>
 			</staticText>
-			<staticText>
+			<textField>
 				<reportElement mode="Opaque" x="252" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
-				<text><![CDATA[hrs]]></text>
-			</staticText>
+				<textFieldExpression><![CDATA[$P{timeUnit}]]></textFieldExpression>
+			</textField>
 			<staticText>
 				<reportElement mode="Opaque" x="294" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
@@ -174,13 +178,13 @@
 				</textElement>
 				<text><![CDATA[#]]></text>
 			</staticText>
-			<staticText>
+			<textField>
 				<reportElement mode="Opaque" x="336" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
-				<text><![CDATA[hrs]]></text>
-			</staticText>
+				<textFieldExpression><![CDATA[$P{timeUnit}]]></textFieldExpression>
+			</textField>
 			<staticText>
 				<reportElement mode="Opaque" x="378" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
@@ -188,13 +192,13 @@
 				</textElement>
 				<text><![CDATA[#]]></text>
 			</staticText>
-			<staticText>
+			<textField>
 				<reportElement mode="Opaque" x="420" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
-				<text><![CDATA[hrs]]></text>
-			</staticText>
+				<textFieldExpression><![CDATA[$P{timeUnit}]]></textFieldExpression>
+			</textField>
 			<staticText>
 				<reportElement mode="Opaque" x="462" y="20" width="42" height="20" forecolor="#006699" backcolor="#E6E6E6"/>
 				<textElement textAlignment="Center">
@@ -235,7 +239,7 @@
 				<textElement>
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{m1SmallTimeMs}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{m1SmallTime}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true">
 				<reportElement x="126" y="0" width="42" height="20"/>
@@ -249,7 +253,7 @@
 				<textElement>
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{c1MediumTimeMs}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{c1MediumTime}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true">
 				<reportElement x="210" y="0" width="42" height="20"/>
@@ -263,7 +267,7 @@
 				<textElement>
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{m1LargeTimeMs}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{m1LargeTime}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true">
 				<reportElement x="294" y="0" width="42" height="20"/>
@@ -277,7 +281,7 @@
 				<textElement>
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{m1XLargeTimeMs}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{m1XLargeTime}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true">
 				<reportElement x="378" y="0" width="42" height="20"/>
@@ -291,21 +295,21 @@
 				<textElement>
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{c1XLargeTimeMs}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{c1XLargeTime}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true">
 				<reportElement x="462" y="0" width="42" height="20"/>
 				<textElement>
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{networkIoMegs}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{networkIoSize}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true">
 				<reportElement x="504" y="0" width="42" height="20"/>
 				<textElement>
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{diskIoMegs}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{diskIoSize}]]></textFieldExpression>
 			</textField>
 		</band>
 	</detail>
