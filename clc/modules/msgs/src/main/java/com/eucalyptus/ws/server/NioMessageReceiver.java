@@ -93,13 +93,19 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
     try {
       ComponentId compId = ComponentIds.lookup( nameGuess );
       soapPipeline = queryPipeline = null;
-      PipelineRegistry.getInstance( ).enable( compId );
+      if( !PipelineRegistry.getInstance( ).enable( compId ) ) {
+        this.setupPipelines( );
+      }
     } catch ( NoSuchElementException ex ) {
-      soapPipeline = new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
-      queryPipeline = new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
-      PipelineRegistry.getInstance( ).register( soapPipeline );
-      PipelineRegistry.getInstance( ).register( queryPipeline );
+      this.setupPipelines( );
     }
+  }
+
+  private void setupPipelines( ) {
+    soapPipeline = new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
+    queryPipeline = new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
+    PipelineRegistry.getInstance( ).register( soapPipeline );
+    PipelineRegistry.getInstance( ).register( queryPipeline );
   }
   
   public void doStart( ) {}
