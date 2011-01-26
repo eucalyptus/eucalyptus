@@ -106,7 +106,12 @@ public class ComponentIds {
   
   public static Object checkDeprecated( Object inst ) {
     if ( com.eucalyptus.bootstrap.Component.class.equals( inst.getClass( ) ) ) {
+      RuntimeException e = new RuntimeException();
+      e.fillInStackTrace( );
       LOG.error( "Deprecated usage of com.eucalyptus.bootstrap.Component for event dispatch.  Please use the corresponding ComponentId.class type." );
+      for( int i = 2; i < 5 && i < e.getStackTrace( ).length; i++ ) {
+        LOG.error( "--> " + e.getStackTrace( )[i] );
+      }
       String old = ( ( com.eucalyptus.bootstrap.Component ) inst ).name( );
       ComponentId compId = ComponentIds.lookup( old );
       LOG.error( "For " + old + " it is " + compId.getClass( ).getCanonicalName( ) );
