@@ -79,7 +79,7 @@ public class Empyrean extends ComponentId {
   
   @Override
   public Boolean hasDispatcher( ) {
-    return false;
+    return true;
   }
 
   @Override
@@ -92,4 +92,8 @@ public class Empyrean extends ComponentId {
     return false;
   }
   
+  @Override
+  public Boolean hasCredentials( ) {
+    return true;
+  }
 }

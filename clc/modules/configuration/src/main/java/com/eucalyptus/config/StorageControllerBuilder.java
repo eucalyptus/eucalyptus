@@ -22,7 +22,7 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
 
   @Override
   public Component getComponent( ) {
-    return Components.lookup( com.eucalyptus.bootstrap.Component.storage );
+    return Components.lookup( Storage.class );
   }
   
   @Override

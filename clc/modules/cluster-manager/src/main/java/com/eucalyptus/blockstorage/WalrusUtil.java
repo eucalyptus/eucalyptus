@@ -77,6 +77,7 @@ import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -163,8 +164,8 @@ public class WalrusUtil {
 		String[] imagePathParts = imgInfo.getImageLocation().split( "/" );
 		GetObjectResponseType reply = null;
 		GetObjectType msg = new GetObjectType( imagePathParts[ 0 ], imagePathParts[ 1 ], true, false, true );
-		msg.setUserId( Component.eucalyptus.name() );
-		msg.setEffectiveUserId( Component.eucalyptus.name() );
+		msg.setUserId( ComponentIds.lookup(Eucalyptus.class).name() );
+		msg.setEffectiveUserId( ComponentIds.lookup(Eucalyptus.class).name() );
 		try {
 			reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
 		} catch ( EucalyptusCloudException e ) {

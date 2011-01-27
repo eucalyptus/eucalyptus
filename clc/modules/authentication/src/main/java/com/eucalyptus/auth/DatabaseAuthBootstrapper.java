@@ -4,7 +4,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.util.AuthBootstrapHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Components;

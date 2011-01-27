@@ -67,12 +67,14 @@ import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.HttpService;
 import com.eucalyptus.system.SubDirectory;
 
 public class EucaKeyStore extends AbstractKeyStore {
   public static String            FORMAT         = "pkcs12";
-  private static String           KEY_STORE_PASS = Component.eucalyptus.name();
+  private static String           KEY_STORE_PASS = ComponentIds.lookup(Eucalyptus.class).name();
   private static String           FILENAME       = "euca.p12";
   private static Logger           LOG            = Logger.getLogger( EucaKeyStore.class );
 
@@ -105,6 +107,6 @@ public class EucaKeyStore extends AbstractKeyStore {
 
   @Override
   public boolean check( ) throws GeneralSecurityException {
-    return (this.getCertificate( Component.jetty.name() )!= null)&&(this.getCertificate( Component.eucalyptus.name() )!=null);
+    return (this.getCertificate( ComponentIds.lookup(HttpService.class).name() )!= null)&&(this.getCertificate( ComponentIds.lookup(Eucalyptus.class).name() )!=null);
   }
 }

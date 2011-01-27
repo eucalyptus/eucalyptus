@@ -100,4 +100,10 @@ public class Database extends ComponentId {
   public Boolean isCloudLocal( ) {
     return true;
   }
+  
+  @Override
+  public Boolean hasCredentials( ) {
+    return true;
+  }
+
 }

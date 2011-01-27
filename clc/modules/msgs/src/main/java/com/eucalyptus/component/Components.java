@@ -211,10 +211,6 @@ public class Components {
     return Components.lookup( Component.class, componentId.getName( ) );
   }
 
-  public static Component lookup( com.eucalyptus.bootstrap.Component component ) throws NoSuchElementException {
-    return Components.lookup( Component.class, component.name( ) );
-  }
-  
   public static Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
     for( Service s : Components.lookup( config.getComponentId( ) ).getServices( ) ) {
       if( s.getServiceConfiguration( ).equals( config ) ) {
@@ -226,10 +222,6 @@ public class Components {
 
   public static boolean contains( String componentName ) {
     return Components.contains( Component.class, componentName );
-  }
-  
-  public static boolean contains( com.eucalyptus.bootstrap.Component component ) {
-    return Components.contains( Component.class, component.name( ) );
   }
   
   public static Component create( ComponentId id ) throws ServiceRegistrationException {

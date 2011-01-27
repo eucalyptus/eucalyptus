@@ -20,6 +20,7 @@ import com.eucalyptus.auth.api.CertificateProvider;
 import com.eucalyptus.auth.api.CryptoProvider;
 import com.eucalyptus.auth.api.HmacProvider;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventType;
@@ -181,7 +182,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
 
   @Override
   public String generateSystemSignature( ) {
-    return this.generateSystemToken( Component.eucalyptus.name( ).getBytes( ) );
+    return this.generateSystemToken( ComponentIds.lookup( Eucalyptus.class ).name( ).getBytes( ) );
   }
 
   @Override

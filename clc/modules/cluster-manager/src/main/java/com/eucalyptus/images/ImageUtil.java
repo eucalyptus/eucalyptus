@@ -89,6 +89,8 @@ import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
@@ -145,7 +147,7 @@ public class ImageUtil {
     ArrayList<String> ancestorIds = Lists.newArrayList( );
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0], imagePathParts[1] );
+      Document inputSource = WalrusUtil.getManifestData( ComponentIds.lookup(Eucalyptus.class).name( ), imagePathParts[0], imagePathParts[1] );
       XPath xpath = XPathFactory.newInstance( ).newXPath( );
       NodeList ancestors = null;
       try {
@@ -170,7 +172,7 @@ public class ImageUtil {
     Long size = 0l;
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = WalrusUtil.getManifestData( Component.eucalyptus.name( ), imagePathParts[0], imagePathParts[1] );
+      Document inputSource = WalrusUtil.getManifestData( ComponentIds.lookup(Eucalyptus.class).name( ), imagePathParts[0], imagePathParts[1] );
       XPath xpath = XPathFactory.newInstance( ).newXPath( );
       String rootSize = "0";
       try {

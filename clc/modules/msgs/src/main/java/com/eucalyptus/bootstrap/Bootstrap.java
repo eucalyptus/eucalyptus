@@ -63,18 +63,11 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.List;
-import java.util.Properties;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -83,9 +76,9 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Join;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -312,7 +305,7 @@ public class Bootstrap {
   private static void doDiscovery( ) {
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( com.eucalyptus.bootstrap.Component.eucalyptus.name( ) ) && f.getName( ).endsWith( ".jar" )
+      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
            && !f.getName( ).matches( ".*-ext-.*" ) ) {
         LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
         try {

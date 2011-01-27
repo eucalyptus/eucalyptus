@@ -21,7 +21,7 @@ public class AccountsService extends ComponentId {
   
   @Override
   public Boolean hasDispatcher( ) {
-    return true;
+    return false;
   }
   
   @Override

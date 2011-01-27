@@ -227,7 +227,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   public ServiceEndpoint getServiceEndpoint( ) {
-    return Services.lookupByHost( Components.delegate.cluster, this.getHostName( ) );
+    return Services.lookupByHost( com.eucalyptus.component.id.Cluster.class, this.getHostName( ) );
   }
   
   public ClusterCredentials getCredentials( ) {

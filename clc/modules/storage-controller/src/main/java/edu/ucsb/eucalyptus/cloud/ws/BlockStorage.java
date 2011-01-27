@@ -81,6 +81,8 @@ import org.apache.tools.ant.util.DateUtils;
 import org.mule.RequestContext;
 
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.StorageControllerBuilder;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.storage.BlockStorageChecker;
@@ -204,7 +206,7 @@ public class BlockStorage {
 
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
-		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
+		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		//test connection to Walrus
 		StorageProperties.updateWalrusUrl();
@@ -227,7 +229,7 @@ public class BlockStorage {
 	public GetStorageConfigurationResponseType GetStorageConfiguration(GetStorageConfigurationType request) throws EucalyptusCloudException {
 		GetStorageConfigurationResponseType reply = (GetStorageConfigurationResponseType) request.getReply();
 		StorageProperties.updateName();
-		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
+		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		if(StorageProperties.NAME.equals(request.getName())) {
 			reply.setName(StorageProperties.NAME);

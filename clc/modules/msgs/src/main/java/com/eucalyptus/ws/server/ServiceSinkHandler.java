@@ -85,6 +85,8 @@ import org.mule.api.transport.DispatchException;
 import org.mule.transport.NullPayload;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -221,7 +223,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
           msg.setEffectiveUserId( msg.getUserId( ) );
         } else if ( ( user != null ) && ( this.msgReceiver == null ) ) {
           msg.setUserId( user.getName( ) );
-          msg.setEffectiveUserId( user.isAdministrator( ) ? Component.eucalyptus.name( ) : user.getName( ) );
+          msg.setEffectiveUserId( user.isAdministrator( ) ? ComponentIds.lookup(Eucalyptus.class).name( ) : user.getName( ) );
         }
         EventRecord.here( ServiceSinkHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
         if ( this.msgReceiver == null ) {

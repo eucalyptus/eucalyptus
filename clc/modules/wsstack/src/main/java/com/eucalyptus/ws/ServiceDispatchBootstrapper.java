@@ -76,6 +76,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -110,7 +111,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     }
     LOG.trace( "Touching class: " + ServiceDispatcher.class );
     boolean failed = false;
-    Component euca = Components.lookup( Components.delegate.eucalyptus );
+    Component euca = Components.lookup( Eucalyptus.class );
     for ( Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
@@ -136,7 +137,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     boolean failed = false;
-    Component euca = Components.lookup( Components.delegate.eucalyptus );
+    Component euca = Components.lookup( Eucalyptus.class );
     for ( Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {

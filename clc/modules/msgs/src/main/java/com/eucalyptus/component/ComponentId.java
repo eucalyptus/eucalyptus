@@ -15,7 +15,6 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
-import org.mule.config.ConfigResource;
 import com.eucalyptus.auth.principal.credential.HmacPrincipal;
 import com.eucalyptus.auth.principal.credential.X509Principal;
 import com.eucalyptus.bootstrap.BootstrapException;
@@ -79,6 +78,9 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   public abstract Boolean isCloudLocal( );
   public abstract Boolean hasDispatcher( );
   public abstract Boolean isAlwaysLocal( );
+  public Boolean hasCredentials( ) {
+    return false;
+  }
 
   
   /**

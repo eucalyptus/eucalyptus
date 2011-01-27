@@ -2,7 +2,6 @@ package com.eucalyptus.address;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.Callback;

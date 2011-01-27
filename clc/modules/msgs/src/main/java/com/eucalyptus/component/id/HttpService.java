@@ -96,4 +96,10 @@ public class HttpService extends ComponentId {
   public String getServiceModelFileName( ) {
     return "eucalyptus-www.xml";
   }
+  
+  @Override
+  public Boolean hasCredentials( ) {
+    return true;
+  }
+
 }

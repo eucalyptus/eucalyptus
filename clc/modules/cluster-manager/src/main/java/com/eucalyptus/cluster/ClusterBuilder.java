@@ -19,8 +19,8 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
@@ -78,7 +78,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     LOG.info( "Starting up cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
     try {
-      if( Components.lookup( Components.delegate.eucalyptus ).isLocal( ) ) {
+      if( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
         try {
           Clusters.start( ( ClusterConfiguration ) config );
         } catch ( EucalyptusCloudException ex ) {
@@ -103,8 +103,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public com.eucalyptus.component.Component getComponent( ) {
-    return Components.lookup( Component.cluster );
+  public Component getComponent( ) {
+    return Components.lookup( com.eucalyptus.component.id.Cluster.class );
   }
   private static String         CLUSTER_KEY_FSTRING = "cc-%s";
   private static String         NODE_KEY_FSTRING    = "nc-%s";

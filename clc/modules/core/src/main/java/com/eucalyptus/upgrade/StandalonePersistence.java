@@ -163,7 +163,7 @@ public class StandalonePersistence {
     if ( !new File( EucaKeyStore.getInstance( ).getFileName( ) ).exists( ) ) {
       throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
     }
-    new SystemCredentialProvider( ).load( );
+    SystemCredentialProvider.initializeCredentials( );
     DispatcherFactory.setFactory( ( DispatcherFactory ) ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.ws.client.DefaultDispatcherFactory" ).newInstance( ) );
     LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.SslSetup" ) );
     LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.Hashes" ) );

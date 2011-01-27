@@ -76,7 +76,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -156,13 +159,14 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   
   private List<ServiceInfoType> buildMessageServiceList( ) {
     return new ArrayList<ServiceInfoType>() {{
-      addAll( Components.lookup( Component.walrus ).getServiceSnapshot( ) );
-      for( ServiceInfoType s : Components.lookup( Component.storage ).getServiceSnapshot( ) ) {
+      addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( ) );
+      addAll( Components.lookup( Walrus.class ).getServiceSnapshot( ) );
+      for( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( ) ) {
         if( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
           add( s );
         }
       }
-      for( ServiceInfoType s : Components.lookup( Component.cluster ).getServiceSnapshot( ) ) {
+      for( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( ) ) {
         if( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
           add( s );
         }

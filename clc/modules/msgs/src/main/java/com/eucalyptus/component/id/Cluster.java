@@ -49,4 +49,5 @@ public class Cluster extends ComponentId {
   public static ChannelPipelineFactory getLogClientPipeline( ) {
     return logPipeline;
   }
+
 }

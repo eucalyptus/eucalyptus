@@ -261,7 +261,7 @@ public abstract class Bootstrapper {
    */
   public <T extends ComponentId> Class<T> getProvides( ) {
     if ( !From( this.getClass( ) ).has( Provides.class ) ) {
-      Exceptions.eat( "Bootstrap class does not specify the component which it @Provides.  Fine.  For now we pretend you had put @Provides(Component.any) instead of System.exit(-1): "
+      Exceptions.eat( "Bootstrap class does not specify the component which it @Provides.  Fine.  For now we pretend you had put @Provides(Any.classss) instead of System.exit(-1): "
                       + this.getClass( ) );
       return ( Class<T> ) Any.class;
     } else {

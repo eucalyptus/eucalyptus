@@ -21,7 +21,9 @@ import javax.net.ssl.TrustManagerFactorySpi;
 import javax.net.ssl.X509ExtendedKeyManager;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.EucaKeyStore;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.system.SubDirectory;
 import com.sun.net.ssl.internal.ssl.X509ExtendedTrustManager;
 
@@ -38,8 +40,8 @@ public class SslSetup {
     System.setProperty( "javax.net.ssl.keyStore", SubDirectory.KEYS.toString( ) + File.separator + "euca.p12" );
     System.setProperty( "javax.net.ssl.trustStoreType", "PKCS12" );
     System.setProperty( "javax.net.ssl.keyStoreType", "PKCS12" );
-    System.setProperty( "javax.net.ssl.trustStorePassword", Component.eucalyptus.name( ) );
-    System.setProperty( "javax.net.ssl.keyStorePassword", Component.eucalyptus.name( ) );
+    System.setProperty( "javax.net.ssl.trustStorePassword", ComponentIds.lookup(Eucalyptus.class).name( ) );
+    System.setProperty( "javax.net.ssl.keyStorePassword", ComponentIds.lookup(Eucalyptus.class).name( ) );
     System.setProperty( "javax.net.debug", "ssl" );//set this to "ssl" for debugging.
     try {
       serverContext = SSLContext.getInstance( "TLS" );
@@ -96,17 +98,17 @@ public class SslSetup {
       
       @Override
       public String chooseClientAlias( String[] arg0, Principal[] arg1, Socket arg2 ) {
-        return Component.eucalyptus.name( );
+        return ComponentIds.lookup(Eucalyptus.class).name( );
       }
       
       @Override
       public String chooseServerAlias( String arg0, Principal[] arg1, Socket arg2 ) {
-        return Component.eucalyptus.name( );
+        return ComponentIds.lookup(Eucalyptus.class).name( );
       }
       
       @Override
       public X509Certificate[] getCertificateChain( String arg0 ) {
-        if ( Component.eucalyptus.name( ).equals( arg0 ) ) {
+        if ( ComponentIds.lookup(Eucalyptus.class).name( ).equals( arg0 ) ) {
           return trustedCerts;
         } else {
           return null;
@@ -115,12 +117,12 @@ public class SslSetup {
       
       @Override
       public String[] getClientAliases( String arg0, Principal[] arg1 ) {
-        return new String[] { Component.eucalyptus.name( ) };
+        return new String[] { ComponentIds.lookup(Eucalyptus.class).name( ) };
       }
       
       @Override
       public PrivateKey getPrivateKey( String arg0 ) {
-        if ( Component.eucalyptus.name( ).equals( arg0 ) ) {
+        if ( ComponentIds.lookup(Eucalyptus.class).name( ).equals( arg0 ) ) {
           return trustedKey;
         } else {
           return null;
@@ -129,17 +131,17 @@ public class SslSetup {
       
       @Override
       public String[] getServerAliases( String arg0, Principal[] arg1 ) {
-        return new String[] { Component.eucalyptus.name( ) };
+        return new String[] { ComponentIds.lookup(Eucalyptus.class).name( ) };
       }
       
       @Override
       public String chooseEngineClientAlias( String[] keyType, Principal[] issuers, SSLEngine engine ) {
-        return Component.eucalyptus.name( );
+        return ComponentIds.lookup(Eucalyptus.class).name( );
       }
       
       @Override
       public String chooseEngineServerAlias( String keyType, Principal[] issuers, SSLEngine engine ) {
-        return Component.eucalyptus.name( );
+        return ComponentIds.lookup(Eucalyptus.class).name( );
       }
       
     }
@@ -154,8 +156,8 @@ public class SslSetup {
     try {
       synchronized ( SslSetup.class ) {
         if ( trusted == null ) {
-          trusted = ( X509Certificate ) EucaKeyStore.getInstance( ).getCertificate( Component.eucalyptus.name( ) );
-          trustedKey = EucaKeyStore.getInstance( ).getKeyPair( Component.eucalyptus.name( ), Component.eucalyptus.name( ) ).getPrivate( );
+          trusted = ( X509Certificate ) EucaKeyStore.getInstance( ).getCertificate( ComponentIds.lookup(Eucalyptus.class).name( ) );
+          trustedKey = EucaKeyStore.getInstance( ).getKeyPair( ComponentIds.lookup(Eucalyptus.class).name( ), ComponentIds.lookup(Eucalyptus.class).name( ) ).getPrivate( );
         }
         return trusted;
       }
