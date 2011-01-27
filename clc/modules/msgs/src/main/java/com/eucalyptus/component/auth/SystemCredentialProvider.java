@@ -130,7 +130,7 @@ public class SystemCredentialProvider extends Bootstrapper {
     if( this.componentId.hasCredentials( ) ) {
       if ( EucaKeyStore.getInstance( ).containsEntry( this.name ) ) {
         try {
-          EventRecord.here( SystemCredentialProvider.class, EventType.COMPONENT_INFO, "initializing", this.name, this.getCertificate( ).getSubjectDN( ).toString( ) ).info( );
+          EventRecord.here( SystemCredentialProvider.class, EventType.COMPONENT_INFO, "initializing", this.name ).info( );
           SystemCredentialProvider.certs.put( this.name, EucaKeyStore.getInstance( ).getCertificate( this.name ) );
           SystemCredentialProvider.keypairs.put( this.name, EucaKeyStore.getInstance( ).getKeyPair( this.name, this.name ) );
           EventRecord.here( SystemCredentialProvider.class, EventType.COMPONENT_INFO, "initialized", this.name, this.getCertificate( ).getSubjectDN( ).toString( ) ).info( );
@@ -142,7 +142,7 @@ public class SystemCredentialProvider extends Bootstrapper {
           LOG.fatal( e, e );
           throw e;
         }
-      } else if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
+      } else if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
         this.createSystemCredentialProviderKey( this.name );
         return;
       }
