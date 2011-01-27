@@ -88,7 +88,7 @@
       <value name="uris" type="java.lang.String" />
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.config.ServiceId" abstract="true">
+  <mapping class="com.eucalyptus.empyrean.ServiceId" abstract="true">
     <value name="name" field="name" />
     <value name="type" field="type" />
     <value name="uri" field="uri" />
