@@ -131,9 +131,11 @@ public class EuareService {
     try {
       for ( Group group : account.getGroups( ) ) {
         if ( Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( group ), account, action, requestUser ) ) {
-          GroupType g = new GroupType( );
-          fillGroupResult( g, group, account.getId( ) );
-          groups.add( g );
+          if ( request.getPathPrefix( ) != null && group.getPath( ).startsWith( request.getPathPrefix( ) ) ) {
+            GroupType g = new GroupType( );
+            fillGroupResult( g, group, account.getId( ) );
+            groups.add( g );
+          }
         }
       }
     } catch ( AuthException e ) {
@@ -538,9 +540,11 @@ public class EuareService {
     try {
       for ( User user : account.getUsers( ) ) {
         if ( Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( user ), account, action, requestUser ) ) {
-          UserType u = new UserType( );
-          fillUserResult( u, user, account.getId( ) );
-          users.add( u );
+          if ( request.getPathPrefix( ) != null && user.getPath( ).startsWith( request.getPathPrefix( ) ) ) {
+            UserType u = new UserType( );
+            fillUserResult( u, user, account.getId( ) );
+            users.add( u );
+          }
         }
       }
     } catch ( AuthException e ) {
