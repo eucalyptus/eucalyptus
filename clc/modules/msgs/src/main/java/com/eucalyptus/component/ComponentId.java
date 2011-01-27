@@ -42,7 +42,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   protected ComponentId( String name ) {
     this.capitalizedName = name;
     this.name = this.capitalizedName.toLowerCase( );
-    this.entryPoint = name + "RequestQueueEndpoint";
+    this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
@@ -52,7 +52,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   protected ComponentId( ) {
     this.capitalizedName = this.getClass( ).getSimpleName( );
     this.name = this.capitalizedName.toLowerCase( );
-    this.entryPoint = name + "RequestQueueEndpoint";
+    this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
