@@ -65,10 +65,9 @@ package com.eucalyptus.component;
 import java.net.URI;
 import java.util.List;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.config.ServiceId;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.NetworkUtil;
-import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class Service implements ComponentInformation, Comparable<Service>, HasParent<Component> {

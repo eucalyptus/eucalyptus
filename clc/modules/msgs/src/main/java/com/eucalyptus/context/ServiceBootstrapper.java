@@ -66,7 +66,6 @@ package com.eucalyptus.context;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.event.DisableComponentEvent;
@@ -80,7 +79,7 @@ import com.eucalyptus.event.ListenerRegistry;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
-public class ServiceBootstrapper extends Bootstrapper implements EventListener {
+public class ServiceBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
   
   public ServiceBootstrapper( ) {}
@@ -134,19 +133,4 @@ public class ServiceBootstrapper extends Bootstrapper implements EventListener {
     return true;
   }
   
-  @Override
-  public void fireEvent( Event event ) {
-    if ( ( event instanceof StartComponentEvent ) || ( event instanceof StopComponentEvent ) ) {
-      LOG.info( "Reloading service context." );
-      ServiceContext.shutdown( );
-      ServiceContext.startup( );
-    }
-  }
-  
-  public static void register( ) {
-    ListenerRegistry.getInstance( ).register( StartComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( StopComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( DisableComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( EnableComponentEvent.class, new ServiceBootstrapper( ) );
-  }
 }

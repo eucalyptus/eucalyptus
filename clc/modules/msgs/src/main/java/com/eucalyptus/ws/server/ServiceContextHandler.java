@@ -63,7 +63,6 @@
 
 package com.eucalyptus.ws.server;
 
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -73,7 +72,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import com.eucalyptus.context.Context;
