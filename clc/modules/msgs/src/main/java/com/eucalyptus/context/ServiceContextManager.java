@@ -172,15 +172,21 @@ public class ServiceContextManager {
     for ( ComponentId c : components ) {
       LOG.info( "-> " + c );
     }
-    Set<ConfigResource> configs = renderServiceConfigurations( components );
-    for ( ConfigResource cfg : configs ) {
-      LOG.info( "-> Rendered cfg: " + cfg.getResourceName( ) );
-    }
+    Set<ConfigResource> configs;
     try {
-      builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
-    } catch ( Exception e ) {
-      LOG.fatal( "Failed to bootstrap services.", e );
-      return false;
+      configs = renderServiceConfigurations( components );
+      for ( ConfigResource cfg : configs ) {
+        LOG.info( "-> Rendered cfg: " + cfg.getResourceName( ) );
+      }
+      try {
+        builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
+      } catch ( Exception e ) {
+        LOG.fatal( "Failed to bootstrap services.", e );
+        return false;
+      }
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+      System.exit( 1 );
     }
     return true;
   }
