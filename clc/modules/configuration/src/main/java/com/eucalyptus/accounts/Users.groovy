@@ -1,10 +1,19 @@
-package edu.ucsb.eucalyptus.msgs;
+package com.eucalyptus.accounts
+;
 
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.empyrean.Empyrean;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
+
+@ComponentMessage(AccountsService.class)
+public class ManagementMessage extends BaseMessage {}
 public class UserInfoType extends EucalyptusData {
   String userName;
   String email;
@@ -48,7 +57,6 @@ public class GroupInfoType extends EucalyptusData {
     this.groupName = name;
   }
 }
-public class ManagementMessage extends EucalyptusMessage {}
 public class UserManagementMessage extends ManagementMessage {}
 
 public class DescribeUsersType extends UserManagementMessage {
@@ -81,7 +89,7 @@ public class AddGroupType extends GroupManagementMessage {
   String groupName;
 }
 public class AddGroupResponseType extends GroupManagementMessage {}
-public class DeleteGroupType extends EucalyptusMessage {
+public class DeleteGroupType extends GroupManagementMessage {
   String groupName;
 }
 public class DeleteGroupResponseType extends GroupManagementMessage {}
@@ -91,13 +99,13 @@ public class AddGroupMemberType extends GroupManagementMessage {
   Boolean admin;
 }
 public class AddGroupMemberResponseType extends GroupManagementMessage {}
-public class DeleteGroupMemberType extends EucalyptusMessage {
+public class DeleteGroupMemberType extends GroupManagementMessage {
   String groupName;
   String userName;
 }
 public class DeleteGroupMemberResponseType extends GroupManagementMessage {}
 
-public class GrantGroupAdminType extends EucalyptusMessage {
+public class GrantGroupAdminType extends GroupManagementMessage {
   String groupName;
   String userName;
 }

@@ -61,92 +61,15 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.context;
+package com.eucalyptus.component;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.event.DisableComponentEvent;
-import com.eucalyptus.component.event.EnableComponentEvent;
-import com.eucalyptus.component.event.StartComponentEvent;
-import com.eucalyptus.component.event.StopComponentEvent;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@Provides( Empyrean.class )
-@RunDuring( Bootstrap.Stage.CloudServiceInit )
-public class ServiceBootstrapper extends Bootstrapper implements EventListener {
-  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
-  
-  public ServiceBootstrapper( ) {}
-  
-  @Override
-  public boolean load( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    return ServiceContext.startup( );
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    ServiceContext.shutdown( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public void fireEvent( Event event ) {
-    if ( ( event instanceof StartComponentEvent ) || ( event instanceof StopComponentEvent ) ) {
-      LOG.info( "Reloading service context." );
-      ServiceContext.shutdown( );
-      ServiceContext.startup( );
-    }
-  }
-  
-  public static void register( ) {
-    ListenerRegistry.getInstance( ).register( StartComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( StopComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( DisableComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( EnableComponentEvent.class, new ServiceBootstrapper( ) );
-  }
+@Target( { ElementType.TYPE, ElementType.FIELD } )
+@Retention( RetentionPolicy.RUNTIME )
+public @interface ComponentMessage {
+  Class value( );
 }

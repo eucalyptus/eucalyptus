@@ -1,11 +1,19 @@
 package com.eucalyptus.context;
 
+import java.io.ByteArrayInputStream;
+import java.io.StringWriter;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.Velocity;
+import org.apache.velocity.exception.MethodInvocationException;
+import org.apache.velocity.exception.ParseErrorException;
+import org.apache.velocity.exception.ResourceNotFoundException;
 import org.mule.DefaultMuleEvent;
 import org.mule.DefaultMuleMessage;
 import org.mule.DefaultMuleSession;
@@ -28,8 +36,11 @@ import org.mule.transport.AbstractConnector;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Resource;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -37,6 +48,7 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
@@ -47,7 +59,9 @@ public class ServiceContext {
   public static Integer                        MAX_OUTSTANDING_MESSAGES = 16;
   @ConfigurableField( initial = "0", description = "Do a soft reset.", changeListener = HupListener.class )
   public static Integer                        HUP                      = 0;
-  
+  static {
+    Velocity.init( );
+  }
   public static class HupListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
@@ -93,7 +107,7 @@ public class ServiceContext {
       MuleSession muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
                                                         ServiceContext.getContext( ) );
       MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
-      LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException(), 3 ) );
+      LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException( ), 3 ) );
       dispatcherFactory.create( endpoint ).dispatch( muleEvent );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
@@ -112,7 +126,7 @@ public class ServiceContext {
     }
     MuleEvent context = RequestContext.getEvent( );
     try {
-      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException(), 3 ) );
+      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException( ), 3 ) );
       MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
       
       if ( reply.getExceptionPayload( ) != null ) {
@@ -129,10 +143,6 @@ public class ServiceContext {
     } finally {
       RequestContext.setEvent( context );
     }
-  }
-  
-  public static void buildContext( Set<ConfigResource> configs ) {
-    ServiceContext.builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
   }
   
   public static void createContext( ) {
@@ -197,35 +207,44 @@ public class ServiceContext {
     }
   }
   
+  
   static boolean loadContext( ) {
-    Set<ConfigResource> configs = Sets.newHashSet( );
-    configs.add( Components.lookup( "bootstrap" ).getIdentity( ).getModel( ) );
-    if ( Components.lookup( "eucalyptus" ).isAvailableLocally( ) ) {
-      for ( Component comp : Components.list( ) ) {
-        if ( comp.getIdentity( ).isCloudLocal( ) ) {
-          LOG.info( "-> Preparing cloud-local cfg: " + comp.getIdentity( ).getModelConfiguration( ) );
-          configs.add( comp.getIdentity( ).getModel( ) );
-        }
-      }
+    List<ComponentId> components = ComponentIds.listEnabled( );
+    LOG.info( "The following components have been identified as active: " );
+    for( ComponentId c : components ) {
+      LOG.info( "-> " + c );
     }
-    for ( Component comp : Components.list( ) ) {
-      if ( comp.isRunningLocally( ) ) {
-        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
-          LOG.info( "-> Preparing component cfg: " + comp.getIdentity( ).getModelConfiguration( ) );
-          configs.add( comp.getIdentity( ).getModel( ) );
-        }
-      }
-    }
+    Set<ConfigResource> configs = ServiceContext.renderServiceConfigurations( components );
     for ( ConfigResource cfg : configs ) {
-      LOG.info( "-> Loaded cfg: " + cfg.getUrl( ) );
+      LOG.info( "-> Rendered cfg: " + cfg.getResourceName( ) );
     }
     try {
-      buildContext( configs );
+      ServiceContext.builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
     } catch ( Exception e ) {
       LOG.fatal( "Failed to bootstrap services.", e );
       return false;
     }
     return true;
+  }
+
+  private static Set<ConfigResource> renderServiceConfigurations( List<ComponentId> components ) {
+    Set<ConfigResource> configs = Sets.newHashSet( );
+    for( ComponentId thisComponent : components ) {
+      VelocityContext context = new VelocityContext( );
+      context.put( "components", components );
+      context.put( "thisComponent", thisComponent );
+      LOG.info( "-> Rendering configuration for " + thisComponent.name( ) );
+      String templateName = thisComponent.getServiceModel( );
+      StringWriter out = new StringWriter();
+      try {
+        Velocity.evaluate( context, out, thisComponent.getServiceModelFileName( ), thisComponent.getServiceModelAsReader( ) );
+        ConfigResource configRsc = new ConfigResource( thisComponent.getServiceModelFileName( ), new ByteArrayInputStream( out.toString( ).getBytes( ) ) );
+        configs.add( configRsc );
+      } catch ( Throwable ex ) {
+        LOG.error( "Failed to render service model configuration for: " + thisComponent + " because of: " + ex.getMessage( ), ex );
+      }
+    }
+    return configs;
   }
   
   public static synchronized boolean startup( ) {

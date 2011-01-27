@@ -72,6 +72,7 @@ import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.event.ClockTick;
@@ -81,7 +82,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
   private static Clusters singleton = getInstance( );

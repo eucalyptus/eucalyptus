@@ -80,18 +80,6 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
-import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
-import edu.ucsb.eucalyptus.msgs.DescribeNodesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeNodesType;
-import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeType;
-import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 
 public class Configuration {
   static Logger         LOG                 = Logger.getLogger( Configuration.class );

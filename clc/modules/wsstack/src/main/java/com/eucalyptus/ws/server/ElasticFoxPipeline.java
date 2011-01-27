@@ -65,7 +65,7 @@ package com.eucalyptus.ws.server;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.ElasticFoxMangleStage;

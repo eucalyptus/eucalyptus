@@ -61,92 +61,44 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.context;
+package com.eucalyptus.empyrean
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.event.DisableComponentEvent;
-import com.eucalyptus.component.event.EnableComponentEvent;
-import com.eucalyptus.component.event.StartComponentEvent;
-import com.eucalyptus.component.event.StopComponentEvent;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
+import java.io.Serializable;
+import java.util.ArrayList;
+import com.eucalyptus.component.ComponentMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-@Provides( Empyrean.class )
-@RunDuring( Bootstrap.Stage.CloudServiceInit )
-public class ServiceBootstrapper extends Bootstrapper implements EventListener {
-  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
-  
-  public ServiceBootstrapper( ) {}
-  
-  @Override
-  public boolean load( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    return ServiceContext.startup( );
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    ServiceContext.shutdown( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public void fireEvent( Event event ) {
-    if ( ( event instanceof StartComponentEvent ) || ( event instanceof StopComponentEvent ) ) {
-      LOG.info( "Reloading service context." );
-      ServiceContext.shutdown( );
-      ServiceContext.startup( );
-    }
-  }
-  
-  public static void register( ) {
-    ListenerRegistry.getInstance( ).register( StartComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( StopComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( DisableComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( EnableComponentEvent.class, new ServiceBootstrapper( ) );
-  }
+@ComponentMessage(Empyrean.class)
+public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
+}
+public class ServiceTransitionType extends EmpyreanMessage  {
+  ArrayList<ServiceId> serviceIds = new ArrayList<ServiceId>();
+}
+public class StartServiceType extends ServiceTransitionType {}
+public class StartServiceResponseType extends ServiceTransitionType {}
+public class StopServiceType extends ServiceTransitionType {}
+public class StopServiceResponseType extends ServiceTransitionType {}
+public class EnableServiceType extends ServiceTransitionType {}
+public class EnableServiceResponseType extends ServiceTransitionType {}
+public class DisableServiceType extends ServiceTransitionType {}
+public class DisableServiceResponseType extends ServiceTransitionType {}
+public class ServiceId extends EucalyptusData {
+  String uuid;/** A UUID of the registration **/
+  String partition;/** The resource partition name **/
+  String name;/** The registration name **/
+  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
+  String uri;/** this is here to account for possibly overlapping private subnets allow for multiple **/
+}
+public class ServiceStatusType extends EucalyptusData {
+  ServiceId serviceId;
+  String localState;/** one of DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED **/
+  Integer localEpoch;
+  ArrayList<String> details = new ArrayList<String>( );
+}
+public class DescribeServicesType extends EmpyreanMessage {
+  ArrayList<String> uris = new ArrayList<String>( );
+}
+public class DescribeServicesResponseType extends EmpyreanMessage {
+  ArrayList<ServiceStatusType> serviceStatus = new ArrayList<ServiceStatusType>( );
 }

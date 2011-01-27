@@ -72,10 +72,11 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.id.Empyrean;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
@@ -92,7 +93,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
      * TODO: ultimately remove this: it is legacy and enforces a one-to-one
      * relationship between component impls
      **/
-    for ( ComponentId c : Components.listIds( ) ) {
+    for ( ComponentId c : ComponentIds.list( ) ) {
       if ( c.hasDispatcher( ) && c.isAlwaysLocal( ) ) {
         try {
           Component comp = Components.lookup( c );

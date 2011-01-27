@@ -39,71 +39,14 @@
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
-  <euca:endpoint name="ConfigurationWS" connector-ref="eucaws"
-    address="http://127.0.0.1:${euca.ws.port}/services/Configuration" synchronous="true" />
-  <euca:endpoint name="PropertiesWS" connector-ref="eucaws" address="http://127.0.0.1:${euca.ws.port}/services/Properties"
-    synchronous="true" />
   <euca:endpoint name="AccountsWS" connector-ref="eucaws" address="http://127.0.0.1:${euca.ws.port}/services/Accounts"
     synchronous="true" />
-  <endpoint name="ConfigurationVMEndpoint" address="vm://ConfigurationVM" synchronous="false" />
-  <endpoint name="EmpyreanVMEndpoint" address="vm://EmpyreanVM" synchronous="false" />
-  <endpoint name="PropertiesVMEndpoint" address="vm://PropertiesVM" synchronous="false" />
   <endpoint name="ManagementVMEndpoint" address="vm://ManagementVM" synchronous="false" />
   
-  <model name="eucalyptus-configuration">
+  <model name="eucalyptus-accounts">
     <default-service-exception-strategy>
       <outbound-endpoint ref="ReplyQueueEndpoint" />
     </default-service-exception-strategy>
-    <service name="ConfigurationRequestQueue">
-      <inbound>
-        <inbound-endpoint ref="ConfigurationRequestQueueEndpoint" />
-      </inbound>
-      <bridge-component />
-      <outbound>
-        <outbound-pass-through-router>
-          <outbound-endpoint ref="ConfigurationVMEndpoint" />
-        </outbound-pass-through-router>
-      </outbound>
-    </service>
-
-    <service name="Configuration">
-      <inbound>
-        <inbound-endpoint ref="ConfigurationVMEndpoint" />
-        <inbound-endpoint ref="ConfigurationWS" />
-      </inbound>
-      <component class="com.eucalyptus.config.Configuration" />
-      <outbound>
-        <outbound-pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint" />
-        </outbound-pass-through-router>
-      </outbound>
-    </service>
-
-
-    <service name="PropertiesRequestQueue">
-      <inbound>
-        <inbound-endpoint ref="PropertiesRequestQueueEndpoint" />
-      </inbound>
-      <bridge-component />
-      <outbound>
-        <outbound-pass-through-router>
-          <outbound-endpoint ref="PropertiesVMEndpoint" />
-        </outbound-pass-through-router>
-      </outbound>
-    </service>
-    <service name="Properties">
-      <inbound>
-        <inbound-endpoint ref="PropertiesVMEndpoint" />
-        <inbound-endpoint ref="PropertiesWS" />
-      </inbound>
-      <component class="com.eucalyptus.config.Properties" />
-      <outbound>
-        <outbound-pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint" />
-        </outbound-pass-through-router>
-      </outbound>
-    </service>
-
 
 
     <service name="ManagementRequestQueue">

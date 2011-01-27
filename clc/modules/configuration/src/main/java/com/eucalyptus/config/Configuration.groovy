@@ -61,10 +61,20 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.msgs;
+package com.eucalyptus.config;
 
 import java.util.ArrayList;
+import com.eucalyptus.component.ComponentPart;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
+@ComponentPart(ConfigurationService.class)
+public class ConfigurationMessage extends BaseMessage {
+  String getComponentName(){
+    String className = this.getClass().getSimpleName();
+    return className.replaceAll("Describe","").replaceAll("Deregister","").replaceAll("Register","").substring(0,6);
+  }
+}
 public class ComponentInfoType extends EucalyptusData {
   String partition;
   String name;
@@ -98,42 +108,7 @@ public class NodeComponentInfoType extends EucalyptusData {
     this.clusterName = clusterName;
   }
 }
-public class ConfigurationMessage extends BaseMessage {
-  String getComponentName(){
-    String className = this.getClass().getSimpleName();
-    return className.replaceAll("Describe","").replaceAll("Deregister","").replaceAll("Register","").substring(0,6);
-  }
-}
-public class ServiceTransitionType extends EmpyreanMessage  {
-  ArrayList<ServiceId> serviceIds = new ArrayList<ServiceId>();
-}
-public class StartServiceType extends ServiceTransitionType {}
-public class StartServiceResponseType extends ServiceTransitionType {}
-public class StopServiceType extends ServiceTransitionType {}
-public class StopServiceResponseType extends ServiceTransitionType {}
-public class EnableServiceType extends ServiceTransitionType {}
-public class EnableServiceResponseType extends ServiceTransitionType {}
-public class DisableServiceType extends ServiceTransitionType {}
-public class DisableServiceResponseType extends ServiceTransitionType {}
-public class ServiceId extends EucalyptusData {
-  String uuid;/** A UUID of the registration **/
-  String partition;/** The resource partition name **/
-  String name;/** The registration name **/
-  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
-  String uri;/** this is here to account for possibly overlapping private subnets allow for multiple **/
-}
-public class ServiceStatusType extends EucalyptusData {
-  ServiceId serviceId;
-  String localState;/** one of DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED **/
-  Integer localEpoch;
-  ArrayList<String> details = new ArrayList<String>( );
-}
-public class DescribeServicesType extends EmpyreanMessage {
-  ArrayList<String> uris = new ArrayList<String>( );
-}
-public class DescribeServicesResponseType extends EmpyreanMessage {
-  ArrayList<ServiceStatusType> serviceStatus = new ArrayList<ServiceStatusType>( );
-}
+
 public class RegisterComponentType extends ConfigurationMessage {
   String partition;
   String name;

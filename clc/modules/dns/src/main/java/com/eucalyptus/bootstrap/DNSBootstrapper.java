@@ -68,7 +68,7 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.cloud.ws.DNSControl;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Dns;
-import com.eucalyptus.component.id.Empyrean;
+import com.eucalyptus.empyrean.Empyrean;
 
 @Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.PrivilegedConfiguration)

@@ -68,7 +68,7 @@ import com.eucalyptus.component.ComponentId;
 public class Database extends ComponentId {
 
   public Database( ) {
-    super( "db" );
+    super( "Db" );
   }
 
   @Override

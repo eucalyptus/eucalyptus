@@ -82,8 +82,8 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
-import com.eucalyptus.component.id.Empyrean;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.SubDirectory;
 
 @Provides( Empyrean.class )

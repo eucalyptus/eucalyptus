@@ -63,15 +63,43 @@
 
 package com.eucalyptus.component;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.google.common.collect.Lists;
 
 public class ComponentIds {
   private static Logger                        LOG       = Logger.getLogger( ComponentIds.class );
   private static final Map<Class, ComponentId> compIdMap = new HashMap<Class, ComponentId>( );
   
+  public static List<ComponentId> listEnabled( ) {
+    List<ComponentId> components = Lists.newArrayList( );
+    if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
+      for ( Component comp : Components.list( ) ) {
+        if ( comp.getIdentity( ).isCloudLocal( ) ) {
+          components.add( comp.getIdentity( ) );
+        }
+      }
+    }
+    for ( Component comp : Components.list( ) ) {
+      if ( comp.isRunningLocally( ) ) {
+        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
+          components.add( comp.getIdentity( ) );
+        }
+      }
+    }
+    return components;
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static List<ComponentId> list( ) {
+    return new ArrayList( Components.lookupMap( ComponentId.class ).values( ) );
+  }
+
   public static ComponentId lookup( Class compIdClass ) {
     if ( !compIdMap.containsKey( compIdClass ) ) {
       throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );

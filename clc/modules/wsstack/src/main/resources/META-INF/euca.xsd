@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 
-<xsd:schema xmlns="http://www.eucalyptus.com/schema/cloud/2.1"
+<xsd:schema xmlns="http://www.eucalyptus.com/schema/cloud/1.6"
             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
             xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
-            targetNamespace="http://www.eucalyptus.com/schema/cloud/2.1"
+            targetNamespace="http://www.eucalyptus.com/schema/cloud/1.6"
             elementFormDefault="qualified"
             attributeFormDefault="unqualified">
 

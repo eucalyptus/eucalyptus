@@ -66,7 +66,7 @@ package com.eucalyptus.ws.server;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;

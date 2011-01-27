@@ -8,7 +8,7 @@ import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.id.Empyrean;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;

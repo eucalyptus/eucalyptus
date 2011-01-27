@@ -61,15 +61,35 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.config;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.eucalyptus.component.ComponentId;
 
-@Target( { ElementType.TYPE, ElementType.FIELD } )
-@Retention( RetentionPolicy.RUNTIME )
-public @interface ComponentPart {
-  Class value( );
+
+public class ConfigurationService extends ComponentId {
+
+  public ConfigurationService( ) {
+    super( "Configuration" );
+  }
+  
+  @Override
+  public String getLocalEndpointName( ) {
+    return "vm://ConfigurationInternal";
+  }
+  
+  @Override
+  public Boolean hasDispatcher( ) {
+    return true;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return true;
+  }
+
 }

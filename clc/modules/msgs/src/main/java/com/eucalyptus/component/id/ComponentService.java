@@ -69,7 +69,7 @@ import com.eucalyptus.component.ComponentId;
 public class ComponentService extends ComponentId {
   
   public ComponentService( ) {
-    super( "component" );
+    super( "Component" );
   }
 
   @Override

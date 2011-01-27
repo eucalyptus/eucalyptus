@@ -74,12 +74,15 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Components {
   private static Logger                            LOG                  = Logger
@@ -93,13 +96,28 @@ public class Components {
                                                                         };
   public static com.eucalyptus.bootstrap.Component delegate             = com.eucalyptus.bootstrap.Component.eucalyptus;
   
+  public static List<Component> listEnabled( ) {
+    List<Component> components = Lists.newArrayList( );
+    if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
+      for ( Component comp : Components.list( ) ) {
+        if ( comp.getIdentity( ).isCloudLocal( ) ) {
+          components.add( comp );
+        }
+      }
+    }
+    for ( Component comp : Components.list( ) ) {
+      if ( comp.isRunningLocally( ) ) {
+        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
+          components.add( comp );
+        }
+      }
+    }
+    return components;
+  }
+
   @SuppressWarnings( "unchecked" )
   public static List<Component> list( ) {
     return new ArrayList( Components.lookupMap( Component.class ).values( ) );
-  }
-  @SuppressWarnings( "unchecked" )
-  public static List<ComponentId> listIds( ) {
-    return new ArrayList( Components.lookupMap( ComponentId.class ).values( ) );
   }
   
   private static <T extends ComponentInformation> Class getRealType( Class<T> maybeSubclass ) {

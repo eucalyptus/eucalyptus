@@ -68,7 +68,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.stages.UnrollableStage;

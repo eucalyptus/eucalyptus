@@ -93,6 +93,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.Services;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.ClockTick;
@@ -125,7 +126,6 @@ import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Cluster implements HasName<Cluster>, EventListener {
   private static Logger                                       LOG            = Logger.getLogger( Cluster.class );

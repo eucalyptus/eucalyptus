@@ -8,9 +8,12 @@ import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.*;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.EphemeralConfiguration;
+import com.eucalyptus.empyrean.Empyrean;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 
 
@@ -174,10 +177,8 @@ public class WalrusStateType extends EucalyptusMessage{
   }
 }
 
-public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
-}
 
-//@ServiceMessage(
+@ComponentMessage(Eucalyptus.class)
 public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
     
   public EucalyptusMessage() {
@@ -230,7 +231,7 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
   
 }
 
-public class EucalyptusData implements Cloneable, Serializable {
+public class EucalyptusData implements BaseData {
   public MetaClass getMetaClass() {
     return metaClass;
   }
@@ -637,6 +638,7 @@ public class StatEventRecord extends EucalyptusMessage {
   }
 }
 
+@ComponentMessage(ComponentService.class)
 public class ComponentMessageType extends BaseMessage {
   String component;
   String host;

@@ -30,16 +30,16 @@ import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.DeregisterClusterType;
+import com.eucalyptus.config.DescribeClustersType;
+import com.eucalyptus.config.ModifyClusterAttributeType;
+import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
-import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
-import edu.ucsb.eucalyptus.msgs.ModifyClusterAttributeType;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 @DiscoverableServiceBuilder( com.eucalyptus.component.id.Cluster.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )

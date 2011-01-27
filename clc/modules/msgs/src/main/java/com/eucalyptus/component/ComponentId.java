@@ -1,12 +1,16 @@
 package com.eucalyptus.component;
 
 import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -14,30 +18,53 @@ import org.jboss.netty.channel.Channels;
 import org.mule.config.ConfigResource;
 import com.eucalyptus.auth.principal.credential.HmacPrincipal;
 import com.eucalyptus.auth.principal.credential.X509Principal;
+import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements ComponentInformation, HasName<ComponentId>, X509Principal, HmacPrincipal {
   private static Logger LOG = Logger.getLogger( ComponentId.class );
   
   private final String name;
+  private final String capitalizedName;
+  private final String entryPoint;
   private final Integer port;
+  private final String modelContent;
   private String uriPattern;
   private String uriLocal;
+
   
   protected ComponentId( String name ) {
-    this.name = name;
+    this.capitalizedName = name;
+    this.name = this.capitalizedName.toLowerCase( );
+    this.entryPoint = name + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
+    this.modelContent = loadModel();
   }
 
   protected ComponentId( ) {
-    this.name = this.getClass( ).getSimpleName( ).toLowerCase( );
+    this.capitalizedName = this.getClass( ).getSimpleName( );
+    this.name = this.capitalizedName.toLowerCase( );
+    this.entryPoint = name + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
+    this.modelContent = loadModel();
+  }
+
+  private String loadModel( ) {
+    StringWriter out = new StringWriter( );
+    try {
+      IOUtils.copy( ClassLoader.getSystemResourceAsStream( this.getServiceModelFileName( ) ), out );
+    } catch ( IOException ex ) {
+      LOG.error( ex , ex );
+      throw BootstrapException.throwError( "BUG! BUG! Failed to load configuration specified for Component: " + this.name, ex );
+    }
+    return out.toString( );
   }
 
   public String name( ) {
@@ -78,16 +105,6 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     return this.port;
   }
   
-  public final ConfigResource getModel( ) {
-    try {
-      return new ConfigResource( this.getModelConfiguration( ) );
-    } catch ( IOException ex ) {
-      LOG.error( "Failed to load model: " + this.getModelConfiguration( ) + " because of: " + ex.getMessage( ), ex );
-      System.exit( -1 );
-      throw new RuntimeException( ex );
-    }
-  }
-  
   public String getLocalEndpointName( ) {
     return this.uriLocal;
   }
@@ -102,7 +119,15 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     return uri;
   }
   
-  public String getModelConfiguration( ) {
+  public String getServiceModel( ) {
+    return this.modelContent;
+  }
+  
+  public Reader getServiceModelAsReader( ) {
+    return new StringReader( this.modelContent );
+  }
+  
+  public String getServiceModelFileName( ) {
     return String.format( "%s-model.xml", this.getName( ) );
   }
   
@@ -190,4 +215,21 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     };
   }
 
+  /**
+   * @return the entryPoint
+   */
+  public String getEntryPoint( ) {
+    return this.entryPoint;
+  }
+
+  /**
+   * @return the capitalizedName
+   */
+  public String getCapitalizedName( ) {
+    return this.capitalizedName;
+  }
+
+  public Class<? extends BaseMessage> lookupBaseMessageType( ) {
+    return ComponentMessages.lookup( this.getClass( ) );
+  }
 }

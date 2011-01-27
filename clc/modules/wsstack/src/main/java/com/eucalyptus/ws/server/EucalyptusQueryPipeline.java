@@ -72,7 +72,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.bootstrap.ComponentPart;
+import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;

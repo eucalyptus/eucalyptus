@@ -75,8 +75,8 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.component.id.Empyrean;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 
 @Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.SystemCredentialsInit)

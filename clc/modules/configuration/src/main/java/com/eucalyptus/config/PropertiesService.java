@@ -61,34 +61,36 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.config;
 
 import com.eucalyptus.component.ComponentId;
 
+public class PropertiesService extends ComponentId {
 
-public class Empyrean extends ComponentId {
   
-  public Empyrean( ) {
-    super( "bootstrap" );
+  public PropertiesService( ) {
+    super( "Properties" );
+  }
+  
+  
+  @Override
+  public String getLocalEndpointName( ) {
+    return "vm://PropertiesInternal";
   }
 
+
   @Override
-  public String getModelConfiguration( ) {
-    return "eucalyptus-bootstrap.xml";
+  public Boolean isCloudLocal( ) {
+    return true;
   }
   
   @Override
   public Boolean hasDispatcher( ) {
-    return false;
-  }
-
-  @Override
-  public Boolean isAlwaysLocal( ) {
     return true;
   }
-
+  
   @Override
-  public Boolean isCloudLocal( ) {
+  public Boolean isAlwaysLocal( ) {
     return false;
   }
   

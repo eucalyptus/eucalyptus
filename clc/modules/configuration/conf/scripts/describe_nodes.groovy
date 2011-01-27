@@ -6,7 +6,7 @@ import com.google.common.collect.Lists;
 
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
+import com.eucalyptus.config.NodeComponentInfoType;
 
 List<NodeComponentInfoType> nodeInfoList = Lists.newArrayList( );
 for( Cluster c : Clusters.getInstance( ).listValues( ) ) {

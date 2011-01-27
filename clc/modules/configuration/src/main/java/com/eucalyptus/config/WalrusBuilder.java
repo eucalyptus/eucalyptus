@@ -6,10 +6,6 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.id.Walrus;
-import edu.ucsb.eucalyptus.msgs.DeregisterWalrusType;
-import edu.ucsb.eucalyptus.msgs.DescribeWalrusesType;
-import edu.ucsb.eucalyptus.msgs.ModifyWalrusAttributeType;
-import edu.ucsb.eucalyptus.msgs.RegisterWalrusType;
 
 @DiscoverableServiceBuilder(Walrus.class)
 @Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, WalrusConfiguration.class, ModifyWalrusAttributeType.class } )

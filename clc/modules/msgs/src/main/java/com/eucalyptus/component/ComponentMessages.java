@@ -61,92 +61,30 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.context;
+package com.eucalyptus.component;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.event.DisableComponentEvent;
-import com.eucalyptus.component.event.EnableComponentEvent;
-import com.eucalyptus.component.event.StartComponentEvent;
-import com.eucalyptus.component.event.StopComponentEvent;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.system.Ats;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-@Provides( Empyrean.class )
-@RunDuring( Bootstrap.Stage.CloudServiceInit )
-public class ServiceBootstrapper extends Bootstrapper implements EventListener {
-  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
+public class ComponentMessages {
+  private static Logger                        LOG       = Logger.getLogger( ComponentMessages.class );
+  private static final Map<Class<? extends ComponentId>, Class<? extends BaseMessage>> compIdMap = new HashMap<Class<? extends ComponentId>, Class<? extends BaseMessage>>( );
   
-  public ServiceBootstrapper( ) {}
-  
-  @Override
-  public boolean load( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    return ServiceContext.startup( );
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    ServiceContext.shutdown( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public void fireEvent( Event event ) {
-    if ( ( event instanceof StartComponentEvent ) || ( event instanceof StopComponentEvent ) ) {
-      LOG.info( "Reloading service context." );
-      ServiceContext.shutdown( );
-      ServiceContext.startup( );
+  public static Class<? extends BaseMessage> lookup( Class<? extends ComponentId> compIdClass ) {
+    if ( !compIdMap.containsKey( compIdClass ) ) {
+      throw new NoSuchElementException( "No ComponentMessage with name: " + compIdClass );
+    } else {
+      return compIdMap.get( compIdClass );
     }
   }
   
-  public static void register( ) {
-    ListenerRegistry.getInstance( ).register( StartComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( StopComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( DisableComponentEvent.class, new ServiceBootstrapper( ) );
-    ListenerRegistry.getInstance( ).register( EnableComponentEvent.class, new ServiceBootstrapper( ) );
+  public static void register( Class<? extends BaseMessage> componentMsg ) {
+    Class<? extends ComponentId> componentIdClass = Ats.from( componentMsg ).get( ComponentMessage.class ).value( );
+    compIdMap.put( componentIdClass, componentMsg );
   }
+
 }

@@ -1,10 +1,13 @@
-package com.eucalyptus.notifications;
+import com.eucalyptus.component.id.Notifications;
+
+import com.eucalyptus.component.ComponentMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import java.util.ArrayList;
 
-
-
+@ComponentMessage(Notifications.class)
+public class NotificationMessage extends BaseMessage {
+}
 public class Subscription extends NotificationMessage {
   String subscriptionArn;
   String owner;
@@ -39,8 +42,6 @@ public class ListTopicsResult extends EucalyptusData {
   TopicsList topics;
   String nextToken;
   public ListTopicsResult() {  }
-}
-public class NotificationMessage extends BaseMessage {
 }
 public class GetTopicAttributesResult extends EucalyptusData {
   TopicAttributesMap attributes;

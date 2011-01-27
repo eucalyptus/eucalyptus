@@ -89,6 +89,10 @@ import org.mule.api.transport.DispatchException;
 import org.mule.transport.NullPayload;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.config.DeregisterComponentResponseType;
+import com.eucalyptus.config.DisableServiceResponseType;
+import com.eucalyptus.config.EnableServiceResponseType;
+import com.eucalyptus.config.RegisterComponentResponseType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -105,12 +109,8 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
-import edu.ucsb.eucalyptus.msgs.DisableServiceResponseType;
-import edu.ucsb.eucalyptus.msgs.EnableServiceResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
 @ChannelPipelineCoverage( "one" )
