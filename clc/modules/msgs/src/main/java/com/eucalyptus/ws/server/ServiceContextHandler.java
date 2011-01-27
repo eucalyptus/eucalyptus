@@ -78,6 +78,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -109,7 +110,7 @@ public class ServiceContextHandler extends SimpleChannelHandler {
     if ( LogLevels.EXTREME ) LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
     BaseMessage reply = BaseMessage.extractMessage( e );
     if ( reply instanceof HasSideEffect && reply.get_return( ) ) {
-      ServiceContext.restart( );
+      ServiceContextManager.restart( );
       this.sendDownstreamNewEvent( ctx, e, reply );
     } else if( reply instanceof BaseMessage ) {
       this.sendDownstreamNewEvent( ctx, e, reply );

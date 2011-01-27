@@ -79,7 +79,9 @@ import org.mule.api.MuleContext;
 import org.mule.api.MuleException;
 import org.mule.api.config.ConfigurationException;
 import org.mule.api.context.MuleContextFactory;
+import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.lifecycle.InitialisationException;
+import org.mule.api.service.Service;
 import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
@@ -128,7 +130,6 @@ public class ServiceContextManager {
       @Override
       public MuleContext call( ) throws Exception {
         try {
-          shutdown( );
           startup( );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
@@ -199,74 +200,12 @@ public class ServiceContextManager {
     return configs;
   }
   
-  public static synchronized boolean startup( ) throws ServiceInitializationException {
-    try {
-      LOG.info( "Loading system bus." );
-      loadContext( );
-    } catch ( Exception e ) {
-      LOG.fatal( "Failed to configure services.", e );
-      return false;
-    }
-    MuleContext muleCtx = context.getReference( );
-    if ( context.compareAndSet( null, null, false, true ) ) {
-      MuleContext newCtx = createContext( );
-      context.compareAndSet( null, newCtx, true, false );
-    } else if ( context.compareAndSet( muleCtx, null, false, true ) ) {//already had a context, assume it needs shutdown
-    
-    }
-    
-    context.compareAndSet( null, null, false, false );
-    MuleContext newCtx = createContext( );
-    if ( !context.compareAndSet( null, newCtx, false, false ) ) {
-      throw new ServiceInitializationException( "Service context initialized twice." );
-    }
-    try {
-      startContext( );
-    } catch ( Exception e ) {
-      LOG.fatal( "Failed to start services.", e );
-      return false;
-    }
-    return true;
-  }
-  
-  private static MuleContext createContext( ) throws ServiceInitializationException {
-    List<ComponentId> components = ComponentIds.listEnabled( );
-    LOG.info( "The following components have been identified as active: " );
-    for ( ComponentId c : components ) {
-      LOG.info( "-> " + c );
-    }
-    Set<ConfigResource> configs = renderServiceConfigurations( components );
-    for ( ConfigResource cfg : configs ) {
-      LOG.info( "-> Rendered cfg: " + cfg.getResourceName( ) );
-    }
-    try {
-      builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
-    } catch ( Throwable ex ) {
-      LOG.fatal( "Failed to bootstrap services.", ex );
-      throw new ServiceInitializationException( "Failed to bootstrap service context because of: " + ex.getMessage( ), ex );
-    }
-    MuleContext muleCtx;
-    try {
-      muleCtx = contextFactory.createMuleContext( builder );
-    } catch ( InitialisationException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceInitializationException( "Failed to initialize service context because of: " + ex.getMessage( ), ex );
-    } catch ( ConfigurationException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceInitializationException( "Failed to initialize service context because of: " + ex.getMessage( ), ex );
-    }
-    return muleCtx;
-  }
-  
   public static synchronized void shutdown( ) {
     MuleContext muleCtx = context.getReference( );
     if ( muleCtx != null ) {
       context.compareAndSet( muleCtx, null, false, true );
       try {
-        muleCtx.stop( );
-        muleCtx.dispose( );
-      } catch ( MuleException ex ) {
-        LOG.error( ex, ex );
+        shutdownContext( muleCtx );
       } finally {
         context.compareAndSet( null, null, true, false );
       }
@@ -299,4 +238,101 @@ public class ServiceContextManager {
       return ref;
     }
   }
+
+  public static synchronized boolean startup( ) throws ServiceInitializationException {
+    try {
+      LOG.info( "Loading system bus." );
+      loadContext( );
+    } catch ( Exception e ) {
+      LOG.fatal( "Failed to configure services.", e );
+      return false;
+    }
+    try {
+      MuleContext muleCtx = context.getReference( );
+      if ( context.compareAndSet( null, null, false, true ) ) {
+        MuleContext newCtx = createContext( );
+        startContext( newCtx );
+        context.compareAndSet( null, newCtx, true, false );
+      } else if ( context.compareAndSet( muleCtx, null, false, true ) ) {//already had a context, assume it needs shutdown
+        MuleContext newCtx = null;
+        try {
+          shutdownContext( muleCtx );
+          newCtx = createContext( );
+          startContext( newCtx );
+        } finally {
+          context.compareAndSet( null, newCtx, true, false );
+        }
+      }
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+      return false;
+    }
+    return true;
+  }
+  
+  private static void startContext( MuleContext ctx ) throws ServiceInitializationException {
+    try {
+      if ( !ctx.isInitialised( ) ) {
+        ctx.initialise( );
+      }
+    } catch ( Throwable e ) {
+      LOG.error( e, e );
+      throw new ServiceInitializationException( "Failed to initialize service context.", e );
+    }
+    try {
+      ctx.start( );
+      endpointToService.clear( );
+      serviceToEndpoint.clear( );
+      for ( Object o : ctx.getRegistry( ).lookupServices( ) ) {
+        Service s = ( Service ) o;
+        for ( Object p : s.getInboundRouter( ).getEndpoints( ) ) {
+          InboundEndpoint in = ( InboundEndpoint ) p;
+          endpointToService.put( in.getEndpointURI( ).toString( ), s.getName( ) );
+          serviceToEndpoint.put( s.getName( ), in.getEndpointURI( ).toString( ) );
+        }
+      }
+    } catch ( Throwable e ) {
+      LOG.error( e, e );
+      throw new ServiceInitializationException( "Failed to start service context.", e );
+    }
+  }
+
+  private static void shutdownContext( MuleContext ctx ) {
+    try {
+      ctx.stop( );
+      ctx.dispose( );
+    } catch ( MuleException ex ) {
+      LOG.error( ex, ex );
+    }
+  }
+  
+  private static MuleContext createContext( ) throws ServiceInitializationException {
+    List<ComponentId> components = ComponentIds.listEnabled( );
+    LOG.info( "The following components have been identified as active: " );
+    for ( ComponentId c : components ) {
+      LOG.info( "-> " + c );
+    }
+    Set<ConfigResource> configs = renderServiceConfigurations( components );
+    for ( ConfigResource cfg : configs ) {
+      LOG.info( "-> Rendered cfg: " + cfg.getResourceName( ) );
+    }
+    try {
+      builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
+    } catch ( Throwable ex ) {
+      LOG.fatal( "Failed to bootstrap services.", ex );
+      throw new ServiceInitializationException( "Failed to bootstrap service context because of: " + ex.getMessage( ), ex );
+    }
+    MuleContext muleCtx;
+    try {
+      muleCtx = contextFactory.createMuleContext( builder );
+    } catch ( InitialisationException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceInitializationException( "Failed to initialize service context because of: " + ex.getMessage( ), ex );
+    } catch ( ConfigurationException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceInitializationException( "Failed to initialize service context because of: " + ex.getMessage( ), ex );
+    }
+    return muleCtx;
+  }
+  
 }
