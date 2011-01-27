@@ -187,7 +187,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   }
   
   public String getConfirmationCode( ) {
-    return this.getConfirmationCode( );
+    return this.confirmationCode;
   }
   
   public void setConfirmationCode( String confirmationCode ) {
