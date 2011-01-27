@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@
  *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
  *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-` *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
  *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
@@ -61,22 +61,35 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.ws.util;
+package com.eucalyptus.ws.server;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.EucalyptusCloudException;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpResponse;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public class RequestQueue {
-  public static String ENDPOINT = "RequestQueue";
-  private static Logger  LOG = Logger.getLogger( RequestQueue.class );
-  private static boolean acceptable;
+public class InternalOnlyHandler implements ChannelUpstreamHandler {
   
-  public BaseMessage handle( BaseMessage msg ) throws EucalyptusCloudException {
-    EventRecord.here( RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), msg.getClass( ).getSimpleName( ) ).debug( );
-    return msg;
+  @Override
+  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+    final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
+    final BaseMessage msg = BaseMessage.extractMessage( e );
+    if( request != null && msg != null ) {
+      final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
+      if( user.isSystem( ) || user.isAdministrator( ) ) {
+        ctx.sendUpstream( e );
+      } else {
+        Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
+        ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
+      }
+    } else {
+      ctx.sendUpstream( e );
+    }
   }
   
 }

@@ -89,14 +89,17 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   
   public abstract String getName( );
   
+  private final void addSystemHandlers( final ChannelPipeline pipeline ) {
+    if ( this.msgReceiver != null ) {
+      pipeline.addLast( "internal-only-restriction", new InternalOnlyHandler( ) );
+    }
+    pipeline.addLast( "service-specific-mangling", new ServiceHackeryHandler( ) );
+    pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
+  }
   public void unroll( final ChannelPipeline pipeline ) {
     try {
       this.addHandlers( pipeline );
-      if ( this.msgReceiver != null ) {
-        pipeline.addLast( "service-sink", new ServiceSinkHandler( this.msgReceiver ) );
-      } else {
-        pipeline.addLast( "service-sink", new ServiceSinkHandler( ) );
-      }
+      this.addSystemHandlers( pipeline );
       if ( LogLevels.TRACE ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
           EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ).trace( );

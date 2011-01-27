@@ -62,7 +62,7 @@
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package edu.ucsb.eucalyptus.constants;
-
+//TODO:GRZE:MOVE
 public interface IsData {
 
 }

@@ -146,18 +146,18 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
         BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
-        if( ( RegisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) 
-            || DeregisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) 
-            || EnableServiceResponseType.class.isAssignableFrom( reply.getClass( ) ) 
-            || DisableServiceResponseType.class.isAssignableFrom( reply.getClass( ) ) 
-            ) && reply.get_return( ) ) {
-          try {
-            ServiceContext.shutdown( );
-            ServiceContext.startup( );
-          } catch ( Throwable ex ) {
-            LOG.error( ex , ex );
-          }
-        }
+//        if( ( RegisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) 
+//            || DeregisterComponentResponseType.class.isAssignableFrom( reply.getClass( ) ) 
+//            || EnableServiceResponseType.class.isAssignableFrom( reply.getClass( ) ) 
+//            || DisableServiceResponseType.class.isAssignableFrom( reply.getClass( ) ) 
+//            ) && reply.get_return( ) ) {
+//          try {
+//            ServiceContext.shutdown( );
+//            ServiceContext.startup( );
+//          } catch ( Throwable ex ) {
+//            LOG.error( ex , ex );
+//          }
+//        }
         if ( reply instanceof WalrusDataGetResponseType
              && !( reply instanceof GetObjectResponseType && ( ( GetObjectResponseType ) reply ).getBase64Data( ) != null ) ) {
           e.getFuture( ).cancel( );

@@ -120,7 +120,7 @@ public class InternalWsSecHandler extends WsSecHandler {
           throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
         }
       }
-      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( User.DUMMY_ADMIN );
+      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( User.SYSTEM );
     }
   }
 }

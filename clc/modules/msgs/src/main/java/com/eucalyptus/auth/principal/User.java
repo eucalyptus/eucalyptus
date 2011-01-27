@@ -73,6 +73,7 @@ import com.eucalyptus.auth.principal.credential.X509Principal;
  *
  */
 public abstract interface User extends BasePrincipal, X509Principal, HmacPrincipal {
+  public abstract Boolean isSystem( );
   public abstract Boolean isAdministrator( );
   public abstract void setAdministrator( Boolean admin );
   public abstract Boolean isEnabled( );
@@ -82,12 +83,14 @@ public abstract interface User extends BasePrincipal, X509Principal, HmacPrincip
   public abstract User getDelegate( );
   public abstract String getPassword( );
   public abstract void setPassword( String password );
-  public static final User DUMMY_ADMIN = new User() {
+  public static final User SYSTEM = new User() { //NOTE:GRZE: this is transitional.  needed for internal communication.
     @Override public String getName( ) {
       return "admin";
     }
     @Override public X509Certificate getX509Certificate( ) { return null; }
-
+    @Override public Boolean isSystem( ) { return true; }
+    @Override public Boolean isAdministrator( ) { return true; }
+    @Override public Boolean isEnabled( ) { return true; }
     @Override public List<X509Certificate> getAllX509Certificates( ) { return null; }
     @Override public void setX509Certificate( X509Certificate cert ) {}    
     @Override public void revokeX509Certificate( ) {}    
@@ -97,9 +100,7 @@ public abstract interface User extends BasePrincipal, X509Principal, HmacPrincip
     @Override public String getSecretKey( ) { return null; }
     @Override public void setQueryId( String queryId ) {}
     @Override public void setSecretKey( String secretKey ) {}
-    @Override public Boolean isAdministrator( ) { return true; }
     @Override public void setAdministrator( Boolean admin ) {}
-    @Override public Boolean isEnabled( ) { return true; }
     @Override public void setEnabled( Boolean enabled ) {}
     @Override public String getToken( ) { return null; }
     @Override public boolean checkToken( String testToken ) { return true; }
