@@ -97,12 +97,12 @@ import com.google.common.collect.Sets;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 public class ServiceContextManager {
-  private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class );
+  private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class.toString( ) );
   private static final VelocityEngine ve = new VelocityEngine( );
   static {
     ve.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
     "org.apache.velocity.runtime.log.Log4JLogChute" );
-    ve.setProperty("runtime.log.logsystem.log4j.logger", LOG );
+    ve.setProperty("runtime.log.logsystem.log4j.logger", ServiceContextManager.class.toString( ) );
     ve.init();
   }
   private static Integer                                      SERVICE_CONTEXT_RELOAD_TIMEOUT = 10 * 1000;
