@@ -11,6 +11,7 @@ import java.net.URISyntaxException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
+import java.util.NoSuchElementException;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -20,6 +21,7 @@ import com.eucalyptus.auth.principal.credential.HmacPrincipal;
 import com.eucalyptus.auth.principal.credential.X509Principal;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
@@ -242,6 +244,10 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   }
 
   public Class<? extends BaseMessage> lookupBaseMessageType( ) {
-    return ComponentMessages.lookup( this.getClass( ) );
+    try {
+      return ComponentMessages.lookup( this.getClass( ) );
+    } catch ( NoSuchElementException ex ) {
+      return AnonymousMessage.class;
+    }
   }
 }

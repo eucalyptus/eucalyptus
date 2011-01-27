@@ -69,6 +69,8 @@ import com.eucalyptus.component.ComponentMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
+public class AnonymousMessage extends BaseMessage implements Cloneable, Serializable {
+}
 @ComponentMessage(Empyrean.class)
 public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
 }
