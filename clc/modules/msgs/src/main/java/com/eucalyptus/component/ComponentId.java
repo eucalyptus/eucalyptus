@@ -1,6 +1,7 @@
 package com.eucalyptus.component;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -19,6 +20,7 @@ import com.eucalyptus.auth.principal.credential.HmacPrincipal;
 import com.eucalyptus.auth.principal.credential.X509Principal;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -58,12 +60,20 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   private String loadModel( ) {
     StringWriter out = new StringWriter( );
     try {
-      IOUtils.copy( ClassLoader.getSystemResourceAsStream( this.getServiceModelFileName( ) ), out );
+      InputStream in = ComponentId.class.getResourceAsStream( this.getServiceModelFileName( ) );
+      IOUtils.copy( in, out );
+      in.close( );
+      out.flush( );
+      String outString = out.toString( );
+      if( LogLevels.EXTREME ) {
+        LOG.trace( "Loaded model for: " + this );
+        LOG.trace( outString );
+      }
+      return outString;
     } catch ( IOException ex ) {
       LOG.error( ex , ex );
       throw BootstrapException.throwError( "BUG! BUG! Failed to load configuration specified for Component: " + this.name, ex );
     }
-    return out.toString( );
   }
 
   public String name( ) {
