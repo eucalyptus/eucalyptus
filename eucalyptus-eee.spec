@@ -108,7 +108,7 @@ node controller (nc), storage controller (sc), walrus, or vmware broker
 Summary:      Elastic Utility Computing Architecture - ws java stack
 Requires:     %{name} = %{version}-%{release}
 Requires:     lvm2
-Requires:     jre
+Requires:     jdk
 Group:        Applications/System
 
 # Facilitate upgrades from Eucalyptus
