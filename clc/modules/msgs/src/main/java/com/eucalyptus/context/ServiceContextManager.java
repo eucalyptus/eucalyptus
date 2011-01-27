@@ -75,6 +75,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
+import org.apache.velocity.app.VelocityEngine;
+import org.apache.velocity.runtime.RuntimeConstants;
 import org.mule.api.MuleContext;
 import org.mule.api.MuleException;
 import org.mule.api.config.ConfigurationException;
@@ -92,13 +94,14 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Sets;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 public class ServiceContextManager {
+  private static final VelocityEngine ve = new VelocityEngine( );
   static {
-    Velocity.init( );
+    ve.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+    "org.apache.velocity.runtime.log.Log4JLogChute" );
   }
   private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class );
   private static Integer                                      SERVICE_CONTEXT_RELOAD_TIMEOUT = 10 * 1000;
