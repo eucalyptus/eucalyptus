@@ -109,17 +109,7 @@ public class EuareService {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getId( ) );
     u.setPath( userFound.getPath( ) );
-    LOG.debug( "YE: 1 " );
-    try {
-      EuareResourceName arn = new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) );
-      LOG.debug( "YE: 2 " );
-      String arnString = arn.toString( );
-      LOG.debug( "YE: 3 " );
-      u.setArn( arnString );
-      LOG.debug( "YE: 4 " );
-    } catch ( Throwable t ) {
-      LOG.error( t, t );
-    }
+    u.setArn( ( new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
   }
   
   private void fillGroupResult( GroupType g, Group groupFound, String accountId ) {
