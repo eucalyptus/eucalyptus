@@ -60,7 +60,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   private String loadModel( ) {
     StringWriter out = new StringWriter( );
     try {
-      InputStream in = ComponentId.class.getResourceAsStream( this.getServiceModelFileName( ) );
+      InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream( this.getServiceModelFileName( ) );
       IOUtils.copy( in, out );
       in.close( );
       out.flush( );
