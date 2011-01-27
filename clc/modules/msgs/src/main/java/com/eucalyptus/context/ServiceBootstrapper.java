@@ -92,7 +92,7 @@ public class ServiceBootstrapper extends Bootstrapper implements EventListener {
   
   @Override
   public boolean start( ) throws Exception {
-    return ServiceContext.startup( );
+    return ServiceContextManager.startup( );
   }
   
   /**
@@ -108,7 +108,7 @@ public class ServiceBootstrapper extends Bootstrapper implements EventListener {
    */
   @Override
   public boolean stop( ) throws Exception {
-    ServiceContext.shutdown( );
+    ServiceContextManager.shutdown( );
     return true;
   }
   
