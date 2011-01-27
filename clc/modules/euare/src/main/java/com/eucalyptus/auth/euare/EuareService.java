@@ -120,7 +120,7 @@ public class EuareService {
   }
   
   private String sanitizePath( String path ) {
-    if ( path != null ) {
+    if ( path != null && !"/".equals( path ) ) {
       if ( path.endsWith( "/" ) ) {
         path = path.substring( 0, path.length( ) - 1 );
       }
