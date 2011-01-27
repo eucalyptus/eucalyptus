@@ -68,13 +68,9 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.context.ServiceDispatchException;
-import com.eucalyptus.context.ServiceInitializationException;
-import com.eucalyptus.context.ServiceStateException;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 
@@ -102,15 +98,7 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
     reply.setTimestamp( new Date( ) );
     reply.setOutput( vm.getConsoleOutputString( ) );
-    try {
-      ServiceContext.dispatch( "ReplyQueue", reply );
-    } catch ( ServiceInitializationException ex ) {
-      LOG.error( ex , ex );
-    } catch ( ServiceDispatchException ex ) {
-      LOG.error( ex , ex );
-    } catch ( ServiceStateException ex ) {
-      LOG.error( ex , ex );
-    }
+    ReplyQueue.response( reply );
   }
 
 

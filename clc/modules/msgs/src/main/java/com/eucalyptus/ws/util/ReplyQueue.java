@@ -106,8 +106,12 @@ public class ReplyQueue {
     }
   }
   
-  @SuppressWarnings( "unchecked" )
   public void handle( BaseMessage responseMessage ) {
+    ReplyQueue.response( responseMessage );
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void response( BaseMessage responseMessage ) {
     EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
     String corrId = responseMessage.getCorrelationId( );
     try {

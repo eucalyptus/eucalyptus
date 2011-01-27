@@ -69,11 +69,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -81,19 +77,13 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
 import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.vm.SystemState.Reason;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
-import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.ws.util.ReplyQueue;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
@@ -106,6 +96,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType;
 import edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType;
@@ -124,6 +116,7 @@ import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesType;
 import edu.ucsb.eucalyptus.msgs.StopInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.StopInstancesType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType;
@@ -229,7 +222,7 @@ public class VmControl {
         reply.setInstanceId( request.getInstanceId( ) );
         reply.setTimestamp( new Date( ) );
         reply.setOutput( v.getConsoleOutputString( ) );
-        ServiceContext.dispatch( "ReplyQueue", reply );
+        ReplyQueue.response( reply );
       } catch ( NoSuchElementException ex ) {
         throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );
       }
@@ -241,7 +234,7 @@ public class VmControl {
       reply.setInstanceId( request.getInstanceId( ) );
       reply.setTimestamp( new Date( ) );
       reply.setOutput( v.getConsoleOutputString( ) );
-      ServiceContext.dispatch( "ReplyQueue", reply );
+      ReplyQueue.response( reply );
     } else {
       Cluster cluster = null;
       try {
