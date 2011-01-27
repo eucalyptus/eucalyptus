@@ -89,6 +89,7 @@ import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -187,10 +188,12 @@ public class ServiceContextManager {
       context.put( "components", components );
       context.put( "thisComponent", thisComponent );
       LOG.info( "-> Rendering configuration for " + thisComponent.name( ) );
-      String templateName = thisComponent.getServiceModel( );
       StringWriter out = new StringWriter( );
       try {
         Velocity.evaluate( context, out, thisComponent.getServiceModelFileName( ), thisComponent.getServiceModelAsReader( ) );
+        if( LogLevels.EXTREME ) {
+          LOG.info( out.toString( ) );
+        }
         ConfigResource configRsc = new ConfigResource( thisComponent.getServiceModelFileName( ), new ByteArrayInputStream( out.toString( ).getBytes( ) ) );
         configs.add( configRsc );
       } catch ( Throwable ex ) {
