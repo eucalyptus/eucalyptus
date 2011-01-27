@@ -23,7 +23,7 @@
       <outbound>
         <filtering-router>
           <outbound-endpoint ref="EmpyreanVM" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EmpyreanMessage" />
+          <payload-type-filter expectedType="com.eucalyptus.empyrean.EmpyreanMessage" />
         </filtering-router>
       </outbound>
     </service>

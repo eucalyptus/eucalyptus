@@ -70,7 +70,7 @@
       <outbound>
         <filtering-router>
           <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EmpyreanMessage" />
+          <payload-type-filter expectedType="com.eucalyptus.empyrean.EmpyreanMessage" />
         </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="WalrusRequestQueueEndpoint" synchronous="false" />
