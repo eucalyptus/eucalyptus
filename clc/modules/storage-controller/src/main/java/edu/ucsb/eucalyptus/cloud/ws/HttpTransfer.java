@@ -11,7 +11,6 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.StorageProperties;

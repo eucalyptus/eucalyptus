@@ -79,7 +79,6 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.event.EventFailedException;

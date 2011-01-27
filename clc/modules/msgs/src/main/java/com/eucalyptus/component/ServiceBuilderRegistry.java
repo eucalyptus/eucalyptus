@@ -67,7 +67,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
 import com.google.common.collect.Maps;
 public class ServiceBuilderRegistry {
   private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );

@@ -88,7 +88,6 @@ import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;

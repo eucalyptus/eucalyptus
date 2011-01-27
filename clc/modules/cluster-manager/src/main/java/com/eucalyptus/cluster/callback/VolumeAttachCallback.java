@@ -66,7 +66,6 @@ package com.eucalyptus.cluster.callback;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;

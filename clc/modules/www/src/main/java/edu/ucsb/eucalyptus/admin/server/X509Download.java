@@ -81,7 +81,6 @@ import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;

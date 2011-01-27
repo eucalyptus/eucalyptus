@@ -84,7 +84,6 @@ import org.mule.api.MuleException;
 import org.mule.api.transport.DispatchException;
 import org.mule.transport.NullPayload;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;

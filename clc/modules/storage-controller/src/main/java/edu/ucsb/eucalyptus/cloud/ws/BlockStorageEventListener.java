@@ -65,7 +65,6 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.event.Event;

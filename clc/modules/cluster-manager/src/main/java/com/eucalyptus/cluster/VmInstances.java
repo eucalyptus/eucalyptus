@@ -72,7 +72,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;

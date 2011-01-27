@@ -78,7 +78,6 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.Configuration;

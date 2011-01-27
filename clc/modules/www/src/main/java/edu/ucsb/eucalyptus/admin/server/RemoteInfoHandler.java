@@ -64,7 +64,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.component.Components;

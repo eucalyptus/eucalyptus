@@ -80,7 +80,6 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.mule.RequestContext;
 
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.StorageControllerBuilder;

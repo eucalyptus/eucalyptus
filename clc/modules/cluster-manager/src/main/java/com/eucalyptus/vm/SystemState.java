@@ -84,7 +84,6 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
 import com.eucalyptus.cluster.Networks;

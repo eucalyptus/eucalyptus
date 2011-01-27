@@ -7,7 +7,6 @@ import java.util.NoSuchElementException;
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.ComponentMessage;
 import com.eucalyptus.component.id.*;
