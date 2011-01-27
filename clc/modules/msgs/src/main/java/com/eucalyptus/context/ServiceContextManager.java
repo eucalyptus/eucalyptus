@@ -74,7 +74,6 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.apache.velocity.VelocityContext;
-import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.mule.api.MuleContext;
@@ -98,13 +97,14 @@ import com.google.common.collect.Sets;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 public class ServiceContextManager {
+  private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class );
   private static final VelocityEngine ve = new VelocityEngine( );
   static {
     ve.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
     "org.apache.velocity.runtime.log.Log4JLogChute" );
+    ve.setProperty("runtime.log.logsystem.log4j.logger", LOG );
     ve.init();
   }
-  private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class );
   private static Integer                                      SERVICE_CONTEXT_RELOAD_TIMEOUT = 10 * 1000;
   private static String                                       FAIL_MSG                       = "ESB client not ready because the service bus has not been started.";
   private static BootstrapException                           failEx                         = new BootstrapException( FAIL_MSG );
