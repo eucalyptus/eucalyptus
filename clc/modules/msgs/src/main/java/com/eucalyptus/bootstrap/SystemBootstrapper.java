@@ -181,8 +181,8 @@ public class SystemBootstrapper {
         stage.start( );
       } while( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( BootstrapException t ) {
-      LOG.fatal( t, t );
       t.printStackTrace( );
+      LOG.fatal( t, t );
       throw t;
     } catch ( Throwable t ) {
       LOG.fatal( t, t );
