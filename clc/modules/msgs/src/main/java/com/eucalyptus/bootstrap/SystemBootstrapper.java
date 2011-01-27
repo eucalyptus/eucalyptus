@@ -116,17 +116,14 @@ public class SystemBootstrapper {
 
   public boolean init( ) throws Exception {
     try {
-      boolean doExtreme = "EXTREME".equals( System.getProperty( "euca.log.level" ) );
-      boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) ) || doExtreme;
-      boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-      if( doExtreme ) {
+      LogLevels.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+      LogLevels.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.EXTREME;
+      LogLevels.DEBUG  = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.TRACE;
+      if( LogLevels.EXTREME ) {
         System.setProperty( "euca.log.level", "TRACE" );        
       }
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + LogUtil.dumpObject( LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
-      LogLevels.DEBUG = doDebug;
-      LogLevels.TRACE = doTrace;
-      LogLevels.EXTREME = doExtreme;
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
       t.printStackTrace( );

@@ -86,7 +86,7 @@ public class ComponentIds {
       }
     }
     for ( Component comp : Components.list( ) ) {
-      if ( comp.isRunningLocally( ) ) {
+      if ( comp.isRunningLocally( ) || comp.getIdentity( ).isAlwaysLocal( ) ) {
         if ( !comp.getIdentity( ).isCloudLocal( ) ) {
           components.add( comp.getIdentity( ) );
         }
