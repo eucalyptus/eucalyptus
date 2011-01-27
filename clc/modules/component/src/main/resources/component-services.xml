@@ -73,9 +73,9 @@
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
 
 	<euca:endpoint name="ComponentWS" connector-ref="eucaws"
-		address="http://127.0.0.1:${euca.ws.port}/services/Component" />
+		address="http://127.0.0.1:8773/services/Component" />
   <euca:endpoint name="ComponentInternalWS"
-    connector-ref="eucaws" address="http://127.0.0.1:${euca.ws.port}/internal/ComponentInternal"
+    connector-ref="eucaws" address="http://127.0.0.1:8773/internal/ComponentInternal"
     synchronous="true" />
 	<endpoint name="ComponentInternalVM" address="vm://ComponentInternal"
 		synchronous="true" />

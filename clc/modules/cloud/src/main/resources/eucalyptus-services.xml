@@ -73,7 +73,7 @@
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
   <!--user data services-->
-  <euca:endpoint name="EucalyptusWS" connector-ref="eucaws" address="http://127.0.0.1:${euca.ws.port}/services/Eucalyptus" synchronous="true" />
+  <euca:endpoint name="EucalyptusWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Eucalyptus" synchronous="true" />
   <endpoint name="ShortBusWS" address="vm://ShortBus" synchronous="false" />
   <endpoint name="ImageWS" address="vm://Image" synchronous="false" />
   <endpoint name="VolumeWS" address="vm://Volume" synchronous="false" />
