@@ -90,13 +90,14 @@ import org.mule.transport.NullPayload;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.config.DeregisterComponentResponseType;
-import com.eucalyptus.config.DisableServiceResponseType;
-import com.eucalyptus.config.EnableServiceResponseType;
 import com.eucalyptus.config.RegisterComponentResponseType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceDispatchException;
+import com.eucalyptus.context.ServiceInitializationException;
+import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -252,37 +253,41 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   /** 
    * ASAP: {@link ServiceSinkHandler#dispatchRequest(BaseMessage)
    */
-  private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final BaseMessage msg ) throws NoSuchContextException {
-    try {
-      /** ASAP:FIXME:GRZE this is a temporary hack around mule reloading issue **/
-      if( !this.msgReceiver.getConnector( ).isStarted( ) ) {
-        InboundEndpoint inbound = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory().getInboundEndpoint( this.msgReceiver.getEndpointURI( ) );
-        Service service = ServiceContext.getContext( ).getRegistry( ).lookupService( this.msgReceiver.getService( ).getName( ) );
-        this.msgReceiver = new NioMessageReceiver( inbound.getConnector( ), service, inbound );
-//        this.msgReceiver.doConnect( );
-      }
-      final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
-      if ( reply != null ) {
-        ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
-      } else {
-        EventRecord.here( ServiceSinkHandler.class, EventType.MSG_SENT_ASYNC, msg.getClass( ).getSimpleName( ), this.msgReceiver.getEndpointURI( ).toString( ) );
-      }
-    } catch ( Exception e1 ) {
-      LOG.error( e1, e1 );
-      EucalyptusErrorMessageType errMsg = new EucalyptusErrorMessageType( this.msgReceiver.getService( ).getName( ), msg,
-                                                                          ( e1.getCause( ) != null ? e1.getCause( ) : e1 ).getMessage( ) );
-      errMsg.setCorrelationId( msg.getCorrelationId( ) );
-      errMsg.setException( e1.getCause( ) != null ? e1.getCause( ) : e1 );
-      Contexts.clear( Contexts.lookup( errMsg.getCorrelationId( ) ) );
-      Channels.write( ctx.getChannel( ), errMsg );
-    }
-  }
+//  private void dispatchRequest( final ChannelHandlerContext ctx, final MappingHttpMessage request, final BaseMessage msg ) throws NoSuchContextException {
+//    try {
+//      /** ASAP:FIXME:GRZE this is a temporary hack around mule reloading issue **/
+//      if( !this.msgReceiver.getConnector( ).isStarted( ) ) {
+//        InboundEndpoint inbound = ServiceContext.getContext( ).getRegistry( ).lookupEndpointFactory().getInboundEndpoint( this.msgReceiver.getEndpointURI( ) );
+//        Service service = ServiceContext.getContext( ).getRegistry( ).lookupService( this.msgReceiver.getService( ).getName( ) );
+//        this.msgReceiver = new NioMessageReceiver( inbound.getConnector( ), service, inbound );
+////        this.msgReceiver.doConnect( );
+//      }
+//      final MuleMessage reply = this.msgReceiver.routeMessage( new DefaultMuleMessage( msg ), true );
+//      if ( reply != null ) {
+//        ReplyQueue.handle( this.msgReceiver.getService( ).getName( ), reply, msg );
+//      } else {
+//        EventRecord.here( ServiceSinkHandler.class, EventType.MSG_SENT_ASYNC, msg.getClass( ).getSimpleName( ), this.msgReceiver.getEndpointURI( ).toString( ) );
+//      }
+//    } catch ( Exception e1 ) {
+//      LOG.error( e1, e1 );
+//      EucalyptusErrorMessageType errMsg = new EucalyptusErrorMessageType( this.msgReceiver.getService( ).getName( ), msg,
+//                                                                          ( e1.getCause( ) != null ? e1.getCause( ) : e1 ).getMessage( ) );
+//      errMsg.setCorrelationId( msg.getCorrelationId( ) );
+//      errMsg.setException( e1.getCause( ) != null ? e1.getCause( ) : e1 );
+//      Contexts.clear( Contexts.lookup( errMsg.getCorrelationId( ) ) );
+//      Channels.write( ctx.getChannel( ), errMsg );
+//    }
+//  }
   
   private static void dispatchRequest( final BaseMessage msg ) throws MuleException, DispatchException {
     try {
       ServiceContext.dispatch( "RequestQueue", msg );
-    } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex , ex );
+    } catch ( ServiceInitializationException ex1 ) {
+      LOG.error( ex1 , ex1 );
+    } catch ( ServiceDispatchException ex1 ) {
+      LOG.error( ex1 , ex1 );
+    } catch ( ServiceStateException ex1 ) {
+      LOG.error( ex1 , ex1 );
     }
   }
   
