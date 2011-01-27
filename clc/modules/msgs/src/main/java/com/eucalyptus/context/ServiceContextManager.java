@@ -195,10 +195,16 @@ public class ServiceContextManager {
       StringWriter out = new StringWriter( );
       try {
         ve.evaluate( context, out, thisComponent.getServiceModelFileName( ), thisComponent.getServiceModelAsReader( ) );
+        out.flush( );
+        out.close( );
+        String outString = out.toString( );        
+        ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ));
         if( LogLevels.EXTREME ) {
-          LOG.info( out.toString( ) );
+          LOG.info( "===================================" );
+          LOG.info( outString );
+          LOG.info( "===================================" );
         }
-        ConfigResource configRsc = new ConfigResource( thisComponent.getServiceModelFileName( ), new ByteArrayInputStream( out.toString( ).getBytes( ) ) );
+        ConfigResource configRsc = new ConfigResource( thisComponent.getServiceModelFileName( ), bis );
         configs.add( configRsc );
       } catch ( Throwable ex ) {
         LOG.error( "Failed to render service model configuration for: " + thisComponent + " because of: " + ex.getMessage( ), ex );
