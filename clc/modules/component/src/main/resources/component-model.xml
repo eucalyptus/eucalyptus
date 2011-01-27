@@ -86,7 +86,7 @@
 				<inbound-endpoint ref="ComponentWS" />
 			</inbound>
 			<component class="com.eucalyptus.cloud.ws.ComponentService" />
-			<outbound>
+			<outbound><!--
 				<filtering-router>
 					<outbound-endpoint ref="StorageRequestQueueEndpoint" />
 					<payload-type-filter
@@ -97,7 +97,7 @@
 					<payload-type-filter
 						expectedType="edu.ucsb.eucalyptus.msgs.WalrusComponentMessageType" />
 				</filtering-router>
-				<filtering-router>
+				--><filtering-router>
 					<outbound-endpoint ref="ReplyQueueEndpoint" />
 					<payload-type-filter
 						expectedType="edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType" />
