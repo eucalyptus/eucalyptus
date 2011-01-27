@@ -9,6 +9,11 @@ package com.eucalyptus.auth.policy.ern;
 public class WildcardResourceName extends Ern {
   
   @Override
+  public String toString( ) {
+    return "*";
+  }
+  
+  @Override
   public String getResourceType( ) {
     return "*";
   }

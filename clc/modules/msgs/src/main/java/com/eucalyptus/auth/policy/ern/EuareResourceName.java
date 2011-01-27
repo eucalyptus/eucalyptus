@@ -16,6 +16,7 @@ public class EuareResourceName extends Ern {
     this.vendor = PolicySpec.VENDOR_IAM;
   }
 
+  @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
     sb.append( ARN_PREFIX ).append( this.getVendor( ) ).append( "::" ).append( this.getNamespace( ) )

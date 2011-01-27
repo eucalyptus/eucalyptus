@@ -109,7 +109,9 @@ public class EuareService {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getId( ) );
     u.setPath( userFound.getPath( ) );
+    LOG.debug( "YE: before fill" );
     u.setArn( ( new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
+    LOG.debug( "YE: before after" );
   }
   
   private void fillGroupResult( GroupType g, Group groupFound, String accountId ) {
@@ -545,8 +547,8 @@ public class EuareService {
           if ( request.getPathPrefix( ) != null && user.getPath( ).startsWith( request.getPathPrefix( ) ) ) {
             UserType u = new UserType( );
             fillUserResult( u, user, account.getId( ) );
-            users.add( u );
             LOG.debug( "YE: user matched" );
+            users.add( u );
           }
         }
       }

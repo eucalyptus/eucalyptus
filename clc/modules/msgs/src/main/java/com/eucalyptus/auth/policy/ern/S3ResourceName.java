@@ -19,6 +19,7 @@ public class S3ResourceName extends Ern {
     return true;
   }
   
+  @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
     sb.append( ARN_PREFIX ).append( this.getVendor( ) ).append( ":::" ).append( this.bucket );
