@@ -85,8 +85,8 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
@@ -278,8 +278,7 @@ public class WalrusManager {
 							+ ".000Z"));
 		}
 		try {
-			CanonicalUserType owner = new CanonicalUserType(Users
-					.lookupUserById(userId).getFirstActiveSecretKeyId(), userId);
+			CanonicalUserType owner = new CanonicalUserType(Accounts.getFirstActiveAccessKeyId(Accounts.lookupUserById(userId)), userId);
 			ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
 			reply.setOwner(owner);
 			bucketList.setBuckets(buckets);
@@ -574,7 +573,7 @@ public class WalrusManager {
 					String uId = grantInfo.getUserId();
 					try {
 						if (uId != null) {
-							User grantUserInfo = Users.lookupUserById(uId);
+							User grantUserInfo = Accounts.lookupUserById(uId);
 							addPermission(grants, grantUserInfo, grantInfo);
 						} else {
 							addPermission(grants, grantInfo);
@@ -594,9 +593,8 @@ public class WalrusManager {
 
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
-			User ownerUserInfo = Users.lookupUserById(ownerId);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo
-					.getFirstActiveSecretKeyId( ), ownerUserInfo.getUserId()));
+			User ownerUserInfo = Accounts.lookupUserById(ownerId);
+			accessControlPolicy.setOwner(new CanonicalUserType(Accounts.getFirstActiveAccessKeyId(ownerUserInfo), ownerUserInfo.getId()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (AuthException e) {
 			db.rollback();
@@ -608,9 +606,9 @@ public class WalrusManager {
 	}
 
 	private static void addPermission(ArrayList<Grant> grants, User userInfo,
-			GrantInfo grantInfo) {
-		CanonicalUserType user = new CanonicalUserType(userInfo.getFirstActiveSecretKeyId( ),
-				userInfo.getUserId());
+			GrantInfo grantInfo) throws AuthException {
+		CanonicalUserType user = new CanonicalUserType(Accounts.getFirstActiveAccessKeyId(userInfo),
+				userInfo.getId());
 
 		if (grantInfo.canRead() && grantInfo.canWrite()
 				&& grantInfo.canReadACP() && grantInfo.isWriteACP()) {
@@ -1479,9 +1477,8 @@ public class WalrusManager {
 								listEntry.setStorageClass(objectInfo.getStorageClass());
 								String displayName = objectInfo.getOwnerId();
 								try {
-									User userInfo = Users.lookupUserById(displayName);
-									listEntry.setOwner(new CanonicalUserType(userInfo
-											.getFirstActiveSecretKeyId( ), displayName));
+									User userInfo = Accounts.lookupUserById(displayName);
+									listEntry.setOwner(new CanonicalUserType(Accounts.getFirstActiveAccessKeyId( userInfo ), displayName));
 								} catch (AuthException e) {
 									db.rollback();
 									throw new AccessDeniedException("Bucket",
@@ -1558,7 +1555,7 @@ public class WalrusManager {
 							for (GrantInfo grantInfo : grantInfos) {
 								String uId = grantInfo.getUserId();
 								try {
-									User userInfo = Users.lookupUserById(uId);
+									User userInfo = Accounts.lookupUserById(uId);
 									objectInfo.readPermissions(grants);
 									addPermission(grants, userInfo, grantInfo);
 								} catch (AuthException e) {
@@ -1582,9 +1579,8 @@ public class WalrusManager {
 
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
-			User ownerUserInfo = Users.lookupUserById(ownerId);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerUserInfo
-					.getFirstActiveSecretKeyId( ), ownerUserInfo.getUserId()));
+			User ownerUserInfo = Accounts.lookupUserById(ownerId);
+			accessControlPolicy.setOwner(new CanonicalUserType(Accounts.getFirstActiveAccessKeyId( ownerUserInfo ), ownerUserInfo.getId()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (AuthException e) {
 			throw new AccessDeniedException("Key", objectKey, logData);
@@ -2598,7 +2594,7 @@ public class WalrusManager {
 						String uId = grantInfo.getUserId();
 						try {
 							if (uId != null) {
-								User grantUserInfo = Users.lookupUserById(uId);
+								User grantUserInfo = Accounts.lookupUserById(uId);
 								addPermission(grants, grantUserInfo, grantInfo);
 							} else {
 								addPermission(grants, grantInfo);
@@ -2837,9 +2833,8 @@ public class WalrusManager {
 											+ ".000Z");
 									String displayName = objectInfo.getOwnerId();
 									try {
-										User userInfo = Users.lookupUserById(displayName);
-										versionEntry.setOwner(new CanonicalUserType(
-												userInfo.getFirstActiveSecretKeyId( ), displayName));
+										User userInfo = Accounts.lookupUserById(displayName);
+										versionEntry.setOwner(new CanonicalUserType(Accounts.getFirstActiveAccessKeyId( userInfo ), displayName));
 									} catch (AuthException e) {
 										db.rollback();
 										throw new AccessDeniedException("Bucket",
@@ -2861,10 +2856,9 @@ public class WalrusManager {
 											+ ".000Z");
 									String displayName = objectInfo.getOwnerId();
 									try {
-										User userInfo = Users.lookupUserById(displayName);
+										User userInfo = Accounts.lookupUserById(displayName);
 										deleteMarkerEntry
-										.setOwner(new CanonicalUserType(
-												userInfo.getFirstActiveSecretKeyId( ),
+										.setOwner(new CanonicalUserType(Accounts.getFirstActiveAccessKeyId( userInfo ),
 												displayName));
 									} catch (AuthException e) {
 										db.rollback();

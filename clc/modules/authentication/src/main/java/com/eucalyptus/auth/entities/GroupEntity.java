@@ -1,8 +1,6 @@
 package com.eucalyptus.auth.entities;
 
 import java.io.Serializable;
-import java.security.Principal;
-import java.util.Enumeration;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -16,14 +14,9 @@ import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.apache.log4j.Logger;
-import org.codehaus.janino.Java.ThisReference;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
 /**
@@ -36,14 +29,11 @@ import com.google.common.collect.Lists;
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class GroupEntity extends AbstractPersistent implements Group, Serializable {
+public class GroupEntity extends AbstractPersistent implements Serializable {
 
   @Transient
   private static final long serialVersionUID = 1L;
 
-  @Transient
-  private static Logger LOG = Logger.getLogger( GroupEntity.class );
-  
   // Group name, not unique since different accounts can have the same group name
   @Column( name = "auth_group_name" )
   String name;
@@ -114,59 +104,21 @@ public class GroupEntity extends AbstractPersistent implements Group, Serializab
     sb.append( ']' );
     sb.append( "policies=[\n");
     for ( PolicyEntity p : this.getPolicies( ) ) {
-      sb.append( p.getPolicyText( ) ).append( '\n' );
+      sb.append( p.getText( ) ).append( '\n' );
     }
     sb.append( ']' );
     sb.append( ")" );
     return sb.toString( );
   }
   
-  @Override
-  public boolean addMember( Principal user ) {
-    if ( user != null && user instanceof UserEntity ) {
-      return this.users.add( ( UserEntity ) user );
-    } else {
-      LOG.debug( "Invalid user type or empty user" );
-      return false;
-    }
-  }
-
-  @Override
-  public boolean isMember( Principal user ) {
-    if ( user != null && user instanceof UserEntity ) {
-      return this.users.contains( ( UserEntity ) user );
-    } else {
-      LOG.debug( "Invalid user type or empty user" );
-      return false;
-    }
-  }
-
-  @Override
-  public Enumeration<? extends Principal> members( ) {
-    return Iterators.asEnumeration( this.users.iterator( ) );
-  }
-
-  @Override
-  public boolean removeMember( Principal user ) {
-    if ( user != null && user instanceof UserEntity ) {
-      return this.users.remove( ( UserEntity ) user );
-    } else {
-      LOG.debug( "Invalid user type or empty user" );
-      return false;
-    }
-  }
-
-  @Override
   public String getName( ) {
     return this.name;
   }
 
-  @Override
   public void setName( String name ) {
     this.name = name;
   }
   
-  @Override
   public String getPath( ) {
     return this.path;
   }
@@ -175,7 +127,7 @@ public class GroupEntity extends AbstractPersistent implements Group, Serializab
     this.path = path;
   }
 
-  public Account getAccount( ) {
+  public AccountEntity getAccount( ) {
     return this.account;
   }
   
@@ -197,11 +149,6 @@ public class GroupEntity extends AbstractPersistent implements Group, Serializab
   
   public List<UserEntity> getUsers( ) {
     return this.users;
-  }
-
-  @Override
-  public String getGroupId( ) {
-    return this.getId( );
   }
   
 }

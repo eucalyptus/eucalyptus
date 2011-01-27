@@ -14,9 +14,7 @@ import javax.naming.directory.SearchResult;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.LdapException;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
@@ -66,21 +64,6 @@ public class LdapSync {
       if ( event instanceof ClockTick ) {
         periodicSync( );
       }
-    }
-    
-  }
-  
-  private static class DummyPrincipal implements Principal {
-
-    private String name;
-    
-    public DummyPrincipal( String name ) {
-      this.name = name;
-    }
-    
-    @Override
-    public String getName( ) {
-      return this.name;
     }
     
   }
@@ -260,8 +243,8 @@ public class LdapSync {
   private static void addNewAccount( String accountName, Set<String> accountMembers, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
     LOG.debug( "Adding new account " + accountName );
     try {
-      Accounts.addAccount( accountName );
-      Users.addAccountAdmin( accountName );
+      Account account = Accounts.addAccount( accountName );
+      account.addUser( User.ACCOUNT_ADMIN, "/", true/* skipRegistration */, true, null );
       for ( String user : getAccountUserSet( accountMembers, groups ) ) {
         try {
           LOG.debug( "Adding new user " + user );
@@ -269,7 +252,7 @@ public class LdapSync {
           if ( info == null ) {
             LOG.warn( "Empty user info for user " + user );
           }
-          Users.addUser( user, "/", true /* skipRegistration */, true /* enabled */, info, true /* createKey */, false /* createPassword */, accountName );
+          account.addUser( user, "/", true/* skipRegistration */, true/* enabled */, info );
         } catch ( AuthException e ) {
           LOG.error( e, e );
           LOG.warn( "Failed add new user " + user, e );
@@ -279,14 +262,14 @@ public class LdapSync {
         Group dbGroup = null;
         try {
           LOG.debug( "Adding new group " + group );
-          dbGroup = Groups.addGroup( group, "/", accountName );
+          dbGroup = account.addGroup( group, "/" );
           Set<String> groupUsers = groups.get( group );
           if ( groupUsers == null ) {
             LOG.error( "Empty user set for group " + group );
           } else {
             for ( String user : groupUsers ) {
               LOG.debug( "Adding " + user + " to group " + group );
-              dbGroup.addMember( new DummyPrincipal( user ) );
+              dbGroup.addUserByName( user );
             }
           }
         } catch ( AuthException e ) {
@@ -315,77 +298,79 @@ public class LdapSync {
   
   private static void updateAccount( String accountName, Set<String> accountMembers, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
     LOG.debug( "Updating account " + accountName );
+    Account account = null;
     try {
+      account = Accounts.lookupAccountByName( accountName );
       // Update users first
       Set<String> newUserSet = getAccountUserSet( accountMembers, groups );
-      Set<String> oldUserSet = getLocalUserSet( accountName );
+      Set<String> oldUserSet = getLocalUserSet( account );
       for ( String user : newUserSet ) {
         if ( oldUserSet.contains( user ) ) {
           oldUserSet.remove( user );
           try {
-            updateUser( accountName, user, users.get( user ) );
+            updateUser( account, user, users.get( user ) );
           } catch ( AuthException e ) {
             LOG.error( e, e );
             LOG.warn( "Failed to update user " + user + " in " + accountName, e );
           }
         } else {
           try {
-            addNewUser( accountName, user, users.get( user ) );
+            addNewUser( account, user, users.get( user ) );
           } catch ( AuthException e ) {
             LOG.error( e, e );
             LOG.warn( "Failed to add new user " + user + " in " + accountName, e );
           }
         }
       }
-      removeObsoleteUsers( accountName, oldUserSet );
+      removeObsoleteUsers( account, oldUserSet );
       // Now update groups
-      Set<String> oldGroupSet = getLocalGroupSet( accountName );
+      Set<String> oldGroupSet = getLocalGroupSet( account );
       for ( String group : accountMembers ) {
         if ( oldGroupSet.contains( group ) ) {
           oldGroupSet.remove( group );
-          updateGroup( accountName, group, groups.get( group ) );
+          updateGroup( account, group, groups.get( group ) );
         } else {
-          addNewGroup( accountName, group, groups.get( group ) );
+          addNewGroup( account, group, groups.get( group ) );
         }
       }
-      removeObsoleteGroups( accountName, oldGroupSet );
+      removeObsoleteGroups( account, oldGroupSet );
     } catch ( AuthException e ) {
       LOG.error( e, e );
       LOG.error( "Failed to update account " + accountName, e );
     }
   }
   
-  private static void removeObsoleteGroups( String accountName, Set<String> oldGroupSet ) {
+  private static void removeObsoleteGroups( Account account, Set<String> oldGroupSet ) {
     for ( String group : oldGroupSet ) {
       try {
-        Groups.deleteGroup( group, accountName, true /* recursive */ );
+        account.deleteGroup( group, true/* recursive */ );
       } catch ( AuthException e ) {
         LOG.error( e, e );
-        LOG.warn( "Failed to delete group " + group + " in " + accountName, e );
+        LOG.warn( "Failed to delete group " + group + " in " + account.getName( ), e );
       }
     }
   }
 
-  private static void addNewGroup( String accountName, String group, Set<String> users ) {
-    LOG.debug( "Adding new group " + group + " in account " + accountName );
+  private static void addNewGroup( Account account, String group, Set<String> users ) {
+    LOG.debug( "Adding new group " + group + " in account " + account.getName( ) );
     if ( users == null ) {
       LOG.error( "Empty new user set of group " + group );
       return;
     }
     try {
-      Group g = Groups.addGroup( group, "/", accountName );
+      Group g = account.addGroup( group, "/" );
       for ( String user : users ) {
         LOG.debug( "Adding " + user + " to " + group );
-        g.addMember( new DummyPrincipal( user ) );
+        g.addUserByName( user );
       }
     } catch ( AuthException e ) {
       LOG.error( e, e );
-      LOG.warn( "Failed to add new group " + group + " in " + accountName, e );
+      LOG.warn( "Failed to add new group " + group + " in " + account.getName( ), e );
     }
   }
 
-  private static void updateGroup( String accountName, String group, Set<String> users ) {
-    LOG.debug( "Updating group " + group + " in account " + accountName );
+  private static void updateGroup( Account account, String group, Set<String> users ) {
+    LOG.debug( "Updating group " + group + " in account " + account.getName( ) );
     if ( users == null ) {
       LOG.error( "Empty new user set of group " + group );
       return;
@@ -393,7 +378,7 @@ public class LdapSync {
     try {
       // Get local user set of the group
       Set<String> localUserSet = Sets.newHashSet( );
-      Group g = Groups.lookupGroupByName( group, accountName );
+      Group g = account.lookupGroupByName( group );
       for ( User u : g.getUsers( ) ) {
         localUserSet.add( u.getName( ) );
       }
@@ -403,62 +388,62 @@ public class LdapSync {
           localUserSet.remove( user );
         } else {
           LOG.debug( "Adding " + user + " to " + g.getName( ) );
-          g.addMember( new DummyPrincipal( user ) );
+          g.addUserByName( user );
         }
       }
       for ( String user : localUserSet ) {
         LOG.debug( "Removing " + user + " from " + g.getName( ) );
-        g.removeMember( new DummyPrincipal( user ) );
+        g.removeUserByName( user );
       }
     } catch ( AuthException e ) {
       LOG.error( e, e );
-      LOG.warn( "Failed to update group " + group + " in " + accountName, e );
+      LOG.warn( "Failed to update group " + group + " in " + account.getName( ), e );
     }
   }
 
-  private static Set<String> getLocalGroupSet( String accountName ) throws AuthException {
+  private static Set<String> getLocalGroupSet( Account account ) throws AuthException {
     Set<String> groupSet = Sets.newHashSet( );
-    for ( Group group : Accounts.listAllGroups( accountName ) ) {
+    for ( Group group : account.getGroups( ) ) {
       groupSet.add( group.getName( ) );
     }
     return groupSet;
   }
 
-  private static void removeObsoleteUsers( String accountName, Set<String> oldUserSet ) {
+  private static void removeObsoleteUsers( Account account, Set<String> oldUserSet ) {
     // We don't want to remove account admin when updating an account
     oldUserSet.remove( User.ACCOUNT_ADMIN );
     
-    LOG.debug( "Removing obsolete users: " + oldUserSet + ", in account " + accountName );
+    LOG.debug( "Removing obsolete users: " + oldUserSet + ", in account " + account.getName( ) );
     for ( String user : oldUserSet ) {
       try {
-        Users.deleteUser( user, accountName, true /* forceDeleteAdmin */, true /* recursive */ );
+        account.deleteUser( user, true/* forceDeleteAdmin */, true /* recursive */ );
       } catch ( AuthException e ) {
         LOG.error( e, e );
-        LOG.warn( "Failed to delete user " + user + " in " + accountName );
+        LOG.warn( "Failed to delete user " + user + " in " + account.getName( ) );
       }
     }
   }
 
-  private static void addNewUser( String accountName, String user, Map<String, String> info ) throws AuthException {
-    LOG.debug( "Adding new user " + user + " in account " + accountName );
+  private static void addNewUser( Account account, String user, Map<String, String> info ) throws AuthException {
+    LOG.debug( "Adding new user " + user + " in account " + account.getName( ) );
     if ( info == null ) {
       LOG.warn( "Empty user info for user " + user );
     }
-    Users.addUser( user, "/", true /* skipRegistration */, true /* enabled */, info, true /* createKey */, false /* createPassword */, accountName );
+    account.addUser( user, "/", true/* skipRegistration */, true/* enabled */, info );
   }
 
-  private static void updateUser( String accountName, String user, Map<String, String> map ) throws AuthException {
-    LOG.debug( "Updating user " + user + " in account " + accountName );
+  private static void updateUser( Account account, String user, Map<String, String> map ) throws AuthException {
+    LOG.debug( "Updating user " + user + " in account " + account.getName( ) );
     if ( map == null ) {
       LOG.error( "Empty info map of user " + user );
     } else {
-      Users.lookupUserByName( user, accountName ).setInfo( map );
+      account.lookupUserByName( user ).setInfo( map );
     }
   }
 
-  private static Set<String> getLocalUserSet( String accountName ) throws AuthException {
+  private static Set<String> getLocalUserSet( Account account ) throws AuthException {
     Set<String> userSet = Sets.newHashSet( );
-    for ( User user : Accounts.listAllUsers( accountName ) ) {
+    for ( User user : account.getUsers( ) ) {
       userSet.add( user.getName( ) );
     }
     return userSet;

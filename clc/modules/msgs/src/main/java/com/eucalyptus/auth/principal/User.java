@@ -62,11 +62,13 @@
  */
 package com.eucalyptus.auth.principal;
 
+import java.io.Serializable;
+import java.math.BigInteger;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.credential.HmacPrincipal;
-import com.eucalyptus.auth.principal.credential.X509Principal;
+import com.eucalyptus.auth.PolicyParseException;
 
 /**
  * The interface for a user in Eucalyptus.
@@ -74,7 +76,7 @@ import com.eucalyptus.auth.principal.credential.X509Principal;
  * @author decker
  *
  */
-public interface User extends BasePrincipal, X509Principal, HmacPrincipal {
+public interface User extends HasId, BasePrincipal, Serializable {
   
   public static final String USER_GROUP_PREFIX = "_";  
   public static final String ACCOUNT_ADMIN = "eucaadmin";
@@ -85,48 +87,63 @@ public interface User extends BasePrincipal, X509Principal, HmacPrincipal {
     CONFIRMED,
   }
   
-  public String getUserId( );
+  public BigInteger getNumber( );
   
   public void setName( String name ) throws AuthException;
   
-  public User getDelegate( );
-  
   public String getPath( );
+  public void setPath( String path ) throws AuthException;
     
   public RegistrationStatus getRegistrationStatus( );
-  
   public void setRegistrationStatus( RegistrationStatus stat ) throws AuthException;
 
   public Boolean isEnabled( );
-
   public void setEnabled( Boolean enabled ) throws AuthException;
   
-  public boolean checkToken( String testToken );
+  public String getToken( );
+  public void setToken( String token ) throws AuthException;
+  public void createToken( ) throws AuthException;
   
   public String getConfirmationCode( );
+  public void setConfirmationCode( String code ) throws AuthException;
+  public void createConfirmationCode( ) throws AuthException;
     
-  public String getPassword( );
+  public String getPassword( );  
+  public void setPassword( String password ) throws AuthException;
+  public void createPassword( ) throws AuthException;
   
   public Long getPasswordExpires( );
-
   public void setPasswordExpires( Long time ) throws AuthException;
   
-  public void setPassword( String password ) throws AuthException;
-  
-  public String getInfo( String key );
-  
-  public Map<String, String> getInfoMap( );
-  
-  public void setInfo( String key, String value ) throws AuthException;
-  
+  public String getInfo( String key ) throws AuthException;
+  public Map<String, String> getInfo( ) throws AuthException;
+  public void setInfo( String key, String value ) throws AuthException;  
   public void setInfo( Map<String, String> newInfo ) throws AuthException;
   
-  public List<? extends Group> getGroups( );
+  public List<AccessKey> getKeys( ) throws AuthException;
+  public AccessKey getKey( String keyId ) throws AuthException;
+  public AccessKey addKey( String key ) throws AuthException;
+  public void removeKey( String keyId ) throws AuthException;
+  public AccessKey createKey( ) throws AuthException;
   
-  public Account getAccount( );
+  public List<Certificate> getCertificates( ) throws AuthException;
+  public Certificate getCertificate( String certificateId ) throws AuthException;
+  public Certificate addCertificate( X509Certificate certificate ) throws AuthException;
+  public void removeCertificate( String certficateId ) throws AuthException;
+  
+  public List<Group> getGroups( ) throws AuthException;
+  
+  public Account getAccount( ) throws AuthException;
   
   public boolean isSystemAdmin( );
   
   public boolean isAccountAdmin( );
+  
+  public List<Policy> getPolicies( ) throws AuthException;
+  public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+  public void removePolicy( String name ) throws AuthException;
+
+  public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException;
+  public List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
     
 }

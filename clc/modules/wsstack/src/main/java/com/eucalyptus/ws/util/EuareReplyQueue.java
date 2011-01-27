@@ -80,6 +80,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -129,9 +130,14 @@ public class EuareReplyQueue {
     EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ).debug( );
     LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
     Throwable exception = exMsg.getException( );
-    if ( exception instanceof MessagingException && exception.getCause( ) instanceof EuareException ) {
-      LOG.debug( "BEFORE create ErrorResponseType " );
-      EuareException euareException = ( EuareException ) exception.getCause( );
+    if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
+      int code = 500;
+      String errorName = EuareException.INTERNAL_FAILURE;
+      if ( exception.getCause( ) instanceof EuareException ) {
+        EuareException euareException = ( EuareException ) exception.getCause( );
+        code = euareException.getCode( );
+        errorName = euareException.getError( );
+      }
       ErrorResponseType errorResp = new ErrorResponseType( );
       BaseMessage payload = null;
       try {
@@ -144,8 +150,8 @@ public class EuareReplyQueue {
         errorResp.setRequestId( payload.getCorrelationId( ) );
         ErrorType error = new ErrorType( );
         error.setType( "Sender" );
-        error.setCode( euareException.getError( ) );
-        error.setMessage( euareException.getMessage( ) );
+        error.setCode( errorName );
+        error.setMessage( exception.getCause( ).getMessage( ) );
         errorResp.getErrorList( ).add( error );
         this.handle( errorResp );
       }

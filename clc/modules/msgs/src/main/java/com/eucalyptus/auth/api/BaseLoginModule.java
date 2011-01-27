@@ -7,7 +7,6 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.login.WrappedCredentials;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;

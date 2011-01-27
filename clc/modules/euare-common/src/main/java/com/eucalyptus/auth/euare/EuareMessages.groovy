@@ -1,4 +1,7 @@
 package com.eucalyptus.auth.euare;
+
+import com.eucalyptus.auth.policy.PolicyAction;
+import com.eucalyptus.auth.policy.PolicySpec;
 import java.util.Date;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
@@ -599,6 +602,7 @@ public class MFADeviceType extends EuareMessage {
   String serialNumber;
   public MFADeviceType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEUSER )
 public class CreateUserType extends EuareMessage {
   String path;
   String userName;

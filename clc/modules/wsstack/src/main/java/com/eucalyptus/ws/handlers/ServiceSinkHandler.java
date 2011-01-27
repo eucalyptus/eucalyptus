@@ -214,8 +214,8 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
           msg.setEffectiveUserId( msg.getUserId( ) );
         } else if ( ( user != null ) && ( this.msgReceiver == null ) ) {
-          msg.setUserId( user.getUserId( ) );
-          msg.setEffectiveUserId( user.isSystemAdmin( ) ? Component.eucalyptus.name( ) : user.getUserId( ) );
+          msg.setUserId( user.getId( ) );
+          msg.setEffectiveUserId( user.isSystemAdmin( ) ? Component.eucalyptus.name( ) : user.getId( ) );
         }
         EventRecord.here( ServiceSinkHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
         if ( this.msgReceiver == null ) {

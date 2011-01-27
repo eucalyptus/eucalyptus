@@ -37,7 +37,7 @@ public class PolicyParserTest {
   }
   
   private static void printPolicy( PolicyEntity parsed ) {
-    System.out.println( "Policy:\n" + parsed.getPolicyText( ) + "\n" + "Version = " + parsed.getPolicyVersion( ) );
+    System.out.println( "Policy:\n" + parsed.getText( ) + "\n" + "Version = " + parsed.getPolicyVersion( ) );
     for ( StatementEntity statement : parsed.getStatements( ) ) {
       System.out.println( "Statement: " + statement.getSid( ) );
       for ( AuthorizationEntity auth : statement.getAuthorizations( ) ) {

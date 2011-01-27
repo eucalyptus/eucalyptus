@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.crypto.Hmacs;

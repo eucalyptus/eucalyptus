@@ -1,7 +1,6 @@
 package com.eucalyptus.context;
 
 import java.lang.ref.WeakReference;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.security.auth.Subject;
@@ -9,13 +8,9 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.api.MuleEvent;
 import com.eucalyptus.auth.Contract;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventType;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
@@ -71,7 +66,7 @@ public class Context {
   
   public void setUser( User user ) {
     if ( user != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getUserId( ) ).debug( );
+      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getId( ) ).debug( );
       this.user = user;
     }
   }

@@ -7,7 +7,6 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
-import com.eucalyptus.auth.Policies;
 import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.Conditions;
@@ -74,20 +73,20 @@ public class PolicyEngineImpl implements PolicyEngine {
 
       // System admin can do everything
       if ( !requestUser.isSystemAdmin( ) ) {
-        String userId = requestUser.getUserId( );
-        String accountId = requestUser.getAccount( ).getAccountId( );
+        String userId = requestUser.getId( );
+        Account account = requestUser.getAccount( );
         
         // Check global (inter-account) authorizations first
-        Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, accountId ), action, resourceName, keyEval, contractEval );
+        Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, account ), action, resourceName, keyEval, contractEval );
         if ( ( decision == Decision.DENY )
-            || ( decision == Decision.DEFAULT && resourceAccount.getAccountId( ) != null && !resourceAccount.getAccountId( ).equals( accountId ) ) ) {
+            || ( decision == Decision.DEFAULT && resourceAccount.getId( ) != null && !resourceAccount.getId( ).equals( account.getId( ) ) ) ) {
           LOG.debug( "Request is rejected by global authorization check, due to decision " + decision );
           throw new AuthException( AuthException.ACCESS_DENIED ); 
         }
         // Account admin can do everything within the account
         if ( !requestUser.isAccountAdmin( ) ) {
           // If not denied by global authorizations, check local (intra-account) authorizations.
-          decision = processAuthorizations( lookupLocalAuthorizations( resourceType, userId ), action, resourceName, keyEval, contractEval );
+          decision = processAuthorizations( lookupLocalAuthorizations( resourceType, requestUser ), action, resourceName, keyEval, contractEval );
           // Denied by explicit or default deny
           if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
             LOG.debug( "Request is rejected by local authorization check, due to decision " + decision );
@@ -117,9 +116,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     try {
       // System admins are not restricted by quota limits.
       if ( !requestUser.isSystemAdmin( ) ) {
-        String userId = requestUser.getUserId( );
-        String accountId = requestUser.getAccount( ).getAccountId( );
-        List<Authorization> quotas = lookupQuotas( resourceType, userId, accountId, requestUser.isAccountAdmin( ) );
+        List<Authorization> quotas = lookupQuotas( resourceType, requestUser, requestUser.getAccount( ), requestUser.isAccountAdmin( ) );
         processQuotas( quotas, action, resourceType, resourceName, quantity );
       }
     } catch ( AuthException e ) {
@@ -230,10 +227,10 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @return The list of global authorizations apply to the request user
    * @throws AuthException for any error
    */
-  private List<Authorization> lookupGlobalAuthorizations( String resourceType, String accountId ) throws AuthException {
+  private List<Authorization> lookupGlobalAuthorizations( String resourceType, Account account ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
-    results.addAll( Policies.lookupAccountGlobalAuthorizations( resourceType, accountId ) );
-    results.addAll( Policies.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE, accountId ) );
+    results.addAll( account.lookupAccountGlobalAuthorizations( resourceType ) );
+    results.addAll( account.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE ) );
     return results;
   }
   
@@ -245,10 +242,10 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @return The list of local authorization apply to the request user
    * @throws AuthException for any error
    */
-  private List<Authorization> lookupLocalAuthorizations( String resourceType, String userId ) throws AuthException {
+  private List<Authorization> lookupLocalAuthorizations( String resourceType, User user ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
-    results.addAll( Policies.lookupAuthorizations( resourceType, userId ) );
-    results.addAll( Policies.lookupAuthorizations( PolicySpec.ALL_RESOURCE, userId ) );
+    results.addAll( user.lookupAuthorizations( resourceType ) );
+    results.addAll( user.lookupAuthorizations( PolicySpec.ALL_RESOURCE ) );
     return results;
   }
   
@@ -257,18 +254,18 @@ public class PolicyEngineImpl implements PolicyEngine {
    * 
    * @param resourceType The resource type to allocate.
    * @param userId The request user ID.
-   * @param accountId The request user account ID.
+   * @param account The request user account.
    * @param isAccountAdmin If the request user is account admin.
    * @return The list of authorizations (quotas) that match.
    * @throws AuthException for any error.
    */
-  private List<Authorization> lookupQuotas( String resourceType, String userId, String accountId, boolean isAccountAdmin ) throws AuthException {
+  private List<Authorization> lookupQuotas( String resourceType, User user, Account account, boolean isAccountAdmin ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
-    results.addAll( Policies.lookupAccountGlobalQuotas( resourceType, accountId ) );
-    results.addAll( Policies.lookupAccountGlobalQuotas( PolicySpec.ALL_RESOURCE, accountId ) );
+    results.addAll( account.lookupAccountGlobalQuotas( resourceType ) );
+    results.addAll( account.lookupAccountGlobalQuotas( PolicySpec.ALL_RESOURCE ) );
     if ( !isAccountAdmin ) {
-      results.addAll( Policies.lookupQuotas( resourceType, userId ) );
-      results.addAll( Policies.lookupQuotas( PolicySpec.ALL_RESOURCE, userId ) );
+      results.addAll( user.lookupQuotas( resourceType ) );
+      results.addAll( user.lookupQuotas( PolicySpec.ALL_RESOURCE ) );
     }
     return results;    
   }
@@ -330,11 +327,11 @@ public class PolicyEngineImpl implements PolicyEngine {
     Group group = auth.getGroup( );
     switch ( scope ) {
       case ACCOUNT:
-        return group.getAccount( ).getAccountId( );
+        return group.getAccount( ).getId( );
       case GROUP:
-        return group.getGroupId( );
+        return group.getId( );
       case USER:
-        return group.getUsers( ).get( 0 ).getUserId( );
+        return group.getUsers( ).get( 0 ).getId( );
     }
     throw new RuntimeException( "Should not reach here: unrecognized scope." );
   }

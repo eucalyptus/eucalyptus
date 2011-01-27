@@ -11,7 +11,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -75,9 +74,6 @@ public class StatementEntity extends AbstractPersistent implements Serializable 
 
   @Transient
   private static final long serialVersionUID = 1L;
-
-  @Transient
-  private static Logger LOG = Logger.getLogger( StatementEntity.class );
   
   // Statement ID
   @Column( name = "auth_statement_sid" )
@@ -109,6 +105,10 @@ public class StatementEntity extends AbstractPersistent implements Serializable 
     return this.sid;
   }
   
+  public void setSid( String sid ) {
+    this.sid = sid;
+  }
+  
   public List<AuthorizationEntity> getAuthorizations( ) {
     return this.authorizations;
   }
@@ -123,6 +123,10 @@ public class StatementEntity extends AbstractPersistent implements Serializable 
   
   public void setConditions( List<ConditionEntity> conditions ) {
     this.conditions = conditions;
+  }
+  
+  public PolicyEntity getPolicy( ) {
+    return this.policy;
   }
   
   public void setPolicy( PolicyEntity policy ) {

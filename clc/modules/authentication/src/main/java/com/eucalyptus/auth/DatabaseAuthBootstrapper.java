@@ -3,6 +3,7 @@ package com.eucalyptus.auth;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -22,10 +23,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     
   public boolean load( ) throws Exception {
   	DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
-  	Users.setUserProvider( dbAuth );
-  	Groups.setGroupProvider( dbAuth );
   	Accounts.setAccountProvider( dbAuth );
-  	Policies.setPolicyProvider( dbAuth );
   	Permissions.setPolicyEngine( new PolicyEngineImpl( ) );
     return true;
   }
@@ -104,7 +102,8 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   
   private void eusureSystemAdminExist( ) throws Exception {
     try {
-      User user = Users.lookupSystemAdmin( );
+      Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+      User user = account.lookupUserByName( User.ACCOUNT_ADMIN );
       if ( user != null ) {
         return;
       }
@@ -112,8 +111,8 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       LOG.warn( "System admin does not exist. Adding it now.", e );
     }
     // Order matters.
-    Accounts.addSystemAccount( );
-    Users.addSystemAdmin( );
+    Account system = Accounts.addSystemAccount( );
+    system.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
   }
 
 }

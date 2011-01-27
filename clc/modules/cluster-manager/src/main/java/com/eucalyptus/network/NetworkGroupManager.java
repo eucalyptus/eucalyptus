@@ -43,14 +43,14 @@ public class NetworkGroupManager {
     Account account = Permissions.getAccountByUserId( request.getUserId( ) );
     
     //ensure the default group exists to cover some old broken installs
-    NetworkGroupUtil.makeDefault( account.getAccountId( ) );
+    NetworkGroupUtil.makeDefault( account.getId( ) );
     
     ArrayList<String> networkNames = new ArrayList<String>( request.getGroupSet( ) );
     if ( networkNames.size( ) < 1 ) {
       networkNames.add( "default" );
     }
     for ( String networkName : networkNames ) {
-      NetworkRulesGroup networkGroup = NetworkGroupUtil.getUserNetworkRulesGroup( account.getAccountId( ), networkName );
+      NetworkRulesGroup networkGroup = NetworkGroupUtil.getUserNetworkRulesGroup( account.getId( ), networkName );
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, networkName, account, action, requestUser ) ) {
         throw new EucalyptusCloudException( "Not authorized to use network group " + networkName + " for " + requestUser.getName( ) );
       }

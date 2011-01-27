@@ -3,6 +3,7 @@ package com.eucalyptus.auth.principal;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
+import com.eucalyptus.auth.AuthException;
 
 /**
  * @author decker
@@ -22,14 +23,14 @@ public interface Authorization extends Serializable {
   
   public Boolean isNotAction( );
   
-  public Set<String> getActions( );
+  public Set<String> getActions( ) throws AuthException;
   
   public Boolean isNotResource( );
   
-  public Set<String> getResources( );
+  public Set<String> getResources( ) throws AuthException;
   
-  public List<? extends Condition> getConditions( );
+  public List<Condition> getConditions( ) throws AuthException;
   
-  public Group getGroup( );
+  public Group getGroup( ) throws AuthException;
   
 }

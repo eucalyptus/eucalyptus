@@ -69,7 +69,6 @@ import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.Calendar;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.servlet.ServletOutputStream;
@@ -77,9 +76,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Certs;
+import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.bootstrap.Component;
@@ -114,13 +116,14 @@ public class X509Download extends HttpServlet {
     
     User user = null;
     try {
-      user = Users.lookupUserByName( userName, accountName );
+      Account account = Accounts.lookupAccountByName( accountName );
+      user = account.lookupUserByName( userName );
     } catch ( Exception e ) {
       hasError( "User does not exist", response );
       return;
     }
-    if ( !user.checkToken( code ) ) {
-      hasError( "Confirmation code is invalid", response );
+    if ( !code.equals( user.getToken( ) ) ) {
+      hasError( "Token is invalid", response );
       return;
     }
     response.setContentType( mimetype );
@@ -153,14 +156,25 @@ public class X509Download extends HttpServlet {
   private static byte[] getX509Zip( User u ) throws Exception {
     X509Certificate cloudCert = null;
     final X509Certificate x509;
-    String userAccessKey = u.getFirstActiveSecretKeyId( );
-    String userSecretKey = u.getSecretKey( userAccessKey );
+    String userAccessKey = null;
+    String userSecretKey = null;
     KeyPair keyPair = null;
     try {
+      for ( AccessKey k : u.getKeys( ) ) {
+        if ( k.isActive( ) ) {
+          userAccessKey = k.getId( );
+          userSecretKey = k.getKey( );
+        }
+      }
+      if ( userAccessKey == null ) {
+        AccessKey k = u.addKey( Hmacs.generateSecretKey( u.getName( ) ) );
+        userAccessKey = k.getId( );
+        userSecretKey = k.getKey( );
+      }
       keyPair = Certs.generateKeyPair( );
       x509 = Certs.generateCertificate( keyPair, u.getName( ) );
       x509.checkValidity( );
-      u.addX509Certificate( x509 );
+      u.addCertificate( x509 );
       cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
     } catch ( Exception e ) {
       LOG.fatal( e, e );

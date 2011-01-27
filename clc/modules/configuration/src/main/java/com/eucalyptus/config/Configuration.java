@@ -67,7 +67,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.ServiceBuilder;

@@ -99,7 +99,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       } else {
         this.namespace = "http://msgs.eucalyptus.com";
       }
-      String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getUserId( );
+      String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getId( );
       try {
         BaseMessage msg = ( BaseMessage ) this.bind( userName, true, httpRequest );
         httpRequest.setMessage( msg );

@@ -340,30 +340,12 @@ public class PolicySpec {
   // Action syntax
   public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "):(\\S+))" );
   
-  // Resource ARN syntax
-  public static final Pattern ARN_PATTERN =
-      Pattern.compile( "\\*" + 
-                       "|(?:arn:aws:(?:" +
-                           "(?:(" + VENDOR_IAM + ")::([a-z0-9]+):(user|group)(/\\S+))" +
-                           "|(?:(" + VENDOR_EC2 + "):::([a-z0-9_]+)/(\\S+))" +
-                           "|(?:(" + VENDOR_S3 + "):::([^\\s/]+)(?:(/\\S+))?)" +
-                           ")" +
-                       ")" );
-
-  // Group index of ARN fields in the ARN pattern
-  public static final int ARN_PATTERNGROUP_IAM = 1;
-  public static final int ARN_PATTERNGROUP_IAM_NAMESPACE = 2;
-  public static final int ARN_PATTERNGROUP_IAM_USERGROUP = 3;
-  public static final int ARN_PATTERNGROUP_IAM_ID = 4;
-  public static final int ARN_PATTERNGROUP_EC2 = 5;
-  public static final int ARN_PATTERNGROUP_EC2_TYPE = 6;
-  public static final int ARN_PATTERNGROUP_EC2_ID = 7;
-  public static final int ARN_PATTERNGROUP_S3 = 8;
-  public static final int ARN_PATTERNGROUP_S3_BUCKET = 9;
-  public static final int ARN_PATTERNGROUP_S3_OBJECT = 10;
-  
   // Wildcard
   public static final String ALL_RESOURCE = "*";
+  
+  // IAM resource types
+  public static final String IAM_RESOURCE_GROUP = "group";
+  public static final String IAM_RESOURCE_USER = "user";
   
   // EC2 resource types, extension to AWS IAM
   public static final String EC2_RESOURCE_IMAGE = "image";

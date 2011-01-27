@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.util.Enumeration;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.PolicyParseException;
 
 /**
  * Dummy class for image user group. Only "all" is supported in AWS.
@@ -20,54 +21,47 @@ public class ImageUserGroup implements Group {
   public ImageUserGroup( String name ) {
     this.name = name;
   }
-  
+
   @Override
-  public boolean addMember( Principal arg0 ) {
-    // TODO Auto-generated method stub
-    return false;
-  }
-  
-  @Override
-  public boolean isMember( Principal arg0 ) {
-    // TODO Auto-generated method stub
-    return false;
-  }
-  
-  @Override
-  public Enumeration<? extends Principal> members( ) {
+  public String getId( ) {
     // TODO Auto-generated method stub
     return null;
   }
-  
-  @Override
-  public boolean removeMember( Principal arg0 ) {
-    // TODO Auto-generated method stub
-    return false;
-  }
-  
+
   @Override
   public String getName( ) {
     return this.name;
   }
-  
+
   @Override
   public void setName( String name ) throws AuthException {
-    // TODO Auto-generated method stub
-    
+    this.name = name;
   }
-  
+
   @Override
   public String getPath( ) {
     // TODO Auto-generated method stub
     return null;
   }
-  
+
+  @Override
+  public void setPath( String path ) throws AuthException {
+    // TODO Auto-generated method stub
+    
+  }
+
   @Override
   public Boolean isUserGroup( ) {
     // TODO Auto-generated method stub
     return null;
   }
-  
+
+  @Override
+  public void setUserGroup( Boolean userGroup ) throws AuthException {
+    // TODO Auto-generated method stub
+    
+  }
+
   @Override
   public Account getAccount( ) {
     // TODO Auto-generated method stub
@@ -75,13 +69,43 @@ public class ImageUserGroup implements Group {
   }
 
   @Override
-  public List<? extends User> getUsers( ) {
+  public List<User> getUsers( ) {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
-  public String getGroupId( ) {
+  public void addUserByName( String userName ) throws AuthException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void removeUserByName( String userName ) throws AuthException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public List<Policy> getPolicies( ) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void removePolicy( String policyId ) throws AuthException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public boolean hasUser( String userName ) throws AuthException {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
     // TODO Auto-generated method stub
     return null;
   }

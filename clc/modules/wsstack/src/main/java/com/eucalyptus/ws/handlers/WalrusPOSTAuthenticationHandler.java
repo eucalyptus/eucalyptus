@@ -94,7 +94,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.User;
@@ -174,8 +174,8 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
 		signature = signature.replaceAll("=", "");
 		try {
-      User user = Users.lookupUserByAccessKeyId( accessKeyID );  
-      String queryKey = user.getSecretKey( accessKeyID );
+      User user = Accounts.lookupUserByAccessKeyId( accessKeyID );  
+      String queryKey = user.getKey( accessKeyID ).getKey( );
 			String authSig = checkSignature( queryKey, data );
 			if (!authSig.equals(signature))
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );

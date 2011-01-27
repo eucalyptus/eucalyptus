@@ -3,10 +3,8 @@ package com.eucalyptus.auth;
 import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
-import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
@@ -34,13 +32,13 @@ public class DatabaseAuthorizationProxy implements Authorization {
   }
 
   @Override
-  public List<? extends Condition> getConditions( ) {
-    final List<DatabaseConditionProxy> results = Lists.newArrayList( );
+  public List<Condition> getConditions( ) {
+    final List<Condition> results = Lists.newArrayList( );
     try {
       Transactions.one( AuthorizationEntity.class, this.delegate.getId( ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
-          for ( Condition c : t.getConditions( ) ) {
-            results.add( new DatabaseConditionProxy( ( ConditionEntity ) c ) );
+          for ( ConditionEntity c : t.getStatement( ).getConditions( ) ) {
+            results.add( new DatabaseConditionProxy( c ) );
           }
         }
       } );
@@ -112,11 +110,11 @@ public class DatabaseAuthorizationProxy implements Authorization {
 
   @Override
   public Group getGroup( ) {
-    final List<DatabaseGroupProxy> results = Lists.newArrayList( );
+    final List<Group> results = Lists.newArrayList( );
     try {
       Transactions.one( AuthorizationEntity.class, this.delegate.getId( ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
-          results.add( new DatabaseGroupProxy( ( GroupEntity) t.getGroup( ) ) );
+          results.add( new DatabaseGroupProxy( t.getStatement( ).getPolicy( ).getGroup( ) ) );
         }
       } );
     } catch ( TransactionException e ) {

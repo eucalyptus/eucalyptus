@@ -6,10 +6,8 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -23,14 +21,11 @@ import com.eucalyptus.entities.AbstractPersistent;
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_account" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class AccountEntity extends AbstractPersistent implements Account, Serializable {
+public class AccountEntity extends AbstractPersistent implements Serializable {
 
   @Transient
   private static final long serialVersionUID = 1L;
 
-  @Transient
-  private static Logger LOG = Logger.getLogger( AccountEntity.class );
-  
   // Account name, it is unique.
   @Column( name = "auth_account_name", unique = true )
   String name;
@@ -64,14 +59,12 @@ public class AccountEntity extends AbstractPersistent implements Account, Serial
     return sb.toString( );
   }
   
-  @Override
   public String getName( ) {
     return this.name;
   }
 
-  @Override
-  public String getAccountId( ) {
-    return this.getId( );
+  public void setName( String name ) {
+    this.name = name;
   }
 
 }

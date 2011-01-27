@@ -47,7 +47,7 @@ public class Permissions {
   
   public static User getUserById( String userId ) throws EucalyptusCloudException {
     try {
-      return Users.lookupUserById( userId );
+      return Accounts.lookupUserById( userId );
     } catch ( Throwable t ) {
       throw new EucalyptusCloudException( t );
     }
@@ -55,7 +55,15 @@ public class Permissions {
   
   public static Account getAccountByUserId( String userId ) throws EucalyptusCloudException {
     try {
-      return Users.lookupUserById( userId ).getAccount( );
+      return Accounts.lookupUserById( userId ).getAccount( );
+    } catch ( Throwable t ) {
+      throw new EucalyptusCloudException( t );
+    }
+  }
+  
+  public static Account getUserAccount( User user ) throws EucalyptusCloudException {
+    try {
+      return user.getAccount( );
     } catch ( Throwable t ) {
       throw new EucalyptusCloudException( t );
     }

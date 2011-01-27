@@ -65,7 +65,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
             int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
               ? state.getAvailability( vmTypeName ).getAvailable( )
               : remaining;
-            ResourceToken token = state.getResourceAllocation( ctx.getCorrelationId( ), ctx.getUser( ).getUserId( ), vmTypeName, tryAmount );
+            ResourceToken token = state.getResourceAllocation( ctx.getCorrelationId( ), ctx.getUser( ).getId( ), vmTypeName, tryAmount );
             remaining -= token.getAmount( );
             tokens.add( token );
           } catch ( Throwable t ) {

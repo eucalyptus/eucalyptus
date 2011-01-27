@@ -18,6 +18,7 @@ import com.eucalyptus.auth.json.JsonUtils;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.Conditions;
 import com.eucalyptus.auth.policy.condition.NumericLessThanEquals;
+import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
@@ -172,8 +173,8 @@ public class PolicyParser {
     // Group resources by type
     Map<String, Set<String>> resourceMap = Maps.newHashMap( );
     for ( String resource : resources ) {
-      String[] parsed = parseResourceArn( resource );
-      addToSetMap( resourceMap, parsed[0], parsed[1] );
+      Ern ern = Ern.parse( resource );
+      addToSetMap( resourceMap, ern.getResourceType( ), ern.getResourceName( ) );
     }
     boolean notAction = Boolean.valueOf( PolicySpec.NOTACTION.equals( actionElement ) );
     boolean notResource = Boolean.valueOf( PolicySpec.NOTRESOURCE.equals( resourceElement ) );
@@ -263,50 +264,8 @@ public class PolicyParser {
       }
     }
     throw new JSONException( "'" + pattern + "' does not match any defined action" );
-  }
-  
-  /**
-   * Parse an ARN.
-   * 
-   * @param resource The resource pattern string.
-   * @return The resource type and the relative ID of the resource.
-   * @throws JSONException for syntax error
-   */
-  private String[] parseResourceArn( String resource ) throws JSONException {
-    String[] parsed = new String[2];
-    Matcher matcher = PolicySpec.ARN_PATTERN.matcher( resource );
-    if ( !matcher.matches( ) ) {
-      throw new JSONException( "'" + resource + "' is not a valid ARN" );
-    }
-    if ( matcher.group( PolicySpec.ARN_PATTERNGROUP_IAM ) != null ) {
-      parsed[0] = matcher.group( PolicySpec.ARN_PATTERNGROUP_IAM ) + ":" +
-          matcher.group( PolicySpec.ARN_PATTERNGROUP_IAM_USERGROUP ).toLowerCase( );
-      parsed[1] = matcher.group( PolicySpec.ARN_PATTERNGROUP_IAM_ID );
-    } else if ( matcher.group( PolicySpec.ARN_PATTERNGROUP_EC2 ) != null ) {
-      String type = matcher.group( PolicySpec.ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
-      parsed[0] = matcher.group( PolicySpec.ARN_PATTERNGROUP_EC2 ) + ":" + type;
-      if ( !PolicySpec.EC2_RESOURCES.contains( type ) ) {
-        throw new JSONException( "EC2 type '" + type + "' is not supported" );
-      }
-      parsed[1] = matcher.group( PolicySpec.ARN_PATTERNGROUP_EC2_ID ).toLowerCase( );
-    } else if ( matcher.group( PolicySpec.ARN_PATTERNGROUP_S3 ) != null ) {
-      parsed[0] = matcher.group( PolicySpec.ARN_PATTERNGROUP_S3 ) + ":";
-      if ( matcher.group( PolicySpec.ARN_PATTERNGROUP_S3_OBJECT ) != null ) {
-        parsed[0] += PolicySpec.S3_RESOURCE_OBJECT;
-        parsed[1] = matcher.group( PolicySpec.ARN_PATTERNGROUP_S3_BUCKET ) +
-            matcher.group( PolicySpec.ARN_PATTERNGROUP_S3_OBJECT );
-      } else {
-        parsed[0] += PolicySpec.S3_RESOURCE_BUCKET;
-        parsed[1] = matcher.group( PolicySpec.ARN_PATTERNGROUP_S3_BUCKET );
-      }
+  }  
 
-    } else {
-      parsed[0] = PolicySpec.ALL_RESOURCE;
-      parsed[1] = PolicySpec.ALL_RESOURCE;
-    }    
-    return parsed;
-  }
-  
   /**
    * Check the validity of a condition type.
    * 

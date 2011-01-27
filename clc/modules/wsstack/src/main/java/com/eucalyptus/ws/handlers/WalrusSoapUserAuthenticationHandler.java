@@ -81,7 +81,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.User;
@@ -149,8 +149,8 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
 		signature = signature.replaceAll("=", "");
 		try {
-      User user = Users.lookupUserByAccessKeyId( accessKeyID );  
-      String queryKey = user.getSecretKey( accessKeyID );
+      User user = Accounts.lookupUserByAccessKeyId( accessKeyID );  
+      String queryKey = user.getKey( accessKeyID ).getKey( );
 			String authSig = checkSignature( queryKey, data );
 			if (!authSig.equals(signature))
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );

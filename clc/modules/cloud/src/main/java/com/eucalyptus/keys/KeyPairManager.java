@@ -58,7 +58,7 @@ public class KeyPairManager {
     String keyName = request.getKeyName( );
     User requestUser = Permissions.getUserById( request.getUserId( ) );
     Account account = Permissions.getAccountByUserId( request.getUserId( ) );
-    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( account.getAccountId( ), keyName );
+    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( account.getId( ), keyName );
     if ( keypair == null ) {
       throw new EucalyptusCloudException( "Failed to find keypair: " + keyName );
     }

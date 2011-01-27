@@ -10,10 +10,10 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.crypto.Hmac;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 
 public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
@@ -29,8 +29,9 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
   public boolean authenticate( HmacCredentials credentials ) throws Exception {
     String sig = credentials.getSignature( );
     SecurityContext.enqueueSignature( sig );
-    User user = Users.lookupUserByAccessKeyId( credentials.getQueryId( ) );
-    String secretKey = user.getSecretKey( credentials.getQueryId( ) );
+    AccessKey accessKey = Accounts.lookupAccessKeyById( credentials.getQueryId( ) );
+    User user = accessKey.getUser( );
+    String secretKey = accessKey.getKey( );
     String canonicalString = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ), credentials.getServicePath( ), credentials.getParameters( ) );
     String canonicalStringWithPort = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ) + ":" + credentials.getHeaderPort( ), credentials.getServicePath( ), credentials.getParameters( ) );
     String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );

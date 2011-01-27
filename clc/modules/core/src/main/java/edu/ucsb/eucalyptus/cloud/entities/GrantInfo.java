@@ -79,8 +79,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Users;
 
 @Entity
 @PersistenceContext(name="eucalyptus_walrus")
@@ -185,7 +185,7 @@ public class GrantInfo {
 						if(id == null || id.length() == 0)
 							continue;
 						try {
-							displayName = Users.lookupUserByAccessKeyId(id).getUserId();
+							displayName = Accounts.lookupUserByAccessKeyId(id).getId();
 						} catch ( AuthException e ) {
               LOG.warn(e,e);
             }

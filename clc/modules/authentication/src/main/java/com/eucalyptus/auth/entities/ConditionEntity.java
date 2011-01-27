@@ -6,16 +6,13 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Sets;
 
@@ -31,14 +28,11 @@ import com.google.common.collect.Sets;
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_condition" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ConditionEntity extends AbstractPersistent implements Condition, Serializable {
+public class ConditionEntity extends AbstractPersistent implements Serializable {
 
   @Transient
   private static final long serialVersionUID = 1L;
 
-  @Transient
-  private static Logger LOG = Logger.getLogger( ConditionEntity.class );
-  
   // The condition type
   @Column( name = "auth_condition_type" )
   String type;
@@ -80,19 +74,28 @@ public class ConditionEntity extends AbstractPersistent implements Condition, Se
     return sb.toString( );
   }
   
-  @Override
   public String getType( ) {
     return this.type;
   }
 
-  @Override
+  public void setType( String type ) {
+    this.type = type;
+  }
+  
   public String getKey( ) {
     return this.key;
   }
 
-  @Override
+  public void setKey( String key ) {
+    this.key = key;
+  }
+  
   public Set<String> getValues( ) {
     return this.values;
+  }
+  
+  public StatementEntity getStatement( ) {
+    return this.statement;
   }
   
   public void setStatement( StatementEntity statement ) {

@@ -1,7 +1,5 @@
 package com.eucalyptus.auth;
 
-import java.security.Principal;
-import java.util.Enumeration;
 import java.util.List;
 import javax.persistence.EntityManager;
 import org.apache.log4j.Logger;
@@ -10,17 +8,21 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.entities.AccountEntity;
+import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
+import com.eucalyptus.auth.entities.PolicyEntity;
+import com.eucalyptus.auth.entities.StatementEntity;
 import com.eucalyptus.auth.entities.UserEntity;
+import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
 public class DatabaseGroupProxy implements Group {
@@ -33,113 +35,6 @@ public class DatabaseGroupProxy implements Group {
   
   public DatabaseGroupProxy( GroupEntity delegate ) {
     this.delegate = delegate;
-  }
-  
-  /**
-   * Does not check if the user is already a member.
-   */
-  @Override
-  public boolean addMember( Principal user ) {
-    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
-    EntityManager em = db.getEntityManager( );
-    try {
-      GroupEntity group = em.find( GroupEntity.class, this.delegate.getId( ) );
-      UserEntity userEntity = DatabaseAuthProvider.getUniqueUser( db.getSession( ), user.getName( ), group.getAccount( ).getName( ) );
-      group.addMember( userEntity );
-      //userEntity.addGroup( group );
-      db.commit( );
-      return true;
-    } catch ( Throwable e ) {
-      Debugging.logError( LOG, e, "Failed to add user to group " + this.delegate );
-      db.rollback( );
-    }
-    return false;
-  }
-  
-  @Override
-  public boolean isMember( Principal member ) {
-    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    Session session = db.getSession( );
-    try {
-      Example userExample = Example.create( new UserEntity( member.getName( ) ) ).enableLike( MatchMode.EXACT );
-      @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) session
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
-          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.idEq( this.delegate.getId( ) ) )
-          .list( );
-      db.commit( );
-      return users.size( ) > 0;
-    } catch ( Throwable e ) {
-      Debugging.logError( LOG, e, "Failed to check membership for group " + this.delegate );
-      db.rollback( );
-    }
-    return false;
-  }
-  
-  @Override
-  public Enumeration<? extends Principal> members( ) {
-    return Iterators.asEnumeration( this.getUsers( ).iterator( ) );
-  }
-  
-  @Override
-  public boolean removeMember( Principal user ) {
-    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
-    EntityManager em = db.getEntityManager( );
-    try {
-      GroupEntity group = em.find( GroupEntity.class, this.delegate.getId( ) );
-      UserEntity userEntity = DatabaseAuthProvider.getUniqueUser( db.getSession( ), user.getName( ), group.getAccount( ).getName( ) );
-      group.removeMember( userEntity );
-      //userEntity.getGroups( ).remove( group );
-      db.commit( );
-      return true;
-    } catch ( Throwable e ) {
-      Debugging.logError( LOG, e, "Failed to remove user from group " + this.delegate );
-      db.rollback( );
-    }
-    return false;
-  }
-  
-  @Override
-  public String getName( ) {
-    return this.delegate.getName( );
-  }
-  
-  @Override
-  public String getPath( ) {
-    return this.delegate.getPath( );
-  }
-
-  @Override
-  public void setName( final String name ) {
-    try {
-      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
-          t.setName( name );
-        }
-      } );
-    } catch ( TransactionException e ) {
-      Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
-    }
-  }
-  
-  @Override
-  public Account getAccount( ) {
-    final List<DatabaseAccountProxy> results = Lists.newArrayList( );
-    try {
-      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
-          results.add( new DatabaseAccountProxy( ( AccountEntity) t.getAccount( ) ) );
-        }
-      } );
-    } catch ( TransactionException e ) {
-      Debugging.logError( LOG, e, "Failed to getAccount for " + this.delegate );
-    }
-    return results.get( 0 );
-  }
-
-  @Override
-  public Boolean isUserGroup( ) {
-    return this.delegate.isUserGroup( );
   }
   
   @Override
@@ -158,8 +53,193 @@ public class DatabaseGroupProxy implements Group {
   }
 
   @Override
-  public List<? extends User> getUsers( ) {
-    final List<DatabaseUserProxy> results = Lists.newArrayList( );
+  public String getId( ) {
+    return this.delegate.getId( );
+  }
+  
+  @Override
+  public String getName( ) {
+    return this.delegate.getName( );
+  }
+
+  @Override
+  public void setName( final String name ) throws AuthException {
+    try {
+      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) throws Throwable {
+          t.setName( name );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public String getPath( ) {
+    return this.delegate.getPath( );
+  }
+
+  @Override
+  public void setPath( final String path ) throws AuthException {
+    try {
+      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) throws Throwable {
+          t.setPath( path );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to setPath for " + this.delegate );
+      throw new AuthException( e );
+    }
+  }
+  
+  @Override
+  public Boolean isUserGroup( ) {
+    return this.delegate.isUserGroup( );
+  }
+  
+  @Override
+  public void setUserGroup( final Boolean userGroup ) throws AuthException {
+    try {
+      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) throws Throwable {
+          t.setUserGroup( userGroup );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to setUserGroup for " + this.delegate );
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public void addUserByName( String userName ) throws AuthException {
+    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
+    EntityManager em = db.getEntityManager( );
+    try {
+      GroupEntity groupEntity = em.find( GroupEntity.class, this.delegate.getId( ) );
+      UserEntity userEntity = DatabaseAuthUtils.getUniqueUser( db.getSession( ), userName, groupEntity.getAccount( ).getName( ) );
+      groupEntity.getUsers( ).add( userEntity );
+      //userEntity.addGroup( groupEntity );
+      db.commit( );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to add user " + userName + " to group " + this.delegate );
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public void removeUserByName( String userName ) throws AuthException {
+    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
+    EntityManager em = db.getEntityManager( );
+    try {
+      GroupEntity groupEntity = em.find( GroupEntity.class, this.delegate.getId( ) );
+      UserEntity userEntity = DatabaseAuthUtils.getUniqueUser( db.getSession( ), userName, groupEntity.getAccount( ).getName( ) );
+      groupEntity.getUsers( ).remove( userEntity );
+      //userEntity.getGroups( ).remove( groupEntity );
+      db.commit( );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to remove user " + userName + " from group " + this.delegate );
+      throw new AuthException( e );
+    }
+  }
+  
+  @Override
+  public boolean hasUser( String userName ) throws AuthException {
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    Session session = db.getSession( );
+    try {
+      Example userExample = Example.create( new UserEntity( userName ) ).enableLike( MatchMode.EXACT );
+      @SuppressWarnings( "unchecked" )
+      List<UserEntity> users = ( List<UserEntity> ) session
+          .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
+          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.idEq( this.delegate.getId( ) ) )
+          .list( );
+      db.commit( );
+      return users.size( ) > 0;
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to check membership for group " + this.delegate );
+      throw new AuthException( e );
+    }
+  }
+  
+  @Override
+  public List<Policy> getPolicies( ) {
+    final List<Policy> results = Lists.newArrayList( );
+    try {
+      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) throws Throwable {
+          for ( PolicyEntity p : t.getPolicies( ) ) {
+            results.add( new DatabasePolicyProxy( p ) );
+          }
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getUsers for " + this.delegate );
+    }
+    return results;
+  }
+
+  @Override
+  public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
+    PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
+    parsedPolicy.setName( name );
+    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
+    EntityManager em = db.getEntityManager( );
+    try {
+      GroupEntity groupEntity = em.find( GroupEntity.class, this.delegate.getId( ) );
+      db.recast( PolicyEntity.class ).add( parsedPolicy );
+      parsedPolicy.setGroup( groupEntity );
+      for ( StatementEntity statement : parsedPolicy.getStatements( ) ) {
+        db.recast( StatementEntity.class ).add( statement );
+        statement.setPolicy( parsedPolicy );
+        for ( AuthorizationEntity auth : statement.getAuthorizations( ) ) {
+          db.recast( AuthorizationEntity.class ).add( auth );
+          auth.setStatement( statement );
+        }
+        for ( ConditionEntity cond : statement.getConditions( ) ) {
+          db.recast( ConditionEntity.class ).add( cond );
+          cond.setStatement( statement );
+        }
+      }
+      db.commit( );
+      return new DatabasePolicyProxy( parsedPolicy );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to attach policy for " + this.delegate.getName( ) );
+      throw new AuthException( "Failed to attach policy", e );
+    }
+  }
+
+  @Override
+  public void removePolicy( String name ) throws AuthException {
+    if ( name == null ) {
+      throw new AuthException( "Empty policy name" );
+    }
+    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
+    EntityManager em = db.getEntityManager( );
+    try {
+      GroupEntity group = em.find( GroupEntity.class, this.delegate.getId( ) );
+      PolicyEntity policy = DatabaseAuthUtils.removeGroupPolicy( group, name );
+      if ( policy != null ) {
+        db.recast( PolicyEntity.class ).delete( policy );
+      }
+      db.commit( );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to remove policy " + name + " in " + this.delegate );
+      throw new AuthException( "Failed to remove policy", e );
+    }
+  }
+  
+  @Override
+  public List<User> getUsers( ) {
+    final List<User> results = Lists.newArrayList( );
     try {
       Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) throws Throwable {
@@ -175,8 +255,18 @@ public class DatabaseGroupProxy implements Group {
   }
 
   @Override
-  public String getGroupId( ) {
-    return this.delegate.getGroupId( );
+  public Account getAccount( ) {
+    final List<DatabaseAccountProxy> results = Lists.newArrayList( );
+    try {
+      Transactions.one( GroupEntity.class, this.delegate.getId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) throws Throwable {
+          results.add( new DatabaseAccountProxy( ( AccountEntity) t.getAccount( ) ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAccount for " + this.delegate );
+    }
+    return results.get( 0 );
   }
   
 }

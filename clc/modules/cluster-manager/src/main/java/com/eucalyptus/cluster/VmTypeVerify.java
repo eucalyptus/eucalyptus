@@ -65,7 +65,6 @@ package com.eucalyptus.cluster;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.VmType;

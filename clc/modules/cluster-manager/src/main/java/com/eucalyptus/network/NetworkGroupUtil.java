@@ -5,8 +5,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.IpRange;
@@ -102,8 +102,8 @@ public class NetworkGroupUtil {
     List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
     if ( groupNames.isEmpty( ) ) {
       try {
-        for( User u : Users.listAllUsers( ) ) {
-          groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( u.getUserId( ), groupNames ) );        
+        for( User u : Accounts.listAllUsers( ) ) {
+          groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( u.getId( ), groupNames ) );        
         }
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( "Fail to get all users", e );

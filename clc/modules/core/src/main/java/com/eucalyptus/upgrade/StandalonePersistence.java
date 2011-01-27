@@ -19,10 +19,9 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
-import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -118,8 +117,7 @@ public class StandalonePersistence {
   
   private static void setupProviders( ) {
     DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
-    Users.setUserProvider( dbAuth );
-    Groups.setGroupProvider( dbAuth );
+    Accounts.setAccountProvider( dbAuth );
   }
   
   private static void setupOldDatabase( ) throws Exception {

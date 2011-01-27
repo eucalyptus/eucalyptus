@@ -75,9 +75,9 @@ import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.ImageUserGroup;
@@ -248,7 +248,7 @@ public class ImageManager {
     db.commit( );
     User user = null;
     try {
-      user = Users.lookupUserById( request.getUserId( ) );
+      user = Accounts.lookupUserById( request.getUserId( ) );
     } catch ( AuthException e ) {
       throw new EucalyptusCloudException( "Failed to find user information for: " + request.getUserId( ), e );
     }
@@ -348,7 +348,7 @@ public class ImageManager {
       throw new EucalyptusCloudException( "failed to register image." );
     }
     try {
-      imageInfo.grantPermission( Users.lookupUserById( request.getUserId( ) ) );
+      imageInfo.grantPermission( Accounts.lookupUserById( request.getUserId( ) ) );
     } catch ( AuthException e ) {
       LOG.debug( e, e );
     }
@@ -433,7 +433,7 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
       ImageInfo imgInfo = db.getUnique( new ImageInfo( request.getImageId( ) ) );
-      if ( !imgInfo.isAllowed( Users.lookupUserById( request.getUserId( ) ) ) ) throw new EucalyptusCloudException( "image attribute: not authorized." );
+      if ( !imgInfo.isAllowed( Accounts.lookupUserById( request.getUserId( ) ) ) ) throw new EucalyptusCloudException( "image attribute: not authorized." );
       if ( request.getKernel( ) != null ) {
         reply.setRealResponse( reply.getKernel( ) );
         if ( imgInfo.getKernelId( ) != null ) {
@@ -512,7 +512,7 @@ public class ImageManager {
       if ( request.getUserId( ).equals( imgInfo.getImageOwnerId( ) ) || request.isAdministrator( ) ) {
         imgInfo.getPermissions( ).clear( );
         db.commit( );
-        imgInfo.grantPermission( Users.lookupUserById( request.getUserId( ) ) );
+        imgInfo.grantPermission( Accounts.lookupUserById( request.getUserId( ) ) );
         //try {
           imgInfo.grantPermission( ImageUserGroup.ALL );
         //} catch ( NoSuchGroupException e ) {

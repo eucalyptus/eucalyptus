@@ -1,7 +1,6 @@
 package com.eucalyptus.auth.entities;
 
 import java.io.Serializable;
-import java.util.List;
 import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -9,19 +8,14 @@ import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.Condition;
-import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -36,13 +30,10 @@ import com.eucalyptus.entities.AbstractPersistent;
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_auth" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class AuthorizationEntity extends AbstractPersistent implements Authorization, Serializable {
+public class AuthorizationEntity extends AbstractPersistent implements Serializable {
 
   @Transient
   private static final long serialVersionUID = 1L;
-
-  @Transient
-  private static Logger LOG = Logger.getLogger( AuthorizationEntity.class );
 
   // The effect of the authorization
   @Enumerated( EnumType.STRING )
@@ -107,48 +98,52 @@ public class AuthorizationEntity extends AbstractPersistent implements Authoriza
     return sb.toString( );
   }
   
-  @Override
   public EffectType getEffect( ) {
     return this.effect;
   }
 
-  @Override
-  public List<? extends Condition> getConditions( ) {
-    return this.statement.getConditions( );
+  public void setEffect( EffectType effect ) {
+    this.effect = effect;
+  }
+  
+  public StatementEntity getStatement( ) {
+    return this.statement;
   }
   
   public void setStatement( StatementEntity statement ) {
     this.statement = statement;
   }
 
-  @Override
   public Boolean isNotAction( ) {
     return this.notAction;
   }
 
-  @Override
+  public void setNotAction( Boolean notAction ) {
+    this.notAction = notAction;
+  }
+  
   public Boolean isNotResource( ) {
     return this.notResource;
   }
+  
+  public void setNotResource( Boolean notResource ) {
+    this.notResource = notResource;
+  }
 
-  @Override
   public String getType( ) {
     return this.type;
   }
 
-  @Override
+  public void setType( String type ) {
+    this.type = type;
+  }
+  
   public Set<String> getActions( ) {
     return this.actions;
   }
 
-  @Override
   public Set<String> getResources( ) {
     return this.resources;
-  }
-
-  @Override
-  public Group getGroup( ) {
-    return this.statement.policy.group;
   }
   
 }

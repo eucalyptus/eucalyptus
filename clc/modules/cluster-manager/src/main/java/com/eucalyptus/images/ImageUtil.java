@@ -79,9 +79,8 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.ImageUserGroup;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
@@ -336,9 +335,9 @@ public class ImageUtil {
       } else if ( perm.isUser( ) ) {
         try {
           if( adding ) {
-            imgInfo.grantPermission( Users.lookupUserById( perm.getUserId( ) ) );
+            imgInfo.grantPermission( Accounts.lookupUserById( perm.getUserId( ) ) );
           } else {
-            imgInfo.revokePermission( Users.lookupUserById( perm.getUserId( ) ) );
+            imgInfo.revokePermission( Accounts.lookupUserById( perm.getUserId( ) ) );
           }
         } catch ( AuthException e ) {
           LOG.debug( e, e );
@@ -398,7 +397,7 @@ public class ImageUtil {
   public static List<ImageDetails> getImagesByOwner( final List<ImageInfo> imgList, final User user, final ArrayList<String> owners ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     List<ImageDetails> repList = Lists.newArrayList( );
-    if ( owners.remove( "self" ) ) owners.add( user.getUserId( ) );
+    if ( owners.remove( "self" ) ) owners.add( user.getId( ) );
     try {
       for ( String userName : owners ) {
         Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.byOwnerId( userName ) ), new Predicate<ImageInfo>( ) {
@@ -422,7 +421,7 @@ public class ImageUtil {
     try {
       for ( String execUserId : executable ) {
         if ( "all".equals( execUserId ) ) continue;
-        final User execUser = Users.lookupUserById( execUserId );
+        final User execUser = Accounts.lookupUserById( execUserId );
         Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.ALL ), new Predicate<ImageInfo>( ) {
           @Override public boolean apply( ImageInfo arg0 ) {
             return arg0.isAllowed( execUser ) || arg0.getImagePublic( );

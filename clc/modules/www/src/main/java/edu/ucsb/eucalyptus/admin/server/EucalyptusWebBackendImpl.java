@@ -87,8 +87,6 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.cluster.Cluster;

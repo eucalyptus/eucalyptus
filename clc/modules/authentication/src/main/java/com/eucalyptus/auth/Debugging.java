@@ -7,6 +7,7 @@ public class Debugging {
   
   public static final boolean DEBUG = true;
   
+  @SuppressWarnings( "rawtypes" )
   public static String getListString( List list ) {
     StringBuilder sb = new StringBuilder( );
     for ( Object o : list ) {

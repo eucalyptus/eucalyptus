@@ -71,8 +71,8 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -293,7 +293,7 @@ public class VmControl {
     String instanceId = request.getInstanceId( );
     User user = null;
     try {
-      user = Users.lookupUserById( request.getUserId( ) );
+      user = Accounts.lookupUserById( request.getUserId( ) );
     } catch ( AuthException e1 ) {
       throw new EucalyptusCloudException( "Failed to lookup the specified user's information: " + request.getUserId( ) );
     }
@@ -322,13 +322,13 @@ public class VmControl {
                              .here( BundleCallback.class, EventType.BUNDLE_PENDING, request.getUserId( ), v.getBundleTask( ).getBundleId( ), v.getInstanceId( ) ) );
         BundleCallback callback = new BundleCallback( request );
         request.setUrl( walrusUrl );
-        request.setAwsAccessKeyId( user.getFirstActiveSecretKeyId( ) );
+        request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( user ) );
         Callbacks.newClusterRequest( callback ).dispatch( v.getPlacement( ) );
         return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
-    } catch ( NoSuchElementException e ) {
+    } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
     }
   }
