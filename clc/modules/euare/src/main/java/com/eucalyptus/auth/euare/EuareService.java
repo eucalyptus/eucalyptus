@@ -110,12 +110,16 @@ public class EuareService {
     u.setUserId( userFound.getId( ) );
     u.setPath( userFound.getPath( ) );
     LOG.debug( "YE: 1 " );
-    EuareResourceName arn = new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) );
-    LOG.debug( "YE: 2 " );
-    String arnString = arn.toString( );
-    LOG.debug( "YE: 3 " );
-    u.setArn( arnString );
-    LOG.debug( "YE: 4 " );
+    try {
+      EuareResourceName arn = new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) );
+      LOG.debug( "YE: 2 " );
+      String arnString = arn.toString( );
+      LOG.debug( "YE: 3 " );
+      u.setArn( arnString );
+      LOG.debug( "YE: 4 " );
+    } catch ( Throwable t ) {
+      LOG.error( t, t );
+    }
   }
   
   private void fillGroupResult( GroupType g, Group groupFound, String accountId ) {
