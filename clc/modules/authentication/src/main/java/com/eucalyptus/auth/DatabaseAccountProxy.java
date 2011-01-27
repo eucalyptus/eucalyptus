@@ -160,11 +160,12 @@ public class DatabaseAccountProxy implements Account {
     try {
       UserEntity user = DatabaseAuthUtils.getUniqueUser( db.getSession( ), userName, accountName );
       GroupEntity userGroup = DatabaseAuthUtils.getUniqueGroup( db.getSession( ), DatabaseAuthUtils.getUserGroupName( userName ), accountName );
-      db.commit( );
-      return ( user.getGroups( ).size( ) > 1
+      boolean result = ( user.getGroups( ).size( ) > 1
           || user.getKeys( ).size( ) > 0
           || user.getCertificates( ).size( ) > 0
           || userGroup.getPolicies( ).size( ) > 0 );
+      db.commit( );
+      return result;
     } catch ( Throwable e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to check user " + userName + " in " + accountName );
