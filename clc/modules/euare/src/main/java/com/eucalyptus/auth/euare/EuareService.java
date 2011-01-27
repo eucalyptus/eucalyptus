@@ -119,6 +119,15 @@ public class EuareService {
     g.setArn( ( new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath( ), groupFound.getName( ) ) ).toString( ) );
   }
   
+  private String sanitizePath( String path ) {
+    if ( path != null ) {
+      if ( path.endsWith( "/" ) ) {
+        path = path.substring( 0, path.length( ) - 1 );
+      }
+    }
+    return path;
+  }
+  
   public ListGroupsResponseType listGroups(ListGroupsType request) throws EucalyptusCloudException {
     ListGroupsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -428,7 +437,7 @@ public class EuareService {
         userFound.setName( request.getNewUserName( ) );
       }
       if ( request.getNewPath( ) != null && !"".equals( request.getNewPath( ) ) ) {
-        userFound.setPath( request.getNewPath( ) );
+        userFound.setPath( sanitizePath( request.getNewPath( ) ) );
       }
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
@@ -578,7 +587,7 @@ public class EuareService {
         groupFound.setName( request.getNewGroupName( ) );
       }
       if ( request.getNewPath( ) != null && !"".equals( request.getNewPath( ) ) ) {
-        groupFound.setPath( request.getNewPath( ) );
+        groupFound.setPath( sanitizePath( request.getNewPath( ) ) );
       }
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
@@ -635,7 +644,7 @@ public class EuareService {
       throw new EuareException( 409, EuareException.LIMIT_EXCEEDED, "User quota exceeded" );
     }
     try {
-      User newUser = account.addUser( request.getUserName( ), request.getPath( ), true, true, null );
+      User newUser = account.addUser( request.getUserName( ), sanitizePath( request.getPath( ) ), true, true, null );
       UserType u = reply.getCreateUserResult( ).getUser( );
       fillUserResult( u, newUser, account.getId( ) );
     } catch ( Exception e ) {
@@ -830,7 +839,7 @@ public class EuareService {
       throw new EuareException( 409, EuareException.LIMIT_EXCEEDED, "Group quota exceeded" );
     }
     try {
-      Group newGroup = account.addGroup( request.getGroupName( ), request.getPath( ) );
+      Group newGroup = account.addGroup( request.getGroupName( ), sanitizePath( request.getPath( ) ) );
       GroupType g = reply.getCreateGroupResult( ).getGroup( );
       g.setGroupName( newGroup.getName( ) );
       g.setPath( newGroup.getPath( ) );
