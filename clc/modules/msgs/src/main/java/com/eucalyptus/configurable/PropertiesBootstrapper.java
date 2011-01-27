@@ -2,10 +2,8 @@ package com.eucalyptus.configurable;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.config.ConfigurationService;
 
 @Provides(ConfigurationService.class)
