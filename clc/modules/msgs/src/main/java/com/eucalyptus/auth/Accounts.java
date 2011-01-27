@@ -47,7 +47,7 @@ public class Accounts {
   }
   
   public static Account addSystemAccount( ) throws AuthException {
-    return addAccount( Account.SYSTEM_ACCOUNT );
+    return Accounts.getAccountProvider( ).addAccount( Account.SYSTEM_ACCOUNT );
   }
   
   public static List<User> listAllUsers( ) throws AuthException {
@@ -67,23 +67,23 @@ public class Accounts {
   }
   
   public static User lookupUserByCertificate( X509Certificate cert ) throws AuthException {
-    return Accounts.lookupUserByCertificate( cert );
+    return Accounts.getAccountProvider( ).lookupUserByCertificate( cert );
   }
   
   public static Group lookupGroupById( String groupId ) throws AuthException {
-    return Accounts.lookupGroupById( groupId );
+    return Accounts.getAccountProvider( ).lookupGroupById( groupId );
   }
   
   public static Certificate lookupCertificate( X509Certificate cert ) throws AuthException {
-    return Accounts.lookupCertificate( cert );
+    return Accounts.getAccountProvider( ).lookupCertificate( cert );
   }
   
   public static AccessKey lookupAccessKeyById( String keyId ) throws AuthException {
-    return Accounts.lookupAccessKeyById( keyId );
+    return Accounts.getAccountProvider( ).lookupAccessKeyById( keyId );
   }
   
   public static User lookupSystemAdmin( ) throws AuthException {
-    Account system = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.SYSTEM_ACCOUNT );
     return system.lookupUserByName( User.ACCOUNT_ADMIN );
   }
   
