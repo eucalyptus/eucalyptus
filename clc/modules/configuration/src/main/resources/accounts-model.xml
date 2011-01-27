@@ -49,9 +49,9 @@
     </default-service-exception-strategy>
 
 
-    <service name="ManagementRequestQueue">
+    <service name="AccountsRequestQueue">
       <inbound>
-        <inbound-endpoint ref="ManagementRequestQueueEndpoint" />
+        <inbound-endpoint ref="AccountsRequestQueueEndpoint" />
       </inbound>
       <bridge-component />
       <outbound>
