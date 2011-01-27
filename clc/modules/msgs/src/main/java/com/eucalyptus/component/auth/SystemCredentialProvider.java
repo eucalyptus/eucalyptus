@@ -130,9 +130,10 @@ public class SystemCredentialProvider extends Bootstrapper {
     if( this.componentId.hasCredentials( ) ) {
       if ( EucaKeyStore.getInstance( ).containsEntry( this.name ) ) {
         try {
+          EventRecord.here( SystemCredentialProvider.class, EventType.COMPONENT_INFO, "initializing", this.name, this.getCertificate( ).getSubjectDN( ).toString( ) ).info( );
           SystemCredentialProvider.certs.put( this.name, EucaKeyStore.getInstance( ).getCertificate( this.name ) );
           SystemCredentialProvider.keypairs.put( this.name, EucaKeyStore.getInstance( ).getKeyPair( this.name, this.name ) );
-          EventRecord.here( SystemCredentialProvider.class, EventType.COMPONENT_INFO, "initialized", this.name, this.getCertificate( ).getSubjectDN( ).toString( ) );
+          EventRecord.here( SystemCredentialProvider.class, EventType.COMPONENT_INFO, "initialized", this.name, this.getCertificate( ).getSubjectDN( ).toString( ) ).info( );
           return;
         } catch ( Exception e ) {
           SystemCredentialProvider.certs.remove( this );
