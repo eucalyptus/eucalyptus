@@ -92,7 +92,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceInfoType;
 
 public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<Service> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );

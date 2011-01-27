@@ -10,6 +10,7 @@ import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
+import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.google.common.collect.Lists;
 

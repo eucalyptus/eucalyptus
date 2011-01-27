@@ -96,12 +96,6 @@ public class HeartbeatComponentType extends EucalyptusData {
     this.name = name;
   }
 }
-public class ServiceInfoType extends EucalyptusData {
-  String partition;
-  String name;
-  String type;
-  ArrayList<String> uris = new ArrayList<String>( );
-}
 
 public class ComponentType extends EucalyptusData {
   String component;

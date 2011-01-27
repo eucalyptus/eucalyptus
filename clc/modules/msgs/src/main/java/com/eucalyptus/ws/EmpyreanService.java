@@ -75,7 +75,7 @@ import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
-import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
@@ -99,17 +99,17 @@ public class EmpyreanService {
   }
   public DisableServiceResponseType disableService( DisableServiceType request ) {
     DisableServiceResponseType reply = request.getReply( );
-    for( ServiceId serviceId : request.getServiceIds( ) ) {
+    for( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
-        Component c = Components.lookup( serviceId.getType( ) );
+        Component c = Components.lookup( serviceInfo.getType( ) );
         for( Service service : c.getServices( ) ) {
           String partition = service.getServiceConfiguration( ).getPartition( );
           String name = service.getServiceConfiguration( ).getName( );
-          if( partition.equals( serviceId.getPartition( ) ) && name.equals( serviceId.getName( ) ) ) {
+          if( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {
             if( Component.State.ENABLED.equals( service.getState( ) ) ) {
               try {
                 c.disableService( service.getServiceConfiguration( ) );
-                reply.getServiceIds( ).add( serviceId );
+                reply.getServices( ).add( serviceInfo );
               } catch ( ServiceRegistrationException ex ) {
                 LOG.error( "DISABLE'ing service failed: " + ex.getMessage( ), ex );
               }
@@ -119,7 +119,7 @@ public class EmpyreanService {
           }
         }
       } catch ( NoSuchElementException ex ) {
-        Exceptions.trace( "Failed to lookup component of type: " + serviceId.getType( ), ex );
+        Exceptions.trace( "Failed to lookup component of type: " + serviceInfo.getType( ), ex );
       }
     }
     return reply;
@@ -129,7 +129,7 @@ public class EmpyreanService {
     for( Component comp : Components.list( ) ) {
       if( comp.isRunningLocally( ) ) {
         final Service localService = comp.getLocalService( );
-        reply.getServiceStatus( ).add( new ServiceStatusType( ) {{
+        reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
           setServiceId( localService.getServiceId( ) );
           setLocalEpoch( reply.getBaseEpoch( ) );
           setLocalState( localService.getState( ).toString( ) );

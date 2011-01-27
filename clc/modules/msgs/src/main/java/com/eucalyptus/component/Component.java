@@ -89,7 +89,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceInfoType;
 
 /**
  * TODO: DOCUMENT. yes pls.

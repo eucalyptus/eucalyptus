@@ -73,7 +73,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
 }
 public class ServiceTransitionType extends EmpyreanMessage  {
-  ArrayList<ServiceId> serviceIds = new ArrayList<ServiceId>();
+  ArrayList<ServiceInfoType> services = new ArrayList<ServiceInfoType>();
 }
 public class StartServiceType extends ServiceTransitionType {}
 public class StartServiceResponseType extends ServiceTransitionType {}
@@ -88,7 +88,13 @@ public class ServiceId extends EucalyptusData {
   String partition;/** The resource partition name **/
   String name;/** The registration name **/
   String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
-  String uri;/** this is here to account for possibly overlapping private subnets allow for multiple **/
+  String uri;
+}
+public class ServiceInfoType extends EucalyptusData {
+  String partition;/** The resource partition name **/
+  String name;/** The registration name **/
+  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
+  ArrayList<String> uris = new ArrayList<String>( );
 }
 public class ServiceStatusType extends EucalyptusData {
   ServiceId serviceId;
@@ -96,9 +102,8 @@ public class ServiceStatusType extends EucalyptusData {
   Integer localEpoch;
   ArrayList<String> details = new ArrayList<String>( );
 }
-public class DescribeServicesType extends EmpyreanMessage {
-  ArrayList<String> uris = new ArrayList<String>( );
+public class DescribeServicesType extends ServiceTransitionType {
 }
 public class DescribeServicesResponseType extends EmpyreanMessage {
-  ArrayList<ServiceStatusType> serviceStatus = new ArrayList<ServiceStatusType>( );
+  ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>( );
 }
