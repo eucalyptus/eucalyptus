@@ -51,7 +51,7 @@ BuildRequires: axis2
 BuildRequires: axis2c-devel >= 1.6.0
 BuildRequires: libvirt-devel >= 0.6
 BuildRequires: libxslt-devel
-BuildRequires: libxml-devel
+BuildRequires: libxml2-devel
 BuildRequires: rampartc-devel >= 1.3.0
 BuildRequires: swig
 %if %{is_suse}
@@ -265,7 +265,7 @@ Requires:     %{name}-cc          = %{version}-%{release}
 Requires:     %{euca_httpd}
 # Since we shut off automatic dependency generation we need to require there:
 Requires:     libxslt
-Requires:     libxml
+Requires:     libxml2
 # The VMware broker links against the VMware disk library, so we have to
 # filter its DSOs from the package's Requires list.
 # Are we allowed to redistribute it?
