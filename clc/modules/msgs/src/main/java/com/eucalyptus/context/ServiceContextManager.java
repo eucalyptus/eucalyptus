@@ -108,7 +108,7 @@ public class ServiceContextManager {
   private static Integer                                      SERVICE_CONTEXT_RELOAD_TIMEOUT = 10 * 1000;
   private static String                                       FAIL_MSG                       = "ESB client not ready because the service bus has not been started.";
   private static BootstrapException                           failEx                         = new BootstrapException( FAIL_MSG );
-  private static final AtomicMarkableReference<MuleContext>   context                        = new AtomicMarkableReference<MuleContext>( null, true );
+  private static final AtomicMarkableReference<MuleContext>   context                        = new AtomicMarkableReference<MuleContext>( null, false );
   private static final ConcurrentNavigableMap<String, String> endpointToService              = new ConcurrentSkipListMap<String, String>( );
   private static final ConcurrentNavigableMap<String, String> serviceToEndpoint              = new ConcurrentSkipListMap<String, String>( );
   private static final MuleContextFactory                     contextFactory                 = new DefaultMuleContextFactory( );
@@ -199,7 +199,7 @@ public class ServiceContextManager {
         out.close( );
         String outString = out.toString( );        
         ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ));
-        if( LogLevels.EXTREME ) {
+        if( LogLevels.DEBUG ) {
           LOG.info( "===================================" );
           LOG.info( outString );
           LOG.info( "===================================" );
